@@ -1235,7 +1235,13 @@ export default function ManageDocuments() {
             )}
           {(isSuperAdmin || isTeamLeader) && <Dialog open={isCreateDialogOpen} onOpenChange={open => {
           setIsCreateDialogOpen(open);
-          if (!open) {
+          if (open) {
+            // Opening for create: start on browse step (edit path never uses it)
+            if (!editingDocumentId) {
+              setCreateStep('browse');
+              setSelectedTemplate(null);
+            }
+          } else {
             setEditingDocumentId(null);
             setFormData({
               title: "",
@@ -1250,6 +1256,8 @@ export default function ManageDocuments() {
             });
             setUploadedFiles([]);
             setExistingFiles([]);
+            setSelectedTemplate(null);
+            setCreateStep('browse');
           }
         }}>
               <DialogTrigger asChild>
