@@ -795,7 +795,7 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="tenant">Client</Label>
+                  <Label htmlFor="tenant">Client <span className="text-destructive">*</span></Label>
                   <Combobox options={tenants.map(tenant => ({
                   value: tenant.id.toString(),
                   label: tenant.name
@@ -855,7 +855,16 @@ export default function TasksManagement() {
                   Cancel
                 </Button>
                 <Button onClick={async () => {
-                  if (!formData.task_name || !formData.due_date || !user) return;
+                  if (!formData.task_name || !formData.due_date || !formData.tenant_id || !user) {
+                    if (!formData.tenant_id) {
+                      toast({
+                        title: "Missing client",
+                        description: "Please select a client before saving.",
+                        variant: "destructive"
+                      });
+                    }
+                    return;
+                  }
                   
                   try {
                     const assignedFollowers = formData.assigned_to 
