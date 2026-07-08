@@ -20,7 +20,19 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, ChevronRight, Loader2, RefreshCcw, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Loader2,
+  RefreshCcw,
+  SkipForward,
+  X,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { format } from "date-fns";
 import {
   JobStatusPill,
