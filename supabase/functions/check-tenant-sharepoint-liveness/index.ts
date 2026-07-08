@@ -229,5 +229,46 @@ Deno.serve(async (req: Request) => {
     },
   );
 
+  // Fire-and-forget cache write. Uses UPDATE (not upsert) — an update against
+  // a tenant with no tenant_sharepoint_settings row is a no-op, matching the
+  // "rows without an entry stay absent" intent. Existing rows have a NOT NULL
+  // `created_by` with no default; INSERTs would fail, and the resulting
+  // multi-row error could take down the whole batch's write-back. UPDATE
+  // sidesteps this entirely.
+  const nowIso = new Date().toISOString();
+  const writeCache = async () => {
+    await Promise.allSettled(
+      results.map((r) =>
+        supabaseService
+          .from('tenant_sharepoint_settings')
+          .update({
+            shared_live_status: r.shared,
+            governance_live_status: r.governance,
+            live_check_error: r.error,
+            live_checked_at: nowIso,
+          })
+          .eq('tenant_id', r.tenant_id)
+          .then(({ error }) => {
+            if (error) {
+              console.error(
+                `[check-tenant-sharepoint-liveness] cache write failed for tenant ${r.tenant_id}:`,
+                error.message,
+              );
+            }
+          }),
+      ),
+    );
+  };
+  // Prefer Edge Runtime's waitUntil so the write survives past Response
+  // dispatch. Fall back to a detached promise if unavailable.
+  const runtime = (globalThis as unknown as {
+    EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void };
+  }).EdgeRuntime;
+  if (runtime?.waitUntil) {
+    runtime.waitUntil(writeCache());
+  } else {
+    writeCache().catch(() => {});
+  }
+
   return json({ results });
 });
