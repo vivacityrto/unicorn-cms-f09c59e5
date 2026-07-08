@@ -424,6 +424,14 @@ const App = () => (
               } 
             />
             <Route
+              path="/manage-documents/bulk-generate/new"
+              element={
+                <ProtectedRoute>
+                  <BulkGenerateNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/manage-documents/bulk-jobs"
               element={
                 <ProtectedRoute>
