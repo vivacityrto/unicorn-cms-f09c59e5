@@ -726,37 +726,40 @@ function TenantRow({
     (liveness.shared !== "ok" || liveness.governance !== "ok");
 
   return (
-    <li className="px-3 py-2 flex items-center gap-2 hover:bg-muted/40">
+    <li className="px-3 py-2 flex items-start gap-2 hover:bg-muted/40 min-w-0">
       <Checkbox
         checked={checked}
         onCheckedChange={(c) => onToggle(!!c)}
+        className="mt-0.5 shrink-0"
       />
-      <button
-        type="button"
-        onClick={onLabelClick}
-        className="flex-1 min-w-0 text-left"
-      >
-        <div className="text-sm truncate">
-          {tenant.name ?? tenant.rto_name ?? `Tenant #${tenant.id}`}
+      <div className="flex-1 min-w-0">
+        <button
+          type="button"
+          onClick={onLabelClick}
+          className="w-full min-w-0 text-left block"
+        >
+          <div className="text-sm truncate">
+            {tenant.name ?? tenant.rto_name ?? `Tenant #${tenant.id}`}
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            {stageCount} eligible stage{stageCount === 1 ? "" : "s"}
+          </div>
+        </button>
+        <div className="flex items-center flex-wrap gap-1 mt-1">
+          <LivenessBadges liveness={liveness} loading={livenessLoading} />
+          {needsFix && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-[11px] text-amber-800 border-amber-300 hover:bg-amber-50"
+              onClick={onFix}
+              title="Fix SharePoint folder"
+            >
+              <Wrench className="h-3 w-3 mr-1" />
+              Fix folder
+            </Button>
+          )}
         </div>
-        <div className="text-[11px] text-muted-foreground">
-          {stageCount} eligible stage{stageCount === 1 ? "" : "s"}
-        </div>
-      </button>
-      <div className="flex items-center gap-1 shrink-0">
-        <LivenessBadges liveness={liveness} loading={livenessLoading} />
-        {needsFix && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-6 px-2 text-[11px] text-amber-800 border-amber-300 hover:bg-amber-50"
-            onClick={onFix}
-            title="Fix SharePoint folder"
-          >
-            <Wrench className="h-3 w-3 mr-1" />
-            Fix folder
-          </Button>
-        )}
       </div>
     </li>
   );
