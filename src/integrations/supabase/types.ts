@@ -7556,6 +7556,7 @@ export type Database = {
           package_ids: number[]
           provisioning_summary: Json
           scope: string
+          selections: Json | null
           skipped_count: number
           stage_ids: number[]
           started_at: string | null
@@ -7576,6 +7577,7 @@ export type Database = {
           package_ids?: number[]
           provisioning_summary?: Json
           scope: string
+          selections?: Json | null
           skipped_count?: number
           stage_ids?: number[]
           started_at?: string | null
@@ -7596,6 +7598,7 @@ export type Database = {
           package_ids?: number[]
           provisioning_summary?: Json
           scope?: string
+          selections?: Json | null
           skipped_count?: number
           stage_ids?: number[]
           started_at?: string | null
@@ -67708,6 +67711,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_targeted_bulk_document_job: {
+        Args: { p_document_ids?: number[]; p_selections: Json }
+        Returns: string
+      }
       create_template_version: {
         Args: {
           p_change_summary: string
@@ -68695,6 +68702,20 @@ export type Database = {
         }[]
       }
       preview_document_delete: { Args: { p_doc_id: number }; Returns: Json }
+      preview_targeted_bulk_document_job: {
+        Args: { p_document_ids?: number[]; p_selections: Json }
+        Returns: {
+          distinct_documents: number
+          distinct_packages: number
+          distinct_stages: number
+          distinct_tenants: number
+          eligible_count: number
+          fully_provisioned_tenants: number
+          missing_governance_tenants: number
+          missing_shared_tenants: number
+          needs_provisioning_tenants: number
+        }[]
+      }
       propose_chart_change: {
         Args: { p_draft_json: Json; p_meeting_id: string }
         Returns: string
