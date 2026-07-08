@@ -31,6 +31,7 @@ import {
   FolderPlus,
   Search,
   XCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -106,6 +107,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [findFolderCandidates, setFindFolderCandidates] = useState<Array<{ item_id: string; name: string; web_url: string; match_type: string; confidence: string }>>([]);
   const [findFolderSearching, setFindFolderSearching] = useState(false);
   const [findFolderConfirming, setFindFolderConfirming] = useState(false);
+  const [checkingLiveness, setCheckingLiveness] = useState(false);
 
   const handleFindFolder = async () => {
     setFindingFolder(true);
@@ -201,9 +203,45 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
       .then(({ error }) => {
         if (error) {
           console.warn('[SharePointFolderConfig] liveness refresh failed:', error.message);
+          return;
         }
+        fetchSettings();
       });
-  }, [tenantId]);
+  }, [tenantId, fetchSettings]);
+
+  const livenessLabel = (v: unknown): string => {
+    switch (v) {
+      case 'ok': return 'OK';
+      case 'missing': return 'Missing in SharePoint';
+      case 'unconfigured': return 'Not configured';
+      case 'error': return 'Check failed';
+      default: return 'Unknown';
+    }
+  };
+
+  const handleCheckLiveness = async () => {
+    setCheckingLiveness(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'check-tenant-sharepoint-liveness',
+        { body: { tenant_ids: [tenantId] } },
+      );
+      if (error) {
+        toast({ title: 'Check failed', description: error.message, variant: 'destructive' });
+      } else {
+        const r = (data as { results?: Array<{ shared?: string; governance?: string }> } | null)?.results?.[0];
+        toast({
+          title: 'Status refreshed',
+          description: `Shared: ${livenessLabel(r?.shared)} · Governance: ${livenessLabel(r?.governance)}`,
+        });
+      }
+    } catch (e) {
+      toast({ title: 'Check failed', description: e instanceof Error ? e.message : 'Unknown error', variant: 'destructive' });
+    } finally {
+      await fetchSettings();
+      setCheckingLiveness(false);
+    }
+  };
 
   const validateUrl = (url: string): boolean => {
     if (!url) {
@@ -405,6 +443,21 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
                 {status.icon}
                 {status.label}
               </Badge>
+            )}
+            {isVivacityTeam && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCheckLiveness}
+                disabled={checkingLiveness}
+              >
+                {checkingLiveness ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                )}
+                Check Status
+              </Button>
             )}
           </div>
           {settings && (
