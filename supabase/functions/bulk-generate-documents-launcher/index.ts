@@ -42,7 +42,7 @@ const SelectionSchema = z.object({
 });
 
 const BodySchema = z.object({
-  action: z.enum(['create', 'preview', 'cancel', 'create_targeted', 'preview_targeted']),
+  action: z.enum(['create', 'preview', 'cancel', 'create_targeted', 'preview_targeted', 'retry']),
   scope: z.enum(['all', 'selected']).optional(),
   tenant_ids: z.array(z.number().int().positive()).optional().nullable(),
   package_ids: z.array(z.number().int().positive()).optional().nullable(),
