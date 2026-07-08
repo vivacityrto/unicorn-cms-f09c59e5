@@ -1,32 +1,53 @@
-# Fix Retry button count to match its "Failed & Pending" label
+# Proactive session refresh + surface stall reason
 
-Single frontend edit in `src/pages/BulkDocumentJobProgress.tsx`. No logic changes to retry gating, RPC, or elsewhere.
+Frontend-only. Two files.
 
-## Change
+## 1. `src/components/documents/bulk-generate/useBulkGenerateLauncher.ts`
 
-Right after the existing `eligibleRetry` computation, add a second count `remainingWork` that additionally includes plain `pending` items:
+Add a small helper:
 
 ```ts
-const remainingWork = items.filter(
-  (i) =>
-    i.state === "pending" ||
-    i.state === "failed" ||
-    i.state === "cancelled" ||
-    (i.state === "leased" &&
-      i.lease_expires_at !== null &&
-      new Date(i.lease_expires_at).getTime() < nowMs),
-).length;
+async function refreshSessionBestEffort() {
+  try {
+    await supabase.auth.refreshSession();
+  } catch (e) {
+    console.warn("[bulk-generate] refreshSession failed; proceeding anyway", e);
+  }
+}
 ```
 
-Leave `eligibleRetry` and `canRetry = eligibleRetry > 0 || isStalled` unchanged — they still correctly gate whether the Retry button is enabled (the RPC only resets failed/cancelled/expired-leased).
+Call it at the top of the three functions that kick off the worker — `launcherCreate`, `launcherCreateTargeted`, and `launcherRetry` — immediately before their `invokeLauncher(...)` call. Convert each to an `async` function so we can `await` the refresh, keeping the same return type.
 
-Update the Retry button label to display `remainingWork` instead of `eligibleRetry`:
+Do **not** modify `launcherCancel`, `launcherPreview`, or `launcherPreviewTargeted`.
+
+## 2. `src/pages/BulkDocumentJobProgress.tsx`
+
+Add a helper co-located near `errorCodeLabel` (or just above the component):
+
+```ts
+function stalledReasonLabel(reason: string): string {
+  switch (reason) {
+    case "jwt_near_expiry":
+      return "Stalled — session token expired mid-run";
+    default:
+      return `Stalled — ${reason}`;
+  }
+}
+```
+
+Next to the existing `<JobStatusPill status={job.status} />` in the header, render:
 
 ```tsx
-Retry Failed & Pending{remainingWork > 0 ? ` (${remainingWork})` : ""}
+{job.status === "stalled" && job.error_summary?.stalled_reason ? (
+  <span className="text-xs text-muted-foreground">
+    {stalledReasonLabel(job.error_summary.stalled_reason as string)}
+  </span>
+) : null}
 ```
+
+`job.error_summary` already comes back from the existing `select("*")` — no query changes.
 
 ## Out of scope
 
-- No changes to `retry_bulk_document_job` RPC, worker, launcher, or gating logic.
-- No changes to any other counts, tiles, or bars.
+- No changes to `launcherCancel`, worker, RPCs, schema, RLS, or edge functions.
+- No new queries.
