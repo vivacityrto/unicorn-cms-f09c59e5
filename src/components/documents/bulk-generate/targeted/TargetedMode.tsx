@@ -423,7 +423,8 @@ export function TargetedMode({ tenants }: Props) {
             </SelectContent>
           </Select>
         </div>
-        <ScrollArea className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
+
           {tree.isLoading ? (
             <div className="p-3 space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (
