@@ -794,45 +794,125 @@ function GovernanceFolderSection({
         </div>
       </div>
 
-      {settings?.governance_folder_item_id && !browsingGovernanceFolder && (
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">{settings.governance_folder_name || 'Configured'}</span>
-          {settings.governance_folder_url && (
-            <a
-              href={settings.governance_folder_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-primary hover:underline flex items-center gap-1"
-            >
-              Open in SharePoint
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          )}
-          <Button variant="outline" size="sm" onClick={startBrowsing} className="ml-auto">
-            Change
-          </Button>
-        </div>
-      )}
+      {(() => {
+        if (browsingGovernanceFolder) return null;
 
-      {!settings?.governance_folder_item_id && !browsingGovernanceFolder && (
-        <div className="flex flex-wrap items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-destructive" />
-          <span className="text-sm text-muted-foreground mr-auto">Not configured — required for document generation</span>
-          <Button variant="outline" size="sm" onClick={startBrowsing}>
-            <FolderOpen className="h-4 w-4 mr-2" />
-            Select Folder
-          </Button>
-          <Button variant="outline" size="sm" onClick={verifyAndCreateDefault} disabled={verifyingGovernance}>
-            {verifyingGovernance ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <FolderPlus className="h-4 w-4 mr-2" />
-            )}
-            Verify & Create Default
-          </Button>
-        </div>
-      )}
+        // Prefer cached live Graph status when available. Fall back to raw
+        // DB presence for tenants that haven't been live-checked yet — those
+        // render a neutral "Not yet checked" pill instead of a false green.
+        const live = settings?.governance_live_status ?? null;
+        const hasBeenChecked = !!settings?.live_checked_at && live != null;
+        const dbConfigured = !!settings?.governance_folder_item_id;
+
+        if (!hasBeenChecked && dbConfigured) {
+          return (
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span
+                className="text-sm text-muted-foreground"
+                title="Not yet verified — refreshing on this visit."
+              >
+                Recorded — not yet checked
+              </span>
+              {settings?.governance_folder_url && (
+                <a
+                  href={settings.governance_folder_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  Open in SharePoint
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+              <Button variant="outline" size="sm" onClick={startBrowsing} className="ml-auto">
+                Change
+              </Button>
+            </div>
+          );
+        }
+
+        if (live === 'ok') {
+          return (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">{settings?.governance_folder_name || 'Configured'}</span>
+              {settings?.governance_folder_url && (
+                <a
+                  href={settings.governance_folder_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  Open in SharePoint
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+              <Button variant="outline" size="sm" onClick={startBrowsing} className="ml-auto">
+                Change
+              </Button>
+            </div>
+          );
+        }
+
+        if (live === 'missing') {
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <span className="text-sm text-muted-foreground mr-auto">
+                Recorded folder no longer exists in SharePoint — re-provision required
+              </span>
+              <Button variant="outline" size="sm" onClick={startBrowsing}>
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Select Folder
+              </Button>
+              <Button variant="outline" size="sm" onClick={verifyAndCreateDefault} disabled={verifyingGovernance}>
+                {verifyingGovernance ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                )}
+                Verify & Create Default
+              </Button>
+            </div>
+          );
+        }
+
+        if (live === 'error') {
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <span className="text-sm text-muted-foreground mr-auto" title={settings?.governance_folder_name ?? undefined}>
+                Live check failed — see logs
+              </span>
+              <Button variant="outline" size="sm" onClick={startBrowsing}>
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Select Folder
+              </Button>
+            </div>
+          );
+        }
+
+        // live === 'unconfigured' OR (never checked AND no db value)
+        return (
+          <div className="flex flex-wrap items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-destructive" />
+            <span className="text-sm text-muted-foreground mr-auto">Not configured — required for document generation</span>
+            <Button variant="outline" size="sm" onClick={startBrowsing}>
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Select Folder
+            </Button>
+            <Button variant="outline" size="sm" onClick={verifyAndCreateDefault} disabled={verifyingGovernance}>
+              {verifyingGovernance ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FolderPlus className="h-4 w-4 mr-2" />
+              )}
+              Verify & Create Default
+            </Button>
+          </div>
+        );
+      })()}
 
       {browsingGovernanceFolder && (
         <div className="space-y-2 border rounded-md p-3">
