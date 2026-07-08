@@ -658,6 +658,16 @@ export default function BulkDocumentJobProgress() {
           })}
         </div>
       )}
+
+      <RetryDialog
+        open={retryDialogOpen}
+        onOpenChange={setRetryDialogOpen}
+        items={retryEligibleItems}
+        tenantNames={tenantNames}
+        documentTitles={documentTitles}
+        submitting={retrying}
+        onConfirm={onRetryConfirm}
+      />
     </div>
     </DashboardLayout>
   );
