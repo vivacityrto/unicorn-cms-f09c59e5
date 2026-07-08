@@ -20,7 +20,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Play, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Loader2, RefreshCcw, X } from "lucide-react";
 import { format } from "date-fns";
 import {
   JobStatusPill,
@@ -33,7 +33,7 @@ import {
 } from "@/components/documents/bulk-generate/errorCodeLabel";
 import {
   launcherCancel,
-  launcherResume,
+  launcherRetry,
 } from "@/components/documents/bulk-generate/useBulkGenerateLauncher";
 
 type Job = {
@@ -68,6 +68,7 @@ type Item = {
   outcome: unknown;
   started_at: string | null;
   finished_at: string | null;
+  lease_expires_at: string | null;
 };
 
 const TERMINAL = new Set(["completed", "cancelled", "failed"]);
@@ -94,7 +95,7 @@ export default function BulkDocumentJobProgress() {
   const { isVivacityStaff, isLoading: accessLoading } = useUserAccess();
 
   const [cancelling, setCancelling] = useState(false);
-  const [resuming, setResuming] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [openTenants, setOpenTenants] = useState<Record<number, boolean>>({});
 
   const { data: job, isLoading: jobLoading } = useQuery({
@@ -124,7 +125,7 @@ export default function BulkDocumentJobProgress() {
       const { data, error } = await supabase
         .from("bulk_document_job_items")
         .select(
-          "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at",
+          "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at, lease_expires_at",
         )
         .eq("job_id", jobId!)
         .order("id", { ascending: true });
@@ -227,22 +228,22 @@ export default function BulkDocumentJobProgress() {
     }
   };
 
-  const onResume = async () => {
+  const onRetry = async () => {
     if (!jobId) return;
-    setResuming(true);
+    setRetrying(true);
     try {
-      await launcherResume(jobId);
-      toast({ title: "Job resumed" });
+      await launcherRetry(jobId);
+      toast({ title: "Retry queued" });
       qc.invalidateQueries({ queryKey: ["bulk-document-job", jobId] });
       qc.invalidateQueries({ queryKey: ["bulk-document-job-items", jobId] });
     } catch (e) {
       toast({
-        title: "Resume failed",
+        title: "Retry failed",
         description: (e as Error).message,
         variant: "destructive",
       });
     } finally {
-      setResuming(false);
+      setRetrying(false);
     }
   };
 
@@ -284,6 +285,17 @@ export default function BulkDocumentJobProgress() {
   const isRunning = job.status === "running";
   const isStalled = job.status === "stalled";
   const isPolling = !TERMINAL.has(job.status);
+
+  const nowMs = Date.now();
+  const eligibleRetry = items.filter(
+    (i) =>
+      i.state === "failed" ||
+      i.state === "cancelled" ||
+      (i.state === "leased" &&
+        i.lease_expires_at !== null &&
+        new Date(i.lease_expires_at).getTime() < nowMs),
+  ).length;
+  const canRetry = eligibleRetry > 0 || isStalled;
 
   return (
     <DashboardLayout>
@@ -331,18 +343,19 @@ export default function BulkDocumentJobProgress() {
               Cancel
             </Button>
           )}
-          {isStalled && (
+          {canRetry && (
             <Button
-              onClick={onResume}
-              disabled={resuming}
+              onClick={onRetry}
+              disabled={retrying}
               className="gap-2 bg-amber-500 hover:bg-amber-600 text-white"
             >
-              {resuming ? (
+              {retrying ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Play className="h-4 w-4" />
+                <RefreshCcw className="h-4 w-4" />
               )}
-              Resume
+              Retry Failed &amp; Pending
+              {eligibleRetry > 0 ? ` (${eligibleRetry})` : ""}
             </Button>
           )}
         </div>

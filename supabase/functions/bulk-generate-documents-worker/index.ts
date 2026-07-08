@@ -46,6 +46,32 @@ const TIME_BUDGET_MS = 50_000;
 const LEASE_BATCH = 5;
 const SUPPORTED_FORMATS = new Set(['docx', 'xlsx', 'xls', 'xlsm', 'pptx']);
 
+// Stop leasing/processing when the forwarded caller JWT is within this window
+// of expiring, so we don't burn through remaining items with an unauthorised
+// token. Fail-safe: if `exp` can't be decoded we behave exactly as today.
+const JWT_SAFETY_MARGIN_MS = 90_000;
+
+function jwtExpMs(bearer: string | null): number | null {
+  if (!bearer?.startsWith('Bearer ')) return null;
+  const token = bearer.slice(7);
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')),
+    );
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function jwtNearExpiry(bearer: string | null): boolean {
+  const exp = jwtExpMs(bearer);
+  if (exp === null) return false;
+  return Date.now() >= exp - JWT_SAFETY_MARGIN_MS;
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -338,11 +364,41 @@ Deno.serve(async (req: Request) => {
     return (data as { format: string | null; source_template_url: string | null } | null) ?? null;
   }
 
+  // Release this worker's still-leased items back to pending (fenced on
+  // worker_id + state='leased') and stall the job. Called when the forwarded
+  // caller JWT is about to expire so we don't waste the remaining budget
+  // hammering deliver-governance-document with a soon-to-be-401 token.
+  async function stallAndRelease(reason: string): Promise<void> {
+    console.warn(`[worker] JWT near expiry — stalling job=${jobId} reason=${reason}`);
+    const { error: relErr } = await supabaseService
+      .from('bulk_document_job_items')
+      .update({
+        state: 'pending',
+        worker_id: null,
+        leased_at: null,
+        lease_expires_at: null,
+        started_at: null,
+      })
+      .eq('job_id', jobId)
+      .eq('worker_id', WORKER_ID)
+      .eq('state', 'leased');
+    if (relErr) console.error('[worker] stallAndRelease lease-release error', relErr);
+    const { error: stallErr } = await supabaseService.rpc('stall_bulk_document_job', {
+      p_job_id: jobId,
+      p_reason: reason,
+    });
+    if (stallErr) console.error('[worker] stall_bulk_document_job error', stallErr);
+  }
+
   // ── Main loop ──────────────────────────────────────────────────────────
   let processed = 0;
   let timedOut = false;
 
   while (Date.now() - startedAt < TIME_BUDGET_MS) {
+    if (jwtNearExpiry(callerAuth)) {
+      await stallAndRelease('jwt_near_expiry');
+      return json({ worker_id: WORKER_ID, processed, stalled: true });
+    }
     const { data: job, error: jobErr } = await supabaseService
       .from('bulk_document_jobs')
       .select('status')
@@ -378,6 +434,10 @@ Deno.serve(async (req: Request) => {
       if (Date.now() - startedAt >= TIME_BUDGET_MS) {
         timedOut = true;
         break;
+      }
+      if (jwtNearExpiry(callerAuth)) {
+        await stallAndRelease('jwt_near_expiry');
+        return json({ worker_id: WORKER_ID, processed, stalled: true });
       }
       try {
         const bootstrap = await ensureSharepoint(item.tenant_id);
