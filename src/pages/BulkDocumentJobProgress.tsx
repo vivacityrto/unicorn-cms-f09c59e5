@@ -266,12 +266,31 @@ export default function BulkDocumentJobProgress() {
     }
   };
 
-  const onRetry = async () => {
+  const onRetryConfirm = async (excludedItemIds: number[]) => {
     if (!jobId) return;
     setRetrying(true);
     try {
-      await launcherRetry(jobId);
-      toast({ title: "Retry queued" });
+      if (excludedItemIds.length > 0) {
+        await launcherSkipItems(jobId, excludedItemIds);
+      }
+      // If everything was excluded, don't fire a retry — nothing left to do.
+      const willRetry = excludedItemIds.length < retryEligibleItems.length;
+      if (willRetry) {
+        await launcherRetry(jobId);
+        toast({
+          title: "Retry queued",
+          description:
+            excludedItemIds.length > 0
+              ? `${excludedItemIds.length} item(s) excluded, remaining will retry.`
+              : undefined,
+        });
+      } else {
+        toast({
+          title: "Items excluded",
+          description: `${excludedItemIds.length} item(s) marked as skipped. No retry queued.`,
+        });
+      }
+      setRetryDialogOpen(false);
       qc.invalidateQueries({ queryKey: ["bulk-document-job", jobId] });
       qc.invalidateQueries({ queryKey: ["bulk-document-job-items", jobId] });
     } catch (e) {
@@ -284,6 +303,7 @@ export default function BulkDocumentJobProgress() {
       setRetrying(false);
     }
   };
+
 
   if (accessLoading || jobLoading) {
     return (
