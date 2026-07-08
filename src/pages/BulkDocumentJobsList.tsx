@@ -241,5 +241,6 @@ export default function BulkDocumentJobsList() {
         </div>
       )}
     </div>
+    </DashboardLayout>
   );
 }
