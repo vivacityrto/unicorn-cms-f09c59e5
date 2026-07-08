@@ -71,7 +71,7 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
     queryFn: async () => {
       const { data } = await supabase
         .from('tenant_sharepoint_settings')
-        .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, root_name, is_enabled, validation_status')
+        .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, root_name, is_enabled, validation_status, governance_folder_item_id, governance_folder_url, governance_folder_name')
         .eq('tenant_id', tenantId)
         .maybeSingle();
       return data;
