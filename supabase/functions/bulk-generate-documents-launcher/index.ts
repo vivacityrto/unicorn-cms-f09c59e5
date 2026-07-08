@@ -120,23 +120,58 @@ Deno.serve(async (req: Request) => {
         return json({ error: 'create_failed', status: error.code, details: error.message }, 400);
       }
       const jobId = data as string;
-
-      // Fire-and-forget initial worker invocation. Don't await.
-      const workerUrl = `${SUPABASE_URL}/functions/v1/bulk-generate-documents-worker`;
-      fetch(workerUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-caller-authorization': authHeader,
-          // Edge function needs *some* Authorization header to satisfy the
-          // gateway; anon key is fine because the worker validates the caller
-          // via x-caller-authorization internally.
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ job_id: jobId }),
-      }).catch((e) => console.error('[launcher] worker fire-and-forget failed (job still created)', e));
-
+      kickoffWorker(jobId, authHeader);
       return json({ job_id: jobId });
+    }
+
+    if (parsed.action === 'preview') {
+      if (!parsed.scope) return json({ error: 'scope is required for preview' }, 400);
+      const { data, error } = await supabase.rpc('preview_bulk_document_job', {
+        p_scope: parsed.scope,
+        p_tenant_ids: parsed.tenant_ids ?? null,
+        p_package_ids: parsed.package_ids ?? null,
+        p_stage_ids: parsed.stage_ids ?? null,
+        p_document_ids: parsed.document_ids ?? null,
+      });
+      if (error) {
+        console.error('[launcher] preview_bulk_document_job error', error);
+        return json({ error: 'preview_failed', status: error.code, details: error.message }, 400);
+      }
+      const row = Array.isArray(data) ? data[0] ?? null : data;
+      return json(row);
+    }
+
+    if (parsed.action === 'create_targeted') {
+      if (!parsed.selections || parsed.selections.length === 0) {
+        return json({ error: 'selections is required for create_targeted' }, 400);
+      }
+      const { data, error } = await supabase.rpc('create_targeted_bulk_document_job', {
+        p_selections: parsed.selections as unknown as never,
+        p_document_ids: parsed.document_ids ?? undefined,
+      });
+      if (error) {
+        console.error('[launcher] create_targeted_bulk_document_job error', error);
+        return json({ error: 'create_targeted_failed', status: error.code, details: error.message }, 400);
+      }
+      const jobId = data as string;
+      kickoffWorker(jobId, authHeader);
+      return json({ job_id: jobId });
+    }
+
+    if (parsed.action === 'preview_targeted') {
+      if (!parsed.selections || parsed.selections.length === 0) {
+        return json({ error: 'selections is required for preview_targeted' }, 400);
+      }
+      const { data, error } = await supabase.rpc('preview_targeted_bulk_document_job', {
+        p_selections: parsed.selections as unknown as never,
+        p_document_ids: parsed.document_ids ?? undefined,
+      });
+      if (error) {
+        console.error('[launcher] preview_targeted_bulk_document_job error', error);
+        return json({ error: 'preview_targeted_failed', status: error.code, details: error.message }, 400);
+      }
+      const row = Array.isArray(data) ? data[0] ?? null : data;
+      return json(row);
     }
 
     if (parsed.action === 'preview') {
