@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +20,19 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, ChevronRight, Loader2, RefreshCcw, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Loader2,
+  RefreshCcw,
+  SkipForward,
+  X,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { format } from "date-fns";
 import {
   JobStatusPill,
@@ -68,6 +80,7 @@ type Item = {
   outcome: unknown;
   started_at: string | null;
   finished_at: string | null;
+  leased_at: string | null;
   lease_expires_at: string | null;
 };
 
@@ -125,7 +138,7 @@ export default function BulkDocumentJobProgress() {
       const { data, error } = await supabase
         .from("bulk_document_job_items")
         .select(
-          "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at, lease_expires_at",
+          "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at, leased_at, lease_expires_at",
         )
         .eq("job_id", jobId!)
         .order("id", { ascending: true });
@@ -197,18 +210,8 @@ export default function BulkDocumentJobProgress() {
     });
   }, [items, tenantNames]);
 
-  useEffect(() => {
-    // Auto-open groups that have any non-generated, non-skipped items on load.
-    if (Object.keys(openTenants).length > 0) return;
-    if (grouped.length === 0) return;
-    const auto: Record<number, boolean> = {};
-    for (const [tid, list] of grouped) {
-      if (list.some((i) => i.state === "failed" || i.state === "leased" || i.state === "pending")) {
-        auto[tid] = true;
-      }
-    }
-    if (Object.keys(auto).length > 0) setOpenTenants(auto);
-  }, [grouped, openTenants]);
+
+
 
   const onCancel = async () => {
     if (!jobId) return;
@@ -297,6 +300,30 @@ export default function BulkDocumentJobProgress() {
   ).length;
   const canRetry = eligibleRetry > 0 || isStalled;
 
+  // Currently-generating banner data (client-side; no new query).
+  const leasedNow = useMemo(
+    () =>
+      items
+        .filter((i) => i.state === "leased" && i.leased_at)
+        .sort(
+          (a, b) =>
+            new Date(a.leased_at!).getTime() - new Date(b.leased_at!).getTime(),
+        ),
+    [items],
+  );
+  const activeItem = leasedNow[0];
+  const showActive = isRunning && !!activeItem;
+
+  // Overall progress segments (authoritative counters from job row).
+  const total = Math.max(0, job.total_items);
+  const gCount = Math.max(0, job.generated_count);
+  const sCount = Math.max(0, job.skipped_count);
+  const fCount = Math.max(0, job.failed_count);
+  const doneCount = Math.min(total, gCount + sCount + fCount);
+  const pCount = Math.max(0, total - doneCount);
+  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+  const seg = (n: number) => (total > 0 ? (n / total) * 100 : 0);
+
   return (
     <DashboardLayout>
     <div className="p-6 space-y-6 animate-fade-in">
@@ -361,16 +388,80 @@ export default function BulkDocumentJobProgress() {
         </div>
       </div>
 
+      {/* Overall progress bar */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Overall progress</span>
+          <span className="font-medium text-foreground">
+            {pct}% · {doneCount.toLocaleString()}/{total.toLocaleString()}
+          </span>
+        </div>
+        <SegmentedBar
+          height={10}
+          segments={[
+            { pct: seg(gCount), className: "bg-emerald-500" },
+            { pct: seg(sCount), className: "bg-slate-400" },
+            { pct: seg(fCount), className: "bg-red-500" },
+            { pct: seg(pCount), className: "bg-blue-500" },
+          ]}
+        />
+      </div>
+
+      {/* Currently generating */}
+      {showActive && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 flex items-center gap-3 animate-fade-in">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inset-0 rounded-full bg-blue-500 opacity-75 animate-ping" />
+            <span className="relative rounded-full bg-blue-500 h-2.5 w-2.5" />
+          </span>
+          <Loader2 className="h-4 w-4 animate-spin text-blue-700" />
+          <div className="text-sm min-w-0 flex-1">
+            <div className="text-blue-900 truncate">
+              <span className="font-medium">Generating:</span>{" "}
+              {tenantNames?.get(activeItem.tenant_id) ??
+                `Tenant #${activeItem.tenant_id}`}{" "}
+              —{" "}
+              {documentTitles?.get(activeItem.document_id) ??
+                `Document #${activeItem.document_id}`}
+            </div>
+            {leasedNow.length > 1 && (
+              <div className="text-xs text-blue-700/80">
+                + {leasedNow.length - 1} more in this batch
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Summary strip */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <SummaryTile label="Total" value={job.total_items} />
-        <SummaryTile label="Generated" value={job.generated_count} tone="emerald" />
-        <SummaryTile label="Skipped" value={job.skipped_count} tone="slate" />
-        <SummaryTile label="Failed" value={job.failed_count} tone="red" />
+        <SummaryTile
+          label="Generated"
+          value={job.generated_count}
+          tone="emerald"
+          icon={CheckCircle2}
+          percent={total > 0 ? Math.round((gCount / total) * 100) : undefined}
+        />
+        <SummaryTile
+          label="Skipped"
+          value={job.skipped_count}
+          tone="slate"
+          icon={SkipForward}
+          percent={total > 0 ? Math.round((sCount / total) * 100) : undefined}
+        />
+        <SummaryTile
+          label="Failed"
+          value={job.failed_count}
+          tone="red"
+          icon={XCircle}
+          percent={total > 0 ? Math.round((fCount / total) * 100) : undefined}
+        />
         <SummaryTile
           label="Duration"
           value={formatDuration(job.started_at, job.finished_at)}
           isString
+          icon={Clock}
         />
       </div>
 
@@ -421,25 +512,48 @@ export default function BulkDocumentJobProgress() {
                           {list.length} item{list.length === 1 ? "" : "s"}
                         </span>
                       </div>
-                      <div className="text-xs flex items-center gap-3">
-                        {generated > 0 && (
-                          <span className="text-emerald-700">
-                            {generated} generated
-                          </span>
-                        )}
-                        {skipped > 0 && (
-                          <span className="text-slate-600">
-                            {skipped} skipped
-                          </span>
-                        )}
-                        {failed > 0 && (
-                          <span className="text-red-700">{failed} failed</span>
-                        )}
-                        {pending > 0 && (
-                          <span className="text-blue-700">
-                            {pending} pending
-                          </span>
-                        )}
+                      <div
+                        className="flex items-center gap-3"
+                        title={`generated: ${generated} · skipped: ${skipped} · failed: ${failed} · pending: ${pending}`}
+                      >
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {generated + skipped + failed}/{list.length}
+                        </span>
+                        <div className="w-24">
+                          <SegmentedBar
+                            height={6}
+                            segments={[
+                              {
+                                pct:
+                                  list.length > 0
+                                    ? (generated / list.length) * 100
+                                    : 0,
+                                className: "bg-emerald-500",
+                              },
+                              {
+                                pct:
+                                  list.length > 0
+                                    ? (skipped / list.length) * 100
+                                    : 0,
+                                className: "bg-slate-400",
+                              },
+                              {
+                                pct:
+                                  list.length > 0
+                                    ? (failed / list.length) * 100
+                                    : 0,
+                                className: "bg-red-500",
+                              },
+                              {
+                                pct:
+                                  list.length > 0
+                                    ? (pending / list.length) * 100
+                                    : 0,
+                                className: "bg-blue-500",
+                              },
+                            ]}
+                          />
+                        </div>
                       </div>
                     </button>
                   </CollapsibleTrigger>
@@ -486,13 +600,17 @@ function SummaryTile({
   value,
   tone,
   isString,
+  icon: Icon,
+  percent,
 }: {
   label: string;
   value: number | string;
   tone?: "emerald" | "slate" | "red";
   isString?: boolean;
+  icon?: LucideIcon;
+  percent?: number;
 }) {
-  const toneCls =
+  const toneText =
     tone === "emerald"
       ? "text-emerald-700"
       : tone === "red"
@@ -500,12 +618,53 @@ function SummaryTile({
         : tone === "slate"
           ? "text-slate-700"
           : "";
+  const toneBg =
+    tone === "emerald"
+      ? "bg-emerald-50 border-emerald-200"
+      : tone === "red"
+        ? "bg-red-50 border-red-200"
+        : tone === "slate"
+          ? "bg-slate-50 border-slate-200"
+          : "";
   return (
-    <div className="rounded-md border p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`text-xl font-semibold ${toneCls}`}>
+    <div className={`rounded-md border p-3 ${toneBg}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        {Icon && <Icon className={`h-4 w-4 ${toneText || "text-muted-foreground"}`} />}
+      </div>
+      <div className={`text-xl font-semibold ${toneText}`}>
         {isString ? value : (value as number).toLocaleString()}
       </div>
+      {typeof percent === "number" && (
+        <div className="text-[11px] text-muted-foreground mt-0.5">
+          {percent}% of total
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SegmentedBar({
+  height,
+  segments,
+}: {
+  height: number;
+  segments: Array<{ pct: number; className: string }>;
+}) {
+  return (
+    <div
+      className="w-full flex overflow-hidden rounded-full bg-muted"
+      style={{ height }}
+    >
+      {segments.map((s, i) =>
+        s.pct > 0 ? (
+          <div
+            key={i}
+            className={s.className}
+            style={{ width: `${s.pct}%`, height: "100%" }}
+          />
+        ) : null,
+      )}
     </div>
   );
 }
