@@ -93,6 +93,8 @@ export function TargetedMode({ tenants }: Props) {
   const [documentIds, setDocumentIds] = useState<number[]>([]);
   const [remediateTenantId, setRemediateTenantId] = useState<number | null>(null);
   const [showItemized, setShowItemized] = useState(false);
+  const [itemizedModalOpen, setItemizedModalOpen] = useState(false);
+
 
   const [preview, setPreview] = useState<PreviewRow | null>(null);
   const [previewStale, setPreviewStale] = useState(true);
