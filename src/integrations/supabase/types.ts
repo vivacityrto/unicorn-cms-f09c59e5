@@ -68035,6 +68035,18 @@ export type Database = {
         }[]
       }
       get_audit_report: { Args: { p_audit_id: number }; Returns: Json }
+      get_bulk_generate_client_tree: {
+        Args: { p_tenant_ids: number[] }
+        Returns: {
+          package_id: number
+          package_instance_id: number
+          package_name: string
+          stage_id: number
+          stage_name: string
+          templated_doc_count: number
+          tenant_id: number
+        }[]
+      }
       get_client_eos_overview: { Args: { p_client_id: string }; Returns: Json }
       get_client_package_dashboard: {
         Args: { p_package_instance_id?: number; p_tenant_id: number }
