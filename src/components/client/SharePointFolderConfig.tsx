@@ -192,6 +192,19 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
     fetchSettings();
   }, [fetchSettings]);
 
+  // Fire-and-forget live Graph verification. Refreshes the cached
+  // shared_live_status / governance_live_status columns for this tenant so
+  // subsequent renders (and other consumers) see up-to-date state.
+  useEffect(() => {
+    supabase.functions
+      .invoke('check-tenant-sharepoint-liveness', { body: { tenant_ids: [tenantId] } })
+      .then(({ error }) => {
+        if (error) {
+          console.warn('[SharePointFolderConfig] liveness refresh failed:', error.message);
+        }
+      });
+  }, [tenantId]);
+
   const validateUrl = (url: string): boolean => {
     if (!url) {
       toast({ title: 'URL required', description: 'Please enter a SharePoint folder link.', variant: 'destructive' });
