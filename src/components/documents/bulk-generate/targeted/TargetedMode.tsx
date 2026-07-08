@@ -468,7 +468,8 @@ export function TargetedMode({ tenants }: Props) {
                   stageCount={byTenant.get(t.id)?.length ?? 0}
                   onFix={() => setRemediateTenantId(t.id)}
                   onViewConfig={() => setViewConfigTenantId(t.id)}
-                />)}
+                />
+              ))}
             </ul>
           )}
         </div>
