@@ -397,7 +397,7 @@ export default function BulkDocumentJobProgress() {
                 <RefreshCcw className="h-4 w-4" />
               )}
               Retry Failed &amp; Pending
-              {eligibleRetry > 0 ? ` (${eligibleRetry})` : ""}
+              {remainingWork > 0 ? ` (${remainingWork})` : ""}
             </Button>
           )}
         </div>
