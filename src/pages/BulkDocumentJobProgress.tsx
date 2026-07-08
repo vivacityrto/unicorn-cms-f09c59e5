@@ -802,13 +802,13 @@ function RetryDialog({
 
   const itemsKey = items.map((i) => i.id).join(",");
   // Reset selection whenever the dialog opens or the eligible set changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useMemo(() => {
+  useEffect(() => {
     if (open) {
       const next: Record<number, boolean> = {};
       for (const it of items) next[it.id] = true;
       setChecked(next);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, itemsKey]);
 
   const grouped = useMemo(() => {
