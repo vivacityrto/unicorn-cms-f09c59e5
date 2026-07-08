@@ -555,6 +555,15 @@ serve(async (req) => {
       }
     }
 
+    if (sharedFolderItemId && sharedFolderName) {
+      try {
+        await ensureFolder(accessToken, driveId, `${folderPath}/${sharedFolderName}`, "- Uploads");
+        console.log("[provision-sp] Uploads subfolder created inside", sharedFolderName);
+      } catch (e) {
+        console.error("[provision-sp] Failed to create Uploads subfolder:", e);
+      }
+    }
+
     // ── Apply seed rules ──
     let seedResult = { linksCreated: 0, filesCopied: 0, errors: [] as string[] };
     const seedRules = (template?.seed_rules as SeedRule[]) || [];

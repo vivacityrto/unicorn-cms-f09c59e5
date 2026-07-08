@@ -471,10 +471,11 @@ export function buildClientFolderName(
   name: string,
   options?: BuildClientFolderNameOptions,
 ): string {
-  const invalidRtoPatterns = ['', 'tba', 'replacing:'];
+  const invalidRtoPatterns = ['tba', 'replacing:'];
+  const trimmedRtoId = rtoId?.trim() ?? '';
   const hasValidRtoId =
-    !!rtoId &&
-    !invalidRtoPatterns.some((p) => rtoId.trim().toLowerCase().startsWith(p));
+    trimmedRtoId !== '' &&
+    !invalidRtoPatterns.some((p) => trimmedRtoId.toLowerCase().startsWith(p));
 
   const displayName = (legalName?.trim() || name).trim();
   const isKickStart = options?.isKickStart === true;
