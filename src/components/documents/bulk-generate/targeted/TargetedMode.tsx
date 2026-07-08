@@ -502,8 +502,8 @@ export function TargetedMode({ tenants }: Props) {
                     </div>
                     <div className="p-2 space-y-2">
                       {Array.from(byPkg.entries()).map(([pkgInstanceId, stages]) => (
-                        <div key={pkgInstanceId} className="text-xs">
-                          <div className="font-medium py-1 px-1 text-slate-700">
+                        <div key={pkgInstanceId} className="text-xs min-w-0">
+                          <div className="font-medium py-1 px-1 text-slate-700 truncate" title={stages[0].package_name}>
                             {stages[0].package_name}
                           </div>
                           <div className="pl-3 space-y-1">
