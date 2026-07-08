@@ -104,6 +104,7 @@ Deno.serve(async (req: Request) => {
   const deliverUrl = `${SUPABASE_URL}/functions/v1/deliver-governance-document`;
   const provisionUrl = `${SUPABASE_URL}/functions/v1/provision-tenant-sharepoint-folder`;
   const verifyUrl = `${SUPABASE_URL}/functions/v1/verify-compliance-folder`;
+  const livenessUrl = `${SUPABASE_URL}/functions/v1/check-tenant-sharepoint-liveness`;
   const selfUrl = `${SUPABASE_URL}/functions/v1/bulk-generate-documents-worker`;
 
   // ── Helpers ────────────────────────────────────────────────────────────
