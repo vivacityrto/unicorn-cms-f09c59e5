@@ -104,6 +104,7 @@ Deno.serve(async (req: Request) => {
   const deliverUrl = `${SUPABASE_URL}/functions/v1/deliver-governance-document`;
   const provisionUrl = `${SUPABASE_URL}/functions/v1/provision-tenant-sharepoint-folder`;
   const verifyUrl = `${SUPABASE_URL}/functions/v1/verify-compliance-folder`;
+  const livenessUrl = `${SUPABASE_URL}/functions/v1/check-tenant-sharepoint-liveness`;
   const selfUrl = `${SUPABASE_URL}/functions/v1/bulk-generate-documents-worker`;
 
   // ── Helpers ────────────────────────────────────────────────────────────
@@ -144,36 +145,78 @@ Deno.serve(async (req: Request) => {
     const cached = bootstrapCache.get(tenantId);
     if (cached) return cached;
 
-    const { data: settings, error: sErr } = await supabaseService
-      .from('tenant_sharepoint_settings')
-      .select('provisioning_status, validation_status, governance_folder_item_id')
-      .eq('tenant_id', tenantId)
-      .maybeSingle();
-
-    if (sErr) {
+    // 1. Live liveness probe — replaces the previous DB-flag-only check.
+    //    Uses the caller's forwarded JWT (staff-gated, same as provision/verify).
+    let shared: 'ok' | 'missing' | 'unconfigured' | 'error';
+    let governance: 'ok' | 'missing' | 'unconfigured' | 'error';
+    let livenessError: string | null = null;
+    try {
+      const resp = await fetch(livenessUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: callerAuth!,
+        },
+        body: JSON.stringify({ tenant_ids: [tenantId] }),
+      });
+      if (!resp.ok) {
+        const bodyText = (await resp.text()).slice(0, 2000);
+        const entry: BootstrapCacheEntry =
+          resp.status === 401
+            ? { ok: false, transient: false, errorCode: 'auth_expired', errorMessage: bodyText }
+            : { ok: false, transient: true, errorCode: 'liveness_check_failed', errorMessage: bodyText };
+        bootstrapCache.set(tenantId, entry);
+        return entry;
+      }
+      const payload = await resp.json().catch(() => null) as
+        | { results?: Array<{ tenant_id: number; shared: string; governance: string; error: string | null }> }
+        | null;
+      const row = payload?.results?.[0];
+      if (!row) {
+        const entry: BootstrapCacheEntry = {
+          ok: false,
+          transient: true,
+          errorCode: 'liveness_check_failed',
+          errorMessage: 'Empty results from check-tenant-sharepoint-liveness',
+        };
+        bootstrapCache.set(tenantId, entry);
+        return entry;
+      }
+      shared = row.shared as typeof shared;
+      governance = row.governance as typeof governance;
+      livenessError = row.error;
+    } catch (e) {
       const entry: BootstrapCacheEntry = {
         ok: false,
         transient: true,
-        errorCode: 'settings_read_failed',
-        errorMessage: sErr.message,
+        errorCode: 'liveness_check_failed',
+        errorMessage: e instanceof Error ? e.message : String(e),
       };
       bootstrapCache.set(tenantId, entry);
       return entry;
     }
 
-    const needsProvision =
-      !settings ||
-      settings.provisioning_status !== 'success' ||
-      settings.validation_status !== 'valid';
-
-    if (needsProvision) {
+    // 2. Shared folder branch.
+    if (shared === 'error') {
+      const entry: BootstrapCacheEntry = {
+        ok: false,
+        transient: true,
+        errorCode: 'settings_read_failed',
+        errorMessage: livenessError ?? 'shared liveness error',
+      };
+      bootstrapCache.set(tenantId, entry);
+      return entry;
+    }
+    if (shared === 'missing' || shared === 'unconfigured') {
+      const body: Record<string, unknown> = { tenant_id: tenantId };
+      if (shared === 'missing') body.force = true;
       const resp = await fetch(provisionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: callerAuth!,
         },
-        body: JSON.stringify({ tenant_id: tenantId }),
+        body: JSON.stringify(body),
       });
       if (!resp.ok) {
         const bodyText = (await resp.text()).slice(0, 2000);
@@ -184,17 +227,21 @@ Deno.serve(async (req: Request) => {
         bootstrapCache.set(tenantId, entry);
         return entry;
       }
-      await resp.text().catch(() => {}); // consume body
+      await resp.text().catch(() => {});
     }
 
-    // Re-read to check governance_folder_item_id after any provisioning
-    const { data: settings2 } = await supabaseService
-      .from('tenant_sharepoint_settings')
-      .select('governance_folder_item_id')
-      .eq('tenant_id', tenantId)
-      .maybeSingle();
-
-    if (!settings2?.governance_folder_item_id) {
+    // 3. Governance folder branch.
+    if (governance === 'error') {
+      const entry: BootstrapCacheEntry = {
+        ok: false,
+        transient: true,
+        errorCode: 'settings_read_failed',
+        errorMessage: livenessError ?? 'governance liveness error',
+      };
+      bootstrapCache.set(tenantId, entry);
+      return entry;
+    }
+    if (governance === 'missing' || governance === 'unconfigured') {
       const resp = await fetch(verifyUrl, {
         method: 'POST',
         headers: {
@@ -219,6 +266,7 @@ Deno.serve(async (req: Request) => {
     bootstrapCache.set(tenantId, entry);
     return entry;
   }
+
 
   async function ensureRepair(tenantId: number): Promise<RepairCacheEntry> {
     const cached = repairCache.get(tenantId);

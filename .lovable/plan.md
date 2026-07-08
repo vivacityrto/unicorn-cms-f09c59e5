@@ -1,61 +1,51 @@
-## Cron scheduling — reclaim + purge only
+## Fix `ensureSharepoint()` to use live SharePoint check
 
-Scope confirmed: two `cron.schedule` calls, no worker drive-queue cron. Both target pure in-database RPCs, so this is **not** an HTTP-invoking cron and does **not** need `net.http_post`, project URL, or anon key — the previous "use `supabase--insert` because it needs URL/anon key" note only applies to HTTP-fanout crons (like `sync-outlook-calendar-cron`). Here, `supabase--insert` is still the right tool (it's DML against `cron.job` via `cron.schedule`, not DDL), but purely because the migration tool is reserved for schema/RLS/function changes — there are no user-specific tokens embedded.
+Replace the DB-flag-only bootstrap logic in `supabase/functions/bulk-generate-documents-worker/index.ts` (lines 143–221) with a live liveness probe before any provisioning decision.
 
-### Grant check (verified live)
+### New flow inside `ensureSharepoint(tenantId)`
 
-Both functions are owned by `postgres`; `has_function_privilege('postgres', ..., 'EXECUTE') = true` for each. `pg_cron` executes jobs as the `postgres` role, so **no grant changes are required**.
+1. **Cache check** — unchanged. Return `bootstrapCache.get(tenantId)` if present.
 
-- `public.reclaim_stale_bulk_document_locks(p_max_attempts integer, p_stall_minutes integer)` — defaults `5` / `120`, call with no args.
-- `public.purge_bulk_document_job_items(p_days integer)` — call with `30`.
+2. **Liveness call** — before touching `tenant_sharepoint_settings`, POST to `${SUPABASE_URL}/functions/v1/check-tenant-sharepoint-liveness` with:
+   - Headers: `Content-Type: application/json`, `Authorization: callerAuth` (same forwarding as existing provision/verify calls).
+   - Body: `{ tenant_ids: [tenantId] }`.
+   - On non-2xx: cache and return
+     - `{ ok: false, transient: false, errorCode: 'auth_expired', errorMessage }` if `status === 401`
+     - `{ ok: false, transient: true, errorCode: 'liveness_check_failed', errorMessage }` otherwise (new error code).
+   - Parse `results[0]` → `{ shared, governance }` where each is `'ok' | 'missing' | 'unconfigured' | 'error'`. If `results[0]` is absent, treat as `liveness_check_failed` transient.
 
-### Exact `cron.schedule` calls to apply
+3. **Shared folder branch** on `results[0].shared`:
+   - `'ok'` → no action.
+   - `'missing'` → POST `provision-tenant-sharepoint-folder` with `{ tenant_id: tenantId, force: true }` (force required because that function no-ops when `provisioning_status === 'success'`).
+   - `'unconfigured'` → POST `provision-tenant-sharepoint-folder` with `{ tenant_id: tenantId }` (no force).
+   - `'error'` → cache and return `{ ok: false, transient: true, errorCode: 'settings_read_failed', errorMessage: liveness.error ?? 'shared liveness error' }` (mirrors the current transient-settings path so `reclaim_stale_bulk_document_locks` retries).
+   - Non-2xx from provision → same 401 / non-401 classification as today (`auth_expired` / `provision_failed`).
 
-```sql
--- 1) Reclaim stuck-leased items and stall long-idle jobs, every 5 minutes.
-SELECT cron.schedule(
-  'bulk-documents-reclaim-locks',
-  '*/5 * * * *',
-  $$SELECT public.reclaim_stale_bulk_document_locks();$$
-);
+4. **Governance folder branch** on `results[0].governance`:
+   - `'ok'` → no action.
+   - `'missing'` or `'unconfigured'` → POST `verify-compliance-folder` with `{ tenant_id: tenantId }` (this function does its own live Graph check and self-heals a stale `governance_folder_item_id`).
+   - `'error'` → same transient `settings_read_failed`-style entry as shared `'error'` above.
+   - Non-2xx from verify → same 401 / non-401 classification as today (`auth_expired` / `verify_failed`).
 
--- 2) Purge finished bulk_document_job_items older than 30 days, once daily at 03:15 UTC.
-SELECT cron.schedule(
-  'bulk-documents-purge-items',
-  '15 3 * * *',
-  $$SELECT public.purge_bulk_document_job_items(30);$$
-);
-```
+5. **Success** — cache and return `{ ok: true }`.
 
-Both `cron.schedule` calls are idempotent by job name (re-running replaces the schedule/command for the same name). If either name already exists it will be updated in place.
+### Removed
+- The `tenant_sharepoint_settings` `.select('provisioning_status, validation_status, governance_folder_item_id')` read at lines 147–162.
+- The `needsProvision` derivation at lines 164–168.
+- The re-read of `governance_folder_item_id` at lines 191–197.
 
-Applied via `supabase--insert` in a single call. Pre-check `pg_cron` + `pg_net` extensions are already enabled (they are — used by existing crons like `sync-outlook-calendar-cron`); if `pg_cron` were somehow missing I'd stop and raise it separately rather than enabling it inside this change.
+The `sErr` transient-read path disappears with the read; the equivalent transient error is now surfaced from either the liveness call (`liveness_check_failed`) or `'error'` states on the liveness result (`settings_read_failed`).
 
-### Verification after apply
+### Unchanged
+- `BootstrapCacheEntry` shape and semantics.
+- `bootstrapCache` keyed by `tenantId`, populated once per invocation.
+- 401 → `{ ok: false, transient: false, errorCode: 'auth_expired' }` on every downstream fetch.
+- Non-401 provision failure → `provision_failed` transient; non-401 verify failure → `verify_failed` transient.
+- All other functions (`processItem`, `ensureRepair`, `record`, etc.) and callers.
+- No schema, RLS, or migration changes.
 
-```sql
-SELECT jobid, jobname, schedule, command, active
-FROM cron.job
-WHERE jobname IN ('bulk-documents-reclaim-locks','bulk-documents-purge-items');
-```
+### Files
+- `supabase/functions/bulk-generate-documents-worker/index.ts` — rewrite the body of `ensureSharepoint` (approx. lines 143–221).
 
-Expect two rows, `active = true`, commands matching above. Then wait ≥5 minutes and check `cron.job_run_details` for a `succeeded` run of `bulk-documents-reclaim-locks` before signing off. Purge won't fire until 03:15 UTC — verified by inspecting the row, not by waiting.
-
-### Accepted tradeoff (recorded, not mitigated here)
-
-If a worker's self-reinvocation chain dies entirely mid-job, `reclaim_stale_bulk_document_locks` will:
-- reset individually stuck-leased items back to `pending` after their lease expires, and
-- mark the job `stalled` once it hits the 2-hour no-progress threshold,
-
-but **nothing will re-lease that pending work** until a human retriggers it. The reason this cron doesn't cover that gap is that the worker chain requires a real staff JWT to satisfy `repair_package_instance_stages` + SharePoint delivery auth (per PR-D's Option A), and `pg_cron` has no user session to mint one from. Widening those four in-production functions to trust `service_role` is out of scope for this change.
-
-### Follow-up flag (do not build now)
-
-The upcoming bulk-documents progress UI must expose a **"resume stalled job"** action that retriggers the worker under the viewing user's JWT. That's the actual mitigation for the tradeoff above — noted here so it doesn't get lost, not implemented in this PR.
-
-### Rollback
-
-```sql
-SELECT cron.unschedule('bulk-documents-reclaim-locks');
-SELECT cron.unschedule('bulk-documents-purge-items');
-```
+### Verification (post-implementation)
+- Deploy is automatic. Confirm with an isolated `curl` of `check-tenant-sharepoint-liveness` for a known tenant, then run a targeted bulk-generate job whose tenant has a governance folder deleted in SharePoint — the worker should now call `verify-compliance-folder` instead of skipping, and delivery should succeed on retry.
