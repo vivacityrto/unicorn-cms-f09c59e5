@@ -49,12 +49,10 @@ export function AssignPackageDialog({ open, onOpenChange, tenantId, tenantName, 
     if (!selectedPackageId) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from('package_instances').insert({
-        tenant_id: tenantId,
-        package_id: parseInt(selectedPackageId),
-        is_complete: false,
-        start_date: new Date().toISOString().split('T')[0],
-        clo_id: 0,
+      const { error } = await supabase.rpc('start_client_package', {
+        p_tenant_id: tenantId,
+        p_package_id: parseInt(selectedPackageId, 10),
+        p_assigned_csc_user_id: null,
       });
       if (error) throw error;
 

@@ -222,12 +222,10 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       // Create package instance(s)
       if (selectedPackageId && newTenantId) {
         try {
-          const { error: piError } = await supabase.from('package_instances').insert({
-            tenant_id: newTenantId,
-            package_id: parseInt(selectedPackageId),
-            is_complete: false,
-            start_date: new Date().toISOString().split('T')[0],
-            clo_id: 0,
+          const { error: piError } = await supabase.rpc('start_client_package', {
+            p_tenant_id: newTenantId,
+            p_package_id: parseInt(selectedPackageId, 10),
+            p_assigned_csc_user_id: null,
           });
           if (piError) {
             console.warn('[AddTenant] Package instance creation failed:', piError.message);
@@ -241,12 +239,10 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       // Create accompanying membership instance if selected
       if (selectedMembershipId && newTenantId) {
         try {
-          const { error: memError } = await supabase.from('package_instances').insert({
-            tenant_id: newTenantId,
-            package_id: parseInt(selectedMembershipId),
-            is_complete: false,
-            start_date: new Date().toISOString().split('T')[0],
-            clo_id: 0,
+          const { error: memError } = await supabase.rpc('start_client_package', {
+            p_tenant_id: newTenantId,
+            p_package_id: parseInt(selectedMembershipId, 10),
+            p_assigned_csc_user_id: null,
           });
           if (memError) {
             console.warn('[AddTenant] Membership instance creation failed:', memError.message);
