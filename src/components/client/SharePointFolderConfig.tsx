@@ -60,6 +60,9 @@ interface SharePointSettings {
   governance_folder_name: string | null;
   provisioning_status: string | null;
   setup_mode: string | null;
+  shared_live_status: 'ok' | 'missing' | 'unconfigured' | 'error' | null;
+  governance_live_status: 'ok' | 'missing' | 'unconfigured' | 'error' | null;
+  live_checked_at: string | null;
   created_at: string;
   updated_at: string;
 }
