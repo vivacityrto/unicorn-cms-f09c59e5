@@ -638,7 +638,13 @@ export function TargetedMode({ tenants }: Props) {
                   </button>
                   {showItemized && (
                     <div className="max-h-64 overflow-auto border-t">
-                      <table className="w-full text-[11px]">
+                      <table className="w-full text-[11px] table-fixed">
+                        <colgroup>
+                          <col style={{ width: "25%" }} />
+                          <col style={{ width: "25%" }} />
+                          <col style={{ width: "22%" }} />
+                          <col style={{ width: "28%" }} />
+                        </colgroup>
                         <thead className="bg-muted/40 sticky top-0">
                           <tr className="text-left">
                             <th className="px-2 py-1 font-medium">Client</th>
@@ -650,10 +656,10 @@ export function TargetedMode({ tenants }: Props) {
                         <tbody>
                           {itemizedRows.map((r) => (
                             <tr key={r.key} className="border-t">
-                              <td className="px-2 py-1 truncate max-w-[100px]" title={r.tenantName}>{r.tenantName}</td>
-                              <td className="px-2 py-1 truncate max-w-[100px]" title={r.packageName}>{r.packageName}</td>
-                              <td className="px-2 py-1 truncate max-w-[100px]" title={r.stageName}>{r.stageName}</td>
-                              <td className="px-2 py-1 truncate max-w-[120px]" title={r.docTitle}>{r.docTitle}</td>
+                              <td className="px-2 py-1 truncate" title={r.tenantName}>{r.tenantName}</td>
+                              <td className="px-2 py-1 truncate" title={r.packageName}>{r.packageName}</td>
+                              <td className="px-2 py-1 truncate" title={r.stageName}>{r.stageName}</td>
+                              <td className="px-2 py-1 truncate" title={r.docTitle}>{r.docTitle}</td>
                             </tr>
                           ))}
                         </tbody>
