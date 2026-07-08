@@ -300,6 +300,30 @@ export default function BulkDocumentJobProgress() {
   ).length;
   const canRetry = eligibleRetry > 0 || isStalled;
 
+  // Currently-generating banner data (client-side; no new query).
+  const leasedNow = useMemo(
+    () =>
+      items
+        .filter((i) => i.state === "leased" && i.leased_at)
+        .sort(
+          (a, b) =>
+            new Date(a.leased_at!).getTime() - new Date(b.leased_at!).getTime(),
+        ),
+    [items],
+  );
+  const activeItem = leasedNow[0];
+  const showActive = isRunning && !!activeItem;
+
+  // Overall progress segments (authoritative counters from job row).
+  const total = Math.max(0, job.total_items);
+  const gCount = Math.max(0, job.generated_count);
+  const sCount = Math.max(0, job.skipped_count);
+  const fCount = Math.max(0, job.failed_count);
+  const doneCount = Math.min(total, gCount + sCount + fCount);
+  const pCount = Math.max(0, total - doneCount);
+  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+  const seg = (n: number) => (total > 0 ? (n / total) * 100 : 0);
+
   return (
     <DashboardLayout>
     <div className="p-6 space-y-6 animate-fade-in">
