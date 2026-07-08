@@ -27,6 +27,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
+import { cn } from '@/lib/utils';
+
 
 interface SharePointFolderDialogProps {
   open: boolean;
@@ -185,7 +187,7 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setShowBrowser(false); setShowSiteConfig(false); } }}>
-      <DialogContent className={showBrowser ? "sm:max-w-4xl max-h-[85vh] overflow-y-auto" : "sm:max-w-lg max-h-[85vh] overflow-y-auto"}>
+      <DialogContent className={cn("w-[95vw] max-h-[85vh] overflow-y-auto overflow-x-hidden", showBrowser ? "sm:max-w-4xl" : "sm:max-w-lg")}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FolderOpen className="h-5 w-5" />
@@ -380,15 +382,15 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
             {/* Actions */}
             {isProvisioned && folderUrl ? (
               <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Button className="flex-1" variant="outline" asChild>
+                <div className="flex flex-wrap gap-2">
+                  <Button className="flex-1 min-w-[180px]" variant="outline" asChild>
                     <a href={folderUrl} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-4 w-4 mr-2" />
                       Open in SharePoint
                     </a>
                   </Button>
                   <Button
-                    className="flex-1"
+                    className="flex-1 min-w-[180px]"
                     variant={showBrowser ? 'secondary' : 'default'}
                     onClick={() => setShowBrowser(!showBrowser)}
                   >
@@ -397,7 +399,7 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
                   </Button>
                 </div>
                 {showBrowser && (
-                  <div className="mt-4">
+                  <div className="mt-4 min-w-0 overflow-x-auto">
                     <SharePointFileBrowser tenantId={tenantId} />
                   </div>
                 )}
