@@ -20,7 +20,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Play, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Loader2, RefreshCcw, X } from "lucide-react";
 import { format } from "date-fns";
 import {
   JobStatusPill,
@@ -33,7 +33,7 @@ import {
 } from "@/components/documents/bulk-generate/errorCodeLabel";
 import {
   launcherCancel,
-  launcherResume,
+  launcherRetry,
 } from "@/components/documents/bulk-generate/useBulkGenerateLauncher";
 
 type Job = {
