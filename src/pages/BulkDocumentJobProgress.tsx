@@ -512,25 +512,48 @@ export default function BulkDocumentJobProgress() {
                           {list.length} item{list.length === 1 ? "" : "s"}
                         </span>
                       </div>
-                      <div className="text-xs flex items-center gap-3">
-                        {generated > 0 && (
-                          <span className="text-emerald-700">
-                            {generated} generated
-                          </span>
-                        )}
-                        {skipped > 0 && (
-                          <span className="text-slate-600">
-                            {skipped} skipped
-                          </span>
-                        )}
-                        {failed > 0 && (
-                          <span className="text-red-700">{failed} failed</span>
-                        )}
-                        {pending > 0 && (
-                          <span className="text-blue-700">
-                            {pending} pending
-                          </span>
-                        )}
+                      <div
+                        className="flex items-center gap-3"
+                        title={`generated: ${generated} · skipped: ${skipped} · failed: ${failed} · pending: ${pending}`}
+                      >
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {generated + skipped + failed}/{list.length}
+                        </span>
+                        <div className="w-24">
+                          <SegmentedBar
+                            height={6}
+                            segments={[
+                              {
+                                pct:
+                                  list.length > 0
+                                    ? (generated / list.length) * 100
+                                    : 0,
+                                className: "bg-emerald-500",
+                              },
+                              {
+                                pct:
+                                  list.length > 0
+                                    ? (skipped / list.length) * 100
+                                    : 0,
+                                className: "bg-slate-400",
+                              },
+                              {
+                                pct:
+                                  list.length > 0
+                                    ? (failed / list.length) * 100
+                                    : 0,
+                                className: "bg-red-500",
+                              },
+                              {
+                                pct:
+                                  list.length > 0
+                                    ? (pending / list.length) * 100
+                                    : 0,
+                                className: "bg-blue-500",
+                              },
+                            ]}
+                          />
+                        </div>
                       </div>
                     </button>
                   </CollapsibleTrigger>
