@@ -228,22 +228,22 @@ export default function BulkDocumentJobProgress() {
     }
   };
 
-  const onResume = async () => {
+  const onRetry = async () => {
     if (!jobId) return;
-    setResuming(true);
+    setRetrying(true);
     try {
-      await launcherResume(jobId);
-      toast({ title: "Job resumed" });
+      await launcherRetry(jobId);
+      toast({ title: "Retry queued" });
       qc.invalidateQueries({ queryKey: ["bulk-document-job", jobId] });
       qc.invalidateQueries({ queryKey: ["bulk-document-job-items", jobId] });
     } catch (e) {
       toast({
-        title: "Resume failed",
+        title: "Retry failed",
         description: (e as Error).message,
         variant: "destructive",
       });
     } finally {
-      setResuming(false);
+      setRetrying(false);
     }
   };
 
