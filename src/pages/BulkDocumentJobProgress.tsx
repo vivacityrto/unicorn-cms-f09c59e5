@@ -440,7 +440,7 @@ export default function BulkDocumentJobProgress() {
           )}
           {canRetry && (
             <Button
-              onClick={onRetry}
+              onClick={() => setRetryDialogOpen(true)}
               disabled={retrying}
               className="gap-2 bg-amber-500 hover:bg-amber-600 text-white"
             >
