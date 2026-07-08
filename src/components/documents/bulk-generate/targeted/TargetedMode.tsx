@@ -458,7 +458,8 @@ export function TargetedMode({ tenants }: Props) {
               ))}
             </ul>
           )}
-        </ScrollArea>
+        </div>
+
       </div>
 
       {/* Middle — package/stage tree of selected tenants */}
