@@ -366,6 +366,16 @@ export default function BulkDocumentJobProgress() {
             <h1 className="text-[22px] font-bold flex items-center gap-3">
               Bulk generation job
               <JobStatusPill status={job.status} />
+              {job.status === "stalled" &&
+              (job.error_summary as { stalled_reason?: string } | null)
+                ?.stalled_reason ? (
+                <span className="text-xs text-muted-foreground font-normal">
+                  {stalledReasonLabel(
+                    (job.error_summary as { stalled_reason?: string })
+                      .stalled_reason as string,
+                  )}
+                </span>
+              ) : null}
               {isPolling && (
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               )}
