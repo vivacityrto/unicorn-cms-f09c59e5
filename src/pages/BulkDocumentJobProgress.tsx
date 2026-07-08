@@ -600,13 +600,17 @@ function SummaryTile({
   value,
   tone,
   isString,
+  icon: Icon,
+  percent,
 }: {
   label: string;
   value: number | string;
   tone?: "emerald" | "slate" | "red";
   isString?: boolean;
+  icon?: LucideIcon;
+  percent?: number;
 }) {
-  const toneCls =
+  const toneText =
     tone === "emerald"
       ? "text-emerald-700"
       : tone === "red"
@@ -614,12 +618,53 @@ function SummaryTile({
         : tone === "slate"
           ? "text-slate-700"
           : "";
+  const toneBg =
+    tone === "emerald"
+      ? "bg-emerald-50 border-emerald-200"
+      : tone === "red"
+        ? "bg-red-50 border-red-200"
+        : tone === "slate"
+          ? "bg-slate-50 border-slate-200"
+          : "";
   return (
-    <div className="rounded-md border p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`text-xl font-semibold ${toneCls}`}>
+    <div className={`rounded-md border p-3 ${toneBg}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        {Icon && <Icon className={`h-4 w-4 ${toneText || "text-muted-foreground"}`} />}
+      </div>
+      <div className={`text-xl font-semibold ${toneText}`}>
         {isString ? value : (value as number).toLocaleString()}
       </div>
+      {typeof percent === "number" && (
+        <div className="text-[11px] text-muted-foreground mt-0.5">
+          {percent}% of total
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SegmentedBar({
+  height,
+  segments,
+}: {
+  height: number;
+  segments: Array<{ pct: number; className: string }>;
+}) {
+  return (
+    <div
+      className="w-full flex overflow-hidden rounded-full bg-muted"
+      style={{ height }}
+    >
+      {segments.map((s, i) =>
+        s.pct > 0 ? (
+          <div
+            key={i}
+            className={s.className}
+            style={{ width: `${s.pct}%`, height: "100%" }}
+          />
+        ) : null,
+      )}
     </div>
   );
 }
