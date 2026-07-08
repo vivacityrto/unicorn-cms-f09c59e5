@@ -243,10 +243,20 @@ export default function BulkDocumentJobProgress() {
     [items],
   );
 
-
-
-
-
+  // Items eligible for retry (failed, cancelled, or leased-expired). Declared
+  // before early returns to keep hook order stable and to satisfy the
+  // onRetryConfirm closure that captures this value.
+  const retryEligibleItems = useMemo(() => {
+    const now = Date.now();
+    return items.filter(
+      (i) =>
+        i.state === "failed" ||
+        i.state === "cancelled" ||
+        (i.state === "leased" &&
+          i.lease_expires_at !== null &&
+          new Date(i.lease_expires_at).getTime() < now),
+    );
+  }, [items]);
 
   const onCancel = async () => {
     if (!jobId) return;
