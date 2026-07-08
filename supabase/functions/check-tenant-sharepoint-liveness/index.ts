@@ -144,7 +144,7 @@ Deno.serve(async (req: Request) => {
   const { data: settingsRows, error: sErr } = await supabaseService
     .from('tenant_sharepoint_settings')
     .select(
-      'tenant_id, drive_id, shared_folder_item_id, governance_folder_item_id, provisioning_status, validation_status',
+      'tenant_id, drive_id, shared_folder_item_id, governance_drive_id, governance_folder_item_id, provisioning_status, validation_status',
     )
     .in('tenant_id', parsed.tenant_ids);
 
@@ -156,6 +156,7 @@ Deno.serve(async (req: Request) => {
     tenant_id: number;
     drive_id: string | null;
     shared_folder_item_id: string | null;
+    governance_drive_id: string | null;
     governance_folder_item_id: string | null;
     provisioning_status: string | null;
     validation_status: string | null;
