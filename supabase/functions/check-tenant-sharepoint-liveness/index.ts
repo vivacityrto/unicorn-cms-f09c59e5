@@ -173,7 +173,7 @@ Deno.serve(async (req: Request) => {
       const row = byTenant.get(tenantId);
 
       // No settings row at all → both folders unconfigured.
-      if (!row || !row.drive_id) {
+      if (!row) {
         return {
           tenant_id: tenantId,
           shared: 'unconfigured',
@@ -186,17 +186,24 @@ Deno.serve(async (req: Request) => {
       // flag says "provisioned" AND an item_id is recorded do we spend a
       // Graph call — otherwise it's unconfigured.
       const has_shared =
-        row.provisioning_status === 'success' ||
-        row.validation_status === 'valid';
-      const has_governance = !!row.governance_folder_item_id;
+        !!row.drive_id &&
+        !!row.shared_folder_item_id &&
+        (row.provisioning_status === 'success' ||
+          row.validation_status === 'valid');
+      // Governance folder lives on a DIFFERENT SharePoint site with its own
+      // drive_id (governance_drive_id). If the item is recorded but the
+      // governance drive is not, treat as 'unconfigured' — the row is
+      // incomplete (legacy) but the item was recorded by an older provisioner.
+      const has_governance =
+        !!row.governance_drive_id && !!row.governance_folder_item_id;
 
       const errs: string[] = [];
 
       let shared: FolderState;
-      if (!has_shared || !row.shared_folder_item_id) {
+      if (!has_shared) {
         shared = 'unconfigured';
       } else {
-        const r = await verifyDriveItem(row.drive_id, row.shared_folder_item_id);
+        const r = await verifyDriveItem(row.drive_id!, row.shared_folder_item_id!);
         shared = r.state;
         if (r.state === 'error' && r.detail) errs.push(`shared:${r.detail}`);
       }
@@ -206,7 +213,7 @@ Deno.serve(async (req: Request) => {
         governance = 'unconfigured';
       } else {
         const r = await verifyDriveItem(
-          row.drive_id,
+          row.governance_drive_id!,
           row.governance_folder_item_id!,
         );
         governance = r.state;
