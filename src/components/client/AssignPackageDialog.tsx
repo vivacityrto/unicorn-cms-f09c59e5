@@ -62,7 +62,11 @@ export function AssignPackageDialog({ open, onOpenChange, tenantId, tenantName, 
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to assign package', variant: 'destructive' });
+      const raw = error?.message ?? '';
+      const description = raw.includes('DUPLICATE_PACKAGE_TYPE')
+        ? 'This client already has an active package of this type. Cancel or complete the existing one before assigning a new one.'
+        : (raw || 'Failed to assign package');
+      toast({ title: 'Error', description, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
