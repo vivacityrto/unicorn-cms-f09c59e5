@@ -563,10 +563,7 @@ function TenantRow({
 }) {
   const needsFix =
     !!liveness &&
-    (liveness.shared_live === false ||
-      liveness.governance_live === false ||
-      !liveness.has_shared ||
-      !liveness.has_governance);
+    (liveness.shared !== "ok" || liveness.governance !== "ok");
 
   return (
     <li className="px-3 py-2 flex items-center gap-2 hover:bg-muted/40">
