@@ -33,7 +33,11 @@ import { useTenantSharepointLiveness, type TenantLiveness } from "../useTenantSh
 import { useTemplatedDocuments } from "../useTemplatedDocuments";
 import { MultiSelect } from "../MultiSelect";
 import { PreviewPanel } from "../PreviewPanel";
-import type { PreviewRow } from "../useBulkGenerateLauncher";
+import {
+  launcherPreviewTargeted,
+  launcherCreateTargeted,
+  type PreviewRow,
+} from "../useBulkGenerateLauncher";
 
 type Tenant = { id: number; name: string | null; rto_name: string | null };
 
