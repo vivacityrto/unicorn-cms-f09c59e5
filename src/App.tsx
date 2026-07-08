@@ -28,6 +28,7 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const ManageDocumentsWrapper = lazy(() => import("./pages/ManageDocumentsWrapper"));
  const BulkDocumentJobsList = lazy(() => import("./pages/BulkDocumentJobsList"));
  const BulkDocumentJobProgress = lazy(() => import("./pages/BulkDocumentJobProgress"));
+ const BulkGenerateNew = lazy(() => import("./pages/BulkGenerateNew"));
  const ManageCategoriesWrapper = lazy(() => import("./pages/ManageCategoriesWrapper"));
  const ManageStagesWrapper = lazy(() => import("./pages/ManageStagesWrapper"));
  const SharePointFolderMapping = lazy(() => import("./pages/admin/SharePointFolderMapping"));
@@ -421,6 +422,14 @@ const App = () => (
                   <ManageDocumentsWrapper />
                 </ProtectedRoute>
               } 
+            />
+            <Route
+              path="/manage-documents/bulk-generate/new"
+              element={
+                <ProtectedRoute>
+                  <BulkGenerateNew />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/manage-documents/bulk-jobs"
