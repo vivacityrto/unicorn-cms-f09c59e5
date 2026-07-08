@@ -560,7 +560,8 @@ export function TargetedMode({ tenants }: Props) {
         <div className="p-3 border-b shrink-0">
           <h3 className="text-sm font-semibold">Documents &amp; launch</h3>
         </div>
-        <ScrollArea className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
+
           <div className="p-3 space-y-4">
             <div>
               <div className="text-xs font-medium mb-1">
