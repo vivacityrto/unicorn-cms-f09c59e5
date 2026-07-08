@@ -313,6 +313,15 @@ export default function BulkDocumentJobProgress() {
         i.lease_expires_at !== null &&
         new Date(i.lease_expires_at).getTime() < nowMs),
   ).length;
+  const remainingWork = items.filter(
+    (i) =>
+      i.state === "pending" ||
+      i.state === "failed" ||
+      i.state === "cancelled" ||
+      (i.state === "leased" &&
+        i.lease_expires_at !== null &&
+        new Date(i.lease_expires_at).getTime() < nowMs),
+  ).length;
   const canRetry = eligibleRetry > 0 || isStalled;
 
   // Currently-generating banner data (client-side; no new query).
@@ -388,7 +397,7 @@ export default function BulkDocumentJobProgress() {
                 <RefreshCcw className="h-4 w-4" />
               )}
               Retry Failed &amp; Pending
-              {eligibleRetry > 0 ? ` (${eligibleRetry})` : ""}
+              {remainingWork > 0 ? ` (${remainingWork})` : ""}
             </Button>
           )}
         </div>
