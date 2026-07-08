@@ -207,6 +207,24 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, job_id: parsed.job_id });
     }
 
+    if (parsed.action === 'skip_items') {
+      if (!parsed.job_id) return json({ error: 'job_id is required for skip_items' }, 400);
+      if (!parsed.item_ids || parsed.item_ids.length === 0) {
+        return json({ error: 'item_ids is required for skip_items' }, 400);
+      }
+      // skip_bulk_document_job_items's gate reads auth.uid(); must run under caller JWT.
+      const { data, error } = await supabase.rpc('skip_bulk_document_job_items', {
+        p_job_id: parsed.job_id,
+        p_item_ids: parsed.item_ids,
+      });
+      if (error) {
+        console.error('[launcher] skip_bulk_document_job_items error', error);
+        return json({ error: 'skip_items_failed', status: error.code, details: error.message }, 400);
+      }
+      return json({ ok: true, moved: (data as number) ?? 0 });
+    }
+
+
     return json({ error: 'unknown action' }, 400);
   } catch (e) {
     console.error('[launcher] unexpected error', e);
