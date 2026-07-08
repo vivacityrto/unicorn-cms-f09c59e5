@@ -435,6 +435,10 @@ Deno.serve(async (req: Request) => {
         timedOut = true;
         break;
       }
+      if (jwtNearExpiry(callerAuth)) {
+        await stallAndRelease('jwt_near_expiry');
+        return json({ worker_id: WORKER_ID, processed, stalled: true });
+      }
       try {
         const bootstrap = await ensureSharepoint(item.tenant_id);
         if (!bootstrap.ok) {
