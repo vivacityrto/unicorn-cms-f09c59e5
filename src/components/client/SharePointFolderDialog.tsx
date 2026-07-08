@@ -22,6 +22,7 @@ import {
   Save,
   Settings2,
   ChevronRight,
+  ShieldCheck,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +41,7 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [provisioning, setProvisioning] = useState(false);
+  const [provisioningGovernance, setProvisioningGovernance] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [showSiteConfig, setShowSiteConfig] = useState(false);
   const [savingSiteConfig, setSavingSiteConfig] = useState(false);
@@ -69,7 +71,7 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
     queryFn: async () => {
       const { data } = await supabase
         .from('tenant_sharepoint_settings')
-        .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, root_name, is_enabled, validation_status')
+        .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, root_name, is_enabled, validation_status, governance_folder_item_id, governance_folder_url, governance_folder_name')
         .eq('tenant_id', tenantId)
         .maybeSingle();
       return data;
@@ -185,6 +187,31 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
     }
   };
 
+  const handleProvisionGovernance = async () => {
+    setProvisioningGovernance(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-compliance-folder', {
+        body: { tenant_id: tenantId },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: 'Governance folder ready',
+        description: `Governance folder verified for ${tenant?.name}.`,
+      });
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['tenant-sharepoint-liveness'] });
+    } catch (err: any) {
+      toast({
+        title: 'Governance provisioning failed',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setProvisioningGovernance(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setShowBrowser(false); setShowSiteConfig(false); } }}>
       <DialogContent className={cn("w-[95vw] max-h-[85vh] overflow-y-auto overflow-x-hidden", showBrowser ? "sm:max-w-4xl" : "sm:max-w-lg")}>
@@ -288,6 +315,61 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
                 </div>
               )}
             </div>
+
+            {/* Governance folder */}
+            <div className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  Governance folder
+                </span>
+                {settings?.governance_folder_item_id ? (
+                  <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Configured
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="gap-1 border-orange-500/40 bg-orange-50 text-orange-800">
+                    <AlertCircle className="h-3 w-3" />
+                    Not provisioned
+                  </Badge>
+                )}
+              </div>
+              {settings?.governance_folder_name && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Folder name</span>
+                  <span className="text-sm truncate max-w-[60%] text-right">{settings.governance_folder_name}</span>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Stored on the governance SharePoint site (separate from the shared client folder). Used for generated governance documents.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {settings?.governance_folder_item_id && settings?.governance_folder_url && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={settings.governance_folder_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open in SharePoint
+                    </a>
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant={settings?.governance_folder_item_id ? 'outline' : 'default'}
+                  onClick={handleProvisionGovernance}
+                  disabled={provisioningGovernance || tenant?.status !== 'active'}
+                >
+                  {provisioningGovernance ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {settings?.governance_folder_item_id ? 'Re-verify governance folder' : 'Provision governance folder'}
+                </Button>
+              </div>
+            </div>
+
+
 
             {/* Site Configuration (collapsible) */}
             <div className="rounded-md border">
