@@ -68947,6 +68947,7 @@ export type Database = {
         Returns: string
       }
       resume_bulk_document_job: { Args: { p_job_id: string }; Returns: boolean }
+      retry_bulk_document_job: { Args: { p_job_id: string }; Returns: boolean }
       retry_failed_generation: {
         Args: { p_generated_document_id: string }
         Returns: Json
@@ -69444,6 +69445,10 @@ export type Database = {
         Returns: Json
       }
       stage_instance_tenant_id: { Args: { p_si_id: number }; Returns: number }
+      stall_bulk_document_job: {
+        Args: { p_job_id: string; p_reason: string }
+        Returns: boolean
+      }
       standardize_code_value: { Args: { input_label: string }; Returns: string }
       start_client_package: {
         Args: {
