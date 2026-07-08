@@ -208,8 +208,7 @@ Deno.serve(async (req: Request) => {
       return entry;
     }
     if (shared === 'missing' || shared === 'unconfigured') {
-      const body: Record<string, unknown> = { tenant_id: tenantId };
-      if (shared === 'missing') body.force = true;
+      const body: Record<string, unknown> = { tenant_id: tenantId, force: true };
       const resp = await fetch(provisionUrl, {
         method: 'POST',
         headers: {
