@@ -33,6 +33,7 @@ import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
 import { SharePointTemplateBrowser, type SelectedTemplate } from '@/components/documents/SharePointTemplateBrowser';
 import { toast as sonnerToast } from 'sonner';
+import { BulkGenerateButton } from '@/components/documents/bulk-generate/BulkGenerateButton';
 type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload';
 interface Document {
   id: number;
@@ -1227,6 +1228,7 @@ export default function ManageDocuments() {
           </p>
         </div>
         <div className="flex gap-2">
+          <BulkGenerateButton />
           {isSuperAdmin && selectedDocuments.length > 0 && (
               <Button variant="destructive" className="gap-2" onClick={() => setIsBulkDeleteDialogOpen(true)}>
                 <Trash2 className="h-4 w-4" />
