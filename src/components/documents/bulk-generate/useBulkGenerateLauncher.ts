@@ -97,10 +97,11 @@ export function launcherPreviewTargeted(
   });
 }
 
-export function launcherCreateTargeted(
+export async function launcherCreateTargeted(
   selections: TargetedSelection[],
   document_ids?: number[] | null,
 ): Promise<{ job_id: string }> {
+  await refreshSessionBestEffort();
   return invokeLauncher<{ job_id: string }>({
     action: "create_targeted",
     selections,
