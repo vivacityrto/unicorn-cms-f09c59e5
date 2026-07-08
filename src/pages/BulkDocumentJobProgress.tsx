@@ -331,7 +331,7 @@ export default function BulkDocumentJobProgress() {
         i.lease_expires_at !== null &&
         new Date(i.lease_expires_at).getTime() < nowMs),
   ).length;
-  const canRetry = eligibleRetry > 0 || isStalled;
+  const canRetry = (eligibleRetry > 0 || isStalled) && job.status !== "running";
 
   // Currently-generating banner data (client-side; no new query).
   const activeItem = leasedNow[0];
