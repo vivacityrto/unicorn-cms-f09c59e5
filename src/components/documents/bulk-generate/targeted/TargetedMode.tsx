@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -22,15 +28,19 @@ import {
   AlertTriangle,
   CheckCircle2,
   RefreshCw,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 import { SharePointFolderDialog } from "@/components/client/SharePointFolderDialog";
 import { useBulkGenerateClientTree, type ClientTreeRow } from "../useBulkGenerateClientTree";
 import { useTenantSharepointLiveness, type TenantLiveness } from "../useTenantSharepointLiveness";
 import { useTemplatedDocuments } from "../useTemplatedDocuments";
+import { useCscAssignments } from "@/hooks/useCscAssignments";
 import { MultiSelect } from "../MultiSelect";
 import { PreviewPanel } from "../PreviewPanel";
 import {
@@ -45,6 +55,13 @@ interface Props {
   tenants: Tenant[];
 }
 
+type CscOption = {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  archived: boolean;
+};
+
 /** stageKey combines package_instance + stage for uniqueness inside a tenant. */
 function tripleKey(tenantId: number, pkgInstanceId: number, stageId: number) {
   return `${tenantId}|${pkgInstanceId}|${stageId}`;
@@ -58,19 +75,53 @@ export function TargetedMode({ tenants }: Props) {
 
   const tree = useBulkGenerateClientTree(tenantIds);
   const liveness = useTenantSharepointLiveness(tenantIds);
+  const cscAssignments = useCscAssignments(tenantIds);
 
   const [search, setSearch] = useState("");
+  const [cscFilter, setCscFilter] = useState<string>("all");
   const [selectedTenants, setSelectedTenants] = useState<Set<number>>(new Set());
   // triple key = tenant|pkgInstance|stage
   const [selectedTriples, setSelectedTriples] = useState<Set<string>>(new Set());
   const [documentIds, setDocumentIds] = useState<number[]>([]);
   const [remediateTenantId, setRemediateTenantId] = useState<number | null>(null);
+  const [showItemized, setShowItemized] = useState(false);
 
   const [preview, setPreview] = useState<PreviewRow | null>(null);
   const [previewStale, setPreviewStale] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+
+  // CSC filter options
+  const { data: cscOptions = [] } = useQuery({
+    queryKey: ["bulk-generate", "csc-options"],
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<CscOption[]> => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, first_name, last_name, staff_teams, staff_team, archived, disabled")
+        .eq("disabled", false)
+        .order("archived", { ascending: true })
+        .order("first_name", { ascending: true });
+      if (error) throw error;
+      return ((data ?? []) as any[])
+        .filter((u) => {
+          const inTeams = Array.isArray(u.staff_teams) && u.staff_teams.includes("client_success");
+          const inTeam = u.staff_team === "client_success";
+          return inTeams || inTeam;
+        })
+        .map((u) => ({
+          user_uuid: u.user_uuid,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          archived: !!u.archived,
+        }));
+    },
+  });
+
+  // Middle-column anchor refs for click-to-scroll
+  const middleScrollRef = useRef<HTMLDivElement | null>(null);
+  const tenantAnchorRefs = useRef<Map<number, HTMLDivElement | null>>(new Map());
 
   // Group tree rows by tenant.
   const byTenant = useMemo(() => {
@@ -91,13 +142,20 @@ export function TargetedMode({ tenants }: Props) {
 
   const filteredTenants = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return eligibleTenants;
-    return eligibleTenants.filter(
-      (t) =>
-        (t.name ?? "").toLowerCase().includes(q) ||
-        (t.rto_name ?? "").toLowerCase().includes(q),
-    );
-  }, [eligibleTenants, search]);
+    const cscMap = cscAssignments.data ?? {};
+    return eligibleTenants.filter((t) => {
+      if (q) {
+        const matchesSearch =
+          (t.name ?? "").toLowerCase().includes(q) ||
+          (t.rto_name ?? "").toLowerCase().includes(q);
+        if (!matchesSearch) return false;
+      }
+      if (cscFilter === "all") return true;
+      const cscId = cscMap[t.id]?.csc_user_id ?? null;
+      if (cscFilter === "unassigned") return !cscId;
+      return cscId === cscFilter;
+    });
+  }, [eligibleTenants, search, cscFilter, cscAssignments.data]);
 
   // Derive available stage IDs from selected triples for the doc picker.
   const selectedStageIds = useMemo(() => {
@@ -120,6 +178,54 @@ export function TargetedMode({ tenants }: Props) {
     () => documentIds.filter((id) => availableDocIds.has(id)),
     [documentIds, availableDocIds],
   );
+
+  // Docs grouped by stage_id, for itemized preview
+  const docsByStage = useMemo(() => {
+    const map = new Map<number, { id: number; title: string }[]>();
+    for (const d of docs.data ?? []) {
+      if (d.stage == null) continue;
+      const arr = map.get(d.stage) ?? [];
+      arr.push({ id: d.id, title: d.title });
+      map.set(d.stage, arr);
+    }
+    return map;
+  }, [docs.data]);
+
+  // Itemized rows: cartesian of selected triples × their eligible docs
+  const itemizedRows = useMemo(() => {
+    const rowByTriple = new Map<string, ClientTreeRow>();
+    for (const [tenantId, rows] of byTenant.entries()) {
+      for (const r of rows) {
+        rowByTriple.set(tripleKey(tenantId, r.package_instance_id, r.stage_id), r);
+      }
+    }
+    const docFilter = validDocumentIds.length > 0 ? new Set(validDocumentIds) : null;
+    const out: {
+      key: string;
+      tenantName: string;
+      packageName: string;
+      stageName: string;
+      docTitle: string;
+    }[] = [];
+    for (const key of selectedTriples) {
+      const row = rowByTriple.get(key);
+      if (!row) continue;
+      const tenantName =
+        tenants.find((t) => t.id === row.tenant_id)?.name ?? `Tenant #${row.tenant_id}`;
+      const stageDocs = docsByStage.get(row.stage_id) ?? [];
+      for (const d of stageDocs) {
+        if (docFilter && !docFilter.has(d.id)) continue;
+        out.push({
+          key: `${key}|${d.id}`,
+          tenantName,
+          packageName: row.package_name,
+          stageName: row.stage_name,
+          docTitle: d.title,
+        });
+      }
+    }
+    return out;
+  }, [selectedTriples, byTenant, docsByStage, validDocumentIds, tenants]);
 
   const toggleTenant = (tenantId: number, checked: boolean) => {
     setPreviewStale(true);
@@ -155,7 +261,6 @@ export function TargetedMode({ tenants }: Props) {
       else next.delete(k);
       return next;
     });
-    // Keep tenant checkbox in sync with any-child-selected.
     setSelectedTenants((prev) => {
       const next = new Set(prev);
       const anyChild = (byTenant.get(tenantId) ?? []).some((r) =>
@@ -167,17 +272,19 @@ export function TargetedMode({ tenants }: Props) {
     });
   };
 
-  /**
-   * Build p_selections in the exact shape the RPC parses:
-   *   [{ tenant_id, package_id, stage_ids: [<bigint>, ...] }, ...]
-   *
-   * The UI keys selection state on (tenant, package_instance, stage) so the
-   * user can pick per-enrolment, but the RPC groups by catalog package_id —
-   * so we resolve package_id per triple from the client tree and collapse
-   * duplicates.
-   */
+  const scrollToTenant = (tenantId: number) => {
+    const el = tenantAnchorRefs.current.get(tenantId);
+    if (el) {
+      el.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  };
+
+  // Reset itemized visibility whenever preview goes stale or clears.
+  useEffect(() => {
+    if (previewStale || !preview) setShowItemized(false);
+  }, [previewStale, preview]);
+
   const buildSelectionsJson = () => {
-    // Lookup: (tenantId, packageInstanceId, stageId) -> package_id
     const rowByTriple = new Map<string, ClientTreeRow>();
     for (const [tenantId, rows] of byTenant.entries()) {
       for (const r of rows) {
@@ -188,14 +295,13 @@ export function TargetedMode({ tenants }: Props) {
       }
     }
 
-    // Group by (tenant_id, package_id) with a Set of stage_ids for dedup.
     const groups = new Map<
       string,
       { tenant_id: number; package_id: number; stage_ids: Set<number> }
     >();
     for (const key of selectedTriples) {
       const row = rowByTriple.get(key);
-      if (!row) continue; // triple no longer in tree (stale selection)
+      if (!row) continue;
       const [t] = key.split("|").map(Number);
       const groupKey = `${t}|${row.package_id}`;
       let g = groups.get(groupKey);
@@ -261,15 +367,15 @@ export function TargetedMode({ tenants }: Props) {
   const anySelection = selectedTriples.size > 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_360px] gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_360px] gap-4 h-full min-h-0">
       {/* Left — tenant list */}
-      <div className="rounded-lg border bg-card flex flex-col min-h-[540px]">
-        <div className="p-3 border-b space-y-2">
+      <div className="rounded-lg border bg-card flex flex-col min-h-0 overflow-hidden">
+        <div className="p-3 border-b space-y-2 shrink-0">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold">
               Clients
               <span className="ml-1 text-muted-foreground font-normal">
-                ({eligibleTenants.length})
+                ({filteredTenants.length}/{eligibleTenants.length})
               </span>
             </h3>
             <Button
@@ -279,6 +385,7 @@ export function TargetedMode({ tenants }: Props) {
               onClick={() => {
                 tree.refetch();
                 liveness.refetch();
+                cscAssignments.refetch();
               }}
               disabled={tree.isFetching || liveness.isFetching}
               title="Refresh"
@@ -300,8 +407,23 @@ export function TargetedMode({ tenants }: Props) {
               className="pl-7 h-8 text-xs"
             />
           </div>
+          <Select value={cscFilter} onValueChange={setCscFilter}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Filter by CSC" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All CSCs</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {cscOptions.map((c) => (
+                <SelectItem key={c.user_uuid} value={c.user_uuid}>
+                  {`${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() || c.user_uuid}
+                  {c.archived ? " (archived)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           {tree.isLoading ? (
             <div className="p-3 space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -320,6 +442,13 @@ export function TargetedMode({ tenants }: Props) {
                   tenant={t}
                   checked={selectedTenants.has(t.id)}
                   onToggle={(c) => toggleTenant(t.id, c)}
+                  onLabelClick={() => {
+                    if (!selectedTenants.has(t.id)) {
+                      toggleTenant(t.id, true);
+                    }
+                    // Defer scroll to allow the section to render if newly added.
+                    requestAnimationFrame(() => scrollToTenant(t.id));
+                  }}
                   liveness={liveness.data?.get(t.id)}
                   livenessLoading={liveness.isLoading}
                   stageCount={byTenant.get(t.id)?.length ?? 0}
@@ -332,8 +461,8 @@ export function TargetedMode({ tenants }: Props) {
       </div>
 
       {/* Middle — package/stage tree of selected tenants */}
-      <div className="rounded-lg border bg-card flex flex-col min-h-[540px]">
-        <div className="p-3 border-b">
+      <div className="rounded-lg border bg-card flex flex-col min-h-0 overflow-hidden">
+        <div className="p-3 border-b shrink-0">
           <h3 className="text-sm font-semibold">
             Packages &amp; stages
             <span className="ml-1 text-muted-foreground font-normal">
@@ -344,18 +473,16 @@ export function TargetedMode({ tenants }: Props) {
             Only packages/stages with templated documents appear here.
           </p>
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0" viewportRef={middleScrollRef as any}>
           {selectedTenants.size === 0 ? (
             <div className="p-8 text-sm text-muted-foreground text-center">
-              Select one or more clients to see their eligible
-              packages and stages.
+              Select one or more clients to see their eligible packages and stages.
             </div>
           ) : (
             <div className="p-3 space-y-4">
               {Array.from(selectedTenants).map((tenantId) => {
                 const tenant = tenants.find((x) => x.id === tenantId);
                 const rows = byTenant.get(tenantId) ?? [];
-                // group by package_instance
                 const byPkg = new Map<number, ClientTreeRow[]>();
                 for (const r of rows) {
                   const arr = byPkg.get(r.package_instance_id) ?? [];
@@ -363,7 +490,13 @@ export function TargetedMode({ tenants }: Props) {
                   byPkg.set(r.package_instance_id, arr);
                 }
                 return (
-                  <div key={tenantId} className="border rounded-md">
+                  <div
+                    key={tenantId}
+                    ref={(el) => {
+                      tenantAnchorRefs.current.set(tenantId, el);
+                    }}
+                    className="border rounded-md scroll-mt-2"
+                  >
                     <div className="px-3 py-2 border-b bg-muted/40 text-sm font-medium">
                       {tenant?.name ?? `Tenant #${tenantId}`}
                     </div>
@@ -423,68 +556,116 @@ export function TargetedMode({ tenants }: Props) {
       </div>
 
       {/* Right — filter + preview + confirm */}
-      <div className="rounded-lg border bg-card flex flex-col min-h-[540px]">
-        <div className="p-3 border-b">
+      <div className="rounded-lg border bg-card flex flex-col min-h-0 overflow-hidden">
+        <div className="p-3 border-b shrink-0">
           <h3 className="text-sm font-semibold">Documents &amp; launch</h3>
         </div>
-        <div className="p-3 space-y-4 flex-1">
-          <div>
-            <div className="text-xs font-medium mb-1">
-              Document filter (optional)
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-3 space-y-4">
+            <div>
+              <div className="text-xs font-medium mb-1">
+                Document filter (optional)
+              </div>
+              <MultiSelect
+                options={(docs.data ?? []).map((d) => ({
+                  value: String(d.id),
+                  label: d.title,
+                }))}
+                values={validDocumentIds.map(String)}
+                onChange={(ids) => {
+                  setDocumentIds(ids.map(Number));
+                  setPreviewStale(true);
+                }}
+                placeholder={
+                  selectedStageIds.length === 0
+                    ? "Select stages first…"
+                    : docs.isLoading
+                      ? "Loading documents…"
+                      : "All templated documents in the selected stages"
+                }
+                searchPlaceholder="Search documents…"
+                emptyText="No templated documents."
+                disabled={selectedStageIds.length === 0 || docs.isLoading}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Leave empty to include every templated document in the selected
+                stages.
+              </p>
             </div>
-            <MultiSelect
-              options={(docs.data ?? []).map((d) => ({
-                value: String(d.id),
-                label: d.title,
-              }))}
-              values={validDocumentIds.map(String)}
-              onChange={(ids) => {
-                setDocumentIds(ids.map(Number));
-                setPreviewStale(true);
-              }}
-              placeholder={
-                selectedStageIds.length === 0
-                  ? "Select stages first…"
-                  : docs.isLoading
-                    ? "Loading documents…"
-                    : "All templated documents in the selected stages"
-              }
-              searchPlaceholder="Search documents…"
-              emptyText="No templated documents."
-              disabled={selectedStageIds.length === 0 || docs.isLoading}
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Leave empty to include every templated document in the selected
-              stages.
-            </p>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-medium">Preview</div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={runPreview}
-                disabled={!anySelection || previewLoading}
-              >
-                {previewLoading && (
-                  <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                )}
-                {preview ? "Refresh" : "Preview"}
-              </Button>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs font-medium">Preview</div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={runPreview}
+                  disabled={!anySelection || previewLoading}
+                >
+                  {previewLoading && (
+                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                  )}
+                  {preview ? "Refresh" : "Preview"}
+                </Button>
+              </div>
+              <PreviewPanel
+                preview={preview}
+                stale={previewStale && !!preview}
+                loading={previewLoading}
+                error={previewError}
+              />
+
+              {preview && !previewStale && itemizedRows.length > 0 && (
+                <div className="mt-3 border rounded-md">
+                  <button
+                    type="button"
+                    onClick={() => setShowItemized((s) => !s)}
+                    className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-medium hover:bg-muted/50"
+                  >
+                    <span className="flex items-center gap-1">
+                      {showItemized ? (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      )}
+                      Show items ({itemizedRows.length})
+                    </span>
+                    <span className="text-muted-foreground font-normal">
+                      client · package · stage · doc
+                    </span>
+                  </button>
+                  {showItemized && (
+                    <div className="max-h-64 overflow-auto border-t">
+                      <table className="w-full text-[11px]">
+                        <thead className="bg-muted/40 sticky top-0">
+                          <tr className="text-left">
+                            <th className="px-2 py-1 font-medium">Client</th>
+                            <th className="px-2 py-1 font-medium">Package</th>
+                            <th className="px-2 py-1 font-medium">Stage</th>
+                            <th className="px-2 py-1 font-medium">Document</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {itemizedRows.map((r) => (
+                            <tr key={r.key} className="border-t">
+                              <td className="px-2 py-1 truncate max-w-[100px]" title={r.tenantName}>{r.tenantName}</td>
+                              <td className="px-2 py-1 truncate max-w-[100px]" title={r.packageName}>{r.packageName}</td>
+                              <td className="px-2 py-1 truncate max-w-[100px]" title={r.stageName}>{r.stageName}</td>
+                              <td className="px-2 py-1 truncate max-w-[120px]" title={r.docTitle}>{r.docTitle}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <PreviewPanel
-              preview={preview}
-              stale={previewStale && !!preview}
-              loading={previewLoading}
-              error={previewError}
-            />
           </div>
-        </div>
-        <div className="p-3 border-t">
+        </ScrollArea>
+        <div className="p-3 border-t shrink-0">
           <Button
             className="w-full bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"
             onClick={confirmCreate}
@@ -509,8 +690,6 @@ export function TargetedMode({ tenants }: Props) {
             if (!o) {
               const id = remediateTenantId;
               setRemediateTenantId(null);
-              // Liveness-only refetch — folder link changes can't affect
-              // package/stage qualification.
               if (id !== null) liveness.refetch();
             }
           }}
@@ -527,6 +706,7 @@ function TenantRow({
   tenant,
   checked,
   onToggle,
+  onLabelClick,
   liveness,
   livenessLoading,
   stageCount,
@@ -535,6 +715,7 @@ function TenantRow({
   tenant: Tenant;
   checked: boolean;
   onToggle: (c: boolean) => void;
+  onLabelClick: () => void;
   liveness: TenantLiveness | undefined;
   livenessLoading: boolean;
   stageCount: number;
@@ -550,25 +731,30 @@ function TenantRow({
         checked={checked}
         onCheckedChange={(c) => onToggle(!!c)}
       />
-      <div className="flex-1 min-w-0">
+      <button
+        type="button"
+        onClick={onLabelClick}
+        className="flex-1 min-w-0 text-left"
+      >
         <div className="text-sm truncate">
           {tenant.name ?? tenant.rto_name ?? `Tenant #${tenant.id}`}
         </div>
         <div className="text-[11px] text-muted-foreground">
           {stageCount} eligible stage{stageCount === 1 ? "" : "s"}
         </div>
-      </div>
+      </button>
       <div className="flex items-center gap-1 shrink-0">
         <LivenessBadges liveness={liveness} loading={livenessLoading} />
         {needsFix && (
           <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6 text-amber-700"
+            size="sm"
+            variant="outline"
+            className="h-6 px-2 text-[11px] text-amber-800 border-amber-300 hover:bg-amber-50"
             onClick={onFix}
             title="Fix SharePoint folder"
           >
-            <Wrench className="h-3.5 w-3.5" />
+            <Wrench className="h-3 w-3 mr-1" />
+            Fix folder
           </Button>
         )}
       </div>
