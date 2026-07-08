@@ -69,3 +69,31 @@ export function launcherResume(
     job_id,
   });
 }
+
+export type TargetedSelection = {
+  tenant_id: number;
+  package_id: number;
+  stage_ids: number[];
+};
+
+export function launcherPreviewTargeted(
+  selections: TargetedSelection[],
+  document_ids?: number[] | null,
+): Promise<PreviewRow> {
+  return invokeLauncher<PreviewRow>({
+    action: "preview_targeted",
+    selections,
+    document_ids: document_ids ?? null,
+  });
+}
+
+export function launcherCreateTargeted(
+  selections: TargetedSelection[],
+  document_ids?: number[] | null,
+): Promise<{ job_id: string }> {
+  return invokeLauncher<{ job_id: string }>({
+    action: "create_targeted",
+    selections,
+    document_ids: document_ids ?? null,
+  });
+}
