@@ -286,6 +286,17 @@ export default function BulkDocumentJobProgress() {
   const isStalled = job.status === "stalled";
   const isPolling = !TERMINAL.has(job.status);
 
+  const nowMs = Date.now();
+  const eligibleRetry = items.filter(
+    (i) =>
+      i.state === "failed" ||
+      i.state === "cancelled" ||
+      (i.state === "leased" &&
+        i.lease_expires_at !== null &&
+        new Date(i.lease_expires_at).getTime() < nowMs),
+  ).length;
+  const canRetry = eligibleRetry > 0 || isStalled;
+
   return (
     <DashboardLayout>
     <div className="p-6 space-y-6 animate-fade-in">
