@@ -473,7 +473,7 @@ export function TargetedMode({ tenants }: Props) {
             Only packages/stages with templated documents appear here.
           </p>
         </div>
-        <ScrollArea className="flex-1 min-h-0" viewportRef={middleScrollRef as any}>
+        <ScrollArea className="flex-1 min-h-0">
           {selectedTenants.size === 0 ? (
             <div className="p-8 text-sm text-muted-foreground text-center">
               Select one or more clients to see their eligible packages and stages.
