@@ -364,11 +364,41 @@ Deno.serve(async (req: Request) => {
     return (data as { format: string | null; source_template_url: string | null } | null) ?? null;
   }
 
+  // Release this worker's still-leased items back to pending (fenced on
+  // worker_id + state='leased') and stall the job. Called when the forwarded
+  // caller JWT is about to expire so we don't waste the remaining budget
+  // hammering deliver-governance-document with a soon-to-be-401 token.
+  async function stallAndRelease(reason: string): Promise<void> {
+    console.warn(`[worker] JWT near expiry — stalling job=${jobId} reason=${reason}`);
+    const { error: relErr } = await supabaseService
+      .from('bulk_document_job_items')
+      .update({
+        state: 'pending',
+        worker_id: null,
+        leased_at: null,
+        lease_expires_at: null,
+        started_at: null,
+      })
+      .eq('job_id', jobId)
+      .eq('worker_id', WORKER_ID)
+      .eq('state', 'leased');
+    if (relErr) console.error('[worker] stallAndRelease lease-release error', relErr);
+    const { error: stallErr } = await supabaseService.rpc('stall_bulk_document_job', {
+      p_job_id: jobId,
+      p_reason: reason,
+    });
+    if (stallErr) console.error('[worker] stall_bulk_document_job error', stallErr);
+  }
+
   // ── Main loop ──────────────────────────────────────────────────────────
   let processed = 0;
   let timedOut = false;
 
   while (Date.now() - startedAt < TIME_BUDGET_MS) {
+    if (jwtNearExpiry(callerAuth)) {
+      await stallAndRelease('jwt_near_expiry');
+      return json({ worker_id: WORKER_ID, processed, stalled: true });
+    }
     const { data: job, error: jobErr } = await supabaseService
       .from('bulk_document_jobs')
       .select('status')
