@@ -80,6 +80,18 @@ export async function launcherRetry(
   });
 }
 
+export async function launcherSkipItems(
+  job_id: string,
+  item_ids: number[],
+): Promise<{ ok: boolean; moved: number }> {
+  await refreshSessionBestEffort();
+  return invokeLauncher<{ ok: boolean; moved: number }>({
+    action: "skip_items",
+    job_id,
+    item_ids,
+  });
+}
+
 export type TargetedSelection = {
   tenant_id: number;
   package_id: number;

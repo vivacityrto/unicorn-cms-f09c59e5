@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,7 +46,17 @@ import {
 import {
   launcherCancel,
   launcherRetry,
+  launcherSkipItems,
 } from "@/components/documents/bulk-generate/useBulkGenerateLauncher";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function stalledReasonLabel(reason: string): string {
   switch (reason) {
@@ -118,6 +128,7 @@ export default function BulkDocumentJobProgress() {
 
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [retryDialogOpen, setRetryDialogOpen] = useState(false);
   const [openTenants, setOpenTenants] = useState<Record<number, boolean>>({});
 
   const { data: job, isLoading: jobLoading } = useQuery({
@@ -232,10 +243,20 @@ export default function BulkDocumentJobProgress() {
     [items],
   );
 
-
-
-
-
+  // Items eligible for retry (failed, cancelled, or leased-expired). Declared
+  // before early returns to keep hook order stable and to satisfy the
+  // onRetryConfirm closure that captures this value.
+  const retryEligibleItems = useMemo(() => {
+    const now = Date.now();
+    return items.filter(
+      (i) =>
+        i.state === "failed" ||
+        i.state === "cancelled" ||
+        (i.state === "leased" &&
+          i.lease_expires_at !== null &&
+          new Date(i.lease_expires_at).getTime() < now),
+    );
+  }, [items]);
 
   const onCancel = async () => {
     if (!jobId) return;
@@ -255,12 +276,31 @@ export default function BulkDocumentJobProgress() {
     }
   };
 
-  const onRetry = async () => {
+  const onRetryConfirm = async (excludedItemIds: number[]) => {
     if (!jobId) return;
     setRetrying(true);
     try {
-      await launcherRetry(jobId);
-      toast({ title: "Retry queued" });
+      if (excludedItemIds.length > 0) {
+        await launcherSkipItems(jobId, excludedItemIds);
+      }
+      // If everything was excluded, don't fire a retry — nothing left to do.
+      const willRetry = excludedItemIds.length < retryEligibleItems.length;
+      if (willRetry) {
+        await launcherRetry(jobId);
+        toast({
+          title: "Retry queued",
+          description:
+            excludedItemIds.length > 0
+              ? `${excludedItemIds.length} item(s) excluded, remaining will retry.`
+              : undefined,
+        });
+      } else {
+        toast({
+          title: "Items excluded",
+          description: `${excludedItemIds.length} item(s) marked as skipped. No retry queued.`,
+        });
+      }
+      setRetryDialogOpen(false);
       qc.invalidateQueries({ queryKey: ["bulk-document-job", jobId] });
       qc.invalidateQueries({ queryKey: ["bulk-document-job-items", jobId] });
     } catch (e) {
@@ -273,6 +313,7 @@ export default function BulkDocumentJobProgress() {
       setRetrying(false);
     }
   };
+
 
   if (accessLoading || jobLoading) {
     return (
@@ -314,14 +355,7 @@ export default function BulkDocumentJobProgress() {
   const isPolling = !TERMINAL.has(job.status);
 
   const nowMs = Date.now();
-  const eligibleRetry = items.filter(
-    (i) =>
-      i.state === "failed" ||
-      i.state === "cancelled" ||
-      (i.state === "leased" &&
-        i.lease_expires_at !== null &&
-        new Date(i.lease_expires_at).getTime() < nowMs),
-  ).length;
+  const eligibleRetry = retryEligibleItems.length;
   const remainingWork = items.filter(
     (i) =>
       i.state === "pending" ||
@@ -406,7 +440,7 @@ export default function BulkDocumentJobProgress() {
           )}
           {canRetry && (
             <Button
-              onClick={onRetry}
+              onClick={() => setRetryDialogOpen(true)}
               disabled={retrying}
               className="gap-2 bg-amber-500 hover:bg-amber-600 text-white"
             >
@@ -624,6 +658,16 @@ export default function BulkDocumentJobProgress() {
           })}
         </div>
       )}
+
+      <RetryDialog
+        open={retryDialogOpen}
+        onOpenChange={setRetryDialogOpen}
+        items={retryEligibleItems}
+        tenantNames={tenantNames}
+        documentTitles={documentTitles}
+        submitting={retrying}
+        onConfirm={onRetryConfirm}
+      />
     </div>
     </DashboardLayout>
   );
@@ -733,4 +777,186 @@ function ItemResult({ item }: { item: Item }) {
     );
   }
   return <span className="text-muted-foreground">—</span>;
+}
+
+function RetryDialog({
+  open,
+  onOpenChange,
+  items,
+  tenantNames,
+  documentTitles,
+  submitting,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  items: Item[];
+  tenantNames: Map<number, string> | undefined;
+  documentTitles: Map<number, string> | undefined;
+  submitting: boolean;
+  onConfirm: (excludedItemIds: number[]) => void;
+}) {
+  // Selection state — checked = retry, unchecked = exclude/skip.
+  // Default all checked whenever the dialog opens with a new item set.
+  const [checked, setChecked] = useState<Record<number, boolean>>({});
+
+  const itemsKey = items.map((i) => i.id).join(",");
+  // Reset selection whenever the dialog opens or the eligible set changes.
+  useEffect(() => {
+    if (open) {
+      const next: Record<number, boolean> = {};
+      for (const it of items) next[it.id] = true;
+      setChecked(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, itemsKey]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<number, Item[]>();
+    for (const it of items) {
+      const arr = map.get(it.tenant_id) ?? [];
+      arr.push(it);
+      map.set(it.tenant_id, arr);
+    }
+    return Array.from(map.entries()).sort((a, b) => {
+      const na = tenantNames?.get(a[0]) ?? "";
+      const nb = tenantNames?.get(b[0]) ?? "";
+      return na.localeCompare(nb);
+    });
+  }, [items, tenantNames]);
+
+  const retryCount = items.filter((i) => checked[i.id]).length;
+  const skipCount = items.length - retryCount;
+
+  const toggleItem = (id: number) =>
+    setChecked((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const toggleTenant = (tenantId: number, newValue: boolean) => {
+    setChecked((prev) => {
+      const next = { ...prev };
+      for (const it of items) {
+        if (it.tenant_id === tenantId) next[it.id] = newValue;
+      }
+      return next;
+    });
+  };
+
+  const confirmLabel =
+    retryCount > 0 && skipCount > 0
+      ? `Retry ${retryCount} · Skip ${skipCount}`
+      : retryCount > 0
+        ? `Retry ${retryCount} item${retryCount === 1 ? "" : "s"}`
+        : `Skip ${skipCount} item${skipCount === 1 ? "" : "s"}`;
+
+  const handleConfirm = () => {
+    const excluded = items.filter((i) => !checked[i.id]).map((i) => i.id);
+    onConfirm(excluded);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Retry failed & pending items</DialogTitle>
+          <DialogDescription>
+            Uncheck any items you don't want to retry — for example docs with no
+            template file, or items that keep failing for the same tenant.
+            Unchecked items will be marked as <strong>skipped</strong> on this
+            job and won't run again.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[50vh] overflow-y-auto rounded-md border">
+          {grouped.length === 0 ? (
+            <div className="p-4 text-sm text-muted-foreground">
+              No retry-eligible items.
+            </div>
+          ) : (
+            grouped.map(([tenantId, tItems]) => {
+              const tenantChecked = tItems.filter(
+                (i) => checked[i.id],
+              ).length;
+              const allChecked = tenantChecked === tItems.length;
+              const noneChecked = tenantChecked === 0;
+              return (
+                <div
+                  key={tenantId}
+                  className="border-b last:border-b-0"
+                >
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
+                    <Checkbox
+                      checked={
+                        allChecked ? true : noneChecked ? false : "indeterminate"
+                      }
+                      onCheckedChange={(v) => toggleTenant(tenantId, v === true)}
+                      aria-label="Toggle all items for this tenant"
+                    />
+                    <div className="text-sm font-medium flex-1 truncate">
+                      {tenantNames?.get(tenantId) ?? `Tenant #${tenantId}`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {tenantChecked} of {tItems.length}
+                    </div>
+                  </div>
+                  <ul className="divide-y">
+                    {tItems.map((it) => {
+                      const errLabel =
+                        errorCodeLabel(it.last_error_code) ||
+                        (it.state === "cancelled" ? "Cancelled" : "");
+                      return (
+                        <li
+                          key={it.id}
+                          className="flex items-start gap-2 px-3 py-2"
+                        >
+                          <Checkbox
+                            checked={!!checked[it.id]}
+                            onCheckedChange={() => toggleItem(it.id)}
+                            aria-label="Retry this item"
+                            className="mt-0.5"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm truncate">
+                              {documentTitles?.get(it.document_id) ??
+                                `Document #${it.document_id}`}
+                            </div>
+                            {errLabel && (
+                              <div className="text-xs text-muted-foreground">
+                                {errLabel}
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={submitting || items.length === 0}
+            className="gap-2 bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCcw className="h-4 w-4" />
+            )}
+            {confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

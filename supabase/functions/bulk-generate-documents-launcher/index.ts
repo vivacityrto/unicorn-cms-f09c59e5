@@ -42,7 +42,7 @@ const SelectionSchema = z.object({
 });
 
 const BodySchema = z.object({
-  action: z.enum(['create', 'preview', 'cancel', 'create_targeted', 'preview_targeted', 'retry']),
+  action: z.enum(['create', 'preview', 'cancel', 'create_targeted', 'preview_targeted', 'retry', 'skip_items']),
   scope: z.enum(['all', 'selected']).optional(),
   tenant_ids: z.array(z.number().int().positive()).optional().nullable(),
   package_ids: z.array(z.number().int().positive()).optional().nullable(),
@@ -51,6 +51,7 @@ const BodySchema = z.object({
   selections: z.array(SelectionSchema).optional().nullable(),
   job_id: z.string().uuid().optional(),
   reason: z.string().max(500).optional().nullable(),
+  item_ids: z.array(z.number().int().positive()).optional().nullable(),
 });
 
 function kickoffWorker(jobId: string, authHeader: string) {
@@ -205,6 +206,24 @@ Deno.serve(async (req: Request) => {
       kickoffWorker(parsed.job_id, authHeader);
       return json({ ok: true, job_id: parsed.job_id });
     }
+
+    if (parsed.action === 'skip_items') {
+      if (!parsed.job_id) return json({ error: 'job_id is required for skip_items' }, 400);
+      if (!parsed.item_ids || parsed.item_ids.length === 0) {
+        return json({ error: 'item_ids is required for skip_items' }, 400);
+      }
+      // skip_bulk_document_job_items's gate reads auth.uid(); must run under caller JWT.
+      const { data, error } = await supabase.rpc('skip_bulk_document_job_items', {
+        p_job_id: parsed.job_id,
+        p_item_ids: parsed.item_ids,
+      });
+      if (error) {
+        console.error('[launcher] skip_bulk_document_job_items error', error);
+        return json({ error: 'skip_items_failed', status: error.code, details: error.message }, 400);
+      }
+      return json({ ok: true, moved: (data as number) ?? 0 });
+    }
+
 
     return json({ error: 'unknown action' }, 400);
   } catch (e) {

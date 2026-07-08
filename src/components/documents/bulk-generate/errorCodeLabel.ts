@@ -19,6 +19,7 @@ const LABELS: Record<string, string> = {
   deliver_failed: "Delivery to SharePoint failed",
   auth_expired: "Microsoft sign-in expired — reconnect required",
   JOB_CANCELLED: "Job cancelled",
+  excluded_on_retry: "Excluded on retry",
 };
 
 /** Convert a snake_case or SCREAMING_SNAKE code to a readable phrase. */

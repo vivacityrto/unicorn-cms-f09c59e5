@@ -69440,6 +69440,10 @@ export type Database = {
         Returns: Json
       }
       set_user_notification_prefs: { Args: { p_prefs: Json }; Returns: string }
+      skip_bulk_document_job_items: {
+        Args: { p_item_ids: number[]; p_job_id: string }
+        Returns: number
+      }
       split_time_entry: {
         Args: { p_reason?: string; p_splits: Json; p_time_entry_id: string }
         Returns: Json
