@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS meeting_artifacts_select_tenant ON public.meeting_artifacts;
