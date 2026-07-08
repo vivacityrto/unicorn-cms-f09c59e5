@@ -138,7 +138,7 @@ export default function BulkDocumentJobProgress() {
       const { data, error } = await supabase
         .from("bulk_document_job_items")
         .select(
-          "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at, lease_expires_at",
+          "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at, leased_at, lease_expires_at",
         )
         .eq("job_id", jobId!)
         .order("id", { ascending: true });
