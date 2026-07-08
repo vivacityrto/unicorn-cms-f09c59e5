@@ -210,6 +210,21 @@ export default function BulkDocumentJobProgress() {
     });
   }, [items, tenantNames]);
 
+  // Currently-generating banner data (client-side; no new query).
+  // Must be declared before any early returns to keep hook order stable.
+  const leasedNow = useMemo(
+    () =>
+      items
+        .filter((i) => i.state === "leased" && i.leased_at)
+        .sort(
+          (a, b) =>
+            new Date(a.leased_at!).getTime() - new Date(b.leased_at!).getTime(),
+        ),
+    [items],
+  );
+
+
+
 
 
 
@@ -301,17 +316,8 @@ export default function BulkDocumentJobProgress() {
   const canRetry = eligibleRetry > 0 || isStalled;
 
   // Currently-generating banner data (client-side; no new query).
-  const leasedNow = useMemo(
-    () =>
-      items
-        .filter((i) => i.state === "leased" && i.leased_at)
-        .sort(
-          (a, b) =>
-            new Date(a.leased_at!).getTime() - new Date(b.leased_at!).getTime(),
-        ),
-    [items],
-  );
   const activeItem = leasedNow[0];
+
   const showActive = isRunning && !!activeItem;
 
   // Overall progress segments (authoritative counters from job row).
