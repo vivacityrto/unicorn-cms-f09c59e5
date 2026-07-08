@@ -46,7 +46,17 @@ import {
 import {
   launcherCancel,
   launcherRetry,
+  launcherSkipItems,
 } from "@/components/documents/bulk-generate/useBulkGenerateLauncher";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function stalledReasonLabel(reason: string): string {
   switch (reason) {
