@@ -68,6 +68,7 @@ type Item = {
   outcome: unknown;
   started_at: string | null;
   finished_at: string | null;
+  lease_expires_at: string | null;
 };
 
 const TERMINAL = new Set(["completed", "cancelled", "failed"]);
