@@ -391,12 +391,47 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
           <Badge variant={setupMode === 'manual' ? 'secondary' : 'default'} className="text-xs">
             {setupMode === 'manual' ? 'Manual' : 'Auto'}
           </Badge>
-          {isProvisioned && (
-            <Badge variant="default" className="flex items-center gap-1 text-xs">
-              <CheckCircle2 className="h-3 w-3" />
-              Configured
-            </Badge>
-          )}
+          {(() => {
+            // Prefer cached live Graph status when available; fall back to
+            // the raw provisioning flag for tenants not yet checked.
+            const live = settings.shared_live_status;
+            if (!settings.live_checked_at || live == null) {
+              if (isProvisioned) {
+                return (
+                  <Badge variant="secondary" className="flex items-center gap-1 text-xs" title="Not yet verified — opens the Integrations tab or bulk-generate to refresh.">
+                    <Clock className="h-3 w-3" />
+                    Not yet checked
+                  </Badge>
+                );
+              }
+              return null;
+            }
+            if (live === 'ok') {
+              return (
+                <Badge variant="default" className="flex items-center gap-1 text-xs">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Configured
+                </Badge>
+              );
+            }
+            if (live === 'missing') {
+              return (
+                <Badge variant="destructive" className="flex items-center gap-1 text-xs" title="Recorded in the database but not found in SharePoint.">
+                  <AlertCircle className="h-3 w-3" />
+                  Missing in SharePoint
+                </Badge>
+              );
+            }
+            if (live === 'error') {
+              return (
+                <Badge variant="destructive" className="flex items-center gap-1 text-xs" title="Live check errored — see logs.">
+                  <AlertCircle className="h-3 w-3" />
+                  Check failed
+                </Badge>
+              );
+            }
+            return null;
+          })()}
           {isFailed && (
             <Badge variant="destructive" className="flex items-center gap-1 text-xs">
               <AlertCircle className="h-3 w-3" />
