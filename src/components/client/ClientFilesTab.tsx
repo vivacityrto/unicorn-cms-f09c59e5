@@ -59,6 +59,8 @@ interface SharePointSettings {
   template_id: string | null;
   setup_mode: string;
   manual_folder_url: string | null;
+  shared_live_status: 'ok' | 'missing' | 'unconfigured' | 'error' | null;
+  live_checked_at: string | null;
   created_at: string;
   updated_at: string;
 }
