@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { FunctionsHttpError } from "@supabase/supabase-js";
+
 
 import { SharePointFolderDialog } from "@/components/client/SharePointFolderDialog";
 import { useBulkGenerateClientTree, type ClientTreeRow } from "../useBulkGenerateClientTree";
