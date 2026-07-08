@@ -163,13 +163,50 @@ export function TargetedMode({ tenants }: Props) {
     });
   };
 
+  /**
+   * Build p_selections in the exact shape the RPC parses:
+   *   [{ tenant_id, package_id, stage_ids: [<bigint>, ...] }, ...]
+   *
+   * The UI keys selection state on (tenant, package_instance, stage) so the
+   * user can pick per-enrolment, but the RPC groups by catalog package_id —
+   * so we resolve package_id per triple from the client tree and collapse
+   * duplicates.
+   */
   const buildSelectionsJson = () => {
-    const arr: Array<{ tenant_id: number; package_instance_id: number; stage_id: number }> = [];
-    for (const key of selectedTriples) {
-      const [t, p, s] = key.split("|").map(Number);
-      arr.push({ tenant_id: t, package_instance_id: p, stage_id: s });
+    // Lookup: (tenantId, packageInstanceId, stageId) -> package_id
+    const rowByTriple = new Map<string, ClientTreeRow>();
+    for (const [tenantId, rows] of byTenant.entries()) {
+      for (const r of rows) {
+        rowByTriple.set(
+          tripleKey(tenantId, r.package_instance_id, r.stage_id),
+          r,
+        );
+      }
     }
-    return arr;
+
+    // Group by (tenant_id, package_id) with a Set of stage_ids for dedup.
+    const groups = new Map<
+      string,
+      { tenant_id: number; package_id: number; stage_ids: Set<number> }
+    >();
+    for (const key of selectedTriples) {
+      const row = rowByTriple.get(key);
+      if (!row) continue; // triple no longer in tree (stale selection)
+      const [t] = key.split("|").map(Number);
+      const groupKey = `${t}|${row.package_id}`;
+      let g = groups.get(groupKey);
+      if (!g) {
+        g = { tenant_id: t, package_id: row.package_id, stage_ids: new Set() };
+        groups.set(groupKey, g);
+      }
+      g.stage_ids.add(row.stage_id);
+    }
+
+    return Array.from(groups.values()).map((g) => ({
+      tenant_id: g.tenant_id,
+      package_id: g.package_id,
+      stage_ids: Array.from(g.stage_ids),
+    }));
   };
 
   const runPreview = async () => {
