@@ -219,15 +219,10 @@ export function TargetedMode({ tenants }: Props) {
     setPreviewError(null);
     try {
       const selections = buildSelectionsJson();
-      const { data, error } = await supabase.rpc(
-        "preview_targeted_bulk_document_job",
-        {
-          p_selections: selections as unknown as never,
-          p_document_ids: validDocumentIds.length > 0 ? validDocumentIds : undefined,
-        },
+      const row = await launcherPreviewTargeted(
+        selections,
+        validDocumentIds.length > 0 ? validDocumentIds : null,
       );
-      if (error) throw error;
-      const row = (data as unknown as PreviewRow[] | null)?.[0] ?? null;
       setPreview(row);
       setPreviewStale(false);
     } catch (e) {
@@ -243,35 +238,15 @@ export function TargetedMode({ tenants }: Props) {
     setConfirming(true);
     try {
       const selections = buildSelectionsJson();
-      const { data, error } = await supabase.rpc(
-        "create_targeted_bulk_document_job",
-        {
-          p_selections: selections as unknown as never,
-          p_document_ids: validDocumentIds.length > 0 ? validDocumentIds : undefined,
-        },
+      const { job_id } = await launcherCreateTargeted(
+        selections,
+        validDocumentIds.length > 0 ? validDocumentIds : null,
       );
-      if (error) throw error;
-      const jobId = data as unknown as string;
-
-      // Kick the worker so it starts draining immediately, mirroring the
-      // launcher's fire-and-forget invocation.
-      supabase.functions
-        .invoke("bulk-generate-documents-worker", { body: { job_id: jobId } })
-        .catch(async (err) => {
-          if (err instanceof FunctionsHttpError) {
-            try {
-              await err.context.text();
-            } catch {
-              /* ignore */
-            }
-          }
-        });
-
       toast({
         title: "Targeted bulk job started",
         description: "The job has been queued and is running.",
       });
-      navigate(`/manage-documents/bulk-jobs/${jobId}`);
+      navigate(`/manage-documents/bulk-jobs/${job_id}`);
     } catch (e) {
       toast({
         title: "Could not start job",
