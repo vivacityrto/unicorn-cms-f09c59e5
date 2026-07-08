@@ -52471,10 +52471,13 @@ export type Database = {
           governance_folder_item_id: string | null
           governance_folder_name: string | null
           governance_folder_url: string | null
+          governance_live_status: string | null
           governance_site_id: string | null
           id: string
           is_enabled: boolean
           last_validated_at: string | null
+          live_check_error: string | null
+          live_checked_at: string | null
           manual_folder_url: string | null
           match_method: string
           provisioning_error: string | null
@@ -52486,6 +52489,7 @@ export type Database = {
           shared_folder_item_id: string | null
           shared_folder_name: string | null
           shared_folder_url: string | null
+          shared_live_status: string | null
           site_id: string | null
           template_id: string | null
           tenant_id: number
@@ -52510,10 +52514,13 @@ export type Database = {
           governance_folder_item_id?: string | null
           governance_folder_name?: string | null
           governance_folder_url?: string | null
+          governance_live_status?: string | null
           governance_site_id?: string | null
           id?: string
           is_enabled?: boolean
           last_validated_at?: string | null
+          live_check_error?: string | null
+          live_checked_at?: string | null
           manual_folder_url?: string | null
           match_method?: string
           provisioning_error?: string | null
@@ -52525,6 +52532,7 @@ export type Database = {
           shared_folder_item_id?: string | null
           shared_folder_name?: string | null
           shared_folder_url?: string | null
+          shared_live_status?: string | null
           site_id?: string | null
           template_id?: string | null
           tenant_id: number
@@ -52549,10 +52557,13 @@ export type Database = {
           governance_folder_item_id?: string | null
           governance_folder_name?: string | null
           governance_folder_url?: string | null
+          governance_live_status?: string | null
           governance_site_id?: string | null
           id?: string
           is_enabled?: boolean
           last_validated_at?: string | null
+          live_check_error?: string | null
+          live_checked_at?: string | null
           manual_folder_url?: string | null
           match_method?: string
           provisioning_error?: string | null
@@ -52564,6 +52575,7 @@ export type Database = {
           shared_folder_item_id?: string | null
           shared_folder_name?: string | null
           shared_folder_url?: string | null
+          shared_live_status?: string | null
           site_id?: string | null
           template_id?: string | null
           tenant_id?: number
