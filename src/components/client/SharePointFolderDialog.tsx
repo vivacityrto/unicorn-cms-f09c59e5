@@ -382,15 +382,15 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
             {/* Actions */}
             {isProvisioned && folderUrl ? (
               <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Button className="flex-1" variant="outline" asChild>
+                <div className="flex flex-wrap gap-2">
+                  <Button className="flex-1 min-w-[180px]" variant="outline" asChild>
                     <a href={folderUrl} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-4 w-4 mr-2" />
                       Open in SharePoint
                     </a>
                   </Button>
                   <Button
-                    className="flex-1"
+                    className="flex-1 min-w-[180px]"
                     variant={showBrowser ? 'secondary' : 'default'}
                     onClick={() => setShowBrowser(!showBrowser)}
                   >
@@ -399,7 +399,7 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
                   </Button>
                 </div>
                 {showBrowser && (
-                  <div className="mt-4">
+                  <div className="mt-4 min-w-0 overflow-x-auto">
                     <SharePointFileBrowser tenantId={tenantId} />
                   </div>
                 )}
