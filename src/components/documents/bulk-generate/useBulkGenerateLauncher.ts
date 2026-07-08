@@ -70,9 +70,10 @@ export function launcherCancel(
   });
 }
 
-export function launcherRetry(
+export async function launcherRetry(
   job_id: string,
 ): Promise<{ ok: boolean; job_id: string }> {
+  await refreshSessionBestEffort();
   return invokeLauncher<{ ok: boolean; job_id: string }>({
     action: "retry",
     job_id,
