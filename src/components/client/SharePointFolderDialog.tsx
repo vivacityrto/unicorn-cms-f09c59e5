@@ -41,6 +41,7 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [provisioning, setProvisioning] = useState(false);
+  const [provisioningGovernance, setProvisioningGovernance] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [showSiteConfig, setShowSiteConfig] = useState(false);
   const [savingSiteConfig, setSavingSiteConfig] = useState(false);
