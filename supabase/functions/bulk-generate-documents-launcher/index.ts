@@ -191,6 +191,21 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, result: data });
     }
 
+    if (parsed.action === 'retry') {
+      if (!parsed.job_id) return json({ error: 'job_id is required for retry' }, 400);
+      // retry_bulk_document_job's gate reads auth.uid(); must run under caller JWT.
+      const { error } = await supabase.rpc('retry_bulk_document_job', {
+        p_job_id: parsed.job_id,
+      });
+      if (error) {
+        console.error('[launcher] retry_bulk_document_job error', error);
+        return json({ error: 'retry_failed', status: error.code, details: error.message }, 400);
+      }
+      // Fresh caller JWT — kick worker off immediately with the current token.
+      kickoffWorker(parsed.job_id, authHeader);
+      return json({ ok: true, job_id: parsed.job_id });
+    }
+
     return json({ error: 'unknown action' }, 400);
   } catch (e) {
     console.error('[launcher] unexpected error', e);
