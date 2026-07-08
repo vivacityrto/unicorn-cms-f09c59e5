@@ -767,7 +767,38 @@ export function TargetedMode({ tenants }: Props) {
           tenantId={remediateTenantId}
         />
       )}
+
+      {viewConfigTenantId !== null && (
+        <SharePointConfigViewDialog
+          tenantId={viewConfigTenantId}
+          onOpenChange={(o) => {
+            if (!o) {
+              setViewConfigTenantId(null);
+              liveness.refetch();
+            }
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function SharePointConfigViewDialog({
+  tenantId,
+  onOpenChange,
+}: {
+  tenantId: number | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={tenantId !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>SharePoint Configuration</DialogTitle>
+        </DialogHeader>
+        {tenantId !== null && <SharePointFolderConfig tenantId={tenantId} />}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -782,6 +813,7 @@ function TenantRow({
   livenessLoading,
   stageCount,
   onFix,
+  onViewConfig,
 }: {
   tenant: Tenant;
   checked: boolean;
@@ -791,6 +823,7 @@ function TenantRow({
   livenessLoading: boolean;
   stageCount: number;
   onFix: () => void;
+  onViewConfig: () => void;
 }) {
   const needsFix =
     !!liveness &&
@@ -830,6 +863,16 @@ function TenantRow({
               Fix folder
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 px-2 text-[11px]"
+            onClick={onViewConfig}
+            title="View SharePoint configuration"
+          >
+            <Eye className="h-3 w-3 mr-1" />
+            View config
+          </Button>
         </div>
       </div>
     </li>
