@@ -187,6 +187,31 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
     }
   };
 
+  const handleProvisionGovernance = async () => {
+    setProvisioningGovernance(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-compliance-folder', {
+        body: { tenant_id: tenantId },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: 'Governance folder ready',
+        description: `Governance folder verified for ${tenant?.name}.`,
+      });
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['tenant-sharepoint-liveness'] });
+    } catch (err: any) {
+      toast({
+        title: 'Governance provisioning failed',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setProvisioningGovernance(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setShowBrowser(false); setShowSiteConfig(false); } }}>
       <DialogContent className={cn("w-[95vw] max-h-[85vh] overflow-y-auto overflow-x-hidden", showBrowser ? "sm:max-w-4xl" : "sm:max-w-lg")}>
