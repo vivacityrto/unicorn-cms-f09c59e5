@@ -174,22 +174,7 @@ Deno.serve(async (req: Request) => {
       return json(row);
     }
 
-    if (parsed.action === 'preview') {
-      if (!parsed.scope) return json({ error: 'scope is required for preview' }, 400);
-      const { data, error } = await supabase.rpc('preview_bulk_document_job', {
-        p_scope: parsed.scope,
-        p_tenant_ids: parsed.tenant_ids ?? null,
-        p_package_ids: parsed.package_ids ?? null,
-        p_stage_ids: parsed.stage_ids ?? null,
-        p_document_ids: parsed.document_ids ?? null,
-      });
-      if (error) {
-        console.error('[launcher] preview_bulk_document_job error', error);
-        return json({ error: 'preview_failed', status: error.code, details: error.message }, 400);
-      }
-      const row = Array.isArray(data) ? data[0] ?? null : data;
-      return json(row);
-    }
+
 
     if (parsed.action === 'cancel') {
       if (!parsed.job_id) return json({ error: 'job_id is required for cancel' }, 400);
