@@ -632,47 +632,58 @@ export function TargetedMode({ tenants }: Props) {
 
               {preview && !previewStale && itemizedRows.length > 0 && (
                 <div className="mt-3 border rounded-md">
-                  <button
-                    type="button"
-                    onClick={() => setShowItemized((s) => !s)}
-                    className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-medium hover:bg-muted/50"
-                  >
-                    <span className="flex items-center gap-1">
-                      {showItemized ? (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      ) : (
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      )}
-                      Show items ({itemizedRows.length})
-                    </span>
-                    <span className="text-muted-foreground font-normal">
-                      client · package · stage · doc
-                    </span>
-                  </button>
+                  <div className="w-full flex items-center gap-1 pr-1 text-xs font-medium hover:bg-muted/50">
+                    <button
+                      type="button"
+                      onClick={() => setShowItemized((s) => !s)}
+                      className="flex-1 min-w-0 flex items-center justify-between px-2 py-1.5 text-left"
+                    >
+                      <span className="flex items-center gap-1">
+                        {showItemized ? (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        )}
+                        Show items ({itemizedRows.length})
+                      </span>
+                      <span className="text-muted-foreground font-normal truncate ml-2">
+                        client · package · stage · doc
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setItemizedModalOpen(true)}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
+                      title="Expand to full view"
+                      aria-label="Expand items"
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   {showItemized && (
                     <div className="max-h-64 overflow-auto border-t">
-                      <table className="w-full text-[11px] table-fixed">
+                      <table className="w-full text-[11px] table-fixed border-separate border-spacing-0">
                         <colgroup>
                           <col style={{ width: "25%" }} />
                           <col style={{ width: "25%" }} />
                           <col style={{ width: "22%" }} />
                           <col style={{ width: "28%" }} />
                         </colgroup>
-                        <thead className="bg-muted/40 sticky top-0">
-                          <tr className="text-left">
-                            <th className="px-2 py-1 font-medium">Client</th>
-                            <th className="px-2 py-1 font-medium">Package</th>
-                            <th className="px-2 py-1 font-medium">Stage</th>
-                            <th className="px-2 py-1 font-medium">Document</th>
+                        <thead className="sticky top-0 z-10">
+                          <tr className="text-left bg-muted">
+                            <th className="px-2 py-1 font-medium border-b">Client</th>
+                            <th className="px-2 py-1 font-medium border-b">Package</th>
+                            <th className="px-2 py-1 font-medium border-b">Stage</th>
+                            <th className="px-2 py-1 font-medium border-b">Document</th>
                           </tr>
                         </thead>
                         <tbody>
                           {itemizedRows.map((r) => (
-                            <tr key={r.key} className="border-t">
-                              <td className="px-2 py-1 truncate" title={r.tenantName}>{r.tenantName}</td>
-                              <td className="px-2 py-1 truncate" title={r.packageName}>{r.packageName}</td>
-                              <td className="px-2 py-1 truncate" title={r.stageName}>{r.stageName}</td>
-                              <td className="px-2 py-1 truncate" title={r.docTitle}>{r.docTitle}</td>
+                            <tr key={r.key}>
+                              <td className="px-2 py-1 truncate border-b" title={r.tenantName}>{r.tenantName}</td>
+                              <td className="px-2 py-1 truncate border-b" title={r.packageName}>{r.packageName}</td>
+                              <td className="px-2 py-1 truncate border-b" title={r.stageName}>{r.stageName}</td>
+                              <td className="px-2 py-1 truncate border-b" title={r.docTitle}>{r.docTitle}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -684,6 +695,42 @@ export function TargetedMode({ tenants }: Props) {
             </div>
           </div>
         </div>
+
+        <Dialog open={itemizedModalOpen} onOpenChange={setItemizedModalOpen}>
+          <DialogContent className="w-[95vw] sm:max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>
+                Preview items
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({itemizedRows.length} document{itemizedRows.length === 1 ? "" : "s"})
+                </span>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 min-h-0 overflow-auto border rounded-md">
+              <table className="w-full text-xs border-separate border-spacing-0">
+                <thead className="sticky top-0 z-10">
+                  <tr className="text-left bg-muted">
+                    <th className="px-3 py-2 font-medium border-b">Client</th>
+                    <th className="px-3 py-2 font-medium border-b">Package</th>
+                    <th className="px-3 py-2 font-medium border-b">Stage</th>
+                    <th className="px-3 py-2 font-medium border-b">Document</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {itemizedRows.map((r) => (
+                    <tr key={r.key} className="hover:bg-muted/40">
+                      <td className="px-3 py-2 border-b">{r.tenantName}</td>
+                      <td className="px-3 py-2 border-b">{r.packageName}</td>
+                      <td className="px-3 py-2 border-b">{r.stageName}</td>
+                      <td className="px-3 py-2 border-b">{r.docTitle}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </DialogContent>
+        </Dialog>
+
 
         <div className="p-3 border-t shrink-0">
           <Button
