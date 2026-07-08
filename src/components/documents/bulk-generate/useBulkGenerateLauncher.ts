@@ -40,13 +40,22 @@ async function invokeLauncher<T>(body: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
+async function refreshSessionBestEffort() {
+  try {
+    await supabase.auth.refreshSession();
+  } catch (e) {
+    console.warn("[bulk-generate] refreshSession failed; proceeding anyway", e);
+  }
+}
+
 export function launcherPreview(filters: LauncherFilters): Promise<PreviewRow> {
   return invokeLauncher<PreviewRow>({ action: "preview", ...filters });
 }
 
-export function launcherCreate(
+export async function launcherCreate(
   filters: LauncherFilters,
 ): Promise<{ job_id: string }> {
+  await refreshSessionBestEffort();
   return invokeLauncher<{ job_id: string }>({ action: "create", ...filters });
 }
 
@@ -61,9 +70,10 @@ export function launcherCancel(
   });
 }
 
-export function launcherRetry(
+export async function launcherRetry(
   job_id: string,
 ): Promise<{ ok: boolean; job_id: string }> {
+  await refreshSessionBestEffort();
   return invokeLauncher<{ ok: boolean; job_id: string }>({
     action: "retry",
     job_id,
@@ -87,10 +97,11 @@ export function launcherPreviewTargeted(
   });
 }
 
-export function launcherCreateTargeted(
+export async function launcherCreateTargeted(
   selections: TargetedSelection[],
   document_ids?: number[] | null,
 ): Promise<{ job_id: string }> {
+  await refreshSessionBestEffort();
   return invokeLauncher<{ job_id: string }>({
     action: "create_targeted",
     selections,
