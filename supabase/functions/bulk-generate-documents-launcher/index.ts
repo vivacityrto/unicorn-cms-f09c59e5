@@ -35,16 +35,40 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
+const SelectionSchema = z.object({
+  tenant_id: z.number().int().positive(),
+  package_id: z.number().int().positive(),
+  stage_ids: z.array(z.number().int().positive()).min(1),
+});
+
 const BodySchema = z.object({
-  action: z.enum(['create', 'preview', 'cancel']),
+  action: z.enum(['create', 'preview', 'cancel', 'create_targeted', 'preview_targeted']),
   scope: z.enum(['all', 'selected']).optional(),
   tenant_ids: z.array(z.number().int().positive()).optional().nullable(),
   package_ids: z.array(z.number().int().positive()).optional().nullable(),
   stage_ids: z.array(z.number().int().positive()).optional().nullable(),
   document_ids: z.array(z.number().int().positive()).optional().nullable(),
+  selections: z.array(SelectionSchema).optional().nullable(),
   job_id: z.string().uuid().optional(),
   reason: z.string().max(500).optional().nullable(),
 });
+
+function kickoffWorker(jobId: string, authHeader: string) {
+  // Fire-and-forget. Anon key satisfies the platform JWT verification;
+  // x-caller-authorization carries the real staff JWT to the worker for its
+  // internal downstream calls (this is the pattern the simple-path 'create'
+  // action has always used successfully).
+  const workerUrl = `${SUPABASE_URL}/functions/v1/bulk-generate-documents-worker`;
+  fetch(workerUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-caller-authorization': authHeader,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ job_id: jobId }),
+  }).catch((e) => console.error('[launcher] worker fire-and-forget failed (job still created)', e));
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -96,22 +120,7 @@ Deno.serve(async (req: Request) => {
         return json({ error: 'create_failed', status: error.code, details: error.message }, 400);
       }
       const jobId = data as string;
-
-      // Fire-and-forget initial worker invocation. Don't await.
-      const workerUrl = `${SUPABASE_URL}/functions/v1/bulk-generate-documents-worker`;
-      fetch(workerUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-caller-authorization': authHeader,
-          // Edge function needs *some* Authorization header to satisfy the
-          // gateway; anon key is fine because the worker validates the caller
-          // via x-caller-authorization internally.
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ job_id: jobId }),
-      }).catch((e) => console.error('[launcher] worker fire-and-forget failed (job still created)', e));
-
+      kickoffWorker(jobId, authHeader);
       return json({ job_id: jobId });
     }
 
@@ -131,6 +140,41 @@ Deno.serve(async (req: Request) => {
       const row = Array.isArray(data) ? data[0] ?? null : data;
       return json(row);
     }
+
+    if (parsed.action === 'create_targeted') {
+      if (!parsed.selections || parsed.selections.length === 0) {
+        return json({ error: 'selections is required for create_targeted' }, 400);
+      }
+      const { data, error } = await supabase.rpc('create_targeted_bulk_document_job', {
+        p_selections: parsed.selections as unknown as never,
+        p_document_ids: parsed.document_ids ?? undefined,
+      });
+      if (error) {
+        console.error('[launcher] create_targeted_bulk_document_job error', error);
+        return json({ error: 'create_targeted_failed', status: error.code, details: error.message }, 400);
+      }
+      const jobId = data as string;
+      kickoffWorker(jobId, authHeader);
+      return json({ job_id: jobId });
+    }
+
+    if (parsed.action === 'preview_targeted') {
+      if (!parsed.selections || parsed.selections.length === 0) {
+        return json({ error: 'selections is required for preview_targeted' }, 400);
+      }
+      const { data, error } = await supabase.rpc('preview_targeted_bulk_document_job', {
+        p_selections: parsed.selections as unknown as never,
+        p_document_ids: parsed.document_ids ?? undefined,
+      });
+      if (error) {
+        console.error('[launcher] preview_targeted_bulk_document_job error', error);
+        return json({ error: 'preview_targeted_failed', status: error.code, details: error.message }, 400);
+      }
+      const row = Array.isArray(data) ? data[0] ?? null : data;
+      return json(row);
+    }
+
+
 
     if (parsed.action === 'cancel') {
       if (!parsed.job_id) return json({ error: 'job_id is required for cancel' }, 400);
