@@ -27,6 +27,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
+import { cn } from '@/lib/utils';
+
 
 interface SharePointFolderDialogProps {
   open: boolean;
