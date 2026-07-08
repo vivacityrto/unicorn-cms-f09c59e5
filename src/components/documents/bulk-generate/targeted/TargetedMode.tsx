@@ -120,8 +120,8 @@ export function TargetedMode({ tenants }: Props) {
   });
 
   // Middle-column anchor refs for click-to-scroll
-  const middleScrollRef = useRef<HTMLDivElement | null>(null);
   const tenantAnchorRefs = useRef<Map<number, HTMLDivElement | null>>(new Map());
+
 
   // Group tree rows by tenant.
   const byTenant = useMemo(() => {
