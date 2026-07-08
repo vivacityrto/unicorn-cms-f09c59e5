@@ -61,11 +61,11 @@ export function launcherCancel(
   });
 }
 
-export function launcherResume(
+export function launcherRetry(
   job_id: string,
-): Promise<{ ok: boolean; job: Record<string, unknown> | null }> {
-  return invokeLauncher<{ ok: boolean; job: Record<string, unknown> | null }>({
-    action: "resume",
+): Promise<{ ok: boolean; job_id: string }> {
+  return invokeLauncher<{ ok: boolean; job_id: string }>({
+    action: "retry",
     job_id,
   });
 }
