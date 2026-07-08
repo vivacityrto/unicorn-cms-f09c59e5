@@ -1,0 +1,1 @@
+UPDATE app_settings SET sharepoint_defaultshare = '-%20Operations%20Share' WHERE id = 1;
