@@ -222,12 +222,10 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       // Create package instance(s)
       if (selectedPackageId && newTenantId) {
         try {
-          const { error: piError } = await supabase.from('package_instances').insert({
-            tenant_id: newTenantId,
-            package_id: parseInt(selectedPackageId),
-            is_complete: false,
-            start_date: new Date().toISOString().split('T')[0],
-            clo_id: 0,
+          const { error: piError } = await supabase.rpc('start_client_package', {
+            p_tenant_id: newTenantId,
+            p_package_id: parseInt(selectedPackageId, 10),
+            p_assigned_csc_user_id: null,
           });
           if (piError) {
             console.warn('[AddTenant] Package instance creation failed:', piError.message);
