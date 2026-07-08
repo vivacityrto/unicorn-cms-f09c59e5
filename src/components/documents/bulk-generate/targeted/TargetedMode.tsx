@@ -671,7 +671,8 @@ export function TargetedMode({ tenants }: Props) {
               )}
             </div>
           </div>
-        </ScrollArea>
+        </div>
+
         <div className="p-3 border-t shrink-0">
           <Button
             className="w-full bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"
