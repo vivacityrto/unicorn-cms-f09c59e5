@@ -388,16 +388,80 @@ export default function BulkDocumentJobProgress() {
         </div>
       </div>
 
+      {/* Overall progress bar */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Overall progress</span>
+          <span className="font-medium text-foreground">
+            {pct}% · {doneCount.toLocaleString()}/{total.toLocaleString()}
+          </span>
+        </div>
+        <SegmentedBar
+          height={10}
+          segments={[
+            { pct: seg(gCount), className: "bg-emerald-500" },
+            { pct: seg(sCount), className: "bg-slate-400" },
+            { pct: seg(fCount), className: "bg-red-500" },
+            { pct: seg(pCount), className: "bg-blue-500" },
+          ]}
+        />
+      </div>
+
+      {/* Currently generating */}
+      {showActive && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 flex items-center gap-3 animate-fade-in">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inset-0 rounded-full bg-blue-500 opacity-75 animate-ping" />
+            <span className="relative rounded-full bg-blue-500 h-2.5 w-2.5" />
+          </span>
+          <Loader2 className="h-4 w-4 animate-spin text-blue-700" />
+          <div className="text-sm min-w-0 flex-1">
+            <div className="text-blue-900 truncate">
+              <span className="font-medium">Generating:</span>{" "}
+              {tenantNames?.get(activeItem.tenant_id) ??
+                `Tenant #${activeItem.tenant_id}`}{" "}
+              —{" "}
+              {documentTitles?.get(activeItem.document_id) ??
+                `Document #${activeItem.document_id}`}
+            </div>
+            {leasedNow.length > 1 && (
+              <div className="text-xs text-blue-700/80">
+                + {leasedNow.length - 1} more in this batch
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Summary strip */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <SummaryTile label="Total" value={job.total_items} />
-        <SummaryTile label="Generated" value={job.generated_count} tone="emerald" />
-        <SummaryTile label="Skipped" value={job.skipped_count} tone="slate" />
-        <SummaryTile label="Failed" value={job.failed_count} tone="red" />
+        <SummaryTile
+          label="Generated"
+          value={job.generated_count}
+          tone="emerald"
+          icon={CheckCircle2}
+          percent={total > 0 ? Math.round((gCount / total) * 100) : undefined}
+        />
+        <SummaryTile
+          label="Skipped"
+          value={job.skipped_count}
+          tone="slate"
+          icon={SkipForward}
+          percent={total > 0 ? Math.round((sCount / total) * 100) : undefined}
+        />
+        <SummaryTile
+          label="Failed"
+          value={job.failed_count}
+          tone="red"
+          icon={XCircle}
+          percent={total > 0 ? Math.round((fCount / total) * 100) : undefined}
+        />
         <SummaryTile
           label="Duration"
           value={formatDuration(job.started_at, job.finished_at)}
           isString
+          icon={Clock}
         />
       </div>
 
