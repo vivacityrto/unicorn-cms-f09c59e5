@@ -185,7 +185,7 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setShowBrowser(false); setShowSiteConfig(false); } }}>
-      <DialogContent className={showBrowser ? "sm:max-w-4xl max-h-[85vh] overflow-y-auto" : "sm:max-w-lg max-h-[85vh] overflow-y-auto"}>
+      <DialogContent className={cn("w-[95vw] max-h-[85vh] overflow-y-auto overflow-x-hidden", showBrowser ? "sm:max-w-4xl" : "sm:max-w-lg")}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FolderOpen className="h-5 w-5" />
