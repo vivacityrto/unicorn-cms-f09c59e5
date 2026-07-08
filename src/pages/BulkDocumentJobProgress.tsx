@@ -128,6 +128,7 @@ export default function BulkDocumentJobProgress() {
 
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [retryDialogOpen, setRetryDialogOpen] = useState(false);
   const [openTenants, setOpenTenants] = useState<Record<number, boolean>>({});
 
   const { data: job, isLoading: jobLoading } = useQuery({
