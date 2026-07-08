@@ -343,18 +343,19 @@ export default function BulkDocumentJobProgress() {
               Cancel
             </Button>
           )}
-          {isStalled && (
+          {canRetry && (
             <Button
-              onClick={onResume}
-              disabled={resuming}
+              onClick={onRetry}
+              disabled={retrying}
               className="gap-2 bg-amber-500 hover:bg-amber-600 text-white"
             >
-              {resuming ? (
+              {retrying ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Play className="h-4 w-4" />
+                <RefreshCcw className="h-4 w-4" />
               )}
-              Resume
+              Retry Failed &amp; Pending
+              {eligibleRetry > 0 ? ` (${eligibleRetry})` : ""}
             </Button>
           )}
         </div>
