@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -247,30 +248,36 @@ export default function BulkDocumentJobProgress() {
 
   if (accessLoading || jobLoading) {
     return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-      </div>
+      <DashboardLayout>
+        <div className="p-6 space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (!isVivacityStaff) {
     return (
-      <div className="p-6">
-        <div className="rounded-md border p-6 text-sm text-muted-foreground">
-          You don't have access to this page.
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="rounded-md border p-6 text-sm text-muted-foreground">
+            You don't have access to this page.
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (!job) {
     return (
-      <div className="p-6">
-        <div className="rounded-md border p-6 text-sm text-muted-foreground">
-          Job not found.
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="rounded-md border p-6 text-sm text-muted-foreground">
+            Job not found.
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -279,6 +286,7 @@ export default function BulkDocumentJobProgress() {
   const isPolling = !TERMINAL.has(job.status);
 
   return (
+    <DashboardLayout>
     <div className="p-6 space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -456,6 +464,7 @@ export default function BulkDocumentJobProgress() {
         </div>
       )}
     </div>
+    </DashboardLayout>
   );
 }
 
