@@ -197,18 +197,8 @@ export default function BulkDocumentJobProgress() {
     });
   }, [items, tenantNames]);
 
-  useEffect(() => {
-    // Auto-open groups that have any non-generated, non-skipped items on load.
-    if (Object.keys(openTenants).length > 0) return;
-    if (grouped.length === 0) return;
-    const auto: Record<number, boolean> = {};
-    for (const [tid, list] of grouped) {
-      if (list.some((i) => i.state === "failed" || i.state === "leased" || i.state === "pending")) {
-        auto[tid] = true;
-      }
-    }
-    if (Object.keys(auto).length > 0) setOpenTenants(auto);
-  }, [grouped, openTenants]);
+
+
 
   const onCancel = async () => {
     if (!jobId) return;
