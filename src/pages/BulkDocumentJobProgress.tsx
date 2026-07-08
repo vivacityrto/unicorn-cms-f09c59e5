@@ -355,14 +355,7 @@ export default function BulkDocumentJobProgress() {
   const isPolling = !TERMINAL.has(job.status);
 
   const nowMs = Date.now();
-  const eligibleRetry = items.filter(
-    (i) =>
-      i.state === "failed" ||
-      i.state === "cancelled" ||
-      (i.state === "leased" &&
-        i.lease_expires_at !== null &&
-        new Date(i.lease_expires_at).getTime() < nowMs),
-  ).length;
+  const eligibleRetry = retryEligibleItems.length;
   const remainingWork = items.filter(
     (i) =>
       i.state === "pending" ||
