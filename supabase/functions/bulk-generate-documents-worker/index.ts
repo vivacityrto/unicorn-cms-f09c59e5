@@ -46,6 +46,32 @@ const TIME_BUDGET_MS = 50_000;
 const LEASE_BATCH = 5;
 const SUPPORTED_FORMATS = new Set(['docx', 'xlsx', 'xls', 'xlsm', 'pptx']);
 
+// Stop leasing/processing when the forwarded caller JWT is within this window
+// of expiring, so we don't burn through remaining items with an unauthorised
+// token. Fail-safe: if `exp` can't be decoded we behave exactly as today.
+const JWT_SAFETY_MARGIN_MS = 90_000;
+
+function jwtExpMs(bearer: string | null): number | null {
+  if (!bearer?.startsWith('Bearer ')) return null;
+  const token = bearer.slice(7);
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')),
+    );
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function jwtNearExpiry(bearer: string | null): boolean {
+  const exp = jwtExpMs(bearer);
+  if (exp === null) return false;
+  return Date.now() >= exp - JWT_SAFETY_MARGIN_MS;
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
