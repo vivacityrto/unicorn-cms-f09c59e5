@@ -163,13 +163,50 @@ export function TargetedMode({ tenants }: Props) {
     });
   };
 
+  /**
+   * Build p_selections in the exact shape the RPC parses:
+   *   [{ tenant_id, package_id, stage_ids: [<bigint>, ...] }, ...]
+   *
+   * The UI keys selection state on (tenant, package_instance, stage) so the
+   * user can pick per-enrolment, but the RPC groups by catalog package_id —
+   * so we resolve package_id per triple from the client tree and collapse
+   * duplicates.
+   */
   const buildSelectionsJson = () => {
-    const arr: Array<{ tenant_id: number; package_instance_id: number; stage_id: number }> = [];
-    for (const key of selectedTriples) {
-      const [t, p, s] = key.split("|").map(Number);
-      arr.push({ tenant_id: t, package_instance_id: p, stage_id: s });
+    // Lookup: (tenantId, packageInstanceId, stageId) -> package_id
+    const rowByTriple = new Map<string, ClientTreeRow>();
+    for (const [tenantId, rows] of byTenant.entries()) {
+      for (const r of rows) {
+        rowByTriple.set(
+          tripleKey(tenantId, r.package_instance_id, r.stage_id),
+          r,
+        );
+      }
     }
-    return arr;
+
+    // Group by (tenant_id, package_id) with a Set of stage_ids for dedup.
+    const groups = new Map<
+      string,
+      { tenant_id: number; package_id: number; stage_ids: Set<number> }
+    >();
+    for (const key of selectedTriples) {
+      const row = rowByTriple.get(key);
+      if (!row) continue; // triple no longer in tree (stale selection)
+      const [t] = key.split("|").map(Number);
+      const groupKey = `${t}|${row.package_id}`;
+      let g = groups.get(groupKey);
+      if (!g) {
+        g = { tenant_id: t, package_id: row.package_id, stage_ids: new Set() };
+        groups.set(groupKey, g);
+      }
+      g.stage_ids.add(row.stage_id);
+    }
+
+    return Array.from(groups.values()).map((g) => ({
+      tenant_id: g.tenant_id,
+      package_id: g.package_id,
+      stage_ids: Array.from(g.stage_ids),
+    }));
   };
 
   const runPreview = async () => {
@@ -526,10 +563,7 @@ function TenantRow({
 }) {
   const needsFix =
     !!liveness &&
-    (liveness.shared_live === false ||
-      liveness.governance_live === false ||
-      !liveness.has_shared ||
-      !liveness.has_governance);
+    (liveness.shared !== "ok" || liveness.governance !== "ok");
 
   return (
     <li className="px-3 py-2 flex items-center gap-2 hover:bg-muted/40">
@@ -575,67 +609,55 @@ function LivenessBadges({
   }
   if (!liveness) return null;
 
-  const shared = liveness.shared_live === true && liveness.has_shared;
-  const gov = liveness.governance_live === true && liveness.has_governance;
-
   return (
     <TooltipProvider>
       <div className="flex items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] px-1.5 py-0 border",
-                shared
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                  : "bg-amber-50 text-amber-800 border-amber-300",
-              )}
-            >
-              {shared ? (
-                <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
-              ) : (
-                <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-              )}
-              Shared
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            {liveness.has_shared
-              ? shared
-                ? "Shared folder verified live in SharePoint."
-                : "DB flag set but Graph returned not-found — needs remediation."
-              : "No shared folder recorded yet."}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] px-1.5 py-0 border",
-                gov
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                  : "bg-amber-50 text-amber-800 border-amber-300",
-              )}
-            >
-              {gov ? (
-                <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
-              ) : (
-                <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-              )}
-              Gov
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            {liveness.has_governance
-              ? gov
-                ? "Governance folder verified live in SharePoint."
-                : "DB flag set but Graph returned not-found — needs remediation."
-              : "No governance folder recorded yet."}
-          </TooltipContent>
-        </Tooltip>
+        <FolderBadge label="Shared" state={liveness.shared} />
+        <FolderBadge label="Gov" state={liveness.governance} />
       </div>
     </TooltipProvider>
+  );
+}
+
+function FolderBadge({
+  label,
+  state,
+}: {
+  label: string;
+  state: "ok" | "missing" | "unconfigured" | "error";
+}) {
+  const isOk = state === "ok";
+  const tooltip =
+    state === "ok"
+      ? `${label} folder verified live in SharePoint.`
+      : state === "missing"
+        ? `${label} folder was provisioned but Graph returned not-found — needs remediation.`
+        : state === "unconfigured"
+          ? `${label} folder not configured yet — will be auto-provisioned during the run.`
+          : `${label} folder check failed — see logs.`;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[10px] px-1.5 py-0 border",
+            isOk
+              ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+              : state === "error"
+                ? "bg-rose-50 text-rose-800 border-rose-300"
+                : "bg-amber-50 text-amber-800 border-amber-300",
+          )}
+        >
+          {isOk ? (
+            <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+          ) : (
+            <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+          )}
+          {label}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
   );
 }

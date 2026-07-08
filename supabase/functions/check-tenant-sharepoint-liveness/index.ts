@@ -1,18 +1,18 @@
 // check-tenant-sharepoint-liveness
 //
-// For each tenant, verify (a) the DB flags on tenant_sharepoint_settings
-// (matching the worker's provisioning predicate) and (b) that the recorded
-// drive/folder items are still resolvable in Microsoft Graph right now.
+// For each tenant, resolve a single four-state enum for shared/governance
+// SharePoint folders by combining the recorded DB flags with a live Graph
+// GET on the recorded drive/item ids.
 //
-// This is the pre-flight "liveness" check surfaced in the targeted bulk-
-// generate mission-control page. It is NOT a substitute for the worker's
-// own bootstrap — the worker still auto-provisions if flags say so. The
-// point here is to catch tenants whose folder link has been deleted /
-// moved / lost permissions since it was recorded.
+// Returned per-folder state (source of truth — do NOT derive elsewhere):
+//   'ok'            live in Graph now
+//   'missing'       DB flag says provisioned, Graph returned 404/410
+//   'unconfigured'  no drive_id / item_id recorded yet
+//   'error'         Graph returned another non-200 status or the call threw
 //
-// Auth: internal Vivacity staff only (RPC public.is_vivacity_internal_safe).
+// Auth:        internal Vivacity staff only (RPC is_vivacity_internal_safe).
 // Concurrency: at most CONCURRENCY Graph calls in flight across the batch.
-// Cap: at most 200 tenants per request (matches page ceiling).
+// Cap:         at most MAX_TENANTS tenants per request.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { z } from 'https://esm.sh/zod@3.23.8';
@@ -36,13 +36,12 @@ const BodySchema = z.object({
   tenant_ids: z.array(z.number().int().positive()).max(MAX_TENANTS),
 });
 
+type FolderState = 'ok' | 'missing' | 'unconfigured' | 'error';
+
 type TenantLiveness = {
   tenant_id: number;
-  has_shared: boolean;
-  has_governance: boolean;
-  shared_live: boolean | null;
-  governance_live: boolean | null;
-  fully_live: boolean;
+  shared: FolderState;
+  governance: FolderState;
   error: string | null;
 };
 
@@ -53,21 +52,28 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+/**
+ * Live verification of a single (drive, item) — returns the enum branch
+ * we should assign to the folder given a successful DB-flag precondition.
+ *   200         → 'ok'
+ *   404 / 410   → 'missing'
+ *   other       → 'error' (with a tag for logs)
+ */
 async function verifyDriveItem(
   driveId: string,
   itemId: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ state: 'ok' | 'missing' | 'error'; detail?: string }> {
   try {
     const resp = await graphGet(
       `/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(itemId)}?$select=id`,
     );
-    if (resp.status === 200) return { ok: true };
+    if (resp.status === 200) return { state: 'ok' };
     if (resp.status === 404 || resp.status === 410) {
-      return { ok: false, error: `not_found_${resp.status}` };
+      return { state: 'missing', detail: `graph_${resp.status}` };
     }
-    return { ok: false, error: `graph_${resp.status}` };
+    return { state: 'error', detail: `graph_${resp.status}` };
   } catch (e) {
-    return { ok: false, error: (e as Error).message.slice(0, 200) };
+    return { state: 'error', detail: (e as Error).message.slice(0, 200) };
   }
 }
 
@@ -110,7 +116,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  // Staff gate — call is_vivacity_internal_safe under the caller's JWT.
+  // Staff gate — is_vivacity_internal_safe under the caller's JWT.
   const supabaseAsCaller = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
   });
@@ -164,50 +170,52 @@ Deno.serve(async (req: Request) => {
     CONCURRENCY,
     async (tenantId) => {
       const row = byTenant.get(tenantId);
-      const has_shared =
-        !!row &&
-        (row.provisioning_status === 'success' || row.validation_status === 'valid');
-      const has_governance = !!row?.governance_folder_item_id;
 
+      // No settings row at all → both folders unconfigured.
       if (!row || !row.drive_id) {
         return {
           tenant_id: tenantId,
-          has_shared,
-          has_governance,
-          shared_live: null,
-          governance_live: null,
-          fully_live: false,
-          error: row ? 'missing_drive_id' : 'no_settings_row',
+          shared: 'unconfigured',
+          governance: 'unconfigured',
+          error: null,
         };
       }
 
-      let shared_live: boolean | null = null;
-      let governance_live: boolean | null = null;
+      // has_X mirrors the worker's provisioning predicate. Only when the DB
+      // flag says "provisioned" AND an item_id is recorded do we spend a
+      // Graph call — otherwise it's unconfigured.
+      const has_shared =
+        row.provisioning_status === 'success' ||
+        row.validation_status === 'valid';
+      const has_governance = !!row.governance_folder_item_id;
+
       const errs: string[] = [];
 
-      if (row.shared_folder_item_id) {
-        const r = await verifyDriveItem(row.drive_id, row.shared_folder_item_id);
-        shared_live = r.ok;
-        if (!r.ok && r.error) errs.push(`shared:${r.error}`);
+      let shared: FolderState;
+      if (!has_shared || !row.shared_folder_item_id) {
+        shared = 'unconfigured';
       } else {
-        shared_live = false;
+        const r = await verifyDriveItem(row.drive_id, row.shared_folder_item_id);
+        shared = r.state;
+        if (r.state === 'error' && r.detail) errs.push(`shared:${r.detail}`);
       }
 
-      if (row.governance_folder_item_id) {
-        const r = await verifyDriveItem(row.drive_id, row.governance_folder_item_id);
-        governance_live = r.ok;
-        if (!r.ok && r.error) errs.push(`governance:${r.error}`);
+      let governance: FolderState;
+      if (!has_governance) {
+        governance = 'unconfigured';
       } else {
-        governance_live = false;
+        const r = await verifyDriveItem(
+          row.drive_id,
+          row.governance_folder_item_id!,
+        );
+        governance = r.state;
+        if (r.state === 'error' && r.detail) errs.push(`governance:${r.detail}`);
       }
 
       return {
         tenant_id: tenantId,
-        has_shared,
-        has_governance,
-        shared_live,
-        governance_live,
-        fully_live: shared_live === true && governance_live === true,
+        shared,
+        governance,
         error: errs.length ? errs.join('; ') : null,
       };
     },
