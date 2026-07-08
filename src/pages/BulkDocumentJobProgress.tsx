@@ -778,3 +778,185 @@ function ItemResult({ item }: { item: Item }) {
   }
   return <span className="text-muted-foreground">—</span>;
 }
+
+function RetryDialog({
+  open,
+  onOpenChange,
+  items,
+  tenantNames,
+  documentTitles,
+  submitting,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  items: Item[];
+  tenantNames: Map<number, string> | undefined;
+  documentTitles: Map<number, string> | undefined;
+  submitting: boolean;
+  onConfirm: (excludedItemIds: number[]) => void;
+}) {
+  // Selection state — checked = retry, unchecked = exclude/skip.
+  // Default all checked whenever the dialog opens with a new item set.
+  const [checked, setChecked] = useState<Record<number, boolean>>({});
+
+  const itemsKey = items.map((i) => i.id).join(",");
+  // Reset selection whenever the dialog opens or the eligible set changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useMemo(() => {
+    if (open) {
+      const next: Record<number, boolean> = {};
+      for (const it of items) next[it.id] = true;
+      setChecked(next);
+    }
+  }, [open, itemsKey]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<number, Item[]>();
+    for (const it of items) {
+      const arr = map.get(it.tenant_id) ?? [];
+      arr.push(it);
+      map.set(it.tenant_id, arr);
+    }
+    return Array.from(map.entries()).sort((a, b) => {
+      const na = tenantNames?.get(a[0]) ?? "";
+      const nb = tenantNames?.get(b[0]) ?? "";
+      return na.localeCompare(nb);
+    });
+  }, [items, tenantNames]);
+
+  const retryCount = items.filter((i) => checked[i.id]).length;
+  const skipCount = items.length - retryCount;
+
+  const toggleItem = (id: number) =>
+    setChecked((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const toggleTenant = (tenantId: number, newValue: boolean) => {
+    setChecked((prev) => {
+      const next = { ...prev };
+      for (const it of items) {
+        if (it.tenant_id === tenantId) next[it.id] = newValue;
+      }
+      return next;
+    });
+  };
+
+  const confirmLabel =
+    retryCount > 0 && skipCount > 0
+      ? `Retry ${retryCount} · Skip ${skipCount}`
+      : retryCount > 0
+        ? `Retry ${retryCount} item${retryCount === 1 ? "" : "s"}`
+        : `Skip ${skipCount} item${skipCount === 1 ? "" : "s"}`;
+
+  const handleConfirm = () => {
+    const excluded = items.filter((i) => !checked[i.id]).map((i) => i.id);
+    onConfirm(excluded);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Retry failed & pending items</DialogTitle>
+          <DialogDescription>
+            Uncheck any items you don't want to retry — for example docs with no
+            template file, or items that keep failing for the same tenant.
+            Unchecked items will be marked as <strong>skipped</strong> on this
+            job and won't run again.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[50vh] overflow-y-auto rounded-md border">
+          {grouped.length === 0 ? (
+            <div className="p-4 text-sm text-muted-foreground">
+              No retry-eligible items.
+            </div>
+          ) : (
+            grouped.map(([tenantId, tItems]) => {
+              const tenantChecked = tItems.filter(
+                (i) => checked[i.id],
+              ).length;
+              const allChecked = tenantChecked === tItems.length;
+              const noneChecked = tenantChecked === 0;
+              return (
+                <div
+                  key={tenantId}
+                  className="border-b last:border-b-0"
+                >
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
+                    <Checkbox
+                      checked={
+                        allChecked ? true : noneChecked ? false : "indeterminate"
+                      }
+                      onCheckedChange={(v) => toggleTenant(tenantId, v === true)}
+                      aria-label="Toggle all items for this tenant"
+                    />
+                    <div className="text-sm font-medium flex-1 truncate">
+                      {tenantNames?.get(tenantId) ?? `Tenant #${tenantId}`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {tenantChecked} of {tItems.length}
+                    </div>
+                  </div>
+                  <ul className="divide-y">
+                    {tItems.map((it) => {
+                      const errLabel =
+                        errorCodeLabel(it.last_error_code) ||
+                        (it.state === "cancelled" ? "Cancelled" : "");
+                      return (
+                        <li
+                          key={it.id}
+                          className="flex items-start gap-2 px-3 py-2"
+                        >
+                          <Checkbox
+                            checked={!!checked[it.id]}
+                            onCheckedChange={() => toggleItem(it.id)}
+                            aria-label="Retry this item"
+                            className="mt-0.5"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm truncate">
+                              {documentTitles?.get(it.document_id) ??
+                                `Document #${it.document_id}`}
+                            </div>
+                            {errLabel && (
+                              <div className="text-xs text-muted-foreground">
+                                {errLabel}
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={submitting || items.length === 0}
+            className="gap-2 bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCcw className="h-4 w-4" />
+            )}
+            {confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
