@@ -464,6 +464,7 @@ export default function BulkDocumentJobProgress() {
         </div>
       )}
     </div>
+    </DashboardLayout>
   );
 }
 
