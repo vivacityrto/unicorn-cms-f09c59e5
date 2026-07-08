@@ -48,6 +48,15 @@ import {
   launcherRetry,
 } from "@/components/documents/bulk-generate/useBulkGenerateLauncher";
 
+function stalledReasonLabel(reason: string): string {
+  switch (reason) {
+    case "jwt_near_expiry":
+      return "Stalled — session token expired mid-run";
+    default:
+      return `Stalled — ${reason}`;
+  }
+}
+
 type Job = {
   id: string;
   created_by: string;
