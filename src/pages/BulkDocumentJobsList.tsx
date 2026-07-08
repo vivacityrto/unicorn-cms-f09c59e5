@@ -5,6 +5,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { Button } from "@/components/ui/button";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -108,24 +109,29 @@ export default function BulkDocumentJobsList() {
 
   if (accessLoading) {
     return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 w-full" />
-      </div>
+      <DashboardLayout>
+        <div className="p-6 space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (!isVivacityStaff) {
     return (
-      <div className="p-6">
-        <div className="rounded-md border p-6 text-sm text-muted-foreground">
-          You don't have access to this page.
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="rounded-md border p-6 text-sm text-muted-foreground">
+            You don't have access to this page.
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
+    <DashboardLayout>
     <div className="p-6 space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
