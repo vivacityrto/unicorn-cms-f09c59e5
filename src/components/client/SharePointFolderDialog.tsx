@@ -316,6 +316,61 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
               )}
             </div>
 
+            {/* Governance folder */}
+            <div className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  Governance folder
+                </span>
+                {settings?.governance_folder_item_id ? (
+                  <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Configured
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="gap-1 border-orange-500/40 bg-orange-50 text-orange-800">
+                    <AlertCircle className="h-3 w-3" />
+                    Not provisioned
+                  </Badge>
+                )}
+              </div>
+              {settings?.governance_folder_name && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Folder name</span>
+                  <span className="text-sm truncate max-w-[60%] text-right">{settings.governance_folder_name}</span>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Stored on the governance SharePoint site (separate from the shared client folder). Used for generated governance documents.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {settings?.governance_folder_item_id && settings?.governance_folder_url && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={settings.governance_folder_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open in SharePoint
+                    </a>
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant={settings?.governance_folder_item_id ? 'outline' : 'default'}
+                  onClick={handleProvisionGovernance}
+                  disabled={provisioningGovernance || tenant?.status !== 'active'}
+                >
+                  {provisioningGovernance ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {settings?.governance_folder_item_id ? 'Re-verify governance folder' : 'Provision governance folder'}
+                </Button>
+              </div>
+            </div>
+
+
+
             {/* Site Configuration (collapsible) */}
             <div className="rounded-md border">
               <button
