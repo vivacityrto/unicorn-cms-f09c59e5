@@ -31,6 +31,7 @@ import {
   ChevronDown,
   ChevronRight,
   Maximize2,
+  Eye,
 } from "lucide-react";
 import {
   Dialog,
@@ -45,6 +46,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
 import { SharePointFolderDialog } from "@/components/client/SharePointFolderDialog";
+import { SharePointFolderConfig } from "@/components/client/SharePointFolderConfig";
 import { useBulkGenerateClientTree, type ClientTreeRow } from "../useBulkGenerateClientTree";
 import { useTenantSharepointLiveness, type TenantLiveness } from "../useTenantSharepointLiveness";
 import { useTemplatedDocuments } from "../useTemplatedDocuments";
@@ -92,6 +94,7 @@ export function TargetedMode({ tenants }: Props) {
   const [selectedTriples, setSelectedTriples] = useState<Set<string>>(new Set());
   const [documentIds, setDocumentIds] = useState<number[]>([]);
   const [remediateTenantId, setRemediateTenantId] = useState<number | null>(null);
+  const [viewConfigTenantId, setViewConfigTenantId] = useState<number | null>(null);
   const [showItemized, setShowItemized] = useState(false);
   const [itemizedModalOpen, setItemizedModalOpen] = useState(false);
 
@@ -464,8 +467,8 @@ export function TargetedMode({ tenants }: Props) {
                   livenessLoading={liveness.isLoading}
                   stageCount={byTenant.get(t.id)?.length ?? 0}
                   onFix={() => setRemediateTenantId(t.id)}
-                />
-              ))}
+                  onViewConfig={() => setViewConfigTenantId(t.id)}
+                />)}
             </ul>
           )}
         </div>
