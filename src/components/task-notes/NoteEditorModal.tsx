@@ -212,27 +212,39 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
             {/* Rich body */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">Details</span>
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs text-brand-aqua-600 hover:text-brand-aqua-700"
-                  onClick={() => setEditorExpanded((e) => !e)}
+                  onClick={() => setShowDetails((s) => !s)}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase hover:text-brand-aqua-600"
                 >
-                  {editorExpanded ? (
-                    <><Minimize2 className="h-3 w-3 mr-1" />Collapse editor</>
-                  ) : (
-                    <><Maximize2 className="h-3 w-3 mr-1" />Expand editor</>
-                  )}
-                </Button>
+                  {showDetails ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  Details
+                  {!showDetails && <span className="ml-1 normal-case tracking-normal font-normal text-muted-foreground">(hidden)</span>}
+                </button>
+                {showDetails && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-brand-aqua-600 hover:text-brand-aqua-700"
+                    onClick={() => setEditorExpanded((e) => !e)}
+                  >
+                    {editorExpanded ? (
+                      <><Minimize2 className="h-3 w-3 mr-1" />Collapse editor</>
+                    ) : (
+                      <><Maximize2 className="h-3 w-3 mr-1" />Expand editor</>
+                    )}
+                  </Button>
+                )}
               </div>
-              <RichTextEditor
-                value={body}
-                onChange={setBody}
-                placeholder="Write details, paste links, format text…"
-                minHeight={editorExpanded ? '420px' : '160px'}
-              />
+              {showDetails && (
+                <RichTextEditor
+                  value={body}
+                  onChange={setBody}
+                  placeholder="Write details, paste links, format text…"
+                  minHeight={editorExpanded ? '420px' : '160px'}
+                />
+              )}
             </div>
 
             {/* Checklist */}
