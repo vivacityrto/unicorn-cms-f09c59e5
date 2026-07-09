@@ -250,58 +250,51 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
             {/* Checklist */}
             <div>
               <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">Checklist</span>
-              <ul className="mt-2 space-y-1">
+              <ul className="mt-2 space-y-0.5">
                 {items.map((it) => (
                   <li
                     key={it.id}
-                    className="group flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors"
+                    className="group flex items-center gap-3 py-1"
                   >
-                    <input
-                      type="checkbox"
-                      checked={it.done}
-                      onChange={(e) => updateItem(it.id, { done: e.target.checked })}
-                      className="h-4 w-4 accent-brand-purple-600 shrink-0"
-                    />
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={it.done}
+                      onClick={() => updateItem(it.id, { done: !it.done })}
+                      className={cn(
+                        'h-4 w-4 rounded-full border-[1.5px] shrink-0 transition-colors flex items-center justify-center',
+                        it.done
+                          ? 'bg-brand-purple-600 border-brand-purple-600'
+                          : 'border-brand-acai-300 hover:border-brand-purple-600',
+                      )}
+                    >
+                      {it.done && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </button>
                     <Input
                       value={it.text}
                       onChange={(e) => updateItem(it.id, { text: e.target.value })}
                       placeholder="List item"
                       className={cn(
-                        'h-7 text-sm border-0 shadow-none px-0 bg-transparent',
+                        'h-7 text-sm border-0 shadow-none px-0 bg-transparent text-brand-acai-700',
                         'focus-visible:ring-0',
                         it.done && 'line-through text-muted-foreground',
                       )}
                     />
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-brand-fuchsia-600 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                       onClick={() => removeItem(it.id)}
                       aria-label="Remove item"
+                      className="text-muted-foreground hover:text-brand-fuchsia-600 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0"
                     >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
+                      <X className="h-4 w-4" />
+                    </button>
                   </li>
                 ))}
-                <li className="flex items-center gap-3 rounded-md px-2 py-1.5">
-                  <span
-                    className="h-4 w-4 rounded-[3px] border border-dashed border-brand-acai-300 shrink-0"
-                    aria-hidden
-                  />
-                  <Input
-                    value={newItemText}
-                    onChange={(e) => setNewItemText(e.target.value)}
-                    onKeyDown={onKeyDown}
-                    placeholder="Add a list item and press Enter"
-                    className="h-7 text-sm border-0 shadow-none focus-visible:ring-0 px-0 bg-transparent placeholder:text-muted-foreground/60"
-                  />
-                </li>
               </ul>
               <button
                 type="button"
                 onClick={() => setItems((prev) => [...prev, { id: newItemId(), text: '', done: false }])}
-                className="mt-2 ml-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-aqua-600 hover:text-brand-aqua-700"
+                className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-aqua-600 hover:text-brand-aqua-700"
               >
                 <Plus className="h-4 w-4" />
                 Add item
