@@ -287,9 +287,18 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
                       {it.done && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </button>
                     <input
+                      ref={(el) => { itemInputsRef.current[it.id] = el; }}
                       type="text"
                       value={it.text}
                       onChange={(e) => updateItem(it.id, { text: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const nextId = newItemId();
+                          focusItemIdRef.current = nextId;
+                          setItems((prev) => [...prev, { id: nextId, text: '', done: false }]);
+                        }
+                      }}
                       placeholder="List item"
                       className={cn(
                         'flex-1 h-7 text-sm bg-transparent text-brand-acai-700',
