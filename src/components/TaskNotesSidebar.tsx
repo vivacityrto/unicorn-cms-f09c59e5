@@ -163,6 +163,7 @@ export default function TaskNotesSidebar({ isOpen, onClose, userId }: Props) {
         onOpenChange={setEditorOpen}
         mode={editing ? 'edit' : 'create'}
         existing={editing}
+        noteDate={selectedDate}
         onSubmit={handleSubmit}
         submitting={submitting}
       />
