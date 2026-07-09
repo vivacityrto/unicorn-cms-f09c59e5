@@ -120,6 +120,7 @@ function getModuleChip(eventType: string): string | null {
   if (eventType.startsWith('sharepoint') || eventType.startsWith('document')) return 'Documents';
   if (eventType.startsWith('task')) return 'Tasks';
   if (eventType.startsWith('note')) return 'Notes';
+  if (eventType.startsWith('account')) return 'Accounts';
   return null;
 }
 
