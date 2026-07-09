@@ -187,28 +187,43 @@ export function ExpandedNotesModal({
               <div className="flex items-center gap-2">
                 {!searching && (
                   <>
-                    <ToggleGroup
-                      type="single"
-                      size="sm"
-                      value={rangeMode}
-                      onValueChange={(v) => v && setRangeMode(v as RangeMode)}
+                    <div
+                      role="tablist"
+                      aria-label="Range"
+                      className="inline-flex items-center h-9 rounded-lg border bg-muted/40 p-0.5"
                     >
-                      <ToggleGroupItem value="day" className="h-8 px-3 text-xs">Day</ToggleGroupItem>
-                      <ToggleGroupItem value="week" className="h-8 px-3 text-xs">Week</ToggleGroupItem>
-                      <ToggleGroupItem value="month" className="h-8 px-3 text-xs">Month</ToggleGroupItem>
-                    </ToggleGroup>
+                      {(['day', 'week', 'month'] as RangeMode[]).map((mode) => {
+                        const active = rangeMode === mode;
+                        return (
+                          <button
+                            key={mode}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setRangeMode(mode)}
+                            className={
+                              'h-8 min-w-[64px] px-3 rounded-md text-xs font-medium capitalize transition-colors ' +
+                              (active
+                                ? 'bg-background text-brand-acai-700 shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground')
+                            }
+                          >
+                            {mode}
+                          </button>
+                        );
+                      })}
+                    </div>
                     <Button
                       type="button"
-                      size="sm"
                       variant="outline"
                       onClick={summary.generate}
                       disabled={!canSummarize}
-                      className="h-8"
+                      className="h-9 min-w-[112px] px-3 text-xs font-medium"
                     >
                       {summary.isFetching ? (
-                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                       ) : (
-                        <Sparkles className="h-3.5 w-3.5 mr-1" />
+                        <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                       )}
                       Summarise
                     </Button>
@@ -216,11 +231,10 @@ export function ExpandedNotesModal({
                 )}
                 <Button
                   type="button"
-                  size="sm"
                   onClick={onAddNote}
-                  className="h-8 bg-brand-aqua-500 text-white hover:bg-brand-aqua-600"
+                  className="h-9 min-w-[112px] px-3 text-xs font-medium bg-brand-aqua-500 text-white hover:bg-brand-aqua-600"
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
                   Add Note
                 </Button>
               </div>
@@ -236,6 +250,22 @@ export function ExpandedNotesModal({
                 />
               ) : (
                 <>
+                  {(prevQ.data?.unfinishedCount ?? 0) > 0 && rangeMode === 'day' && (
+                    <div className="mb-4">
+                      <CarryOverBanner
+                        count={prevQ.data?.unfinishedCount ?? 0}
+                        pending={m.carryOver.isPending}
+                        onCarryOver={() =>
+                          m.carryOver.mutate({
+                            targetDate: selectedDate,
+                            sourceNotes: prevQ.data?.notes ?? [],
+                            targetNotes: dayNotes,
+                          })
+                        }
+                      />
+                    </div>
+                  )}
+
                   {/* Stat strip */}
                   {rangeMode !== 'day' && (
                     <div className="grid grid-cols-3 gap-3 mb-5">
