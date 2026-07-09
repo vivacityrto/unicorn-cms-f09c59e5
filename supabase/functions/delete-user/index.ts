@@ -124,6 +124,27 @@ Deno.serve(async (req) => {
       details: { deleted_user_uuid: user_uuid },
     });
 
+    // Client Timeline — account removed
+    if (targetUserData?.tenant_id) {
+      const fullName = [targetUserData.first_name, targetUserData.last_name]
+        .filter(Boolean).join(' ').trim() || targetUserData.email || 'user';
+      await emitTimelineEvent(supabase, {
+        tenant_id: targetUserData.tenant_id,
+        client_id: String(targetUserData.tenant_id),
+        event_type: 'account_removed',
+        title: `Account removed: ${fullName}`,
+        source: 'user',
+        visibility: 'internal',
+        entity_type: 'user',
+        entity_id: user_uuid,
+        created_by: currentUser.id,
+        metadata: {
+          removed_email: targetUserData.email ?? null,
+          removed_name: fullName,
+        },
+      });
+    }
+
     console.log(`User ${user_uuid} deleted successfully`);
 
     return new Response(JSON.stringify({ ok: true }), {
