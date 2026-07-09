@@ -162,5 +162,12 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
         </Button>
       </div>
     </article>
+    <NotePreviewModal
+      open={previewOpen}
+      onOpenChange={setPreviewOpen}
+      note={note}
+      onEdit={onEdit}
+    />
+    </>
   );
 }
