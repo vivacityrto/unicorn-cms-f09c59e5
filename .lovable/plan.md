@@ -1,55 +1,97 @@
-## Goal
-Redesign the Daily Notes side panel (`src/components/TaskNotesSidebar.tsx`) into a structured note+checklist hybrid with Panel/Focus modes, rich-text editor, carry-over, search, and expand-to-workspace. Keep existing trigger wiring in `TasksManagement.tsx` and the `@tanstack/react-query` + Supabase data pattern.
+## Daily Notes — Range overview + AI summary in Expand modal
 
-## 1. Database migration
-Extend `public.user_daily_notes` (keep RLS + `content` column for back-compat):
-```sql
-ALTER TABLE public.user_daily_notes
-  ADD COLUMN title text NOT NULL DEFAULT '',
-  ADD COLUMN color text NOT NULL DEFAULT 'purple',
-  ADD COLUMN body  text NOT NULL DEFAULT '',
-  ADD COLUMN items jsonb NOT NULL DEFAULT '[]'::jsonb;
-```
-No server-side sanitize trigger — sanitize client-side only, matching how every other rich-text feature in this codebase already works (`ComposeEmailDialog`, `ClientStructuredNotesTab`, `NoteFormDialog` all sanitize via `src/lib/sanitize.ts`, none use a DB trigger).
+Additive changes to the Expand modal only. Panel mode, `TasksManagement.tsx`, the `user_daily_notes` schema, search/carry-over/editor flows are untouched.
 
-Legacy row hydration is read-side only (no data migration): if `title`/`items` empty and `content` non-empty, derive `title` = first line, `items` = remaining lines as unchecked.
+### 1. Data hook — `src/components/task-notes/useDailyNotes.ts`
 
-## 2. Component structure
-Replace internals of `TaskNotesSidebar.tsx`; keep exported signature (`isOpen`, `onClose`, `userId`) so `TasksManagement.tsx` wiring is untouched. New files under `src/components/task-notes/`:
+Add:
+- `noteQueryKeys.range(userId, from, to)` → `['user_daily_notes', userId, 'range', from, to]`.
+- `useNotesForRange(userId, from, to, enabled)`: `select('*').eq('user_id').gte('note_date', from).lte('note_date', to)` ordered by `note_date` then `created_at`, mapped through `hydrateLegacyNote`. Returns `DailyNote[]`.
 
-- **`TaskNotesSidebar.tsx`** — shell, header, `Panel ⇄ Focus` segmented toggle (persisted to `localStorage['unicorn:notes:view-mode']`), search state, selected-date state, expand state. Renders `PanelMode` or `FocusMode`.
-- **`PanelMode.tsx`** — progress bar, search, month `Calendar` (dot on note-days, aqua selected, acai today), day label + Add Note, `CarryOverBanner`, `NoteCardList`, sticky footer (Delete Completed / Clear All).
-- **`FocusMode.tsx`** — progress ring (SVG, purple→fuchsia gradient), 7-day week strip with chevron paging, search, Add Note, `CarryOverBanner`, `NoteCardList`. No footer.
-- **`NoteCard.tsx`** — time, color dot, title, sanitized body (`dangerouslySetInnerHTML` with `sanitizeNoteHtml`), checklist with circular checkboxes, inline "Add item" input, edit/delete icon buttons. Toggle/add-item = optimistic `useMutation` on `items`.
-- **`NoteEditorModal.tsx`** — shared Add/Edit modal. Reuse existing `<RichTextEditor>` from `src/components/ui/rich-text-editor.tsx` (already wraps Tiptap StarterKit + Link + Underline + TextAlign — do not instantiate a second bespoke `useEditor()`). Title input, 4 color swatches, checklist editor, discard-if-empty rule.
-- **`CarryOverBanner.tsx`** — macaron banner, count of unfinished items from previous day, "Carry Over" action.
-- **`SearchResultsList.tsx`** — flat, date-desc results with date chip when search query active.
-- **`ExpandedNotesModal.tsx`** — two-pane full-screen modal (left: search + calendar + progress + carry-over; right: 2-column grid of note cards).
-- **`useDailyNotes.ts`** — `useNotesForDate`, `useNotesForMonth` (calendar dots), `useSearchNotes`, `usePreviousDayUnfinished`. All keyed `['user_daily_notes', userId, ...]`.
-- **`useNoteMutations.ts`** — `createNote`, `updateNote`, `deleteNote`, `toggleItem`, `addItem`, `carryOver`, `deleteCompleted`, `clearAll`. Each invalidates the relevant query keys and shows a sonner toast.
-- **`sanitizeNoteHtml.ts`** — Add an optional `overrides` param to `sanitizeHtml()` in `src/lib/sanitize.ts` (merges into `ALLOWED_TAGS`/`ALLOWED_ATTR`, backward compatible), then this file calls it with the widened allowlist: `p, br, strong, em, u, s, h2, h3, ul, ol, li, blockquote, hr, a[href], span[style]` — matching what `RichTextEditor`'s extensions can actually produce. Force `a` to `rel="noopener noreferrer" target="_blank"`.
-- **`hydrateLegacyNote.ts`** — pure function: if `title` + `items` empty and `content` non-empty, split into title + unchecked items.
+### 2. Expand modal — `src/components/task-notes/ExpandedNotesModal.tsx`
 
-## 3. Styling
-Colors/gradients via existing CSS custom properties in `src/index.css` (`--brand-purple-600`, `--brand-acai-700`, `--brand-light-purple-300`, `--brand-fuchsia-600`, `--brand-macaron-500`, `--primary`, `--gradient-brand`, `--radius`). No hardcoded hex. Shadows via Tailwind utilities `shadow-card` / `shadow-card-hover` / `shadow-xl` (defined in `tailwind.config.ts`'s `boxShadow`, not CSS vars). Motion easing via `ease-smooth` Tailwind class (already `cubic-bezier(0.4,0,0.2,1)`). Panel width ~470px. `prefers-reduced-motion` respected via `motion-reduce:` utilities. Icons only from `lucide-react`.
+Local state: `rangeMode: 'day' | 'week' | 'month'` (default `'day'`).
 
-## 4. Interactions
-- Mode toggle swaps only region below header; shared state (selected date, search, scroll) lives in `TaskNotesSidebar.tsx` and is passed as props.
-- Search: when query non-empty, both modes render `SearchResultsList` instead of the calendar/week + notes; Add Note still targets `selectedDate`.
-- Carry-over: RPC-free — client reads previous day's notes, computes unfinished items; on click, upserts a "Carried Over" macaron note on `selectedDate`, updates source notes, deletes any source note that becomes fully empty.
-- Empty-note discard: `createNote`/`updateNote` short-circuit or delete when title/body/items all empty.
-- Toasts: reuse `sonner` (already imported in current file).
+Right-pane header additions (next to the date title):
+- `ToggleGroup type="single"` (Day / Week / Month) from `@/components/ui/toggle-group`.
+- `Summarize` button (disabled if the visible range has zero notes; spinner while pending).
 
-## 5. Wiring
-No changes to `src/pages/TasksManagement.tsx`. The Notes button + `<TaskNotesSidebar>` mount stay as-is.
+Range bounds derived from `selectedDate`:
+- `day`: single date (existing path — unchanged).
+- `week`: `startOfWeek` / `endOfWeek` (same weekStartsOn convention `FocusMode.tsx` uses).
+- `month`: `startOfMonth` / `endOfMonth` (matches `useNotesForMonth`).
 
-## 6. Dependencies
-None to add — `@tiptap/*`, `dompurify` already installed and wired into `src/components/ui/rich-text-editor.tsx` and `src/lib/sanitize.ts`. Reuse both rather than adding parallel copies.
+Feed:
+- `day`: unchanged 2-column grid using `useNotesForDate`.
+- `week` / `month`: use `useNotesForRange`, group by `note_date`, render a day subheader (weekday, `dd MMM yyyy`, per-day done/total) then that day's `NoteCard`s. Days with zero notes are skipped.
 
-## 7. Out of scope
-- No tenant scoping (internal per-user tool; RLS is already `auth.uid() = user_id`).
-- No changes to `TasksManagement.tsx` beyond existing mount.
-- No changes to unrelated files/features.
+Stat strip (above the feed, styled like the left-pane progress bar):
+- Total notes in period.
+- Items `done/total` + %.
+- Days-with-notes vs. days-in-period.
+All computed client-side from the range/day query.
 
-## Acceptance
-Walk through §8 checklist of the uploaded spec: mode toggle preserves state, calendar dots, progress bar/ring, carry-over banner + action, cross-date search, expand modal, empty-note discard, sanitized rich text (toolbar formatting survives a save round-trip), reduced-motion, toast styling.
+Search behaviour: unchanged. When `query` is non-empty, `SearchResultsList` still renders and the range toggle/summary card hide.
+
+### 3. AI summary — client
+
+New hook `src/components/task-notes/useNotesSummary.ts`:
+- `useQuery` keyed `['user_daily_notes', userId, 'summary', rangeMode, periodStartISO, periodEndISO]`.
+- `enabled: false` — triggered by `refetch()` from the Summarize button (so it only runs on click, but result is cached).
+- `staleTime: 10 * 60 * 1000`, `gcTime: 30 * 60 * 1000`.
+- Builds a compact digest client-side from the already-loaded notes: per note → title, done items, open items, plaintext body (strip HTML), grouped by date. POSTs `{ period_label, period_start, period_end, digest }` to the edge function via `supabase.functions.invoke('summarize-daily-notes')`.
+- Errors surface via `sonner` toast.
+
+Invalidation: extend `invalidate()` in `useNoteMutations.ts` to also invalidate `['user_daily_notes', userId, 'summary']` so any create/update/delete/toggle/carry-over within the summarised window busts the cached summary. (Broad key match — cheap, correct.)
+
+Summary card (rendered above the feed, only when a summary exists for the current period key):
+- Headline in the bold acai heading style.
+- Summary body text.
+- `open_count` as a stat chip.
+- `Regenerate` link-button that calls `refetch()` (bypasses cache via `queryClient.invalidateQueries` on that key first).
+
+### 4. Edge function — `supabase/functions/summarize-daily-notes/index.ts`
+
+Follows `draft-finding` shape:
+- CORS + `OPTIONS`.
+- Verify caller JWT via `supabase.auth.getClaims(token)`; 401 if missing/invalid.
+- Body: `{ user_id, period_label, period_start, period_end, digest }`. Validate with Zod. **Reject if `claims.sub !== body.user_id`** (no tenant scoping — notes are per-user).
+- Guard: cap digest size (e.g. 60 KB) to keep prompts sane; return 413 if larger.
+- Rate limit: **~20/day per user**. See "Rate-limit storage" below.
+- Call Lovable AI Gateway: `POST https://ai.gateway.lovable.dev/v1/chat/completions`, `Authorization: Bearer ${LOVABLE_API_KEY}`, `model: 'google/gemini-2.5-pro'`, `response_format: { type: 'json_object' }`.
+- System prompt (Australian English): summarise across the period — what got done, what's still open, and a brief note on any reflective/no-checklist entries. Output **JSON only**: `{ "headline": string, "summary": string, "open_count": number }`.
+- Reuse `safeParse` (defensive fence/preamble stripping).
+- Map upstream 429 → 429 with friendly message. Missing `LOVABLE_API_KEY` → 500 with clear error (surfaced as toast, not silent).
+- Deployed with `verify_jwt = false` (JWT validated in code, per project convention).
+
+### Rate-limit storage — decision needed
+
+`draft-finding` counts `client_audit_log` rows for its cap. Daily notes has no equivalent audit table and the spec says "no new persistence table for v1". Two viable options — flagging for your call before build:
+
+- **A (preferred, matches spec literally):** best-effort in-process counter (`Map<userId, { count, resetsAt }>` in the edge function module scope). Simple, zero-schema. Caveat: resets on cold start, so real cap ≈ 20 per warm instance — soft ceiling, not hard.
+- **B:** log each call to an existing generic audit table (e.g. `audit_events` if a suitable `entity_type`/`action` fits) and count rows in a 24 h window like `draft-finding` does. Durable cap, no new table, but couples Daily Notes to an audit surface it doesn't otherwise touch.
+
+Default to **A** unless you say otherwise.
+
+### 5. Acceptance
+
+- Expand still opens on today in Day mode, unchanged.
+- Week/Month shows every day with notes, grouped and dated; zero-note days omitted.
+- Stat strip totals match the visible feed exactly.
+- Summarize disabled when period has zero notes; produces Australian-English JSON digest; toggling period or editing a note within the period invalidates the cached summary; reopening within 10 min doesn't re-call the model; Regenerate forces a fresh call.
+- No new secrets. Missing `LOVABLE_API_KEY` → toast, not silent failure.
+
+### Out of scope
+
+- Panel/Focus toggle is not restored.
+- No changes to `TasksManagement.tsx`, `user_daily_notes` schema, or search/carry-over/editor flows.
+- No persistent summary-cache table.
+
+### Files touched
+
+- `src/components/task-notes/useDailyNotes.ts` — add `useNotesForRange` + key.
+- `src/components/task-notes/ExpandedNotesModal.tsx` — range toggle, grouped feed, stat strip, summary card wiring.
+- `src/components/task-notes/useNotesSummary.ts` — **new**.
+- `src/components/task-notes/useNoteMutations.ts` — extend `invalidate()` to also clear summary keys.
+- `supabase/functions/summarize-daily-notes/index.ts` — **new**.
+- `supabase/config.toml` — register the new function with `verify_jwt = false`.
