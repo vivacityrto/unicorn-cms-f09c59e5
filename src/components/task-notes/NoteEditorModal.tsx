@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { cn } from '@/lib/utils';
-import { Trash2, Plus, X, Maximize2, Minimize2 } from 'lucide-react';
+import { Trash2, Plus, X, Maximize2, Minimize2, Sparkles, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { COLOR_SWATCH, ChecklistItem, DailyNote, NoteColor, newItemId } from './types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
   open: boolean;
@@ -29,6 +30,9 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
   const [newItemText, setNewItemText] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [editorExpanded, setEditorExpanded] = useState(false);
+  const [showDetails, setShowDetails] = useState(true);
+  const [generatingTitle, setGeneratingTitle] = useState(false);
+  const [titleEdited, setTitleEdited] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -37,11 +41,15 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
       setColor(existing.color);
       setBody(existing.body);
       setItems(existing.items.map((i) => ({ ...i })));
+      setShowDetails(!!existing.body && existing.body.replace(/<[^>]*>/g, '').trim().length > 0);
+      setTitleEdited(true);
     } else {
       setTitle('');
       setColor('purple');
       setBody('');
       setItems([]);
+      setShowDetails(false);
+      setTitleEdited(false);
     }
     setNewItemText('');
     setExpanded(false);
@@ -65,7 +73,44 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
     }
   };
 
-  const handleSave = () => onSubmit({ title, color, body, items });
+  const buildAiContent = (): string => {
+    const plain = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const checklist = items.map((it) => `- ${it.text}`).filter((s) => s.trim() !== '-').join('\n');
+    return [plain, checklist].filter(Boolean).join('\n\n');
+  };
+
+  const generateTitle = async (): Promise<string> => {
+    const content = buildAiContent();
+    if (!content) return '';
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-note-title', { body: { content } });
+      if (error) return '';
+      return (data?.title || '').trim();
+    } catch {
+      return '';
+    }
+  };
+
+  const handleGenerateTitleClick = async () => {
+    setGeneratingTitle(true);
+    const t = await generateTitle();
+    if (t) {
+      setTitle(t);
+      setTitleEdited(false);
+    }
+    setGeneratingTitle(false);
+  };
+
+  const handleSave = async () => {
+    let finalTitle = title.trim();
+    if (!finalTitle && !titleEdited) {
+      setGeneratingTitle(true);
+      finalTitle = await generateTitle();
+      setGeneratingTitle(false);
+      if (finalTitle) setTitle(finalTitle);
+    }
+    onSubmit({ title: finalTitle, color, body, items });
+  };
 
   const displayDate = existing ? new Date(existing.note_date) : (noteDate ?? new Date());
   const dateLabel = format(displayDate, 'EEEE, dd MMMM yyyy');
@@ -115,17 +160,31 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
           {/* Body */}
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
             {/* Title */}
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Note title"
-              className={cn(
-                'border-0 border-b border-border rounded-none px-0 text-2xl font-bold h-auto py-2',
-                'placeholder:text-muted-foreground/60',
-                'focus-visible:ring-0 focus-visible:border-brand-aqua-500',
-              )}
-              autoFocus
-            />
+            <div className="flex items-end gap-2">
+              <Input
+                value={title}
+                onChange={(e) => { setTitle(e.target.value); setTitleEdited(true); }}
+                placeholder="Note title (auto-generated if left blank)"
+                className={cn(
+                  'flex-1 border-0 border-b border-border rounded-none px-0 text-2xl font-bold h-auto py-2',
+                  'placeholder:text-muted-foreground/60',
+                  'focus-visible:ring-0 focus-visible:border-brand-aqua-500',
+                )}
+                autoFocus
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleGenerateTitleClick}
+                disabled={generatingTitle || (!body && items.length === 0)}
+                className="h-8 gap-1.5 text-xs text-brand-fuchsia-600 hover:text-brand-fuchsia-700 hover:bg-brand-fuchsia-50 shrink-0"
+                title="Generate title with AI"
+              >
+                {generatingTitle ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                AI title
+              </Button>
+            </div>
 
             {/* Label / color */}
             <div className="flex items-center gap-3">
@@ -153,27 +212,39 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
             {/* Rich body */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">Details</span>
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs text-brand-aqua-600 hover:text-brand-aqua-700"
-                  onClick={() => setEditorExpanded((e) => !e)}
+                  onClick={() => setShowDetails((s) => !s)}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase hover:text-brand-aqua-600"
                 >
-                  {editorExpanded ? (
-                    <><Minimize2 className="h-3 w-3 mr-1" />Collapse editor</>
-                  ) : (
-                    <><Maximize2 className="h-3 w-3 mr-1" />Expand editor</>
-                  )}
-                </Button>
+                  {showDetails ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  Details
+                  {!showDetails && <span className="ml-1 normal-case tracking-normal font-normal text-muted-foreground">(hidden)</span>}
+                </button>
+                {showDetails && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-brand-aqua-600 hover:text-brand-aqua-700"
+                    onClick={() => setEditorExpanded((e) => !e)}
+                  >
+                    {editorExpanded ? (
+                      <><Minimize2 className="h-3 w-3 mr-1" />Collapse editor</>
+                    ) : (
+                      <><Maximize2 className="h-3 w-3 mr-1" />Expand editor</>
+                    )}
+                  </Button>
+                )}
               </div>
-              <RichTextEditor
-                value={body}
-                onChange={setBody}
-                placeholder="Write details, paste links, format text…"
-                minHeight={editorExpanded ? '420px' : '160px'}
-              />
+              {showDetails && (
+                <RichTextEditor
+                  value={body}
+                  onChange={setBody}
+                  placeholder="Write details, paste links, format text…"
+                  minHeight={editorExpanded ? '420px' : '160px'}
+                />
+              )}
             </div>
 
             {/* Checklist */}
