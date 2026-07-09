@@ -95,6 +95,7 @@ const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   emails: ['email_sent', 'email_failed', 'email_linked', 'email_attachment_saved'],
   docs: ['document_uploaded', 'document_downloaded', 'document_shared_to_client', 'sharepoint_doc_linked', 'sharepoint_root_configured', 'sharepoint_root_invalid'],
   notes: ['note_added', 'note_created', 'note_pinned', 'note_unpinned'],
+  accounts: ['account_invited', 'account_activated', 'account_deactivated', 'account_role_changed', 'account_removed'],
   microsoft: [
     'microsoft_connected', 'microsoft_disconnected', 'microsoft_sync_failed',
     'sharepoint_doc_linked', 'sharepoint_root_configured', 'sharepoint_root_invalid',
