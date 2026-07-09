@@ -17,6 +17,7 @@ import {
   Plug, PlugZap, FolderCog, FolderX,
   Clock, ExternalLink, RotateCcw, MoreHorizontal, Copy, Shield,
   ChevronDown, ChevronUp, Pin, PinOff, Package,
+  UserPlus, UserCheck, UserX, UserCog, UserMinus,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { LucideIcon } from 'lucide-react';
