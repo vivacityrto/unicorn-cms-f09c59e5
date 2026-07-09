@@ -43,6 +43,12 @@ export const TIMELINE_EVENT_TYPES = [
   // Time
   'time_posted',
   'time_ignored',
+  // Accounts
+  'account_invited',
+  'account_activated',
+  'account_deactivated',
+  'account_role_changed',
+  'account_removed',
 ] as const;
 
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
