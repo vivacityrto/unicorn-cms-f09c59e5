@@ -1,296 +1,185 @@
-import { useState } from "react";
-import { format } from "date-fns";
-import { X, MoreHorizontal, Plus, List, ListOrdered } from "lucide-react";
+import { useEffect, useMemo, useState } from 'react';
+import { startOfMonth, startOfWeek } from 'date-fns';
+import { Maximize2, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { PanelMode } from './task-notes/PanelMode';
+import { FocusMode } from './task-notes/FocusMode';
+import { NoteEditorModal } from './task-notes/NoteEditorModal';
+import { ExpandedNotesModal } from './task-notes/ExpandedNotesModal';
+import { useNoteMutations } from './task-notes/useNoteMutations';
+import type { DailyNote, ViewMode } from './task-notes/types';
 
-function applyBullets(value: string): string {
-  if (!value.trim()) return "- ";
-  return value
-    .split("\n")
-    .map((line) => (line.trim() === "" || /^\s*-\s/.test(line) ? line : `- ${line}`))
-    .join("\n");
-}
-
-function applyNumbering(value: string): string {
-  if (!value.trim()) return "1. ";
-  let n = 1;
-  return value
-    .split("\n")
-    .map((line) => {
-      if (line.trim() === "") return line;
-      if (/^\s*\d+\.\s/.test(line)) {
-        n++;
-        return line;
-      }
-      return `${n++}. ${line}`;
-    })
-    .join("\n");
-}
-import { supabase } from "@/integrations/supabase/client";
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
-
-interface TaskNotesSidebarProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
 }
 
-interface DailyNote {
-  id: string;
-  user_id: string;
-  note_date: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
+const STORAGE_KEY = 'unicorn:notes:view-mode';
+
+function readInitialMode(): ViewMode {
+  if (typeof window === 'undefined') return 'panel';
+  const v = window.localStorage.getItem(STORAGE_KEY);
+  return v === 'focus' ? 'focus' : 'panel';
 }
 
-export default function TaskNotesSidebar({ isOpen, onClose, userId }: TaskNotesSidebarProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [isAdding, setIsAdding] = useState(false);
-  const [newContent, setNewContent] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingContent, setEditingContent] = useState("");
-  const queryClient = useQueryClient();
+export default function TaskNotesSidebar({ isOpen, onClose, userId }: Props) {
+  const [mode, setMode] = useState<ViewMode>(() => readInitialMode());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [query, setQuery] = useState('');
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editing, setEditing] = useState<DailyNote | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
-  const dateStr = format(selectedDate, "yyyy-MM-dd");
-  const queryKey = ["user_daily_notes", userId, dateStr];
+  const m = useNoteMutations(userId);
 
-  const { data: notes = [], isLoading } = useQuery({
-    queryKey,
-    enabled: isOpen && !!userId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_daily_notes" as any)
-        .select("*")
-        .eq("user_id", userId)
-        .eq("note_date", dateStr)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data || []) as unknown as DailyNote[];
-    },
-  });
+  useEffect(() => {
+    try { window.localStorage.setItem(STORAGE_KEY, mode); } catch { /* ignore */ }
+  }, [mode]);
 
-  const addMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const { error } = await supabase.from("user_daily_notes" as any).insert({
-        user_id: userId,
-        note_date: dateStr,
-        content,
-      } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-      setNewContent("");
-      setIsAdding(false);
-      toast.success("Note added");
-    },
-    onError: (e: any) => toast.error(e.message || "Failed to add note"),
-  });
+  // Keep week-start in sync when jumping across weeks via calendar/search.
+  useEffect(() => {
+    setWeekStart(startOfWeek(selectedDate, { weekStartsOn: 1 }));
+    setMonth(startOfMonth(selectedDate));
+  }, [selectedDate]);
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, content }: { id: string; content: string }) => {
-      const { error } = await supabase
-        .from("user_daily_notes" as any)
-        .update({ content } as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-      setEditingId(null);
-      setEditingContent("");
-      toast.success("Note updated");
-    },
-    onError: (e: any) => toast.error(e.message || "Failed to update note"),
-  });
+  const openAdd = () => { setEditing(null); setEditorOpen(true); };
+  const openEdit = (n: DailyNote) => { setEditing(n); setEditorOpen(true); };
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("user_daily_notes" as any).delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-      toast.success("Note deleted");
-    },
-    onError: (e: any) => toast.error(e.message || "Failed to delete note"),
-  });
+  const handleSubmit = (data: { title: string; color: DailyNote['color']; body: string; items: DailyNote['items'] }) => {
+    if (editing) {
+      m.updateNote.mutate(
+        { id: editing.id, userId, date: new Date(editing.note_date), ...data },
+        { onSuccess: () => setEditorOpen(false) },
+      );
+    } else {
+      m.createNote.mutate(
+        { userId, date: selectedDate, ...data },
+        { onSuccess: () => setEditorOpen(false) },
+      );
+    }
+  };
+
+  const submitting = m.createNote.isPending || m.updateNote.isPending;
+
+  const shared = useMemo(() => ({
+    userId,
+    selectedDate,
+    onSelectDate: setSelectedDate,
+    query,
+    onQueryChange: setQuery,
+    onAddNote: openAdd,
+    onEditNote: openEdit,
+  }), [userId, selectedDate, query]);
 
   if (!isOpen) return null;
 
   return (
-    <aside className="w-[360px] shrink-0 border-l border-border bg-muted/30 flex flex-col h-[calc(100vh-0px)] sticky top-0 self-start max-h-screen overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-background">
-        <h2 className="text-sm font-semibold">Daily Notes</h2>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="border-b bg-background p-2 flex justify-center">
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={(d) => d && setSelectedDate(d)}
-          initialFocus
-          className="pointer-events-auto"
-        />
-      </div>
-
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-background">
-        <div className="text-sm font-medium">
-          Notes for {format(selectedDate, "EEEE, dd MMMM yyyy")}
+    <>
+      <aside
+        className={cn(
+          'w-[470px] shrink-0 border-l border-border bg-background flex flex-col',
+          'h-[calc(100vh-0px)] sticky top-0 self-start max-h-screen overflow-hidden shadow-card',
+        )}
+        aria-label="Daily Notes"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-background">
+          <h2 className="text-sm font-semibold text-brand-acai-700">Daily Notes</h2>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setExpanded(true)}
+              aria-label="Expand notes to workspace"
+              title="Expand"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onClose}
+              aria-label="Close notes panel"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <Button
-          size="sm"
-          onClick={() => {
-            setIsAdding(true);
-            setNewContent("");
-          }}
-          style={{ backgroundColor: "#7130A0", color: "white" }}
-          className="hover:opacity-90 h-8"
-        >
-          <Plus className="h-3.5 w-3.5 mr-1" />
-          Add Note
-        </Button>
-      </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {isLoading ? (
-          <div className="text-sm text-muted-foreground">Loading…</div>
-        ) : notes.length === 0 && !isAdding ? (
-          <div className="text-sm text-muted-foreground text-center py-8">
-            No notes for this date.
+        {/* Panel/Focus toggle */}
+        <div className="px-4 py-2 border-b bg-background">
+          <div
+            role="tablist"
+            aria-label="View mode"
+            className="grid grid-cols-2 gap-1 p-1 rounded-[11px] bg-brand-light-purple-100"
+          >
+            {(['panel', 'focus'] as const).map((m) => (
+              <button
+                key={m}
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => setMode(m)}
+                className={cn(
+                  'text-[12px] py-1.5 rounded-[8px]',
+                  'transition-all duration-150 ease-smooth motion-reduce:transition-none',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                  mode === m
+                    ? 'bg-background text-brand-acai-700 font-bold shadow-sm'
+                    : 'text-brand-acai-700/70 hover:text-brand-acai-700',
+                )}
+              >
+                {m === 'panel' ? 'Panel' : 'Focus'}
+              </button>
+            ))}
           </div>
-        ) : (
-          notes.map((note) => (
-            <div key={note.id} className="bg-background border rounded-md p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="text-xs text-muted-foreground">
-                  {format(new Date(note.created_at), "hh:mm a")}
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setEditingId(note.id);
-                        setEditingContent(note.content);
-                      }}
-                    >
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => deleteMutation.mutate(note.id)}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              {editingId === note.id ? (
-                <div className="mt-2 space-y-2">
-                  <div className="flex gap-1">
-                    <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setEditingContent(applyBullets(editingContent))}>
-                      <List className="h-3.5 w-3.5 mr-1" /> Bullets
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setEditingContent(applyNumbering(editingContent))}>
-                      <ListOrdered className="h-3.5 w-3.5 mr-1" /> Numbering
-                    </Button>
-                  </div>
-                  <Textarea
-                    value={editingContent}
-                    onChange={(e) => setEditingContent(e.target.value)}
-                    rows={3}
-                    autoFocus
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditingId(null);
-                        setEditingContent("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        updateMutation.mutate({ id: note.id, content: editingContent.trim() })
-                      }
-                      disabled={!editingContent.trim() || updateMutation.isPending}
-                      style={{ backgroundColor: "#7130A0", color: "white" }}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-1 text-sm whitespace-pre-wrap break-words">
-                  {note.content}
-                </div>
-              )}
-            </div>
-          ))
-        )}
+        </div>
 
-        {isAdding && (
-          <div className="bg-background border rounded-md p-3 space-y-2">
-            <div className="flex gap-1">
-              <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setNewContent(applyBullets(newContent))}>
-                <List className="h-3.5 w-3.5 mr-1" /> Bullets
-              </Button>
-              <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setNewContent(applyNumbering(newContent))}>
-                <ListOrdered className="h-3.5 w-3.5 mr-1" /> Numbering
-              </Button>
-            </div>
-            <Textarea
-              value={newContent}
-              onChange={(e) => setNewContent(e.target.value)}
-              rows={3}
-              placeholder="Write a note…"
-              autoFocus
+        {/* Body */}
+        <div className="flex-1 min-h-0">
+          {mode === 'panel' ? (
+            <PanelMode
+              {...shared}
+              month={month}
+              onMonthChange={setMonth}
             />
-            <div className="flex justify-end gap-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setIsAdding(false);
-                  setNewContent("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => addMutation.mutate(newContent.trim())}
-                disabled={!newContent.trim() || addMutation.isPending}
-                style={{ backgroundColor: "#7130A0", color: "white" }}
-              >
-                Save
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    </aside>
+          ) : (
+            <FocusMode
+              {...shared}
+              weekStart={weekStart}
+              onWeekStartChange={setWeekStart}
+            />
+          )}
+        </div>
+      </aside>
+
+      <NoteEditorModal
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        mode={editing ? 'edit' : 'create'}
+        existing={editing}
+        onSubmit={handleSubmit}
+        submitting={submitting}
+      />
+
+      <ExpandedNotesModal
+        open={expanded}
+        onOpenChange={setExpanded}
+        userId={userId}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+        month={month}
+        onMonthChange={setMonth}
+        query={query}
+        onQueryChange={setQuery}
+        onAddNote={() => { setExpanded(false); openAdd(); }}
+        onEditNote={(n) => { setExpanded(false); openEdit(n); }}
+      />
+    </>
   );
 }
