@@ -1,18 +1,26 @@
-## Fix: Surface real edge-function error messages in GovernancePublishDialog
+## Auto-create template mapping on import
 
-### Problem
-In `src/components/governance/GovernancePublishDialog.tsx`, `handlePublish` treats non-2xx responses from the `import-sharepoint-template` edge function as thrown errors (supabase-js populates `error`, not `data`). The current `catch` block shows only `err.message`, which is the generic `"Edge Function returned a non-2xx status code"`. The actual reason (missing mappings, drift detected, version not found, wrong status) is on the underlying `Response` at `err.context` and never reaches the user. The `if (data?.error)` branch below `throw error` is unreachable for these cases.
+In `supabase/functions/import-sharepoint-template/index.ts`, inside `handleImport`, right after the existing `scanDocxMergeFields` block that produces `detected_fields`, `invalid_tags`, and `fields_linked`:
 
-### Change
-Replace the `catch` block (lines 41–45) in `handlePublish` to read the JSON body from `err.context` before falling back:
+1. If `detected_fields.length > 0`, run a best-effort block (try/catch, `console.warn` on failure — same guard style as the scan itself):
+   - Select `id, name` from `dd_fields` where `id in (detected_fields.map(f => f.field_id))`.
+   - Build a `tag → name` lookup keyed by `field_id`.
+   - Build `mapping_json` as `{ [tag]: { label: name, defaultValue: '' } }` for each detected field. Skip any field whose name didn't come back from the select.
+   - Compute `checksum_sha256` via the existing `sha256Hex` helper, using `new TextEncoder().encode(JSON.stringify(mappingJson, Object.keys(mappingJson).sort()))` — same canonical form `GovernanceMappingEditor.handleSave` uses.
+   - Insert one row into `document_template_mappings`: `{ template_version_id: newVersion.id, mapping_json, checksum_sha256, created_by: userId }`. No delete-first (brand-new version).
+   - On success set a local `fieldsAutoMapped = <mapped count>`; on caught error leave it at `0` and `console.warn`.
 
-- Try `await err.context.json()`.
-- If the body has `error`, use it as the message and read `drift_detected`.
-- If drift → `setDriftError(message)`; else → `toast.error(message)`.
-- If parsing fails → fall back to `err.message || 'Publish failed'` via `toast.error`.
-- Keep `finally { setPublishing(false) }`.
+2. Include `fields_auto_mapped: fieldsAutoMapped` in the JSON response returned at the end of `handleImport`.
 
-### Scope
-- Single file: `src/components/governance/GovernancePublishDialog.tsx`
-- Only the `catch`/`finally` in `handlePublish`. The existing `if (data?.error)` block stays untouched (still valid for any future 2xx-with-error-shape responses).
-- No changes to the edge function, no schema changes, no other components.
+### Out of scope
+
+- `invalid_tags` — unchanged (no `dd_fields` label to derive; still surfaced for manual follow-up).
+- `GovernanceMappingEditor.tsx` — unchanged; loads the auto-created row via its existing path, staff can still add/edit fields there before publish.
+- `handlePublish` mapping-count check — unchanged; it just naturally passes on first import when at least one tag was auto-detected.
+- No schema, RPC, or `document_fields` changes.
+
+### Technical notes
+
+- Reuses the existing `sha256Hex(bytes: Uint8Array): Promise<string>` helper at the top of `index.ts` — pass UTF-8 bytes of the canonicalised JSON string.
+- Reuses the `userId` already resolved earlier in `handleImport` (same one used for `created_by` on the version insert).
+- Best-effort wrapping ensures a mapping-insert failure never regresses import success.
