@@ -73,7 +73,44 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
     }
   };
 
-  const handleSave = () => onSubmit({ title, color, body, items });
+  const buildAiContent = (): string => {
+    const plain = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const checklist = items.map((it) => `- ${it.text}`).filter((s) => s.trim() !== '-').join('\n');
+    return [plain, checklist].filter(Boolean).join('\n\n');
+  };
+
+  const generateTitle = async (): Promise<string> => {
+    const content = buildAiContent();
+    if (!content) return '';
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-note-title', { body: { content } });
+      if (error) return '';
+      return (data?.title || '').trim();
+    } catch {
+      return '';
+    }
+  };
+
+  const handleGenerateTitleClick = async () => {
+    setGeneratingTitle(true);
+    const t = await generateTitle();
+    if (t) {
+      setTitle(t);
+      setTitleEdited(false);
+    }
+    setGeneratingTitle(false);
+  };
+
+  const handleSave = async () => {
+    let finalTitle = title.trim();
+    if (!finalTitle && !titleEdited) {
+      setGeneratingTitle(true);
+      finalTitle = await generateTitle();
+      setGeneratingTitle(false);
+      if (finalTitle) setTitle(finalTitle);
+    }
+    onSubmit({ title: finalTitle, color, body, items });
+  };
 
   const displayDate = existing ? new Date(existing.note_date) : (noteDate ?? new Date());
   const dateLabel = format(displayDate, 'EEEE, dd MMMM yyyy');
