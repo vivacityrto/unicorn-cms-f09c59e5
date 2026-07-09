@@ -72,27 +72,73 @@ Deno.serve(async (req) => {
 
     const tenantId = firstUser?.tenant_id || 1;
 
-    // Perform bulk update
-    let updateData: Record<string, any> = { updated_at: new Date().toISOString() };
-    
-    if (action === 'activate') {
-      updateData.disabled = false;
-    } else if (action === 'deactivate') {
-      updateData.disabled = true;
-    } else if (action === 'change_role' && role) {
-      updateData.unicorn_role = role;
-    }
-
-    const { data: updatedUsers, error: updateError } = await supabase
+    // Load target users up-front so we can emit precise timeline events
+    const { data: targetUsers } = await supabase
       .from("users")
-      .update(updateData)
-      .in("user_uuid", user_uuids)
-      .select("user_uuid");
+      .select("user_uuid, tenant_id, first_name, last_name, email, unicorn_role")
+      .in("user_uuid", user_uuids);
+    const targetByUuid = new Map(
+      (targetUsers || []).map((u: any) => [u.user_uuid, u]),
+    );
 
-    if (updateError) {
-      console.error("Update error:", updateError);
-      return jsonErr(400, "UPDATE_FAILED", updateError.message);
+    let successUuids: string[] = [];
+
+    if (action === 'activate' || action === 'deactivate') {
+      // Route through central RPC so each toggle writes the timeline event atomically.
+      const disabled = action === 'deactivate';
+      for (const uuid of user_uuids) {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc(
+          'rpc_set_client_account_status',
+          { p_user_uuid: uuid, p_disabled: disabled },
+        );
+        if (rpcError) {
+          console.warn(`rpc_set_client_account_status failed for ${uuid}:`, rpcError.message);
+          continue;
+        }
+        const res = rpcResult as { success: boolean; error?: string } | null;
+        if (res?.success) successUuids.push(uuid);
+        else console.warn(`rpc_set_client_account_status refused ${uuid}:`, res?.error);
+      }
+    } else if (action === 'change_role' && role) {
+      const { data: updatedUsers, error: updateError } = await supabase
+        .from("users")
+        .update({ unicorn_role: role, updated_at: new Date().toISOString() })
+        .in("user_uuid", user_uuids)
+        .select("user_uuid");
+
+      if (updateError) {
+        console.error("Update error:", updateError);
+        return jsonErr(400, "UPDATE_FAILED", updateError.message);
+      }
+      successUuids = (updatedUsers || []).map((u: any) => u.user_uuid);
+
+      // Emit one timeline event per role change
+      for (const uuid of successUuids) {
+        const target: any = targetByUuid.get(uuid);
+        if (!target?.tenant_id) continue;
+        const fullName = [target.first_name, target.last_name].filter(Boolean).join(' ').trim() || target.email || 'user';
+        await emitTimelineEvent(supabase, {
+          tenant_id: target.tenant_id,
+          client_id: String(target.tenant_id),
+          event_type: 'account_role_changed',
+          title: `Role changed: ${fullName} → ${role}`,
+          source: 'user',
+          visibility: 'internal',
+          entity_type: 'user',
+          entity_id: uuid,
+          created_by: currentUser.id,
+          metadata: {
+            previous_role: target.unicorn_role ?? null,
+            new_role: role,
+            target_email: target.email ?? null,
+            target_name: fullName,
+          },
+        });
+      }
     }
+
+    const updatedUsers = successUuids.map((user_uuid) => ({ user_uuid }));
+
 
     // Create audit log entries
     const auditEntries = user_uuids.map(uuid => ({
