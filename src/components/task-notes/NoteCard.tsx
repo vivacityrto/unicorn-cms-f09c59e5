@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { sanitizeNoteHtml } from './sanitizeNoteHtml';
 import { COLOR_SWATCH, DailyNote } from './types';
 import { useNoteMutations } from './useNoteMutations';
+import { NotePreviewModal } from './NotePreviewModal';
 
 interface Props {
   note: DailyNote;
@@ -17,6 +18,7 @@ interface Props {
 
 export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
   const [newItem, setNewItem] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
   const m = useNoteMutations(userId);
   const swatch = COLOR_SWATCH[note.color];
 
@@ -35,10 +37,18 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
 
   const bodyHtml = note.body ? sanitizeNoteHtml(note.body) : '';
 
+  const handleCardClick = (e: React.MouseEvent<HTMLElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, input, textarea, [role="button"]')) return;
+    setPreviewOpen(true);
+  };
+
   return (
+    <>
     <article
+      onClick={handleCardClick}
       className={cn(
-        'group bg-card border border-border rounded-[var(--radius)] p-4',
+        'group bg-card border border-border rounded-[var(--radius)] p-4 cursor-pointer',
         'shadow-card hover:shadow-card-hover transition-shadow duration-200 ease-smooth motion-reduce:transition-none',
       )}
     >
@@ -152,5 +162,12 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
         </Button>
       </div>
     </article>
+    <NotePreviewModal
+      open={previewOpen}
+      onOpenChange={setPreviewOpen}
+      note={note}
+      onEdit={onEdit}
+    />
+    </>
   );
 }
