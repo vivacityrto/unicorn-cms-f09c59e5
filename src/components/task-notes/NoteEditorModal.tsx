@@ -236,7 +236,6 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
                 Add item
               </button>
             </div>
-            </div>
           </div>
 
           {/* Footer */}
