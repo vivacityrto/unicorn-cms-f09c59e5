@@ -270,13 +270,14 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
                     >
                       {it.done && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </button>
-                    <Input
+                    <input
+                      type="text"
                       value={it.text}
                       onChange={(e) => updateItem(it.id, { text: e.target.value })}
                       placeholder="List item"
                       className={cn(
-                        'h-7 text-sm border-0 shadow-none px-0 bg-transparent text-brand-acai-700',
-                        'focus-visible:ring-0',
+                        'flex-1 h-7 text-sm bg-transparent text-brand-acai-700',
+                        'border-0 outline-none focus:outline-none focus:ring-0 shadow-none p-0',
                         it.done && 'line-through text-muted-foreground',
                       )}
                     />
