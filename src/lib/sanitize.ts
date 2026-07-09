@@ -1,25 +1,46 @@
 import DOMPurify from 'dompurify';
 
+const DEFAULT_ALLOWED_TAGS = [
+  'p', 'b', 'i', 'u', 'a', 'br', 'strong', 'em', 'span', 'div',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'ul', 'ol', 'li',
+  'table', 'thead', 'tbody', 'tr', 'th', 'td',
+  'img', 'blockquote', 'pre', 'code', 'hr',
+];
+
+const DEFAULT_ALLOWED_ATTR = [
+  'href', 'target', 'class', 'style', 'src', 'alt', 'width', 'height',
+  'rel', 'title', 'id',
+];
+
+export interface SanitizeOverrides {
+  /** Extra tags to allow on top of the defaults. */
+  extraTags?: string[];
+  /** Extra attributes to allow on top of the defaults. */
+  extraAttrs?: string[];
+  /** Replace the default tag list entirely. */
+  tags?: string[];
+  /** Replace the default attribute list entirely. */
+  attrs?: string[];
+}
+
 /**
  * Sanitize HTML content to prevent XSS attacks.
  * Use this whenever rendering user-provided HTML with dangerouslySetInnerHTML.
+ *
+ * Optional `overrides` lets callers widen or replace the allowlist for a
+ * specific feature (e.g. the daily-notes editor which produces `h3`, `s`,
+ * `blockquote`, etc.) without forking the DOMPurify config.
  */
-export function sanitizeHtml(unsafeHtml: string): string {
+export function sanitizeHtml(unsafeHtml: string, overrides?: SanitizeOverrides): string {
+  const ALLOWED_TAGS = overrides?.tags
+    ?? [...DEFAULT_ALLOWED_TAGS, ...(overrides?.extraTags ?? [])];
+  const ALLOWED_ATTR = overrides?.attrs
+    ?? [...DEFAULT_ALLOWED_ATTR, ...(overrides?.extraAttrs ?? [])];
   return DOMPurify.sanitize(unsafeHtml, {
-    ALLOWED_TAGS: [
-      'p', 'b', 'i', 'u', 'a', 'br', 'strong', 'em', 'span', 'div',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      'ul', 'ol', 'li',
-      'table', 'thead', 'tbody', 'tr', 'th', 'td',
-      'img', 'blockquote', 'pre', 'code', 'hr',
-    ],
-    ALLOWED_ATTR: [
-      'href', 'target', 'class', 'style', 'src', 'alt', 'width', 'height',
-      'rel', 'title', 'id',
-    ],
-    // Allow data: URIs for inline images in email templates
+    ALLOWED_TAGS,
+    ALLOWED_ATTR,
     ALLOW_DATA_ATTR: false,
-    // Force all links to open in new tab for safety
     ADD_ATTR: ['target'],
   });
 }
