@@ -30,6 +30,9 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
   const [newItemText, setNewItemText] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [editorExpanded, setEditorExpanded] = useState(false);
+  const [showDetails, setShowDetails] = useState(true);
+  const [generatingTitle, setGeneratingTitle] = useState(false);
+  const [titleEdited, setTitleEdited] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -38,11 +41,15 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
       setColor(existing.color);
       setBody(existing.body);
       setItems(existing.items.map((i) => ({ ...i })));
+      setShowDetails(!!existing.body && existing.body.replace(/<[^>]*>/g, '').trim().length > 0);
+      setTitleEdited(true);
     } else {
       setTitle('');
       setColor('purple');
       setBody('');
       setItems([]);
+      setShowDetails(false);
+      setTitleEdited(false);
     }
     setNewItemText('');
     setExpanded(false);
