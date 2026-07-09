@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     // Get target user's tenant
     const { data: targetUserData, error: targetUserError } = await supabase
       .from("users")
-      .select("tenant_id, user_uuid")
+      .select("tenant_id, user_uuid, first_name, last_name, email")
       .eq("user_uuid", user_uuid)
       .single();
 
