@@ -1,10 +1,12 @@
 import { useEffect, useState, KeyboardEvent } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { cn } from '@/lib/utils';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, X, Maximize2, Minimize2 } from 'lucide-react';
 import { COLOR_SWATCH, ChecklistItem, DailyNote, NoteColor, newItemId } from './types';
 
 interface Props {
@@ -14,16 +16,19 @@ interface Props {
   existing?: DailyNote | null;
   onSubmit: (data: { title: string; color: NoteColor; body: string; items: ChecklistItem[] }) => void;
   submitting?: boolean;
+  noteDate?: Date;
 }
 
 const COLOR_ORDER: NoteColor[] = ['purple', 'aqua', 'fuchsia', 'macaron'];
 
-export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, submitting }: Props) {
+export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, submitting, noteDate }: Props) {
   const [title, setTitle] = useState('');
   const [color, setColor] = useState<NoteColor>('purple');
   const [body, setBody] = useState('');
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [newItemText, setNewItemText] = useState('');
+  const [expanded, setExpanded] = useState(false);
+  const [editorExpanded, setEditorExpanded] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -39,6 +44,8 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
       setItems([]);
     }
     setNewItemText('');
+    setExpanded(false);
+    setEditorExpanded(false);
   }, [open, mode, existing]);
 
   const updateItem = (id: string, patch: Partial<ChecklistItem>) => {
@@ -58,133 +65,197 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
     }
   };
 
-  const handleSave = () => {
-    onSubmit({ title, color, body, items });
-  };
+  const handleSave = () => onSubmit({ title, color, body, items });
+
+  const displayDate = existing ? new Date(existing.note_date) : (noteDate ?? new Date());
+  const dateLabel = format(displayDate, 'EEEE, dd MMMM yyyy');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[580px] p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-5 pb-3 border-b">
-          <DialogTitle className="text-brand-acai-700">
-            {mode === 'edit' ? 'Edit Note' : 'Add Note'}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content
+          className={cn(
+            'fixed z-50 bg-background shadow-lg duration-200',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            expanded
+              ? 'inset-4 rounded-lg flex flex-col'
+              : 'left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[92vw] max-w-[720px] max-h-[90vh] rounded-lg flex flex-col',
+          )}
+        >
+          {/* Header */}
+          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b shrink-0">
+            <div>
+              <h2 className="text-xl font-bold text-brand-acai-700">
+                {mode === 'edit' ? 'Edit Note' : 'Create Note'}
+              </h2>
+              <p className="text-xs text-brand-fuchsia-600 mt-0.5 font-medium">{dateLabel}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setExpanded((e) => !e)}
+                aria-label={expanded ? 'Collapse modal' : 'Expand modal'}
+                title={expanded ? 'Collapse' : 'Expand'}
+              >
+                {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+              <DialogPrimitive.Close asChild>
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label="Close">
+                  <X className="h-4 w-4" />
+                </Button>
+              </DialogPrimitive.Close>
+            </div>
+          </div>
 
-        <div className="px-6 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
-          {/* Title */}
-          <div>
+          {/* Body */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
+            {/* Title */}
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Note title"
               className={cn(
-                'border-0 border-b-2 border-border rounded-none px-0 text-lg font-semibold',
+                'border-0 border-b border-border rounded-none px-0 text-2xl font-bold h-auto py-2',
+                'placeholder:text-muted-foreground/60',
                 'focus-visible:ring-0 focus-visible:border-brand-aqua-500',
               )}
               autoFocus
             />
-          </div>
 
-          {/* Color swatches */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground mr-1">Label</span>
-            {COLOR_ORDER.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setColor(c)}
-                aria-label={`${COLOR_SWATCH[c].label} label`}
-                aria-pressed={color === c}
-                className={cn(
-                  'h-6 w-6 rounded-full transition-all duration-150 ease-smooth motion-reduce:transition-none',
-                  COLOR_SWATCH[c].dot,
-                  color === c ? 'ring-2 ring-offset-2 ring-brand-acai-700' : 'opacity-80 hover:opacity-100',
-                )}
-              />
-            ))}
-          </div>
-
-          {/* Rich body */}
-          <div>
-            <label className="text-xs text-muted-foreground">Details</label>
-            <RichTextEditor
-              value={body}
-              onChange={setBody}
-              placeholder="Write details, paste links, format text…"
-              minHeight="140px"
-              className="mt-1"
-            />
-          </div>
-
-          {/* Checklist editor */}
-          <div>
-            <label className="text-xs text-muted-foreground">Checklist</label>
-            <ul className="mt-2 space-y-2">
-              {items.map((it) => (
-                <li key={it.id} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={it.done}
-                    onChange={(e) => updateItem(it.id, { done: e.target.checked })}
-                    className="h-4 w-4 accent-brand-purple-600"
+            {/* Label / color */}
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">Label</span>
+              <div className="flex items-center gap-2">
+                {COLOR_ORDER.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setColor(c)}
+                    aria-label={`${COLOR_SWATCH[c].label} label`}
+                    aria-pressed={color === c}
+                    className={cn(
+                      'h-7 w-7 rounded-md transition-all duration-150 ease-smooth motion-reduce:transition-none',
+                      COLOR_SWATCH[c].dot,
+                      color === c
+                        ? 'ring-2 ring-offset-2 ring-brand-acai-700 scale-105'
+                        : 'opacity-80 hover:opacity-100',
+                    )}
                   />
+                ))}
+              </div>
+            </div>
+
+            {/* Rich body */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">Details</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-brand-aqua-600 hover:text-brand-aqua-700"
+                  onClick={() => setEditorExpanded((e) => !e)}
+                >
+                  {editorExpanded ? (
+                    <><Minimize2 className="h-3 w-3 mr-1" />Collapse editor</>
+                  ) : (
+                    <><Maximize2 className="h-3 w-3 mr-1" />Expand editor</>
+                  )}
+                </Button>
+              </div>
+              <RichTextEditor
+                value={body}
+                onChange={setBody}
+                placeholder="Write details, paste links, format text…"
+                minHeight={editorExpanded ? '420px' : '160px'}
+              />
+            </div>
+
+            {/* Checklist */}
+            <div>
+              <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">Checklist</span>
+              <ul className="mt-2 space-y-2">
+                {items.map((it) => (
+                  <li key={it.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={it.done}
+                      onChange={(e) => updateItem(it.id, { done: e.target.checked })}
+                      className="h-4 w-4 accent-brand-purple-600"
+                    />
+                    <Input
+                      value={it.text}
+                      onChange={(e) => updateItem(it.id, { text: e.target.value })}
+                      className="h-8 text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-brand-fuchsia-600"
+                      onClick={() => removeItem(it.id)}
+                      aria-label="Remove item"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+                <li className="flex items-center gap-2">
+                  <span className="h-4 w-4 rounded-full border border-dashed border-brand-acai-300 shrink-0" aria-hidden />
                   <Input
-                    value={it.text}
-                    onChange={(e) => updateItem(it.id, { text: e.target.value })}
-                    className="h-8 text-sm"
+                    value={newItemText}
+                    onChange={(e) => setNewItemText(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    placeholder="List item"
+                    className="h-8 text-sm border-0 focus-visible:ring-0 px-0"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-brand-fuchsia-600"
-                    onClick={() => removeItem(it.id)}
-                    aria-label="Remove item"
+                    className="h-8 w-8"
+                    onClick={() => addItem()}
+                    disabled={!newItemText.trim()}
+                    aria-label="Add checklist item"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 opacity-0" />
                   </Button>
                 </li>
-              ))}
-              <li className="flex items-center gap-2">
-                <span className="h-4 w-4 rounded-full border border-dashed border-brand-acai-300 shrink-0" aria-hidden />
-                <Input
-                  value={newItemText}
-                  onChange={(e) => setNewItemText(e.target.value)}
-                  onKeyDown={onKeyDown}
-                  placeholder="Add item"
-                  className="h-8 text-sm"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => addItem()}
-                  disabled={!newItemText.trim()}
-                  aria-label="Add checklist item"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </li>
-            </ul>
+              </ul>
+              <button
+                type="button"
+                onClick={() => {
+                  setItems((prev) => [...prev, { id: newItemId(), text: '', done: false }]);
+                }}
+                className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-aqua-600 hover:text-brand-aqua-700"
+              >
+                <Plus className="h-4 w-4" />
+                Add item
+              </button>
+            </div>
           </div>
-        </div>
 
-        <DialogFooter className="px-6 py-4 border-t bg-muted/30 gap-2">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={submitting}
-            className="bg-brand-aqua-500 text-white hover:bg-brand-aqua-600"
-          >
-            Save Note
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t bg-muted/30 shrink-0">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={submitting}
+              className="bg-brand-aqua-500 text-white hover:bg-brand-aqua-600"
+            >
+              Save Note
+            </Button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 }
