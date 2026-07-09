@@ -34,6 +34,9 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
   const [generatingTitle, setGeneratingTitle] = useState(false);
   const [titleEdited, setTitleEdited] = useState(false);
 
+  const focusItemIdRef = useRef<string | null>(null);
+  const itemInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
+
   useEffect(() => {
     if (!open) return;
     if (mode === 'edit' && existing) {
@@ -43,18 +46,32 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
       setItems(existing.items.map((i) => ({ ...i })));
       setShowDetails(!!existing.body && existing.body.replace(/<[^>]*>/g, '').trim().length > 0);
       setTitleEdited(true);
+      focusItemIdRef.current = null;
     } else {
+      const firstId = newItemId();
       setTitle('');
       setColor('purple');
       setBody('');
-      setItems([]);
+      setItems([{ id: firstId, text: '', done: false }]);
       setShowDetails(false);
       setTitleEdited(false);
+      focusItemIdRef.current = firstId;
     }
     setNewItemText('');
     setExpanded(false);
     setEditorExpanded(false);
   }, [open, mode, existing]);
+
+  // Auto-focus a targeted checklist input after render.
+  useEffect(() => {
+    const id = focusItemIdRef.current;
+    if (!id) return;
+    const el = itemInputsRef.current[id];
+    if (el) {
+      el.focus();
+      focusItemIdRef.current = null;
+    }
+  }, [items]);
 
   const updateItem = (id: string, patch: Partial<ChecklistItem>) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
