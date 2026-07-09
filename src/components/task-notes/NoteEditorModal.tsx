@@ -179,60 +179,58 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
             {/* Checklist */}
             <div>
               <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">Checklist</span>
-              <ul className="mt-2 space-y-2">
+              <ul className="mt-2 space-y-1">
                 {items.map((it) => (
-                  <li key={it.id} className="flex items-center gap-2">
+                  <li
+                    key={it.id}
+                    className="group flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors"
+                  >
                     <input
                       type="checkbox"
                       checked={it.done}
                       onChange={(e) => updateItem(it.id, { done: e.target.checked })}
-                      className="h-4 w-4 accent-brand-purple-600"
+                      className="h-4 w-4 accent-brand-purple-600 shrink-0"
                     />
                     <Input
                       value={it.text}
                       onChange={(e) => updateItem(it.id, { text: e.target.value })}
-                      className="h-8 text-sm"
+                      placeholder="List item"
+                      className={cn(
+                        'h-7 text-sm border-0 shadow-none px-0 bg-transparent',
+                        'focus-visible:ring-0',
+                        it.done && 'line-through text-muted-foreground',
+                      )}
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-brand-fuchsia-600"
+                      className="h-7 w-7 text-muted-foreground hover:text-brand-fuchsia-600 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                       onClick={() => removeItem(it.id)}
                       aria-label="Remove item"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   </li>
                 ))}
-                <li className="flex items-center gap-2">
-                  <span className="h-4 w-4 rounded-full border border-dashed border-brand-acai-300 shrink-0" aria-hidden />
+                <li className="flex items-center gap-3 rounded-md px-2 py-1.5">
+                  <span
+                    className="h-4 w-4 rounded-[3px] border border-dashed border-brand-acai-300 shrink-0"
+                    aria-hidden
+                  />
                   <Input
                     value={newItemText}
                     onChange={(e) => setNewItemText(e.target.value)}
                     onKeyDown={onKeyDown}
-                    placeholder="List item"
-                    className="h-8 text-sm border-0 focus-visible:ring-0 px-0"
+                    placeholder="Add a list item and press Enter"
+                    className="h-7 text-sm border-0 shadow-none focus-visible:ring-0 px-0 bg-transparent placeholder:text-muted-foreground/60"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => addItem()}
-                    disabled={!newItemText.trim()}
-                    aria-label="Add checklist item"
-                  >
-                    <Trash2 className="h-4 w-4 opacity-0" />
-                  </Button>
                 </li>
               </ul>
               <button
                 type="button"
-                onClick={() => {
-                  setItems((prev) => [...prev, { id: newItemId(), text: '', done: false }]);
-                }}
-                className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-aqua-600 hover:text-brand-aqua-700"
+                onClick={() => setItems((prev) => [...prev, { id: newItemId(), text: '', done: false }])}
+                className="mt-2 ml-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-aqua-600 hover:text-brand-aqua-700"
               >
                 <Plus className="h-4 w-4" />
                 Add item
