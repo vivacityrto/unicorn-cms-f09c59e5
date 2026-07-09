@@ -167,32 +167,6 @@ export function PanelMode({
         )}
       </div>
 
-      {/* Sticky footer */}
-      {!searching && notes.length > 0 && (
-        <div className={cn(
-          'shrink-0 border-t bg-background px-4 py-2 flex items-center justify-between gap-2',
-        )}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              m.deleteCompleted.mutate({ notes, dateStr: format(selectedDate, 'yyyy-MM-dd') })
-            }
-          >
-            Delete Completed
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="text-brand-fuchsia-600 hover:text-brand-fuchsia-700 hover:bg-brand-fuchsia-50"
-            onClick={() => m.clearAll.mutate({ notes, dateStr: format(selectedDate, 'yyyy-MM-dd') })}
-          >
-            Clear All
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
