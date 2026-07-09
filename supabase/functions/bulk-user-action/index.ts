@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
