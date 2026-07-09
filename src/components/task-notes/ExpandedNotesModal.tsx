@@ -159,14 +159,14 @@ export function ExpandedNotesModal({
               />
             </div>
             <div className="flex-1 overflow-y-auto">
-              <div className="p-2 flex justify-center border-b bg-background">
+              <div className="px-2 py-3 flex justify-center">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
                   onSelect={(d) => d && onSelectDate(d)}
                   month={month}
                   onMonthChange={onMonthChange}
-                  className="pointer-events-auto"
+                  className="pointer-events-auto p-0"
                   modifiers={{ hasNote: (d) => noteDays.has(format(d, 'yyyy-MM-dd')) }}
                   modifiersClassNames={{
                     hasNote:
@@ -174,21 +174,9 @@ export function ExpandedNotesModal({
                   }}
                 />
               </div>
-              <div className="p-4">
-                <CarryOverBanner
-                  count={prevQ.data?.unfinishedCount ?? 0}
-                  pending={m.carryOver.isPending}
-                  onCarryOver={() =>
-                    m.carryOver.mutate({
-                      targetDate: selectedDate,
-                      sourceNotes: prevQ.data?.notes ?? [],
-                      targetNotes: dayNotes,
-                    })
-                  }
-                />
-              </div>
             </div>
           </aside>
+
 
           {/* Right pane */}
           <section className="flex flex-col min-h-0">
