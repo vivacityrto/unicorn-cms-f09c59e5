@@ -322,3 +322,7 @@ verify_jwt = false
 
 [functions.mailgun-webhook]
 verify_jwt = false
+
+[functions.summarize-daily-notes]
+verify_jwt = false
+
