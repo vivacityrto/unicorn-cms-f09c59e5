@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 type DeleteUserBody = {
   user_uuid: string;
