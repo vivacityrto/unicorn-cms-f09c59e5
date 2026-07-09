@@ -166,6 +166,21 @@ serve(async (req) => {
           outcome: "sent",
         });
         consecutiveFailures = 0;
+
+        if (body.action === "activate" && body.tenant_id) {
+          const name = nameByUuid.get(user_uuid) || email || "user";
+          await emitTimelineEvent(admin, {
+            tenant_id: body.tenant_id,
+            client_id: String(body.tenant_id),
+            event_type: 'account_invited',
+            title: `Invitation sent to ${name}`,
+            source: 'user',
+            visibility: 'internal',
+            entity_type: 'user',
+            entity_id: user_uuid,
+            metadata: { email: data.email ?? email, action: 'activate' },
+          });
+        }
       } else {
         // Sender returned ok:false — state-mismatch codes are skips, not failures.
         const code = data?.code as string | undefined;
