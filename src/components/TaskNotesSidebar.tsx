@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import { startOfMonth, startOfWeek } from 'date-fns';
+import { useMemo, useState } from 'react';
+import { startOfMonth } from 'date-fns';
 import { Maximize2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { PanelMode } from './task-notes/PanelMode';
-import { FocusMode } from './task-notes/FocusMode';
 import { NoteEditorModal } from './task-notes/NoteEditorModal';
 import { ExpandedNotesModal } from './task-notes/ExpandedNotesModal';
 import { useNoteMutations } from './task-notes/useNoteMutations';
-import type { DailyNote, ViewMode } from './task-notes/types';
+import type { DailyNote } from './task-notes/types';
 
 interface Props {
   isOpen: boolean;
@@ -16,35 +15,15 @@ interface Props {
   userId: string;
 }
 
-const STORAGE_KEY = 'unicorn:notes:view-mode';
-
-function readInitialMode(): ViewMode {
-  if (typeof window === 'undefined') return 'panel';
-  const v = window.localStorage.getItem(STORAGE_KEY);
-  return v === 'focus' ? 'focus' : 'panel';
-}
-
 export default function TaskNotesSidebar({ isOpen, onClose, userId }: Props) {
-  const [mode, setMode] = useState<ViewMode>(() => readInitialMode());
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
-  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [query, setQuery] = useState('');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<DailyNote | null>(null);
   const [expanded, setExpanded] = useState(false);
 
   const m = useNoteMutations(userId);
-
-  useEffect(() => {
-    try { window.localStorage.setItem(STORAGE_KEY, mode); } catch { /* ignore */ }
-  }, [mode]);
-
-  // Keep week-start in sync when jumping across weeks via calendar/search.
-  useEffect(() => {
-    setWeekStart(startOfWeek(selectedDate, { weekStartsOn: 1 }));
-    setMonth(startOfMonth(selectedDate));
-  }, [selectedDate]);
 
   const openAdd = () => { setEditing(null); setEditorOpen(true); };
   const openEdit = (n: DailyNote) => { setEditing(n); setEditorOpen(true); };
@@ -64,16 +43,6 @@ export default function TaskNotesSidebar({ isOpen, onClose, userId }: Props) {
   };
 
   const submitting = m.createNote.isPending || m.updateNote.isPending;
-
-  const shared = useMemo(() => ({
-    userId,
-    selectedDate,
-    onSelectDate: setSelectedDate,
-    query,
-    onQueryChange: setQuery,
-    onAddNote: openAdd,
-    onEditNote: openEdit,
-  }), [userId, selectedDate, query]);
 
   if (!isOpen) return null;
 
@@ -112,49 +81,17 @@ export default function TaskNotesSidebar({ isOpen, onClose, userId }: Props) {
           </div>
         </div>
 
-        {/* Panel/Focus toggle */}
-        <div className="px-4 py-2 border-b bg-background">
-          <div
-            role="tablist"
-            aria-label="View mode"
-            className="grid grid-cols-2 gap-1 p-1 rounded-[11px] bg-brand-light-purple-100"
-          >
-            {(['panel', 'focus'] as const).map((m) => (
-              <button
-                key={m}
-                role="tab"
-                aria-selected={mode === m}
-                onClick={() => setMode(m)}
-                className={cn(
-                  'text-[12px] py-1.5 rounded-[8px]',
-                  'transition-all duration-150 ease-smooth motion-reduce:transition-none',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                  mode === m
-                    ? 'bg-background text-brand-acai-700 font-bold shadow-sm'
-                    : 'text-brand-acai-700/70 hover:text-brand-acai-700',
-                )}
-              >
-                {m === 'panel' ? 'Panel' : 'Focus'}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Body */}
         <div className="flex-1 min-h-0">
-          {mode === 'panel' ? (
-            <PanelMode
-              {...shared}
-              month={month}
-              onMonthChange={setMonth}
-            />
-          ) : (
-            <FocusMode
-              {...shared}
-              weekStart={weekStart}
-              onWeekStartChange={setWeekStart}
-            />
-          )}
+          <PanelMode
+            userId={userId}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            month={month}
+            onMonthChange={setMonth}
+            onAddNote={openAdd}
+            onEditNote={openEdit}
+          />
         </div>
       </aside>
 
