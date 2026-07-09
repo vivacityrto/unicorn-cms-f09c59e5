@@ -13,12 +13,12 @@ interface Props {
   note: DailyNote;
   userId: string;
   onEdit: (note: DailyNote) => void;
-  onPreview?: (note: DailyNote) => void;
   showDateChip?: boolean;
 }
 
-export function NoteCard({ note, userId, onEdit, onPreview, showDateChip }: Props) {
+export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
   const [newItem, setNewItem] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
   const m = useNoteMutations(userId);
   const swatch = COLOR_SWATCH[note.color];
 
@@ -38,20 +38,18 @@ export function NoteCard({ note, userId, onEdit, onPreview, showDateChip }: Prop
   const bodyHtml = note.body ? sanitizeNoteHtml(note.body) : '';
 
   const handleCardClick = (e: React.MouseEvent<HTMLElement>) => {
-    if (!onPreview) return;
     const target = e.target as HTMLElement;
-    // Ignore clicks on interactive children
     if (target.closest('button, a, input, textarea, [role="button"]')) return;
-    onPreview(note);
+    setPreviewOpen(true);
   };
 
   return (
+    <>
     <article
       onClick={handleCardClick}
       className={cn(
-        'group bg-card border border-border rounded-[var(--radius)] p-4',
+        'group bg-card border border-border rounded-[var(--radius)] p-4 cursor-pointer',
         'shadow-card hover:shadow-card-hover transition-shadow duration-200 ease-smooth motion-reduce:transition-none',
-        onPreview && 'cursor-pointer',
       )}
     >
       <header className="flex items-start justify-between gap-2 mb-2">
