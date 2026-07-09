@@ -1,4 +1,4 @@
-import { useEffect, useState, KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, KeyboardEvent } from 'react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
@@ -34,6 +34,9 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
   const [generatingTitle, setGeneratingTitle] = useState(false);
   const [titleEdited, setTitleEdited] = useState(false);
 
+  const focusItemIdRef = useRef<string | null>(null);
+  const itemInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
+
   useEffect(() => {
     if (!open) return;
     if (mode === 'edit' && existing) {
@@ -43,18 +46,32 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
       setItems(existing.items.map((i) => ({ ...i })));
       setShowDetails(!!existing.body && existing.body.replace(/<[^>]*>/g, '').trim().length > 0);
       setTitleEdited(true);
+      focusItemIdRef.current = null;
     } else {
+      const firstId = newItemId();
       setTitle('');
       setColor('purple');
       setBody('');
-      setItems([]);
+      setItems([{ id: firstId, text: '', done: false }]);
       setShowDetails(false);
       setTitleEdited(false);
+      focusItemIdRef.current = firstId;
     }
     setNewItemText('');
     setExpanded(false);
     setEditorExpanded(false);
   }, [open, mode, existing]);
+
+  // Auto-focus a targeted checklist input after render.
+  useEffect(() => {
+    const id = focusItemIdRef.current;
+    if (!id) return;
+    const el = itemInputsRef.current[id];
+    if (el) {
+      el.focus();
+      focusItemIdRef.current = null;
+    }
+  }, [items]);
 
   const updateItem = (id: string, patch: Partial<ChecklistItem>) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -170,7 +187,6 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
                   'placeholder:text-muted-foreground/60',
                   'focus-visible:ring-0 focus-visible:border-brand-aqua-500',
                 )}
-                autoFocus
               />
               <Button
                 type="button"
@@ -271,9 +287,18 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
                       {it.done && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                     </button>
                     <input
+                      ref={(el) => { itemInputsRef.current[it.id] = el; }}
                       type="text"
                       value={it.text}
                       onChange={(e) => updateItem(it.id, { text: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const nextId = newItemId();
+                          focusItemIdRef.current = nextId;
+                          setItems((prev) => [...prev, { id: nextId, text: '', done: false }]);
+                        }
+                      }}
                       placeholder="List item"
                       className={cn(
                         'flex-1 h-7 text-sm bg-transparent text-brand-acai-700',
@@ -294,7 +319,11 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
               </ul>
               <button
                 type="button"
-                onClick={() => setItems((prev) => [...prev, { id: newItemId(), text: '', done: false }])}
+                onClick={() => {
+                  const id = newItemId();
+                  focusItemIdRef.current = id;
+                  setItems((prev) => [...prev, { id, text: '', done: false }]);
+                }}
                 className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-aqua-600 hover:text-brand-aqua-700"
               >
                 <Plus className="h-4 w-4" />
