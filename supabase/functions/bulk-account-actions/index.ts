@@ -104,11 +104,14 @@ serve(async (req) => {
   //    even when the per-user sender call fails before returning an email.
   const { data: userRows } = await admin
     .from("users")
-    .select("user_uuid, email")
+    .select("user_uuid, email, first_name, last_name")
     .in("user_uuid", uuids);
   const emailByUuid = new Map<string, string>();
-  for (const u of (userRows || []) as { user_uuid: string; email: string | null }[]) {
+  const nameByUuid = new Map<string, string>();
+  for (const u of (userRows || []) as { user_uuid: string; email: string | null; first_name: string | null; last_name: string | null }[]) {
     if (u.email) emailByUuid.set(u.user_uuid, u.email);
+    const full = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+    if (full) nameByUuid.set(u.user_uuid, full);
   }
 
   const senderName = body.action === "activate" ? "activate-ghost-user" : "send-password-reset";
