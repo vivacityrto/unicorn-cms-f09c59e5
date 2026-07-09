@@ -103,6 +103,11 @@ const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   note_unpinned: 'bg-muted text-muted-foreground',
   time_posted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   time_ignored: 'bg-muted text-muted-foreground',
+  account_invited: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  account_activated: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  account_deactivated: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  account_role_changed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  account_removed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 // =============================================
