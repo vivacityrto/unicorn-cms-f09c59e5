@@ -187,7 +187,6 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
                   'placeholder:text-muted-foreground/60',
                   'focus-visible:ring-0 focus-visible:border-brand-aqua-500',
                 )}
-                autoFocus
               />
               <Button
                 type="button"
