@@ -319,7 +319,11 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
               </ul>
               <button
                 type="button"
-                onClick={() => setItems((prev) => [...prev, { id: newItemId(), text: '', done: false }])}
+                onClick={() => {
+                  const id = newItemId();
+                  focusItemIdRef.current = id;
+                  setItems((prev) => [...prev, { id, text: '', done: false }]);
+                }}
                 className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-aqua-600 hover:text-brand-aqua-700"
               >
                 <Plus className="h-4 w-4" />
