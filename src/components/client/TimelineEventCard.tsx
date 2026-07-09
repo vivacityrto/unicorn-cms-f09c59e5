@@ -162,6 +162,12 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
       return null;
     case 'microsoft_sync_failed':
       return { label: 'Fix connection', path: '/settings?tab=calendar' };
+    case 'account_invited':
+    case 'account_activated':
+    case 'account_deactivated':
+    case 'account_role_changed':
+    case 'account_removed':
+      return { label: 'View account', path: `/clients/${event.tenant_id}?tab=users` };
     default:
       return null;
   }
