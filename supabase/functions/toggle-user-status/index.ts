@@ -68,15 +68,22 @@ Deno.serve(async (req) => {
       return jsonErr(403, "FORBIDDEN", "Only admins can change user status");
     }
 
-    // Update status
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({ disabled, updated_at: new Date().toISOString() })
-      .eq("user_uuid", user_uuid);
+    // Route through central RPC — writes the disabled toggle AND the timeline event
+    // in one transaction, and re-checks permissions server-side.
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      'rpc_set_client_account_status',
+      { p_user_uuid: user_uuid, p_disabled: disabled },
+    );
 
-    if (updateError) {
-      return jsonErr(400, "UPDATE_FAILED", updateError.message);
+    if (rpcError) {
+      return jsonErr(400, "UPDATE_FAILED", rpcError.message);
     }
+    const res = rpcResult as { success: boolean; error?: string; unchanged?: boolean } | null;
+    if (res && !res.success) {
+      const isForbidden = (res.error || '').toLowerCase().includes('forbidden');
+      return jsonErr(isForbidden ? 403 : 400, isForbidden ? "FORBIDDEN" : "UPDATE_FAILED", res.error || "RPC refused update");
+    }
+
 
     // Audit log
     await supabase.from("audit_eos_events").insert({
