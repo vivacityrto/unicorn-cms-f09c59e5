@@ -160,17 +160,31 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
           {/* Body */}
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
             {/* Title */}
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Note title"
-              className={cn(
-                'border-0 border-b border-border rounded-none px-0 text-2xl font-bold h-auto py-2',
-                'placeholder:text-muted-foreground/60',
-                'focus-visible:ring-0 focus-visible:border-brand-aqua-500',
-              )}
-              autoFocus
-            />
+            <div className="flex items-end gap-2">
+              <Input
+                value={title}
+                onChange={(e) => { setTitle(e.target.value); setTitleEdited(true); }}
+                placeholder="Note title (auto-generated if left blank)"
+                className={cn(
+                  'flex-1 border-0 border-b border-border rounded-none px-0 text-2xl font-bold h-auto py-2',
+                  'placeholder:text-muted-foreground/60',
+                  'focus-visible:ring-0 focus-visible:border-brand-aqua-500',
+                )}
+                autoFocus
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleGenerateTitleClick}
+                disabled={generatingTitle || (!body && items.length === 0)}
+                className="h-8 gap-1.5 text-xs text-brand-fuchsia-600 hover:text-brand-fuchsia-700 hover:bg-brand-fuchsia-50 shrink-0"
+                title="Generate title with AI"
+              >
+                {generatingTitle ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                AI title
+              </Button>
+            </div>
 
             {/* Label / color */}
             <div className="flex items-center gap-3">
