@@ -1,15 +1,31 @@
-import { useMemo } from 'react';
-import { format } from 'date-fns';
-import { Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  differenceInCalendarDays,
+} from 'date-fns';
+import { Plus, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { NoteCard } from './NoteCard';
 import { CarryOverBanner } from './CarryOverBanner';
 import { SearchResultsList } from './SearchResultsList';
-import { useNotesForDate, useNotesForMonth, usePreviousDayUnfinished, useSearchNotes } from './useDailyNotes';
+import {
+  useNotesForDate,
+  useNotesForMonth,
+  useNotesForRange,
+  usePreviousDayUnfinished,
+  useSearchNotes,
+} from './useDailyNotes';
 import { useNoteMutations } from './useNoteMutations';
+import { useNotesSummary, type RangeMode } from './useNotesSummary';
 import type { DailyNote } from './types';
 
 interface Props {
@@ -26,24 +42,92 @@ interface Props {
   onEditNote: (n: DailyNote) => void;
 }
 
+function computeRange(mode: RangeMode, date: Date): { from: Date; to: Date; label: string } {
+  if (mode === 'day') {
+    return { from: date, to: date, label: format(date, 'EEEE, dd MMM yyyy') };
+  }
+  if (mode === 'week') {
+    const from = startOfWeek(date, { weekStartsOn: 1 });
+    const to = endOfWeek(date, { weekStartsOn: 1 });
+    return {
+      from,
+      to,
+      label: `Week of ${format(from, 'dd MMM')} – ${format(to, 'dd MMM yyyy')}`,
+    };
+  }
+  const from = startOfMonth(date);
+  const to = endOfMonth(date);
+  return { from, to, label: format(from, 'MMMM yyyy') };
+}
+
+function computeStats(notes: DailyNote[]) {
+  let done = 0;
+  let total = 0;
+  const dayKeys = new Set<string>();
+  for (const n of notes) {
+    dayKeys.add(n.note_date);
+    for (const it of n.items) {
+      total++;
+      if (it.done) done++;
+    }
+  }
+  return { noteCount: notes.length, done, total, daysWithNotes: dayKeys.size };
+}
+
 export function ExpandedNotesModal({
   open, onOpenChange, userId, selectedDate, onSelectDate,
   month, onMonthChange, query, onQueryChange, onAddNote, onEditNote,
 }: Props) {
-  const notesQ = useNotesForDate(userId, selectedDate, open);
+  const [rangeMode, setRangeMode] = useState<RangeMode>('day');
+
+  const notesQ = useNotesForDate(userId, selectedDate, open && rangeMode === 'day');
+  const range = useMemo(() => computeRange(rangeMode, selectedDate), [rangeMode, selectedDate]);
+  const rangeFromStr = format(range.from, 'yyyy-MM-dd');
+  const rangeToStr = format(range.to, 'yyyy-MM-dd');
+  const rangeQ = useNotesForRange(
+    userId,
+    rangeFromStr,
+    rangeToStr,
+    open && rangeMode !== 'day',
+  );
+
   const monthQ = useNotesForMonth(userId, month, open);
   const prevQ = usePreviousDayUnfinished(userId, selectedDate, open);
   const searchQ = useSearchNotes(userId, query, open);
   const m = useNoteMutations(userId);
 
-  const notes = notesQ.data ?? [];
-  const { done, total, pct } = useMemo(() => {
-    let d = 0, t = 0;
-    notes.forEach((n) => n.items.forEach((it) => { t++; if (it.done) d++; }));
-    return { done: d, total: t, pct: t ? Math.round((d / t) * 100) : 0 };
-  }, [notes]);
+  const dayNotes = notesQ.data ?? [];
+  const rangeNotes = rangeQ.data ?? [];
+  const periodNotes = rangeMode === 'day' ? dayNotes : rangeNotes;
+
+  const stats = useMemo(() => computeStats(periodNotes), [periodNotes]);
+  const daysInPeriod = differenceInCalendarDays(range.to, range.from) + 1;
+  const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
+
+  const grouped = useMemo(() => {
+    if (rangeMode === 'day') return null;
+    const map = new Map<string, DailyNote[]>();
+    for (const n of rangeNotes) {
+      const list = map.get(n.note_date) ?? [];
+      list.push(n);
+      map.set(n.note_date, list);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [rangeMode, rangeNotes]);
+
   const noteDays = new Set(monthQ.data ?? []);
   const searching = query.trim().length > 0;
+
+  const summary = useNotesSummary({
+    userId,
+    rangeMode,
+    periodStart: rangeFromStr,
+    periodEnd: rangeToStr,
+    periodLabel: range.label,
+    notes: periodNotes,
+  });
+
+  const canSummarize = periodNotes.length > 0 && !summary.isFetching;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -55,7 +139,7 @@ export function ExpandedNotesModal({
               <div>
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-muted-foreground">Progress</span>
-                  <span className="font-semibold text-brand-acai-700">{done}/{total} · {pct}%</span>
+                  <span className="font-semibold text-brand-acai-700">{stats.done}/{stats.total} · {pct}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-brand-light-purple-100 overflow-hidden">
                   <div
@@ -98,7 +182,7 @@ export function ExpandedNotesModal({
                     m.carryOver.mutate({
                       targetDate: selectedDate,
                       sourceNotes: prevQ.data?.notes ?? [],
-                      targetNotes: notes,
+                      targetNotes: dayNotes,
                     })
                   }
                 />
@@ -108,19 +192,50 @@ export function ExpandedNotesModal({
 
           {/* Right pane */}
           <section className="flex flex-col min-h-0">
-            <header className="px-6 py-4 border-b bg-background flex items-center justify-between">
+            <header className="px-6 py-4 border-b bg-background flex items-center justify-between gap-3 flex-wrap">
               <h2 className="text-lg font-semibold text-brand-acai-700">
-                {searching ? `Search: “${query}”` : format(selectedDate, 'EEEE, dd MMM yyyy')}
+                {searching ? `Search: "${query}"` : range.label}
               </h2>
-              <Button
-                type="button"
-                size="sm"
-                onClick={onAddNote}
-                className="h-8 bg-brand-aqua-500 text-white hover:bg-brand-aqua-600"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Add Note
-              </Button>
+              <div className="flex items-center gap-2">
+                {!searching && (
+                  <>
+                    <ToggleGroup
+                      type="single"
+                      size="sm"
+                      value={rangeMode}
+                      onValueChange={(v) => v && setRangeMode(v as RangeMode)}
+                    >
+                      <ToggleGroupItem value="day" className="h-8 px-3 text-xs">Day</ToggleGroupItem>
+                      <ToggleGroupItem value="week" className="h-8 px-3 text-xs">Week</ToggleGroupItem>
+                      <ToggleGroupItem value="month" className="h-8 px-3 text-xs">Month</ToggleGroupItem>
+                    </ToggleGroup>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={summary.generate}
+                      disabled={!canSummarize}
+                      className="h-8"
+                    >
+                      {summary.isFetching ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      Summarise
+                    </Button>
+                  </>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={onAddNote}
+                  className="h-8 bg-brand-aqua-500 text-white hover:bg-brand-aqua-600"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Add Note
+                </Button>
+              </div>
             </header>
             <div className="flex-1 overflow-y-auto p-6">
               {searching ? (
@@ -131,21 +246,116 @@ export function ExpandedNotesModal({
                   isLoading={searchQ.isLoading}
                   query={query}
                 />
-              ) : notes.length === 0 ? (
-                <div className="text-sm text-muted-foreground text-center py-12">
-                  No notes for this date.
-                </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {notes.map((n) => (
-                    <NoteCard key={n.id} note={n} userId={userId} onEdit={onEditNote} />
-                  ))}
-                </div>
+                <>
+                  {/* Stat strip */}
+                  {rangeMode !== 'day' && (
+                    <div className="grid grid-cols-3 gap-3 mb-5">
+                      <StatTile label="Notes" value={String(stats.noteCount)} />
+                      <StatTile
+                        label="Checklist items"
+                        value={`${stats.done}/${stats.total}`}
+                        sub={stats.total ? `${pct}% done` : undefined}
+                      />
+                      <StatTile
+                        label="Days with notes"
+                        value={`${stats.daysWithNotes}/${daysInPeriod}`}
+                      />
+                    </div>
+                  )}
+
+                  {/* Summary card */}
+                  {summary.hasResult && summary.data && (
+                    <div className="mb-5 rounded-lg border border-brand-purple-200 bg-gradient-to-br from-brand-light-purple-50 to-white p-4">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <h3 className="text-base font-semibold text-brand-acai-700 flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-brand-purple-600" />
+                          {summary.data.headline}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={summary.regenerate}
+                          disabled={summary.isFetching}
+                          className="text-xs text-brand-purple-600 hover:text-brand-purple-700 inline-flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {summary.isFetching ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                          Regenerate
+                        </button>
+                      </div>
+                      <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                        {summary.data.summary}
+                      </p>
+                      {summary.data.open_count > 0 && (
+                        <div className="mt-3 inline-flex items-center rounded-full bg-brand-fuchsia-100 text-brand-fuchsia-700 text-xs font-medium px-2.5 py-0.5">
+                          {summary.data.open_count} still open
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Feed */}
+                  {rangeMode === 'day' ? (
+                    dayNotes.length === 0 ? (
+                      <div className="text-sm text-muted-foreground text-center py-12">
+                        No notes for this date.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {dayNotes.map((n) => (
+                          <NoteCard key={n.id} note={n} userId={userId} onEdit={onEditNote} />
+                        ))}
+                      </div>
+                    )
+                  ) : grouped && grouped.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-12">
+                      No notes in this period.
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {grouped!.map(([dateStr, dayList]) => {
+                        const dayStats = computeStats(dayList);
+                        return (
+                          <div key={dateStr}>
+                            <div className="flex items-center justify-between mb-2 pb-1 border-b">
+                              <h4 className="text-sm font-semibold text-brand-acai-700">
+                                {format(new Date(dateStr + 'T00:00:00'), 'EEEE, dd MMM yyyy')}
+                              </h4>
+                              {dayStats.total > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {dayStats.done}/{dayStats.total}
+                                </span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              {dayList.map((n) => (
+                                <NoteCard key={n.id} note={n} userId={userId} onEdit={onEditNote} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </section>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-lg border bg-background p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-lg font-semibold text-brand-acai-700">{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
+    </div>
   );
 }
