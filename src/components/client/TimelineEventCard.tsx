@@ -61,6 +61,11 @@ const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   note_unpinned: PinOff,
   time_posted: Clock,
   time_ignored: Clock,
+  account_invited: UserPlus,
+  account_activated: UserCheck,
+  account_deactivated: UserX,
+  account_role_changed: UserCog,
+  account_removed: UserMinus,
 };
 
 /**
