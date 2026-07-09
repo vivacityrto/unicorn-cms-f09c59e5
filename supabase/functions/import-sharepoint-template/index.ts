@@ -215,6 +215,48 @@ async function handleImport(
     }
   }
 
+  // ── Auto-create document_template_mappings row from detected fields ────
+  let fields_auto_mapped = 0;
+  if (detected_fields.length > 0) {
+    try {
+      const fieldIds = detected_fields.map((f) => f.field_id);
+      const { data: ddRows, error: ddErr } = await supabase
+        .from('dd_fields')
+        .select('id, name')
+        .in('id', fieldIds);
+      if (ddErr) throw ddErr;
+
+      const nameById = new Map<number, string>();
+      for (const r of ddRows ?? []) nameById.set(r.id as number, r.name as string);
+
+      const mappingJson: Record<string, { label: string; defaultValue: string }> = {};
+      for (const f of detected_fields) {
+        const label = nameById.get(f.field_id);
+        if (!label) continue;
+        mappingJson[f.tag] = { label, defaultValue: '' };
+      }
+
+      const mappedCount = Object.keys(mappingJson).length;
+      if (mappedCount > 0) {
+        const canonical = JSON.stringify(mappingJson, Object.keys(mappingJson).sort());
+        const checksumSha256 = await sha256Hex(new TextEncoder().encode(canonical));
+
+        const { error: mapErr } = await supabase
+          .from('document_template_mappings')
+          .insert({
+            template_version_id: newVersion.id,
+            mapping_json: mappingJson,
+            checksum_sha256: checksumSha256,
+            created_by: userId,
+          });
+        if (mapErr) throw mapErr;
+        fields_auto_mapped = mappedCount;
+      }
+    } catch (mapErr) {
+      console.warn('[import-sharepoint-template] Auto-mapping insert failed (non-fatal):', mapErr);
+    }
+  }
+
   return new Response(JSON.stringify({
     success: true,
     version_id: newVersion.id,
@@ -225,6 +267,7 @@ async function handleImport(
     detected_fields,
     invalid_tags,
     fields_linked,
+    fields_auto_mapped,
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
