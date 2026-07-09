@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { sanitizeNoteHtml } from './sanitizeNoteHtml';
 import { COLOR_SWATCH, DailyNote } from './types';
 import { useNoteMutations } from './useNoteMutations';
+import { NotePreviewModal } from './NotePreviewModal';
 
 interface Props {
   note: DailyNote;
