@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { cn } from '@/lib/utils';
-import { Trash2, Plus, X, Maximize2, Minimize2 } from 'lucide-react';
+import { Trash2, Plus, X, Maximize2, Minimize2, Sparkles, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { COLOR_SWATCH, ChecklistItem, DailyNote, NoteColor, newItemId } from './types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
   open: boolean;
