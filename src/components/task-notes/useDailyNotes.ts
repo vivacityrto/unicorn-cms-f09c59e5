@@ -12,7 +12,35 @@ export const noteQueryKeys = {
   month: (userId: string, monthKey: string) => ['user_daily_notes', userId, 'month', monthKey] as const,
   search: (userId: string, q: string) => ['user_daily_notes', userId, 'search', q] as const,
   previous: (userId: string, dateStr: string) => ['user_daily_notes', userId, 'previous', dateStr] as const,
+  range: (userId: string, from: string, to: string) =>
+    ['user_daily_notes', userId, 'range', from, to] as const,
+  summary: (userId: string, mode: string, from: string, to: string) =>
+    ['user_daily_notes', userId, 'summary', mode, from, to] as const,
 };
+
+export function useNotesForRange(
+  userId: string | undefined,
+  from: string,
+  to: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: noteQueryKeys.range(userId ?? '', from, to),
+    enabled: !!userId && enabled,
+    queryFn: async (): Promise<DailyNote[]> => {
+      const { data, error } = await supabase
+        .from(TABLE as any)
+        .select('*')
+        .eq('user_id', userId!)
+        .gte('note_date', from)
+        .lte('note_date', to)
+        .order('note_date', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return ((data ?? []) as any[]).map(hydrateLegacyNote);
+    },
+  });
+}
 
 async function fetchByDate(userId: string, dateStr: string): Promise<DailyNote[]> {
   const { data, error } = await supabase
