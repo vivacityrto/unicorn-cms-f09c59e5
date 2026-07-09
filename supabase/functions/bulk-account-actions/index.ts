@@ -179,6 +179,7 @@ serve(async (req) => {
             entity_type: 'user',
             entity_id: user_uuid,
             metadata: { email: data.email ?? email, action: 'activate' },
+            created_by: caller.id,
           });
         }
       } else {
