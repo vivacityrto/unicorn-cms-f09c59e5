@@ -14,7 +14,7 @@ import { TimelineEventCard, TimelineEventCardSkeleton } from './TimelineEventCar
 import {
   Activity, FileText, Mail, CheckSquare, StickyNote,
   Clock, Loader2, RefreshCw, Calendar, Timer, Search,
-  Plus, X, ChevronDown, ChevronUp, Pin, PinOff, Link2,
+  Plus, X, ChevronDown, ChevronUp, Pin, PinOff, Link2, UserCog,
 } from 'lucide-react';
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns';
 
@@ -29,6 +29,7 @@ const FILTER_OPTIONS = [
   { value: 'docs', label: 'Documents', icon: FileText },
   { value: 'tasks', label: 'Tasks', icon: CheckSquare },
   { value: 'notes', label: 'Notes', icon: StickyNote },
+  { value: 'accounts', label: 'Accounts', icon: UserCog },
   { value: 'microsoft', label: 'Microsoft', icon: Link2 },
 ];
 

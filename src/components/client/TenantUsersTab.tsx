@@ -717,16 +717,31 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     if (!editingMember) return;
     setSavingEdit(true);
     try {
+      const disabledChanged = (editingMember.users.disabled ?? false) !== editForm.disabled;
+
       const { error: userError } = await supabase
         .from('users')
         .update({
           job_title: editForm.job_title || null,
           phone: editForm.phone || null,
-          disabled: editForm.disabled,
         })
         .eq('user_uuid', editingMember.users.user_uuid);
 
       if (userError) throw userError;
+
+      if (disabledChanged) {
+        const { data: statusResult, error: statusError } = await supabase.rpc(
+          'rpc_set_client_account_status',
+          {
+            p_user_uuid: editingMember.users.user_uuid,
+            p_disabled: editForm.disabled,
+          },
+        );
+        if (statusError) throw statusError;
+        const res = statusResult as { success: boolean; error?: string } | null;
+        if (res && !res.success) throw new Error(res.error || 'Failed to update account status');
+      }
+
 
       const currentRR = getMemberRelationshipRole(editingMember);
       const newRR = editForm.role as RelationshipRole;

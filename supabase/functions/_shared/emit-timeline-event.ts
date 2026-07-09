@@ -25,6 +25,8 @@ const VALID_EVENT_TYPES = new Set([
   'email_linked','email_attachment_saved','email_sent','email_failed',
   'note_added','note_created','note_pinned','note_unpinned',
   'time_posted','time_ignored',
+  'account_invited','account_activated','account_deactivated',
+  'account_role_changed','account_removed',
 ] as const);
 
 type ValidEventType = typeof VALID_EVENT_TYPES extends Set<infer T> ? T : never;

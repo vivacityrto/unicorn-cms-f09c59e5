@@ -69271,6 +69271,10 @@ export type Database = {
         Args: { p_action_item_id: string; p_status: string }
         Returns: Json
       }
+      rpc_set_client_account_status: {
+        Args: { p_disabled: boolean; p_user_uuid: string }
+        Returns: Json
+      }
       rpc_snooze_time_draft: {
         Args: { p_draft_id: string; p_until: string }
         Returns: Json

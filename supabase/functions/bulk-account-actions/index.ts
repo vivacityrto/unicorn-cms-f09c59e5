@@ -5,6 +5,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -103,11 +104,14 @@ serve(async (req) => {
   //    even when the per-user sender call fails before returning an email.
   const { data: userRows } = await admin
     .from("users")
-    .select("user_uuid, email")
+    .select("user_uuid, email, first_name, last_name")
     .in("user_uuid", uuids);
   const emailByUuid = new Map<string, string>();
-  for (const u of (userRows || []) as { user_uuid: string; email: string | null }[]) {
+  const nameByUuid = new Map<string, string>();
+  for (const u of (userRows || []) as { user_uuid: string; email: string | null; first_name: string | null; last_name: string | null }[]) {
     if (u.email) emailByUuid.set(u.user_uuid, u.email);
+    const full = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+    if (full) nameByUuid.set(u.user_uuid, full);
   }
 
   const senderName = body.action === "activate" ? "activate-ghost-user" : "send-password-reset";
@@ -162,6 +166,21 @@ serve(async (req) => {
           outcome: "sent",
         });
         consecutiveFailures = 0;
+
+        if (body.action === "activate" && body.tenant_id) {
+          const name = nameByUuid.get(user_uuid) || email || "user";
+          await emitTimelineEvent(admin, {
+            tenant_id: body.tenant_id,
+            client_id: String(body.tenant_id),
+            event_type: 'account_invited',
+            title: `Invitation sent to ${name}`,
+            source: 'user',
+            visibility: 'internal',
+            entity_type: 'user',
+            entity_id: user_uuid,
+            metadata: { email: data.email ?? email, action: 'activate' },
+          });
+        }
       } else {
         // Sender returned ok:false — state-mismatch codes are skips, not failures.
         const code = data?.code as string | undefined;

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 type DeleteUserBody = {
   user_uuid: string;
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
     // Get target user's tenant
     const { data: targetUserData, error: targetUserError } = await supabase
       .from("users")
-      .select("tenant_id, user_uuid")
+      .select("tenant_id, user_uuid, first_name, last_name, email")
       .eq("user_uuid", user_uuid)
       .single();
 
@@ -122,6 +123,27 @@ Deno.serve(async (req) => {
       reason: "User deleted by admin",
       details: { deleted_user_uuid: user_uuid },
     });
+
+    // Client Timeline — account removed
+    if (targetUserData?.tenant_id) {
+      const fullName = [targetUserData.first_name, targetUserData.last_name]
+        .filter(Boolean).join(' ').trim() || targetUserData.email || 'user';
+      await emitTimelineEvent(supabase, {
+        tenant_id: targetUserData.tenant_id,
+        client_id: String(targetUserData.tenant_id),
+        event_type: 'account_removed',
+        title: `Account removed: ${fullName}`,
+        source: 'user',
+        visibility: 'internal',
+        entity_type: 'user',
+        entity_id: user_uuid,
+        created_by: currentUser.id,
+        metadata: {
+          removed_email: targetUserData.email ?? null,
+          removed_name: fullName,
+        },
+      });
+    }
 
     console.log(`User ${user_uuid} deleted successfully`);
 

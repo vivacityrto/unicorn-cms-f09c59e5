@@ -17,6 +17,7 @@ import {
   Plug, PlugZap, FolderCog, FolderX,
   Clock, ExternalLink, RotateCcw, MoreHorizontal, Copy, Shield,
   ChevronDown, ChevronUp, Pin, PinOff, Package,
+  UserPlus, UserCheck, UserX, UserCog, UserMinus,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { LucideIcon } from 'lucide-react';
@@ -60,6 +61,11 @@ const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   note_unpinned: PinOff,
   time_posted: Clock,
   time_ignored: Clock,
+  account_invited: UserPlus,
+  account_activated: UserCheck,
+  account_deactivated: UserX,
+  account_role_changed: UserCog,
+  account_removed: UserMinus,
 };
 
 /**
@@ -97,6 +103,11 @@ const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   note_unpinned: 'bg-muted text-muted-foreground',
   time_posted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   time_ignored: 'bg-muted text-muted-foreground',
+  account_invited: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  account_activated: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  account_deactivated: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  account_role_changed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  account_removed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 // =============================================
@@ -109,6 +120,7 @@ function getModuleChip(eventType: string): string | null {
   if (eventType.startsWith('sharepoint') || eventType.startsWith('document')) return 'Documents';
   if (eventType.startsWith('task')) return 'Tasks';
   if (eventType.startsWith('note')) return 'Notes';
+  if (eventType.startsWith('account')) return 'Accounts';
   return null;
 }
 
@@ -150,6 +162,12 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
       return null;
     case 'microsoft_sync_failed':
       return { label: 'Fix connection', path: '/settings?tab=calendar' };
+    case 'account_invited':
+    case 'account_activated':
+    case 'account_deactivated':
+    case 'account_role_changed':
+    case 'account_removed':
+      return { label: 'View account', path: `/clients/${event.tenant_id}?tab=users` };
     default:
       return null;
   }
