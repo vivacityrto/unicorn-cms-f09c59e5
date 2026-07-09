@@ -1,14 +1,12 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
-import { Plus, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { NoteCard } from './NoteCard';
 import { CarryOverBanner } from './CarryOverBanner';
-import { SearchResultsList } from './SearchResultsList';
-import { useNotesForDate, useNotesForMonth, usePreviousDayUnfinished, useSearchNotes } from './useDailyNotes';
+import { useNotesForDate, useNotesForMonth, usePreviousDayUnfinished } from './useDailyNotes';
 import { useNoteMutations } from './useNoteMutations';
 import { DailyNote } from './types';
 
