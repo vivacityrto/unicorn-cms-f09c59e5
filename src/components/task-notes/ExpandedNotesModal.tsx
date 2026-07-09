@@ -114,10 +114,11 @@ export function ExpandedNotesModal({
               </h2>
               <Button
                 type="button"
+                size="sm"
                 onClick={onAddNote}
-                className="bg-brand-aqua-500 text-white hover:bg-brand-aqua-600"
+                className="h-8 bg-brand-aqua-500 text-white hover:bg-brand-aqua-600"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3.5 w-3.5 mr-1" />
                 Add Note
               </Button>
             </header>
