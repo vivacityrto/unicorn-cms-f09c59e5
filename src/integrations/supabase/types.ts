@@ -56429,26 +56429,38 @@ export type Database = {
       }
       user_daily_notes: {
         Row: {
+          body: string
+          color: string
           content: string
           created_at: string
           id: string
+          items: Json
           note_date: string
+          title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          body?: string
+          color?: string
           content: string
           created_at?: string
           id?: string
+          items?: Json
           note_date: string
+          title?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          body?: string
+          color?: string
           content?: string
           created_at?: string
           id?: string
+          items?: Json
           note_date?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }
