@@ -5,10 +5,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreatableSelect } from '@/components/ui/CreatableSelect';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import { ClientProfile } from '@/hooks/useClientManagement';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ClientProfileFormProps {
   profile: ClientProfile | null;
