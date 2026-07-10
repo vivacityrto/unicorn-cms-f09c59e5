@@ -379,8 +379,28 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
 
       {/* Contact & Profile */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg">Contact & Profile</CardTitle>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={syncing || loading || !(formData as any).tenant_id}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                Sync Contact Details
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-background">
+              <DropdownMenuItem onClick={() => handleSyncContact('primary')}>
+                Sync from Primary Contact
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSyncContact('secondary')}>
+                Sync from Secondary Contact
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
