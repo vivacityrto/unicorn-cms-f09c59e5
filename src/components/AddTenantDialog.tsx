@@ -7,8 +7,19 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Loader2, AlertTriangle, ShieldAlert, Merge, FolderOpen } from 'lucide-react';
+import { Building2, Loader2, AlertTriangle, ShieldAlert, Merge, FolderOpen, Search, Sparkles, CheckCircle2, Circle, X } from 'lucide-react';
 import { TenantMergeWizard } from '@/components/tenant/TenantMergeWizard';
+
+interface TgaPreviewData {
+  rto_number: string;
+  legal_name: string | null;
+  trading_name: string | null;
+  abn: string | null;
+  status: string | null;
+  organisation_type: string | null;
+}
+
+type TgaDirtyField = 'legalName' | 'tradingName' | 'abn';
 
 interface AddTenantDialogProps {
   open: boolean;
@@ -55,6 +66,16 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   const [autoAssignConsultant, setAutoAssignConsultant] = useState(true);
   const [createSharePointFolders, setCreateSharePointFolders] = useState(true);
   const [selectedMembershipId, setSelectedMembershipId] = useState<string>('');
+
+  // TGA lookup state (non-Kickstart)
+  const [tgaLooking, setTgaLooking] = useState(false);
+  const [tgaLookupError, setTgaLookupError] = useState<string | null>(null);
+  const [confirmedTgaData, setConfirmedTgaData] = useState<TgaPreviewData | null>(null);
+  const [tgaFilledFields, setTgaFilledFields] = useState<Set<TgaDirtyField>>(new Set());
+
+  // Auto-link progress
+  type LinkStep = 'idle' | 'creating' | 'linking' | 'importing' | 'done';
+  const [linkStep, setLinkStep] = useState<LinkStep>('idle');
 
   // Duplicate detection state
   const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
@@ -127,6 +148,90 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     }
   };
 
+  // Update rtoCode; clear any confirmed TGA snapshot when the number changes
+  const handleRtoCodeChange = (raw: string) => {
+    const cleaned = raw.replace(/\D/g, '').slice(0, 6);
+    setRtoCode(cleaned);
+    setUserAcknowledgedWarning(false);
+    setTgaLookupError(null);
+    if (confirmedTgaData && confirmedTgaData.rto_number !== cleaned) {
+      setConfirmedTgaData(null);
+      setTgaFilledFields(new Set());
+    }
+  };
+
+  const rtoCodeValid = /^\d{4,6}$/.test(rtoCode.trim());
+
+  const runTgaLookup = async () => {
+    if (!rtoCodeValid || tgaLooking) return;
+    setTgaLooking(true);
+    setTgaLookupError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('tga-rto-preview', {
+        body: { rtoId: rtoCode.trim() },
+      });
+      let payload: any = data;
+      if (error && !payload) {
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          try { payload = await ctx.json(); } catch { /* ignore */ }
+        }
+      }
+      if (!payload?.success) {
+        setTgaLookupError(payload?.error || `RTO ${rtoCode} not found on training.gov.au`);
+        setConfirmedTgaData(null);
+        return;
+      }
+      const d = payload.data || {};
+      setConfirmedTgaData({
+        rto_number: String(d.code || rtoCode.trim()),
+        legal_name: d.legal_name || null,
+        trading_name: d.trading_name || null,
+        abn: d.abn || null,
+        status: d.status || null,
+        organisation_type: d.organisation_type || null,
+      });
+    } catch (err: any) {
+      setTgaLookupError(err?.message || 'Unexpected error during TGA lookup.');
+    } finally {
+      setTgaLooking(false);
+    }
+  };
+
+  const applyTgaDetails = () => {
+    if (!confirmedTgaData) return;
+    const filled = new Set<TgaDirtyField>();
+    if (confirmedTgaData.legal_name) {
+      setLegalName(confirmedTgaData.legal_name);
+      filled.add('legalName');
+    }
+    if (confirmedTgaData.trading_name) {
+      setTradingName(confirmedTgaData.trading_name);
+      filled.add('tradingName');
+    }
+    if (confirmedTgaData.abn && !abn.trim()) {
+      setAbn(confirmedTgaData.abn);
+      filled.add('abn');
+    }
+    setTgaFilledFields(filled);
+    setUserAcknowledgedWarning(false);
+  };
+
+  const clearTgaField = (field: TgaDirtyField) => {
+    if (!tgaFilledFields.has(field)) return;
+    setTgaFilledFields((prev) => {
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
+  };
+
+  const tgaStatusIsActive = (() => {
+    const s = (confirmedTgaData?.status || '').toLowerCase();
+    return !!s && (s.includes('current') || s.includes('active') || s.includes('registered'));
+  })();
+
+
   const handleSaveTenant = async () => {
     const isKickStart = selectedPackage?.package_type === 'regulatory_submission';
     if (!isKickStart && !legalName) {
@@ -159,6 +264,12 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
 
   const createTenant = async () => {
     setSaving(true);
+    const isKickStartLocal = selectedPackage?.package_type === 'regulatory_submission';
+    const shouldAutoLinkTga =
+      !isKickStartLocal &&
+      !!confirmedTgaData &&
+      confirmedTgaData.rto_number === rtoCode.trim();
+    setLinkStep(shouldAutoLinkTga ? 'creating' : 'idle');
     const displayName = tradingName || legalName;
     const tenantSlug = generateSlug(displayName);
 
@@ -252,7 +363,47 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         }
       }
 
-      toast({ title: 'Success', description: 'Client created successfully' });
+      // Auto-link to TGA + fire-and-forget sync (non-Kickstart with confirmed lookup)
+      let tgaLinkFailed = false;
+      if (shouldAutoLinkTga && newTenantId) {
+        setLinkStep('linking');
+        try {
+          const { error: linkErr } = await supabase.rpc('client_tga_link_set', {
+            p_tenant_id: newTenantId,
+            p_rto_number: rtoCode.trim(),
+          });
+          if (linkErr) throw linkErr;
+          const { error: verifyErr } = await supabase.rpc('client_tga_link_verify', {
+            p_tenant_id: newTenantId,
+          });
+          if (verifyErr) throw verifyErr;
+        } catch (linkError: any) {
+          tgaLinkFailed = true;
+          console.warn('[AddTenant] TGA link failed:', linkError?.message);
+        }
+
+        if (!tgaLinkFailed) {
+          setLinkStep('importing');
+          // Fire-and-forget sync
+          supabase.functions.invoke('tga-rto-sync', {
+            body: { tenantId: newTenantId, rtoId: rtoCode.trim() },
+          }).catch((err) => {
+            console.warn('[AddTenant] TGA sync invoke failed:', err?.message);
+          });
+        }
+        setLinkStep('done');
+      }
+
+      if (shouldAutoLinkTga && !tgaLinkFailed) {
+        toast({ title: 'Success', description: 'Client created — TGA sync in progress' });
+      } else if (shouldAutoLinkTga && tgaLinkFailed) {
+        toast({
+          title: 'Client created',
+          description: 'TGA link failed — use the Integrations tab to retry.',
+        });
+      } else {
+        toast({ title: 'Success', description: 'Client created successfully' });
+      }
 
       // Auto-assign consultant (fire and forget)
       if (autoAssignConsultant && newTenantId) {
@@ -305,6 +456,11 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     setShowDuplicateWarning(false);
     setUserAcknowledgedWarning(false);
     setShowMergeWizard(false);
+    setConfirmedTgaData(null);
+    setTgaFilledFields(new Set());
+    setTgaLookupError(null);
+    setTgaLooking(false);
+    setLinkStep('idle');
   };
 
   useEffect(() => {
@@ -499,6 +655,118 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
               </div>
             )}
 
+            {/* RTO-first hero card (non-Kickstart only) */}
+            {!isKickStart && selectedPackageId && (
+              <div
+                className="rounded-xl p-[2px]"
+                style={{ background: 'linear-gradient(135deg, #7130A0, #ED1878)' }}
+              >
+                <div className="rounded-[10px] bg-background p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="rto" className="text-sm font-semibold">RTO Number</Label>
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full text-white"
+                      style={{ background: 'linear-gradient(135deg, #7130A0, #ED1878)' }}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Auto-fills from TGA
+                    </span>
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <Input
+                        id="rto"
+                        value={rtoCode}
+                        onChange={(e) => handleRtoCodeChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            runTgaLookup();
+                          }
+                        }}
+                        placeholder="e.g. 40888"
+                        inputMode="numeric"
+                        disabled={tgaLooking}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="default"
+                      onClick={runTgaLookup}
+                      disabled={!rtoCodeValid || tgaLooking}
+                    >
+                      {tgaLooking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                      <span className="ml-1.5">{tgaLooking ? 'Looking up…' : 'Look up TGA'}</span>
+                    </Button>
+                  </div>
+
+                  {rtoCode && !rtoCodeValid && (
+                    <p className="text-[11px] text-destructive">RTO Number must be 4–6 digits.</p>
+                  )}
+
+                  <p className="text-[11px] text-muted-foreground">
+                    We'll fetch the legal name, trading name, ABN and registration status from training.gov.au — you can still edit anything before saving.
+                  </p>
+
+                  {tgaLookupError && (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                      {tgaLookupError}
+                    </div>
+                  )}
+
+                  {confirmedTgaData && (
+                    <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          training.gov.au match
+                        </span>
+                        <span
+                          className={
+                            'text-[10px] font-medium px-2 py-0.5 rounded-full ' +
+                            (tgaStatusIsActive
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-400')
+                          }
+                        >
+                          {tgaStatusIsActive ? 'Currently registered' : (confirmedTgaData.status || 'Status unknown')}
+                        </span>
+                      </div>
+                      <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 text-xs">
+                        <dt className="text-muted-foreground">Legal name</dt>
+                        <dd className="font-medium">{confirmedTgaData.legal_name || '—'}</dd>
+                        <dt className="text-muted-foreground">Trading name</dt>
+                        <dd className="font-medium">{confirmedTgaData.trading_name || '—'}</dd>
+                        <dt className="text-muted-foreground">ABN</dt>
+                        <dd className="font-mono">{confirmedTgaData.abn || '—'}</dd>
+                        <dt className="text-muted-foreground">Org type</dt>
+                        <dd>{confirmedTgaData.organisation_type || '—'}</dd>
+                      </dl>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <Button type="button" size="sm" onClick={applyTgaDetails}>
+                          Use these details
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setConfirmedTgaData(null);
+                            setTgaFilledFields(new Set());
+                            setTgaLookupError(null);
+                            setTimeout(() => document.getElementById('rto')?.focus(), 0);
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5 mr-1" />
+                          Try a different number
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* For KickStart: Trading Name is primary (legal comes from TGA later) */}
             {isKickStart ? (
               <div className="space-y-2">
@@ -514,49 +782,85 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="legal-name">Legal Name *</Label>
+                  <Label htmlFor="legal-name" className="flex items-center gap-2">
+                    Legal Name *
+                    {tgaFilledFields.has('legalName') && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                        from TGA
+                      </span>
+                    )}
+                  </Label>
                   <Input
                     id="legal-name"
                     value={legalName}
-                    onChange={(e) => { setLegalName(e.target.value); setUserAcknowledgedWarning(false); }}
+                    onChange={(e) => { setLegalName(e.target.value); setUserAcknowledgedWarning(false); clearTgaField('legalName'); }}
                     placeholder="Registered legal entity name"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="trading-name">Trading Name</Label>
-                  <Input
-                    id="trading-name"
-                    value={tradingName}
-                    onChange={(e) => setTradingName(e.target.value)}
-                    placeholder="Trading / display name (optional)"
-                  />
-                  <p className="text-xs text-muted-foreground">If blank, legal name is used as display name.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="trading-name" className="flex items-center gap-2">
+                      Trading Name
+                      {tgaFilledFields.has('tradingName') && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                          from TGA
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      id="trading-name"
+                      value={tradingName}
+                      onChange={(e) => { setTradingName(e.target.value); clearTgaField('tradingName'); }}
+                      placeholder="Trading / display name (optional)"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="abn" className="flex items-center gap-2">
+                      ABN
+                      {tgaFilledFields.has('abn') && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                          from TGA
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      id="abn"
+                      value={abn}
+                      onChange={(e) => { setAbn(e.target.value); setUserAcknowledgedWarning(false); clearTgaField('abn'); }}
+                      placeholder="e.g. 51 824 753 556"
+                      maxLength={14}
+                    />
+                  </div>
                 </div>
               </>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="abn">ABN</Label>
-                <Input
-                  id="abn"
-                  value={abn}
-                  onChange={(e) => { setAbn(e.target.value); setUserAcknowledgedWarning(false); }}
-                  placeholder="e.g. 51 824 753 556"
-                  maxLength={14}
-                />
+            {/* Kickstart-only: keep original ABN + RTO row */}
+            {isKickStart && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="abn">ABN</Label>
+                  <Input
+                    id="abn"
+                    value={abn}
+                    onChange={(e) => { setAbn(e.target.value); setUserAcknowledgedWarning(false); }}
+                    placeholder="e.g. 51 824 753 556"
+                    maxLength={14}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rto">RTO Code</Label>
+                  <Input
+                    id="rto"
+                    value={rtoCode}
+                    onChange={(e) => { setRtoCode(e.target.value); setUserAcknowledgedWarning(false); }}
+                    placeholder="e.g. 91262"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="rto">RTO Code</Label>
-                <Input
-                  id="rto"
-                  value={rtoCode}
-                  onChange={(e) => { setRtoCode(e.target.value); setUserAcknowledgedWarning(false); }}
-                  placeholder="e.g. 91262"
-                />
-              </div>
-            </div>
+            )}
+
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
@@ -591,28 +895,62 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving || checking}
-            className="hover:bg-[#40c6e524] hover:text-black"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSaveTenant}
-            disabled={saving || checking || !selectedPackageId || (isKickStart ? !tradingName : !legalName)}
-          >
-            {saving || checking ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {checking ? 'Checking...' : 'Creating...'}
-              </>
-            ) : (
-              'Create Client'
-            )}
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {saving && linkStep !== 'idle' && linkStep !== 'done' && (
+            <div className="flex-1 rounded-md border bg-muted/30 px-3 py-2 space-y-1 text-xs">
+              {([
+                { key: 'creating', label: 'Creating client', hint: null },
+                { key: 'linking', label: 'Linking to TGA', hint: null },
+                { key: 'importing', label: 'Importing TGA data', hint: 'Started — continues in background' },
+              ] as { key: 'creating' | 'linking' | 'importing'; label: string; hint: string | null }[]).map((step) => {
+                const order = ['creating', 'linking', 'importing'] as const;
+                const currentIdx = order.indexOf(linkStep as any);
+                const stepIdx = order.indexOf(step.key);
+                const done = stepIdx < currentIdx;
+                const active = stepIdx === currentIdx;
+                return (
+                  <div key={step.key} className="flex items-center gap-2">
+                    {done ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : active ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                    ) : (
+                      <Circle className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                    <span className={done ? 'text-muted-foreground line-through' : active ? 'font-medium' : 'text-muted-foreground'}>
+                      {step.label}
+                    </span>
+                    {step.hint && active && (
+                      <span className="text-[10px] text-muted-foreground">— {step.hint}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={saving || checking}
+              className="hover:bg-[#40c6e524] hover:text-black"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveTenant}
+              disabled={saving || checking || !selectedPackageId || (isKickStart ? !tradingName : !legalName)}
+            >
+              {saving || checking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {checking ? 'Checking...' : 'Creating...'}
+                </>
+              ) : (
+                'Create Client'
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
