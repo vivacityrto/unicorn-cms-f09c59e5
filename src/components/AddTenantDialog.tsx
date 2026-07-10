@@ -148,6 +148,90 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     }
   };
 
+  // Update rtoCode; clear any confirmed TGA snapshot when the number changes
+  const handleRtoCodeChange = (raw: string) => {
+    const cleaned = raw.replace(/\D/g, '').slice(0, 6);
+    setRtoCode(cleaned);
+    setUserAcknowledgedWarning(false);
+    setTgaLookupError(null);
+    if (confirmedTgaData && confirmedTgaData.rto_number !== cleaned) {
+      setConfirmedTgaData(null);
+      setTgaFilledFields(new Set());
+    }
+  };
+
+  const rtoCodeValid = /^\d{4,6}$/.test(rtoCode.trim());
+
+  const runTgaLookup = async () => {
+    if (!rtoCodeValid || tgaLooking) return;
+    setTgaLooking(true);
+    setTgaLookupError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('tga-rto-preview', {
+        body: { rtoId: rtoCode.trim() },
+      });
+      let payload: any = data;
+      if (error && !payload) {
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          try { payload = await ctx.json(); } catch { /* ignore */ }
+        }
+      }
+      if (!payload?.success) {
+        setTgaLookupError(payload?.error || `RTO ${rtoCode} not found on training.gov.au`);
+        setConfirmedTgaData(null);
+        return;
+      }
+      const d = payload.data || {};
+      setConfirmedTgaData({
+        rto_number: String(d.code || rtoCode.trim()),
+        legal_name: d.legal_name || null,
+        trading_name: d.trading_name || null,
+        abn: d.abn || null,
+        status: d.status || null,
+        organisation_type: d.organisation_type || null,
+      });
+    } catch (err: any) {
+      setTgaLookupError(err?.message || 'Unexpected error during TGA lookup.');
+    } finally {
+      setTgaLooking(false);
+    }
+  };
+
+  const applyTgaDetails = () => {
+    if (!confirmedTgaData) return;
+    const filled = new Set<TgaDirtyField>();
+    if (confirmedTgaData.legal_name) {
+      setLegalName(confirmedTgaData.legal_name);
+      filled.add('legalName');
+    }
+    if (confirmedTgaData.trading_name) {
+      setTradingName(confirmedTgaData.trading_name);
+      filled.add('tradingName');
+    }
+    if (confirmedTgaData.abn && !abn.trim()) {
+      setAbn(confirmedTgaData.abn);
+      filled.add('abn');
+    }
+    setTgaFilledFields(filled);
+    setUserAcknowledgedWarning(false);
+  };
+
+  const clearTgaField = (field: TgaDirtyField) => {
+    if (!tgaFilledFields.has(field)) return;
+    setTgaFilledFields((prev) => {
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
+  };
+
+  const tgaStatusIsActive = (() => {
+    const s = (confirmedTgaData?.status || '').toLowerCase();
+    return !!s && (s.includes('current') || s.includes('active') || s.includes('registered'));
+  })();
+
+
   const handleSaveTenant = async () => {
     const isKickStart = selectedPackage?.package_type === 'regulatory_submission';
     if (!isKickStart && !legalName) {
