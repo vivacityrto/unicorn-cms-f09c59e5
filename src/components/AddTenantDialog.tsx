@@ -895,28 +895,62 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving || checking}
-            className="hover:bg-[#40c6e524] hover:text-black"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSaveTenant}
-            disabled={saving || checking || !selectedPackageId || (isKickStart ? !tradingName : !legalName)}
-          >
-            {saving || checking ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {checking ? 'Checking...' : 'Creating...'}
-              </>
-            ) : (
-              'Create Client'
-            )}
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {saving && linkStep !== 'idle' && linkStep !== 'done' && (
+            <div className="flex-1 rounded-md border bg-muted/30 px-3 py-2 space-y-1 text-xs">
+              {([
+                { key: 'creating', label: 'Creating client' },
+                { key: 'linking', label: 'Linking to TGA' },
+                { key: 'importing', label: 'Importing TGA data', hint: 'Started — continues in background' },
+              ] as const).map((step) => {
+                const order = ['creating', 'linking', 'importing'] as const;
+                const currentIdx = order.indexOf(linkStep as any);
+                const stepIdx = order.indexOf(step.key);
+                const done = stepIdx < currentIdx;
+                const active = stepIdx === currentIdx;
+                return (
+                  <div key={step.key} className="flex items-center gap-2">
+                    {done ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : active ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                    ) : (
+                      <Circle className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                    <span className={done ? 'text-muted-foreground line-through' : active ? 'font-medium' : 'text-muted-foreground'}>
+                      {step.label}
+                    </span>
+                    {step.hint && active && (
+                      <span className="text-[10px] text-muted-foreground">— {step.hint}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={saving || checking}
+              className="hover:bg-[#40c6e524] hover:text-black"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveTenant}
+              disabled={saving || checking || !selectedPackageId || (isKickStart ? !tradingName : !legalName)}
+            >
+              {saving || checking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {checking ? 'Checking...' : 'Creating...'}
+                </>
+              ) : (
+                'Create Client'
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
