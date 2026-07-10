@@ -264,6 +264,12 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
 
   const createTenant = async () => {
     setSaving(true);
+    const isKickStartLocal = selectedPackage?.package_type === 'regulatory_submission';
+    const shouldAutoLinkTga =
+      !isKickStartLocal &&
+      !!confirmedTgaData &&
+      confirmedTgaData.rto_number === rtoCode.trim();
+    setLinkStep(shouldAutoLinkTga ? 'creating' : 'idle');
     const displayName = tradingName || legalName;
     const tenantSlug = generateSlug(displayName);
 
