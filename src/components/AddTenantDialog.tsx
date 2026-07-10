@@ -7,8 +7,19 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Loader2, AlertTriangle, ShieldAlert, Merge, FolderOpen } from 'lucide-react';
+import { Building2, Loader2, AlertTriangle, ShieldAlert, Merge, FolderOpen, Search, Sparkles, CheckCircle2, Circle, X } from 'lucide-react';
 import { TenantMergeWizard } from '@/components/tenant/TenantMergeWizard';
+
+interface TgaPreviewData {
+  rto_number: string;
+  legal_name: string | null;
+  trading_name: string | null;
+  abn: string | null;
+  status: string | null;
+  organisation_type: string | null;
+}
+
+type TgaDirtyField = 'legalName' | 'tradingName' | 'abn';
 
 interface AddTenantDialogProps {
   open: boolean;
