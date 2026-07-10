@@ -456,6 +456,11 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     setShowDuplicateWarning(false);
     setUserAcknowledgedWarning(false);
     setShowMergeWizard(false);
+    setConfirmedTgaData(null);
+    setTgaFilledFields(new Set());
+    setTgaLookupError(null);
+    setTgaLooking(false);
+    setLinkStep('idle');
   };
 
   useEffect(() => {
