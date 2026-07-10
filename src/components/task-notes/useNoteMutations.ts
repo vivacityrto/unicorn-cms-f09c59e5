@@ -153,10 +153,17 @@ export function useNoteMutations(userId: string | undefined) {
         } else {
           const { error } = await supabase
             .from(TABLE as any)
-            .update({ items: remaining } as any)
+            .update({
+              items: remaining,
+              title: n.title.trim(),
+              color: n.color,
+              body: sanitizeNoteHtml(n.body ?? ''),
+              content: '',
+            } as any)
             .eq('id', n.id);
           if (error) throw error;
         }
+
       }
       return dateStr;
     },
