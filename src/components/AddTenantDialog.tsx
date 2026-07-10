@@ -655,6 +655,118 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
               </div>
             )}
 
+            {/* RTO-first hero card (non-Kickstart only) */}
+            {!isKickStart && selectedPackageId && (
+              <div
+                className="rounded-xl p-[2px]"
+                style={{ background: 'linear-gradient(135deg, #7130A0, #ED1878)' }}
+              >
+                <div className="rounded-[10px] bg-background p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="rto" className="text-sm font-semibold">RTO Number</Label>
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full text-white"
+                      style={{ background: 'linear-gradient(135deg, #7130A0, #ED1878)' }}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Auto-fills from TGA
+                    </span>
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <Input
+                        id="rto"
+                        value={rtoCode}
+                        onChange={(e) => handleRtoCodeChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            runTgaLookup();
+                          }
+                        }}
+                        placeholder="e.g. 40888"
+                        inputMode="numeric"
+                        disabled={tgaLooking}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="default"
+                      onClick={runTgaLookup}
+                      disabled={!rtoCodeValid || tgaLooking}
+                    >
+                      {tgaLooking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                      <span className="ml-1.5">{tgaLooking ? 'Looking up…' : 'Look up TGA'}</span>
+                    </Button>
+                  </div>
+
+                  {rtoCode && !rtoCodeValid && (
+                    <p className="text-[11px] text-destructive">RTO Number must be 4–6 digits.</p>
+                  )}
+
+                  <p className="text-[11px] text-muted-foreground">
+                    We'll fetch the legal name, trading name, ABN and registration status from training.gov.au — you can still edit anything before saving.
+                  </p>
+
+                  {tgaLookupError && (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                      {tgaLookupError}
+                    </div>
+                  )}
+
+                  {confirmedTgaData && (
+                    <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          training.gov.au match
+                        </span>
+                        <span
+                          className={
+                            'text-[10px] font-medium px-2 py-0.5 rounded-full ' +
+                            (tgaStatusIsActive
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-400')
+                          }
+                        >
+                          {tgaStatusIsActive ? 'Currently registered' : (confirmedTgaData.status || 'Status unknown')}
+                        </span>
+                      </div>
+                      <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 text-xs">
+                        <dt className="text-muted-foreground">Legal name</dt>
+                        <dd className="font-medium">{confirmedTgaData.legal_name || '—'}</dd>
+                        <dt className="text-muted-foreground">Trading name</dt>
+                        <dd className="font-medium">{confirmedTgaData.trading_name || '—'}</dd>
+                        <dt className="text-muted-foreground">ABN</dt>
+                        <dd className="font-mono">{confirmedTgaData.abn || '—'}</dd>
+                        <dt className="text-muted-foreground">Org type</dt>
+                        <dd>{confirmedTgaData.organisation_type || '—'}</dd>
+                      </dl>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <Button type="button" size="sm" onClick={applyTgaDetails}>
+                          Use these details
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setConfirmedTgaData(null);
+                            setTgaFilledFields(new Set());
+                            setTgaLookupError(null);
+                            setTimeout(() => document.getElementById('rto')?.focus(), 0);
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5 mr-1" />
+                          Try a different number
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* For KickStart: Trading Name is primary (legal comes from TGA later) */}
             {isKickStart ? (
               <div className="space-y-2">
@@ -670,49 +782,85 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="legal-name">Legal Name *</Label>
+                  <Label htmlFor="legal-name" className="flex items-center gap-2">
+                    Legal Name *
+                    {tgaFilledFields.has('legalName') && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                        from TGA
+                      </span>
+                    )}
+                  </Label>
                   <Input
                     id="legal-name"
                     value={legalName}
-                    onChange={(e) => { setLegalName(e.target.value); setUserAcknowledgedWarning(false); }}
+                    onChange={(e) => { setLegalName(e.target.value); setUserAcknowledgedWarning(false); clearTgaField('legalName'); }}
                     placeholder="Registered legal entity name"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="trading-name">Trading Name</Label>
-                  <Input
-                    id="trading-name"
-                    value={tradingName}
-                    onChange={(e) => setTradingName(e.target.value)}
-                    placeholder="Trading / display name (optional)"
-                  />
-                  <p className="text-xs text-muted-foreground">If blank, legal name is used as display name.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="trading-name" className="flex items-center gap-2">
+                      Trading Name
+                      {tgaFilledFields.has('tradingName') && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                          from TGA
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      id="trading-name"
+                      value={tradingName}
+                      onChange={(e) => { setTradingName(e.target.value); clearTgaField('tradingName'); }}
+                      placeholder="Trading / display name (optional)"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="abn" className="flex items-center gap-2">
+                      ABN
+                      {tgaFilledFields.has('abn') && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                          from TGA
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      id="abn"
+                      value={abn}
+                      onChange={(e) => { setAbn(e.target.value); setUserAcknowledgedWarning(false); clearTgaField('abn'); }}
+                      placeholder="e.g. 51 824 753 556"
+                      maxLength={14}
+                    />
+                  </div>
                 </div>
               </>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="abn">ABN</Label>
-                <Input
-                  id="abn"
-                  value={abn}
-                  onChange={(e) => { setAbn(e.target.value); setUserAcknowledgedWarning(false); }}
-                  placeholder="e.g. 51 824 753 556"
-                  maxLength={14}
-                />
+            {/* Kickstart-only: keep original ABN + RTO row */}
+            {isKickStart && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="abn">ABN</Label>
+                  <Input
+                    id="abn"
+                    value={abn}
+                    onChange={(e) => { setAbn(e.target.value); setUserAcknowledgedWarning(false); }}
+                    placeholder="e.g. 51 824 753 556"
+                    maxLength={14}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rto">RTO Code</Label>
+                  <Input
+                    id="rto"
+                    value={rtoCode}
+                    onChange={(e) => { setRtoCode(e.target.value); setUserAcknowledgedWarning(false); }}
+                    placeholder="e.g. 91262"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="rto">RTO Code</Label>
-                <Input
-                  id="rto"
-                  value={rtoCode}
-                  onChange={(e) => { setRtoCode(e.target.value); setUserAcknowledgedWarning(false); }}
-                  placeholder="e.g. 91262"
-                />
-              </div>
-            </div>
+            )}
+
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
