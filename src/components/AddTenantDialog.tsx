@@ -363,7 +363,47 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         }
       }
 
-      toast({ title: 'Success', description: 'Client created successfully' });
+      // Auto-link to TGA + fire-and-forget sync (non-Kickstart with confirmed lookup)
+      let tgaLinkFailed = false;
+      if (shouldAutoLinkTga && newTenantId) {
+        setLinkStep('linking');
+        try {
+          const { error: linkErr } = await supabase.rpc('client_tga_link_set', {
+            p_tenant_id: newTenantId,
+            p_rto_number: rtoCode.trim(),
+          });
+          if (linkErr) throw linkErr;
+          const { error: verifyErr } = await supabase.rpc('client_tga_link_verify', {
+            p_tenant_id: newTenantId,
+          });
+          if (verifyErr) throw verifyErr;
+        } catch (linkError: any) {
+          tgaLinkFailed = true;
+          console.warn('[AddTenant] TGA link failed:', linkError?.message);
+        }
+
+        if (!tgaLinkFailed) {
+          setLinkStep('importing');
+          // Fire-and-forget sync
+          supabase.functions.invoke('tga-rto-sync', {
+            body: { tenantId: newTenantId, rtoId: rtoCode.trim() },
+          }).catch((err) => {
+            console.warn('[AddTenant] TGA sync invoke failed:', err?.message);
+          });
+        }
+        setLinkStep('done');
+      }
+
+      if (shouldAutoLinkTga && !tgaLinkFailed) {
+        toast({ title: 'Success', description: 'Client created — TGA sync in progress' });
+      } else if (shouldAutoLinkTga && tgaLinkFailed) {
+        toast({
+          title: 'Client created',
+          description: 'TGA link failed — use the Integrations tab to retry.',
+        });
+      } else {
+        toast({ title: 'Success', description: 'Client created successfully' });
+      }
 
       // Auto-assign consultant (fire and forget)
       if (autoAssignConsultant && newTenantId) {
