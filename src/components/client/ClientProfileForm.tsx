@@ -5,10 +5,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreatableSelect } from '@/components/ui/CreatableSelect';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import { ClientProfile } from '@/hooks/useClientManagement';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ClientProfileFormProps {
   profile: ClientProfile | null;
@@ -66,6 +69,8 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
   const [formData, setFormData] = useState<Partial<ClientProfile>>({});
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const { toast } = useToast();
   
   const { options: ORG_TYPES } = useLookupTable('dd_org_type');
   const { options: SMS_OPTIONS, refresh: refreshSms } = useLookupTable('dd_sms');
@@ -90,10 +95,58 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
 
   useEffect(() => {
     if (profile) {
-      setFormData(profile);
+      setFormData({ ...profile, country: profile.country || 'Australia' });
       setHasChanges(false);
     }
   }, [profile]);
+
+  const handleSyncContact = async (role: 'primary' | 'secondary') => {
+    const tid = (formData as any).tenant_id;
+    if (!tid) return;
+    setSyncing(true);
+    try {
+      let query = supabase
+        .from('tenant_users')
+        .select('user_id, created_at')
+        .eq('tenant_id', tid);
+      if (role === 'primary') {
+        query = query.eq('relationship_role', 'primary_contact').order('created_at', { ascending: true });
+      } else {
+        query = query.eq('secondary_contact', true);
+      }
+      const { data: tu, error: tuErr } = await query.limit(1).maybeSingle();
+      if (tuErr) throw tuErr;
+      const roleLabel = role === 'primary' ? 'Primary Contact' : 'Secondary Contact';
+      if (!tu?.user_id) {
+        toast({ title: 'No contact found', description: `No ${roleLabel} assigned to this client yet.` });
+        return;
+      }
+      const { data: u, error: uErr } = await supabase
+        .from('users')
+        .select('first_name, last_name, email, phone, mobile_phone')
+        .eq('user_uuid', tu.user_id)
+        .maybeSingle();
+      if (uErr) throw uErr;
+      if (!u) {
+        toast({ title: 'No contact found', description: `No ${roleLabel} assigned to this client yet.` });
+        return;
+      }
+      const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+      setFormData(prev => ({
+        ...prev,
+        primary_contact_name: fullName,
+        primary_contact_email: u.email || '',
+        primary_contact_phone: u.phone || u.mobile_phone || '',
+      }));
+      setHasChanges(true);
+      toast({ title: 'Contact synced', description: `Loaded details from ${roleLabel}.` });
+    } catch (err: any) {
+      toast({ title: 'Sync failed', description: err?.message || 'Unable to sync contact.', variant: 'destructive' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
 
   const handleChange = (field: keyof ClientProfile, value: string | null) => {
     setFormData(prev => {
@@ -326,8 +379,28 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
 
       {/* Contact & Profile */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg">Contact & Profile</CardTitle>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={syncing || loading || !(formData as any).tenant_id}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                Sync Contact Details
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-background">
+              <DropdownMenuItem onClick={() => handleSyncContact('primary')}>
+                Sync from Primary Contact
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSyncContact('secondary')}>
+                Sync from Secondary Contact
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
