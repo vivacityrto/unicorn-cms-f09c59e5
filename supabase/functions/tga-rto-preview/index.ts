@@ -77,7 +77,8 @@ serve(async (req) => {
     })) || [];
 
     // Extract ABN from the legal name record
-    const abn = currentLegalName?.abns?.[0]?.abn || currentLegalName?.abn || null;
+    const firstAbn = currentLegalName?.abns?.[0];
+    const abn = (typeof firstAbn === 'object' && firstAbn !== null ? firstAbn.abn : firstAbn) || currentLegalName?.abn || null;
     const acn = currentLegalName?.acn || rawData.acn || null;
     
     console.log(`[TGA_PREVIEW] Found RTO: ${currentLegalName?.name || 'Unknown'}`);
