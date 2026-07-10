@@ -67,6 +67,16 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   const [createSharePointFolders, setCreateSharePointFolders] = useState(true);
   const [selectedMembershipId, setSelectedMembershipId] = useState<string>('');
 
+  // TGA lookup state (non-Kickstart)
+  const [tgaLooking, setTgaLooking] = useState(false);
+  const [tgaLookupError, setTgaLookupError] = useState<string | null>(null);
+  const [confirmedTgaData, setConfirmedTgaData] = useState<TgaPreviewData | null>(null);
+  const [tgaFilledFields, setTgaFilledFields] = useState<Set<TgaDirtyField>>(new Set());
+
+  // Auto-link progress
+  type LinkStep = 'idle' | 'creating' | 'linking' | 'importing' | 'done';
+  const [linkStep, setLinkStep] = useState<LinkStep>('idle');
+
   // Duplicate detection state
   const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
