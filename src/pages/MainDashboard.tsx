@@ -670,13 +670,6 @@ export default function MainDashboard() {
       ]
     : [];
 
-  // Client-side task filter tabs (works on already-loaded array)
-  const [taskFilter, setTaskFilter] = useState<"all" | "overdue" | "today">("all");
-  const filteredTasks = tasks.filter((t) => {
-    if (taskFilter === "overdue") return t.dueDate && t.dueDate < today;
-    if (taskFilter === "today") return t.dueDate === today;
-    return true;
-  });
 
   const todayLabel = format(new Date(), "EEE, d MMM");
 

@@ -105,9 +105,17 @@ export function useNoteMutations(userId: string | undefined) {
 
   const patchItems = useMutation({
     mutationFn: async ({ note, items }: { note: DailyNote; items: ChecklistItem[] }) => {
+      // Persist the hydrated structured fields alongside items so legacy notes
+      // (whose title/items were derived from `content`) don't revert to "Untitled".
       const { error } = await supabase
         .from(TABLE as any)
-        .update({ items: normalizeItems(items) } as any)
+        .update({
+          items: normalizeItems(items),
+          title: note.title.trim(),
+          color: note.color,
+          body: sanitizeNoteHtml(note.body ?? ''),
+          content: '',
+        } as any)
         .eq('id', note.id);
       if (error) throw error;
       return note.note_date;
@@ -115,6 +123,7 @@ export function useNoteMutations(userId: string | undefined) {
     onSuccess: (dateStr) => invalidate(dateStr),
     onError: (e: any) => toast.error(e?.message ?? 'Failed to update checklist'),
   });
+
 
   const toggleItem = (note: DailyNote, itemId: string) => {
     const next = note.items.map((it) => (it.id === itemId ? { ...it, done: !it.done } : it));
@@ -144,10 +153,17 @@ export function useNoteMutations(userId: string | undefined) {
         } else {
           const { error } = await supabase
             .from(TABLE as any)
-            .update({ items: remaining } as any)
+            .update({
+              items: remaining,
+              title: n.title.trim(),
+              color: n.color,
+              body: sanitizeNoteHtml(n.body ?? ''),
+              content: '',
+            } as any)
             .eq('id', n.id);
           if (error) throw error;
         }
+
       }
       return dateStr;
     },
@@ -228,10 +244,17 @@ export function useNoteMutations(userId: string | undefined) {
         } else {
           const { error } = await supabase
             .from(TABLE as any)
-            .update({ items: doneOnly } as any)
+            .update({
+              items: doneOnly,
+              title: n.title.trim(),
+              color: n.color,
+              body: sanitizeNoteHtml(n.body ?? ''),
+              content: '',
+            } as any)
             .eq('id', n.id);
           if (error) throw error;
         }
+
       }
 
       return { targetStr, moved: unfinished.length };
