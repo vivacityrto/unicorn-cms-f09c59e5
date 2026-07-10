@@ -244,10 +244,17 @@ export function useNoteMutations(userId: string | undefined) {
         } else {
           const { error } = await supabase
             .from(TABLE as any)
-            .update({ items: doneOnly } as any)
+            .update({
+              items: doneOnly,
+              title: n.title.trim(),
+              color: n.color,
+              body: sanitizeNoteHtml(n.body ?? ''),
+              content: '',
+            } as any)
             .eq('id', n.id);
           if (error) throw error;
         }
+
       }
 
       return { targetStr, moved: unfinished.length };
