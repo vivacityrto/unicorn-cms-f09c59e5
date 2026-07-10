@@ -899,10 +899,10 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           {saving && linkStep !== 'idle' && linkStep !== 'done' && (
             <div className="flex-1 rounded-md border bg-muted/30 px-3 py-2 space-y-1 text-xs">
               {([
-                { key: 'creating', label: 'Creating client' },
-                { key: 'linking', label: 'Linking to TGA' },
+                { key: 'creating', label: 'Creating client', hint: null },
+                { key: 'linking', label: 'Linking to TGA', hint: null },
                 { key: 'importing', label: 'Importing TGA data', hint: 'Started — continues in background' },
-              ] as const).map((step) => {
+              ] as { key: 'creating' | 'linking' | 'importing'; label: string; hint: string | null }[]).map((step) => {
                 const order = ['creating', 'linking', 'importing'] as const;
                 const currentIdx = order.indexOf(linkStep as any);
                 const stepIdx = order.indexOf(step.key);
