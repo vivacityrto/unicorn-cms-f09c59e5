@@ -292,6 +292,7 @@ const App = () => (
             <Route path="/activate" element={<ActivateAccount />} />
             <Route path="/accept-invitation" element={<AcceptInvitationWrapper />} />
             <Route path="/post-sign-in" element={<PostSignInRedirect />} />
+            <Route path="/oauth/consent" element={<OAuthConsent />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
             <Route 
