@@ -72,7 +72,7 @@ export function useInviteMutations() {
         },
       });
       if (error) {
-        const edge = extractEdgeError(error);
+        const edge = await extractEdgeError(error);
         const wrapped = new Error(edge?.detail || error.message) as Error & {
           code?: string;
         };
@@ -93,7 +93,7 @@ export function useInviteMutations() {
         body: { invitation_id: invitationId },
       });
       if (error) {
-        const edge = extractEdgeError(error);
+        const edge = await extractEdgeError(error);
         throw new Error(edge?.detail || error.message);
       }
       return data;
@@ -113,7 +113,7 @@ export function useInviteMutations() {
         body: { invitation_id: invitationId, reason: "Revoked by tenant admin" },
       });
       if (error) {
-        const edge = extractEdgeError(error);
+        const edge = await extractEdgeError(error);
         throw new Error(edge?.detail || error.message);
       }
       return data;
