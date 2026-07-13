@@ -906,7 +906,7 @@ export const LiveMeetingView = () => {
               </Button>
             )}
             
-            {meetingStarted && isFacilitator && (
+            {meetingStarted && canControlMeeting && (
               <Button
                 onClick={() => setCloseDialogOpen(true)}
                 size="sm"
