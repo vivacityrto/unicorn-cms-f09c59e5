@@ -286,6 +286,7 @@ export const LiveMeetingView = () => {
   const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
   const isMeetingAttendee = attendees?.some(a => a.user_id === profile?.user_uuid) ?? false;
   const canStartMeeting = isVivacityStaff && isMeetingAttendee;
+  const canControlMeeting = canStartMeeting || isFacilitator;
 
 
   // Start first segment mutation
@@ -873,7 +874,7 @@ export const LiveMeetingView = () => {
               </Button>
             )}
             
-            {meetingStarted && isFacilitator && completedSegments.length > 0 && (
+            {meetingStarted && canControlMeeting && completedSegments.length > 0 && (
               <Button 
                 onClick={handlePreviousSegment} 
                 size="sm" 
@@ -889,7 +890,7 @@ export const LiveMeetingView = () => {
               </Button>
             )}
             
-            {meetingStarted && isFacilitator && currentSegment && (
+            {meetingStarted && canControlMeeting && currentSegment && (
               <Button 
                 onClick={handleAdvanceSegment} 
                 size="sm" 
@@ -905,7 +906,7 @@ export const LiveMeetingView = () => {
               </Button>
             )}
             
-            {meetingStarted && isFacilitator && (
+            {meetingStarted && canControlMeeting && (
               <Button
                 onClick={() => setCloseDialogOpen(true)}
                 size="sm"
