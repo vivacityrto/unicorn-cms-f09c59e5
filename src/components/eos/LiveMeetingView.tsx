@@ -21,6 +21,7 @@ import {
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
   ArrowRight, Timer, PlayCircle, Star, LogOut, Eye, Loader2, Pencil
 } from 'lucide-react';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
@@ -272,6 +273,12 @@ export const LiveMeetingView = () => {
     : participants.length === 0
       ? true
       : participants.some(p => p.user_id === profile?.user_uuid && p.role === 'Leader');
+
+  // Any signed-in Vivacity staff member who is a meeting participant can start the meeting,
+  // not just the designated facilitator. Backend RLS already permits this.
+  const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
+  const isMeetingParticipant = participants?.some(p => p.user_id === profile?.user_uuid);
+  const canStartMeeting = isVivacityStaff && isMeetingParticipant;
 
   // Start first segment mutation
   const startFirstSegment = useMutation({
@@ -841,7 +848,7 @@ export const LiveMeetingView = () => {
           <div className="flex items-center gap-4">
             <OnlineUsersIndicator onlineUsers={onlineUsers} attendees={attendees} />
             
-            {!meetingStarted && isFacilitator && (
+            {!meetingStarted && canStartMeeting && (
               <Button 
                 onClick={() => setFacilitatorDialogOpen(true)} 
                 size="sm"
@@ -986,7 +993,7 @@ export const LiveMeetingView = () => {
                     This {meeting.meeting_type} meeting has {segments.length} agenda segments 
                     ({segments.reduce((sum, s) => sum + s.duration_minutes, 0)} minutes total).
                   </p>
-                  {isFacilitator ? (
+                  {canStartMeeting ? (
                     <Button 
                       size="lg"
                       onClick={() => setFacilitatorDialogOpen(true)}
