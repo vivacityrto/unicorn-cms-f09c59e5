@@ -133,27 +133,6 @@ export type Database = {
           },
         ]
       }
-      _tenant_users_contact_backfill_20260512: {
-        Row: {
-          captured_at: string
-          id: number
-          primary_contact: boolean | null
-          secondary_contact: boolean | null
-        }
-        Insert: {
-          captured_at?: string
-          id: number
-          primary_contact?: boolean | null
-          secondary_contact?: boolean | null
-        }
-        Update: {
-          captured_at?: string
-          id?: number
-          primary_contact?: boolean | null
-          secondary_contact?: boolean | null
-        }
-        Relationships: []
-      }
       academy_assessment_attempts: {
         Row: {
           answers_json: Json | null
