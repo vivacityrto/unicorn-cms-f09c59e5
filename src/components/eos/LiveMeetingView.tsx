@@ -286,6 +286,7 @@ export const LiveMeetingView = () => {
   const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
   const isMeetingAttendee = attendees?.some(a => a.user_id === profile?.user_uuid) ?? false;
   const canStartMeeting = isVivacityStaff && isMeetingAttendee;
+  const canControlMeeting = canStartMeeting || isFacilitator;
 
 
   // Start first segment mutation
