@@ -848,7 +848,7 @@ export const LiveMeetingView = () => {
           <div className="flex items-center gap-4">
             <OnlineUsersIndicator onlineUsers={onlineUsers} attendees={attendees} />
             
-            {!meetingStarted && isFacilitator && (
+            {!meetingStarted && canStartMeeting && (
               <Button 
                 onClick={() => setFacilitatorDialogOpen(true)} 
                 size="sm"
@@ -993,7 +993,7 @@ export const LiveMeetingView = () => {
                     This {meeting.meeting_type} meeting has {segments.length} agenda segments 
                     ({segments.reduce((sum, s) => sum + s.duration_minutes, 0)} minutes total).
                   </p>
-                  {isFacilitator ? (
+                  {canStartMeeting ? (
                     <Button 
                       size="lg"
                       onClick={() => setFacilitatorDialogOpen(true)}
