@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { LogIn, KeyRound, Sparkles } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,14 +22,22 @@ const Login = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
 
+  // Preserve ?next= across auth so flows like the MCP OAuth consent screen
+  // land back on their originating URL. Only accept same-origin relative paths.
+  const rawNext = searchParams.get("next");
+  const nextPath =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
+  const postLoginTarget = nextPath ?? "/post-sign-in";
+
   // Redirect if already logged in (returning session — no fresh flag, suppress toast)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/post-sign-in");
+        navigate(postLoginTarget, { replace: true });
       }
     });
-  }, [navigate]);
+  }, [navigate, postLoginTarget]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +56,7 @@ const Login = () => {
         description: "Redirecting...",
       });
 
-      navigate("/post-sign-in", { state: { fresh: true } });
+      navigate(nextPath ?? "/post-sign-in", nextPath ? { replace: true } : { state: { fresh: true } });
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -256,7 +265,9 @@ const Login = () => {
                         provider: 'azure',
                         options: {
                           scopes: 'openid profile email',
-                          redirectTo: `${window.location.origin}/post-sign-in?fresh=1`,
+                          redirectTo: nextPath
+                            ? `${window.location.origin}${nextPath}`
+                            : `${window.location.origin}/post-sign-in?fresh=1`,
                         },
                       });
                       if (error) throw error;
