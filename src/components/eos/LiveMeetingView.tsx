@@ -854,7 +854,14 @@ export const LiveMeetingView = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {facilitatorName && (
+              <div className="hidden md:flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Facilitator:</span>
+                <span>{facilitatorName}</span>
+              </div>
+            )}
             <OnlineUsersIndicator onlineUsers={onlineUsers} attendees={attendees} />
+
             
             {!meetingStarted && canStartMeeting && (
               <Button 
