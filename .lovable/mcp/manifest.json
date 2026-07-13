@@ -58,20 +58,21 @@
           "openWorldHint": false
         },
         "inputSchema": {
-          "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "properties": {
             "limit": {
-              "description": "Maximum number of tasks to return (default 25, max 100).",
               "type": "integer",
               "minimum": 1,
-              "maximum": 100
+              "maximum": 100,
+              "description": "Maximum number of tasks to return (default 25, max 100)."
             },
             "status": {
-              "description": "Optional task status filter (e.g. 'open', 'in_progress', 'done').",
-              "type": "string"
+              "type": "string",
+              "description": "Optional task status filter (e.g. 'open', 'in_progress', 'done')."
             }
-          }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
       }

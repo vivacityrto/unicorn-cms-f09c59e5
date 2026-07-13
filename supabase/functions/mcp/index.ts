@@ -83,7 +83,7 @@ var list_my_tenants_default = defineTool2({
 // src/lib/mcp/tools/list-my-tasks.ts
 import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.108.2";
 import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z } from "npm:zod@^4.4.3";
+import { z } from "npm:zod@^3.23.8";
 var list_my_tasks_default = defineTool3({
   name: "list_my_tasks",
   title: "List my tasks",
