@@ -274,6 +274,12 @@ export const LiveMeetingView = () => {
       ? true
       : participants.some(p => p.user_id === profile?.user_uuid && p.role === 'Leader');
 
+  // Any signed-in Vivacity staff member who is a meeting participant can start the meeting,
+  // not just the designated facilitator. Backend RLS already permits this.
+  const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
+  const isMeetingParticipant = participants?.some(p => p.user_id === profile?.user_uuid);
+  const canStartMeeting = isVivacityStaff && isMeetingParticipant;
+
   // Start first segment mutation
   const startFirstSegment = useMutation({
     mutationFn: async () => {
