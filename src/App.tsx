@@ -70,6 +70,7 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const ClientEosOverview = lazy(() => import("./pages/ClientEosOverview"));
 const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const PostSignInRedirect = lazy(() => import("./pages/PostSignInRedirect"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
 const AddinSettings = lazy(() => import("./pages/admin/AddinSettings"));
 const AddinDiagnostics = lazy(() => import("./pages/admin/AddinDiagnostics"));
@@ -291,6 +292,8 @@ const App = () => (
             <Route path="/activate" element={<ActivateAccount />} />
             <Route path="/accept-invitation" element={<AcceptInvitationWrapper />} />
             <Route path="/post-sign-in" element={<PostSignInRedirect />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
             <Route 
               path="/dashboard" 
               element={
