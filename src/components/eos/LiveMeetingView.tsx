@@ -274,11 +274,19 @@ export const LiveMeetingView = () => {
       ? true
       : participants.some(p => p.user_id === profile?.user_uuid && p.role === 'Leader');
 
-  // Any signed-in Vivacity staff member who is a meeting participant can start the meeting,
-  // not just the designated facilitator. Backend RLS already permits this.
+  // Derive facilitator display name from the participant row with role='Leader'.
+  const facilitatorParticipant = participants?.find((p: any) => p.role === 'Leader');
+  const facilitatorName = facilitatorParticipant
+    ? `${facilitatorParticipant.users?.first_name || ''} ${facilitatorParticipant.users?.last_name || ''}`.trim() || null
+    : null;
+
+  // Any signed-in Vivacity staff member who is listed as a meeting attendee can start
+  // the meeting — not just the designated facilitator, and not gated on the separate
+  // eos_meeting_participants sync which can lag behind the attendee list users see.
   const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
-  const isMeetingParticipant = participants?.some(p => p.user_id === profile?.user_uuid);
-  const canStartMeeting = isVivacityStaff && isMeetingParticipant;
+  const isMeetingAttendee = attendees?.some(a => a.user_id === profile?.user_uuid) ?? false;
+  const canStartMeeting = isVivacityStaff && isMeetingAttendee;
+
 
   // Start first segment mutation
   const startFirstSegment = useMutation({
@@ -846,7 +854,14 @@ export const LiveMeetingView = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {facilitatorName && (
+              <div className="hidden md:flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Facilitator:</span>
+                <span>{facilitatorName}</span>
+              </div>
+            )}
             <OnlineUsersIndicator onlineUsers={onlineUsers} attendees={attendees} />
+
             
             {!meetingStarted && canStartMeeting && (
               <Button 
@@ -989,9 +1004,15 @@ export const LiveMeetingView = () => {
                 <Card className="p-8 text-center">
                   <Eye className="h-16 w-16 mx-auto mb-4 text-primary" />
                   <h2 className="text-xl font-bold mb-2">Meeting Preview</h2>
-                  <p className="text-muted-foreground mb-6">
+                  <p className="text-muted-foreground mb-2">
                     This {meeting.meeting_type} meeting has {segments.length} agenda segments 
                     ({segments.reduce((sum, s) => sum + s.duration_minutes, 0)} minutes total).
+                  </p>
+                  <p className="text-sm mb-6">
+                    <span className="text-muted-foreground">Facilitator: </span>
+                    <span className="font-medium">
+                      {facilitatorName ?? 'Not assigned'}
+                    </span>
                   </p>
                   {canStartMeeting ? (
                     <Button 
@@ -1003,7 +1024,9 @@ export const LiveMeetingView = () => {
                     </Button>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      Waiting for the facilitator to start the meeting...
+                      {isVivacityStaff
+                        ? "You're not listed as an attendee on this meeting, so you can't start it. Ask someone on the attendee list to start."
+                        : 'Waiting for a Vivacity staff attendee to start the meeting…'}
                     </p>
                   )}
                 </Card>
