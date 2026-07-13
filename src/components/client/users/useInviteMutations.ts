@@ -28,11 +28,22 @@ interface EdgeError {
   detail?: string;
 }
 
-function extractEdgeError(err: unknown): EdgeError | null {
+async function extractEdgeError(err: unknown): Promise<EdgeError | null> {
   if (!err || typeof err !== "object") return null;
   const ctx = (err as { context?: unknown }).context;
   if (!ctx || typeof ctx !== "object") return null;
-  return ctx as EdgeError;
+  const response = ctx as Response;
+  try {
+    if (typeof response.json === "function") {
+      return (await response.json()) as EdgeError;
+    }
+    if (typeof response.text === "function") {
+      return JSON.parse(await response.text()) as EdgeError;
+    }
+  } catch {
+    // body already consumed or not JSON — fall through
+  }
+  return null;
 }
 
 export function useInviteMutations() {
@@ -61,7 +72,7 @@ export function useInviteMutations() {
         },
       });
       if (error) {
-        const edge = extractEdgeError(error);
+        const edge = await extractEdgeError(error);
         const wrapped = new Error(edge?.detail || error.message) as Error & {
           code?: string;
         };
@@ -82,7 +93,7 @@ export function useInviteMutations() {
         body: { invitation_id: invitationId },
       });
       if (error) {
-        const edge = extractEdgeError(error);
+        const edge = await extractEdgeError(error);
         throw new Error(edge?.detail || error.message);
       }
       return data;
@@ -102,7 +113,7 @@ export function useInviteMutations() {
         body: { invitation_id: invitationId, reason: "Revoked by tenant admin" },
       });
       if (error) {
-        const edge = extractEdgeError(error);
+        const edge = await extractEdgeError(error);
         throw new Error(edge?.detail || error.message);
       }
       return data;
