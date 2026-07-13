@@ -21,6 +21,7 @@ import {
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
   ArrowRight, Timer, PlayCircle, Star, LogOut, Eye, Loader2, Pencil
 } from 'lucide-react';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
