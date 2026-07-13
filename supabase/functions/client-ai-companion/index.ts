@@ -100,18 +100,45 @@ Deno.serve(async (req) => {
       action,
     } = await req.json();
 
-    // Extract auth token
+    // Require a valid Supabase JWT
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.replace("Bearer ", "");
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Verify user from token
-    let userId: string | null = null;
-    if (token && token !== SUPABASE_SERVICE_ROLE_KEY) {
-      const anonClient = createClient(SUPABASE_URL, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4a2dkYWxrYnJyaWFzaXl5cndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc2MjQwMzEsImV4cCI6MjA2MzIwMDAzMX0.bBFTaO-6Afko1koQqx-PWdzl2mu5qmE0xWNTvneqyqY");
-      const { data: { user } } = await anonClient.auth.getUser(token);
-      userId = user?.id ?? null;
+    if (!token || token === SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const anonClient = createClient(
+      SUPABASE_URL,
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
+    const { data: userData, error: authError } = await anonClient.auth.getUser(token);
+    const userId: string | null = userData?.user?.id ?? null;
+    if (authError || !userId) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify the caller belongs to the requested tenant (or is Vivacity staff)
+    if (tenant_id != null) {
+      const [{ data: staffRow }, { data: membershipRow }] = await Promise.all([
+        sb.from("users").select("is_vivacity_internal, superadmin_level").eq("user_uuid", userId).maybeSingle(),
+        sb.from("tenant_users").select("user_id").eq("user_id", userId).eq("tenant_id", tenant_id).maybeSingle(),
+      ]);
+      const isStaff = !!staffRow?.is_vivacity_internal || !!staffRow?.superadmin_level;
+      if (!isStaff && !membershipRow) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: no access to this tenant" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const sessionMode = mode ?? "orientation";
