@@ -85,9 +85,15 @@ Deno.serve(async (req) => {
 
     if (action === 'activate' || action === 'deactivate') {
       // Route through central RPC so each toggle writes the timeline event atomically.
+      // The RPC reads auth.uid(); we must forward the caller's JWT so it isn't NULL.
+      const callerClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
       const disabled = action === 'deactivate';
       for (const uuid of user_uuids) {
-        const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        const { data: rpcResult, error: rpcError } = await callerClient.rpc(
           'rpc_set_client_account_status',
           { p_user_uuid: uuid, p_disabled: disabled },
         );
