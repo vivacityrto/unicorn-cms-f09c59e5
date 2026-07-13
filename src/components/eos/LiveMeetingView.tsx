@@ -286,7 +286,10 @@ export const LiveMeetingView = () => {
   const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
   const isMeetingAttendee = attendees?.some(a => a.user_id === profile?.user_uuid) ?? false;
   const canStartMeeting = isVivacityStaff && isMeetingAttendee;
-  const canControlMeeting = canStartMeeting || isFacilitator;
+  // Once the meeting is live, any Vivacity staff member can control it so
+  // navigation buttons stay consistent across every segment/page even if the
+  // attendee list hasn't synced this user yet.
+  const canControlMeeting = isVivacityStaff || isFacilitator;
 
 
   // Start first segment mutation
