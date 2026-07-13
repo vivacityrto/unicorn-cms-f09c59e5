@@ -1,38 +1,28 @@
-## Problem
+# KPI Dashboard widget — data verification
 
-On the L10 Live Meeting screen (`src/components/eos/LiveMeetingView.tsx`), two things are broken:
+I traced the widget end-to-end against the live DB for your signed-in user (angela@vivacity.com.au, user_uuid `611a7972-…14f0`, `kpi_role = csc_consultant`) for the current period **July 2026**.
 
-1. **No one can click Start Meeting.** The gate is `canStartMeeting = isVivacityStaff && isMeetingParticipant`, where `isMeetingParticipant` requires the signed-in user to appear in `eos_meeting_participants` for this meeting. That table is populated by a background `sync_l10_meeting_participants` RPC, and the sidebar people actually see is fed by a different table (`eos_meeting_attendees`). Attendees who show up in the UI can still be missing from `eos_meeting_participants`, which silently disables the button — the message just says "Waiting for the facilitator to start…". For "Weekly L10 – 13 Jul 2026" (`c7eb06a1-060f-4825-840a-8b1c261a147a`), the DB confirms 16 attendees but only 14 participants, and only one of them (Nova Canto) is stored as `Leader`.
+## What the widget renders vs live data
 
-2. **No visible facilitator.** The Leader role lives in `eos_meeting_participants.role='Leader'` and is never rendered anywhere. The sidebar shows attendance role (`Attendee` / `Core Team`) and status (`Invited`), so viewers cannot tell who the facilitator is.
+| Row | UI shows | Live DB result | Match |
+|---|---|---|---|
+| Overall this period | 100% | avg of decided rows = 100% (only Retention has decided data) | Yes |
+| Retention | 100% — 8/8 retained, target 100% | `kpi_csc_retention_rows` returns 8 stints, 0 churned in period → 100% | Yes |
+| Communication | — no messages, target 80% | `kpi_csc_communication_rows` returns 0 attributed client-initiated messages in July → `pct = null` (displayed as "—") | Yes |
+| Tasks | — no tasks, target 90% | `kpi_csc_tasks_rows` returns 0 `client_team_tasks` created in July for tenants where you are CSC → `pct = null` | Yes |
 
-## Fix (frontend only)
+The 8 retained clients are: Total Training Solutions Adelaide, Vivacity Coaching & Consulting, AHMRC Training, Dijan Training Program, Smart Nation Education, TAE Institute, Absolute Medical Response, Upskill You. All have `churned_at IS NULL`.
 
-### 1. Broaden the Start Meeting gate
+## How it's wired (for the record)
 
-In `src/components/eos/LiveMeetingView.tsx`, replace the participants-table check with an attendees-table check that matches what the user actually sees in the sidebar:
+- `src/pages/MainDashboard.tsx` renders `<MiniKpiSummary subjectUuid={userUuid} period={defaultPeriod()} role={profile.kpi_role} />`.
+- `src/components/kpi-v2/MiniKpiSummary.tsx` calls `fetchRetention`, `fetchCommunication`, `fetchCscTasks` in `src/lib/kpi-v2/fetchers.ts`.
+- Each fetcher invokes the corresponding `kpi_csc_*_rows` Postgres RPC with a half-open `[p_start, p_end)` window (July 2026).
+- "Overall" is the arithmetic mean of the rows whose `pct` is not null — so with only Retention decided, Overall = Retention = 100%. That is expected behaviour, not a bug.
 
-- Add a query (or reuse `useMeetingAttendance`) to load `eos_meeting_attendees` for the meeting.
-- Change `canStartMeeting` to: `isVivacityStaffRole(profile?.unicorn_role) && attendees.some(a => a.user_id === profile?.user_uuid)`.
-- Keep the "Vivacity staff only" restriction so client-tenant users still can't start.
-- Keep both existing button locations (sticky header + preview card) gated on the same value.
-- Update the fallback message from "Waiting for the facilitator to start the meeting…" to something honest, e.g. "Only Vivacity staff listed as attendees can start this meeting." shown when the user is signed in but not on the attendee list.
+## Recommendation
 
-### 2. Show who the facilitator is
+No changes required — the widget is showing live, accurate data. Two optional follow-ups if you want them (say the word and I'll plan them separately):
 
-Still in `LiveMeetingView.tsx`, derive `facilitator` from `participants` (the row with `role='Leader'`, joined name from the existing `users!eos_meeting_participants_user_id_users_fkey` embed) and render it in two places:
-
-- **Meeting Preview card** (the "Waiting for facilitator…" area, ~line 989–1009): add a line "Facilitator: {name}" above the Start button. If no Leader is assigned, show "Facilitator: not assigned" in muted text.
-- **Sticky header** (near the "4 online" indicator, ~line 851): add a small "Facilitator: {name}" chip so it stays visible once the meeting is running.
-
-No changes to the attendance sidebar itself, no schema changes, no RLS changes, no edge functions.
-
-### Files touched
-
-- `src/components/eos/LiveMeetingView.tsx` — gate logic, facilitator display, fallback copy.
-
-### Out of scope
-
-- Reconciling `eos_meeting_participants` vs `eos_meeting_attendees` (data-model cleanup).
-- Letting client-tenant attendees start meetings.
-- Changing who is stored as `Leader` or adding a UI to reassign the facilitator.
+1. Show a small "based on 1 of 3 metrics" hint under **Overall this period** when some rows are `—`, so 100% doesn't look inflated.
+2. When Communication/Tasks are `—`, render a lighter "No activity this period" label instead of a target-only footer, to distinguish "no data" from "0% performance".
