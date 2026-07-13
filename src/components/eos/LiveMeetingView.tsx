@@ -1004,9 +1004,15 @@ export const LiveMeetingView = () => {
                 <Card className="p-8 text-center">
                   <Eye className="h-16 w-16 mx-auto mb-4 text-primary" />
                   <h2 className="text-xl font-bold mb-2">Meeting Preview</h2>
-                  <p className="text-muted-foreground mb-6">
+                  <p className="text-muted-foreground mb-2">
                     This {meeting.meeting_type} meeting has {segments.length} agenda segments 
                     ({segments.reduce((sum, s) => sum + s.duration_minutes, 0)} minutes total).
+                  </p>
+                  <p className="text-sm mb-6">
+                    <span className="text-muted-foreground">Facilitator: </span>
+                    <span className="font-medium">
+                      {facilitatorName ?? 'Not assigned'}
+                    </span>
                   </p>
                   {canStartMeeting ? (
                     <Button 
@@ -1018,7 +1024,9 @@ export const LiveMeetingView = () => {
                     </Button>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      Waiting for the facilitator to start the meeting...
+                      {isVivacityStaff
+                        ? "You're not listed as an attendee on this meeting, so you can't start it. Ask someone on the attendee list to start."
+                        : 'Waiting for a Vivacity staff attendee to start the meeting…'}
                     </p>
                   )}
                 </Card>
