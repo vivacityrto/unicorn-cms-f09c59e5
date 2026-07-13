@@ -890,7 +890,7 @@ export const LiveMeetingView = () => {
               </Button>
             )}
             
-            {meetingStarted && isFacilitator && currentSegment && (
+            {meetingStarted && canControlMeeting && currentSegment && (
               <Button 
                 onClick={handleAdvanceSegment} 
                 size="sm" 
