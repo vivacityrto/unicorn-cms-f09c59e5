@@ -874,7 +874,7 @@ export const LiveMeetingView = () => {
               </Button>
             )}
             
-            {meetingStarted && isFacilitator && completedSegments.length > 0 && (
+            {meetingStarted && canControlMeeting && completedSegments.length > 0 && (
               <Button 
                 onClick={handlePreviousSegment} 
                 size="sm" 
