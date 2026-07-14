@@ -41170,7 +41170,7 @@ export type Database = {
           input_json: Json | null
           job_type: string
           output_json: Json | null
-          stage_instance_id: string | null
+          stage_instance_id: number | null
           standards_version: string
           status: string
           tenant_id: number | null
@@ -41183,7 +41183,7 @@ export type Database = {
           input_json?: Json | null
           job_type: string
           output_json?: Json | null
-          stage_instance_id?: string | null
+          stage_instance_id?: number | null
           standards_version?: string
           status?: string
           tenant_id?: number | null
@@ -41196,7 +41196,7 @@ export type Database = {
           input_json?: Json | null
           job_type?: string
           output_json?: Json | null
-          stage_instance_id?: string | null
+          stage_instance_id?: number | null
           standards_version?: string
           status?: string
           tenant_id?: number | null
