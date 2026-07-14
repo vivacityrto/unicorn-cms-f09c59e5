@@ -32,7 +32,7 @@ export function useTenantPackages(tenantIds: number[]) {
     queryFn: async (): Promise<TenantPackagesMap> => {
       const { data: piData, error: piErr } = await supabase
         .from("package_instances")
-        .select("id, tenant_id, package_id, next_renewal_date, included_minutes, hours_included, parent_instance_id, is_complete")
+        .select("id, tenant_id, package_id, next_renewal_date, included_minutes, hours_included, hours_added, hours_used, parent_instance_id, is_complete")
         .eq("is_complete", false)
         .in("tenant_id", sortedIds);
       if (piErr) throw piErr;
@@ -53,7 +53,7 @@ export function useTenantPackages(tenantIds: number[]) {
       const allPackagesMap: Record<number, TenantPackageInfo[]> = {};
       const renewalMap: Record<number, string> = {};
       const includedMap: Record<number, number> = {};
-      const activeInstanceIds: number[] = [];
+      const usedMap: Record<number, number> = {};
 
       (piData || []).forEach((pi: any) => {
         if (pi.package_id && packageLookup[pi.package_id]) {
@@ -73,31 +73,27 @@ export function useTenantPackages(tenantIds: number[]) {
             }
           }
         }
-        // Included minutes only for top-level (non add-on) instances.
+
+        // Included: every active instance (parent AND child) contributes its own
+        // allowance — base included_minutes plus any hours_added top-up. Matches
+        // rpc_get_package_usage / v_package_burndown.
+        const baseMins = pi.included_minutes || ((pi.hours_included || 0) * 60);
+        const addedMins = (pi.hours_added || 0) * 60;
+        includedMap[pi.tenant_id] = (includedMap[pi.tenant_id] || 0) + baseMins + addedMins;
+
+        // Used: only top-level instances. The DB trigger already rolls each child's
+        // usage into its parent's hours_used, so adding children would double-count.
         if (!pi.parent_instance_id) {
-          const mins = pi.included_minutes || ((pi.hours_included || 0) * 60);
-          includedMap[pi.tenant_id] = (includedMap[pi.tenant_id] || 0) + mins;
-          activeInstanceIds.push(pi.id);
+          let usedMins = Math.round(Number(pi.hours_used || 0) * 60);
+          if (usedMins < 0) {
+            console.warn(
+              `[useTenantPackages] Negative hours_used on package_instance ${pi.id} (tenant ${pi.tenant_id}): ${pi.hours_used}. Clamping to 0.`
+            );
+            usedMins = 0;
+          }
+          usedMap[pi.tenant_id] = (usedMap[pi.tenant_id] || 0) + usedMins;
         }
       });
-
-      const usedMap: Record<number, number> = {};
-      if (activeInstanceIds.length > 0) {
-        const { data: burndown } = await supabase
-          .from("v_package_burndown")
-          .select("tenant_id, used_minutes, included_minutes, package_instance_id")
-          .in("tenant_id", sortedIds)
-          .in("package_instance_id", activeInstanceIds);
-        const includedFromBurn: Record<number, number> = {};
-        (burndown || []).forEach((r: any) => {
-          usedMap[r.tenant_id] = (usedMap[r.tenant_id] || 0) + (r.used_minutes || 0);
-          includedFromBurn[r.tenant_id] = (includedFromBurn[r.tenant_id] || 0) + (r.included_minutes || 0);
-        });
-        // Burndown view is authoritative when present.
-        Object.keys(includedFromBurn).forEach(tid => {
-          includedMap[Number(tid)] = includedFromBurn[Number(tid)];
-        });
-      }
 
       const result: TenantPackagesMap = {};
       sortedIds.forEach(id => {
