@@ -940,15 +940,18 @@ export default function ManageTenants() {
                         const used = tenant.hours_used_minutes || 0;
                         const included = tenant.hours_included_minutes || 0;
                         if (included === 0 && used === 0) return <span className="text-xs text-muted-foreground">—</span>;
-                        const usedH = Math.floor(used / 60);
-                        const usedM = Math.round(used % 60);
-                        const inclH = Math.floor(included / 60);
-                        const inclM = Math.round(included % 60);
+                        const fmt = (mins: number) => {
+                          const abs = Math.abs(mins);
+                          const sign = mins < 0 ? '-' : '';
+                          const h = Math.floor(abs / 60);
+                          const m = Math.round(abs % 60);
+                          return `${sign}${h}:${m.toString().padStart(2, '0')}`;
+                        };
                         const pct = included > 0 ? (used / included) * 100 : 0;
                         const colorClass = pct >= 100 ? 'text-destructive' : pct >= 80 ? 'text-yellow-600' : '';
                         return (
                           <span className={cn("text-sm font-medium", colorClass)}>
-                            {usedH}:{usedM.toString().padStart(2, '0')} / {inclH}:{inclM.toString().padStart(2, '0')}
+                            {fmt(used)} / {fmt(included)}
                           </span>
                         );
                       })()}
