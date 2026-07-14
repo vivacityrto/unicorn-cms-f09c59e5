@@ -11729,6 +11729,7 @@ export type Database = {
           id: string
           intelligence_pack_id: string | null
           is_cricos: boolean
+          is_retrospective: boolean
           is_rto: boolean
           lead_auditor_id: string | null
           linked_stage_instance_id: number | null
@@ -11786,6 +11787,7 @@ export type Database = {
           id?: string
           intelligence_pack_id?: string | null
           is_cricos?: boolean
+          is_retrospective?: boolean
           is_rto?: boolean
           lead_auditor_id?: string | null
           linked_stage_instance_id?: number | null
@@ -11843,6 +11845,7 @@ export type Database = {
           id?: string
           intelligence_pack_id?: string | null
           is_cricos?: boolean
+          is_retrospective?: boolean
           is_rto?: boolean
           lead_auditor_id?: string | null
           linked_stage_instance_id?: number | null
@@ -28950,6 +28953,7 @@ export type Database = {
           tenant_id: number
           title: string
           updated_at: string
+          validation_tool_id: string | null
         }
         Insert: {
           assigned_to_client_user_id?: string | null
@@ -28970,6 +28974,7 @@ export type Database = {
           tenant_id: number
           title: string
           updated_at?: string
+          validation_tool_id?: string | null
         }
         Update: {
           assigned_to_client_user_id?: string | null
@@ -28990,6 +28995,7 @@ export type Database = {
           tenant_id?: number
           title?: string
           updated_at?: string
+          validation_tool_id?: string | null
         }
         Relationships: [
           {
@@ -29271,6 +29277,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_membership_usage"
             referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_validation_tool_id_fkey"
+            columns: ["validation_tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_red_flags_v"
+            referencedColumns: ["tool_id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_validation_tool_id_fkey"
+            columns: ["validation_tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_tools"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -57709,6 +57729,709 @@ export type Database = {
           },
         ]
       }
+      validation_actions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          due_date: string | null
+          finding_id: string
+          id: string
+          owner_user_id: string | null
+          session_id: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_date?: string | null
+          finding_id: string
+          id?: string
+          owner_user_id?: string | null
+          session_id: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_date?: string | null
+          finding_id?: string
+          id?: string
+          owner_user_id?: string | null
+          session_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_actions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "validation_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_actions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "validation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_checklist_items: {
+        Row: {
+          ai_prefilled: boolean
+          checklist_role: string
+          created_at: string
+          id: string
+          item_no: number
+          item_text: string
+          notes: string | null
+          result: string
+          section_no: number
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_prefilled?: boolean
+          checklist_role: string
+          created_at?: string
+          id?: string
+          item_no: number
+          item_text: string
+          notes?: string | null
+          result?: string
+          section_no: number
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_prefilled?: boolean
+          checklist_role?: string
+          created_at?: string
+          id?: string
+          item_no?: number
+          item_text?: string
+          notes?: string | null
+          result?: string
+          section_no?: number
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_checklist_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "validation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_evidence_sampling_items: {
+        Row: {
+          ai_drafted: boolean
+          created_at: string
+          flag: string | null
+          id: string
+          model_response: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          session_id: string
+          task_ref: string
+          unit_requirement_ref: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_drafted?: boolean
+          created_at?: string
+          flag?: string | null
+          id?: string
+          model_response?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          session_id: string
+          task_ref: string
+          unit_requirement_ref?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_drafted?: boolean
+          created_at?: string
+          flag?: string | null
+          id?: string
+          model_response?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          session_id?: string
+          task_ref?: string
+          unit_requirement_ref?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_evidence_sampling_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "validation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_findings: {
+        Row: {
+          created_at: string
+          decision: string
+          finding_text: string
+          id: string
+          method: string | null
+          raised_by: string | null
+          resolved_at: string | null
+          session_id: string
+          standard_clause: string | null
+        }
+        Insert: {
+          created_at?: string
+          decision?: string
+          finding_text: string
+          id?: string
+          method?: string | null
+          raised_by?: string | null
+          resolved_at?: string | null
+          session_id: string
+          standard_clause?: string | null
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          finding_text?: string
+          id?: string
+          method?: string | null
+          raised_by?: string | null
+          resolved_at?: string | null
+          session_id?: string
+          standard_clause?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_findings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "validation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_mapping_cells: {
+        Row: {
+          ai_suggested: boolean
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          is_mapped: boolean
+          requirement_ref: string
+          requirement_text: string | null
+          requirement_type: string
+          task_ref: string
+          tool_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_suggested?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          is_mapped?: boolean
+          requirement_ref: string
+          requirement_text?: string | null
+          requirement_type: string
+          task_ref: string
+          tool_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_suggested?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          is_mapped?: boolean
+          requirement_ref?: string
+          requirement_text?: string | null
+          requirement_type?: string
+          task_ref?: string
+          tool_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_mapping_cells_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_red_flags_v"
+            referencedColumns: ["tool_id"]
+          },
+          {
+            foreignKeyName: "validation_mapping_cells_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_pilot_participants: {
+        Row: {
+          ai_summary: string | null
+          ai_summary_generated: boolean
+          created_at: string
+          created_by: string | null
+          debrief_notes: string | null
+          id: string
+          misreads_count: number | null
+          observation_notes: string | null
+          participant_ref: string
+          pauses_count: number | null
+          questions_count: number | null
+          session_id: string
+          timeouts_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          ai_summary_generated?: boolean
+          created_at?: string
+          created_by?: string | null
+          debrief_notes?: string | null
+          id?: string
+          misreads_count?: number | null
+          observation_notes?: string | null
+          participant_ref: string
+          pauses_count?: number | null
+          questions_count?: number | null
+          session_id: string
+          timeouts_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ai_summary?: string | null
+          ai_summary_generated?: boolean
+          created_at?: string
+          created_by?: string | null
+          debrief_notes?: string | null
+          id?: string
+          misreads_count?: number | null
+          observation_notes?: string | null
+          participant_ref?: string
+          pauses_count?: number | null
+          questions_count?: number | null
+          session_id?: string
+          timeouts_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_pilot_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "validation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          independent_reviewer_user_id: string
+          methods_used: string[]
+          pack_distributed_at: string | null
+          scheduled_date: string | null
+          session_date: string | null
+          session_type: string
+          status: string
+          tool_id: string
+          tool_outcome: string | null
+          trigger_event_id: string | null
+          updated_at: string
+          validator_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          independent_reviewer_user_id: string
+          methods_used?: string[]
+          pack_distributed_at?: string | null
+          scheduled_date?: string | null
+          session_date?: string | null
+          session_type: string
+          status?: string
+          tool_id: string
+          tool_outcome?: string | null
+          trigger_event_id?: string | null
+          updated_at?: string
+          validator_user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          independent_reviewer_user_id?: string
+          methods_used?: string[]
+          pack_distributed_at?: string | null
+          scheduled_date?: string | null
+          session_date?: string | null
+          session_type?: string
+          status?: string
+          tool_id?: string
+          tool_outcome?: string | null
+          trigger_event_id?: string | null
+          updated_at?: string
+          validator_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_sessions_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_red_flags_v"
+            referencedColumns: ["tool_id"]
+          },
+          {
+            foreignKeyName: "validation_sessions_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_sessions_trigger_event_id_fkey"
+            columns: ["trigger_event_id"]
+            isOneToOne: false
+            referencedRelation: "validation_trigger_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_signoffs: {
+        Row: {
+          id: string
+          role: string
+          session_id: string
+          signed_at: string
+          signed_by: string
+        }
+        Insert: {
+          id?: string
+          role: string
+          session_id: string
+          signed_at?: string
+          signed_by: string
+        }
+        Update: {
+          id?: string
+          role?: string
+          session_id?: string
+          signed_at?: string
+          signed_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_signoffs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "validation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_tools: {
+        Row: {
+          complaint_history: boolean
+          created_at: string
+          created_by: string | null
+          delivery_mode: string | null
+          designer_user_id: string | null
+          high_learner_volume: boolean
+          high_stakes_licensed: boolean
+          id: string
+          is_new_tool: boolean
+          last_validated_at: string | null
+          last_validated_method: string | null
+          new_or_revised_tool: boolean
+          next_due_date: string | null
+          priority_review: boolean
+          responsible_user_id: string | null
+          risk_factor_count: number
+          risk_rating: string
+          single_assessor_delivery: boolean
+          status: string
+          subject_tenant_id: number
+          tool_name: string
+          training_package_updated: boolean
+          training_product_code: string | null
+          unit_code: string
+          unit_title: string | null
+          updated_at: string
+          validation_required: boolean
+          validation_required_reason: string | null
+        }
+        Insert: {
+          complaint_history?: boolean
+          created_at?: string
+          created_by?: string | null
+          delivery_mode?: string | null
+          designer_user_id?: string | null
+          high_learner_volume?: boolean
+          high_stakes_licensed?: boolean
+          id?: string
+          is_new_tool?: boolean
+          last_validated_at?: string | null
+          last_validated_method?: string | null
+          new_or_revised_tool?: boolean
+          next_due_date?: string | null
+          priority_review?: boolean
+          responsible_user_id?: string | null
+          risk_factor_count?: number
+          risk_rating?: string
+          single_assessor_delivery?: boolean
+          status?: string
+          subject_tenant_id: number
+          tool_name: string
+          training_package_updated?: boolean
+          training_product_code?: string | null
+          unit_code: string
+          unit_title?: string | null
+          updated_at?: string
+          validation_required?: boolean
+          validation_required_reason?: string | null
+        }
+        Update: {
+          complaint_history?: boolean
+          created_at?: string
+          created_by?: string | null
+          delivery_mode?: string | null
+          designer_user_id?: string | null
+          high_learner_volume?: boolean
+          high_stakes_licensed?: boolean
+          id?: string
+          is_new_tool?: boolean
+          last_validated_at?: string | null
+          last_validated_method?: string | null
+          new_or_revised_tool?: boolean
+          next_due_date?: string | null
+          priority_review?: boolean
+          responsible_user_id?: string | null
+          risk_factor_count?: number
+          risk_rating?: string
+          single_assessor_delivery?: boolean
+          status?: string
+          subject_tenant_id?: number
+          tool_name?: string
+          training_package_updated?: boolean
+          training_product_code?: string | null
+          unit_code?: string
+          unit_title?: string | null
+          updated_at?: string
+          validation_required?: boolean
+          validation_required_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      validation_trigger_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          detail: string | null
+          id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          tool_id: string
+          trigger_source: string
+          triggered_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          detail?: string | null
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          tool_id: string
+          trigger_source: string
+          triggered_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          detail?: string | null
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          tool_id?: string
+          trigger_source?: string
+          triggered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_trigger_events_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_red_flags_v"
+            referencedColumns: ["tool_id"]
+          },
+          {
+            foreignKeyName: "validation_trigger_events_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vector_embeddings: {
         Row: {
           chunk_index: number
@@ -66985,6 +67708,212 @@ export type Database = {
         }
         Relationships: []
       }
+      validation_mapping_gaps_v: {
+        Row: {
+          gap_flag: boolean | null
+          mapped_task_count: number | null
+          over_assessment_flag: boolean | null
+          requirement_ref: string | null
+          requirement_text: string | null
+          requirement_type: string | null
+          tool_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_mapping_cells_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_red_flags_v"
+            referencedColumns: ["tool_id"]
+          },
+          {
+            foreignKeyName: "validation_mapping_cells_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "validation_tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_red_flags_v: {
+        Row: {
+          flag_blocked_pending_validation: boolean | null
+          flag_no_validation_record: boolean | null
+          flag_overdue: boolean | null
+          flag_validation_over_12_months: boolean | null
+          next_due_date: string | null
+          risk_rating: string | null
+          subject_tenant_id: number | null
+          tool_id: string | null
+          tool_name: string | null
+          unit_code: string | null
+          validation_required: boolean | null
+          validation_required_reason: string | null
+        }
+        Insert: {
+          flag_blocked_pending_validation?: boolean | null
+          flag_no_validation_record?: never
+          flag_overdue?: never
+          flag_validation_over_12_months?: never
+          next_due_date?: string | null
+          risk_rating?: string | null
+          subject_tenant_id?: number | null
+          tool_id?: string | null
+          tool_name?: string | null
+          unit_code?: string | null
+          validation_required?: boolean | null
+          validation_required_reason?: string | null
+        }
+        Update: {
+          flag_blocked_pending_validation?: boolean | null
+          flag_no_validation_record?: never
+          flag_overdue?: never
+          flag_validation_over_12_months?: never
+          next_due_date?: string | null
+          risk_rating?: string | null
+          subject_tenant_id?: number | null
+          tool_id?: string | null
+          tool_name?: string | null
+          unit_code?: string | null
+          validation_required?: boolean | null
+          validation_required_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "validation_tools_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       vw_client_capacity_diagnostics: {
         Row: {
           base_weekly_required: number | null
@@ -68352,6 +69281,15 @@ export type Database = {
         }[]
       }
       get_user_notification_prefs: { Args: never; Returns: Json }
+      get_user_private_contact: {
+        Args: { p_user_id: string }
+        Returns: {
+          personal_email: string
+          personal_phone: string
+          po_box_address: string
+          street_address: string
+        }[]
+      }
       get_valid_vivacity_users: {
         Args: never
         Returns: {
@@ -69209,6 +70147,10 @@ export type Database = {
       rpc_post_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_publish_stage_tasks: {
         Args: { p_stage_instance_id: number }
+        Returns: Json
+      }
+      rpc_resolve_validation_trigger: {
+        Args: { p_resolved_by?: string; p_trigger_id: string }
         Returns: Json
       }
       rpc_run_time_draft_worker: {

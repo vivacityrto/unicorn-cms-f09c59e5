@@ -56,8 +56,7 @@ Deno.serve(async (req) => {
   }
 
   const tenantSegment = storage_path.split("/")[0];
-  const tenantIdNum = Number(tenantSegment);
-  if (!tenantSegment || !Number.isFinite(tenantIdNum)) {
+  if (!tenantSegment) {
     return json(400, { error: "Invalid storage_path" });
   }
 
@@ -74,12 +73,15 @@ Deno.serve(async (req) => {
 
   let authorised = isStaff;
   if (!authorised) {
-    const { data: memberRow } = await admin
+    const tenantIdNum = Number(tenantSegment);
+    const query = admin
       .from("tenant_users")
       .select("user_id")
-      .eq("user_id", uid)
-      .eq("tenant_id", tenantIdNum)
-      .maybeSingle();
+      .eq("user_id", uid);
+    const { data: memberRow } = await (Number.isFinite(tenantIdNum)
+      ? query.eq("tenant_id", tenantIdNum)
+      : query.eq("tenant_id", tenantSegment)
+    ).maybeSingle();
     authorised = !!memberRow;
   }
   if (!authorised) {
