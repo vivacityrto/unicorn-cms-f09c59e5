@@ -48,7 +48,7 @@ const EMAIL_TRIAGE_ROLES = new Set(["Super Admin", "Team Member", "CSC", "Integr
 // 2. CLIENTS Section - All Vivacity Team Roles
 const clientsMenuItems = [
   { icon: Building2, label: "Clients", path: "/manage-tenants" },
-  { icon: Package2, label: "Packages", path: "/manage-packages" },
+  
   { icon: FileText, label: "Documents", path: "/manage-documents" },
   { icon: Mail, label: "Communications", path: "/communications" },
   { icon: LifeBuoy, label: "Support Tickets", path: "/support-tickets" },

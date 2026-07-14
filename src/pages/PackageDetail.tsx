@@ -781,7 +781,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
   if (!packageInfo) {
     return <div className="p-6 text-center">
         <h2 className="text-2xl font-bold">Package not found</h2>
-        <Button onClick={() => navigate("/manage-packages")} className="mt-4">
+        <Button onClick={() => navigate("/admin/manage-packages")} className="mt-4">
           Back to Packages
         </Button>
       </div>;

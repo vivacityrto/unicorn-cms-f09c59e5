@@ -45,7 +45,7 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const TenantDocumentDetailWrapper = lazy(() => import("./pages/TenantDocumentDetailWrapper"));
  const TenantNotesWrapper = lazy(() => import("./pages/TenantNotesWrapper"));
  const ClientPortalDocumentsWrapper = lazy(() => import("./pages/ClientPortalDocumentsWrapper"));
- const ManagePackagesWrapper = lazy(() => import("./pages/ManagePackagesWrapper"));
+ 
  const PackageDetail = lazy(() => import("./pages/PackageDetail"));
  const AdminPackageDetailWrapper = lazy(() => import("./pages/AdminPackageDetailWrapper"));
  const AdminPackageTenantDetailWrapper = lazy(() => import("./pages/AdminPackageTenantDetailWrapper"));
@@ -592,14 +592,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ClientDetailWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/manage-packages" 
-              element={
-                <ProtectedRoute>
-                  <ManagePackagesWrapper />
                 </ProtectedRoute>
               } 
             />

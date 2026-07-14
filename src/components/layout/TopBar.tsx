@@ -48,7 +48,7 @@ const routeTitles: Record<string, string> = {
   "/email-triage": "Email Triage",
   "/calendar": "Event Calendar",
   "/manage-tenants": "Clients",
-  "/manage-packages": "Packages",
+  
   "/manage-documents": "Documents",
   "/communications": "Communications",
   "/rto-tips": "RTO Tips",
