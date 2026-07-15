@@ -98,7 +98,7 @@ export const DashboardStats = ({ stats, activities = [] }: DashboardStatsProps) 
       // Total users
       const { count: usersCount } = await supabase
         .from("users")
-        .select("*", { count: "exact", head: true });
+        .select("user_uuid", { count: "exact", head: true });
 
       // Total documents
       const { count: documentsCount } = await supabase

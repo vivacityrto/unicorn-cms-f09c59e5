@@ -34,7 +34,7 @@ export const useDashboardData = () => {
     queryFn: async () => {
       const { count, error } = await supabase
         .from("users")
-        .select("*", { count: "exact", head: true })
+        .select("user_uuid", { count: "exact", head: true })
         .eq("archived", false);
       if (error) throw error;
       return count || 0;

@@ -109,7 +109,7 @@ export default function Settings() {
     try {
       const { data: userData, error } = await supabase
         .from('users')
-        .select('*')
+        .select('user_uuid, first_name, last_name, email, mobile_phone, job_title, timezone, bio, avatar_url, linkedin_url, booking_url, working_days, working_hours, availability_note, public_holiday_region, is_csc, leave_from, leave_until, away_message, cover_user_id, user_type, unicorn_role')
         .eq('user_uuid', user?.id)
         .single();
 

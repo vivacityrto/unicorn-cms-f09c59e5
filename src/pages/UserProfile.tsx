@@ -128,8 +128,6 @@ export default function UserProfile() {
           last_sign_in_at,
           staff_team,
           staff_teams,
-          personal_email,
-          personal_phone,
           preferred_name,
           start_date,
           linkedin_url,
@@ -151,10 +149,28 @@ export default function UserProfile() {
 
       if (userError) throw userError;
 
+      // Personal contact is column-privileged; read via SECURITY DEFINER RPC
+      // (owner or admin.team_users.manage). Soft-fail if denied so the profile still loads.
+      let personal_email: string | null = null;
+      let personal_phone: string | null = null;
+      const { data: contactRows, error: contactError } = await supabase.rpc(
+        'get_user_private_contact',
+        { p_user_id: userId }
+      );
+      if (contactError) {
+        console.error('Error fetching private contact:', contactError);
+      } else {
+        const contact = Array.isArray(contactRows) ? contactRows[0] : contactRows;
+        personal_email = contact?.personal_email ?? null;
+        personal_phone = contact?.personal_phone ?? null;
+      }
+
       // Add tenant name to user data and cast JSON fields
       const rawData = userData as any;
       const userWithTenant: UserData = {
         ...rawData,
+        personal_email,
+        personal_phone,
         tenant_name: rawData.tenants?.name || null,
         staff_team: rawData.staff_team || null,
         staff_teams: rawData.staff_teams || null,
