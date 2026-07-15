@@ -326,3 +326,9 @@ verify_jwt = false
 [functions.summarize-daily-notes]
 verify_jwt = false
 
+[functions.create-session]
+verify_jwt = false
+
+[functions.create-session-v2]
+verify_jwt = false
+
