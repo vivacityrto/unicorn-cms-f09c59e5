@@ -14,3 +14,7 @@ Unicorn security audit follow-up:
 
 Target email remains hard-allowlisted to `angela@vivacity.com.au`. Do **not**
 stub-redeploy a 410 — deploy the patched source when ready.
+
+When the invite path falls through to reset, this function invokes `issue-token`
+(service-role). That callee now emails the opaque token via Mailgun and returns
+a success ack only — this caller must not forward raw token material.
