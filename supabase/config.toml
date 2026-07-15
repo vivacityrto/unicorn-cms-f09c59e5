@@ -358,3 +358,8 @@ verify_jwt = true
 
 [functions.consume-token]
 verify_jwt = true
+
+# L3: release-audit-report — real UI release path. Auth + audits.report
+# permission gate handled in-function (anon key is a valid JWT).
+[functions.release-audit-report]
+verify_jwt = false
