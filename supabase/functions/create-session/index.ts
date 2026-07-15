@@ -19,7 +19,8 @@ serve(async (req) => {
 
   return new Response(
     JSON.stringify({
-      error: "This function has been retired",
+      error:
+        "This function has been retired (security finding C1, 14 Jul 2026). Use generate-recovery-link instead.",
       code: "FUNCTION_RETIRED",
     }),
     {
