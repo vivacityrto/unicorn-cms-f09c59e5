@@ -25,6 +25,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -238,6 +239,10 @@ serve(async (req) => {
 
     if (!email || !type) {
       return jsonResponse({ error: "Missing required fields" }, 400);
+    }
+
+    if (typeof email !== "string" || typeof type !== "string") {
+      return jsonResponse({ error: "email and type must be strings" }, 400);
     }
 
     if (!(type in TTL)) {

@@ -352,3 +352,9 @@ verify_jwt = true
 [functions.issue-token]
 verify_jwt = true
 
+# H4: mark-token-used requires token + token_id (possession proof).
+[functions.mark-token-used]
+verify_jwt = true
+
+[functions.consume-token]
+verify_jwt = true
