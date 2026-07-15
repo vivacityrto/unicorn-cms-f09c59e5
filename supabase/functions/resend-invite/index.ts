@@ -181,11 +181,8 @@ serve(async (req) => {
     }
 
     // 9. Create invite URL
-    const frontendOrigin =
-      req.headers.get("origin") ||
-      req.headers.get("referer")?.split('/').slice(0, 3).join('/') ||
-      'https://unicorn-cms.au';
-    const inviteUrl = `${frontendOrigin}/accept-invitation?token=${newToken}`;
+    const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
+    const inviteUrl = `${APP_BASE_URL}/accept-invitation?token=${newToken}`;
     console.log('Generated resend invite URL:', inviteUrl);
 
     // 10. Determine user type based on tenant

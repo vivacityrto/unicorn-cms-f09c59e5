@@ -694,11 +694,8 @@ serve(async (req) => {
       console.warn('Failed to invoke send-invitation-email:', emailError);
     }
 
-    const frontendOrigin =
-      req.headers.get("origin") ||
-      req.headers.get("referer")?.split('/').slice(0, 3).join('/') ||
-      'https://www.unicorn-cms.au';
-    const inviteUrl = `${frontendOrigin}/accept-invitation?token=${inviteToken}`;
+    const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
+    const inviteUrl = `${APP_BASE_URL}/accept-invitation?token=${inviteToken}`;
 
     // 10. Track invite attempts and log
     const { data: prevInvites } = await supabase
