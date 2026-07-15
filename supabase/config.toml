@@ -69,6 +69,11 @@ verify_jwt = false
 [functions.resend-invite]
 verify_jwt = false
 
+[functions.send-invitation-email]
+# Auth is enforced in-function (service-role OR staff JWT + scope).
+# Gateway verify_jwt alone accepts the public anon key.
+verify_jwt = false
+
 [functions.cancel-invite]
 verify_jwt = false
 
