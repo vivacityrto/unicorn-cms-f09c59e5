@@ -105,33 +105,10 @@ async function verifyProofToken(token: string): Promise<{ email: string; msUserI
     }
   }
 
-  // Try to decode as JWT (Office SSO token)
-  try {
-    const parts = token.split('.');
-    if (parts.length === 3) {
-      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-      
-      // Check expiration
-      if (payload.exp && payload.exp < Date.now() / 1000) {
-        console.error('[addin-auth] Token expired');
-        return null;
-      }
-
-      const email = (payload.preferred_username || payload.email || payload.upn || '').toLowerCase();
-      const msUserId = payload.oid;
-
-      if (email && msUserId) {
-        return {
-          email,
-          msUserId,
-          displayName: payload.name,
-        };
-      }
-    }
-  } catch (e) {
-    console.error('[addin-auth] JWT decode failed:', e);
-  }
-
+  // SECURITY: Do NOT fall back to unverified local JWT decoding. Only trust
+  // identities confirmed by an actual Microsoft Graph call above. Accepting a
+  // decoded-but-unverified JWT here would allow forging any user's identity.
+  console.error('[addin-auth] Microsoft Graph verification failed; refusing to accept unverified token');
   return null;
 }
 
