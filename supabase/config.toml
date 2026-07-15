@@ -342,3 +342,14 @@ verify_jwt = false
 [functions.invite-or-reset-user]
 verify_jwt = true
 
+# Custom opaque-token lifecycle (Mailgun reset/invite/magic/setpwd). H3/H4:
+# in-code caller authz on issue-token; mark-token-used requires token + token_id.
+[functions.issue-token]
+verify_jwt = true
+
+[functions.mark-token-used]
+verify_jwt = true
+
+[functions.consume-token]
+verify_jwt = true
+
