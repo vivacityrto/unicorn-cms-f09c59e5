@@ -61,6 +61,33 @@ serve(async (req) => {
       return jsonResponse(400, { error: "to, subject, and body_html are required" });
     }
 
+    if (!tenant_id || typeof tenant_id !== "number") {
+      return jsonResponse(400, { error: "tenant_id is required" });
+    }
+
+    // SECURITY: Verify caller is either Vivacity staff or a member of the target tenant.
+    // Without this check, any authenticated user could send emails using another tenant's
+    // merge data (ABN, contacts) from the platform's trusted sending domain.
+    const VIVACITY_STAFF_ROLES = ["Super Admin", "SuperAdmin", "Team Leader", "Team Member"];
+    const isVivacityStaff =
+      VIVACITY_STAFF_ROLES.includes(profile.unicorn_role ?? "") ||
+      VIVACITY_STAFF_ROLES.includes(profile.global_role ?? "");
+
+    if (!isVivacityStaff) {
+      const { data: tenantMember } = await supabase
+        .from("tenant_users")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+
+      if (!tenantMember) {
+        console.warn("[send-composed-email] Access denied", { user: user.id, tenant_id });
+        return jsonResponse(403, { error: "Access denied: not a member of this tenant" });
+      }
+    }
+
+
     // Resolve merge fields from tenant data
     const { data: tenant } = await supabase
       .from("tenants")
