@@ -108,7 +108,7 @@ export default function NewStarterWizard() {
       const { data, error } = await supabase
         .from("users")
         .select(
-          "first_name, last_name, full_name, email, phone, mobile_phone, job_title, unicorn_role, superadmin_level, staff_team, public_holiday_region, manager_uuid, created_at, personal_email, personal_phone, preferred_name, start_date"
+          "first_name, last_name, full_name, email, phone, mobile_phone, job_title, unicorn_role, superadmin_level, staff_team, public_holiday_region, manager_uuid, created_at, preferred_name, start_date"
         )
         .eq("user_uuid", prefillUserId)
         .maybeSingle();
@@ -119,6 +119,21 @@ export default function NewStarterWizard() {
           variant: "destructive",
         });
         return;
+      }
+
+      // Personal contact via SECURITY DEFINER RPC; soft-fail if denied
+      let personalEmail: string | null = null;
+      let personalPhone: string | null = null;
+      const { data: contactRows, error: contactError } = await supabase.rpc(
+        "get_user_private_contact",
+        { p_user_id: prefillUserId }
+      );
+      if (contactError) {
+        console.error("Error fetching private contact for prefill:", contactError);
+      } else {
+        const contact = Array.isArray(contactRows) ? contactRows[0] : contactRows;
+        personalEmail = contact?.personal_email ?? null;
+        personalPhone = contact?.personal_phone ?? null;
       }
 
       // Map staff_team → role code (singular). Fallback: job_title keyword match.
@@ -147,12 +162,12 @@ export default function NewStarterWizard() {
         lastName: data.last_name ?? "",
         fullName: (data as any).full_name ?? f.fullName,
         preferredName: (data as any).preferred_name ?? f.preferredName,
-        personalEmail: (data as any).personal_email ?? f.personalEmail,
+        personalEmail: personalEmail ?? f.personalEmail,
         jobTitle: data.job_title ?? "",
         upn: data.email ?? "",
         mailNickname: data.email ? data.email.split("@")[0] : "",
         displayName: [data.first_name, data.last_name].filter(Boolean).join(" "),
-        phone: (data as any).personal_phone ?? data.phone ?? data.mobile_phone ?? "",
+        phone: personalPhone ?? data.phone ?? data.mobile_phone ?? "",
         locationCode: locationCode || f.locationCode,
         roleCode: roleCode || f.roleCode,
         teamLeaderId:

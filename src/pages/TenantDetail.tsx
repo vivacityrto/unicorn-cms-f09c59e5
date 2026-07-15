@@ -343,7 +343,7 @@ export default function TenantDetail() {
       const {
         data: userData,
         error: userError
-      } = await supabase.from("users").select("*").eq("tenant_id", parseInt(tenantId)).eq("unicorn_role", "Admin").order("created_at", {
+      } = await supabase.from("users").select("user_uuid, first_name, last_name, email, phone, mobile_phone, head_office_address, state, rto_name, rto_id, abn, acn, street_number_and_name, suburb, postcode, country, email_address, lms, website, accounting_system, training_facility_address, po_box_address, cricos_id, registration_end_date, keap_url, clickup_url, accountable_person, avatar_url, last_sign_in_at").eq("tenant_id", parseInt(tenantId)).eq("unicorn_role", "Admin").order("created_at", {
         ascending: true
       }).limit(1).maybeSingle();
       if (userError) throw userError;

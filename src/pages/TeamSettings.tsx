@@ -127,7 +127,7 @@ export default function TeamSettings() {
 
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('user_uuid, first_name, last_name, email, unicorn_role, user_type, disabled, created_at')
         .eq('tenant_id', profile?.tenant_id)
         .order('first_name');
 
