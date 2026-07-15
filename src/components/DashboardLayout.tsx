@@ -431,6 +431,7 @@ export const DashboardLayout = ({
               </div>
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label="Collapse sidebar"
                 className={`p-1.5 rounded-full transition-all duration-200 ${
                   showVivacityMenu
                     ? "hover:bg-white/10 text-white/50 hover:text-white"
@@ -457,6 +458,7 @@ export const DashboardLayout = ({
           <div className={`h-16 flex items-center justify-between px-4 border-b ${showVivacityMenu ? "border-white/20" : "border-border"}`}>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label="Expand sidebar"
               className={`p-2 rounded-lg transition-colors ${showVivacityMenu ? "hover:bg-white/10 text-white" : "hover:bg-muted/30 text-secondary"}`}
             >
               <Menu className="w-5 h-5" />

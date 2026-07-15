@@ -64,7 +64,7 @@ export function TodaysFocusSection({ items, onAction, onSnooze }: Props) {
                   {item.whyText && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label="Why this item">
                           <Info className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
                       </TooltipTrigger>
@@ -86,6 +86,7 @@ export function TodaysFocusSection({ items, onAction, onSnooze }: Props) {
                       className="shrink-0 h-7 text-xs text-muted-foreground"
                       onClick={() => onSnooze(item, 1)}
                       title="Snooze 1 day"
+                      aria-label="Snooze 1 day"
                     >
                       <Clock className="h-3 w-3" />
                     </Button>

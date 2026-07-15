@@ -395,10 +395,10 @@ const Login = () => {
 
         {/* Vivacity Logo Footer */}
         <div className="flex justify-center mt-4">
-          <img src={vivacityLogo} alt="Vivacity" className="h-10" />
+          <img src={vivacityLogo} alt="Vivacity Coaching &amp; Consulting" className="h-10" />
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 
