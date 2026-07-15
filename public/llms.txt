@@ -1,0 +1,9 @@
+# Unicorn — Compliance Management System
+
+> Vivacity's internal client management system for Australian Registered Training Organisations (RTOs), designed to save time, money, and simplify compliance.
+
+Unicorn is a private, authenticated platform. Public pages are limited to sign-in and account activation flows; all substantive product surfaces sit behind authentication.
+
+## Pages
+
+- [Sign in](/): Sign in to the Unicorn Compliance Management System.

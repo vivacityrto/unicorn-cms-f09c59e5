@@ -168,15 +168,16 @@ const Login = () => {
   };
 
   return (
-    <div
+    <main
       className="min-h-screen w-full flex items-center justify-center p-4"
       style={{ backgroundImage: "linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%)" }}
     >
+      <h1 className="sr-only">Unicorn Compliance Management System — Sign in</h1>
       <div className="w-full max-w-md">
         {/* Login Form Card - Matching Settings page style */}
         <Card className="border-0 shadow-lg overflow-hidden">
           <div className="bg-muted/30 px-6 py-0 h-[84px] border-b border-border/50 flex items-center justify-between">
-            <img src={unicornLogo} alt="Unicorn" className="h-16 w-auto" width="127" height="69" fetchPriority="high" />
+            <img src={unicornLogo} alt="Unicorn Compliance Management System" className="h-16 w-auto" width="127" height="69" fetchPriority="high" />
             {getHeaderIcon()}
           </div>
           <CardContent className="p-6">
