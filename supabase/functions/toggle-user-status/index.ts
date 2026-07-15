@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
 
     // Check permissions
     const isClientAdmin = currentUserData?.unicorn_role === "Admin" &&
-                         currentUserData?.user_type === "Client" &&
+                         (currentUserData?.user_type === "Client" || currentUserData?.user_type === "Client Parent") &&
                          targetUserData?.tenant_id === currentUserData?.tenant_id;
 
     if (!isSuperAdmin && !isClientAdmin) {
