@@ -142,6 +142,8 @@ export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
         FORBIDDEN: "You don't have permission to invite users.",
         SECONDARY_CONTACT_TAKEN: "This organisation already has a secondary contact.",
         SECONDARY_CONTACT_PENDING: "A pending invite already nominates someone as secondary contact.",
+        PRIMARY_CONTACT_TAKEN: "This organisation already has a primary contact.",
+        PRIMARY_CONTACT_PENDING: "A pending invite already nominates someone as primary contact.",
         RELATIONSHIP_ROLE_NOT_ALLOWED: "That role can't be assigned via this flow.",
       };
       setError((e.code && codeMessages[e.code]) || e.message || "Couldn't send invitation. Please try again.");
