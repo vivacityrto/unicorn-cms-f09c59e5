@@ -337,3 +337,8 @@ verify_jwt = false
 [functions.admin-reset-user]
 verify_jwt = false
 
+# Historical / still-hosted orphan. Handles auth in-function; verify_jwt matches production.
+# H2: redirectTo pinned to APP_BASE_URL; caller gated via check_permission + disabled.
+[functions.invite-or-reset-user]
+verify_jwt = true
+
