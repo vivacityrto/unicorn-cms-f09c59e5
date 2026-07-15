@@ -1,3 +1,19 @@
+/**
+ * send-invitation-email
+ *
+ * Sends the Mailgun invite template for a pending user_invitations row.
+ *
+ * Authorization (in-code; gateway verify_jwt alone accepts the public anon key):
+ *   - Trusted internal: Authorization bearer === SUPABASE_SERVICE_ROLE_KEY
+ *     (invite-user / resend-invite / activate-ghost-user invoke with the
+ *     service-role client and no user JWT override)
+ *   - Staff: auth.getUser(bearer) + check_permission(..., 'admin.invites.manage', 'full')
+ *   - Tenant Admin: primary/secondary contact on the invitation's tenant
+ *     (same scope gate as resend-invite / cancel-invite)
+ *
+ * Possession proof: SHA-256(token_plaintext) must equal the stored token_hash
+ * for invitation_id before any email is built or sent.
+ */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -36,6 +52,13 @@ const ROLE_LABELS: Record<string, string> = {
   "Academy User": "Academy User",
 };
 
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+}
+
 function formatExpiry(expiresAt: string): string {
   // dd/MM/yyyy (Australian)
   try {
@@ -49,47 +72,145 @@ function formatExpiry(expiresAt: string): string {
   }
 }
 
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Constant-time hex string compare (equal length required). */
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const body = (await req.json()) as RequestBody;
-    if (!body?.invitation_id || !body?.token_plaintext) {
-      return new Response(
-        JSON.stringify({ error: "invitation_id and token_plaintext are required" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
-      console.error("Missing Mailgun configuration");
-      return new Response(
-        JSON.stringify({ error: "Mailgun configuration is missing" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    // ── 1. Authenticate caller ────────────────────────────────────────────
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!bearer) {
+      return jsonResponse(401, { error: "Missing Authorization header" });
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
 
-    // Load invitation
+    // Trusted internal path: invite-user / resend-invite / activate-ghost-user
+    // invoke with the service-role client (bearer === SERVICE_ROLE_KEY).
+    const isTrustedInternalCall = bearer === SERVICE_ROLE_KEY;
+
+    let callerId: string | null = null;
+    if (!isTrustedInternalCall) {
+      const { data: callerData, error: callerErr } = await supabase.auth.getUser(bearer);
+      if (callerErr || !callerData?.user) {
+        return jsonResponse(401, { error: "Unauthorized" });
+      }
+      callerId = callerData.user.id;
+    }
+
+    // ── 2. Parse body ─────────────────────────────────────────────────────
+    const body = (await req.json()) as RequestBody;
+    if (!body?.invitation_id || !body?.token_plaintext) {
+      return jsonResponse(400, {
+        error: "invitation_id and token_plaintext are required",
+      });
+    }
+
+    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+      console.error("Missing Mailgun configuration");
+      return jsonResponse(500, { error: "Mailgun configuration is missing" });
+    }
+
+    // ── 3. Load invitation (include token_hash + tenant/creator for scope) ─
     const { data: invitation, error: invErr } = await supabase
       .from("user_invitations")
-      .select("id, email, first_name, last_name, tenant_id, unicorn_role, expires_at, invited_by")
+      .select(
+        "id, email, first_name, last_name, tenant_id, unicorn_role, expires_at, invited_by, token_hash, status",
+      )
       .eq("id", body.invitation_id)
       .maybeSingle();
 
     if (invErr || !invitation) {
       console.error("Invitation lookup failed:", invErr);
-      return new Response(
-        JSON.stringify({ error: "Invitation not found" }),
-        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return jsonResponse(404, { error: "Invitation not found" });
     }
 
+    // ── 4. Authorise non-service callers against invitation tenant/scope ──
+    // Do not trust invitation_id alone: use the row's tenant_id (and
+    // invited_by as creator context) so permission is scoped to that invite.
+    // Service-role callers are already gated by the upstream invite-creation
+    // / resend flow (same pattern as issue-token isTrustedInternalCall).
+    if (!isTrustedInternalCall && callerId) {
+      const { data: staffAllowed } = await supabase.rpc("check_permission", {
+        p_user_id: callerId,
+        p_feature_key: "admin.invites.manage",
+        p_min_level: "full",
+      });
+      let authorised = !!staffAllowed;
+
+      // Tenant Admin whose membership covers the invitation's tenant
+      // (mirrors resend-invite / cancel-invite).
+      if (!authorised) {
+        const { data: callerProfile } = await supabase
+          .from("users")
+          .select("unicorn_role")
+          .eq("user_uuid", callerId)
+          .maybeSingle();
+
+        if (callerProfile?.unicorn_role === "Admin") {
+          const { data: membership } = await supabase
+            .from("tenant_users")
+            .select("id, relationship_role")
+            .eq("user_id", callerId)
+            .eq("tenant_id", invitation.tenant_id)
+            .maybeSingle();
+          if (
+            membership &&
+            (membership.relationship_role === "primary_contact" ||
+              membership.relationship_role === "secondary_contact")
+          ) {
+            authorised = true;
+          }
+        }
+      }
+
+      // Creator context: Vivacity staff who created this invite may send for it
+      // without global admin.invites.manage (invite-user allows broader staff).
+      if (!authorised && invitation.invited_by === callerId) {
+        const { data: isVivacityTeam } = await supabase.rpc("is_vivacity_team_safe", {
+          p_user_id: callerId,
+        });
+        if (isVivacityTeam) authorised = true;
+      }
+
+      if (!authorised) {
+        return jsonResponse(403, {
+          error: "You don't have permission to send this invitation email",
+        });
+      }
+    }
+
+    // ── 5. Possession proof: re-hash token_plaintext vs stored token_hash ─
+    if (!invitation.token_hash) {
+      return jsonResponse(400, { error: "Invitation token is invalid or revoked" });
+    }
+    const expectedHash = await sha256Hex(body.token_plaintext);
+    if (!timingSafeEqualHex(expectedHash, invitation.token_hash)) {
+      return jsonResponse(400, { error: "Invitation token mismatch" });
+    }
+
+    // ── 6. Build and send email ───────────────────────────────────────────
     // Resolve tenant name
     let tenantName = "your organisation";
     if (invitation.tenant_id === VIVACITY_TENANT_ID) {
@@ -112,12 +233,14 @@ const handler = async (req: Request): Promise<Response> => {
         .eq("user_uuid", invitation.invited_by)
         .maybeSingle();
       if (inviter) {
-        inviterName = [inviter.first_name, inviter.last_name].filter(Boolean).join(" ").trim() || inviterName;
+        inviterName =
+          [inviter.first_name, inviter.last_name].filter(Boolean).join(" ").trim() ||
+          inviterName;
       }
     }
 
     const inviteUrl = `${APP_BASE_URL.replace(/\/$/, "")}/accept-invitation?token=${encodeURIComponent(
-      body.token_plaintext
+      body.token_plaintext,
     )}`;
 
     const roleLabel = ROLE_LABELS[invitation.unicorn_role] || invitation.unicorn_role;
@@ -169,10 +292,10 @@ const handler = async (req: Request): Promise<Response> => {
         statusText: mailgunResponse.statusText,
         body: errorText,
       });
-      return new Response(
-        JSON.stringify({ error: "Failed to send invitation email", detail: errorText }),
-        { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return jsonResponse(502, {
+        error: "Failed to send invitation email",
+        detail: errorText,
+      });
     }
 
     const result = await mailgunResponse.json();
@@ -187,16 +310,16 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq("id", invitation.id);
 
-    return new Response(
-      JSON.stringify({ success: true, messageId: result?.id, invite_url: inviteUrl }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
+    return jsonResponse(200, {
+      success: true,
+      messageId: result?.id,
+      invite_url: inviteUrl,
+    });
   } catch (error: any) {
     console.error("Error in send-invitation-email:", error);
-    return new Response(
-      JSON.stringify({ error: error?.message || "Failed to send invitation email" }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
+    return jsonResponse(500, {
+      error: error?.message || "Failed to send invitation email",
+    });
   }
 };
 
