@@ -332,3 +332,8 @@ verify_jwt = false
 [functions.create-session-v2]
 verify_jwt = false
 
+# Historical / still-hosted orphan. Handles auth in-function (NO_AUTH / AUTH_FAILED).
+# Superseded by generate-recovery-link; kept for keeper-repo history — do not stub-redeploy.
+[functions.admin-reset-user]
+verify_jwt = false
+
