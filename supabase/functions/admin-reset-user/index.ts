@@ -4,154 +4,112 @@
  * Still ACTIVE on project yxkgdalkbrriasiyyrwk (gated; orphan — no in-repo callers).
  * Superseded by generate-recovery-link / send-password-reset.
  *
- * Provenance: reconstructed for keeper-repo reconciliation (14 Jul 2026 Unicorn
- * security audit follow-up) from independently verified live behavior
- * (get_edge_function / canAdministerPasswords contract) and live HTTP probes
- * matching NO_AUTH / AUTH_FAILED response shapes. Management API was unavailable
- * in the agent environment; replace with a byte-identical dump if one is obtained.
+ * Provenance: byte-accurate deployed source, pulled directly via Supabase MCP
+ * get_edge_function on 15 Jul 2026 (function id 22fc2a87-f5aa-4f10-8236-e5ed3e2649dc,
+ * version 78). Not a reconstruction — this replaces an earlier reconstructed version
+ * committed in PR #5 that had diverged from real production behavior (different
+ * request contract, added a redirectTo option that doesn't exist live, different
+ * response shape, different audit-log fields).
  */
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 import { canAdministerPasswords } from "../_shared/admin-authorization.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-interface AdminResetRequest {
-  user_uuid: string;
-}
-
-serve(async (req: Request): Promise<Response> => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } }
+  );
+
   try {
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "NO_AUTH", detail: "Missing Authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+    if (!token) {
+      return new Response(JSON.stringify({ ok: false, code: "NO_AUTH", detail: "Missing Authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user: caller },
-      error: authError,
-    } = await supabaseAdmin.auth.getUser(token);
-
-    if (authError || !caller) {
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          code: "AUTH_FAILED",
-          detail: authError?.message || "Invalid token",
-        }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    const { data: callerData, error: callerErr } = await supabase.auth.getUser(token);
+    if (callerErr || !callerData?.user) {
+      return new Response(JSON.stringify({ ok: false, code: "AUTH_FAILED", detail: callerErr?.message || "Unable to authenticate caller" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+    const caller = callerData.user;
 
-    const { data: callerProfile, error: profileError } = await supabaseAdmin
+    const { data: callerProfile, error: profileErr } = await supabase
       .from("users")
-      .select("unicorn_role, user_type, disabled, archived, tenant_id")
+      .select("unicorn_role, user_type, disabled, archived")
       .eq("user_uuid", caller.id)
       .maybeSingle();
 
-    if (profileError || !callerProfile || !canAdministerPasswords(callerProfile)) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Insufficient permissions" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    if (profileErr || !canAdministerPasswords(callerProfile)) {
+      return new Response(JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Only active Vivacity Super Admins can generate password reset links" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const { user_uuid }: AdminResetRequest = await req.json();
-    if (!user_uuid) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "MISSING_USER_UUID", detail: "user_uuid is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    const { email } = await req.json();
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+
+    if (!normalizedEmail) {
+      return new Response(JSON.stringify({ ok: false, code: "MISSING_EMAIL", detail: "email is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const { data: targetUser, error: targetError } = await supabaseAdmin
-      .from("users")
-      .select("email, first_name, last_name, tenant_id")
-      .eq("user_uuid", user_uuid)
-      .single();
-
-    if (targetError || !targetUser) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "USER_NOT_FOUND", detail: "Target user not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au";
-
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: "recovery",
-      email: targetUser.email,
-      options: {
-        redirectTo: `${APP_BASE_URL}/reset-password`,
-      },
+      email: normalizedEmail,
     });
 
-    if (linkError || !linkData) {
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          code: "LINK_GENERATION_FAILED",
-          detail: linkError?.message || "Failed to generate recovery link",
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    if (linkErr) {
+      return new Response(JSON.stringify({ ok: false, code: "RESET_FAILED", detail: linkErr.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const actionLink = linkData.properties?.action_link;
-    if (!actionLink) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "NO_ACTION_LINK", detail: "No action_link in response" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    const resetLink = linkData?.properties?.action_link;
+    if (!resetLink) {
+      return new Response(JSON.stringify({ ok: false, code: "RESET_FAILED", detail: "No reset link generated" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    await supabaseAdmin.from("audit_user_events").insert({
-      actor_user_uuid: caller.id,
-      target_user_uuid: user_uuid,
-      tenant_id: targetUser.tenant_id ?? callerProfile.tenant_id ?? null,
-      action: "admin_reset_user",
-      details: {
-        target_email: targetUser.email,
-        initiated_by: caller.email,
-      },
+    console.log("Password reset link generated successfully");
+
+    try {
+      await supabase.from("audit_user_events").insert({
+        actor_user_uuid: caller.id,
+        target_user_uuid: linkData?.user?.id,
+        action: "admin_password_reset",
+        reason: "Admin-initiated password reset",
+        details: { email: normalizedEmail },
+      });
+    } catch (auditErr) {
+      console.warn("Audit log failed (non-fatal):", auditErr);
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, resetLink }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err: any) {
+    console.error("Unhandled error:", err);
+    return new Response(JSON.stringify({ ok: false, code: "INTERNAL", detail: err?.message || String(err) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        action_link: actionLink,
-        email: targetUser.email,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  } catch (error: any) {
-    console.error("Unexpected error:", error);
-    return new Response(
-      JSON.stringify({
-        ok: false,
-        code: "UNEXPECTED_ERROR",
-        detail: "An unexpected error occurred",
-      }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
   }
 });
