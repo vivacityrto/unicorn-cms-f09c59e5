@@ -10,10 +10,11 @@
 -- would incorrectly admit CSC/CET/BGT who have other audit keys but not report.
 --
 -- p_released_by is retained for signature compatibility with the deployed
--- release-audit-report edge function (not in this repo) but is ignored;
--- report_released_by / portal uploaded_by / shared_by are always auth.uid().
--- Edge callers must forward the caller JWT (create-tenant pattern) so auth.uid()
--- resolves under any service-role client.
+-- release-audit-report edge function (not in this repo). When supplied it must
+-- equal auth.uid(); report_released_by / portal uploaded_by / shared_by are
+-- always written from auth.uid(), never from the parameter. Edge callers must
+-- forward the caller JWT (create-tenant pattern) so auth.uid() resolves under
+-- any service-role client.
 
 BEGIN;
 
