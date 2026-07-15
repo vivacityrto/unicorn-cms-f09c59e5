@@ -342,3 +342,8 @@ verify_jwt = false
 [functions.invite-or-reset-user]
 verify_jwt = true
 
+# Custom opaque-token mint (Mailgun reset/invite/magic/setpwd). H3:
+# in-code caller authz + Mailgun-only delivery (raw token never in HTTP body).
+[functions.issue-token]
+verify_jwt = true
+

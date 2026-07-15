@@ -118,7 +118,9 @@ serve(async (req) => {
     if (inviteError) {
     // If user already exists, send reset using token system instead
       if (inviteError.message?.toLowerCase().includes("already registered") || inviteError.status === 422) {
-        // Use the token-based system for password reset emails (Mailgun)
+        // Use the token-based system for password reset emails (Mailgun).
+        // issue-token authenticates the service-role invoke, mints the opaque
+        // token, emails it via Mailgun, and returns a success ack only (no raw token).
         const { data: tokenData, error: tokenError } = await supabase.functions.invoke('issue-token', {
           body: {
             email: email,
@@ -135,8 +137,21 @@ serve(async (req) => {
           );
         }
 
+        if (tokenData?.error || tokenData?.ok === false) {
+          console.error("Token issue rejected:", tokenData);
+          return new Response(
+            JSON.stringify({ error: tokenData?.error || "Failed to issue reset token" }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+
         return new Response(
-          JSON.stringify({ ok: true, mode: "reset", message: `Password reset email sent to ${email}`, data: tokenData }),
+          JSON.stringify({
+            ok: true,
+            mode: "reset",
+            message: `Password reset email sent to ${email}`,
+            expiresAt: tokenData?.expiresAt,
+          }),
           { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
