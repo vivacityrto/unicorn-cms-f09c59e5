@@ -234,11 +234,17 @@ Deno.serve(async (req) => {
       });
       // Best-effort rollback of the portal row so we don't leave a visible
       // document without the audit flag flipped.
-      await admin
+      const { error: rollbackErr } = await admin
         .from('portal_documents')
         .delete()
-        .eq('id', (portalDoc as { id: string }).id)
-        .catch(() => {});
+        .eq('id', (portalDoc as { id: string }).id);
+      if (rollbackErr) {
+        console.error('[release-audit-report] rollback failed', {
+          auditId,
+          portalDocumentId: (portalDoc as { id: string }).id,
+          errorMessage: rollbackErr.message,
+        });
+      }
       return json(
         { error: "Couldn't release the report. Try again, or contact support." },
         500,
