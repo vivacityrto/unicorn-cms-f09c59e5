@@ -47,7 +47,7 @@ serve(async (req) => {
 
     const { data: profile } = await supabase
       .from("users")
-      .select("unicorn_role, email, first_name, last_name, global_role, job_title")
+      .select("unicorn_role, email, first_name, last_name, global_role, job_title, is_vivacity_internal")
       .eq("user_uuid", user.id)
       .single();
 
@@ -66,12 +66,18 @@ serve(async (req) => {
     }
 
     // SECURITY: Verify caller is either Vivacity staff or a member of the target tenant.
-    // Without this check, any authenticated user could send emails using another tenant's
-    // merge data (ABN, contacts) from the platform's trusted sending domain.
-    const VIVACITY_STAFF_ROLES = ["Super Admin", "SuperAdmin", "Team Leader", "Team Member"];
+    // Vivacity staff are identified by is_vivacity_internal flag OR by any known internal role
+    // (Super Admin, Team Leader, Team Member, Integrator, BGT, CSC, CET). CSC/Integrator/BGT/CET
+    // service client tenants without a tenant_users row, so a role-name allowlist alone is wrong.
+    const VIVACITY_STAFF_ROLES = [
+      "Super Admin", "SuperAdmin", "Team Leader", "Team Member",
+      "Integrator", "BGT", "CSC", "CET",
+    ];
     const isVivacityStaff =
+      profile.is_vivacity_internal === true ||
       VIVACITY_STAFF_ROLES.includes(profile.unicorn_role ?? "") ||
       VIVACITY_STAFF_ROLES.includes(profile.global_role ?? "");
+
 
     if (!isVivacityStaff) {
       const { data: tenantMember } = await supabase
