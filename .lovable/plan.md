@@ -1,39 +1,50 @@
-## Goal
-Remove the legacy `/manage-packages` dashboard page (frontend only). Leave `/admin/manage-packages` and all data/hooks/DB objects untouched.
+# Unlink Email Feature
 
-## Files to delete
-- `src/pages/ManagePackages.tsx`
-- `src/pages/ManagePackagesWrapper.tsx`
+Add an "Unlink" action to each row in the Linked Emails list on the client Emails tab. Unlinking permanently removes the email and every trace connected to it: attachment files in storage, attachment rows, and any notes that were created from that email via the "Convert to Note" flow.
 
-## Files to edit
+## Scope of "traces"
 
-1. **`src/App.tsx`**
-   - Remove the lazy import of `ManagePackagesWrapper` (line 48).
-   - Remove the `<Route path="/manage-packages" ...>` block (lines 598-605).
+Today, converting an email to a note copies the AI-generated title/body into a new `notes` row but does not record a back-reference. Without a back-reference we can't reliably identify which notes came from which email, so unlinking cannot clean them up. The plan adds that back-reference first, then wires unlink to use it.
 
-2. **`src/components/DashboardLayout.tsx`**
-   - Remove the sidebar entry `{ icon: Package2, label: "Packages", path: "/manage-packages" }` (line 51). Keep the `/admin/manage-packages` entry at line 123 (Admin Package Builder list — different feature).
+Traces removed on unlink:
+1. Files in the `email-attachments` storage bucket for that email.
+2. Rows in `email_message_attachments` for that email.
+3. The row in `email_messages`.
+4. Any rows in `notes` whose new `source_email_id` matches.
 
-3. **`src/components/layout/TopBar.tsx`**
-   - Remove the `"/manage-packages": "Packages"` breadcrumb label (line 51). Keep `/admin/manage-packages`.
+Notes converted **before** this change won't have `source_email_id` set, so they won't be auto-deleted. Users can delete those manually. (Called out in the confirm dialog copy.)
 
-4. **`src/pages/PackageDetail.tsx`** (line 784)
-   - The "Package not found" fallback button currently navigates to `/manage-packages`. Redirect it to `/admin/manage-packages` so nothing 404s. All other back-buttons in this file already point to `/admin/manage-packages`.
+## Changes
 
-## Not touched
-- `/admin/manage-packages` route, `AdminManagePackages.tsx`, `AdminManagePackagesWrapper.tsx`, `PackageBuilderEditor.tsx` — different feature.
-- `src/test/rbac/useRBAC.test.ts` references `/admin/manage-packages` only — no change.
-- No Supabase migrations, RLS, edge functions, tables, or shared hooks are touched. `ManagePackages.tsx` uses only inline `supabase` queries and shared UI primitives — nothing else imports from it.
+### 1. DB migration
+- Add `source_email_id uuid` (nullable, indexed) to `public.notes`.
+- No FK — email rows are deletable independently and we tolerate dangling ids.
 
-## Verification
-Run after edits:
-```
-rg "/manage-packages\"" src                          # expect zero (only /admin/manage-packages remains)
-rg "ManagePackagesWrapper|ManagePackages\b" src      # expect zero after deletion, aside from the admin equivalents
-```
-Plus a typecheck/build via the harness.
+### 2. `ConvertEmailToNoteDialog.tsx`
+- Pass `source_email_id: email.id` through `createNote(...)` so the linkage is recorded going forward.
+- Requires `useNotes.createNote` to forward the field (verify + extend the payload shape).
 
-## Summary reported after implementation
-- Deleted: `ManagePackages.tsx`, `ManagePackagesWrapper.tsx`.
-- Nav removed: sidebar "Packages" entry in `DashboardLayout.tsx`.
-- Other references updated: `App.tsx` route + lazy import, `TopBar.tsx` breadcrumb, `PackageDetail.tsx` not-found fallback redirected to `/admin/manage-packages`.
+### 3. `useLinkedEmails.tsx`
+- Add `unlinkEmail(emailId)` mutation that:
+  1. Lists `email_message_attachments` for the email, calls `supabase.storage.from('email-attachments').remove([...paths])`.
+  2. Deletes `email_message_attachments` rows for the email.
+  3. Deletes `notes` rows where `source_email_id = emailId`.
+  4. Deletes the `email_messages` row.
+  5. Invalidates the `linked-emails` query and any notes queries for the tenant.
+- Surfaces toast success/failure. Errors on storage cleanup are logged but don't block DB deletion (best-effort).
+
+### 4. `LinkedEmailsList.tsx` / `EmailCard`
+- Add an "Unlink" icon button (Unlink2 / Trash2 icon) next to the existing Convert-to-Note and View buttons.
+- On click, open an AlertDialog:
+  - Title: "Unlink this email?"
+  - Body: warns that the email, its attachments, and any notes created from it via Convert-to-Note will be permanently deleted, and that older converted notes (pre-feature) won't be touched.
+  - Confirm calls `unlinkEmail(email.id)`.
+
+### 5. Verification
+- Manually unlink a test email with attachments + a converted note in the preview; confirm all rows/files/notes are gone and the list refreshes.
+
+## Technical notes
+
+- Deletion order matters: storage first, then attachment rows, then notes, then the email row (attachments rely on the parent id for lookup).
+- Existing RLS on `email_messages`, `email_message_attachments`, and `notes` already restricts to same-tenant staff, so DELETE from the client is safe.
+- No edge function needed — everything runs through the Supabase JS client under the caller's JWT.
