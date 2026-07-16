@@ -277,5 +277,7 @@ export function useLinkedEmails(options?: {
     isUpdating: updateLinkMutation.isPending,
     fetchAttachments,
     getAttachmentUrl,
+    unlinkEmail: unlinkEmailMutation.mutateAsync,
+    isUnlinking: unlinkEmailMutation.isPending,
   };
 }
