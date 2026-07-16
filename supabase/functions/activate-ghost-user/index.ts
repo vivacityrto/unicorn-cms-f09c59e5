@@ -229,6 +229,9 @@ serve(async (req) => {
       invitationId = insertedInvite.id;
       const { error: emailErr } = await admin.functions.invoke('send-invitation-email', {
         body: { invitation_id: insertedInvite.id, token_plaintext: inviteToken },
+        // Deno's functions.invoke does not auto-forward the service-role token;
+        // send-invitation-email requires it for its trusted-internal path.
+        headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
       });
       if (emailErr) {
         emailError = emailErr.message || 'send-invitation-email failed';
