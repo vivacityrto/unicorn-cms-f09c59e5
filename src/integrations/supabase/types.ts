@@ -68107,7 +68107,6 @@ export type Database = {
         Args: { p_token_hash: string; p_user_id: string }
         Returns: Json
       }
-      accept_invite: { Args: { p_token: string }; Returns: Json }
       acknowledge_audit_report: {
         Args: { p_audit_id: string }
         Returns: undefined
@@ -69937,7 +69936,7 @@ export type Database = {
         Args: {
           p_audit_id: string
           p_release_notes?: string
-          p_released_by: string
+          p_released_by?: string
         }
         Returns: Json
       }
@@ -70807,6 +70806,16 @@ export type Database = {
         }
       }
       upsert_rock_with_parenting: { Args: { p_payload: Json }; Returns: Json }
+      user_contact_fields_change_authorized_safe: {
+        Args: {
+          p_personal_email: string
+          p_personal_phone: string
+          p_po_box_address: string
+          p_street_address: string
+          p_user_uuid: string
+        }
+        Returns: boolean
+      }
       user_has_tenant_access: {
         Args: { p_tenant_id: number }
         Returns: boolean
