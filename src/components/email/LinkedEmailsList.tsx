@@ -1,10 +1,20 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Mail, User, Calendar, Eye, Sparkles, FileText } from "lucide-react";
+import { Mail, User, Calendar, Eye, Sparkles, FileText, Unlink2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLinkedEmails, LinkedEmail, EmailAttachment } from "@/hooks/useLinkedEmails";
 import { EmailViewDialog } from "./EmailViewDialog";
 import { ConvertEmailToNoteDialog } from "./ConvertEmailToNoteDialog";
