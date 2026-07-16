@@ -683,7 +683,10 @@ serve(async (req) => {
         body: {
           invitation_id: insertedInvite.id,
           token_plaintext: inviteToken,
-        }
+        },
+        // Deno's functions.invoke does not auto-forward the service-role token;
+        // send-invitation-email requires it for its trusted-internal path.
+        headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
       });
       if (emailErr) {
         console.warn('send-invitation-email returned error:', emailErr);
