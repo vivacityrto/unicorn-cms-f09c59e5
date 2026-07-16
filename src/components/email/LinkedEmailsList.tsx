@@ -1,10 +1,20 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Mail, User, Calendar, Eye, Sparkles, FileText } from "lucide-react";
+import { Mail, User, Calendar, Eye, Sparkles, FileText, Unlink2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLinkedEmails, LinkedEmail, EmailAttachment } from "@/hooks/useLinkedEmails";
 import { EmailViewDialog } from "./EmailViewDialog";
 import { ConvertEmailToNoteDialog } from "./ConvertEmailToNoteDialog";
@@ -25,7 +35,8 @@ export function LinkedEmailsList({
   emptyMessage = "No emails linked yet",
 }: LinkedEmailsListProps) {
   const [convertNoteEmail, setConvertNoteEmail] = useState<LinkedEmail | null>(null);
-  const { emails, isLoading, fetchAttachments, getAttachmentUrl } = useLinkedEmails({
+  const [unlinkEmail, setUnlinkEmail] = useState<LinkedEmail | null>(null);
+  const { emails, isLoading, fetchAttachments, getAttachmentUrl, unlinkEmail: unlinkEmailFn, isUnlinking } = useLinkedEmails({
     clientId,
     packageId,
     taskId,
@@ -77,11 +88,45 @@ export function LinkedEmailsList({
                 fetchAttachments={fetchAttachments}
                 getAttachmentUrl={getAttachmentUrl}
                 onConvertToNote={clientId ? () => setConvertNoteEmail(email) : undefined}
+                onUnlink={() => setUnlinkEmail(email)}
               />
             ))}
           </div>
         )}
       </CardContent>
+
+      <AlertDialog open={!!unlinkEmail} onOpenChange={(open) => !open && setUnlinkEmail(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unlink this email?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <span className="font-medium">"{unlinkEmail?.subject || "(No subject)"}"</span>,
+              its attachments, and any notes created from it via "Convert to Note". This action cannot be undone.
+              <br /><br />
+              Notes converted before this feature was added won't have a link back to the email and will need to be
+              removed manually.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUnlinking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isUnlinking}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!unlinkEmail) return;
+                try {
+                  await unlinkEmailFn(unlinkEmail.id);
+                  setUnlinkEmail(null);
+                } catch {
+                  /* toast already handled in hook */
+                }
+              }}
+            >
+              {isUnlinking ? "Unlinking..." : "Unlink and delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {convertNoteEmail && clientId && (
         <ConvertEmailToNoteDialog
@@ -103,13 +148,14 @@ interface EmailCardProps {
   fetchAttachments: (emailId: string) => Promise<EmailAttachment[]>;
   getAttachmentUrl: (storagePath: string) => Promise<string | null>;
   onConvertToNote?: () => void;
+  onUnlink?: () => void;
 }
 
 function normalizeEmailText(text?: string | null) {
   return text?.replace(/\s+/g, " ").trim() ?? "";
 }
 
-function EmailCard({ email, onConvertToNote }: EmailCardProps) {
+function EmailCard({ email, onConvertToNote, onUnlink }: EmailCardProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const summaryText = normalizeEmailText(email.ai_summary);
   const previewText = normalizeEmailText(email.body_preview);
@@ -161,6 +207,20 @@ function EmailCard({ email, onConvertToNote }: EmailCardProps) {
             >
               <Eye className="h-4 w-4" />
             </Button>
+            {onUnlink && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUnlink();
+                }}
+                title="Unlink email"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Unlink2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
 

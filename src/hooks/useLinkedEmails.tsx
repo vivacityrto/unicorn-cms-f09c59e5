@@ -144,6 +144,63 @@ export function useLinkedEmails(options?: {
       toast.error("Failed to update email link");
     },
   });
+  // Unlink email: remove attachments (storage + rows), converted notes, and the email row
+  const unlinkEmailMutation = useMutation({
+    mutationFn: async (emailId: string) => {
+      // 1. Load attachments to remove from storage
+      const { data: attachments } = await supabase
+        .from("email_message_attachments")
+        .select("id, storage_path")
+        .eq("email_message_id", emailId);
+
+      const paths = (attachments || [])
+        .map((a: any) => a.storage_path)
+        .filter(Boolean) as string[];
+
+      if (paths.length > 0) {
+        const { error: storageErr } = await supabase.storage
+          .from("email-attachments")
+          .remove(paths);
+        if (storageErr) {
+          // Best-effort: log but continue with DB cleanup
+          console.warn("Failed to remove some attachment files:", storageErr);
+        }
+      }
+
+      // 2. Delete attachment rows
+      const { error: attErr } = await supabase
+        .from("email_message_attachments")
+        .delete()
+        .eq("email_message_id", emailId);
+      if (attErr) throw attErr;
+
+      // 3. Delete notes that were converted from this email
+      const { error: noteErr } = await supabase
+        .from("notes")
+        .delete()
+        .eq("source_email_id", emailId);
+      if (noteErr) throw noteErr;
+
+      // 4. Delete the email row itself
+      const { error: emailErr } = await supabase
+        .from("email_messages")
+        .delete()
+        .eq("id", emailId);
+      if (emailErr) throw emailErr;
+
+      return { emailId };
+    },
+    onSuccess: () => {
+      toast.success("Email unlinked and removed");
+      invalidateLinkedEmails();
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+    },
+    onError: (error: Error) => {
+      console.error("Unlink email error:", error);
+      toast.error(error.message || "Failed to unlink email");
+    },
+  });
+
 
   // Fetch attachments for an email
   const fetchAttachments = useCallback(async (emailId: string): Promise<EmailAttachment[]> => {
@@ -220,5 +277,7 @@ export function useLinkedEmails(options?: {
     isUpdating: updateLinkMutation.isPending,
     fetchAttachments,
     getAttachmentUrl,
+    unlinkEmail: unlinkEmailMutation.mutateAsync,
+    isUnlinking: unlinkEmailMutation.isPending,
   };
 }
