@@ -155,7 +155,7 @@ function normalizeEmailText(text?: string | null) {
   return text?.replace(/\s+/g, " ").trim() ?? "";
 }
 
-function EmailCard({ email, onConvertToNote }: EmailCardProps) {
+function EmailCard({ email, onConvertToNote, onUnlink }: EmailCardProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const summaryText = normalizeEmailText(email.ai_summary);
   const previewText = normalizeEmailText(email.body_preview);
@@ -207,6 +207,20 @@ function EmailCard({ email, onConvertToNote }: EmailCardProps) {
             >
               <Eye className="h-4 w-4" />
             </Button>
+            {onUnlink && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUnlink();
+                }}
+                title="Unlink email"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Unlink2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
 
