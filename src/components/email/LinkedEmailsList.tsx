@@ -35,7 +35,8 @@ export function LinkedEmailsList({
   emptyMessage = "No emails linked yet",
 }: LinkedEmailsListProps) {
   const [convertNoteEmail, setConvertNoteEmail] = useState<LinkedEmail | null>(null);
-  const { emails, isLoading, fetchAttachments, getAttachmentUrl } = useLinkedEmails({
+  const [unlinkEmail, setUnlinkEmail] = useState<LinkedEmail | null>(null);
+  const { emails, isLoading, fetchAttachments, getAttachmentUrl, unlinkEmail: unlinkEmailFn, isUnlinking } = useLinkedEmails({
     clientId,
     packageId,
     taskId,
@@ -87,11 +88,45 @@ export function LinkedEmailsList({
                 fetchAttachments={fetchAttachments}
                 getAttachmentUrl={getAttachmentUrl}
                 onConvertToNote={clientId ? () => setConvertNoteEmail(email) : undefined}
+                onUnlink={() => setUnlinkEmail(email)}
               />
             ))}
           </div>
         )}
       </CardContent>
+
+      <AlertDialog open={!!unlinkEmail} onOpenChange={(open) => !open && setUnlinkEmail(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unlink this email?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <span className="font-medium">"{unlinkEmail?.subject || "(No subject)"}"</span>,
+              its attachments, and any notes created from it via "Convert to Note". This action cannot be undone.
+              <br /><br />
+              Notes converted before this feature was added won't have a link back to the email and will need to be
+              removed manually.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUnlinking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isUnlinking}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!unlinkEmail) return;
+                try {
+                  await unlinkEmailFn(unlinkEmail.id);
+                  setUnlinkEmail(null);
+                } catch {
+                  /* toast already handled in hook */
+                }
+              }}
+            >
+              {isUnlinking ? "Unlinking..." : "Unlink and delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {convertNoteEmail && clientId && (
         <ConvertEmailToNoteDialog
@@ -113,6 +148,7 @@ interface EmailCardProps {
   fetchAttachments: (emailId: string) => Promise<EmailAttachment[]>;
   getAttachmentUrl: (storagePath: string) => Promise<string | null>;
   onConvertToNote?: () => void;
+  onUnlink?: () => void;
 }
 
 function normalizeEmailText(text?: string | null) {
