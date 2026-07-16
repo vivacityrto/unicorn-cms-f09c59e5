@@ -231,7 +231,13 @@ serve(async (req) => {
     try {
       const { data: sendData, error: sendErr } = await supabase.functions.invoke(
         'send-invitation-email',
-        { body: { invitation_id: payload.invitation_id, token_plaintext: newToken } },
+        {
+          body: { invitation_id: payload.invitation_id, token_plaintext: newToken },
+          // Explicitly forward the service-role bearer — Deno's functions.invoke
+          // does not auto-attach it, and send-invitation-email requires it for
+          // its trusted-internal path.
+          headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+        },
       );
 
       if (sendErr) {
