@@ -108,6 +108,7 @@ export function ConvertEmailToNoteDialog({
         priority,
         parent_type_override: "tenant",
         parent_id_override: tenantId,
+        source_email_id: email.id,
       });
       if (result) {
         toast.success("Note created");

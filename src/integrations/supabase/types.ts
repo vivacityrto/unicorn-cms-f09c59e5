@@ -35167,6 +35167,7 @@ export type Database = {
           parent_type: string | null
           parent_uuid: string | null
           priority: string | null
+          source_email_id: string | null
           started_date: string | null
           status: string | null
           tags: string[]
@@ -35201,6 +35202,7 @@ export type Database = {
           parent_type?: string | null
           parent_uuid?: string | null
           priority?: string | null
+          source_email_id?: string | null
           started_date?: string | null
           status?: string | null
           tags?: string[]
@@ -35235,6 +35237,7 @@ export type Database = {
           parent_type?: string | null
           parent_uuid?: string | null
           priority?: string | null
+          source_email_id?: string | null
           started_date?: string | null
           status?: string | null
           tags?: string[]
