@@ -159,12 +159,14 @@ serve(async (req) => {
     const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     // 8. Update invitation with new token and expiration
+    // NOTE: last_sent_at is intentionally NOT updated here — it is only stamped
+    // after a successful Mailgun dispatch below, so failures don't produce a
+    // misleading "resent" timestamp with no message ID.
     const { error: updateErr } = await supabase
       .from("user_invitations")
       .update({
         token_hash: newTokenHash,
         expires_at: newExpiresAt.toISOString(),
-        last_sent_at: new Date().toISOString(),
         status: 'pending', // Reset to pending in case it was expired
         delivery_status: null,
         delivery_event_at: null,
@@ -191,6 +193,12 @@ serve(async (req) => {
 
     // 10b. Handle skip_email — generate link only, no send, no audit_invites
     if (payload.skip_email === true) {
+      // Stamp last_sent_at so the UI reflects the link-generation event
+      await supabase
+        .from("user_invitations")
+        .update({ last_sent_at: new Date().toISOString() })
+        .eq("id", payload.invitation_id);
+
       await supabase.from("audit_eos_events").insert({
         tenant_id: invitation.tenant_id,
         entity: "user_invitations",
@@ -215,23 +223,67 @@ serve(async (req) => {
       });
     }
 
-    // 11. Send invitation email
+    // 11. Send invitation email — surface real failures instead of swallowing them.
+    // supabase.functions.invoke returns { data, error } and does NOT throw on
+    // HTTP errors, so we must inspect BOTH the error field and data.ok.
+    let sendErrorDetail: string | null = null;
+    let sendErrorCode: string | null = null;
     try {
-      await supabase.functions.invoke('send-invitation-email', {
-        body: {
-          invitation_id: payload.invitation_id,
-          token_plaintext: newToken,
+      const { data: sendData, error: sendErr } = await supabase.functions.invoke(
+        'send-invitation-email',
+        { body: { invitation_id: payload.invitation_id, token_plaintext: newToken } },
+      );
+
+      if (sendErr) {
+        // Try to pull the JSON body from the FunctionsHttpError context.
+        let bodyDetail: string | null = null;
+        let bodyCode: string | null = null;
+        const ctx = (sendErr as { context?: Response }).context;
+        if (ctx && typeof ctx.text === 'function') {
+          try {
+            const txt = await ctx.text();
+            try {
+              const parsed = JSON.parse(txt);
+              bodyDetail = parsed?.detail || parsed?.error || txt;
+              bodyCode = parsed?.code ?? null;
+            } catch {
+              bodyDetail = txt;
+            }
+          } catch { /* ignore */ }
         }
-      });
-      console.log(`Resent invitation email to ${invitation.email}`);
+        sendErrorDetail = bodyDetail || sendErr.message || 'send-invitation-email failed';
+        sendErrorCode = bodyCode;
+      } else if (sendData && sendData.ok === false) {
+        sendErrorDetail = sendData.detail || sendData.error || 'send-invitation-email returned ok=false';
+        sendErrorCode = sendData.code ?? null;
+      }
     } catch (emailError) {
-      console.error('Failed to send invitation email:', emailError);
-      return jsonResponse(500, {
+      sendErrorDetail = (emailError as Error)?.message || String(emailError);
+    }
+
+    if (sendErrorDetail) {
+      console.error('Failed to send invitation email:', sendErrorCode, sendErrorDetail);
+      await supabase.from("audit_invites").insert({
+        email: invitation.email.toLowerCase(),
+        tenant_id: invitation.tenant_id,
+        role: invitation.unicorn_role,
+        outcome: "resend_failed",
+        actor_user_id: callerUser.user.id,
+        detail: `Resend failed: ${sendErrorCode || ''} ${sendErrorDetail}`.trim(),
+      });
+      return jsonResponse(502, {
         ok: false,
-        code: "EMAIL_SEND_FAILED",
-        detail: "Failed to send invitation email",
+        code: sendErrorCode || "EMAIL_SEND_FAILED",
+        detail: sendErrorDetail,
       });
     }
+
+    // Only stamp last_sent_at once Mailgun has accepted the message
+    await supabase
+      .from("user_invitations")
+      .update({ last_sent_at: new Date().toISOString() })
+      .eq("id", payload.invitation_id);
+    console.log(`Resent invitation email to ${invitation.email}`);
 
     // 12. Log the resend in audit tables
     // Get previous attempts count
