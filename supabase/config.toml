@@ -80,6 +80,12 @@ verify_jwt = false
 [functions.send-self-password-reset]
 verify_jwt = false
 
+# Historical / still-hosted orphan (no in-repo callers). Self-service reset by
+# email; verify_jwt=false matches production. Hardened: anti-enumeration,
+# users.disabled gate, shared per-email/per-IP rate limit.
+[functions.auth-generate-password-reset]
+verify_jwt = false
+
 [functions.bulk-user-action]
 verify_jwt = false
 

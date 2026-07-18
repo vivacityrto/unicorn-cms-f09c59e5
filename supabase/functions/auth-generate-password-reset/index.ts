@@ -1,3 +1,23 @@
+/**
+ * HISTORICAL orphan — auth-generate-password-reset
+ *
+ * Still ACTIVE on project yxkgdalkbrriasiyyrwk (verify_jwt: false; callable
+ * with the public anon key). No in-repo frontend callers — Login.tsx uses
+ * send-self-password-reset exclusively. Confirmed via live probe (18 Jul 2026):
+ * missing/invalid email → 400 "Valid email is required"; unknown email → 500
+ * "Failed to create reset link"; known email → 200 {"ok":true} — classic
+ * account-enumeration leak.
+ *
+ * Keeper-repo source was missing; this file reimplements the self-service
+ * reset path on top of send-self-password-reset's hardened behaviour:
+ * - Anti-enumeration: always 200 + GENERIC_RESET_MESSAGE (missing / disabled)
+ * - users.disabled gate (no email for disabled accounts)
+ * - Per-email / per-IP rate limit (shared with send-self-password-reset)
+ * - Mailgun delivery of a scanner-safe /activate recovery link
+ *
+ * Deploy this patched source when ready — do not leave the live enumerating
+ * build in place.
+ */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
@@ -12,7 +32,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface SelfPasswordResetRequest {
+interface AuthGeneratePasswordResetRequest {
   email: string;
 }
 
@@ -23,8 +43,12 @@ function genericSuccess(): Response {
   );
 }
 
+function isValidEmail(email: string): boolean {
+  // Keep a light shape check (live orphan rejected values without '@').
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -45,29 +69,28 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create admin client
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false }
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Parse request body
-    const { email }: SelfPasswordResetRequest = await req.json();
+    const body = await req.json().catch(() => null);
+    const email = typeof body?.email === "string" ? body.email : "";
 
-    if (!email) {
+    if (!email || !isValidEmail(email.trim())) {
       return new Response(
-        JSON.stringify({ ok: false, code: "MISSING_EMAIL" }),
+        JSON.stringify({ ok: false, code: "MISSING_EMAIL", detail: "Valid email is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
     const clientIp = getClientIp(req);
 
-    // Per-email / per-IP rate limit (invite-user pattern + IP ceiling)
     const rate = await checkPasswordResetRateLimit(supabaseAdmin, normalizedEmail, clientIp);
     if (rate.limited) {
-      console.log(`Password reset rate-limited (${rate.reason}): ${normalizedEmail} ip=${clientIp}`);
+      console.log(
+        `auth-generate-password-reset rate-limited (${rate.reason}): ${normalizedEmail} ip=${clientIp}`,
+      );
       return new Response(
         JSON.stringify({
           ok: false,
@@ -81,35 +104,34 @@ serve(async (req: Request): Promise<Response> => {
     await recordPasswordResetAttempt(supabaseAdmin, {
       email: normalizedEmail,
       ip: clientIp,
-      endpoint: "send-self-password-reset",
+      endpoint: "auth-generate-password-reset",
     });
 
-    // Check if user exists in our users table (case-insensitive)
     const { data: targetUser, error: targetError } = await supabaseAdmin
       .from("users")
       .select("user_uuid, email, first_name, last_name, tenant_id, disabled")
       .ilike("email", normalizedEmail)
       .maybeSingle();
 
-    // Security: Always return success to prevent email enumeration
-    // But only actually send email if user exists and is active
+    // Anti-enumeration: identical success for missing accounts
     if (targetError || !targetUser) {
-      console.log(`Password reset requested for non-existent email: ${normalizedEmail}`, targetError ?? "");
+      console.log(
+        `auth-generate-password-reset for non-existent email: ${normalizedEmail}`,
+        targetError ?? "",
+      );
       return genericSuccess();
     }
 
-    // Check if user is active (disabled flag)
+    // Anti-enumeration: identical success for disabled accounts
     if (targetUser.disabled) {
-      console.log(`Password reset requested for disabled user: ${normalizedEmail}`);
+      console.log(`auth-generate-password-reset for disabled user: ${normalizedEmail}`);
       return genericSuccess();
     }
 
-    console.log(`Generating self-service password reset link for ${targetUser.email}`);
+    console.log(`Generating password reset link (auth-generate) for ${targetUser.email}`);
 
-    // Get the origin for redirect URL
     const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au";
 
-    // Generate password reset link using Supabase Admin API
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: targetUser.email,
@@ -120,36 +142,26 @@ serve(async (req: Request): Promise<Response> => {
 
     if (linkError || !linkData) {
       console.error("Failed to generate reset link:", linkError);
-      return new Response(
-        JSON.stringify({ ok: false, code: "LINK_GENERATION_FAILED", detail: linkError?.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Do not reveal link-generation failure to the client (enumeration).
+      return genericSuccess();
     }
 
     const resetLink = linkData.properties?.action_link;
     if (!resetLink) {
       console.error("No action_link in response");
-      return new Response(
-        JSON.stringify({ ok: false, code: "NO_ACTION_LINK" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return genericSuccess();
     }
 
-    // Transform raw GoTrue link into scanner-safe /activate URL
     const actionUrl = new URL(resetLink);
-    const rawToken = actionUrl.searchParams.get('token');
+    const rawToken = actionUrl.searchParams.get("token");
     if (!rawToken) {
       console.error("Could not extract token from action_link");
-      return new Response(
-        JSON.stringify({ ok: false, code: "TOKEN_EXTRACT_FAILED" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return genericSuccess();
     }
-    const safeResetLink = `${APP_BASE_URL}/activate?token=${encodeURIComponent(rawToken)}&type=recovery&email=${encodeURIComponent(targetUser.email)}`;
+    const safeResetLink =
+      `${APP_BASE_URL}/activate?token=${encodeURIComponent(rawToken)}` +
+      `&type=recovery&email=${encodeURIComponent(targetUser.email)}`;
 
-    console.log(`Password reset link generated successfully for ${targetUser.email}`);
-
-    // Build the email HTML
     const recipientName = targetUser.first_name || targetUser.email.split("@")[0];
     const emailHtml = `
 <!DOCTYPE html>
@@ -164,7 +176,6 @@ serve(async (req: Request): Promise<Response> => {
     .header { background: linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%); padding: 24px; color: #fff; text-align: center; }
     .content { padding: 24px; }
     .btn { display: inline-block; background: #6b21a8; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; }
-    .btn:hover { background: #581c87; }
     .muted { color: #666; font-size: 14px; margin-top: 16px; }
     .footer { padding: 16px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #e5e7eb; }
     a { color: #6b21a8; }
@@ -179,20 +190,15 @@ serve(async (req: Request): Promise<Response> => {
     </div>
     <div class="content">
       <h2 style="color: #1f2937; margin-top: 0;">Reset your password</h2>
-      
       <p>Hey ${recipientName},</p>
-      
       <p>You requested to reset your password for your Unicorn CMS account. Click the button below to create a new password:</p>
-      
       <p style="text-align: center; margin: 28px 0;">
         <a href="${safeResetLink}" class="btn">Reset My Password</a>
       </p>
-      
       <p class="muted">If the button doesn't work, copy and paste this link into your browser:</p>
       <div class="link-box">
         <a href="${safeResetLink}">${safeResetLink}</a>
       </div>
-      
       <p class="muted">
         <strong>This link expires in 24 hours.</strong><br><br>
         If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
@@ -206,7 +212,6 @@ serve(async (req: Request): Promise<Response> => {
 </body>
 </html>`;
 
-    // Send email via Mailgun (EU region)
     const fromEmail = MAILGUN_FROM_EMAIL || `noreply@${MAILGUN_DOMAIN}`;
     const fromName = MAILGUN_FROM_NAME || "Unicorn CMS";
 
@@ -224,7 +229,7 @@ serve(async (req: Request): Promise<Response> => {
           Authorization: `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
         },
         body: formData,
-      }
+      },
     );
 
     if (!mailgunResponse.ok) {
@@ -234,19 +239,12 @@ serve(async (req: Request): Promise<Response> => {
         statusText: mailgunResponse.statusText,
         body: errorText,
       });
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          code: "EMAIL_SEND_FAILED",
-          detail: errorText,
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Anti-enumeration: same generic success even when delivery fails.
+      return genericSuccess();
     }
 
-    console.log(`Self-service password reset email sent to ${targetUser.email}`);
+    console.log(`auth-generate-password-reset email sent to ${targetUser.email}`);
 
-    // Log the action to audit (no user_id since this is self-service)
     await supabaseAdmin.from("audit_eos_events").insert({
       tenant_id: targetUser.tenant_id || 1,
       user_id: targetUser.user_uuid,
@@ -256,17 +254,14 @@ serve(async (req: Request): Promise<Response> => {
       details: {
         email: targetUser.email,
         ip: clientIp,
-        endpoint: "send-self-password-reset",
+        endpoint: "auth-generate-password-reset",
       },
     });
 
     return genericSuccess();
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Unexpected error:", error);
-    return new Response(
-      JSON.stringify({ ok: false, code: "UNEXPECTED_ERROR", detail: "An unexpected error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Prefer generic success over leaking unexpected failures for valid-looking emails.
+    return genericSuccess();
   }
 });
