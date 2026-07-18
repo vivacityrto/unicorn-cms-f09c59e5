@@ -1,6 +1,7 @@
 # Backlog: Deduplicate Vivacity team helper functions
 
 **Status:** Backlog (not urgent)  
+**GitHub:** https://github.com/vivacityrto/unicorn-cms-f09c59e5/issues/34  
 **Priority:** Low — tech debt / maintainability  
 **Risk if deferred:** Low. As of migration `20260609072651_9e6ff894-4276-4d2a-a520-31bf78732eee`, the stale variants already **delegate** to `is_vivacity_team_safe`. Behaviour is unified; the debt is naming sprawl, extra `SECURITY DEFINER` surfaces, and harder audits.  
 **Do not** attempt as a single migration.
