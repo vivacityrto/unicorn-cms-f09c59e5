@@ -1,5 +1,6 @@
 /**
- * Historical admin authorization helpers used by admin-reset-user.
+ * Historical admin authorization helpers formerly used by admin-reset-user
+ * (now a 410 FUNCTION_RETIRED stub).
  *
  * Kept for keeper-repo history. Active password-reset / recovery flows use
  * check_permission(..., 'admin.team_users.manage', 'full') instead.
