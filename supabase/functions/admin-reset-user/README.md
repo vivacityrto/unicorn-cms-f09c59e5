@@ -1,12 +1,17 @@
-# admin-reset-user (deprecated — historical)
+# admin-reset-user (retired)
 
-Superseded by `generate-recovery-link` and `send-password-reset`, which gate on
-`check_permission(..., 'admin.team_users.manage', 'full')`.
+Auth-gated orphan on production (`yxkgdalkbrriasiyyrwk`). Accepted `{ email }`
+from Vivacity Super Admins and called `admin.generateLink` (recovery). No
+in-repo callers — superseded by `generate-recovery-link` /
+`send-password-reset`.
 
-Kept for history after the 14 Jul 2026 Unicorn security audit keeper-repo
-reconciliation. The function remains ACTIVE and correctly gated on production
-(`yxkgdalkbrriasiyyrwk`); there are no in-repo callers (orphan, same pattern as
-`create-session` / C1). Do **not** redeploy a 410 stub — unlike C1 this endpoint
-is already auth-gated and not exploitable as an unauthenticated session mint.
+- **Callers:** none in this repo (`TenantUsersTab` / `AdminActions` use
+  `generate-recovery-link`)
+- **Survivor:** `generate-recovery-link` (gated:
+  `admin.team_users.manage` / `full`)
+- **Neutralization:** HTTP `410` stub (`FUNCTION_RETIRED`), same pattern as
+  `auth-send-magic-link` / `create-session` / C1
 
-Shared helper: `../_shared/admin-authorization.ts` (`canAdministerPasswords`).
+Do **not** restore the historical generateLink path. Shared helper
+`../_shared/admin-authorization.ts` (`canAdministerPasswords`) is retained
+for keeper-repo history only.
