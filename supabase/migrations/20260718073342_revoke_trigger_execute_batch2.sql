@@ -1,0 +1,80 @@
+-- Bulk remediation batch 2 — revoke EXECUTE on remaining trigger-only functions
+--
+-- Context: security advisors flag ~524 public functions with EXECUTE available
+-- to anon/authenticated (default PUBLIC grant). PR #28 revoked 102 SECURITY
+-- DEFINER trigger helpers. This batch continues the staged approach.
+--
+-- Selection criteria (this batch):
+--   1. CREATE FUNCTION ... RETURNS trigger (confirmed trigger-only)
+--   2. ZERO frontend/edge .rpc('<name>') call sites across src/ + supabase/functions/
+--   3. Not already fully revoked from anon + authenticated
+--   4. Excludes is_*/has_*/can_* helpers (none are RETURNS trigger anyway)
+--
+-- Inventory (repo reconstruction; Supabase MCP unauthenticated so live
+-- get_advisors could not be re-run in this agent environment):
+--   - 531 CREATE FUNCTION public.* names in migrations
+--   - 154 RETURNS trigger
+--   - 121 already REVOKE EXECUTE ... FROM anon (incl. PR #28)
+--   - 49 remaining RETURNS trigger with zero RPC callers → this batch
+--
+-- Safe because trigger functions fire as table/function owner; session roles
+-- anon/authenticated do not need EXECUTE for INSERT/UPDATE/DELETE to fire them.
+--
+-- After deploy: re-run get_advisors(security) and smoke-test login / client
+-- detail / task creation before the next naming-convention batch.
+
+BEGIN;
+
+REVOKE EXECUTE ON FUNCTION public.academy_lesson_set_minutes_from_video() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.academy_set_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.block_ai_event_mutation() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.check_parent_defined_lock() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.coerce_audit_appointment_attendees() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.compliance_set_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.enforce_level10_participants() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.fn_validate_allocation_reason() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.fn_validate_billing_fields() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.fn_validate_scope_tag() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.fn_validate_weights() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.set_client_audit_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.set_default_renewal_date() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.set_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.suggest_items_set_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.sync_is_vivacity_internal() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.sync_primary_contact_on_role() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.sync_rock_owner_from_seat() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.sync_user_full_name() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.tg_bulk_document_set_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.training_video_refresh_lesson_minutes() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.trg_normalise_tenant_identifier() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.trg_staff_task_status_normalize() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.trg_validate_action_item_priority_status() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_action_item_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_ai_review_flags_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_compliance_membership_timestamp() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_dd_fields_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_document_links_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_exec_weekly_review_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_meetings_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_membership_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_processes_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_sharepoint_sites_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_stages_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_system_reference_lists_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_tenant_merge_data_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_tga_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_user_ms_identity_updated_at() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_user_time_capture_settings_timestamp() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_ai_event_status() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_ai_feature_override() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_ai_feedback_rating() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_doc_file_source() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_doc_file_type() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_meeting_summary_source() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_phase_requirement_framework() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_risk_item_fields() FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_rock_scope() FROM anon, authenticated, PUBLIC;
+
+NOTIFY pgrst, 'reload schema';
+
+COMMIT;
