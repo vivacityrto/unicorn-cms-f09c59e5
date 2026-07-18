@@ -6,8 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const VIVACITY_ROLES = ["Super Admin", "Team Leader", "Team Member"];
-
 interface RecipientRow {
   id: string;
   tenant_id: number;
@@ -47,20 +45,14 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // 2. Confirm staff: is_team OR unicorn_role in VIVACITY_ROLES
-    const { data: staffRow, error: staffErr } = await svc
-      .from("users")
-      .select("user_uuid, is_team, unicorn_role")
-      .eq("user_uuid", callerId)
-      .maybeSingle();
-    if (staffErr || !staffRow) {
-      return jsonError(403, "Staff profile not found");
-    }
-    const isStaff =
-      staffRow.is_team === true ||
-      VIVACITY_ROLES.includes(staffRow.unicorn_role ?? "");
-    if (!isStaff) {
-      return jsonError(403, "Vivacity staff only");
+    // 2. Permission gate via central RPC (matches invite-user / bulk-send-invitations)
+    const { data: allowed } = await svc.rpc("check_permission", {
+      p_user_id: callerId,
+      p_feature_key: "admin.broadcast.send",
+      p_min_level: "full",
+    });
+    if (!allowed) {
+      return jsonError(403, "Insufficient permissions");
     }
 
     // 3. Parse + validate input
