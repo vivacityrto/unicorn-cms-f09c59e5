@@ -1,122 +1,35 @@
 /**
- * HISTORICAL — admin-reset-user
+ * RETIRED — Unicorn security audit follow-up (18 Jul 2026).
  *
- * Still ACTIVE on project yxkgdalkbrriasiyyrwk (gated; orphan — no in-repo callers).
- * Superseded by generate-recovery-link / send-password-reset.
+ * Previously accepted { email } from Vivacity Super Admins and called
+ * supabase.auth.admin.generateLink(type: "recovery"). Auth-gated orphan —
+ * no in-repo callers. Superseded by generate-recovery-link /
+ * send-password-reset (admin.team_users.manage / full).
  *
- * Provenance: byte-accurate deployed source, pulled directly via Supabase MCP
- * get_edge_function on 15 Jul 2026 (function id 22fc2a87-f5aa-4f10-8236-e5ed3e2649dc,
- * version 78). Not a reconstruction — this replaces an earlier reconstructed version
- * committed in PR #5 that had diverged from real production behavior (different
- * request contract, response shape, audit-log fields).
- *
- * Subsequent change: generateLink() now sets options.redirectTo to
- * `${APP_BASE_URL}/reset-password`, matching send-password-reset.
+ * Neutralization: HTTP 410 stub (FUNCTION_RETIRED), same pattern as
+ * auth-send-magic-link / create-session / C1.
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
-import { canAdministerPasswords } from "../_shared/admin-authorization.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-Deno.serve(async (req) => {
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    { auth: { persistSession: false } }
-  );
-
-  try {
-    const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-    if (!token) {
-      return new Response(JSON.stringify({ ok: false, code: "NO_AUTH", detail: "Missing Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: callerData, error: callerErr } = await supabase.auth.getUser(token);
-    if (callerErr || !callerData?.user) {
-      return new Response(JSON.stringify({ ok: false, code: "AUTH_FAILED", detail: callerErr?.message || "Unable to authenticate caller" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const caller = callerData.user;
-
-    const { data: callerProfile, error: profileErr } = await supabase
-      .from("users")
-      .select("unicorn_role, user_type, disabled, archived")
-      .eq("user_uuid", caller.id)
-      .maybeSingle();
-
-    if (profileErr || !canAdministerPasswords(callerProfile)) {
-      return new Response(JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Only active Vivacity Super Admins can generate password reset links" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { email } = await req.json();
-    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
-
-    if (!normalizedEmail) {
-      return new Response(JSON.stringify({ ok: false, code: "MISSING_EMAIL", detail: "email is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Match send-password-reset: pin recovery redirectTo to APP_BASE_URL/reset-password
-    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au";
-    const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
-      type: "recovery",
-      email: normalizedEmail,
-      options: {
-        redirectTo: `${APP_BASE_URL}/reset-password`,
-      },
-    });
-
-    if (linkErr) {
-      return new Response(JSON.stringify({ ok: false, code: "RESET_FAILED", detail: linkErr.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const resetLink = linkData?.properties?.action_link;
-    if (!resetLink) {
-      return new Response(JSON.stringify({ ok: false, code: "RESET_FAILED", detail: "No reset link generated" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    console.log("Password reset link generated successfully");
-
-    try {
-      await supabase.from("audit_user_events").insert({
-        actor_user_uuid: caller.id,
-        target_user_uuid: linkData?.user?.id,
-        action: "admin_password_reset",
-        reason: "Admin-initiated password reset",
-        details: { email: normalizedEmail },
-      });
-    } catch (auditErr) {
-      console.warn("Audit log failed (non-fatal):", auditErr);
-    }
-
-    return new Response(
-      JSON.stringify({ ok: true, resetLink }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (err: any) {
-    console.error("Unhandled error:", err);
-    return new Response(JSON.stringify({ ok: false, code: "INTERNAL", detail: err?.message || String(err) }), {
-      status: 500,
+  return new Response(
+    JSON.stringify({
+      error:
+        "This function has been retired (orphaned admin password-reset sender). Use generate-recovery-link instead.",
+      code: "FUNCTION_RETIRED",
+    }),
+    {
+      status: 410,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+    },
+  );
 });
