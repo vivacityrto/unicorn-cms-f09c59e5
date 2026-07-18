@@ -1,25 +1,29 @@
-# auth-generate-password-reset (historical / orphan)
+# auth-generate-password-reset (retired)
 
-Still ACTIVE on production (`yxkgdalkbrriasiyyrwk`) with `verify_jwt = false`.
-**No in-repo frontend callers** — the Login “Forgot Password” flow invokes
+Unauthenticated orphan on production (`yxkgdalkbrriasiyyrwk`). Duplicated
+`send-self-password-reset` with no in-repo callers — Login uses
 `send-self-password-reset` only (`src/pages/Login.tsx`).
 
-## Why this file exists
+## Live probe (18 Jul 2026)
 
-The live edge function was missing from the keeper repo. Live probes (18 Jul 2026)
-showed account enumeration:
+Anti-enumeration body was already deployed for known vs unknown emails, but
+signals remained:
 
 | Condition | Live response |
 |-----------|---------------|
-| Missing / invalid email | `400 {"error":"Valid email is required"}` |
-| Unknown email | `500 {"error":"Failed to create reset link"}` |
-| Known email | `200 {"ok":true}` |
+| Known active email | `200 {"ok":true,"message":"If an account exists…"}` |
+| Nonexistent email | `200` same body |
+| Malformed email (`not-an-email`) | `400 {"ok":false,"code":"MISSING_EMAIL",…}` |
+| Timing | Known path ~2–3s (Mailgun); unknown ~0.9–1.4s |
 
-This vendored source ports `send-self-password-reset`’s anti-enumeration
-response (always the same generic 200 message), its `users.disabled` gate, and
-shared per-email / per-IP rate limiting (`_shared/password-reset-rate-limit.ts`,
-invite-user-style 5/email/hour plus 20/IP/hour).
+`send-self-password-reset` returns the same generic `200` for malformed emails
+(only empty/missing email → `400 MISSING_EMAIL`).
 
-Deploy this patched source when ready. Prefer routing new clients to
-`send-self-password-reset`; keep this endpoint hardened while anything external
-may still call it.
+## Neutralization
+
+- **Callers:** none in this repo
+- **Survivor:** `send-self-password-reset`
+- **Stub:** HTTP `410` (`FUNCTION_RETIRED`), same pattern as
+  `auth-send-magic-link` / `create-session`
+
+Do **not** restore the historical generateLink + Mailgun path.
