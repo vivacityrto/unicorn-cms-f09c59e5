@@ -8,8 +8,10 @@
  * get_edge_function on 15 Jul 2026 (function id 22fc2a87-f5aa-4f10-8236-e5ed3e2649dc,
  * version 78). Not a reconstruction — this replaces an earlier reconstructed version
  * committed in PR #5 that had diverged from real production behavior (different
- * request contract, added a redirectTo option that doesn't exist live, different
- * response shape, different audit-log fields).
+ * request contract, response shape, audit-log fields).
+ *
+ * Subsequent change: generateLink() now sets options.redirectTo to
+ * `${APP_BASE_URL}/reset-password`, matching send-password-reset.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -67,9 +69,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Match send-password-reset: pin recovery redirectTo to APP_BASE_URL/reset-password
+    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au";
     const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email: normalizedEmail,
+      options: {
+        redirectTo: `${APP_BASE_URL}/reset-password`,
+      },
     });
 
     if (linkErr) {
