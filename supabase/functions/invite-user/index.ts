@@ -141,16 +141,13 @@ serve(async (req) => {
       });
     }
 
-    // VIVACITY invitations require admin.team_users.manage (SA) or Integrator role
-    if (
-      payload.invite_as === 'VIVACITY' &&
-      !canManageVivacityUsers &&
-      callerProfile.unicorn_role !== 'Integrator'
-    ) {
+    // VIVACITY invitations require admin.team_users.manage (Super Admin only).
+    // DB trigger enforce_invitation_role_ceiling mirrors this for direct PostgREST writes.
+    if (payload.invite_as === 'VIVACITY' && !canManageVivacityUsers) {
       return jsonResponse(403, {
         ok: false,
         code: "FORBIDDEN",
-        detail: "Only Super Admin or Integrator can invite Vivacity team members",
+        detail: "Only a Super Admin may invite Vivacity team members",
       });
     }
 
