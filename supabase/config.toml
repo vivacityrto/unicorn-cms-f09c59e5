@@ -80,9 +80,8 @@ verify_jwt = false
 [functions.send-self-password-reset]
 verify_jwt = false
 
-# Historical / still-hosted orphan (no in-repo callers). Self-service reset by
-# email; verify_jwt=false matches production. Hardened: anti-enumeration,
-# users.disabled gate, shared per-email/per-IP rate limit.
+# Retired duplicate of send-self-password-reset (no in-repo callers).
+# Deployed as HTTP 410 FUNCTION_RETIRED stub; verify_jwt=false matches production.
 [functions.auth-generate-password-reset]
 verify_jwt = false
 
