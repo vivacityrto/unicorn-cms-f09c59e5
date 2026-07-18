@@ -27,15 +27,13 @@ Deno.serve(async (req) => {
       return jsonErr(401, "UNAUTHORIZED", "Invalid token");
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("users")
-      .select("is_vivacity_internal")
-      .eq("user_uuid", user.id)
-      .single();
-
-    if (profileError || !profile?.is_vivacity_internal) {
-      return jsonErr(403, "FORBIDDEN", "Vivacity staff only");
-    }
+    // Match storage RLS: admin.team_users.manage (full) — HR/Admin only.
+    const { data: allowed } = await supabase.rpc("check_permission", {
+      p_user_id: user.id,
+      p_feature_key: "admin.team_users.manage",
+      p_min_level: "full",
+    });
+    if (!allowed) return jsonErr(403, "FORBIDDEN", "HR/Admin only");
 
     const contentType = req.headers.get("content-type") ?? "";
     const body = contentType.includes("multipart/form-data")
