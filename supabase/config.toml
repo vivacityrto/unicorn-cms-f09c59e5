@@ -80,9 +80,8 @@ verify_jwt = false
 [functions.send-self-password-reset]
 verify_jwt = false
 
-# Historical / still-hosted orphan (no in-repo callers). Self-service reset by
-# email; verify_jwt=false matches production. Hardened: anti-enumeration,
-# users.disabled gate, shared per-email/per-IP rate limit.
+# Retired duplicate of send-self-password-reset (no in-repo callers).
+# Deployed as HTTP 410 FUNCTION_RETIRED stub; verify_jwt=false matches production.
 [functions.auth-generate-password-reset]
 verify_jwt = false
 
@@ -353,8 +352,9 @@ verify_jwt = false
 [functions.send-magic-link]
 verify_jwt = false
 
-# Historical / still-hosted orphan. Handles auth in-function (NO_AUTH / AUTH_FAILED).
-# Superseded by generate-recovery-link; kept for keeper-repo history — do not stub-redeploy.
+# Retired orphaned admin password-reset sender (410 stub). verify_jwt false matches
+# project convention; neutralization is in-function (same as auth-send-magic-link / C1).
+# Survivor: generate-recovery-link.
 [functions.admin-reset-user]
 verify_jwt = false
 

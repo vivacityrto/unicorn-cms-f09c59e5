@@ -4,8 +4,8 @@
  * Mirrors invite-user's audit-table window (5 attempts / email / hour), and
  * adds a looser per-IP cap so randomized-email probes are still throttled.
  * Attempts are recorded in audit_eos_events (action: password_reset_attempt)
- * so both send-self-password-reset and auth-generate-password-reset share
- * the same budget.
+ * so send-self-password-reset (and any historical orphan that recorded under
+ * the same action) share the same budget.
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";

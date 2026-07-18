@@ -1,7 +1,7 @@
 # invite-or-reset-user (historical / orphan)
 
 Still ACTIVE on production (`yxkgdalkbrriasiyyrwk`). No in-repo callers — same
-orphan pattern as `admin-reset-user` / `create-session`.
+orphan pattern as the retired `admin-reset-user` / `create-session` stubs.
 
 Vendored into the keeper repo as part of closing **H2** from the 14 Jul 2026
 Unicorn security audit follow-up:
