@@ -337,6 +337,16 @@ verify_jwt = false
 [functions.create-session-v2]
 verify_jwt = false
 
+# Retired unauthenticated magic-link orphan (410 stub). verify_jwt false matches
+# project convention; neutralization is in-function (same as create-session / C1).
+[functions.auth-send-magic-link]
+verify_jwt = false
+
+# Gated magic-link / recovery sender (self-service or admin.team_users.manage full).
+# Auth handled in-function; gateway verify_jwt alone accepts the public anon key.
+[functions.send-magic-link]
+verify_jwt = false
+
 # Historical / still-hosted orphan. Handles auth in-function (NO_AUTH / AUTH_FAILED).
 # Superseded by generate-recovery-link; kept for keeper-repo history — do not stub-redeploy.
 [functions.admin-reset-user]
