@@ -147,47 +147,13 @@ export function useLinkedEmails(options?: {
   // Unlink email: remove attachments (storage + rows), converted notes, and the email row
   const unlinkEmailMutation = useMutation({
     mutationFn: async (emailId: string) => {
-      // 1. Load attachments to remove from storage
-      const { data: attachments } = await supabase
-        .from("email_message_attachments")
-        .select("id, storage_path")
-        .eq("email_message_id", emailId);
-
-      const paths = (attachments || [])
-        .map((a: any) => a.storage_path)
-        .filter(Boolean) as string[];
-
-      if (paths.length > 0) {
-        const { error: storageErr } = await supabase.storage
-          .from("email-attachments")
-          .remove(paths);
-        if (storageErr) {
-          // Best-effort: log but continue with DB cleanup
-          console.warn("Failed to remove some attachment files:", storageErr);
-        }
-      }
-
-      // 2. Delete attachment rows
-      const { error: attErr } = await supabase
-        .from("email_message_attachments")
-        .delete()
-        .eq("email_message_id", emailId);
-      if (attErr) throw attErr;
-
-      // 3. Delete notes that were converted from this email
-      const { error: noteErr } = await supabase
-        .from("notes")
-        .delete()
-        .eq("source_email_id", emailId);
-      if (noteErr) throw noteErr;
-
-      // 4. Delete the email row itself
-      const { error: emailErr } = await supabase
-        .from("email_messages")
-        .delete()
-        .eq("id", emailId);
-      if (emailErr) throw emailErr;
-
+      // Delegate to edge function so cleanup runs with service role and bypasses
+      // Super-Admin-only RLS on email_messages / email_message_attachments / storage.
+      const { data, error } = await supabase.functions.invoke("unlink-email", {
+        body: { email_id: emailId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       return { emailId };
     },
     onSuccess: () => {
