@@ -25,9 +25,6 @@ export interface AcademyLesson {
   is_published: boolean | null;
   is_preview: boolean | null;
   estimated_minutes: number | null;
-  video_id: string | null;
-  resource_id: string | null;
-  content_markdown: string | null;
 }
 
 export function useModulesWithLessons(courseId: number | null) {

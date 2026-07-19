@@ -926,6 +926,13 @@ export type Database = {
             referencedRelation: "academy_lessons"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "academy_lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_lesson_outline"
+            referencedColumns: ["id"]
+          },
         ]
       }
       academy_lessons: {
@@ -61009,6 +61016,67 @@ export type Database = {
           video_lesson_count: number | null
         }
         Relationships: []
+      }
+      v_academy_lesson_outline: {
+        Row: {
+          course_id: number | null
+          description: string | null
+          estimated_minutes: number | null
+          id: number | null
+          is_preview: boolean | null
+          is_published: boolean | null
+          lesson_type: string | null
+          module_id: number | null
+          sort_order: number | null
+          title: string | null
+        }
+        Insert: {
+          course_id?: number | null
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: number | null
+          is_preview?: boolean | null
+          is_published?: boolean | null
+          lesson_type?: string | null
+          module_id?: number | null
+          sort_order?: number | null
+          title?: string | null
+        }
+        Update: {
+          course_id?: number | null
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: number | null
+          is_preview?: boolean | null
+          is_published?: boolean | null
+          lesson_type?: string | null
+          module_id?: number | null
+          sort_order?: number | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "academy_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "academy_lessons_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "academy_modules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_admin_zero_progress_packages: {
         Row: {
