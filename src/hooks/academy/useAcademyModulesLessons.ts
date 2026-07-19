@@ -46,8 +46,8 @@ export function useModulesWithLessons(courseId: number | null) {
           .eq("course_id", courseId)
           .order("sort_order"),
         supabase
-          .from("academy_lessons")
-          .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown")
+          .from("v_academy_lesson_outline")
+          .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes")
           .eq("course_id", courseId)
           .order("sort_order"),
       ]);
