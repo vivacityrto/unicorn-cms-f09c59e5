@@ -25,9 +25,11 @@ export interface AcademyLesson {
   is_published: boolean | null;
   is_preview: boolean | null;
   estimated_minutes: number | null;
-  video_id: string | null;
-  resource_id: string | null;
-  content_markdown: string | null;
+  // Sensitive fields — not selected by useModulesWithLessons (view exposes structural cols only).
+  // Populated by admin builder / lesson viewer queries against the base table.
+  video_id?: string | null;
+  resource_id?: string | null;
+  content_markdown?: string | null;
 }
 
 export function useModulesWithLessons(courseId: number | null) {
@@ -44,8 +46,8 @@ export function useModulesWithLessons(courseId: number | null) {
           .eq("course_id", courseId)
           .order("sort_order"),
         supabase
-          .from("academy_lessons")
-          .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown")
+          .from("v_academy_lesson_outline")
+          .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes")
           .eq("course_id", courseId)
           .order("sort_order"),
       ]);
