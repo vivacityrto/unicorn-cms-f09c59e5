@@ -134,6 +134,49 @@ async function scanDocx(fileContent: ArrayBuffer): Promise<ScanResult> {
   }
 }
 
+// Parse PPTX file to extract merge fields from slides
+async function scanPptx(fileContent: ArrayBuffer): Promise<ScanResult> {
+  try {
+    const JSZip = (await import("https://esm.sh/jszip@3.10.1")).default;
+    const zip = await JSZip.loadAsync(fileContent);
+
+    const slideFiles = Object.keys(zip.files)
+      .filter(f => /^ppt\/slides\/slide\d+\.xml$/.test(f))
+      .sort();
+
+    const mergeFields: string[] = [];
+
+    for (const slideFile of slideFiles) {
+      const slideXml = await zip.file(slideFile)?.async("string");
+      if (!slideXml) continue;
+
+      // Extract <a:t> text runs
+      const textMatches = slideXml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+      const runText = textMatches
+        .map(m => m.replace(/<a:t[^>]*>/, '').replace('</a:t>', ''))
+        .join(' ');
+      mergeFields.push(...extractMergeFields(runText));
+
+      // Fallback: strip all XML tags in case placeholders are split across runs
+      const strippedText = slideXml.replace(/<[^>]+>/g, ' ');
+      mergeFields.push(...extractMergeFields(strippedText));
+    }
+
+    const uniqueFields = [...new Set(mergeFields)];
+
+    console.log(`PPTX scan found ${uniqueFields.length} merge fields across ${slideFiles.length} slides`);
+
+    return {
+      merge_fields: uniqueFields,
+      named_ranges: [],
+      scan_method: "pptx_scan"
+    };
+  } catch (error) {
+    console.error("Error scanning PPTX:", error);
+    return { merge_fields: [], named_ranges: [], scan_method: "pptx_scan_error" };
+  }
+}
+
 // Parse XLSX file to extract merge fields, named ranges, and data validations
 async function scanXlsx(fileContent: ArrayBuffer): Promise<ScanResult> {
   try {
@@ -397,14 +440,17 @@ serve(async (req) => {
     // Determine file type and scan accordingly
     const isWord = fileName.endsWith(".docx") || fileFormat === "word" || fileFormat === "docx";
     const isExcel = fileName.endsWith(".xlsx") || fileFormat === "excel" || fileFormat === "xlsx" || fileFormat === "xls";
-    
+    const isPpt = fileName.endsWith(".pptx") || fileFormat === "powerpoint" || fileFormat === "pptx";
+
     if (isWord) {
       scanResult = await scanDocx(fileBuffer);
     } else if (isExcel) {
       scanResult = await scanXlsx(fileBuffer);
+    } else if (isPpt) {
+      scanResult = await scanPptx(fileBuffer);
     } else {
       return new Response(
-        JSON.stringify({ error: "Unsupported file type. Only .docx and .xlsx are supported." }),
+        JSON.stringify({ error: "Unsupported file type. Only .docx, .xlsx, and .pptx are supported." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

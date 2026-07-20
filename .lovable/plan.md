@@ -1,48 +1,37 @@
-## Goal
-Enhance the "Link Documents from Library" dialog inside `src/components/stage/StageDocumentsPanel.tsx` with richer filtering — category, file type, framework, and SharePoint status — matching patterns already established in `AddExistingDocumentDialog.tsx` and `ManageDocuments.tsx`. Filtering-only change; selection, footer, and data model untouched.
+# PPTX merge-field detection
 
-## Changes
+Port existing pptx scan logic (already in `analyze-document/index.ts`) into the two edge functions that currently only handle docx/xlsx.
 
-### `src/components/stage/StageDocumentsPanel.tsx`
+## 1. `supabase/functions/scan-document/index.ts`
 
-1. **Extend the local `Document` interface**
-   - Add `framework_type: string | null` and `source_template_url: string | null`.
+Add a `scanPptx(fileContent: ArrayBuffer): Promise<ScanResult>` function alongside `scanDocx` and `scanXlsx`.
 
-2. **Extend `fetchLibraryDocs` query**
-   - Select `framework_type` and `source_template_url` alongside the existing `id, title, format, category, description`.
-   - No new query round-trips; existing single fetch remains.
+Behavior:
+- Load the file with JSZip (same import as `scanDocx`).
+- List entries matching `ppt/slides/slide*.xml` (sorted).
+- For each slide XML: extract `<a:t>…</a:t>` text runs, join, run `extractMergeFields()` (the same helper already used by docx). Also strip XML tags and re-run `extractMergeFields()` as a fallback so placeholders split across text runs are still detected (mirrors the docx `replace(/<[^>]+>/g, ' ')` approach).
+- Deduplicate, return `{ merge_fields, named_ranges: [], scan_method: "pptx_scan" }`.
+- Wrap in try/catch returning `scan_method: "pptx_scan_error"` on failure (parallels docx).
 
-3. **Add filter state**
-   - `categoryFilter: string` (default `"all"`)
-   - `fileTypeFilter: string` (default `"all"`) — values: `all | word | pdf | excel | powerpoint`, aligned with the format buckets used by `getFileTypeBadge`.
-   - `frameworkFilter: string` (default `"all"`) — supports `all`, `__none__`, or a framework `value`.
-   - `sharepointFilter: string` (default `"all"`) — `all | has | none`.
+Wire into the format branch (around lines 397-410):
+- Add `const isPpt = fileName.endsWith(".pptx") || fileFormat === "powerpoint" || fileFormat === "pptx";`
+- Add `else if (isPpt) { scanResult = await scanPptx(fileBuffer); }` before the unsupported-type 400.
+- Keep the existing docx/xlsx branches and error message unchanged (message updated to mention .pptx).
+- The existing "update `documents` row with `merge_fields`/`detected_merge_fields`" path (lines 412-438) already handles the returned ScanResult — no changes needed there. The xlsx-only `upsert_excel_template_bindings` block (line 441+) is gated by `isExcel` and stays untouched.
 
-4. **Data hooks**
-   - Use `useDocumentCategories()` for category options (same shape as `AddExistingDocumentDialog.tsx`: "All Categories" + one `SelectItem` per active category).
-   - Add a `useQuery` for `dd_governance_framework` (label/value/is_active/sort_order) mirroring the query used in `ManageDocuments.tsx`; render "All frameworks", "No framework" (`__none__`), then one item per row.
+## 2. `supabase/functions/import-sharepoint-template/index.ts`
 
-5. **Extend `filteredLibraryDocs`**
-   - Keep client-side filtering over already-fetched `libraryDocs`.
-   - Combine all predicates with AND:
-     - existing search-text match on title/category/description
-     - category: match `doc.category === categoryFilter` when not `all`
-     - file type: bucket `doc.format` into word/pdf/excel/powerpoint using the same logic that drives `getFileTypeBadge`, then compare
-     - framework: `all` → skip; `__none__` → `!doc.framework_type`; otherwise `doc.framework_type === frameworkFilter`
-     - SharePoint: `has` → `!!doc.source_template_url`; `none` → `!doc.source_template_url`
+Extend the merge-field gate at line 206 to also cover pptx.
 
-6. **Layout inside the dialog**
-   - Row 1 (unchanged): full-width search `Input`.
-   - Row 2 (new): responsive `flex flex-wrap gap-2` (or `grid grid-cols-2 md:grid-cols-4`) containing the four shadcn `Select`s in this order — Category, File Type, Framework, SharePoint. Styling matches existing shadcn selects already in this dialog/file.
-   - "Clear filters" — small ghost/link `Button` shown only when any of the four dropdowns is non-default OR the search input is non-empty; resets all filter state to defaults.
-   - Scrollable document list below remains as-is.
+- Replace the `isDocx` gate with `isDocx || isPptx` where `isPptx = fileName.toLowerCase().endsWith('.pptx')`.
+- Add a `scanPptxMergeFields(fileContent, documentId, supabase)` helper alongside `scanDocxMergeFields`, with the same signature and return shape (`{ detected_fields, invalid_tags, fields_linked }`).
+  - Unzip via the existing `zip.ZipReader` / `BlobReader` pattern already used in `scanDocxMergeFields`.
+  - Iterate entries matching `/^ppt\/slides\/slide\d+\.xml$/`.
+  - For each entry decode XML, strip tags with `.replace(/<[^>]+>/g, '')` (same tactic as docx to defeat split-run splitting), accumulate into `allText`.
+  - Run the same `{{tag}}` extraction, `dd_fields` lookup, and `document_fields` sync that `scanDocxMergeFields` performs — factor the shared "text → detected/invalid/linked" tail into a small helper if straightforward, otherwise duplicate.
+- In the branch, call `scanDocxMergeFields` for docx and `scanPptxMergeFields` for pptx. Everything downstream (`detected_fields`, `document_template_mappings` auto-insert at lines 218-258) is format-agnostic and already works off `detected_fields`.
 
-7. **No changes** to:
-   - The category taxonomy or persistence.
-   - Row checkbox/selection state.
-   - The "Link N Documents" footer button and its handler.
-   - `getFileTypeBadge` implementation (only its bucket boundaries are reused for the file-type filter).
-
-## Verification
-- Type-check the modified file.
-- Manually walk the dialog: each dropdown narrows results; combined filters intersect correctly; "Clear filters" appears only when active and restores the full list; selection state persists across filter changes (since selection lives outside `filteredLibraryDocs`).
+## Out of scope
+- `deliver-governance-document` / `processPptxTemplate` — untouched.
+- Frontend (`DocumentDetail.tsx`, `DocumentScanStatus.tsx`, `MergeFieldsEditor.tsx`) — untouched.
+- Excel (`.xlsx`) paths in both functions — untouched.

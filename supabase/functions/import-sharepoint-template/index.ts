@@ -203,10 +203,14 @@ async function handleImport(
   let invalid_tags: string[] = [];
   let fields_linked = 0;
 
-  const isDocx = fileName.toLowerCase().endsWith('.docx');
-  if (isDocx) {
+  const lowerName = fileName.toLowerCase();
+  const isDocx = lowerName.endsWith('.docx');
+  const isPptx = lowerName.endsWith('.pptx');
+  if (isDocx || isPptx) {
     try {
-      const scanResult = await scanDocxMergeFields(fileContent, document_id, supabase);
+      const scanResult = isPptx
+        ? await scanPptxMergeFields(fileContent, document_id, supabase)
+        : await scanDocxMergeFields(fileContent, document_id, supabase);
       detected_fields = scanResult.detected_fields;
       invalid_tags = scanResult.invalid_tags;
       fields_linked = scanResult.fields_linked;
@@ -310,7 +314,58 @@ async function scanDocxMergeFields(
   }
   await reader.close();
 
-  // 2. Find all {{...}} patterns in the concatenated text
+  return await classifyAndSyncMergeFields(allText, documentId, supabase);
+}
+
+/**
+ * Scan a PPTX file for {{...}} merge field patterns across all slides.
+ * Matches against dd_fields tags and syncs document_fields table.
+ */
+async function scanPptxMergeFields(
+  fileContent: Uint8Array,
+  documentId: number,
+  supabase: ReturnType<typeof createClient>,
+): Promise<{
+  detected_fields: Array<{ tag: string; field_id: number }>;
+  invalid_tags: string[];
+  fields_linked: number;
+}> {
+  const blob = new Blob([fileContent.slice().buffer]);
+  const reader = new zip.ZipReader(new zip.BlobReader(blob));
+  const entries = await reader.getEntries();
+
+  const slidePattern = /^ppt\/slides\/slide\d+\.xml$/;
+
+  let allText = '';
+  for (const entry of entries) {
+    if (!entry.getData) continue;
+    if (!slidePattern.test(entry.filename)) continue;
+
+    const data = await entry.getData(new zip.BlobWriter());
+    const arrayBuffer = await data.arrayBuffer();
+    const xmlContent = new TextDecoder().decode(arrayBuffer);
+
+    // Strip all XML tags to defeat split-run splitting (same tactic as docx)
+    allText += xmlContent.replace(/<[^>]+>/g, '') + ' ';
+  }
+  await reader.close();
+
+  return await classifyAndSyncMergeFields(allText, documentId, supabase);
+}
+
+/**
+ * Given the raw concatenated text of a template, find {{...}} placeholders,
+ * classify against dd_fields, and sync document_fields for the document.
+ */
+async function classifyAndSyncMergeFields(
+  allText: string,
+  documentId: number,
+  supabase: ReturnType<typeof createClient>,
+): Promise<{
+  detected_fields: Array<{ tag: string; field_id: number }>;
+  invalid_tags: string[];
+  fields_linked: number;
+}> {
   const mergeFieldRegex = /\{\{\s*([^}]+?)\s*\}\}/g;
   const foundTags = new Set<string>();
   let match: RegExpExecArray | null;
@@ -323,7 +378,6 @@ async function scanDocxMergeFields(
     return { detected_fields: [], invalid_tags: [], fields_linked: 0 };
   }
 
-  // 3. Fetch all dd_fields tags
   const { data: ddFields } = await supabase
     .from('dd_fields')
     .select('id, tag')
@@ -334,7 +388,6 @@ async function scanDocxMergeFields(
     tagMap.set(f.tag, f.id);
   }
 
-  // 4. Classify found tags
   const detected_fields: Array<{ tag: string; field_id: number }> = [];
   const invalid_tags: string[] = [];
 
@@ -347,7 +400,6 @@ async function scanDocxMergeFields(
     }
   }
 
-  // 5. Sync document_fields: clear old, insert new
   if (detected_fields.length > 0) {
     await supabase
       .from('document_fields')
