@@ -116,6 +116,30 @@ export function StageDocumentsPanel({
   const [aiStatusFilter, setAiStatusFilter] = useState<string>('all');
   const [nameFilter, setNameFilter] = useState('');
 
+  // Library dialog: dropdown data
+  const { categories: ddCategories } = useDocumentCategories();
+  const { data: frameworks } = useQuery({
+    queryKey: ['dd_governance_framework'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('dd_governance_framework')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      return data || [];
+    },
+  });
+
+  // Bucket a document format into the filter's file-type category
+  const getFileTypeBucket = (format: string | null): 'word' | 'pdf' | 'excel' | 'powerpoint' | 'other' => {
+    const f = (format || '').toLowerCase();
+    if (f.includes('pdf')) return 'pdf';
+    if (f.includes('doc') || f.includes('word')) return 'word';
+    if (f.includes('xls') || f.includes('excel')) return 'excel';
+    if (f.includes('ppt') || f.includes('powerpoint')) return 'powerpoint';
+    return 'other';
+  };
+
   // Get file type badge color
   const getFileTypeBadge = (format: string | null) => {
     const formatLower = (format || '').toLowerCase();
