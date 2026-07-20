@@ -822,28 +822,27 @@ export function StageDocumentsPanel({
                     return (
                       <div
                         key={doc.id}
-                        className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${
+                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
                           isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
                         }`}
                         onClick={() => toggleDocSelection(doc.id)}
                       >
-                        <div className="pt-0.5">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => toggleDocSelection(doc.id)}
-                          />
-                        </div>
-                        <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium block truncate leading-tight">{doc.title}</span>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleDocSelection(doc.id)}
+                          className="shrink-0"
+                        />
+                        <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0 py-0.5">
+                          <div className="font-medium text-sm truncate leading-5">{doc.title}</div>
                           {doc.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1 mt-1 leading-relaxed">
+                            <div className="text-xs text-muted-foreground truncate leading-5 mt-0.5">
                               {doc.description}
-                            </p>
+                            </div>
                           )}
                         </div>
-                        <div className="flex flex-wrap items-start justify-end gap-2 shrink-0 max-w-[40%]">
-                          <Badge variant="outline" className={`text-xs ${fileType.className}`}>
+                        <div className="flex items-center justify-end gap-1.5 shrink-0 max-w-[35%] flex-wrap">
+                          <Badge variant="outline" className={`text-xs whitespace-nowrap ${fileType.className}`}>
                             {fileType.label}
                           </Badge>
                           {doc.category && (
