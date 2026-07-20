@@ -225,9 +225,28 @@ export function StageDocumentsPanel({
   const openLinkDialog = () => {
     setSelectedDocIds(new Set());
     setSearchQuery('');
+    setLibraryCategoryFilter('all');
+    setLibraryFileTypeFilter('all');
+    setLibraryFrameworkFilter('all');
+    setLibrarySharepointFilter('all');
     setLinkDialogOpen(true);
     fetchLibraryDocs();
   };
+
+  const clearLibraryFilters = () => {
+    setSearchQuery('');
+    setLibraryCategoryFilter('all');
+    setLibraryFileTypeFilter('all');
+    setLibraryFrameworkFilter('all');
+    setLibrarySharepointFilter('all');
+  };
+
+  const hasActiveLibraryFilters =
+    searchQuery !== '' ||
+    libraryCategoryFilter !== 'all' ||
+    libraryFileTypeFilter !== 'all' ||
+    libraryFrameworkFilter !== 'all' ||
+    librarySharepointFilter !== 'all';
 
   // Toggle document selection
   const toggleDocSelection = (docId: number) => {
