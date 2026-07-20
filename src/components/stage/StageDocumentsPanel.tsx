@@ -33,6 +33,8 @@ interface Document {
   format: string | null;
   category: string | null;
   description?: string | null;
+  framework_type?: string | null;
+  source_template_url?: string | null;
   document_status?: string | null;
   current_published_version_id?: string | null;
   ai_status?: AIStatus;
