@@ -140,6 +140,10 @@ export function SharePointTemplateBrowser({
       if (item.isFolder) return true;
       return item.name.toLowerCase().includes(filterText.toLowerCase());
     })
+    .filter((item) => {
+      if (!hideImported || item.isFolder) return true;
+      return !importedItemIds.has(item.id);
+    })
     .sort((a, b) => {
       if (a.isFolder && !b.isFolder) return -1;
       if (!a.isFolder && b.isFolder) return 1;
