@@ -44,6 +44,8 @@ export function SharePointTemplateBrowser({
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbEntry[]>([{ id: null, name: 'Root' }]);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [filterText, setFilterText] = useState(initialFilter);
+  const [hideImported, setHideImported] = useState(false);
+  const [importedItemIds, setImportedItemIds] = useState<Set<string>>(new Set());
   const autoNavigatedRef = useRef(false);
 
   const browse = async (folderId?: string) => {
