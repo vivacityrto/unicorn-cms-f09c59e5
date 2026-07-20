@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +33,8 @@ interface Document {
   format: string | null;
   category: string | null;
   description?: string | null;
+  framework_type?: string | null;
+  source_template_url?: string | null;
   document_status?: string | null;
   current_published_version_id?: string | null;
   ai_status?: AIStatus;
@@ -92,6 +96,10 @@ export function StageDocumentsPanel({
   const [libraryDocs, setLibraryDocs] = useState<Document[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<string>('all');
+  const [libraryFileTypeFilter, setLibraryFileTypeFilter] = useState<string>('all');
+  const [libraryFrameworkFilter, setLibraryFrameworkFilter] = useState<string>('all');
+  const [librarySharepointFilter, setLibrarySharepointFilter] = useState<string>('all');
   const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
   const [isLinking, setIsLinking] = useState(false);
   
@@ -107,6 +115,30 @@ export function StageDocumentsPanel({
   // Filters
   const [aiStatusFilter, setAiStatusFilter] = useState<string>('all');
   const [nameFilter, setNameFilter] = useState('');
+
+  // Library dialog: dropdown data
+  const { categories: ddCategories } = useDocumentCategories();
+  const { data: frameworks } = useQuery({
+    queryKey: ['dd_governance_framework'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('dd_governance_framework')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      return data || [];
+    },
+  });
+
+  // Bucket a document format into the filter's file-type category
+  const getFileTypeBucket = (format: string | null): 'word' | 'pdf' | 'excel' | 'powerpoint' | 'other' => {
+    const f = (format || '').toLowerCase();
+    if (f.includes('pdf')) return 'pdf';
+    if (f.includes('doc') || f.includes('word')) return 'word';
+    if (f.includes('xls') || f.includes('excel')) return 'excel';
+    if (f.includes('ppt') || f.includes('powerpoint')) return 'powerpoint';
+    return 'other';
+  };
 
   // Get file type badge color
   const getFileTypeBadge = (format: string | null) => {
@@ -165,7 +197,7 @@ export function StageDocumentsPanel({
       while (true) {
         const { data: page, error: pageErr } = await supabase
           .from('documents')
-          .select('id, title, format, category, description')
+          .select('id, title, format, category, description, framework_type, source_template_url')
           .order('title', { ascending: true })
           .range(from, from + PAGE - 1);
         if (pageErr) throw pageErr;
@@ -193,9 +225,28 @@ export function StageDocumentsPanel({
   const openLinkDialog = () => {
     setSelectedDocIds(new Set());
     setSearchQuery('');
+    setLibraryCategoryFilter('all');
+    setLibraryFileTypeFilter('all');
+    setLibraryFrameworkFilter('all');
+    setLibrarySharepointFilter('all');
     setLinkDialogOpen(true);
     fetchLibraryDocs();
   };
+
+  const clearLibraryFilters = () => {
+    setSearchQuery('');
+    setLibraryCategoryFilter('all');
+    setLibraryFileTypeFilter('all');
+    setLibraryFrameworkFilter('all');
+    setLibrarySharepointFilter('all');
+  };
+
+  const hasActiveLibraryFilters =
+    searchQuery !== '' ||
+    libraryCategoryFilter !== 'all' ||
+    libraryFileTypeFilter !== 'all' ||
+    libraryFrameworkFilter !== 'all' ||
+    librarySharepointFilter !== 'all';
 
   // Toggle document selection
   const toggleDocSelection = (docId: number) => {
@@ -276,10 +327,31 @@ export function StageDocumentsPanel({
   };
 
   // Filter library docs by search
-  const filteredLibraryDocs = libraryDocs.filter(doc => 
-    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (doc.category || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLibraryDocs = libraryDocs.filter(doc => {
+    const q = searchQuery.toLowerCase();
+    if (q) {
+      const matchesText =
+        doc.title.toLowerCase().includes(q) ||
+        (doc.category || '').toLowerCase().includes(q) ||
+        (doc.description || '').toLowerCase().includes(q);
+      if (!matchesText) return false;
+    }
+    if (libraryCategoryFilter !== 'all' && doc.category !== libraryCategoryFilter) return false;
+    if (libraryFileTypeFilter !== 'all' && getFileTypeBucket(doc.format) !== libraryFileTypeFilter) return false;
+    if (libraryFrameworkFilter !== 'all') {
+      if (libraryFrameworkFilter === '__none__') {
+        if (doc.framework_type) return false;
+      } else if (doc.framework_type !== libraryFrameworkFilter) {
+        return false;
+      }
+    }
+    if (librarySharepointFilter === 'has') {
+      if (!doc.source_template_url) return false;
+    } else if (librarySharepointFilter === 'none') {
+      if (doc.source_template_url) return false;
+    }
+    return true;
+  });
 
   // Wrap action if certified
   const safeAction = (fn: () => void) => {
@@ -649,15 +721,81 @@ export function StageDocumentsPanel({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+          <div className="space-y-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search documents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={libraryCategoryFilter} onValueChange={setLibraryCategoryFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {ddCategories.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={libraryFileTypeFilter} onValueChange={setLibraryFileTypeFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[150px] text-sm">
+                  <SelectValue placeholder="File Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All File Types</SelectItem>
+                  <SelectItem value="word">Word</SelectItem>
+                  <SelectItem value="pdf">PDF</SelectItem>
+                  <SelectItem value="excel">Excel</SelectItem>
+                  <SelectItem value="powerpoint">PowerPoint</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={libraryFrameworkFilter} onValueChange={setLibraryFrameworkFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                  <SelectValue placeholder="Framework" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Frameworks</SelectItem>
+                  <SelectItem value="__none__">No Framework</SelectItem>
+                  {frameworks?.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={librarySharepointFilter} onValueChange={setLibrarySharepointFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                  <SelectValue placeholder="SharePoint" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All SharePoint</SelectItem>
+                  <SelectItem value="has">Has SharePoint URL</SelectItem>
+                  <SelectItem value="none">No SharePoint URL</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {hasActiveLibraryFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 text-xs"
+                  onClick={clearLibraryFilters}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear filters
+                </Button>
+              )}
+            </div>
           </div>
+
 
           <div className="border rounded-lg">
             {loadingLibrary ? (
