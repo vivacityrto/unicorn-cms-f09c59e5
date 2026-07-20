@@ -203,10 +203,14 @@ async function handleImport(
   let invalid_tags: string[] = [];
   let fields_linked = 0;
 
-  const isDocx = fileName.toLowerCase().endsWith('.docx');
-  if (isDocx) {
+  const lowerName = fileName.toLowerCase();
+  const isDocx = lowerName.endsWith('.docx');
+  const isPptx = lowerName.endsWith('.pptx');
+  if (isDocx || isPptx) {
     try {
-      const scanResult = await scanDocxMergeFields(fileContent, document_id, supabase);
+      const scanResult = isPptx
+        ? await scanPptxMergeFields(fileContent, document_id, supabase)
+        : await scanDocxMergeFields(fileContent, document_id, supabase);
       detected_fields = scanResult.detected_fields;
       invalid_tags = scanResult.invalid_tags;
       fields_linked = scanResult.fields_linked;
