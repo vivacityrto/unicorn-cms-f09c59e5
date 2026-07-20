@@ -48,6 +48,20 @@ export function SharePointTemplateBrowser({
   const [importedItemIds, setImportedItemIds] = useState<Set<string>>(new Set());
   const autoNavigatedRef = useRef(false);
 
+  const fetchImportedItemIds = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('document_versions')
+        .select('source_drive_item_id')
+        .not('source_drive_item_id', 'is', null);
+      if (error) throw error;
+      const ids = new Set<string>((data || []).map((row) => row.source_drive_item_id as string));
+      setImportedItemIds(ids);
+    } catch (err: any) {
+      console.error('Failed to load imported item IDs:', err.message);
+    }
+  };
+
   const browse = async (folderId?: string) => {
     setLoading(true);
     setSelectedFile(null);
@@ -61,6 +75,7 @@ export function SharePointTemplateBrowser({
       setItems(data.items || []);
       if (data.drive_id) setDriveId(data.drive_id);
       setInitialLoaded(true);
+      await fetchImportedItemIds();
       return data.items || [];
     } catch (err: any) {
       toast.error(err.message || 'Failed to browse SharePoint');
