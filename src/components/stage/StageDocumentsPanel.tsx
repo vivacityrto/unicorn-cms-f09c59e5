@@ -96,6 +96,10 @@ export function StageDocumentsPanel({
   const [libraryDocs, setLibraryDocs] = useState<Document[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<string>('all');
+  const [libraryFileTypeFilter, setLibraryFileTypeFilter] = useState<string>('all');
+  const [libraryFrameworkFilter, setLibraryFrameworkFilter] = useState<string>('all');
+  const [librarySharepointFilter, setLibrarySharepointFilter] = useState<string>('all');
   const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
   const [isLinking, setIsLinking] = useState(false);
   
