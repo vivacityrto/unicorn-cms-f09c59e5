@@ -814,7 +814,7 @@ export function StageDocumentsPanel({
                 </p>
               </div>
             ) : (
-              <ScrollArea className="h-full">
+              <ScrollArea className="h-full [&>[data-radix-scroll-area-viewport]>div]:!block">
                 <div className="divide-y">
                   {filteredLibraryDocs.map((doc) => {
                     const isSelected = selectedDocIds.has(doc.id);
