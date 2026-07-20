@@ -169,22 +169,32 @@ export function SharePointTemplateBrowser({
       </div>
 
       {/* Filter input */}
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Filter files by name..."
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value)}
-          className="pl-9 pr-9 h-9 text-sm"
-        />
-        {filterText && (
-          <button
-            onClick={() => setFilterText('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter files by name..."
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            className="pl-9 pr-9 h-9 text-sm"
+          />
+          {filterText && (
+            <button
+              onClick={() => setFilterText('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Button
+          variant={hideImported ? 'default' : 'outline'}
+          size="sm"
+          className="h-9 whitespace-nowrap"
+          onClick={() => setHideImported((v) => !v)}
+        >
+          Hide already-imported
+        </Button>
       </div>
 
       {/* File list */}
