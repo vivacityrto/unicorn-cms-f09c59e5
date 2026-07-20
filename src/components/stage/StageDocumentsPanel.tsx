@@ -197,7 +197,7 @@ export function StageDocumentsPanel({
       while (true) {
         const { data: page, error: pageErr } = await supabase
           .from('documents')
-          .select('id, title, format, category, description')
+          .select('id, title, format, category, description, framework_type, source_template_url')
           .order('title', { ascending: true })
           .range(from, from + PAGE - 1);
         if (pageErr) throw pageErr;
