@@ -1,37 +1,48 @@
-Implement a toggle in `src/components/documents/SharePointTemplateBrowser.tsx` that hides SharePoint files already imported as governance document versions.
+## Goal
+Enhance the "Link Documents from Library" dialog inside `src/components/stage/StageDocumentsPanel.tsx` with richer filtering — category, file type, framework, and SharePoint status — matching patterns already established in `AddExistingDocumentDialog.tsx` and `ManageDocuments.tsx`. Filtering-only change; selection, footer, and data model untouched.
 
-## What to build
+## Changes
 
-1. Track already-imported Graph item IDs
-   - Add state `importedItemIds: Set<string>`.
-   - On component mount and after every successful `browse()` load, query Supabase:
-     ```ts
-     const { data } = await supabase
-       .from('document_versions')
-       .select('source_drive_item_id')
-       .not('source_drive_item_id', 'is', null);
-     ```
-   - Build a `Set<string>` of the returned `source_drive_item_id` values.
+### `src/components/stage/StageDocumentsPanel.tsx`
 
-2. Add the toggle UI
-   - Add state `hideImported: boolean` defaulting to `false`.
-   - Place a `<Button>` immediately next to the existing "Filter files by name..." search input, using the same pattern as `showDuplicatesOnly` in `ManageDocuments.tsx`:
-     ```tsx
-     <Button
-       variant={hideImported ? "default" : "outline"}
-       onClick={() => setHideImported((v) => !v)}
-     >
-       Hide already-imported
-     </Button>
-     ```
-   - Wrap the input and button in a flex row so they sit side by side.
+1. **Extend the local `Document` interface**
+   - Add `framework_type: string | null` and `source_template_url: string | null`.
 
-3. Apply the additional filter
-   - Extend `filteredItems` computation so that when `hideImported` is true, non-folder items whose `id` exists in `importedItemIds` are excluded.
-   - Folders remain visible regardless of the toggle.
-   - The existing `filterText` name filter and folder-first sort continue to work unchanged.
+2. **Extend `fetchLibraryDocs` query**
+   - Select `framework_type` and `source_template_url` alongside the existing `id, title, format, category, description`.
+   - No new query round-trips; existing single fetch remains.
 
-## Out of scope
-- No changes to selection, multi-select, or auto-navigation logic.
-- No changes to the `browse()` edge-function invocation or returned data shape.
-- No changes to other components.
+3. **Add filter state**
+   - `categoryFilter: string` (default `"all"`)
+   - `fileTypeFilter: string` (default `"all"`) — values: `all | word | pdf | excel | powerpoint`, aligned with the format buckets used by `getFileTypeBadge`.
+   - `frameworkFilter: string` (default `"all"`) — supports `all`, `__none__`, or a framework `value`.
+   - `sharepointFilter: string` (default `"all"`) — `all | has | none`.
+
+4. **Data hooks**
+   - Use `useDocumentCategories()` for category options (same shape as `AddExistingDocumentDialog.tsx`: "All Categories" + one `SelectItem` per active category).
+   - Add a `useQuery` for `dd_governance_framework` (label/value/is_active/sort_order) mirroring the query used in `ManageDocuments.tsx`; render "All frameworks", "No framework" (`__none__`), then one item per row.
+
+5. **Extend `filteredLibraryDocs`**
+   - Keep client-side filtering over already-fetched `libraryDocs`.
+   - Combine all predicates with AND:
+     - existing search-text match on title/category/description
+     - category: match `doc.category === categoryFilter` when not `all`
+     - file type: bucket `doc.format` into word/pdf/excel/powerpoint using the same logic that drives `getFileTypeBadge`, then compare
+     - framework: `all` → skip; `__none__` → `!doc.framework_type`; otherwise `doc.framework_type === frameworkFilter`
+     - SharePoint: `has` → `!!doc.source_template_url`; `none` → `!doc.source_template_url`
+
+6. **Layout inside the dialog**
+   - Row 1 (unchanged): full-width search `Input`.
+   - Row 2 (new): responsive `flex flex-wrap gap-2` (or `grid grid-cols-2 md:grid-cols-4`) containing the four shadcn `Select`s in this order — Category, File Type, Framework, SharePoint. Styling matches existing shadcn selects already in this dialog/file.
+   - "Clear filters" — small ghost/link `Button` shown only when any of the four dropdowns is non-default OR the search input is non-empty; resets all filter state to defaults.
+   - Scrollable document list below remains as-is.
+
+7. **No changes** to:
+   - The category taxonomy or persistence.
+   - Row checkbox/selection state.
+   - The "Link N Documents" footer button and its handler.
+   - `getFileTypeBadge` implementation (only its bucket boundaries are reused for the file-type filter).
+
+## Verification
+- Type-check the modified file.
+- Manually walk the dialog: each dropdown narrows results; combined filters intersect correctly; "Clear filters" appears only when active and restores the full list; selection state persists across filter changes (since selection lives outside `filteredLibraryDocs`).
