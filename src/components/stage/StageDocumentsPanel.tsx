@@ -327,10 +327,31 @@ export function StageDocumentsPanel({
   };
 
   // Filter library docs by search
-  const filteredLibraryDocs = libraryDocs.filter(doc => 
-    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (doc.category || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLibraryDocs = libraryDocs.filter(doc => {
+    const q = searchQuery.toLowerCase();
+    if (q) {
+      const matchesText =
+        doc.title.toLowerCase().includes(q) ||
+        (doc.category || '').toLowerCase().includes(q) ||
+        (doc.description || '').toLowerCase().includes(q);
+      if (!matchesText) return false;
+    }
+    if (libraryCategoryFilter !== 'all' && doc.category !== libraryCategoryFilter) return false;
+    if (libraryFileTypeFilter !== 'all' && getFileTypeBucket(doc.format) !== libraryFileTypeFilter) return false;
+    if (libraryFrameworkFilter !== 'all') {
+      if (libraryFrameworkFilter === '__none__') {
+        if (doc.framework_type) return false;
+      } else if (doc.framework_type !== libraryFrameworkFilter) {
+        return false;
+      }
+    }
+    if (librarySharepointFilter === 'has') {
+      if (!doc.source_template_url) return false;
+    } else if (librarySharepointFilter === 'none') {
+      if (doc.source_template_url) return false;
+    }
+    return true;
+  });
 
   // Wrap action if certified
   const safeAction = (fn: () => void) => {
