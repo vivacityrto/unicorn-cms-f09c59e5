@@ -721,15 +721,81 @@ export function StageDocumentsPanel({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+          <div className="space-y-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search documents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={libraryCategoryFilter} onValueChange={setLibraryCategoryFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {ddCategories.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={libraryFileTypeFilter} onValueChange={setLibraryFileTypeFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[150px] text-sm">
+                  <SelectValue placeholder="File Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All File Types</SelectItem>
+                  <SelectItem value="word">Word</SelectItem>
+                  <SelectItem value="pdf">PDF</SelectItem>
+                  <SelectItem value="excel">Excel</SelectItem>
+                  <SelectItem value="powerpoint">PowerPoint</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={libraryFrameworkFilter} onValueChange={setLibraryFrameworkFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                  <SelectValue placeholder="Framework" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Frameworks</SelectItem>
+                  <SelectItem value="__none__">No Framework</SelectItem>
+                  {frameworks?.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={librarySharepointFilter} onValueChange={setLibrarySharepointFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                  <SelectValue placeholder="SharePoint" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All SharePoint</SelectItem>
+                  <SelectItem value="has">Has SharePoint URL</SelectItem>
+                  <SelectItem value="none">No SharePoint URL</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {hasActiveLibraryFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 text-xs"
+                  onClick={clearLibraryFilters}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear filters
+                </Button>
+              )}
+            </div>
           </div>
+
 
           <div className="border rounded-lg">
             {loadingLibrary ? (
