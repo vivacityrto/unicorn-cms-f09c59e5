@@ -710,9 +710,9 @@ export function StageDocumentsPanel({
 
       {/* Link from Library Dialog */}
       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-6">
+          <DialogHeader className="space-y-2 shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <Link2 className="h-5 w-5" />
               Link Documents from Library
             </DialogTitle>
@@ -721,20 +721,20 @@ export function StageDocumentsPanel({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
+          <div className="space-y-3 shrink-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search documents..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-10"
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               <Select value={libraryCategoryFilter} onValueChange={setLibraryCategoryFilter}>
-                <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                <SelectTrigger className="h-10 w-full text-sm">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -746,7 +746,7 @@ export function StageDocumentsPanel({
               </Select>
 
               <Select value={libraryFileTypeFilter} onValueChange={setLibraryFileTypeFilter}>
-                <SelectTrigger className="h-9 w-full sm:w-[150px] text-sm">
+                <SelectTrigger className="h-10 w-full text-sm">
                   <SelectValue placeholder="File Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -759,7 +759,7 @@ export function StageDocumentsPanel({
               </Select>
 
               <Select value={libraryFrameworkFilter} onValueChange={setLibraryFrameworkFilter}>
-                <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                <SelectTrigger className="h-10 w-full text-sm">
                   <SelectValue placeholder="Framework" />
                 </SelectTrigger>
                 <SelectContent>
@@ -772,7 +772,7 @@ export function StageDocumentsPanel({
               </Select>
 
               <Select value={librarySharepointFilter} onValueChange={setLibrarySharepointFilter}>
-                <SelectTrigger className="h-9 w-full sm:w-[180px] text-sm">
+                <SelectTrigger className="h-10 w-full text-sm">
                   <SelectValue placeholder="SharePoint" />
                 </SelectTrigger>
                 <SelectContent>
@@ -781,12 +781,17 @@ export function StageDocumentsPanel({
                   <SelectItem value="none">No SharePoint URL</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
 
+            <div className="flex items-center justify-between min-h-[2rem]">
+              <p className="text-sm text-muted-foreground">
+                {filteredLibraryDocs.length} document{filteredLibraryDocs.length !== 1 ? 's' : ''} available
+              </p>
               {hasActiveLibraryFilters && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-9 text-xs"
+                  className="h-8 text-xs"
                   onClick={clearLibraryFilters}
                 >
                   <X className="h-3 w-3 mr-1" />
@@ -796,21 +801,20 @@ export function StageDocumentsPanel({
             </div>
           </div>
 
-
-          <div className="border rounded-lg">
+          <div className="border rounded-lg flex-1 min-h-0 overflow-hidden">
             {loadingLibrary ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-12 h-full">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : filteredLibraryDocs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="flex flex-col items-center justify-center py-12 text-center h-full">
                 <FileText className="h-8 w-8 text-muted-foreground mb-2" />
                 <p className="text-muted-foreground text-sm">
                   {searchQuery ? 'No documents match your search' : 'No available documents to link'}
                 </p>
               </div>
             ) : (
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-full">
                 <div className="divide-y">
                   {filteredLibraryDocs.map((doc) => {
                     const isSelected = selectedDocIds.has(doc.id);
@@ -818,28 +822,32 @@ export function StageDocumentsPanel({
                     return (
                       <div
                         key={doc.id}
-                        className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
+                        className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${
                           isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
                         }`}
                         onClick={() => toggleDocSelection(doc.id)}
                       >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleDocSelection(doc.id)}
-                        />
-                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="pt-0.5">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleDocSelection(doc.id)}
+                          />
+                        </div>
+                        <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <span className="font-medium block truncate">{doc.title}</span>
+                          <span className="font-medium block truncate leading-tight">{doc.title}</span>
                           {doc.description && (
-                            <p className="text-xs text-muted-foreground truncate">{doc.description}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-1 mt-1 leading-relaxed">
+                              {doc.description}
+                            </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-wrap items-start justify-end gap-2 shrink-0 max-w-[40%]">
                           <Badge variant="outline" className={`text-xs ${fileType.className}`}>
                             {fileType.label}
                           </Badge>
                           {doc.category && (
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge variant="secondary" className="text-xs truncate max-w-[140px]">
                               {doc.category}
                             </Badge>
                           )}
@@ -852,13 +860,14 @@ export function StageDocumentsPanel({
             )}
           </div>
 
-          {selectedDocIds.size > 0 && (
-            <p className="text-sm text-muted-foreground">
-              {selectedDocIds.size} document{selectedDocIds.size !== 1 ? 's' : ''} selected
-            </p>
-          )}
-
-          <DialogFooter>
+          <DialogFooter className="shrink-0 gap-2 pt-2">
+            <div className="flex-1 text-sm text-muted-foreground">
+              {selectedDocIds.size > 0 && (
+                <span>
+                  {selectedDocIds.size} document{selectedDocIds.size !== 1 ? 's' : ''} selected
+                </span>
+              )}
+            </div>
             <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>
               Cancel
             </Button>
