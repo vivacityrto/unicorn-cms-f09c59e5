@@ -55,7 +55,13 @@ export default function SupportTicketsPage() {
   }, [loading, allowed, navigate]);
 
   const { data: rows = [], isLoading } = useAdminSupportTickets();
+  const { data: helpThreads = [] } = useAdminHelpThreads();
+  const clientBadgeCount = useMemo(
+    () => helpThreads.filter((t) => t.status === 'open' && t.unanswered).length,
+    [helpThreads],
+  );
 
+  const [view, setView] = useState<'internal' | 'client'>('internal');
   const [statusTab, setStatusTab] = useState<StatusTab>('active');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
