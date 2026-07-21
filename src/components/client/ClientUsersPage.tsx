@@ -239,11 +239,11 @@ function StatusDot({ row }: { row: ClientTenantUserRow }) {
   if (row.status === "disabled") {
     dotClass = "bg-destructive";
     label = "Disabled";
-  } else if (!row.last_sign_in_at) {
+  } else if (!row.last_active_at) {
     dotClass = null;
     label = "Never signed in";
   } else {
-    const days = differenceInDays(new Date(), parseISO(row.last_sign_in_at));
+    const days = differenceInDays(new Date(), parseISO(row.last_active_at));
     if (days < 30) {
       dotClass = "bg-emerald-500";
       label = "Active";
@@ -256,7 +256,7 @@ function StatusDot({ row }: { row: ClientTenantUserRow }) {
   return (
     <div
       className="flex items-center gap-2"
-      title={row.last_sign_in_at ?? undefined}
+      title={row.last_active_at ?? undefined}
     >
       {dotClass ? (
         <span className={`inline-block h-2 w-2 rounded-full ${dotClass}`} />
@@ -293,10 +293,10 @@ function SentIndicator({ row }: { row: ClientTenantUserRow }) {
 
 function LastActive({ row }: { row: ClientTenantUserRow }) {
   if (row.row_type === "active") {
-    if (row.last_sign_in_at) {
+    if (row.last_active_at) {
       return (
         <span className="text-sm text-muted-foreground">
-          {formatDistanceToNow(parseISO(row.last_sign_in_at), { addSuffix: true })}
+          {formatDistanceToNow(parseISO(row.last_active_at), { addSuffix: true })}
         </span>
       );
     }
