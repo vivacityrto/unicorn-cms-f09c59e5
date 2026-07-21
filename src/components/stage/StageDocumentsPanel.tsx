@@ -710,7 +710,7 @@ export function StageDocumentsPanel({
 
       {/* Link from Library Dialog */}
       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-        <DialogContent className="max-w-4xl h-[85vh] h-[85dvh] !overflow-hidden !flex !flex-col p-6">
+        <DialogContent className="!max-w-[min(1200px,95vw)] w-[95vw] h-[90vh] h-[90dvh] !overflow-hidden !flex !flex-col p-6">
           <DialogHeader className="space-y-2 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <Link2 className="h-5 w-5" />
