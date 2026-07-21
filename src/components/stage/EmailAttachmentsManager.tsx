@@ -156,12 +156,25 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
     queryKey: ['core-docs-for-stage', stageId],
     enabled: !!stageId,
     queryFn: async (): Promise<CoreDoc[]> => {
-      const { data, error } = await supabase
+      const { data: linkRows, error: linkErr } = await supabase
+        .from('document_stage_links')
+        .select('document_id')
+        .eq('stage_id', stageId!);
+      if (linkErr) throw linkErr;
+      const additionalIds = Array.from(
+        new Set(((linkRows ?? []) as { document_id: number }[]).map((r) => r.document_id)),
+      );
+
+      let query = supabase
         .from('documents')
         .select('id, title, format')
-        .eq('is_core', true)
-        .eq('stage', stageId!)
-        .order('title', { ascending: true });
+        .eq('is_core', true);
+      if (additionalIds.length > 0) {
+        query = query.or(`stage.eq.${stageId},id.in.(${additionalIds.join(',')})`);
+      } else {
+        query = query.eq('stage', stageId!);
+      }
+      const { data, error } = await query.order('title', { ascending: true });
       if (error) throw error;
       return (data || []) as CoreDoc[];
     },
