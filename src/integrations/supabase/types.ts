@@ -63508,9 +63508,14 @@ export type Database = {
         Row: {
           access_scope: string | null
           avatar_url: string | null
+          click_count: number | null
+          delivery_event_at: string | null
+          delivery_status: string | null
           display_name: string | null
           email: string | null
+          first_clicked_at: string | null
           first_name: string | null
+          first_opened_at: string | null
           invite_expires_at: string | null
           invited_at: string | null
           last_name: string | null
@@ -63518,6 +63523,7 @@ export type Database = {
           last_sign_in_at: string | null
           mailgun_message_id: string | null
           member_since: string | null
+          open_count: number | null
           primary_contact: boolean | null
           relationship_role: string | null
           row_key: string | null

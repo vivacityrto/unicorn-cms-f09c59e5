@@ -32,6 +32,12 @@ export interface ClientTenantUserRow {
   member_since: string | null;
   last_sent_at: string | null;
   mailgun_message_id: string | null;
+  delivery_status?: 'delivered' | 'bounced' | 'failed' | 'complained' | null;
+  delivery_event_at?: string | null;
+  open_count?: number | null;
+  first_opened_at?: string | null;
+  click_count?: number | null;
+  first_clicked_at?: string | null;
 }
 
 export function useClientTenantUsers() {

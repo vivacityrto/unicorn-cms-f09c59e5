@@ -127,5 +127,74 @@ export function useInviteMutations() {
     },
   });
 
-  return { invite, resend, revoke };
+  const copyLink = useMutation({
+    mutationFn: async (invitationId: string) => {
+      const { data, error } = await supabase.functions.invoke("resend-invite", {
+        body: { invitation_id: invitationId, skip_email: true },
+      });
+      if (error) {
+        const edge = await extractEdgeError(error);
+        throw new Error(edge?.detail || error.message);
+      }
+      if (!data?.action_link) {
+        throw new Error("The resend-invite function did not return a link.");
+      }
+      return data as { action_link: string };
+    },
+    onSuccess: async (data) => {
+      try {
+        await navigator.clipboard.writeText(data.action_link);
+        toast({
+          title: "Link copied",
+          description: "Paste it into Teams, email, or WhatsApp.",
+        });
+      } catch {
+        toast({ title: "Link ready", description: data.action_link });
+      }
+      invalidate();
+    },
+    onError: (err: Error) => {
+      toast({ variant: "destructive", title: "Couldn't copy link", description: err.message });
+    },
+  });
+
+  const resetPassword = useMutation({
+    mutationFn: async (userUuid: string) => {
+      const { data, error } = await supabase.functions.invoke("send-password-reset", {
+        body: { user_uuid: userUuid },
+      });
+      if (error) {
+        const edge = await extractEdgeError(error);
+        const wrapped = new Error(edge?.detail || error.message) as Error & { code?: string };
+        wrapped.code = edge?.code;
+        throw wrapped;
+      }
+      return data as { ok?: boolean; email?: string };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Password reset sent",
+        description: data?.email
+          ? `Reset email sent to ${data.email}.`
+          : "Reset email sent.",
+      });
+    },
+    onError: (err: Error & { code?: string }) => {
+      if (err.code === "AUTH_USER_NOT_FOUND") {
+        toast({
+          title: "Account not activated",
+          description:
+            "This user hasn't activated their account yet — resend their invitation instead.",
+        });
+        return;
+      }
+      toast({
+        variant: "destructive",
+        title: "Couldn't send reset email",
+        description: err.message,
+      });
+    },
+  });
+
+  return { invite, resend, revoke, copyLink, resetPassword };
 }
