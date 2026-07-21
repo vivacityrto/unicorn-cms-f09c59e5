@@ -118,7 +118,9 @@ export default function ManageInvites() {
     }
   };
 
-  const handleCopyLink = async (invite: InviteRow) => {
+  const [copyLinkConfirm, setCopyLinkConfirm] = useState<{ invite: InviteRow; secondsAgo: number } | null>(null);
+
+  const doCopyLink = async (invite: InviteRow) => {
     setCopyingLinkId(invite.id);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -150,6 +152,15 @@ export default function ManageInvites() {
     } finally {
       setCopyingLinkId(null);
     }
+  };
+
+  const handleCopyLink = async (invite: InviteRow) => {
+    const secondsAgo = secondsSince(invite.last_sent_at);
+    if (secondsAgo !== null && secondsAgo < RECENT_ACTION_THRESHOLD_SECONDS) {
+      setCopyLinkConfirm({ invite, secondsAgo });
+      return;
+    }
+    await doCopyLink(invite);
   };
 
   const fetchInvites = async () => {
