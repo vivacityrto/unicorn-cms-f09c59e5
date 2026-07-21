@@ -48,7 +48,17 @@ export function useDocumentSyncAudit(stageId: number | null) {
         .select('id')
         .eq('stage', stageId);
       if (tdErr) throw tdErr;
-      const templateDocIds = new Set((templateDocs || []).map(t => t.id));
+
+      const { data: linkedDocs, error: linkErr } = await supabase
+        .from('document_stage_links')
+        .select('document_id')
+        .eq('stage_id', stageId);
+      if (linkErr) throw linkErr;
+
+      const templateDocIds = new Set<number>([
+        ...(templateDocs || []).map(t => t.id),
+        ...(linkedDocs || []).map(l => l.document_id),
+      ]);
 
       // 2. Stage instances for this stage
       const { data: stageInstances, error: siErr } = await supabase
