@@ -263,7 +263,12 @@ export default function ManageDocuments() {
           versionnumber: doc.versionnumber?.toString() || "",
           versionlastupdated: doc.versionlastupdated ? new Date(doc.versionlastupdated) : undefined,
           isclientdoc: doc.isclientdoc || false,
-          categories: doc.category ? doc.category.split(",").map(c => c.trim()) : []
+          categories: doc.category ? doc.category.split(",").map(c => c.trim()) : [],
+          framework_type: (doc as any).framework_type || "",
+          stage: (doc as any).stage ? String((doc as any).stage) : "",
+          standard_set: (doc as any).standard_set || "",
+          is_core: (doc as any).is_core ?? false,
+          is_tenant_downloadable: (doc as any).is_tenant_downloadable ?? false,
         });
         // Set existing files
         if (doc.uploaded_files && doc.file_names) {
