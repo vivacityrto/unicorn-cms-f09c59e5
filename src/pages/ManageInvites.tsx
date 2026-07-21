@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck, Calendar, Ban, Link as LinkIcon, Loader2 } from "lucide-react";
+import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck, Calendar, Ban, Link as LinkIcon, Loader2, Eye, MousePointerClick } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,6 +36,10 @@ type InviteRow = {
   expires_at?: string | null;
   delivery_status?: 'delivered' | 'bounced' | 'failed' | 'complained' | null;
   delivery_event_at?: string | null;
+  first_opened_at?: string | null;
+  open_count?: number | null;
+  first_clicked_at?: string | null;
+  click_count?: number | null;
 };
 
 type UserStatus = {
@@ -870,6 +874,27 @@ export default function ManageInvites() {
                                 <AlertCircle className="mr-1 h-3 w-3" />
                                 {cfg.label}
                               </Badge>
+                            );
+                          })()}
+                          {(invite.first_clicked_at || invite.first_opened_at) && (() => {
+                            const clicked = !!invite.first_clicked_at;
+                            const label = clicked ? 'Clicked' : 'Opened';
+                            const Icon = clicked ? MousePointerClick : Eye;
+                            const count = clicked ? (invite.click_count ?? 0) : (invite.open_count ?? 0);
+                            const firstAt = clicked ? invite.first_clicked_at! : invite.first_opened_at!;
+                            const firstAtLabel = new Date(firstAt).toLocaleString();
+                            const noun = clicked ? 'click' : 'open';
+                            const tip = `${label} ${count} time${count === 1 ? '' : 's'} — first ${noun} ${firstAtLabel}`;
+                            return (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-xs">
+                                    <Icon className="mr-1 h-3 w-3" />
+                                    {label}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>{tip}</TooltipContent>
+                              </Tooltip>
                             );
                           })()}
                         </div>

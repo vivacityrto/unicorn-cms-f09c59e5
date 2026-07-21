@@ -112,7 +112,8 @@ serve(async (req: Request) => {
     }
 
     const status = mapEvent(event, severity);
-    if (!status) {
+    const isEngagement = event === "opened" || event === "clicked";
+    if (!status && !isEngagement) {
       console.log("mailgun-webhook: ignored event", { event, severity });
       return ok();
     }
@@ -123,7 +124,7 @@ serve(async (req: Request) => {
 
     const { data: invite, error: lookupErr } = await supabase
       .from("user_invitations")
-      .select("id")
+      .select("id, first_opened_at, first_clicked_at, open_count, click_count")
       .eq("mailgun_message_id", messageId)
       .limit(1)
       .maybeSingle();
@@ -141,24 +142,58 @@ serve(async (req: Request) => {
       ? new Date(timestamp * 1000).toISOString()
       : new Date().toISOString();
 
-    const { error: updateErr } = await supabase
-      .from("user_invitations")
-      .update({
-        delivery_status: status,
-        delivery_event_at: eventAtIso,
-      })
-      .eq("id", invite.id);
+    // Branch A — terminal delivery outcome. Unchanged semantics.
+    if (status) {
+      const { error: updateErr } = await supabase
+        .from("user_invitations")
+        .update({
+          delivery_status: status,
+          delivery_event_at: eventAtIso,
+        })
+        .eq("id", invite.id);
 
-    if (updateErr) {
-      console.log("mailgun-webhook: update error", updateErr.message);
+      if (updateErr) {
+        console.log("mailgun-webhook: update error", updateErr.message);
+        return ok();
+      }
+
+      console.log("mailgun-webhook: updated invitation", {
+        invitation_id: invite.id,
+        delivery_status: status,
+        event,
+        severity,
+      });
       return ok();
     }
 
-    console.log("mailgun-webhook: updated invitation", {
+    // Branch B — engagement (opened / clicked). Independent from delivery_status.
+    const patch: Record<string, unknown> = {};
+    if (event === "opened") {
+      patch.open_count = (invite.open_count ?? 0) + 1;
+      patch.first_opened_at = invite.first_opened_at ?? eventAtIso;
+    } else if (event === "clicked") {
+      patch.click_count = (invite.click_count ?? 0) + 1;
+      patch.first_clicked_at = invite.first_clicked_at ?? eventAtIso;
+    }
+
+    const { error: engagementErr } = await supabase
+      .from("user_invitations")
+      .update(patch)
+      .eq("id", invite.id);
+
+    if (engagementErr) {
+      console.log(
+        "mailgun-webhook: engagement update error",
+        engagementErr.message,
+      );
+      return ok();
+    }
+
+    console.log("mailgun-webhook: engagement", {
       invitation_id: invite.id,
-      delivery_status: status,
       event,
-      severity,
+      open_count: patch.open_count,
+      click_count: patch.click_count,
     });
     return ok();
   } catch (err) {

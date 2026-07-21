@@ -114,7 +114,9 @@ serve(async (req: Request) => {
 
   const { data: pending, error: selectErr } = await supabase
     .from("user_invitations")
-    .select("id, email, mailgun_message_id, last_sent_at")
+    .select(
+      "id, email, mailgun_message_id, last_sent_at, first_opened_at, first_clicked_at, open_count, click_count",
+    )
     .is("delivery_status", null)
     .not("mailgun_message_id", "is", null)
     .gt("last_sent_at", sevenDaysAgo)
@@ -137,6 +139,8 @@ serve(async (req: Request) => {
 
   let checked = 0;
   let updated = 0;
+  let openedUpdated = 0;
+  let clickedUpdated = 0;
   let stillPending = 0;
   let errors = 0;
 
@@ -184,35 +188,62 @@ serve(async (req: Request) => {
           timestamp: number;
         }
         | null = null;
+      let openedCount = 0;
+      let firstOpenedTs: number | null = null;
+      let clickedCount = 0;
+      let firstClickedTs: number | null = null;
+
       for (const item of items) {
-        const status = mapEvent(item.event ?? "", item.severity);
-        if (status) {
-          mapped = {
-            status,
-            timestamp: typeof item.timestamp === "number"
-              ? item.timestamp
-              : Number(item.timestamp),
-          };
-          break;
+        const evt = item.event ?? "";
+        const ts = typeof item.timestamp === "number"
+          ? item.timestamp
+          : Number(item.timestamp);
+        const s = mapEvent(evt, item.severity);
+        if (s && !mapped) {
+          mapped = { status: s, timestamp: ts };
+        }
+        if (evt === "opened") {
+          openedCount++;
+          if (Number.isFinite(ts) && (firstOpenedTs === null || ts < firstOpenedTs)) {
+            firstOpenedTs = ts;
+          }
+        } else if (evt === "clicked") {
+          clickedCount++;
+          if (Number.isFinite(ts) && (firstClickedTs === null || ts < firstClickedTs)) {
+            firstClickedTs = ts;
+          }
         }
       }
 
-      if (!mapped) {
+      const patch: Record<string, unknown> = {};
+      if (mapped) {
+        patch.delivery_status = mapped.status;
+        patch.delivery_event_at = Number.isFinite(mapped.timestamp)
+          ? new Date(mapped.timestamp * 1000).toISOString()
+          : new Date().toISOString();
+      }
+      if (openedCount > 0) {
+        patch.open_count = openedCount;
+        if (!row.first_opened_at && firstOpenedTs !== null) {
+          patch.first_opened_at = new Date(firstOpenedTs * 1000).toISOString();
+        }
+      }
+      if (clickedCount > 0) {
+        patch.click_count = clickedCount;
+        if (!row.first_clicked_at && firstClickedTs !== null) {
+          patch.first_clicked_at = new Date(firstClickedTs * 1000).toISOString();
+        }
+      }
+
+      if (Object.keys(patch).length === 0) {
         stillPending++;
         await sleep(DELAY_BETWEEN_CALLS_MS);
         continue;
       }
 
-      const eventAtIso = Number.isFinite(mapped.timestamp)
-        ? new Date(mapped.timestamp * 1000).toISOString()
-        : new Date().toISOString();
-
       const { error: updateErr } = await supabase
         .from("user_invitations")
-        .update({
-          delivery_status: mapped.status,
-          delivery_event_at: eventAtIso,
-        })
+        .update(patch)
         .eq("id", row.id);
 
       if (updateErr) {
@@ -221,9 +252,11 @@ serve(async (req: Request) => {
         );
         errors++;
       } else {
-        updated++;
+        if (mapped) updated++;
+        if (openedCount > 0) openedUpdated++;
+        if (clickedCount > 0) clickedUpdated++;
         console.log(
-          `[reconcile-invite-delivery-status] updated invitation=${row.id} email=${row.email} status=${mapped.status} at=${eventAtIso}`,
+          `[reconcile-invite-delivery-status] updated invitation=${row.id} email=${row.email} status=${mapped?.status ?? "(unchanged)"} opens=${openedCount} clicks=${clickedCount}`,
         );
       }
     } catch (err) {
@@ -240,6 +273,8 @@ serve(async (req: Request) => {
   const summary = {
     checked,
     updated,
+    opened_updated: openedUpdated,
+    clicked_updated: clickedUpdated,
     still_pending: stillPending,
     errors,
     duration_ms: Date.now() - startedAt,

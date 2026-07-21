@@ -56479,17 +56479,21 @@ export type Database = {
         Row: {
           accepted_at: string | null
           accepted_by_user_id: string | null
+          click_count: number
           created_at: string | null
           delivery_event_at: string | null
           delivery_status: string | null
           email: string
           expires_at: string
+          first_clicked_at: string | null
           first_name: string
+          first_opened_at: string | null
           id: string
           invited_by: string | null
           last_name: string | null
           last_sent_at: string | null
           mailgun_message_id: string | null
+          open_count: number
           relationship_role: string | null
           revoked_at: string | null
           revoked_reason: string | null
@@ -56502,17 +56506,21 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           accepted_by_user_id?: string | null
+          click_count?: number
           created_at?: string | null
           delivery_event_at?: string | null
           delivery_status?: string | null
           email: string
           expires_at?: string
+          first_clicked_at?: string | null
           first_name?: string
+          first_opened_at?: string | null
           id?: string
           invited_by?: string | null
           last_name?: string | null
           last_sent_at?: string | null
           mailgun_message_id?: string | null
+          open_count?: number
           relationship_role?: string | null
           revoked_at?: string | null
           revoked_reason?: string | null
@@ -56525,17 +56533,21 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           accepted_by_user_id?: string | null
+          click_count?: number
           created_at?: string | null
           delivery_event_at?: string | null
           delivery_status?: string | null
           email?: string
           expires_at?: string
+          first_clicked_at?: string | null
           first_name?: string
+          first_opened_at?: string | null
           id?: string
           invited_by?: string | null
           last_name?: string | null
           last_sent_at?: string | null
           mailgun_message_id?: string | null
+          open_count?: number
           relationship_role?: string | null
           revoked_at?: string | null
           revoked_reason?: string | null
