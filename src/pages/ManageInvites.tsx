@@ -1051,6 +1051,38 @@ export default function ManageInvites() {
         }}
       />
 
+      <AlertDialog open={!!copyLinkConfirm} onOpenChange={(o) => !o && setCopyLinkConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate a new link?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {copyLinkConfirm ? (
+                <>
+                  This invite was sent or a link was generated{' '}
+                  <strong>{copyLinkConfirm.secondsAgo} seconds ago</strong>. Doing this again will
+                  invalidate that link — anyone who already has it will get an "invalid" error.
+                  Continue anyway?
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                const target = copyLinkConfirm?.invite;
+                setCopyLinkConfirm(null);
+                if (target) void doCopyLink(target);
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="border-[3px] border-[#dfdfdf]">
           <AlertDialogHeader>
