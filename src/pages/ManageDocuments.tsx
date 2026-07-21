@@ -760,6 +760,11 @@ export default function ManageDocuments() {
           versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
           isclientdoc: formData.isclientdoc,
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
+          framework_type: formData.framework_type || null,
+          stage: formData.stage ? parseInt(formData.stage) : null,
+          standard_set: formData.standard_set || null,
+          is_core: formData.is_core,
+          is_tenant_downloadable: formData.is_tenant_downloadable,
           uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
           file_names: allFileNames.length > 0 ? allFileNames : null
         }).eq("id", editingDocumentId);
