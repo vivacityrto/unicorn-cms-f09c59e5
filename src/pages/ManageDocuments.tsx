@@ -847,6 +847,9 @@ export default function ManageDocuments() {
           setPendingImportDocId(null);
         }
 
+        // Drill into the newly created document detail view
+        setSelectedDocId(newDocId);
+
         // Update next order number only for new documents
         const newNextOrderNumber = nextOrderNumber ? nextOrderNumber + 1 : 1;
         setNextOrderNumber(newNextOrderNumber);
