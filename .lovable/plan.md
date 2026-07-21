@@ -1,47 +1,44 @@
 
-## Scope
+## Audit results (step 1)
 
-Additive changes to the client-portal Users page (`/client/users`). No new edge functions, no RLS changes, no changes to invite/reset edge functions or `generate-recovery-link` (stays Super-Admin-only).
+- **View ownership / access to `auth.sessions`**: `v_client_tenant_users` is owned by `postgres` and has `reloptions = NULL` — i.e. no `security_invoker=true`, so it runs with the view owner's privileges (the default). `postgres` can read `auth.sessions` freely. Direct check confirms neither `authenticated` nor `anon` has `SELECT` on `auth.sessions`, but that doesn't matter here — the view executes as owner, so the added `LEFT JOIN LATERAL` against `auth.sessions` will work through PostgREST without any new grant or SECURITY DEFINER wrapper.
+- **Index on `auth.sessions.user_id`**: present — `sessions_user_id_idx` (btree on `user_id`) plus a composite `user_id_created_at_idx`. Per-user `max(updated_at)` lookup will be an index scan, not a seq scan.
+
+No prerequisite fix needed. Proceeding with the additive view change as specified.
 
 ## 1. Migration — extend `v_client_tenant_users`
 
 `CREATE OR REPLACE VIEW public.v_client_tenant_users` reproducing the current definition verbatim, with only these additions:
 
-- **`active_users` CTE**: append six NULL literals (`delivery_status text`, `delivery_event_at timestamptz`, `open_count integer`, `first_opened_at timestamptz`, `click_count integer`, `first_clicked_at timestamptz`).
-- **`pending_invites` CTE**: select the corresponding real columns from `user_invitations`.
-- **Both branches of the outer `UNION ALL`**: add the same six column names, in the same position (right after `mailgun_message_id`).
+- In `active_users` CTE, add `LEFT JOIN LATERAL (SELECT max(s.updated_at) AS last_session_at FROM auth.sessions s WHERE s.user_id = u.user_uuid) sess ON true` after the `users` join.
+- In `active_users` CTE, append a new column: `GREATEST(u.last_sign_in_at, sess.last_session_at) AS last_active_at` (positioned at end, after `first_clicked_at`, matching the additive convention).
+- In `pending_invites` CTE, append `NULL::timestamptz AS last_active_at` in the same position.
+- In both branches of the outer `UNION ALL SELECT`, append `last_active_at` at the end of the column list.
+- Keep the existing `last_sign_in_at` column untouched (additive only).
+- Follow with `NOTIFY pgrst, 'reload schema';`.
 
-No other change to filters, joins, WHERE clauses, or security-invoker attribute. Follow with `NOTIFY pgrst, 'reload schema';`.
+No changes to filters, WHERE clauses, other joins, ordering, or view options.
 
 ## 2. Type — `src/hooks/use-client-tenant-users.ts`
 
-Extend `ClientTenantUserRow` with the six optional/nullable fields (`delivery_status` narrowed to `'delivered' | 'bounced' | 'failed' | 'complained' | null`, timestamps as `string | null`, counts as `number | null`). Query already uses `select("*")` — no query change needed.
+Add `last_active_at: string | null;` to `ClientTenantUserRow`. The query already uses `select("*")`, so no query change.
 
-## 3. Mutations — `src/components/client/users/useInviteMutations.ts`
+## 3. UI — `src/components/client/ClientUsersPage.tsx`
 
-Add two mutations mirroring the existing `resend`/`revoke` pattern (same `useMutation` shape, same `invalidate()` call reusing the `client_tenant_users` + `userCapacityKeys` query keys):
+Only affects `row.row_type === "active"` rendering paths:
 
-- **`copyLink`** — invokes `resend-invite` with `{ invitation_id, skip_email: true }`. On success, `navigator.clipboard.writeText(data.action_link)` inside a try/catch; fallback toast shows the raw link. Success toast: "Link copied — paste it into Teams, email, or WhatsApp." Invalidates same keys as `resend`.
-- **`resetPassword`** — invokes `send-password-reset` with `{ user_uuid }`. Uses existing `extractEdgeError` helper to unwrap `code`/`detail`; specifically surfaces `AUTH_USER_NOT_FOUND` with the "hasn't activated yet" message (mirroring `TenantUsersTab.tsx`). Success toast confirms email address from response body.
+- **StatusDot**: replace both `row.last_sign_in_at` reads (the null-check that yields "Never signed in" and the `differenceInDays(new Date(), new Date(row.last_sign_in_at))` used for the 30-day Active/Inactive threshold) with `row.last_active_at`. Thresholds unchanged: `< 30 days` = Active, else Inactive, `null` = Never signed in.
+- **LastActive**: replace `row.last_sign_in_at` with `row.last_active_at` in the `formatDistanceToNow` call and the "Never" fallback check.
+- No changes to invited-row rendering, dropdown gates, delivery/engagement badges, Copy Link, or Reset Password logic.
 
-Both returned from `useInviteMutations()` alongside `invite`, `resend`, `revoke`.
+## Out of scope
 
-## 4. UI — `src/components/client/ClientUsersPage.tsx`
-
-- Import `Eye`, `MousePointerClick`, `Link as LinkIcon`, `KeyRound` from `lucide-react`.
-- **StatusDot** (invited rows only): render the two-badge pattern from `ManageInvites.tsx` — destructive/warning badge for `delivery_status ∈ {bounced, failed, complained}` with the same label mapping, plus outline badge with Eye/MousePointerClick when `first_opened_at`/`first_clicked_at` present (clicked > opened), with the same tooltip format.
-- **Invited-row dropdown** (`canManagePortalUsers` gate unchanged): insert a "Copy invite link" item between Resend and Revoke, wired to `copyLink.mutate(row.row_key)`.
-- **Active-row dropdown** (new): when `row.row_type === "active" && row.user_id && canManagePortalUsers`, render a dropdown with a single "Reset password" item wired to `resetPassword.mutate(row.user_id!)`. Mirror any self-exclusion pattern already used elsewhere in the file if present.
-
-## 5. Out of scope
-
-No changes to `generate-recovery-link` exposure, `invite-user`, `resend-invite`, `cancel-invite`, `send-password-reset`, `InviteUserDialog`, or any RLS policy.
+- `src/pages/ManageInvites.tsx` and `src/components/client/TenantUsersTab.tsx` (staff-side) untouched. Heads-up in summary: both derive activity from `last_sign_in_at`, so they will exhibit the same staleness for long-lived silently-refreshed sessions — separate follow-up if desired.
+- No changes to `auth.sessions`, no new columns on `public.users`, no client heartbeat.
 
 ## Verification
 
-- Diff view definition — only 6 columns added.
-- As tenant admin: bounced invite shows Bounced badge; opened invite shows Opened badge.
-- Copy Link writes a working `/accept-invitation?token=...` URL to clipboard; row's `last_sent_at`/`expires_at` refresh.
-- Reset Password fires `send-password-reset` and toasts success (or friendly `AUTH_USER_NOT_FOUND` message).
-- Actions hidden for `user`/`academy_user` rows (existing `canManagePortalUsers` gate).
-- `rg generate-recovery-link src/components/client src/pages/client` returns nothing.
+1. Confirm view still runs cleanly under PostgREST (permissions/index check already clean above).
+2. `SELECT last_sign_in_at, last_active_at FROM public.v_client_tenant_users WHERE email = 'greg@bwfat.com.au' AND tenant_id = 7478;` — `last_active_at` should reflect ~21 Jul (session `updated_at`), not the older 17 Jun `last_sign_in_at`.
+3. Load `/client/users` as a Business Wise tenant admin (or via client impersonation) and confirm Greg shows **Active**.
+4. Spot-check a genuinely dormant user (no sign-in for >30d and no recent session) still shows **Inactive** / **Never signed in**.
