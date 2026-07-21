@@ -1,44 +1,33 @@
+# Extend Manage Documents create/edit dialog
 
-## Audit results (step 1)
+## A. Add missing metadata fields
 
-- **View ownership / access to `auth.sessions`**: `v_client_tenant_users` is owned by `postgres` and has `reloptions = NULL` — i.e. no `security_invoker=true`, so it runs with the view owner's privileges (the default). `postgres` can read `auth.sessions` freely. Direct check confirms neither `authenticated` nor `anon` has `SELECT` on `auth.sessions`, but that doesn't matter here — the view executes as owner, so the added `LEFT JOIN LATERAL` against `auth.sessions` will work through PostgREST without any new grant or SECURITY DEFINER wrapper.
-- **Index on `auth.sessions.user_id`**: present — `sessions_user_id_idx` (btree on `user_id`) plus a composite `user_id_created_at_idx`. Per-user `max(updated_at)` lookup will be an index scan, not a seq scan.
+In `src/pages/ManageDocuments.tsx`, mirror the conventions from `src/components/governance/GovernanceDocumentEditDialog.tsx`:
 
-No prerequisite fix needed. Proceeding with the additive view change as specified.
+1. **`formData` state** (~line 203): add `framework_type: ""`, `stage: ""`, `standard_set: ""`, `is_core: false`, `is_tenant_downloadable: false`.
 
-## 1. Migration — extend `v_client_tenant_users`
+2. **Lookup query**: add a new `stages` query — `.from('stages').select('id, name').order('name')` — separate from the existing `fetchStages()` (which just fetches a count for the stat card and stays untouched). Reuse the existing `dd_governance_framework` query for Framework Type.
 
-`CREATE OR REPLACE VIEW public.v_client_tenant_users` reproducing the current definition verbatim, with only these additions:
+3. **Edit pre-fill** (~line 236–250): populate the five new fields from `doc.*`, stringifying `stage`. Reset to the same defaults in the dialog-close/new-doc reset (~line 1247–1248).
 
-- In `active_users` CTE, add `LEFT JOIN LATERAL (SELECT max(s.updated_at) AS last_session_at FROM auth.sessions s WHERE s.user_id = u.user_uuid) sess ON true` after the `users` join.
-- In `active_users` CTE, append a new column: `GREATEST(u.last_sign_in_at, sess.last_session_at) AS last_active_at` (positioned at end, after `first_clicked_at`, matching the additive convention).
-- In `pending_invites` CTE, append `NULL::timestamptz AS last_active_at` in the same position.
-- In both branches of the outer `UNION ALL SELECT`, append `last_active_at` at the end of the column list.
-- Keep the existing `last_sign_in_at` column untouched (additive only).
-- Follow with `NOTIFY pgrst, 'reload schema';`.
+4. **Metadata step JSX** (after the Category field): add — using the same Select/Switch components and layout as `GovernanceDocumentEditDialog.tsx`:
+   - Framework Type — Select
+   - Stage (Template Association) — single Select (not multi; deferred)
+   - Standard Set Reference — text Input, placeholder `e.g. RTO2025, CRICOS2018`
+   - Core Document — Switch
+   - Tenant Downloadable — Switch
 
-No changes to filters, WHERE clauses, other joins, ordering, or view options.
+5. **`handleCreateDocument`**: include the five fields in both insert and update payloads. Parse `stage` as `formData.stage ? parseInt(formData.stage) : null`; treat empty strings as `null` for `framework_type` and `standard_set`.
 
-## 2. Type — `src/hooks/use-client-tenant-users.ts`
+Do not add a Document Status field — new docs keep the DB default (`'draft'`).
 
-Add `last_active_at: string | null;` to `ClientTenantUserRow`. The query already uses `select("*")`, so no query change.
+## B. Auto-drill into newly created document
 
-## 3. UI — `src/components/client/ClientUsersPage.tsx`
-
-Only affects `row.row_type === "active"` rendering paths:
-
-- **StatusDot**: replace both `row.last_sign_in_at` reads (the null-check that yields "Never signed in" and the `differenceInDays(new Date(), new Date(row.last_sign_in_at))` used for the 30-day Active/Inactive threshold) with `row.last_active_at`. Thresholds unchanged: `< 30 days` = Active, else Inactive, `null` = Never signed in.
-- **LastActive**: replace `row.last_sign_in_at` with `row.last_active_at` in the `formatDistanceToNow` call and the "Never" fallback check.
-- No changes to invited-row rendering, dropdown gates, delivery/engagement badges, Copy Link, or Reset Password logic.
+In the create branch of `handleCreateDocument` (the `else` block), after the SharePoint import attempt finishes (success or failure — the row is kept either way), call `setSelectedDocId(newDocId)` to trigger the existing drill-down via `<GovernanceDocumentDetail />` (~line 1209). Edit path is unchanged.
 
 ## Out of scope
 
-- `src/pages/ManageInvites.tsx` and `src/components/client/TenantUsersTab.tsx` (staff-side) untouched. Heads-up in summary: both derive activity from `last_sign_in_at`, so they will exhibit the same staleness for long-lived silently-refreshed sessions — separate follow-up if desired.
-- No changes to `auth.sessions`, no new columns on `public.users`, no client heartbeat.
-
-## Verification
-
-1. Confirm view still runs cleanly under PostgREST (permissions/index check already clean above).
-2. `SELECT last_sign_in_at, last_active_at FROM public.v_client_tenant_users WHERE email = 'greg@bwfat.com.au' AND tenant_id = 7478;` — `last_active_at` should reflect ~21 Jul (session `updated_at`), not the older 17 Jun `last_sign_in_at`.
-3. Load `/client/users` as a Business Wise tenant admin (or via client impersonation) and confirm Greg shows **Active**.
-4. Spot-check a genuinely dormant user (no sign-in for >30d and no recent session) still shows **Inactive** / **Never signed in**.
+- Do not touch `GovernanceDocumentEditDialog.tsx`.
+- Stage stays single-select; no `stage_documents`/`package_stage_documents` sync.
+- No changes to the SharePoint browse step or import edge function.
+- No URL param sync for the new navigation.

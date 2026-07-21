@@ -183,6 +183,18 @@ export default function ManageDocuments() {
     },
   });
 
+  // Fetch stages list for the metadata form Stage select
+  const { data: stagesList } = useQuery({
+    queryKey: ['stages-list-for-manage-documents'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('stages')
+        .select('id, name')
+        .order('name');
+      return (data as any[]) || [];
+    },
+  });
+
   // Document categories from dd_ lookup table
   const { categories: ddCategories, valueLabelMap } = useDocumentCategories();
 
@@ -209,7 +221,12 @@ export default function ManageDocuments() {
     versionnumber: "",
     versionlastupdated: undefined as Date | undefined,
     isclientdoc: false,
-    categories: [] as string[]
+    categories: [] as string[],
+    framework_type: "" as string,
+    stage: "" as string,
+    standard_set: "",
+    is_core: false,
+    is_tenant_downloadable: false,
   });
 
   // Two-step Create flow state (browse SharePoint → prefill metadata)
@@ -246,7 +263,12 @@ export default function ManageDocuments() {
           versionnumber: doc.versionnumber?.toString() || "",
           versionlastupdated: doc.versionlastupdated ? new Date(doc.versionlastupdated) : undefined,
           isclientdoc: doc.isclientdoc || false,
-          categories: doc.category ? doc.category.split(",").map(c => c.trim()) : []
+          categories: doc.category ? doc.category.split(",").map(c => c.trim()) : [],
+          framework_type: (doc as any).framework_type || "",
+          stage: (doc as any).stage ? String((doc as any).stage) : "",
+          standard_set: (doc as any).standard_set || "",
+          is_core: (doc as any).is_core ?? false,
+          is_tenant_downloadable: (doc as any).is_tenant_downloadable ?? false,
         });
         // Set existing files
         if (doc.uploaded_files && doc.file_names) {
@@ -738,6 +760,11 @@ export default function ManageDocuments() {
           versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
           isclientdoc: formData.isclientdoc,
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
+          framework_type: formData.framework_type || null,
+          stage: formData.stage ? parseInt(formData.stage) : null,
+          standard_set: formData.standard_set || null,
+          is_core: formData.is_core,
+          is_tenant_downloadable: formData.is_tenant_downloadable,
           uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
           file_names: allFileNames.length > 0 ? allFileNames : null
         }).eq("id", editingDocumentId);
@@ -771,6 +798,11 @@ export default function ManageDocuments() {
           versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
           isclientdoc: formData.isclientdoc,
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
+          framework_type: formData.framework_type || null,
+          stage: formData.stage ? parseInt(formData.stage) : null,
+          standard_set: formData.standard_set || null,
+          is_core: formData.is_core,
+          is_tenant_downloadable: formData.is_tenant_downloadable,
           uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
           file_names: allFileNames.length > 0 ? allFileNames : null,
           created_by: profile?.user_uuid || null,
@@ -815,6 +847,9 @@ export default function ManageDocuments() {
           setPendingImportDocId(null);
         }
 
+        // Drill into the newly created document detail view
+        setSelectedDocId(newDocId);
+
         // Update next order number only for new documents
         const newNextOrderNumber = nextOrderNumber ? nextOrderNumber + 1 : 1;
         setNextOrderNumber(newNextOrderNumber);
@@ -830,7 +865,12 @@ export default function ManageDocuments() {
         versionnumber: "",
         versionlastupdated: undefined,
         isclientdoc: false,
-        categories: []
+        categories: [],
+        framework_type: "",
+        stage: "",
+        standard_set: "",
+        is_core: false,
+        is_tenant_downloadable: false,
       });
       setUploadedFiles([]);
       setExistingFiles([]);
@@ -1254,7 +1294,12 @@ export default function ManageDocuments() {
               versionnumber: "",
               versionlastupdated: undefined,
               isclientdoc: false,
-              categories: []
+              categories: [],
+              framework_type: "",
+              stage: "",
+              standard_set: "",
+              is_core: false,
+              is_tenant_downloadable: false,
             });
             setUploadedFiles([]);
             setExistingFiles([]);
@@ -1426,6 +1471,81 @@ export default function ManageDocuments() {
                     })}
                       </div>}
                   </div>
+
+                  {/* Framework Type */}
+                  <div className="grid gap-2">
+                    <Label>Framework Type</Label>
+                    <Select
+                      value={formData.framework_type || '__none__'}
+                      onValueChange={(v) => setFormData({ ...formData, framework_type: v === '__none__' ? '' : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {frameworks?.map((f: any) => (
+                          <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Stage (Template Association) */}
+                  <div className="grid gap-2">
+                    <Label>Stage (Template Association)</Label>
+                    <Select
+                      value={formData.stage || '__none__'}
+                      onValueChange={(v) => setFormData({ ...formData, stage: v === '__none__' ? '' : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {stagesList?.map((s: any) => (
+                          <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Standard Set Reference */}
+                  <div className="grid gap-2">
+                    <Label htmlFor="standard_set">Standard Set Reference</Label>
+                    <Input
+                      id="standard_set"
+                      value={formData.standard_set}
+                      onChange={(e) => setFormData({ ...formData, standard_set: e.target.value })}
+                      placeholder="e.g. RTO2025, CRICOS2018"
+                    />
+                  </div>
+
+                  {/* Toggles */}
+                  <div className="flex flex-col gap-3 border rounded-md p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-medium">Core Document</Label>
+                        <p className="text-xs text-muted-foreground">Automatically seeded into new client stage instances</p>
+                      </div>
+                      <Switch
+                        checked={formData.is_core}
+                        onCheckedChange={(v) => setFormData({ ...formData, is_core: v })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-medium">Tenant Downloadable</Label>
+                        <p className="text-xs text-muted-foreground">Clients can download this document from their portal</p>
+                      </div>
+                      <Switch
+                        checked={formData.is_tenant_downloadable}
+                        onCheckedChange={(v) => setFormData({ ...formData, is_tenant_downloadable: v })}
+                      />
+                    </div>
+                  </div>
+
+
 
 
 
