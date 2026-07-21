@@ -13,6 +13,7 @@ import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, FolderSearch } from 'lucide-react';
 import { SharePointLinkDialog } from '@/components/ui/sharepoint-link-dialog';
+import { DocumentAdditionalStagesField } from '@/components/documents/DocumentAdditionalStagesField';
 
 interface GovernanceDocumentEditDialogProps {
   documentId: number;
@@ -264,6 +265,13 @@ export function GovernanceDocumentEditDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Additional Stages */}
+          <DocumentAdditionalStagesField
+            documentId={documentId}
+            stages={stages as any}
+            primaryStageId={form.stage ? parseInt(form.stage) : null}
+          />
 
           {/* SharePoint Template URL */}
           <div className="space-y-1.5">
