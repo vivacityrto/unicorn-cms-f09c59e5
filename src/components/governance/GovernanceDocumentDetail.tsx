@@ -99,6 +99,9 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
   const latestDraft = versions?.find(v => v.status === 'draft');
   // Find published version for delivery
   const publishedVersion = versions?.find(v => v.id === doc?.current_published_version_id);
+  // Prefer editing the draft, but fall back to the current published version
+  // so published-only documents (e.g. PowerPoint templates) still show mappings.
+  const mappingEditorVersion = latestDraft || publishedVersion;
 
   if (isLoading || !doc) {
     return (
@@ -251,10 +254,10 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       {/* Tailoring Health */}
       <GovernanceTailoringHealth documentId={documentId} />
 
-      {/* Mapping Editor for latest draft */}
-      {latestDraft && (
+      {/* Mapping Editor: prefer latest draft, fall back to published version */}
+      {mappingEditorVersion && (
         <GovernanceMappingEditor
-          versionId={latestDraft.id}
+          versionId={mappingEditorVersion.id}
         />
       )}
 
