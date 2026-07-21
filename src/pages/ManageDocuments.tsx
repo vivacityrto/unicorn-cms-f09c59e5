@@ -183,6 +183,18 @@ export default function ManageDocuments() {
     },
   });
 
+  // Fetch stages list for the metadata form Stage select
+  const { data: stagesList } = useQuery({
+    queryKey: ['stages-list-for-manage-documents'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('stages')
+        .select('id, name')
+        .order('name');
+      return (data as any[]) || [];
+    },
+  });
+
   // Document categories from dd_ lookup table
   const { categories: ddCategories, valueLabelMap } = useDocumentCategories();
 
