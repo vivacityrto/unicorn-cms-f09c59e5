@@ -19,6 +19,9 @@ import {
   type TypeFilter, type UrgencyFilter, type DateRangeFilter,
 } from '@/components/support-tickets/AdminTicketFilters';
 import { AdminTicketsTable } from '@/components/support-tickets/AdminTicketsTable';
+import { ClientMessagesPanel } from '@/components/support-tickets/ClientMessagesPanel';
+import { useAdminHelpThreads } from '@/components/support-tickets/useAdminHelpThreads';
+import { cn } from '@/lib/utils';
 
 const BUG_TYPE_CODES = new Set(['error', 'functionality_fail']);
 
