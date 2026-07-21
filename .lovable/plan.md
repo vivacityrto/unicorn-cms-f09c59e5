@@ -1,26 +1,37 @@
-Fix the document-stage usage safety-net so shared documents report all linked stages, not just their primary stage.
+## Goal
 
-Changes
+Make eight read-only document-fetch/count queries union-aware with `document_stage_links`, so shared documents (e.g. the 37 docs linked between stages 1114/1125) surface everywhere they should — not just under their primary stage. No write paths, no rendering, no unrelated filters change.
 
-1. View public.document_stage_usage
-   - Replace the single-stage join with a union subquery that collects stage associations from both documents.stage and public.document_stage_links.
-   - Keep the same output columns (document_id, title, stage_count, stage_names).
-   - Preserve security_invoker = true.
-   - Result: documents with secondary links show stage_count > 1 and all relevant stage names.
+## Shared pattern
 
-2. Function public.get_document_stage_usage(p_document_id bigint)
-   - Keep STABLE SECURITY DEFINER and SET search_path TO 'public' exactly as today.
-   - Add a second RETURN QUERY branch that selects stages from public.document_stage_links and unions it with the existing documents.stage branch.
-   - Leave pinned_version_id and pinned_version_number NULL in both branches.
-   - No grant changes — authenticated and service_role already have EXECUTE, confirmed live; don't add anon, and don't touch existing grants at all.
+For each site, before the documents query runs:
 
-Verification
-   - SELECT * FROM document_stage_usage WHERE document_id = 7346; should return stage_count = 2 and both stage names.
-   - SELECT * FROM get_document_stage_usage(7346); should return two rows.
-   - Spot-check a single-stage document to confirm unchanged behavior.
+1. Query `document_stage_links` for the stage(s) in scope → collect `additionalIds` (document IDs reached via link).
+2. Broaden the docs query:
+   - **Single stage, no `package_id` filter**: `.or('stage.eq.<X>,id.in.(<ids>)')` when `additionalIds` is non-empty; otherwise keep the plain `.eq('stage', X)`.
+   - **Multi-stage array**: `.or('stage.in.(<X,Y>),id.in.(<ids>)')` else `.in('stage', stageKey)`.
+   - **`package_id` filter present**: keep `package_id` bound to the primary-stage branch only (links aren't package-scoped). Since `.or()` can't nest AND cleanly, run **two queries** — (a) existing `package_id` + `stage` filter, (b) `id.in.(additionalIds)` with no `package_id` filter — and merge client-side, deduping by `id`.
 
-Out of scope
-   - No changes to DocumentLibraryBrowser.tsx, StageDocumentsPanel.tsx, useDocumentAIAnalysis.tsx, useDocumentVersions.tsx, or DocumentStageUsagePanel.tsx — they consume these objects and will automatically see corrected data.
-   - No changes to version pinning logic.
-   - No changes to documents.stage primary-stage behavior.
-   - No grant/permission changes of any kind.
+Skip the extra query entirely when `additionalIds.length === 0` to preserve existing behavior.
+
+## Files & changes
+
+1. **`src/components/documents/bulk-generate/useTemplatedDocuments.ts`** (~L25-34) — array-stage variant of `.or()`.
+2. **`src/hooks/useStageQualityCheck.tsx`** (~L291-294 and ~L652-655) — both `{ count: 'exact', head: true }` queries; single-stage `.or()`.
+3. **`src/hooks/usePackageBuilder.tsx`** (~L629-633) — two-query merge (keeps `package_id` on primary branch).
+4. **`src/pages/AdminManagePackages.tsx`** — inline `Promise.all` (~L117) and `fetchPackageDocuments` (~L277-287, only when `stageId` provided); two-query merge each.
+5. **`src/pages/PackageDetail.tsx`** — `fetchDocuments` (~L530-537); two-query merge.
+6. **`src/components/stage/EmailAttachmentsManager.tsx`** — `coreDocsQuery` (~L155-165); single-query `.or()` alongside `is_core`.
+7. **`src/components/package-builder/StagePreviewDialog.tsx`** (~L121-127) — single-query `.or()`; embedded `packages:package_id (name)` preserved.
+8. **`src/pages/TenantDetail.tsx`** (~L167) — after fetching `(package_id, stage)` for `packageIds`, also fetch `document_stage_links` for those document IDs, then add each `stage_id` into the per-package `Set<number>` keyed by the doc's `package_id` from the first result.
+
+## Out of scope
+
+Rendering, `is_core`/visibility/other filters, write paths, version pinning, grants.
+
+## Verification
+
+- Stage 1114 bulk-generate picker (#1): shared 37 docs appear.
+- Stage 1114 core-doc email attachments picker (#6): shared docs with `is_core = true` appear.
+- Spot-check one single-stage document in each site to confirm results unchanged.
+- Production build passes.
