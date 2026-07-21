@@ -171,12 +171,35 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
 
       let error;
       if (editDocument) {
-        // Update existing document in public.documents
+        // Protect existing primary stage: if it differs from the target, keep it and add
+        // the target as an additional-stage link instead.
+        const currentStage = (editDocument as any).stage ?? null;
+        const targetStage = stageId ?? null;
+        const shouldPreservePrimary =
+          currentStage !== null && targetStage !== null && currentStage !== targetStage;
+
+        const updatePayload = shouldPreservePrimary
+          ? (() => {
+              const { stage: _omit, ...rest } = documentData as any;
+              return rest;
+            })()
+          : documentData;
+
         const result = await supabase
           .from('documents')
-          .update(documentData)
+          .update(updatePayload)
           .eq('id', editDocument.id);
         error = result.error;
+
+        if (!error && shouldPreservePrimary && targetStage !== null) {
+          const { error: linkError } = await supabase
+            .from('document_stage_links')
+            .upsert(
+              [{ document_id: editDocument.id, stage_id: targetStage }],
+              { onConflict: 'document_id,stage_id', ignoreDuplicates: true }
+            );
+          if (linkError) error = linkError;
+        }
       } else {
         // Insert new document into public.documents
         const result = await supabase

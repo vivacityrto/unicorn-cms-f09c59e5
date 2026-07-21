@@ -1,40 +1,43 @@
-## Fix `start_client_package` to include multi-stage document links
+## Protect `documents.stage` in three write paths
 
-`start_client_package` was missed in the earlier multi-stage rewrite. It seeds `document_instances` itself (bypassing `seed_stage_instances_from_template` via `app.skip_stage_seed`), so its own WHERE clause needs the same `document_stage_links` union that the other three provisioning RPCs already have.
+Apply the same rule everywhere: never overwrite a document's existing non-null `stage` with a different value. Instead, leave the primary stage as-is and record the target stage as an additional association in `document_stage_links`.
 
-## Change
+### Shared rule
 
-Fetch the current definition via `pg_get_functiondef('public.start_client_package'::regprocedure)`, then `CREATE OR REPLACE FUNCTION` with a single edit to the `document_instances` INSERT:
+Given a document with current stage `curr` and a target stage `target`:
 
-```sql
-INSERT INTO public.document_instances (document_id, stageinstance_id, tenant_id, status, isgenerated)
-SELECT d.id, v_stage_instance_id, p_tenant_id, 'pending', false
-  FROM public.documents d
- WHERE d.stage = v_stage.stage_id::integer
-    OR EXISTS (
-      SELECT 1 FROM public.document_stage_links dsl
-      WHERE dsl.document_id = d.id
-        AND dsl.stage_id = v_stage.stage_id::integer
-    );
-```
+- `curr` is null → set `stage = target` (current behaviour).
+- `curr === target` → no-op on stage (current behaviour).
+- `curr !== target` (both non-null) → omit `stage` from the UPDATE, then `INSERT INTO document_stage_links (document_id, stage_id) VALUES (docId, target) ON CONFLICT (document_id, stage_id) DO NOTHING`.
 
-Every other line — signature, billing-type logic, duplicate-package guard, `stage_instances`/`staff_task_instances`/`client_task_instances`/`email_instances` inserts, audit log insert, `SECURITY DEFINER`, `SET search_path = ''`, `app.skip_stage_seed` toggle — stays byte-identical.
+### 1. `src/components/AddExistingDocumentDialog.tsx`
 
-Delivered as one migration containing only the `CREATE OR REPLACE FUNCTION` statement.
+- **Dedupe (~L161–167)**: in addition to excluding docs already matching `package_id = packageId AND stage = stageId`, also query `document_stage_links` for rows with `stage_id = stageId` and exclude any `document_id` present there from `newDocuments`.
+- **Write (~L187–195)**: for each doc, branch on `selectedDoc.stage`:
+  - null or `=== stageId`: existing update `{ package_id, stage: stageId, is_released: true }`.
+  - different non-null: update `{ package_id, is_released: true }` (omit `stage`) + insert link `(selectedDoc.id, stageId)` with `ON CONFLICT DO NOTHING`.
 
-## Out of scope
+### 2. `src/components/CreateDocumentDialog2.tsx`
 
-- No changes to `seed_stage_instances_from_template`, `publish_stage_version`, or `repair_package_instance_stages`.
-- No changes to the `app.skip_stage_seed` mechanism.
-- No other Tier 1/2/3 sweep items.
-- No frontend changes.
+- **`editDocument` branch only (~L154–178)**: compare `editDocument.stage` to `stageId`.
+  - null or equal: unchanged.
+  - different non-null: strip `stage` from the update payload; keep the rest of `documentData`; after the update succeeds, insert `(editDocument.id, stageId)` into `document_stage_links` with `ON CONFLICT DO NOTHING`.
+- Create/insert branch: unchanged.
 
-## Verification
+### 3. `src/pages/AdminManagePackages.tsx`
 
-1. `pg_get_functiondef` diff before/after shows only the added `OR EXISTS` clause changed.
-2. Confirm `SECURITY DEFINER` and `SET search_path = ''` remain.
-3. Call `start_client_package` for a tenant against an old-track package (e.g. M-AM); confirm resulting `document_instances` include the 37 shared documents linked via `document_stage_links`.
+- **`editingDocumentId` branch (~L421–440)**: `existingDoc` is already in scope via `packageDocuments.find(...)`. Compare `existingDoc.stage` to `parseInt(documentFormData.stage)`.
+  - null or equal: unchanged.
+  - different non-null: omit `stage` from the update payload; after the update, insert `(editingDocumentId, parseInt(documentFormData.stage))` into `document_stage_links` with `ON CONFLICT DO NOTHING`.
 
-## Rollback
+### Out of scope
 
-Re-apply the prior definition captured from `pg_get_functiondef` before the migration.
+- `package_id` handling in all three files.
+- Create/insert branches (no prior stage to protect).
+- `StageDocumentsPanel.tsx` / `useStageTemplateContent.tsx` (separate read-side fix).
+
+### Verification (manual, per file)
+
+1. Doc on stage 1114, no links → "add"/"link"/"edit" into a different stage: `documents.stage` unchanged, new `document_stage_links` row for the target stage.
+2. Doc with `stage = null` → primary gets set normally, no link row created.
+3. Doc already on the target stage → no-op, no duplicate link, no error.

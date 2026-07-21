@@ -423,8 +423,13 @@ export default function AdminManagePackages() {
         const existingDoc = packageDocuments.find(d => d.id === editingDocumentId);
         const existingFiles = existingDoc?.uploaded_files || [];
         const existingNames = existingDoc?.file_names || [];
-        
-        const { error } = await supabase.from("documents").update({
+
+        const targetStage = documentFormData.stage ? parseInt(documentFormData.stage) : null;
+        const currentStage = (existingDoc as any)?.stage ?? null;
+        const shouldPreservePrimary =
+          currentStage !== null && targetStage !== null && currentStage !== targetStage;
+
+        const basePayload: any = {
           title: documentFormData.title,
           description: documentFormData.description || null,
           format: documentFormData.format || null,
@@ -433,13 +438,27 @@ export default function AdminManagePackages() {
           versionnumber: documentFormData.versionnumber ? parseInt(documentFormData.versionnumber) : null,
           versionlastupdated: documentFormData.versionlastupdated ? documentFormData.versionlastupdated.toISOString() : null,
           isclientdoc: documentFormData.isclientdoc,
-          stage: documentFormData.stage ? parseInt(documentFormData.stage) : null,
           category: documentFormData.categories.length > 0 ? documentFormData.categories[0] : null,
           uploaded_files: fileUrls.length > 0 ? [...existingFiles, ...fileUrls] : existingFiles,
           file_names: fileNames.length > 0 ? [...existingNames, ...fileNames] : existingNames,
-        }).eq('id', editingDocumentId);
+        };
+        if (!shouldPreservePrimary) {
+          basePayload.stage = targetStage;
+        }
+
+        const { error } = await supabase.from("documents").update(basePayload).eq('id', editingDocumentId);
 
         if (error) throw error;
+
+        if (shouldPreservePrimary && targetStage !== null) {
+          const { error: linkError } = await supabase
+            .from('document_stage_links')
+            .upsert(
+              [{ document_id: editingDocumentId, stage_id: targetStage }],
+              { onConflict: 'document_id,stage_id', ignoreDuplicates: true }
+            );
+          if (linkError) throw linkError;
+        }
 
         toast({
           title: "Success",

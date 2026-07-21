@@ -159,7 +159,7 @@ export function AddExistingDocumentDialog({
     try {
       setIsLoading(true);
 
-      // Check which documents are already linked to this package/stage
+      // Check which documents are already linked to this package/stage (primary stage)
       const { data: existingLinks, error: checkError } = await supabase
         .from('documents')
         .select('id')
@@ -168,9 +168,20 @@ export function AddExistingDocumentDialog({
 
       if (checkError) throw checkError;
 
-      const existingDocIds = new Set((existingLinks || []).map(link => link.id));
+      // Also check additional-stage links (not package-scoped) for this stage
+      const { data: existingStageLinks, error: linksCheckError } = await supabase
+        .from('document_stage_links')
+        .select('document_id')
+        .eq('stage_id', stageId);
 
-      // Filter out documents that are already in this stage
+      if (linksCheckError) throw linksCheckError;
+
+      const existingDocIds = new Set<number>([
+        ...((existingLinks || []).map(link => link.id as number)),
+        ...((existingStageLinks || []).map(l => l.document_id as number)),
+      ]);
+
+      // Filter out documents that are already in this stage (primary or additional)
       const newDocuments = selectedDocuments.filter(doc => !existingDocIds.has(doc.id));
       const alreadyLinkedCount = selectedDocuments.length - newDocuments.length;
 
@@ -183,20 +194,44 @@ export function AddExistingDocumentDialog({
         return;
       }
 
-      // Update documents to link them to this package/stage and auto-release (no duplication - just update their package_id and stage)
-      const updatePromises = newDocuments.map(selectedDoc => 
-        supabase.from('documents')
+      // For each doc: if its primary stage is null or already equals the target, set it as primary.
+      // Otherwise leave primary stage untouched and add an additional-stage link instead.
+      const updatePromises = newDocuments.map(selectedDoc => {
+        const curr = (selectedDoc as any).stage ?? null;
+        if (curr === null || curr === stageId) {
+          return supabase.from('documents')
+            .update({
+              package_id: packageId,
+              stage: stageId,
+              is_released: true,
+            })
+            .eq('id', selectedDoc.id);
+        }
+        return supabase.from('documents')
           .update({
             package_id: packageId,
-            stage: stageId,
             is_released: true,
           })
-          .eq('id', selectedDoc.id)
-      );
+          .eq('id', selectedDoc.id);
+      });
       const results = await Promise.all(updatePromises);
       const errors = results.filter(r => r.error);
       if (errors.length > 0) {
         throw new Error(`Failed to add ${errors.length} document(s)`);
+      }
+
+      // For docs whose primary stage differs from target, add an additional-stage link.
+      const linkRows = newDocuments
+        .filter(d => {
+          const curr = (d as any).stage ?? null;
+          return curr !== null && curr !== stageId;
+        })
+        .map(d => ({ document_id: d.id, stage_id: stageId }));
+      if (linkRows.length > 0) {
+        const { error: linkError } = await supabase
+          .from('document_stage_links')
+          .upsert(linkRows, { onConflict: 'document_id,stage_id', ignoreDuplicates: true });
+        if (linkError) throw linkError;
       }
 
       const message = alreadyLinkedCount > 0 
