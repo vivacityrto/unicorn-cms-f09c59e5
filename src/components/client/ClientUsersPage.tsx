@@ -534,14 +534,14 @@ export default function ClientUsersPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => resend.mutate(row.row_key)}
+                                onClick={() => requestResend(row)}
                                 disabled={resend.isPending}
                               >
                                 <RefreshCcw className="mr-2 h-4 w-4" />
                                 Resend invitation
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => copyLink.mutate(row.row_key)}
+                                onClick={() => requestCopyLink(row)}
                                 disabled={copyLink.isPending}
                               >
                                 <LinkIcon className="mr-2 h-4 w-4" />
