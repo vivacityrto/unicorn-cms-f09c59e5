@@ -596,6 +596,45 @@ export default function ClientUsersPage() {
           invitationId={revokeTarget?.id ?? null}
           email={revokeTarget?.email ?? null}
         />
+        <AlertDialog
+          open={!!inviteActionConfirm}
+          onOpenChange={(o) => !o && setInviteActionConfirm(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {inviteActionConfirm?.action === "copy"
+                  ? "Generate a new link?"
+                  : "Send a new invitation email?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {inviteActionConfirm ? (
+                  <>
+                    The link you already sent/copied to <strong>{inviteActionConfirm.email}</strong> was
+                    generated <strong>{inviteActionConfirm.secondsAgo} seconds ago</strong>. Doing this
+                    again will invalidate that link — if they try to use it they'll get an "invalid"
+                    error. Continue anyway?
+                  </>
+                ) : null}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  const target = inviteActionConfirm;
+                  setInviteActionConfirm(null);
+                  if (!target) return;
+                  if (target.action === "copy") copyLink.mutate(target.rowKey);
+                  else resend.mutate(target.rowKey);
+                }}
+              >
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
   );
