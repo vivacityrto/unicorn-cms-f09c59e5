@@ -1,91 +1,92 @@
-## Goal
+# Mailgun engagement signals (opens/clicks) on invitations
 
-Add a pull-based Mailgun reconciliation fallback so `user_invitations.delivery_status` becomes self-healing, even if the push webhook was never registered. Additive only — `mailgun-webhook/index.ts` is untouched.
+Additive extension of the existing delivery-status pipeline. `delivery_status` / `delivery_event_at` semantics stay identical (terminal outcomes only). Opens and clicks land in four new columns and surface as a secondary badge next to the existing one in Manage Invites.
 
-Sequencing per user approval: **deploy + manually verify against the two bwfat.com.au invites first, then add the cron job.**
-
-## Step 1 — Create & deploy edge function (no cron yet)
-
-File: `supabase/functions/reconcile-invite-delivery-status/index.ts`. Deno, `verify_jwt = false` (matches other cron-invoked functions in this project).
-
-**Auth gate** (copied from `sync-outlook-calendar-cron`): accept either
-- exact `SUPABASE_SERVICE_ROLE_KEY` bearer, or
-- a JWT with `role=service_role`, `iss=supabase`, `ref` matching this project host, and unexpired `exp`.
-
-Everything else → 401.
-
-**Env reuse** (already configured):
-`MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_REGION` (default `"eu"`), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
-
-Region branch copied verbatim from `send-invitation-email/index.ts`:
-```
-const apiBase = MAILGUN_REGION === "eu"
-  ? "https://api.eu.mailgun.net"
-  : "https://api.mailgun.net";
-```
-
-Mailgun auth: HTTP Basic `api:${MAILGUN_API_KEY}`.
-
-**Flow per invocation**
-
-1. Select up to **50** rows from `user_invitations` where:
-   - `delivery_status IS NULL`
-   - `mailgun_message_id IS NOT NULL`
-   - `last_sent_at > now() - interval '7 days'`
-   - Order `last_sent_at ASC` (oldest still-in-window first so nothing ages out unchecked).
-2. Sequentially, for each row:
-   - Trim `mailgun_message_id`, strip surrounding `<…>` — identical to `mailgun-webhook/index.ts` lines 109–112.
-   - `GET ${apiBase}/v3/${MAILGUN_DOMAIN}/events?message-id=<id>` with Basic auth.
-   - Parse `items` (Mailgun returns reverse-chronological). Walk items, pick the first mapped by the shared `mapEvent(event, severity)` helper copied verbatim from `mailgun-webhook/index.ts` (`delivered`, `complained`, `failed+permanent → bounced`, `failed+temporary → failed`). Non-terminal events (`accepted`, `opened`, `clicked`) → `null` and the row stays pending for a later run.
-   - If mapped: `delivery_event_at = new Date(item.timestamp * 1000).toISOString()`, then `UPDATE user_invitations SET delivery_status, delivery_event_at WHERE id = row.id`. Last-write-wins vs. webhook — no conflict handling.
-   - Per-row failures (non-200 Mailgun, malformed body, DB update error) are caught, counted as `errors`, logged with invitation id + short body snippet, and never abort the run.
-   - Sleep 250 ms between Mailgun calls.
-3. Log final summary: `{ checked, updated, still_pending, errors, duration_ms }`. Return `200 { ok: true, summary }`.
-
-**Not touched:** `supabase/functions/mailgun-webhook/index.ts`, any frontend code, any schema — `delivery_status` / `delivery_event_at` columns already exist.
-
-## Step 2 — Manual verification (BEFORE any cron)
-
-1. Look up the two target rows to confirm they still have `mailgun_message_id` and `delivery_status IS NULL`:
-   ```sql
-   SELECT id, email, mailgun_message_id, last_sent_at,
-          delivery_status, delivery_event_at
-   FROM user_invitations
-   WHERE email IN ('mary@bwfat.com.au','partners@bwfat.com.au')
-   ORDER BY last_sent_at DESC;
-   ```
-2. Invoke the function once via `supabase--curl_edge_functions` (POST, empty body). Confirm HTTP 200 and summary payload.
-3. Pull `supabase--edge_function_logs` for `reconcile-invite-delivery-status` and confirm per-row `updated invitation=… status=…` lines (or `mailgun 404/…` / `still pending` reasons if applicable).
-4. Re-run the SQL from step 1 and confirm `delivery_status` + `delivery_event_at` are populated with real values (whatever Mailgun actually recorded — likely `delivered` or `bounced`).
-5. Stop and report the results to the user before scheduling.
-
-## Step 3 — Add pg_cron schedule (only after Step 2 confirmed)
-
-Use the project's existing pattern (same shape as the `sync-outlook-calendar-cron` scheduling row):
+## 1. Migration — `user_invitations`
 
 ```sql
-select cron.schedule(
-  'reconcile-invite-delivery-status',
-  '*/20 * * * *',
-  $$
-  select net.http_post(
-    url:='https://<project>.supabase.co/functions/v1/reconcile-invite-delivery-status',
-    headers:='{"Content-Type":"application/json","Authorization":"Bearer <SERVICE_ROLE_KEY>"}'::jsonb,
-    body:='{}'::jsonb
-  );
-  $$
-);
+ALTER TABLE public.user_invitations
+  ADD COLUMN first_opened_at  timestamptz,
+  ADD COLUMN open_count       integer NOT NULL DEFAULT 0,
+  ADD COLUMN first_clicked_at timestamptz,
+  ADD COLUMN click_count      integer NOT NULL DEFAULT 0;
 ```
 
-Executed via **`supabase--insert`** (not `supabase--migration`) — matches the Lovable rule that cron scheduling SQL carrying project-specific tokens must not be a shared migration.
+No RLS/grant/FK/enum changes. `accepted_at` untouched.
 
-Before scheduling, confirm `pg_cron` + `pg_net` are already enabled (the existing calendar cron proves they are, so no extension changes expected).
+## 2. `supabase/functions/mailgun-webhook/index.ts`
 
-After insert: `SELECT jobname, schedule FROM cron.job WHERE jobname = 'reconcile-invite-delivery-status';` to confirm registration.
+Restructure so terminal delivery and engagement are independent branches off the same lookup.
 
-## Technical notes
+**Explicit change to the current early-return:** today, lines 114–118 do:
 
-- Mailgun Events API pagination is ignored — filtering by `message-id` returns a small event set for one message; we only need the most recent terminal event.
-- 7-day window matches Mailgun's default event retention; older rows are silently skipped.
-- 50/run × every 20 min = 150/hour headroom, well above the ~210 invitations/6 months backlog.
-- Both push (webhook) and pull (this function) write the same enum values to the same two columns, so no reconciliation logic is needed if they overlap.
+```ts
+const status = mapEvent(event, severity);
+if (!status) {
+  console.log("mailgun-webhook: ignored event", { event, severity });
+  return ok();
+}
+```
+
+That early `return ok()` currently short-circuits every non-terminal event before the DB lookup runs. **This early return must be removed.** Replace it with: compute `status` (may be `null`); if `status` is `null` AND `event` is neither `"opened"` nor `"clicked"`, then log "ignored event" and `return ok()` (preserves existing no-op for `accepted`, `unsubscribed`, etc.). Otherwise fall through to the shared lookup so opened/clicked reach Branch B.
+
+Flow after that fix:
+
+- Trim `messageId` (unchanged, lines ~109–112).
+- Compute `eventAtIso` from `ed.timestamp` (fallback `now()`), same as today.
+- Single lookup:
+  ```ts
+  .from("user_invitations")
+  .select("id, first_opened_at, first_clicked_at, open_count, click_count")
+  .eq("mailgun_message_id", messageId)
+  .limit(1).maybeSingle();
+  ```
+  Note the explicit inclusion of `open_count` and `click_count` — required because Branch B increments them in TS and both columns are `NOT NULL DEFAULT 0`; reading them as `undefined` would produce `undefined + 1 = NaN` and violate the constraint on write.
+- Branch A — terminal delivery (unchanged behavior): if `status` is non-null, update `delivery_status` + `delivery_event_at`. Existing logging preserved.
+- Branch B — engagement (new):
+  - `event === "opened"` → `update { open_count: (invite.open_count ?? 0) + 1, first_opened_at: invite.first_opened_at ?? eventAtIso }`.
+  - `event === "clicked"` → same pattern for `click_count` / `first_clicked_at`.
+  - Best-effort counters; a single event body carries one `event`, so branches are mutually exclusive per call.
+- Signature verification, always-200 response, and top-level try/catch unchanged.
+
+## 3. `supabase/functions/reconcile-invite-delivery-status/index.ts`
+
+Extend the per-row loop that already walks the Mailgun events response:
+
+- Keep the existing 50-row batch, 7-day window, 250 ms sleep, error accounting, and terminal-status update path.
+- While walking `items`, additionally:
+  - Count `opened` items → `openedCount`; track earliest `opened` timestamp → `firstOpenedTs`.
+  - Same for `clicked` → `clickedCount`, `firstClickedTs`.
+- Row select expands to include `first_opened_at, first_clicked_at, open_count, click_count` so the null-guard on `first_*_at` works without re-reading.
+- Build the update patch:
+  - Include `delivery_status` + `delivery_event_at` only when a terminal event was picked (existing behavior).
+  - If `openedCount > 0`: set `open_count = openedCount`, and `first_opened_at = firstOpenedTs` only when current row value is null.
+  - Same for clicks.
+  - Empty patch → row stays pending (unchanged).
+- Summary log gains `opened_updated` / `clicked_updated`.
+
+## 4. `src/pages/ManageInvites.tsx` — UI
+
+- Extend `InviteRow` with `first_opened_at?: string | null`, `open_count?: number`, `first_clicked_at?: string | null`, `click_count?: number`. No query change (`select("*")`).
+- In the Status column, keep the existing `delivery_status` badge exactly as today.
+- Immediately after it, render a second, independent engagement badge:
+  - `first_clicked_at` set → `<Badge variant="outline">` with `MousePointerClick` icon, label "Clicked", tooltip `Clicked N time(s) — first click <formatted date>`.
+  - Else `first_opened_at` set → `<Badge variant="outline">` with `Eye` icon, label "Opened", tooltip `Opened N time(s) — first open <formatted date>`.
+  - Else → render nothing.
+- Both badges live side-by-side; no re-layout of the row. Icons from `lucide-react` (existing dep). Date formatting reuses the helper already used for `delivery_event_at`.
+
+## Verification (in order)
+
+1. Confirm migration adds exactly the four columns; no other diff.
+2. Regenerate Supabase types (auto after migration).
+3. Invoke `reconcile-invite-delivery-status` once. Confirm:
+   - bwfat.com.au (bounced) rows still show `open_count = 0`, `first_opened_at = null`.
+   - Any historical delivered+opened row picks up non-zero counters.
+4. Send a fresh invite to a mailbox that will open + click. Confirm webhook path writes both counters and the engagement badge appears with correct tooltip.
+5. Visually verify Manage Invites: delivered+opened row shows both badges; delivered-only shows just delivery badge; bounced row unchanged.
+
+## Out of scope
+
+- No changes to `delivery_status` enum, RLS, FKs, or `accepted_at`.
+- Copy Link / resend-invite / cancel-invite flows unchanged.
+- No filter/sort by engagement in this pass.
