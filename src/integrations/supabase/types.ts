@@ -21915,6 +21915,66 @@ export type Database = {
           },
         ]
       }
+      document_stage_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_id: number
+          id: number
+          stage_id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_id: number
+          id?: never
+          stage_id: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_id?: number
+          id?: never
+          stage_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_stage_links_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_stage_links_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_stage_links_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_phase_timeline"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_stage_links_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_stage_links_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_stages"
+            referencedColumns: ["stage_id"]
+          },
+        ]
+      }
       document_template_mappings: {
         Row: {
           checksum_sha256: string
