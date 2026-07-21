@@ -841,7 +841,7 @@ export function StageDocumentsPanel({
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center justify-end gap-1.5 shrink-0 max-w-[35%] flex-wrap">
+                        <div className="flex items-center justify-end gap-1.5 shrink-0 flex-wrap">
                           <Badge variant="outline" className={`text-xs whitespace-nowrap ${fileType.className}`}>
                             {fileType.label}
                           </Badge>
