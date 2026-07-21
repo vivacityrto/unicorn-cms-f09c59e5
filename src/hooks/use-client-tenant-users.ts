@@ -26,6 +26,7 @@ export interface ClientTenantUserRow {
   secondary_contact: boolean | null;
   access_scope: string | null;
   last_sign_in_at: string | null;
+  last_active_at: string | null;
   invited_at: string | null;
   invite_expires_at: string | null;
   status: TenantUserStatus;
