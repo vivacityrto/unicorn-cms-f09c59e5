@@ -221,7 +221,12 @@ export default function ManageDocuments() {
     versionnumber: "",
     versionlastupdated: undefined as Date | undefined,
     isclientdoc: false,
-    categories: [] as string[]
+    categories: [] as string[],
+    framework_type: "" as string,
+    stage: "" as string,
+    standard_set: "",
+    is_core: false,
+    is_tenant_downloadable: false,
   });
 
   // Two-step Create flow state (browse SharePoint → prefill metadata)
