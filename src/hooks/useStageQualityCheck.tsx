@@ -665,10 +665,24 @@ export async function computeStageQuality(
       tenantVisibleDocs = docs?.filter((d: any) => d.visibility !== 'team_only').length || 0;
       teamOnlyDocs = docs?.filter((d: any) => d.visibility === 'team_only').length || 0;
     } else {
-      const { count } = await supabase
+      const { data: linkRows } = await supabase
+        .from('document_stage_links')
+        .select('document_id')
+        .eq('stage_id', stageId);
+      const additionalIds = Array.from(
+        new Set(((linkRows ?? []) as { document_id: number }[]).map((r) => r.document_id)),
+      );
+      let countQuery = supabase
         .from('documents')
-        .select('*', { count: 'exact', head: true })
-        .eq('stage', stageId);
+        .select('*', { count: 'exact', head: true });
+      if (additionalIds.length > 0) {
+        countQuery = countQuery.or(
+          `stage.eq.${stageId},id.in.(${additionalIds.join(',')})`,
+        );
+      } else {
+        countQuery = countQuery.eq('stage', stageId);
+      }
+      const { count } = await countQuery;
 
       documentCount = count || 0;
       tenantVisibleDocs = documentCount;
