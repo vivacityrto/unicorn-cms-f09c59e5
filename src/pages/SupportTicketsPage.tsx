@@ -162,39 +162,77 @@ export default function SupportTicketsPage() {
             Manage and triage suggestions, bugs, and feature requests across all clients
           </p>
         </div>
-        <Button
-          onClick={() => setNewOpen(true)}
-          disabled={!hasTenant}
-          className="bg-white text-[#7130A0] hover:bg-white/90 font-semibold rounded-lg px-5 py-2.5 text-sm h-auto"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          Submit Support Ticket
-        </Button>
+        {view === 'internal' && (
+          <Button
+            onClick={() => setNewOpen(true)}
+            disabled={!hasTenant}
+            className="bg-white text-[#7130A0] hover:bg-white/90 font-semibold rounded-lg px-5 py-2.5 text-sm h-auto"
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            Submit Support Ticket
+          </Button>
+        )}
       </div>
 
-      {/* Stats */}
-      <div className="bg-white border-b border-gray-100">
-        <AdminTicketStats rows={rows} />
+      {/* View switch */}
+      <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-2">
+        {([
+          { key: 'internal' as const, label: 'Internal Tickets', count: rows.length },
+          { key: 'client' as const, label: 'Client Messages', count: clientBadgeCount },
+        ]).map((v) => {
+          const active = view === v.key;
+          return (
+            <button
+              key={v.key}
+              onClick={() => setView(v.key)}
+              className={cn(
+                'text-sm font-medium px-4 py-2 rounded-md border transition-colors inline-flex items-center gap-2',
+                active
+                  ? 'bg-[#7130A0] text-white border-[#7130A0]'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50',
+              )}
+            >
+              {v.label}
+              <span className={cn(
+                'text-[11px] font-semibold rounded-full px-1.5 py-0.5 min-w-[20px] text-center',
+                active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600',
+              )}>
+                {v.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white">
-        <AdminTicketStatusTabs value={statusTab} onChange={setStatusTab} counts={tabCounts} />
-      </div>
+      {view === 'internal' ? (
+        <>
+          {/* Stats */}
+          <div className="bg-white border-b border-gray-100">
+            <AdminTicketStats rows={rows} />
+          </div>
 
-      {/* Filters */}
-      <AdminTicketFilters
-        search={search} onSearchChange={setSearch}
-        typeFilter={typeFilter} onTypeChange={setTypeFilter}
-        urgencyFilter={urgencyFilter} onUrgencyChange={setUrgencyFilter}
-        clientFilter={clientFilter} onClientChange={setClientFilter}
-        clientOptions={clientOptions}
-        dateRange={dateRange} onDateRangeChange={setDateRange}
-        onExportCsv={handleExportCsv}
-      />
+          {/* Tabs */}
+          <div className="bg-white">
+            <AdminTicketStatusTabs value={statusTab} onChange={setStatusTab} counts={tabCounts} />
+          </div>
 
-      {/* Table */}
-      <AdminTicketsTable rows={visibleRows} isLoading={isLoading} />
+          {/* Filters */}
+          <AdminTicketFilters
+            search={search} onSearchChange={setSearch}
+            typeFilter={typeFilter} onTypeChange={setTypeFilter}
+            urgencyFilter={urgencyFilter} onUrgencyChange={setUrgencyFilter}
+            clientFilter={clientFilter} onClientChange={setClientFilter}
+            clientOptions={clientOptions}
+            dateRange={dateRange} onDateRangeChange={setDateRange}
+            onExportCsv={handleExportCsv}
+          />
+
+          {/* Table */}
+          <AdminTicketsTable rows={visibleRows} isLoading={isLoading} />
+        </>
+      ) : (
+        <ClientMessagesPanel />
+      )}
 
       <NewTicketModal open={newOpen} onOpenChange={setNewOpen} />
     </div>
