@@ -269,13 +269,34 @@ export function StageDocumentsPanel({
     const docIds = Array.from(selectedDocIds);
 
     try {
-      // Update documents.stage to link them to this stage
-      const { error } = await supabase
+      // Preserve existing non-null primary stage: only overwrite when null or already matches.
+      const { data: currentRows, error: fetchErr } = await supabase
         .from('documents')
-        .update({ stage: stageId })
+        .select('id, stage')
         .in('id', docIds);
+      if (fetchErr) throw fetchErr;
 
-      if (error) throw error;
+      const rows = (currentRows || []) as Array<{ id: number; stage: number | null }>;
+      const toSetPrimary = rows.filter(r => r.stage === null || r.stage === stageId).map(r => r.id);
+      const toLink = rows.filter(r => r.stage !== null && r.stage !== stageId).map(r => r.id);
+
+      if (toSetPrimary.length > 0) {
+        const { error } = await supabase
+          .from('documents')
+          .update({ stage: stageId })
+          .in('id', toSetPrimary);
+        if (error) throw error;
+      }
+
+      if (toLink.length > 0) {
+        const { error } = await supabase
+          .from('document_stage_links')
+          .upsert(
+            toLink.map(id => ({ document_id: id, stage_id: stageId })),
+            { onConflict: 'document_id,stage_id', ignoreDuplicates: true }
+          );
+        if (error) throw error;
+      }
 
       // Log audit event
       await supabase.from('audit_events').insert({
@@ -284,6 +305,7 @@ export function StageDocumentsPanel({
         action: 'stage_document_linked',
         details: { document_ids: docIds, count: docIds.length }
       });
+
 
       toast({
         title: 'Documents Linked',
