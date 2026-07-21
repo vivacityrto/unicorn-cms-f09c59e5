@@ -221,8 +221,15 @@ async function seedChildInstances(
   }
 
   if (opts.documents) {
-    const { data: templates } = await svcClient
-      .from("documents").select("id").eq("stage", stageId);
+    const { data: linkRows } = await svcClient
+      .from("document_stage_links").select("document_id").eq("stage_id", stageId);
+    const additionalIds = (linkRows ?? []).map((r: any) => r.document_id);
+
+    let docsQuery = svcClient.from("documents").select("id");
+    docsQuery = additionalIds.length > 0
+      ? docsQuery.or(`stage.eq.${stageId},id.in.(${additionalIds.join(',')})`)
+      : docsQuery.eq("stage", stageId);
+    const { data: templates } = await docsQuery;
     for (const d of templates ?? []) {
       const { error } = await svcClient.from("document_instances").insert({
         document_id: d.id,
