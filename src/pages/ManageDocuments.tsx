@@ -1281,7 +1281,12 @@ export default function ManageDocuments() {
               versionnumber: "",
               versionlastupdated: undefined,
               isclientdoc: false,
-              categories: []
+              categories: [],
+              framework_type: "",
+              stage: "",
+              standard_set: "",
+              is_core: false,
+              is_tenant_downloadable: false,
             });
             setUploadedFiles([]);
             setExistingFiles([]);
