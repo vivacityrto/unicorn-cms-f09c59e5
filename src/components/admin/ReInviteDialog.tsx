@@ -9,7 +9,17 @@ type SelectedInvite = {
   id: string;
   email: string;
   tenant_id: number;
+  last_sent_at?: string | null;
 };
+
+const RECENT_ACTION_THRESHOLD_SECONDS = 120;
+
+function secondsSince(iso?: string | null): number | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  return Math.max(0, Math.floor((Date.now() - then) / 1000));
+}
 
 type ReInviteDialogProps = {
   open: boolean;
