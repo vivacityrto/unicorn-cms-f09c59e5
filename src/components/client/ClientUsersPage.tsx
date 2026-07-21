@@ -373,6 +373,39 @@ export default function ClientUsersPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string | null } | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [inviteActionConfirm, setInviteActionConfirm] = useState<{
+    action: "resend" | "copy";
+    rowKey: string;
+    email: string;
+    secondsAgo: number;
+  } | null>(null);
+
+  const RECENT_ACTION_THRESHOLD_SECONDS = 120;
+  const secondsSince = (iso?: string | null): number | null => {
+    if (!iso) return null;
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return null;
+    return Math.max(0, Math.floor((Date.now() - then) / 1000));
+  };
+
+  const requestResend = (row: ClientTenantUserRow) => {
+    const s = secondsSince(row.last_sent_at);
+    if (s !== null && s < RECENT_ACTION_THRESHOLD_SECONDS) {
+      setInviteActionConfirm({ action: "resend", rowKey: row.row_key, email: row.email, secondsAgo: s });
+      return;
+    }
+    resend.mutate(row.row_key);
+  };
+  const requestCopyLink = (row: ClientTenantUserRow) => {
+    const s = secondsSince(row.last_sent_at);
+    if (s !== null && s < RECENT_ACTION_THRESHOLD_SECONDS) {
+      setInviteActionConfirm({ action: "copy", rowKey: row.row_key, email: row.email, secondsAgo: s });
+      return;
+    }
+    copyLink.mutate(row.row_key);
+  };
+
+
 
 
   const rows = useMemo<ClientTenantUserRow[]>(() => data ?? [], [data]);
