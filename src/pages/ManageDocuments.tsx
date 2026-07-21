@@ -1511,6 +1511,13 @@ export default function ManageDocuments() {
                     </Select>
                   </div>
 
+                  {/* Additional Stages */}
+                  <DocumentAdditionalStagesField
+                    documentId={editingDocumentId}
+                    stages={stagesList as any}
+                    primaryStageId={formData.stage ? parseInt(formData.stage) : null}
+                  />
+
                   {/* Standard Set Reference */}
                   <div className="grid gap-2">
                     <Label htmlFor="standard_set">Standard Set Reference</Label>
