@@ -1,43 +1,60 @@
-## Protect `documents.stage` in three write paths
+## Fix StageDocumentsPanel + useStageTemplateContent for multi-stage links
 
-Apply the same rule everywhere: never overwrite a document's existing non-null `stage` with a different value. Instead, leave the primary stage as-is and record the target stage as an additional association in `document_stage_links`.
+Bring the stage's document reads and writes into alignment with the multi-stage model already applied to the other three dialogs. Two problems: reads only consider `documents.stage` (under-reporting shared docs), and writes can silently overwrite a document's existing non-null primary stage.
 
-### Shared rule
+### 1. `src/hooks/useStageTemplateContent.tsx` — union-aware document fetch (~L144–147)
 
-Given a document with current stage `curr` and a target stage `target`:
+Replace the single `.eq('stage', stageId)` query in `fetchContent` with a two-step union:
 
-- `curr` is null → set `stage = target` (current behaviour).
-- `curr === target` → no-op on stage (current behaviour).
-- `curr !== target` (both non-null) → omit `stage` from the UPDATE, then `INSERT INTO document_stage_links (document_id, stage_id) VALUES (docId, target) ON CONFLICT (document_id, stage_id) DO NOTHING`.
+- Query `document_stage_links` for `stage_id = stageId`, collect `additionalIds`.
+- Build the `documents` select; if `additionalIds.length > 0`, use `.or(\`stage.eq.${stageId},id.in.(${additionalIds.join(',')})\`)`, otherwise `.eq('stage', stageId)`.
+- Order by `title` ascending.
 
-### 1. `src/components/AddExistingDocumentDialog.tsx`
+Because step 2 depends on step 1, pull this out of the current `Promise.all([...])`. Run the existing `staff_tasks` / `client_tasks` / `emails` promises in parallel with a `fetchDocsUnionAware()` async helper: `Promise.all([teamPromise, clientPromise, emailsPromise, fetchDocsUnionAware()])`. Destructure results the same way as today.
 
-- **Dedupe (~L161–167)**: in addition to excluding docs already matching `package_id = packageId AND stage = stageId`, also query `document_stage_links` for rows with `stage_id = stageId` and exclude any `document_id` present there from `newDocuments`.
-- **Write (~L187–195)**: for each doc, branch on `selectedDoc.stage`:
-  - null or `=== stageId`: existing update `{ package_id, stage: stageId, is_released: true }`.
-  - different non-null: update `{ package_id, is_released: true }` (omit `stage`) + insert link `(selectedDoc.id, stageId)` with `ON CONFLICT DO NOTHING`.
+This also fixes `StageDocumentsPanel.tsx`'s "already-linked" exclusion in `fetchLibraryDocs` for free, since it derives `linkedIds` from the same documents state.
 
-### 2. `src/components/CreateDocumentDialog2.tsx`
+### 2. `useStageTemplateContent.tsx` — `addDocument` (~L389) and `addBulkDocuments` (~L409)
 
-- **`editDocument` branch only (~L154–178)**: compare `editDocument.stage` to `stageId`.
-  - null or equal: unchanged.
-  - different non-null: strip `stage` from the update payload; keep the rest of `documentData`; after the update succeeds, insert `(editDocument.id, stageId)` into `document_stage_links` with `ON CONFLICT DO NOTHING`.
-- Create/insert branch: unchanged.
+Apply the preserve-primary rule.
 
-### 3. `src/pages/AdminManagePackages.tsx`
+For `addBulkDocuments(documentIds)`:
 
-- **`editingDocumentId` branch (~L421–440)**: `existingDoc` is already in scope via `packageDocuments.find(...)`. Compare `existingDoc.stage` to `parseInt(documentFormData.stage)`.
-  - null or equal: unchanged.
-  - different non-null: omit `stage` from the update payload; after the update, insert `(editingDocumentId, parseInt(documentFormData.stage))` into `document_stage_links` with `ON CONFLICT DO NOTHING`.
+```ts
+const { data: currentRows } = await supabase
+  .from('documents').select('id, stage').in('id', documentIds);
+const toSetPrimary = (currentRows || [])
+  .filter(r => r.stage === null || r.stage === stageId).map(r => r.id);
+const toLink = (currentRows || [])
+  .filter(r => r.stage !== null && r.stage !== stageId).map(r => r.id);
+
+if (toSetPrimary.length > 0) {
+  await supabase.from('documents').update({ stage: stageId }).in('id', toSetPrimary);
+}
+if (toLink.length > 0) {
+  await supabase.from('document_stage_links').upsert(
+    toLink.map(id => ({ document_id: id, stage_id: stageId })),
+    { onConflict: 'document_id,stage_id', ignoreDuplicates: true }
+  );
+}
+```
+
+Apply the single-doc equivalent in `addDocument`. Leave `deleteDocument` (sets `stage: null`) and `updateDocument` (documented no-op) untouched.
+
+### 3. `src/components/stage/StageDocumentsPanel.tsx` — `handleLinkSelected` (~L265–300)
+
+Same pattern: fetch current stage for the selected `docIds`, split into `toSetPrimary` / `toLink`, run the conditional `.update({ stage: stageId })` and the `document_stage_links` upsert with `onConflict: 'document_id,stage_id', ignoreDuplicates: true`. Keep the existing audit-event insert, toast, and success handling unchanged — just fed by the corrected write.
 
 ### Out of scope
 
-- `package_id` handling in all three files.
-- Create/insert branches (no prior stage to protect).
-- `StageDocumentsPanel.tsx` / `useStageTemplateContent.tsx` (separate read-side fix).
+- `deleteDocument`, `updateDocument`, `handleDuplicateDocument`, `reorderDocuments`.
+- `document_stage_usage` view and sync-audit mismatch.
+- The four provisioning RPCs and the primary-change trigger.
 
-### Verification (manual, per file)
+### Verification
 
-1. Doc on stage 1114, no links → "add"/"link"/"edit" into a different stage: `documents.stage` unchanged, new `document_stage_links` row for the target stage.
-2. Doc with `stage = null` → primary gets set normally, no link row created.
-3. Doc already on the target stage → no-op, no duplicate link, no error.
+1. Open stage 1114's panel — full document list (173 original + 37 shared) shows, where previously only 173 appeared.
+2. In stage 1114's "Link from library," the 37 shared documents no longer appear in the "available" list.
+3. Link a document whose primary stage is a different non-null value into an unrelated stage via this panel — `documents.stage` stays untouched; a new `document_stage_links` row appears.
+4. Repeat with a document whose current stage is null — primary gets set normally; no link row created.
+5. Repeat with a document already on the target stage — no-op, no duplicate link, no error.

@@ -125,6 +125,22 @@ export function useStageTemplateContent(stageId: number | null) {
 
     setLoading(true);
     try {
+      const fetchDocsUnionAware = async () => {
+        const { data: linkRows } = await supabase
+          .from('document_stage_links')
+          .select('document_id')
+          .eq('stage_id', stageId);
+        const additionalIds = (linkRows || []).map((r: any) => r.document_id);
+
+        let docsQuery = supabase
+          .from('documents')
+          .select('id, title, description, format, category, document_status, ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence, ai_reasoning, createdat, stage');
+        docsQuery = additionalIds.length > 0
+          ? docsQuery.or(`stage.eq.${stageId},id.in.(${additionalIds.join(',')})`)
+          : docsQuery.eq('stage', stageId);
+        return docsQuery.order('title', { ascending: true });
+      };
+
       const [teamResult, clientResult, emailsResult, docsResult] = await Promise.all([
         supabase
           .from('staff_tasks')
@@ -141,12 +157,9 @@ export function useStageTemplateContent(stageId: number | null) {
           .select('*')
           .eq('stage_id', stageId)
           .order('order_number', { ascending: true }),
-        supabase
-          .from('documents')
-          .select('id, title, description, format, category, document_status, ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence, ai_reasoning, createdat, stage')
-          .eq('stage', stageId)
-          .order('title', { ascending: true })
+        fetchDocsUnionAware(),
       ]);
+
 
       if (teamResult.error) throw teamResult.error;
       if (clientResult.error) throw clientResult.error;
@@ -384,12 +397,29 @@ export function useStageTemplateContent(stageId: number | null) {
   const addDocument = async (documentId: number) => {
     if (!stageId) return;
 
-    const { error } = await supabase
+    const { data: currentRow } = await supabase
       .from('documents')
-      .update({ stage: stageId })
-      .eq('id', documentId);
+      .select('id, stage')
+      .eq('id', documentId)
+      .maybeSingle();
 
-    if (error) throw error;
+    const currentStage = (currentRow as any)?.stage ?? null;
+
+    if (currentStage === null || currentStage === stageId) {
+      const { error } = await supabase
+        .from('documents')
+        .update({ stage: stageId })
+        .eq('id', documentId);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('document_stage_links')
+        .upsert(
+          [{ document_id: documentId, stage_id: stageId }],
+          { onConflict: 'document_id,stage_id', ignoreDuplicates: true }
+        );
+      if (error) throw error;
+    }
 
     await supabase.from('audit_events').insert({
       entity: 'stage',
@@ -404,12 +434,32 @@ export function useStageTemplateContent(stageId: number | null) {
   const addBulkDocuments = async (documentIds: number[]) => {
     if (!stageId || documentIds.length === 0) return;
 
-    const { error } = await supabase
+    const { data: currentRows } = await supabase
       .from('documents')
-      .update({ stage: stageId })
+      .select('id, stage')
       .in('id', documentIds);
 
-    if (error) throw error;
+    const rows = (currentRows || []) as Array<{ id: number; stage: number | null }>;
+    const toSetPrimary = rows.filter(r => r.stage === null || r.stage === stageId).map(r => r.id);
+    const toLink = rows.filter(r => r.stage !== null && r.stage !== stageId).map(r => r.id);
+
+    if (toSetPrimary.length > 0) {
+      const { error } = await supabase
+        .from('documents')
+        .update({ stage: stageId })
+        .in('id', toSetPrimary);
+      if (error) throw error;
+    }
+
+    if (toLink.length > 0) {
+      const { error } = await supabase
+        .from('document_stage_links')
+        .upsert(
+          toLink.map(id => ({ document_id: id, stage_id: stageId })),
+          { onConflict: 'document_id,stage_id', ignoreDuplicates: true }
+        );
+      if (error) throw error;
+    }
 
     await supabase.from('audit_events').insert({
       entity: 'stage',
@@ -420,6 +470,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     await fetchContent();
   };
+
 
   const updateDocument = async (docId: number, data: Record<string, any>) => {
     // No-op for junction-specific fields (visibility, is_core, etc.) since documents.stage model doesn't support them
