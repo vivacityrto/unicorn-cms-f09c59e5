@@ -1472,6 +1472,81 @@ export default function ManageDocuments() {
                       </div>}
                   </div>
 
+                  {/* Framework Type */}
+                  <div className="grid gap-2">
+                    <Label>Framework Type</Label>
+                    <Select
+                      value={formData.framework_type || '__none__'}
+                      onValueChange={(v) => setFormData({ ...formData, framework_type: v === '__none__' ? '' : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {frameworks?.map((f: any) => (
+                          <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Stage (Template Association) */}
+                  <div className="grid gap-2">
+                    <Label>Stage (Template Association)</Label>
+                    <Select
+                      value={formData.stage || '__none__'}
+                      onValueChange={(v) => setFormData({ ...formData, stage: v === '__none__' ? '' : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {stagesList?.map((s: any) => (
+                          <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Standard Set Reference */}
+                  <div className="grid gap-2">
+                    <Label htmlFor="standard_set">Standard Set Reference</Label>
+                    <Input
+                      id="standard_set"
+                      value={formData.standard_set}
+                      onChange={(e) => setFormData({ ...formData, standard_set: e.target.value })}
+                      placeholder="e.g. RTO2025, CRICOS2018"
+                    />
+                  </div>
+
+                  {/* Toggles */}
+                  <div className="flex flex-col gap-3 border rounded-md p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-medium">Core Document</Label>
+                        <p className="text-xs text-muted-foreground">Automatically seeded into new client stage instances</p>
+                      </div>
+                      <Switch
+                        checked={formData.is_core}
+                        onCheckedChange={(v) => setFormData({ ...formData, is_core: v })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-medium">Tenant Downloadable</Label>
+                        <p className="text-xs text-muted-foreground">Clients can download this document from their portal</p>
+                      </div>
+                      <Switch
+                        checked={formData.is_tenant_downloadable}
+                        onCheckedChange={(v) => setFormData({ ...formData, is_tenant_downloadable: v })}
+                      />
+                    </div>
+                  </div>
+
+
+
 
 
                   {editingDocumentId && (() => {
