@@ -1,29 +1,26 @@
-Fix three Tier 2 provisioning paths that currently seed/copy documents by primary stage only, missing documents linked through `document_stage_links`.
+Fix the document-stage usage safety-net so shared documents report all linked stages, not just their primary stage.
 
 Changes
 
-1. Database function `copy_stage_template_to_package`
-   - Update the `package_stage_documents` INSERT's document source query.
-   - Keep `WHERE d.stage = p_stage_id` and add an `OR EXISTS` clause against `public.document_stage_links`.
-   - Leave the three sibling inserts (`package_staff_tasks`, `package_client_tasks`, `package_stage_emails`) and the `package_stages` update untouched.
-   - Preserve existing `SECURITY DEFINER` and `SET search_path TO 'public'`.
+1. View public.document_stage_usage
+   - Replace the single-stage join with a union subquery that collects stage associations from both documents.stage and public.document_stage_links.
+   - Keep the same output columns (document_id, title, stage_count, stage_names).
+   - Preserve security_invoker = true.
+   - Result: documents with secondary links show stage_count > 1 and all relevant stage names.
 
-2. `src/hooks/useStageTemplateContent.tsx` — `copyTemplateToOverrides`
-   - Replace the single `documents` query `.eq('stage', stageId)` with a two-step union: query `document_stage_links` for `stage_id = stageId`, then query `documents` with `.or('stage.eq.X,id.in.(...)')`, falling back to `.eq('stage', stageId)` when no additional IDs exist.
-   - The rest of the function (inserts into `package_staff_tasks`, `package_client_tasks`, `package_stage_emails`, `package_stage_documents`) remains unchanged.
-
-3. `supabase/functions/import-unicorn1-client/index.ts`
-   - Replace the direct `documents.eq('stage', stageId)` query with the same union pattern: fetch `document_id`s from `document_stage_links`, then build an `.or(...)` or `.eq(...)` query against `documents`.
-   - The per-template `document_instances` insert loop is unchanged.
+2. Function public.get_document_stage_usage(p_document_id bigint)
+   - Keep STABLE SECURITY DEFINER and SET search_path TO 'public' exactly as today.
+   - Add a second RETURN QUERY branch that selects stages from public.document_stage_links and unions it with the existing documents.stage branch.
+   - Leave pinned_version_id and pinned_version_number NULL in both branches.
+   - No grant changes — authenticated and service_role already have EXECUTE, confirmed live; don't add anon, and don't touch existing grants at all.
 
 Verification
-
-- Call `copy_stage_template_to_package` for stage `1114` against a test package and confirm `package_stage_documents` receives all 210 documents (173 primary + 37 linked), not just 173.
-- Trigger `copyTemplateToOverrides` for a stage/package combo involving stage `1114` or `1125` and confirm the resulting `package_stage_documents` rows include the linked documents.
-- For `import-unicorn1-client`, confirm the query logic returns the union by running the equivalent SQL directly against the database.
+   - SELECT * FROM document_stage_usage WHERE document_id = 7346; should return stage_count = 2 and both stage names.
+   - SELECT * FROM get_document_stage_usage(7346); should return two rows.
+   - Spot-check a single-stage document to confirm unchanged behavior.
 
 Out of scope
-
-- No changes to `package_staff_tasks`, `package_client_tasks`, or `package_stage_emails` inserts in `copy_stage_template_to_package`.
-- No changes to `package_stage_documents` structure or the `use_overrides`/`last_synced_at` update.
-- No other changes to `import-unicorn1-client` or `useStageTemplateContent.tsx`.
+   - No changes to DocumentLibraryBrowser.tsx, StageDocumentsPanel.tsx, useDocumentAIAnalysis.tsx, useDocumentVersions.tsx, or DocumentStageUsagePanel.tsx — they consume these objects and will automatically see corrected data.
+   - No changes to version pinning logic.
+   - No changes to documents.stage primary-stage behavior.
+   - No grant/permission changes of any kind.
