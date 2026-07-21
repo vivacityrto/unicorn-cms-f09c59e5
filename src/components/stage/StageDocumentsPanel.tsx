@@ -840,16 +840,18 @@ export function StageDocumentsPanel({
                               {doc.description}
                             </div>
                           )}
+                          {doc.category && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="inline-flex items-center rounded-sm bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground max-w-full truncate">
+                                {doc.category}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center justify-end gap-1.5 shrink-0 flex-wrap">
+                        <div className="flex items-center justify-end gap-1.5 shrink-0">
                           <Badge variant="outline" className={`text-xs whitespace-nowrap ${fileType.className}`}>
                             {fileType.label}
                           </Badge>
-                          {doc.category && (
-                            <Badge variant="secondary" className="text-xs truncate max-w-[140px]">
-                              {doc.category}
-                            </Badge>
-                          )}
                         </div>
                       </div>
                     );
