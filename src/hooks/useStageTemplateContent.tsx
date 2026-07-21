@@ -649,12 +649,26 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
     if (!packageId || !stageId) return;
 
     try {
+      const fetchDocsUnionAware = async () => {
+        const { data: linkRows } = await supabase
+          .from('document_stage_links')
+          .select('document_id')
+          .eq('stage_id', stageId);
+        const additionalIds = (linkRows || []).map((r: any) => r.document_id);
+
+        let docsQuery = supabase.from('documents').select('id, title');
+        docsQuery = additionalIds.length > 0
+          ? docsQuery.or(`stage.eq.${stageId},id.in.(${additionalIds.join(',')})`)
+          : docsQuery.eq('stage', stageId);
+        return docsQuery;
+      };
+
       // Fetch template content from base tables
       const [teamTasks, clientTasks, emailsData, docs] = await Promise.all([
         supabase.from('staff_tasks').select('*').eq('stage_id', stageId),
         supabase.from('client_tasks').select('*').eq('stage_id', stageId),
         supabase.from('emails').select('*').eq('stage_id', stageId),
-        supabase.from('documents').select('id, title').eq('stage', stageId)
+        fetchDocsUnionAware()
       ]);
 
       // Copy team tasks
