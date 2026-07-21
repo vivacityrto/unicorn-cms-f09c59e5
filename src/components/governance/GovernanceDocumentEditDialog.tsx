@@ -13,6 +13,7 @@ import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, FolderSearch } from 'lucide-react';
 import { SharePointLinkDialog } from '@/components/ui/sharepoint-link-dialog';
+import { DocumentAdditionalStagesField } from '@/components/documents/DocumentAdditionalStagesField';
 
 interface GovernanceDocumentEditDialogProps {
   documentId: number;
