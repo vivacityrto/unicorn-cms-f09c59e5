@@ -90,6 +90,30 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
     
     setLoading(true);
     try {
+      // Fetch additional document IDs linked to this stage via document_stage_links
+      const { data: linkRows } = await supabase
+        .from('document_stage_links')
+        .select('document_id')
+        .eq('stage_id', stage.id);
+      const additionalIds = Array.from(
+        new Set(((linkRows ?? []) as { document_id: number }[]).map((r) => r.document_id)),
+      );
+
+      let documentsQuery: any = (supabase as any)
+        .from('documents')
+        .select(`
+          id, doc_name,
+          packages:package_id (name)
+        `);
+      if (additionalIds.length > 0) {
+        documentsQuery = documentsQuery.or(
+          `stage.eq.${stage.id},id.in.(${additionalIds.join(',')})`,
+        );
+      } else {
+        documentsQuery = documentsQuery.eq('stage', stage.id);
+      }
+      documentsQuery = documentsQuery.order('id', { ascending: true });
+
       // Fetch team tasks for this stage across all packages
       const [teamTasksResult, clientTasksResult, emailsResult, documentsResult] = await Promise.all([
         (supabase as any)
@@ -117,14 +141,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
           `)
           .eq('stage_id', stage.id)
           .order('sort_order', { ascending: true }) as any,
-        (supabase as any)
-          .from('documents')
-          .select(`
-            id, doc_name,
-            packages:package_id (name)
-          `)
-          .eq('stage', stage.id)
-          .order('id', { ascending: true })
+        documentsQuery,
       ]);
 
       setUsageData({
