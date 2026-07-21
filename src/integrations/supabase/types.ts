@@ -63518,6 +63518,7 @@ export type Database = {
           first_opened_at: string | null
           invite_expires_at: string | null
           invited_at: string | null
+          last_active_at: string | null
           last_name: string | null
           last_sent_at: string | null
           last_sign_in_at: string | null
