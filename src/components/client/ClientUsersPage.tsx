@@ -366,7 +366,7 @@ function LoadingSkeleton() {
 export default function ClientUsersPage() {
   const { data, isLoading, isError } = useClientTenantUsers();
   const { canManagePortalUsers, activeTenantId, isReadOnly } = useClientTenant();
-  const { resend } = useInviteMutations();
+  const { resend, copyLink, resetPassword } = useInviteMutations();
   const capacity = useUserCapacity(activeTenantId);
   const atLimit = !!capacity.data?.atLimit;
 
@@ -484,7 +484,7 @@ export default function ClientUsersPage() {
                                 size="icon"
                                 className="h-8 w-8"
                                 aria-label="Invitation actions"
-                                disabled={resend.isPending}
+                                disabled={resend.isPending || copyLink.isPending}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
@@ -498,11 +498,41 @@ export default function ClientUsersPage() {
                                 Resend invitation
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                onClick={() => copyLink.mutate(row.row_key)}
+                                disabled={copyLink.isPending}
+                              >
+                                <LinkIcon className="mr-2 h-4 w-4" />
+                                Copy invite link
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 onClick={() => setRevokeTarget({ id: row.row_key, email: row.email })}
                                 className="text-destructive focus:text-destructive"
                               >
                                 <Ban className="mr-2 h-4 w-4" />
                                 Revoke invitation
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : row.row_type === "active" && row.user_id && canManagePortalUsers ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label="User actions"
+                                disabled={resetPassword.isPending}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => resetPassword.mutate(row.user_id!)}
+                                disabled={resetPassword.isPending}
+                              >
+                                <KeyRound className="mr-2 h-4 w-4" />
+                                Reset password
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
