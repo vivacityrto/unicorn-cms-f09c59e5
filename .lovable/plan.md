@@ -1,30 +1,40 @@
-Add a database trigger that automatically removes rows from `public.document_stage_links` whenever a document's primary `stage` is updated to a value that already exists as an additional stage link. This ensures the two association mechanisms never overlap.
+## Fix `start_client_package` to include multi-stage document links
 
-## What will be built
+`start_client_package` was missed in the earlier multi-stage rewrite. It seeds `document_instances` itself (bypassing `seed_stage_instances_from_template` via `app.skip_stage_seed`), so its own WHERE clause needs the same `document_stage_links` union that the other three provisioning RPCs already have.
 
-A single Postgres trigger and supporting function:
+## Change
 
-- `public.sync_document_stage_links_on_primary_change()` — `SECURITY DEFINER` function with `search_path = ''` that deletes any `document_stage_links` row where `document_id = NEW.id` and `stage_id = NEW.stage`.
-- `trg_sync_document_stage_links_on_primary_change` — `AFTER UPDATE OF stage ON public.documents` trigger that fires only when `NEW.stage` is non-null and has changed from `OLD.stage`.
+Fetch the current definition via `pg_get_functiondef('public.start_client_package'::regprocedure)`, then `CREATE OR REPLACE FUNCTION` with a single edit to the `document_instances` INSERT:
 
-## Why this covers all write paths
+```sql
+INSERT INTO public.document_instances (document_id, stageinstance_id, tenant_id, status, isgenerated)
+SELECT d.id, v_stage_instance_id, p_tenant_id, 'pending', false
+  FROM public.documents d
+ WHERE d.stage = v_stage.stage_id::integer
+    OR EXISTS (
+      SELECT 1 FROM public.document_stage_links dsl
+      WHERE dsl.document_id = d.id
+        AND dsl.stage_id = v_stage.stage_id::integer
+    );
+```
 
-Because the trigger is attached to the `documents` table itself, it fires regardless of which UI or RPC updates `documents.stage` — current dialogs, future dialogs, bulk updates, or migrations.
+Every other line — signature, billing-type logic, duplicate-package guard, `stage_instances`/`staff_task_instances`/`client_task_instances`/`email_instances` inserts, audit log insert, `SECURITY DEFINER`, `SET search_path = ''`, `app.skip_stage_seed` toggle — stays byte-identical.
+
+Delivered as one migration containing only the `CREATE OR REPLACE FUNCTION` statement.
 
 ## Out of scope
 
-- No changes to the three provisioning RPCs, the `document_stage_links` table structure, or either frontend file.
-- No reverse-direction guard (adding an additional stage equal to the current primary) — already blocked client-side by `DocumentAdditionalStagesField`.
+- No changes to `seed_stage_instances_from_template`, `publish_stage_version`, or `repair_package_instance_stages`.
+- No changes to the `app.skip_stage_seed` mechanism.
+- No other Tier 1/2/3 sweep items.
+- No frontend changes.
 
-## Verification steps
+## Verification
 
-1. Pick a document that has an existing `document_stage_links` row (e.g. one of the 37 linked to stage 1114). Run `UPDATE public.documents SET stage = 1114 WHERE id = <document_id>;`. Confirm the matching `(document_id, 1114)` link row is deleted.
-2. Update a different document's `stage` to an unrelated stage with no additional link. Confirm no `document_stage_links` rows are touched for any other document.
-3. Run `SELECT pg_get_functiondef('public.sync_document_stage_links_on_primary_change'::regprocedure);` and confirm it shows `SECURITY DEFINER` and `SET search_path = ''`.
+1. `pg_get_functiondef` diff before/after shows only the added `OR EXISTS` clause changed.
+2. Confirm `SECURITY DEFINER` and `SET search_path = ''` remain.
+3. Call `start_client_package` for a tenant against an old-track package (e.g. M-AM); confirm resulting `document_instances` include the 37 shared documents linked via `document_stage_links`.
 
 ## Rollback
 
-```sql
-DROP TRIGGER IF EXISTS trg_sync_document_stage_links_on_primary_change ON public.documents;
-DROP FUNCTION IF EXISTS public.sync_document_stage_links_on_primary_change();
-```
+Re-apply the prior definition captured from `pg_get_functiondef` before the migration.
