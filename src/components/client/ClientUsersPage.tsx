@@ -38,6 +38,16 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import {
   Tooltip,
@@ -373,6 +383,39 @@ export default function ClientUsersPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string | null } | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [inviteActionConfirm, setInviteActionConfirm] = useState<{
+    action: "resend" | "copy";
+    rowKey: string;
+    email: string;
+    secondsAgo: number;
+  } | null>(null);
+
+  const RECENT_ACTION_THRESHOLD_SECONDS = 120;
+  const secondsSince = (iso?: string | null): number | null => {
+    if (!iso) return null;
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return null;
+    return Math.max(0, Math.floor((Date.now() - then) / 1000));
+  };
+
+  const requestResend = (row: ClientTenantUserRow) => {
+    const s = secondsSince(row.last_sent_at);
+    if (s !== null && s < RECENT_ACTION_THRESHOLD_SECONDS) {
+      setInviteActionConfirm({ action: "resend", rowKey: row.row_key, email: row.email, secondsAgo: s });
+      return;
+    }
+    resend.mutate(row.row_key);
+  };
+  const requestCopyLink = (row: ClientTenantUserRow) => {
+    const s = secondsSince(row.last_sent_at);
+    if (s !== null && s < RECENT_ACTION_THRESHOLD_SECONDS) {
+      setInviteActionConfirm({ action: "copy", rowKey: row.row_key, email: row.email, secondsAgo: s });
+      return;
+    }
+    copyLink.mutate(row.row_key);
+  };
+
+
 
 
   const rows = useMemo<ClientTenantUserRow[]>(() => data ?? [], [data]);
@@ -491,14 +534,14 @@ export default function ClientUsersPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => resend.mutate(row.row_key)}
+                                onClick={() => requestResend(row)}
                                 disabled={resend.isPending}
                               >
                                 <RefreshCcw className="mr-2 h-4 w-4" />
                                 Resend invitation
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => copyLink.mutate(row.row_key)}
+                                onClick={() => requestCopyLink(row)}
                                 disabled={copyLink.isPending}
                               >
                                 <LinkIcon className="mr-2 h-4 w-4" />
@@ -553,6 +596,45 @@ export default function ClientUsersPage() {
           invitationId={revokeTarget?.id ?? null}
           email={revokeTarget?.email ?? null}
         />
+        <AlertDialog
+          open={!!inviteActionConfirm}
+          onOpenChange={(o) => !o && setInviteActionConfirm(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {inviteActionConfirm?.action === "copy"
+                  ? "Generate a new link?"
+                  : "Send a new invitation email?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {inviteActionConfirm ? (
+                  <>
+                    The link you already sent/copied to <strong>{inviteActionConfirm.email}</strong> was
+                    generated <strong>{inviteActionConfirm.secondsAgo} seconds ago</strong>. Doing this
+                    again will invalidate that link — if they try to use it they'll get an "invalid"
+                    error. Continue anyway?
+                  </>
+                ) : null}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  const target = inviteActionConfirm;
+                  setInviteActionConfirm(null);
+                  if (!target) return;
+                  if (target.action === "copy") copyLink.mutate(target.rowKey);
+                  else resend.mutate(target.rowKey);
+                }}
+              >
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
   );

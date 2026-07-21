@@ -34,6 +34,7 @@ type InviteRow = {
   error_message?: string | null;
   invited_by?: string | null;
   expires_at?: string | null;
+  last_sent_at?: string | null;
   delivery_status?: 'delivered' | 'bounced' | 'failed' | 'complained' | null;
   delivery_event_at?: string | null;
   first_opened_at?: string | null;
@@ -41,6 +42,15 @@ type InviteRow = {
   first_clicked_at?: string | null;
   click_count?: number | null;
 };
+
+const RECENT_ACTION_THRESHOLD_SECONDS = 120;
+
+function secondsSince(iso?: string | null): number | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  return Math.max(0, Math.floor((Date.now() - then) / 1000));
+}
 
 type UserStatus = {
   email: string;
@@ -108,7 +118,9 @@ export default function ManageInvites() {
     }
   };
 
-  const handleCopyLink = async (invite: InviteRow) => {
+  const [copyLinkConfirm, setCopyLinkConfirm] = useState<{ invite: InviteRow; secondsAgo: number } | null>(null);
+
+  const doCopyLink = async (invite: InviteRow) => {
     setCopyingLinkId(invite.id);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -140,6 +152,15 @@ export default function ManageInvites() {
     } finally {
       setCopyingLinkId(null);
     }
+  };
+
+  const handleCopyLink = async (invite: InviteRow) => {
+    const secondsAgo = secondsSince(invite.last_sent_at);
+    if (secondsAgo !== null && secondsAgo < RECENT_ACTION_THRESHOLD_SECONDS) {
+      setCopyLinkConfirm({ invite, secondsAgo });
+      return;
+    }
+    await doCopyLink(invite);
   };
 
   const fetchInvites = async () => {
@@ -1029,6 +1050,38 @@ export default function ManageInvites() {
           fetchInvites();
         }}
       />
+
+      <AlertDialog open={!!copyLinkConfirm} onOpenChange={(o) => !o && setCopyLinkConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate a new link?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {copyLinkConfirm ? (
+                <>
+                  This invite was sent or a link was generated{' '}
+                  <strong>{copyLinkConfirm.secondsAgo} seconds ago</strong>. Doing this again will
+                  invalidate that link — anyone who already has it will get an "invalid" error.
+                  Continue anyway?
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                const target = copyLinkConfirm?.invite;
+                setCopyLinkConfirm(null);
+                if (target) void doCopyLink(target);
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="border-[3px] border-[#dfdfdf]">

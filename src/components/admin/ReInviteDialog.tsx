@@ -9,7 +9,17 @@ type SelectedInvite = {
   id: string;
   email: string;
   tenant_id: number;
+  last_sent_at?: string | null;
 };
+
+const RECENT_ACTION_THRESHOLD_SECONDS = 120;
+
+function secondsSince(iso?: string | null): number | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  return Math.max(0, Math.floor((Date.now() - then) / 1000));
+}
 
 type ReInviteDialogProps = {
   open: boolean;
@@ -95,14 +105,23 @@ export default function ReInviteDialog({
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
           <div className="max-h-64 overflow-y-auto rounded-md border border-border divide-y">
-            {selectedInvites.map((invite) => (
-              <div key={invite.id} className="px-3 py-2 text-sm">
-                <div className="font-medium text-foreground">{invite.email}</div>
-                <div className="text-xs text-muted-foreground">
-                  {tenantNames?.get(invite.tenant_id) || `Tenant #${invite.tenant_id}`}
+            {selectedInvites.map((invite) => {
+              const secondsAgo = secondsSince(invite.last_sent_at);
+              const isRecent = secondsAgo !== null && secondsAgo < RECENT_ACTION_THRESHOLD_SECONDS;
+              return (
+                <div key={invite.id} className="px-3 py-2 text-sm">
+                  <div className="font-medium text-foreground">{invite.email}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {tenantNames?.get(invite.tenant_id) || `Tenant #${invite.tenant_id}`}
+                  </div>
+                  {isRecent && (
+                    <div className="mt-1 text-xs text-amber-600">
+                      Sent/copied {secondsAgo}s ago — this will invalidate that link.
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {selectedInvites.length === 0 && (
               <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                 No invitations selected.
