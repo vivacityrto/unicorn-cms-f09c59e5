@@ -1,92 +1,47 @@
-# Mailgun engagement signals (opens/clicks) on invitations
 
-Additive extension of the existing delivery-status pipeline. `delivery_status` / `delivery_event_at` semantics stay identical (terminal outcomes only). Opens and clicks land in four new columns and surface as a secondary badge next to the existing one in Manage Invites.
+## Scope
 
-## 1. Migration — `user_invitations`
+Additive changes to the client-portal Users page (`/client/users`). No new edge functions, no RLS changes, no changes to invite/reset edge functions or `generate-recovery-link` (stays Super-Admin-only).
 
-```sql
-ALTER TABLE public.user_invitations
-  ADD COLUMN first_opened_at  timestamptz,
-  ADD COLUMN open_count       integer NOT NULL DEFAULT 0,
-  ADD COLUMN first_clicked_at timestamptz,
-  ADD COLUMN click_count      integer NOT NULL DEFAULT 0;
-```
+## 1. Migration — extend `v_client_tenant_users`
 
-No RLS/grant/FK/enum changes. `accepted_at` untouched.
+`CREATE OR REPLACE VIEW public.v_client_tenant_users` reproducing the current definition verbatim, with only these additions:
 
-## 2. `supabase/functions/mailgun-webhook/index.ts`
+- **`active_users` CTE**: append six NULL literals (`delivery_status text`, `delivery_event_at timestamptz`, `open_count integer`, `first_opened_at timestamptz`, `click_count integer`, `first_clicked_at timestamptz`).
+- **`pending_invites` CTE**: select the corresponding real columns from `user_invitations`.
+- **Both branches of the outer `UNION ALL`**: add the same six column names, in the same position (right after `mailgun_message_id`).
 
-Restructure so terminal delivery and engagement are independent branches off the same lookup.
+No other change to filters, joins, WHERE clauses, or security-invoker attribute. Follow with `NOTIFY pgrst, 'reload schema';`.
 
-**Explicit change to the current early-return:** today, lines 114–118 do:
+## 2. Type — `src/hooks/use-client-tenant-users.ts`
 
-```ts
-const status = mapEvent(event, severity);
-if (!status) {
-  console.log("mailgun-webhook: ignored event", { event, severity });
-  return ok();
-}
-```
+Extend `ClientTenantUserRow` with the six optional/nullable fields (`delivery_status` narrowed to `'delivered' | 'bounced' | 'failed' | 'complained' | null`, timestamps as `string | null`, counts as `number | null`). Query already uses `select("*")` — no query change needed.
 
-That early `return ok()` currently short-circuits every non-terminal event before the DB lookup runs. **This early return must be removed.** Replace it with: compute `status` (may be `null`); if `status` is `null` AND `event` is neither `"opened"` nor `"clicked"`, then log "ignored event" and `return ok()` (preserves existing no-op for `accepted`, `unsubscribed`, etc.). Otherwise fall through to the shared lookup so opened/clicked reach Branch B.
+## 3. Mutations — `src/components/client/users/useInviteMutations.ts`
 
-Flow after that fix:
+Add two mutations mirroring the existing `resend`/`revoke` pattern (same `useMutation` shape, same `invalidate()` call reusing the `client_tenant_users` + `userCapacityKeys` query keys):
 
-- Trim `messageId` (unchanged, lines ~109–112).
-- Compute `eventAtIso` from `ed.timestamp` (fallback `now()`), same as today.
-- Single lookup:
-  ```ts
-  .from("user_invitations")
-  .select("id, first_opened_at, first_clicked_at, open_count, click_count")
-  .eq("mailgun_message_id", messageId)
-  .limit(1).maybeSingle();
-  ```
-  Note the explicit inclusion of `open_count` and `click_count` — required because Branch B increments them in TS and both columns are `NOT NULL DEFAULT 0`; reading them as `undefined` would produce `undefined + 1 = NaN` and violate the constraint on write.
-- Branch A — terminal delivery (unchanged behavior): if `status` is non-null, update `delivery_status` + `delivery_event_at`. Existing logging preserved.
-- Branch B — engagement (new):
-  - `event === "opened"` → `update { open_count: (invite.open_count ?? 0) + 1, first_opened_at: invite.first_opened_at ?? eventAtIso }`.
-  - `event === "clicked"` → same pattern for `click_count` / `first_clicked_at`.
-  - Best-effort counters; a single event body carries one `event`, so branches are mutually exclusive per call.
-- Signature verification, always-200 response, and top-level try/catch unchanged.
+- **`copyLink`** — invokes `resend-invite` with `{ invitation_id, skip_email: true }`. On success, `navigator.clipboard.writeText(data.action_link)` inside a try/catch; fallback toast shows the raw link. Success toast: "Link copied — paste it into Teams, email, or WhatsApp." Invalidates same keys as `resend`.
+- **`resetPassword`** — invokes `send-password-reset` with `{ user_uuid }`. Uses existing `extractEdgeError` helper to unwrap `code`/`detail`; specifically surfaces `AUTH_USER_NOT_FOUND` with the "hasn't activated yet" message (mirroring `TenantUsersTab.tsx`). Success toast confirms email address from response body.
 
-## 3. `supabase/functions/reconcile-invite-delivery-status/index.ts`
+Both returned from `useInviteMutations()` alongside `invite`, `resend`, `revoke`.
 
-Extend the per-row loop that already walks the Mailgun events response:
+## 4. UI — `src/components/client/ClientUsersPage.tsx`
 
-- Keep the existing 50-row batch, 7-day window, 250 ms sleep, error accounting, and terminal-status update path.
-- While walking `items`, additionally:
-  - Count `opened` items → `openedCount`; track earliest `opened` timestamp → `firstOpenedTs`.
-  - Same for `clicked` → `clickedCount`, `firstClickedTs`.
-- Row select expands to include `first_opened_at, first_clicked_at, open_count, click_count` so the null-guard on `first_*_at` works without re-reading.
-- Build the update patch:
-  - Include `delivery_status` + `delivery_event_at` only when a terminal event was picked (existing behavior).
-  - If `openedCount > 0`: set `open_count = openedCount`, and `first_opened_at = firstOpenedTs` only when current row value is null.
-  - Same for clicks.
-  - Empty patch → row stays pending (unchanged).
-- Summary log gains `opened_updated` / `clicked_updated`.
+- Import `Eye`, `MousePointerClick`, `Link as LinkIcon`, `KeyRound` from `lucide-react`.
+- **StatusDot** (invited rows only): render the two-badge pattern from `ManageInvites.tsx` — destructive/warning badge for `delivery_status ∈ {bounced, failed, complained}` with the same label mapping, plus outline badge with Eye/MousePointerClick when `first_opened_at`/`first_clicked_at` present (clicked > opened), with the same tooltip format.
+- **Invited-row dropdown** (`canManagePortalUsers` gate unchanged): insert a "Copy invite link" item between Resend and Revoke, wired to `copyLink.mutate(row.row_key)`.
+- **Active-row dropdown** (new): when `row.row_type === "active" && row.user_id && canManagePortalUsers`, render a dropdown with a single "Reset password" item wired to `resetPassword.mutate(row.user_id!)`. Mirror any self-exclusion pattern already used elsewhere in the file if present.
 
-## 4. `src/pages/ManageInvites.tsx` — UI
+## 5. Out of scope
 
-- Extend `InviteRow` with `first_opened_at?: string | null`, `open_count?: number`, `first_clicked_at?: string | null`, `click_count?: number`. No query change (`select("*")`).
-- In the Status column, keep the existing `delivery_status` badge exactly as today.
-- Immediately after it, render a second, independent engagement badge:
-  - `first_clicked_at` set → `<Badge variant="outline">` with `MousePointerClick` icon, label "Clicked", tooltip `Clicked N time(s) — first click <formatted date>`.
-  - Else `first_opened_at` set → `<Badge variant="outline">` with `Eye` icon, label "Opened", tooltip `Opened N time(s) — first open <formatted date>`.
-  - Else → render nothing.
-- Both badges live side-by-side; no re-layout of the row. Icons from `lucide-react` (existing dep). Date formatting reuses the helper already used for `delivery_event_at`.
+No changes to `generate-recovery-link` exposure, `invite-user`, `resend-invite`, `cancel-invite`, `send-password-reset`, `InviteUserDialog`, or any RLS policy.
 
-## Verification (in order)
+## Verification
 
-1. Confirm migration adds exactly the four columns; no other diff.
-2. Regenerate Supabase types (auto after migration).
-3. Invoke `reconcile-invite-delivery-status` once. Confirm:
-   - bwfat.com.au (bounced) rows still show `open_count = 0`, `first_opened_at = null`.
-   - Any historical delivered+opened row picks up non-zero counters.
-4. Send a fresh invite to a mailbox that will open + click. Confirm webhook path writes both counters and the engagement badge appears with correct tooltip.
-5. Visually verify Manage Invites: delivered+opened row shows both badges; delivered-only shows just delivery badge; bounced row unchanged.
-
-## Out of scope
-
-- No changes to `delivery_status` enum, RLS, FKs, or `accepted_at`.
-- Copy Link / resend-invite / cancel-invite flows unchanged.
-- No filter/sort by engagement in this pass.
+- Diff view definition — only 6 columns added.
+- As tenant admin: bounced invite shows Bounced badge; opened invite shows Opened badge.
+- Copy Link writes a working `/accept-invitation?token=...` URL to clipboard; row's `last_sent_at`/`expires_at` refresh.
+- Reset Password fires `send-password-reset` and toasts success (or friendly `AUTH_USER_NOT_FOUND` message).
+- Actions hidden for `user`/`academy_user` rows (existing `canManagePortalUsers` gate).
+- `rg generate-recovery-link src/components/client src/pages/client` returns nothing.
