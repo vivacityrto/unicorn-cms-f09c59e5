@@ -295,20 +295,46 @@ export default function AdminManagePackages() {
   const fetchPackageDocuments = async (packageId: number, stageId?: number) => {
     try {
       setLoadingDocuments(true);
-      let query = supabase
-        .from('documents')
-        .select('*')
-        .eq('package_id', packageId);
-      
-      // Filter by stage if provided
-      if (stageId) {
-        query = query.eq('stage', stageId);
-      }
-      
-      const { data, error } = await query.order('id', { ascending: true });
 
-      if (error) throw error;
-      setPackageDocuments(data || []);
+      if (stageId) {
+        const { data: linkRows } = await supabase
+          .from('document_stage_links')
+          .select('document_id')
+          .eq('stage_id', stageId);
+        const additionalIds = Array.from(
+          new Set(((linkRows ?? []) as { document_id: number }[]).map((r) => r.document_id)),
+        );
+
+        const [primaryRes, linkedRes] = await Promise.all([
+          supabase
+            .from('documents')
+            .select('*')
+            .eq('package_id', packageId)
+            .eq('stage', stageId)
+            .order('id', { ascending: true }),
+          additionalIds.length > 0
+            ? supabase.from('documents').select('*').in('id', additionalIds).order('id', { ascending: true })
+            : Promise.resolve({ data: [] as any[], error: null } as any),
+        ]);
+        if (primaryRes.error) throw primaryRes.error;
+
+        const merged = [...(primaryRes.data || []), ...(((linkedRes as any)?.data) || [])];
+        const seen = new Set<number>();
+        const deduped = merged.filter((d: any) => {
+          if (seen.has(d.id)) return false;
+          seen.add(d.id);
+          return true;
+        });
+        setPackageDocuments(deduped);
+      } else {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('package_id', packageId)
+          .order('id', { ascending: true });
+        if (error) throw error;
+        setPackageDocuments(data || []);
+      }
     } catch (error: any) {
       console.error('Error fetching package documents:', error);
       toast({
