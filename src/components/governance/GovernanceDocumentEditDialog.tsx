@@ -266,6 +266,13 @@ export function GovernanceDocumentEditDialog({
             </Select>
           </div>
 
+          {/* Additional Stages */}
+          <DocumentAdditionalStagesField
+            documentId={documentId}
+            stages={stages as any}
+            primaryStageId={form.stage ? parseInt(form.stage) : null}
+          />
+
           {/* SharePoint Template URL */}
           <div className="space-y-1.5">
             <Label htmlFor="edit-source-url">SharePoint Template URL</Label>
