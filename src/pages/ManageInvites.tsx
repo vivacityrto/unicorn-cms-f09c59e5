@@ -34,6 +34,7 @@ type InviteRow = {
   error_message?: string | null;
   invited_by?: string | null;
   expires_at?: string | null;
+  last_sent_at?: string | null;
   delivery_status?: 'delivered' | 'bounced' | 'failed' | 'complained' | null;
   delivery_event_at?: string | null;
   first_opened_at?: string | null;
@@ -41,6 +42,15 @@ type InviteRow = {
   first_clicked_at?: string | null;
   click_count?: number | null;
 };
+
+const RECENT_ACTION_THRESHOLD_SECONDS = 120;
+
+function secondsSince(iso?: string | null): number | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  return Math.max(0, Math.floor((Date.now() - then) / 1000));
+}
 
 type UserStatus = {
   email: string;
