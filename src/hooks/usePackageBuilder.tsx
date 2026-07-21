@@ -606,7 +606,16 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
     if (!packageId || !stageId) return;
 
     try {
-      const [staffResult, clientResult, emailsResult, docsResult] = await Promise.all([
+      // Fetch additional document IDs linked to this stage via document_stage_links
+      const { data: linkRows } = await supabase
+        .from('document_stage_links')
+        .select('document_id')
+        .eq('stage_id', stageId);
+      const additionalIds = Array.from(
+        new Set(((linkRows ?? []) as { document_id: number }[]).map((r) => r.document_id)),
+      );
+
+      const [staffResult, clientResult, emailsResult, docsResult, linkedDocsResult] = await Promise.all([
         supabase
           .from('package_staff_tasks')
           .select('*')
@@ -630,13 +639,28 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
           .select('*')
           .eq('package_id', packageId)
           .eq('stage', stageId)
-          .order('id', { ascending: true })
+          .order('id', { ascending: true }),
+        additionalIds.length > 0
+          ? supabase
+              .from('documents')
+              .select('*')
+              .in('id', additionalIds)
+              .order('id', { ascending: true })
+          : Promise.resolve({ data: [] as any[] } as any),
       ]);
 
       setStaffTasks((staffResult.data || []) as StaffTask[]);
       setClientTasks((clientResult.data || []) as ClientTask[]);
       setStageEmails((emailsResult.data || []) as StageEmail[]);
-      setDocuments(docsResult.data || []);
+      // Merge and dedupe documents by id
+      const mergedDocs = [...(docsResult.data || []), ...((linkedDocsResult as any)?.data || [])];
+      const seen = new Set<number>();
+      const dedupedDocs = mergedDocs.filter((d: any) => {
+        if (seen.has(d.id)) return false;
+        seen.add(d.id);
+        return true;
+      });
+      setDocuments(dedupedDocs);
     } catch (error: any) {
       toast({
         title: 'Error',
