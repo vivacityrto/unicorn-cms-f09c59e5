@@ -164,22 +164,40 @@ export default function TenantDetail() {
         // Fetch package details and stage counts from documents
         const [packagesResult, stageCountsResult] = await Promise.all([
           supabase.from("packages").select("id, name, slug, full_text, duration_months, total_hours").in("id", packageIds).order("name"),
-          supabase.from('documents').select('package_id, stage').in('package_id', packageIds).not('stage', 'is', null)
+          supabase.from('documents').select('id, package_id, stage').in('package_id', packageIds).not('stage', 'is', null)
         ]);
         
         if (packagesResult.error) throw packagesResult.error;
         
         // Count distinct stages per package
         const stageCounts: Record<number, Set<number>> = {};
-        if (stageCountsResult.data) {
-          stageCountsResult.data.forEach((row: { package_id: number; stage: number }) => {
-            if (!stageCounts[row.package_id]) {
-              stageCounts[row.package_id] = new Set();
-            }
-            stageCounts[row.package_id].add(row.stage);
+        const primaryRows = (stageCountsResult.data || []) as { id: number; package_id: number; stage: number }[];
+        primaryRows.forEach((row) => {
+          if (!stageCounts[row.package_id]) {
+            stageCounts[row.package_id] = new Set();
+          }
+          stageCounts[row.package_id].add(row.stage);
+        });
+
+        // Union-aware: also include stages reached via document_stage_links
+        // for documents belonging to these packages.
+        const packageDocIds = primaryRows.map((r) => r.id);
+        if (packageDocIds.length > 0) {
+          const { data: linkRows } = await supabase
+            .from('document_stage_links')
+            .select('document_id, stage_id')
+            .in('document_id', packageDocIds);
+          const docToPackage = new Map<number, number>(
+            primaryRows.map((r) => [r.id, r.package_id]),
+          );
+          ((linkRows ?? []) as { document_id: number; stage_id: number }[]).forEach((l) => {
+            const pkgId = docToPackage.get(l.document_id);
+            if (pkgId == null) return;
+            if (!stageCounts[pkgId]) stageCounts[pkgId] = new Set();
+            stageCounts[pkgId].add(l.stage_id);
           });
         }
-        
+
         // Add stage counts to packages
         const packagesWithCounts = (packagesResult.data || []).map(pkg => ({
           ...pkg,

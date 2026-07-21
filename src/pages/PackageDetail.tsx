@@ -529,12 +529,30 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
   };
   const fetchDocuments = async (stageId: number) => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("documents").select("*").eq("package_id", Number(id)).eq("stage", stageId).order("id");
-      if (error) throw error;
-      setDocuments(data || []);
+      const { data: linkRows } = await supabase
+        .from('document_stage_links')
+        .select('document_id')
+        .eq('stage_id', stageId);
+      const additionalIds = Array.from(
+        new Set(((linkRows ?? []) as { document_id: number }[]).map((r) => r.document_id)),
+      );
+
+      const [primaryRes, linkedRes] = await Promise.all([
+        supabase.from("documents").select("*").eq("package_id", Number(id)).eq("stage", stageId).order("id"),
+        additionalIds.length > 0
+          ? supabase.from("documents").select("*").in("id", additionalIds).order("id")
+          : Promise.resolve({ data: [] as any[], error: null } as any),
+      ]);
+      if (primaryRes.error) throw primaryRes.error;
+
+      const merged = [...(primaryRes.data || []), ...(((linkedRes as any)?.data) || [])];
+      const seen = new Set<number>();
+      const deduped = merged.filter((d: any) => {
+        if (seen.has(d.id)) return false;
+        seen.add(d.id);
+        return true;
+      });
+      setDocuments(deduped);
     } catch (error: any) {
       console.error("Error fetching documents:", error);
     }

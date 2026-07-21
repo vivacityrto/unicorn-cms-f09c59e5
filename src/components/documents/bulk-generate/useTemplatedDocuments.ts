@@ -24,13 +24,31 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
     queryKey: ["bulk-generate", "templated-documents", stageKey],
     staleTime: 60_000,
     queryFn: async (): Promise<TemplatedDocumentRow[]> => {
-      // 1. Pull documents scoped by stage filter (if any).
+      // 1. Pull documents scoped by stage filter (if any) — union-aware with
+      //    document_stage_links so shared documents are included.
+      let additionalIds: number[] = [];
+      if (stageKey.length > 0) {
+        const { data: linkRows, error: linkErr } = await supabase
+          .from("document_stage_links")
+          .select("document_id")
+          .in("stage_id", stageKey);
+        if (linkErr) throw linkErr;
+        additionalIds = Array.from(
+          new Set(((linkRows ?? []) as { document_id: number }[]).map((r) => r.document_id)),
+        );
+      }
       let docQuery = supabase
         .from("documents")
         .select("id, title, stage, source_template_url")
         .order("title", { ascending: true });
       if (stageKey.length > 0) {
-        docQuery = docQuery.in("stage", stageKey);
+        if (additionalIds.length > 0) {
+          docQuery = docQuery.or(
+            `stage.in.(${stageKey.join(",")}),id.in.(${additionalIds.join(",")})`,
+          );
+        } else {
+          docQuery = docQuery.in("stage", stageKey);
+        }
       }
       const { data: docs, error: docErr } = await docQuery;
       if (docErr) throw docErr;
