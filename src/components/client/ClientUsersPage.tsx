@@ -12,6 +12,10 @@ import {
   MailWarning,
   RefreshCcw,
   Ban,
+  Eye,
+  MousePointerClick,
+  Link as LinkIcon,
+  KeyRound,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -167,13 +171,63 @@ function RoleSwitcher({
 }
 
 
+function DeliveryBadges({ row }: { row: ClientTenantUserRow }) {
+  const ds = row.delivery_status;
+  const showDelivery = ds && ds !== "delivered";
+  const engagementFirstAt = row.first_clicked_at || row.first_opened_at;
+  if (!showDelivery && !engagementFirstAt) return null;
+  return (
+    <>
+      {showDelivery
+        ? (() => {
+            const cfg =
+              ds === "bounced"
+                ? { variant: "destructive" as const, label: "Bounced" }
+                : ds === "failed"
+                ? { variant: "warning" as const, label: "Delivery failed" }
+                : { variant: "destructive" as const, label: "Spam report" };
+            return (
+              <Badge variant={cfg.variant} className="text-xs">
+                <AlertCircle className="mr-1 h-3 w-3" />
+                {cfg.label}
+              </Badge>
+            );
+          })()
+        : null}
+      {engagementFirstAt
+        ? (() => {
+            const clicked = !!row.first_clicked_at;
+            const label = clicked ? "Clicked" : "Opened";
+            const Icon = clicked ? MousePointerClick : Eye;
+            const count = clicked ? row.click_count ?? 0 : row.open_count ?? 0;
+            const firstAt = clicked ? row.first_clicked_at! : row.first_opened_at!;
+            const noun = clicked ? "click" : "open";
+            const tip = `${label} ${count} time${count === 1 ? "" : "s"} — first ${noun} ${new Date(firstAt).toLocaleString()}`;
+            return (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-xs">
+                    <Icon className="mr-1 h-3 w-3" />
+                    {label}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>{tip}</TooltipContent>
+              </Tooltip>
+            );
+          })()
+        : null}
+    </>
+  );
+}
+
 function StatusDot({ row }: { row: ClientTenantUserRow }) {
   if (row.row_type === "invited") {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
         <span className="text-sm">Invited</span>
         <SentIndicator row={row} />
+        <DeliveryBadges row={row} />
       </div>
     );
   }
