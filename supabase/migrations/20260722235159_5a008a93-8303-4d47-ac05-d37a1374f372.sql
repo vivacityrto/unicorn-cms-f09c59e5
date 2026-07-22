@@ -49,3 +49,4 @@ REVOKE EXECUTE ON FUNCTION public.validate_risk_item_fields() FROM anon, authent
 REVOKE EXECUTE ON FUNCTION public.validate_rock_scope() FROM anon, authenticated, PUBLIC;
 COMMIT;
 NOTIFY pgrst, 'reload schema';
+-- sync-nudge 2026-07-22b

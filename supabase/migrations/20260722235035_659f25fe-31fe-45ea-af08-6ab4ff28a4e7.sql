@@ -100,3 +100,4 @@ REVOKE EXECUTE ON FUNCTION public.update_tenant_status() FROM anon, authenticate
 REVOKE EXECUTE ON FUNCTION public.validate_kickstart_tas() FROM anon, authenticated, PUBLIC;
 COMMIT;
 NOTIFY pgrst, 'reload schema';
+-- sync-nudge 2026-07-22b

@@ -32,3 +32,4 @@ ON public.role_permissions AS RESTRICTIVE FOR DELETE TO authenticated
 USING (is_super_admin_safe((SELECT auth.uid())));
 COMMIT;
 NOTIFY pgrst, 'reload schema';
+-- sync-nudge 2026-07-22b
