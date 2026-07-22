@@ -483,10 +483,10 @@ export default function ManageInvites() {
   });
 
   const toggleSelectAll = () => {
-    if (selectedInvites.size === filteredInvites.length) {
+    if (selectedInvites.size === sortedInvites.length) {
       setSelectedInvites(new Set());
     } else {
-      setSelectedInvites(new Set(filteredInvites.map(i => i.id)));
+      setSelectedInvites(new Set(sortedInvites.map(i => i.id)));
     }
   };
 
