@@ -1,61 +1,34 @@
-## Backfill 27 migration files from `supabase_migrations.schema_migrations`
+## Backfill 7 security migrations from the 12–13 Jul remediation
 
-Pure git-history reconciliation. No SQL will be executed against the database — every listed version is already applied in production. The task is to fetch each version's `statements` column verbatim and write it to the corresponding file under `supabase/migrations/`.
+Pure reconciliation. Each block was applied directly to production in mid-July, is already live, and has been independently verified by you as a safe no-op. This task gives each one a real file under `supabase/migrations/` and a `schema_migrations` row via the normal tooling.
 
 ### Approach
 
-1. For each of the 27 versions, run a read-only query:
-   ```sql
-   SELECT statements FROM supabase_migrations.schema_migrations WHERE version = '<version>';
-   ```
-   `statements` is a `text[]`; write its elements concatenated as-is (joined with `;\n` between statements, matching the Supabase CLI's own on-disk convention) with **no reformatting, cleanup, or modification** of the SQL content itself.
+Apply each block as its own migration via `supabase--migration`, in the order below, under today's date (22 Jul 2026). SQL is used verbatim from the prompt — no reformatting, no scope changes, no folding in of adjacent-but-separate decisions (PR #29 cohort tightening, `set_user_organisation`, etc.).
 
-2. Write each result to the exact target path listed in the request.
+Between each application, confirm the change was a true no-op against live state (policy/grant/table already matches). If any step reports an actual behavioral delta, stop and surface it before continuing.
 
-3. Preserve the two known historical quirks unchanged:
-   - `20260715234853_l3_gate_tga_sync_cluster.sql`, and the relevant portions of `20260715235839_l3_gate_document_ai_cluster.sql` (`upsert_excel_template_bindings`) and `20260716000201_l3_gate_remaining_utility_functions.sql` (`stall_bulk_document_job`) — backfill the original gate content as-recorded. The 22 Jul supersede fix already exists in git and remains untouched.
-   - `20260715233351_l3_harden_release_audit_report_rpc.sql` — add alongside the existing earlier same-day file `20260715080600_release_audit_report_caller_gate.sql`. That existing file is not touched.
+### Migrations (in order)
 
-4. Do not run migrations, do not lint, do not modify any other file.
-
-### Files created (27)
-
-```
-supabase/migrations/20260714031339_add_is_retrospective_to_client_audits.sql
-supabase/migrations/20260714031635_a1_auto_generate_evidence_request_on_audit_scheduling.sql
-supabase/migrations/20260714033012_validation_tool_sprint1_register_and_schedule.sql
-supabase/migrations/20260714033414_validation_tool_sprint2_methods_and_sessions.sql
-supabase/migrations/20260714033900_validation_tool_sprint3_pilot_and_portal_intake.sql
-supabase/migrations/20260714070905_fn_package_used_minutes_helper.sql
-supabase/migrations/20260714070914_backfill_null_package_instance_id_from_package_id.sql
-supabase/migrations/20260714071007_backfill_remaining_orphan_time_entries_via_package_template_id_v2.sql
-supabase/migrations/20260714071033_fix_recalc_hours_used_trigger.sql
-supabase/migrations/20260714071041_backfill_hours_used_all_package_instances.sql
-supabase/migrations/20260714071137_exclude_carry_over_from_used_minutes_calc.sql
-supabase/migrations/20260714071256_fix_package_burndown_and_time_summary_views_v2.sql
-supabase/migrations/20260714071319_fix_rpc_get_package_usage.sql
-supabase/migrations/20260714074601_fix_v_package_time_summary_security_invoker.sql
-supabase/migrations/20260714074812_fix_research_jobs_stage_instance_id_type.sql
-supabase/migrations/20260714074920_enable_retention_and_risk_forecast_cron.sql
-supabase/migrations/20260715035656_revoke_users_personal_contact_columns_c2.sql
-supabase/migrations/20260715060008_retire_dead_accept_invite_m1.sql
-supabase/migrations/20260715061352_widen_rpc_set_client_account_status_client_parent_m3.sql
-supabase/migrations/20260715233351_l3_harden_release_audit_report_rpc.sql
-supabase/migrations/20260715233813_l3_revoke_orphaned_audit_functions.sql
-supabase/migrations/20260715233915_l3_gate_audit_workflow_functions.sql
-supabase/migrations/20260715234853_l3_gate_tga_sync_cluster.sql
-supabase/migrations/20260715235328_l3_gate_eos_meetings_cluster.sql
-supabase/migrations/20260715235552_l3_gate_document_ai_cluster.sql
-supabase/migrations/20260715235839_l3_gate_templates_packages_cluster.sql
-supabase/migrations/20260716000201_l3_gate_remaining_utility_functions.sql
-```
+| # | Timestamp (planned) | File | Content |
+|---|---|---|---|
+| 1 | `20260722030001` | `reconcile_c2_users_no_privilege_escalation.sql` | RESTRICTIVE UPDATE policy on `public.users` guarding protected columns |
+| 2 | `20260722030002` | `reconcile_h1_drop_emails_authenticated_select.sql` | DROP stale world-readable `emails_authenticated_select` policy |
+| 3 | `20260722030003` | `reconcile_h3_internal_onboarding_admin_only.sql` | Scope storage read/update/delete on `internal-onboarding` to `admin.team_users.manage:full` |
+| 4 | `20260722030004` | `reconcile_m2_restrictive_backstops.sql` | RESTRICTIVE ALL policies on `emails`, `auth_tokens`, `oauth_tokens`, `cohort_send_jobs`, `cohort_send_job_items` — mirrors 12–13 Jul scope (`is_vivacity_staff` on cohort tables); PR #29's `admin.cohort.send` tightening is deliberately out of scope |
+| 5 | `20260722030005` | `reconcile_m3_revoke_anon_execute_15_fns.sql` | REVOKE ALL FROM PUBLIC + GRANT EXECUTE TO authenticated, service_role on the 15 listed functions. Excludes `delete_document_cascade`, `bulk_reassign_primary_csc` (already committed) and `set_user_organisation` (separate follow-up) |
+| 6 | `20260722030006` | `reconcile_l1_l3_drop_backfill_and_lock_cron_run_details.sql` | DROP stale `_tenant_users_contact_backfill_20260512`; REVOKE SELECT on `cron.job_run_details` from PUBLIC/anon/authenticated |
+| 7 | `20260722030007` | `reconcile_pr36_lock_cron_job.sql` | Reissue PR #36 verbatim: REVOKE SELECT on `cron.job` from PUBLIC/authenticated/anon + assertion DO block |
 
 ### Verification
 
-- Confirm all 27 files exist at the exact paths above.
-- Spot-check a few files against the `statements` array they came from to confirm verbatim content.
-- No DB writes, no `supabase--migration` calls, no other project files changed.
+- After each `supabase--migration` returns, note whether the operation was structurally a no-op (policies/grants already match). Expected outcome: all 7 are no-ops.
+- Confirm 7 new files appear under `supabase/migrations/` with the planned timestamps.
+- No source code, edge functions, or non-migration files are touched.
+- No follow-up lint/build/test runs — these are DB-only reconciliations.
 
-### Commit
+### Explicitly out of scope (per your note)
 
-All 27 new files as a single commit (I'll surface the file writes; you handle the actual git commit in your usual workflow since this sandbox can't run stateful git commands).
+- PR #29 cohort tables tightening to `admin.cohort.send`.
+- `set_user_organisation` anon EXECUTE revoke.
+- Any other findings from the 12–13 Jul pass not listed in the 7 blocks above.
