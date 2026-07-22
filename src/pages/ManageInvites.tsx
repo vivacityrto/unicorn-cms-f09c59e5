@@ -77,6 +77,7 @@ export default function ManageInvites() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState(launchMode ? "pending" : "all");
   const [dateFilter, setDateFilter] = useState(launchMode ? "this-week" : "all");
+  const [sortBy, setSortBy] = useState<"latest-activity" | "date-created">("latest-activity");
   const [reInviteDialogOpen, setReInviteDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInvites, setSelectedInvites] = useState<Set<string>>(new Set());
