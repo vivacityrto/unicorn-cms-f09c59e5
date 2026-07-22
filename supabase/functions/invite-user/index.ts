@@ -142,7 +142,9 @@ serve(async (req) => {
     }
 
     // VIVACITY invitations require admin.team_users.manage (Super Admin only).
-    // DB trigger enforce_invitation_role_ceiling mirrors this for direct PostgREST writes.
+    // The DB trigger trg_enforce_invitation_role_ceiling on public.user_invitations
+    // mirrors this for direct PostgREST writes; service-role callers (this fn) are
+    // short-circuited by the trigger via request.jwt.claim.role = 'service_role'.
     if (payload.invite_as === 'VIVACITY' && !canManageVivacityUsers) {
       return jsonResponse(403, {
         ok: false,
