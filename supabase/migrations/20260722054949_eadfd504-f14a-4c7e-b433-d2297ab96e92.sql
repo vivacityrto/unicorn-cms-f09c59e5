@@ -1,20 +1,24 @@
 -- Enforce that only a Super Admin may create or change an invitation that
 -- carries an internal Vivacity unicorn_role.
 --
--- Closes a direct PostgREST bypass: RLS currently lets tenant admins INSERT/
--- UPDATE user_invitations for their tenant, and the CHECK constraint allows
--- internal roles. Without this trigger a non-SA authenticated client could
--- write unicorn_role = 'Super Admin' (etc.) onto an invitation row.
+-- Originally authored 18 Jul 2026 as 20260718065738_enforce_invitation_role_ceiling.sql
+-- but never reached the live DB; reissued under today's timestamp and the old
+-- file removed in the same commit.
+--
+-- Closes a direct PostgREST bypass: user_invitations_manage_tenant_admin RLS
+-- lets tenant admins INSERT/UPDATE for their tenant, and the CHECK constraint
+-- allows internal roles. Without this trigger a tenant Admin could write
+-- unicorn_role = 'Super Admin' (etc.) via direct REST.
 --
 -- Canonical internal-staff role list: src/lib/roles/vivacityRoles.ts
 -- (Super Admin, Team Leader, Team Member, Integrator, BGT, CSC, CET).
 --
 -- Safety notes:
---   * service_role bypass — invite-user / bulk-send edge functions insert via
---     the service role (auth.uid() is null); they enforce caller permissions
---     in application code.
---   * UPDATE only re-checks when unicorn_role actually changes — so
---     accept_invitation_v2 status transitions (and similar) are unaffected.
+--   * service_role bypass — every writer edge function uses the SERVICE_ROLE_KEY,
+--     so PostgREST sets request.jwt.claim.role = 'service_role' and the
+--     short-circuit fires.
+--   * UPDATE only re-checks when unicorn_role actually changes — accept-flow
+--     status transitions, expiry auto-flip, and delivery backfills pass through.
 
 CREATE OR REPLACE FUNCTION public.enforce_invitation_role_ceiling()
 RETURNS trigger
@@ -23,12 +27,10 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  -- Edge functions / service-role writers manage their own authz.
   IF current_setting('request.jwt.claim.role', true) = 'service_role' THEN
     RETURN NEW;
   END IF;
 
-  -- Status / metadata updates that leave unicorn_role alone are fine.
   IF TG_OP = 'UPDATE'
      AND NEW.unicorn_role IS NOT DISTINCT FROM OLD.unicorn_role
   THEN
@@ -57,6 +59,7 @@ END;
 $$;
 
 REVOKE EXECUTE ON FUNCTION public.enforce_invitation_role_ceiling() FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.enforce_invitation_role_ceiling() FROM authenticated, service_role;
 
 DROP TRIGGER IF EXISTS trg_enforce_invitation_role_ceiling ON public.user_invitations;
 CREATE TRIGGER trg_enforce_invitation_role_ceiling
