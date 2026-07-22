@@ -49,3 +49,4 @@ WITH CHECK (
 );
 COMMIT;
 NOTIFY pgrst, 'reload schema';
+-- sync-nudge 2026-07-22b
