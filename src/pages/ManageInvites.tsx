@@ -789,6 +789,19 @@ export default function ManageInvites() {
               </div>
             </PopoverContent>
           </Popover>
+
+          <Select value={sortBy} onValueChange={(value: "latest-activity" | "date-created") => setSortBy(value)}>
+            <SelectTrigger className="w-full md:w-[180px] h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm">
+              <span className="whitespace-nowrap text-muted-foreground/80 font-normal mr-1">Sort by</span>
+              <span className="whitespace-nowrap">
+                {sortBy === "latest-activity" ? "Latest activity" : "Date created"}
+              </span>
+            </SelectTrigger>
+            <SelectContent className="rounded-lg shadow-lg border-border/50 bg-popover z-[100]" align="start">
+              <SelectItem value="latest-activity">Latest activity</SelectItem>
+              <SelectItem value="date-created">Date created</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Invites Table */}
