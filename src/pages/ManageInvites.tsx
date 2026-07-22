@@ -41,6 +41,8 @@ type InviteRow = {
   open_count?: number | null;
   first_clicked_at?: string | null;
   click_count?: number | null;
+  accepted_at?: string | null;
+  revoked_at?: string | null;
 };
 
 const RECENT_ACTION_THRESHOLD_SECONDS = 120;
