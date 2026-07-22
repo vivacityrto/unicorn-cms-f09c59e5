@@ -36,3 +36,4 @@ REVOKE ALL ON FUNCTION public.set_user_notification_prefs(jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.set_user_notification_prefs(jsonb) TO authenticated, service_role;
 COMMIT;
 NOTIFY pgrst, 'reload schema';
+-- sync-nudge 2026-07-22: file present in working tree; awaiting Lovable→GitHub flush
