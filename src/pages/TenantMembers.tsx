@@ -52,7 +52,7 @@ export default function TenantMembers() {
       // Single join query: tenant_users → users via user_id = user_uuid FK
       const { data, error } = await supabase
         .from("tenant_users")
-        .select("user_id, role, users(*)")
+        .select("user_id, role, users(user_uuid, first_name, last_name, email, phone, mobile_phone, unicorn_role, disabled, created_at)")
         .eq("tenant_id", parseInt(tenantId!));
 
       if (error) throw error;
