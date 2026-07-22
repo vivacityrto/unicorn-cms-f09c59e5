@@ -514,7 +514,7 @@ export default function ManageInvites() {
   };
 
   // Get the selected invitation rows for the re-invite dialog
-  const selectedInviteRows = filteredInvites.filter((i) => selectedInvites.has(i.id));
+  const selectedInviteRows = sortedInvites.filter((i) => selectedInvites.has(i.id));
 
   if (loading) {
     return (
