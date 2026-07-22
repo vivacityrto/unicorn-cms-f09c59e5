@@ -830,7 +830,7 @@ export default function ManageInvites() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvites.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((invite) => {
+                {sortedInvites.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((invite) => {
                   const tenantName = tenantNames.get(invite.tenant_id) || `ID: ${invite.tenant_id}`;
                   const userStatus = userStatuses.get(invite.email);
                   // If user exists in users table, they've successfully signed up - show Verified
