@@ -800,7 +800,7 @@ export default function ManageInvites() {
                 <p>{error}</p>
               </div>
             </div>
-          ) : filteredInvites.length === 0 ? (
+          ) : sortedInvites.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
               <p className="text-sm text-muted-foreground whitespace-nowrap">
@@ -813,7 +813,7 @@ export default function ManageInvites() {
                 <TableRow className="border-b-2 hover:bg-transparent">
                   <TableHead className="w-12 bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
                     <Checkbox
-                      checked={selectedInvites.size === filteredInvites.length && filteredInvites.length > 0}
+                      checked={selectedInvites.size === sortedInvites.length && sortedInvites.length > 0}
                       onCheckedChange={toggleSelectAll}
                       className="!border-[hsl(0deg_0%_43.45%)] !rounded-[5px]"
                     />
