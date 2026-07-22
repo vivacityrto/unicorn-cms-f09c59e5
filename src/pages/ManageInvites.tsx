@@ -440,6 +440,18 @@ export default function ManageInvites() {
     }
   };
 
+  const getLastActivityAt = (invite: InviteRow): number => {
+    const timestamps = [
+      invite.created_at,
+      invite.last_sent_at,
+      invite.delivery_event_at,
+      invite.accepted_at,
+      invite.revoked_at,
+    ].filter((ts): ts is string => !!ts);
+    if (timestamps.length === 0) return 0;
+    return Math.max(...timestamps.map(ts => new Date(ts).getTime()));
+  };
+
   // Filter invites
   const filteredInvites = invites.filter(invite => {
     const matchesSearch = invite.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -460,6 +472,14 @@ export default function ManageInvites() {
     const matchesDate = isWithinDateRange(invite.created_at);
     
     return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  // Sort filtered invites before pagination
+  const sortedInvites = [...filteredInvites].sort((a, b) => {
+    if (sortBy === "date-created") {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    return getLastActivityAt(b) - getLastActivityAt(a);
   });
 
   const toggleSelectAll = () => {
