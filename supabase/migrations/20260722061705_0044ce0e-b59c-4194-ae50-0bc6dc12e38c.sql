@@ -34,3 +34,4 @@ USING (is_vivacity_staff((SELECT auth.uid())))
 WITH CHECK (is_vivacity_staff((SELECT auth.uid())));
 
 NOTIFY pgrst, 'reload schema';
+-- sync-nudge 2026-07-22: file present in working tree; awaiting Lovable→GitHub flush

@@ -16,3 +16,4 @@ CREATE POLICY "Internal onboarding workbook files delete"
   USING (bucket_id = 'internal-onboarding' AND check_permission(auth.uid(), 'admin.team_users.manage', 'full'));
 
 NOTIFY pgrst, 'reload schema';
+-- sync-nudge 2026-07-22: file present in working tree; awaiting Lovable→GitHub flush
