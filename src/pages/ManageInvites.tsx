@@ -1002,10 +1002,10 @@ export default function ManageInvites() {
       </div>
 
       {/* Pagination */}
-      {filteredInvites.length > 0 && (
+      {sortedInvites.length > 0 && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground whitespace-nowrap">
-            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredInvites.length)}–{Math.min(currentPage * itemsPerPage, filteredInvites.length)} of {filteredInvites.length} results
+            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, sortedInvites.length)}–{Math.min(currentPage * itemsPerPage, sortedInvites.length)} of {sortedInvites.length} results
           </div>
           <Pagination>
             <PaginationContent>
@@ -1015,9 +1015,9 @@ export default function ManageInvites() {
                   className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                 />
               </PaginationItem>
-              {Array.from({ length: Math.ceil(filteredInvites.length / itemsPerPage) }, (_, i) => i + 1)
+              {Array.from({ length: Math.ceil(sortedInvites.length / itemsPerPage) }, (_, i) => i + 1)
                 .filter(page => {
-                  const totalPages = Math.ceil(filteredInvites.length / itemsPerPage);
+                  const totalPages = Math.ceil(sortedInvites.length / itemsPerPage);
                   if (totalPages <= 7) return true;
                   if (page === 1 || page === totalPages) return true;
                   if (page >= currentPage - 1 && page <= currentPage + 1) return true;
@@ -1054,8 +1054,8 @@ export default function ManageInvites() {
                 })}
               <PaginationItem>
                 <PaginationNext 
-                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredInvites.length / itemsPerPage), p + 1))}
-                  className={currentPage === Math.ceil(filteredInvites.length / itemsPerPage) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(sortedInvites.length / itemsPerPage), p + 1))}
+                  className={currentPage === Math.ceil(sortedInvites.length / itemsPerPage) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                 />
               </PaginationItem>
             </PaginationContent>
