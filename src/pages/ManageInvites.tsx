@@ -41,6 +41,8 @@ type InviteRow = {
   open_count?: number | null;
   first_clicked_at?: string | null;
   click_count?: number | null;
+  accepted_at?: string | null;
+  revoked_at?: string | null;
 };
 
 const RECENT_ACTION_THRESHOLD_SECONDS = 120;
@@ -75,6 +77,7 @@ export default function ManageInvites() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState(launchMode ? "pending" : "all");
   const [dateFilter, setDateFilter] = useState(launchMode ? "this-week" : "all");
+  const [sortBy, setSortBy] = useState<"latest-activity" | "date-created">("latest-activity");
   const [reInviteDialogOpen, setReInviteDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInvites, setSelectedInvites] = useState<Set<string>>(new Set());
@@ -437,6 +440,18 @@ export default function ManageInvites() {
     }
   };
 
+  const getLastActivityAt = (invite: InviteRow): number => {
+    const timestamps = [
+      invite.created_at,
+      invite.last_sent_at,
+      invite.delivery_event_at,
+      invite.accepted_at,
+      invite.revoked_at,
+    ].filter((ts): ts is string => !!ts);
+    if (timestamps.length === 0) return 0;
+    return Math.max(...timestamps.map(ts => new Date(ts).getTime()));
+  };
+
   // Filter invites
   const filteredInvites = invites.filter(invite => {
     const matchesSearch = invite.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -459,11 +474,19 @@ export default function ManageInvites() {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
+  // Sort filtered invites before pagination
+  const sortedInvites = [...filteredInvites].sort((a, b) => {
+    if (sortBy === "date-created") {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    return getLastActivityAt(b) - getLastActivityAt(a);
+  });
+
   const toggleSelectAll = () => {
-    if (selectedInvites.size === filteredInvites.length) {
+    if (selectedInvites.size === sortedInvites.length) {
       setSelectedInvites(new Set());
     } else {
-      setSelectedInvites(new Set(filteredInvites.map(i => i.id)));
+      setSelectedInvites(new Set(sortedInvites.map(i => i.id)));
     }
   };
 
@@ -491,7 +514,7 @@ export default function ManageInvites() {
   };
 
   // Get the selected invitation rows for the re-invite dialog
-  const selectedInviteRows = filteredInvites.filter((i) => selectedInvites.has(i.id));
+  const selectedInviteRows = sortedInvites.filter((i) => selectedInvites.has(i.id));
 
   if (loading) {
     return (
@@ -766,6 +789,19 @@ export default function ManageInvites() {
               </div>
             </PopoverContent>
           </Popover>
+
+          <Select value={sortBy} onValueChange={(value: "latest-activity" | "date-created") => setSortBy(value)}>
+            <SelectTrigger className="w-full md:w-[180px] h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm">
+              <span className="whitespace-nowrap text-muted-foreground/80 font-normal mr-1">Sort by</span>
+              <span className="whitespace-nowrap">
+                {sortBy === "latest-activity" ? "Latest activity" : "Date created"}
+              </span>
+            </SelectTrigger>
+            <SelectContent className="rounded-lg shadow-lg border-border/50 bg-popover z-[100]" align="start">
+              <SelectItem value="latest-activity">Latest activity</SelectItem>
+              <SelectItem value="date-created">Date created</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Invites Table */}
@@ -777,7 +813,7 @@ export default function ManageInvites() {
                 <p>{error}</p>
               </div>
             </div>
-          ) : filteredInvites.length === 0 ? (
+          ) : sortedInvites.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
               <p className="text-sm text-muted-foreground whitespace-nowrap">
@@ -790,7 +826,7 @@ export default function ManageInvites() {
                 <TableRow className="border-b-2 hover:bg-transparent">
                   <TableHead className="w-12 bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
                     <Checkbox
-                      checked={selectedInvites.size === filteredInvites.length && filteredInvites.length > 0}
+                      checked={selectedInvites.size === sortedInvites.length && sortedInvites.length > 0}
                       onCheckedChange={toggleSelectAll}
                       className="!border-[hsl(0deg_0%_43.45%)] !rounded-[5px]"
                     />
@@ -807,7 +843,7 @@ export default function ManageInvites() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvites.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((invite) => {
+                {sortedInvites.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((invite) => {
                   const tenantName = tenantNames.get(invite.tenant_id) || `ID: ${invite.tenant_id}`;
                   const userStatus = userStatuses.get(invite.email);
                   // If user exists in users table, they've successfully signed up - show Verified
@@ -979,10 +1015,10 @@ export default function ManageInvites() {
       </div>
 
       {/* Pagination */}
-      {filteredInvites.length > 0 && (
+      {sortedInvites.length > 0 && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground whitespace-nowrap">
-            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredInvites.length)}–{Math.min(currentPage * itemsPerPage, filteredInvites.length)} of {filteredInvites.length} results
+            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, sortedInvites.length)}–{Math.min(currentPage * itemsPerPage, sortedInvites.length)} of {sortedInvites.length} results
           </div>
           <Pagination>
             <PaginationContent>
@@ -992,9 +1028,9 @@ export default function ManageInvites() {
                   className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                 />
               </PaginationItem>
-              {Array.from({ length: Math.ceil(filteredInvites.length / itemsPerPage) }, (_, i) => i + 1)
+              {Array.from({ length: Math.ceil(sortedInvites.length / itemsPerPage) }, (_, i) => i + 1)
                 .filter(page => {
-                  const totalPages = Math.ceil(filteredInvites.length / itemsPerPage);
+                  const totalPages = Math.ceil(sortedInvites.length / itemsPerPage);
                   if (totalPages <= 7) return true;
                   if (page === 1 || page === totalPages) return true;
                   if (page >= currentPage - 1 && page <= currentPage + 1) return true;
@@ -1031,8 +1067,8 @@ export default function ManageInvites() {
                 })}
               <PaginationItem>
                 <PaginationNext 
-                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredInvites.length / itemsPerPage), p + 1))}
-                  className={currentPage === Math.ceil(filteredInvites.length / itemsPerPage) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(sortedInvites.length / itemsPerPage), p + 1))}
+                  className={currentPage === Math.ceil(sortedInvites.length / itemsPerPage) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                 />
               </PaginationItem>
             </PaginationContent>
