@@ -1,0 +1,608 @@
+-- ============================================================
+-- Rollback for 20260723064007_eos_overhaul_m5_structural_cleanup.sql
+-- Recreates every dropped object verbatim from its live definition
+-- captured before this migration ran. Run BEFORE M4's rollback if both
+-- need reverting (apply order was M4 then M5; rollback order is M5
+-- down, then M4 down).
+-- ============================================================
+
+BEGIN;
+
+-- 5. Restore dd_ rows
+INSERT INTO public.dd_eos_meeting_type (value, label, sort_order, is_active)
+SELECT 'Focus_Day', 'Focus Day', 40, true
+WHERE NOT EXISTS (SELECT 1 FROM public.dd_eos_meeting_type WHERE value = 'Focus_Day');
+INSERT INTO public.dd_eos_meeting_type (value, label, sort_order, is_active)
+SELECT 'Custom', 'Custom', 50, true
+WHERE NOT EXISTS (SELECT 1 FROM public.dd_eos_meeting_type WHERE value = 'Custom');
+-- NOTE: sort_order values above are best-effort placeholders (original
+-- live sort_order was not captured pre-drop) - verify/adjust ordering
+-- against the surviving 4 rows after restore if this rollback ever runs.
+
+-- 4. Recreate dropped RPC overloads verbatim
+CREATE OR REPLACE FUNCTION public.create_meeting_from_template(
+  p_template_id uuid, p_scheduled_date timestamp with time zone, p_scheduled_end_time timestamp with time zone,
+  p_facilitator_id uuid, p_scribe_id uuid, p_location text DEFAULT NULL::text,
+  p_participant_ids uuid[] DEFAULT NULL::uuid[], p_title text DEFAULT NULL::text,
+  p_series_id uuid DEFAULT NULL::uuid, p_tenant_id bigint DEFAULT NULL::bigint
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_meeting_id uuid;
+  v_template_name text;
+  v_template_type text;
+  v_meeting_type text;
+  v_meeting_scope text;
+  v_duration_minutes integer;
+  v_agenda_json jsonb;
+  v_tenant_id bigint;
+  v_is_level10 boolean := false;
+  v_segment jsonb;
+  v_sequence integer := 1;
+  v_seg_name text;
+  v_seg_duration integer;
+BEGIN
+  IF NOT public.is_vivacity_team_safe(auth.uid()) THEN
+    RAISE EXCEPTION 'Forbidden: staff only';
+  END IF;
+
+  SELECT template_name, template_type::text, duration_minutes, segments, tenant_id,
+         COALESCE(meeting_scope, 'tenant')
+  INTO v_template_name, v_template_type, v_duration_minutes, v_agenda_json, v_tenant_id, v_meeting_scope
+  FROM public.eos_agenda_templates
+  WHERE id = p_template_id;
+
+  IF v_template_name IS NULL THEN
+    RAISE EXCEPTION 'Template not found: %', p_template_id;
+  END IF;
+
+  IF p_tenant_id IS NOT NULL THEN v_tenant_id := p_tenant_id; END IF;
+
+  v_meeting_type := COALESCE(v_template_type, v_template_name);
+  v_is_level10 := (v_meeting_type ILIKE '%L10%' OR v_meeting_type ILIKE '%level%10%' OR v_template_name ILIKE '%level%10%');
+
+  INSERT INTO public.eos_meetings (
+    tenant_id, template_id, title, meeting_type, meeting_scope,
+    scheduled_date, scheduled_end_time, duration_minutes,
+    facilitator_id, scribe_id, location, agenda, status, series_id
+  ) VALUES (
+    v_tenant_id, p_template_id,
+    COALESCE(p_title, v_template_name || ' - ' || to_char(p_scheduled_date, 'YYYY-MM-DD')),
+    v_meeting_type, v_meeting_scope,
+    p_scheduled_date, p_scheduled_end_time, v_duration_minutes,
+    p_facilitator_id, p_scribe_id, p_location, v_agenda_json, 'scheduled', p_series_id
+  ) RETURNING id INTO v_meeting_id;
+
+  IF v_agenda_json IS NOT NULL AND jsonb_array_length(v_agenda_json) > 0 THEN
+    FOR v_segment IN SELECT * FROM jsonb_array_elements(v_agenda_json)
+    LOOP
+      v_seg_name := COALESCE(v_segment->>'segment_name', v_segment->>'name', 'Untitled Segment');
+      v_seg_duration := COALESCE((v_segment->>'duration_minutes')::INT, (v_segment->>'duration')::INT, 5);
+      INSERT INTO public.eos_meeting_segments (meeting_id, segment_name, duration_minutes, sequence_order)
+        VALUES (v_meeting_id, v_seg_name, v_seg_duration, v_sequence);
+      v_sequence := v_sequence + 1;
+    END LOOP;
+  END IF;
+
+  INSERT INTO public.eos_meeting_participants (meeting_id, user_id, role)
+  VALUES (v_meeting_id, p_facilitator_id, 'Leader')
+  ON CONFLICT (meeting_id, user_id) DO NOTHING;
+
+  IF p_scribe_id IS DISTINCT FROM p_facilitator_id THEN
+    INSERT INTO public.eos_meeting_participants (meeting_id, user_id, role)
+    VALUES (v_meeting_id, p_scribe_id, 'Member')
+    ON CONFLICT (meeting_id, user_id) DO NOTHING;
+  END IF;
+
+  IF v_is_level10 THEN
+    INSERT INTO public.eos_meeting_participants (meeting_id, user_id, role)
+    SELECT v_meeting_id, u.user_uuid, 'Member'
+    FROM public.users u
+    INNER JOIN auth.users au ON au.id = u.user_uuid
+    WHERE u.is_vivacity_internal = true
+      AND u.archived = false
+      AND u.user_uuid IS NOT NULL
+      AND u.user_uuid IS DISTINCT FROM p_facilitator_id
+      AND u.user_uuid IS DISTINCT FROM p_scribe_id
+    ON CONFLICT (meeting_id, user_id) DO NOTHING;
+  ELSE
+    IF p_participant_ids IS NOT NULL AND array_length(p_participant_ids, 1) > 0 THEN
+      INSERT INTO public.eos_meeting_participants (meeting_id, user_id, role)
+      SELECT v_meeting_id, pid, 'Member'
+      FROM unnest(p_participant_ids) AS pid
+      WHERE pid IS DISTINCT FROM p_facilitator_id AND pid IS DISTINCT FROM p_scribe_id
+      ON CONFLICT (meeting_id, user_id) DO NOTHING;
+    END IF;
+  END IF;
+
+  PERFORM public.seed_meeting_attendees_from_roles(v_meeting_id);
+  RETURN v_meeting_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.create_meeting_basic(
+  p_tenant_id bigint, p_meeting_type text, p_title text,
+  p_scheduled_date timestamp with time zone, p_facilitator_id uuid DEFAULT NULL::uuid
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_meeting_id UUID;
+BEGIN
+  IF NOT public.is_vivacity_team_safe(auth.uid()) THEN
+    RAISE EXCEPTION 'Forbidden: staff only';
+  END IF;
+
+  INSERT INTO eos_meetings (
+    tenant_id, meeting_type, title, scheduled_date, facilitator_id, status, created_by
+  ) VALUES (
+    p_tenant_id, p_meeting_type, p_title, p_scheduled_date,
+    COALESCE(p_facilitator_id, auth.uid()), 'scheduled', auth.uid()
+  )
+  RETURNING id INTO v_meeting_id;
+
+  IF p_meeting_type = 'L10' THEN
+    INSERT INTO eos_meeting_segments (meeting_id, segment_name, duration_minutes, sequence_order) VALUES
+      (v_meeting_id, 'Segue', 5, 1), (v_meeting_id, 'Scorecard', 5, 2),
+      (v_meeting_id, 'Rock Review', 5, 3), (v_meeting_id, 'Headlines', 5, 4),
+      (v_meeting_id, 'To-Do List', 5, 5), (v_meeting_id, 'IDS', 60, 6),
+      (v_meeting_id, 'Conclude', 5, 7);
+  ELSIF p_meeting_type = 'Quarterly' THEN
+    INSERT INTO eos_meeting_segments (meeting_id, segment_name, duration_minutes, sequence_order) VALUES
+      (v_meeting_id, 'Segue', 10, 1), (v_meeting_id, 'Review Previous Flight Plan', 30, 2),
+      (v_meeting_id, 'Review Mission Control', 30, 3), (v_meeting_id, 'Establish Next Quarter Rocks', 60, 4),
+      (v_meeting_id, 'Tackle Key Issues', 60, 5), (v_meeting_id, 'Next Steps', 20, 6),
+      (v_meeting_id, 'Conclude', 10, 7);
+  ELSIF p_meeting_type = 'Annual' THEN
+    INSERT INTO eos_meeting_segments (meeting_id, segment_name, duration_minutes, sequence_order) VALUES
+      (v_meeting_id, 'Day 1: Segue', 15, 1), (v_meeting_id, 'Day 1: Review Previous Mission Control', 60, 2),
+      (v_meeting_id, 'Day 1: Team Health', 45, 3), (v_meeting_id, 'Day 1: SWOT/Issues List', 60, 4),
+      (v_meeting_id, 'Day 1: Review Mission Control', 90, 5), (v_meeting_id, 'Day 2: Establish Next Quarter Rocks', 60, 6),
+      (v_meeting_id, 'Day 2: Tackle Key Issues', 90, 7), (v_meeting_id, 'Day 2: Conclude', 20, 8);
+  ELSIF p_meeting_type = 'Same_Page' THEN
+    INSERT INTO eos_meeting_segments (meeting_id, segment_name, duration_minutes, sequence_order) VALUES
+      (v_meeting_id, 'Check-In', 10, 1), (v_meeting_id, 'Review V/TO', 20, 2),
+      (v_meeting_id, 'Clarify Roles and Ownership', 20, 3), (v_meeting_id, 'Discuss Key Issues', 40, 4),
+      (v_meeting_id, 'Align on Priorities', 20, 5), (v_meeting_id, 'Decisions and Next Steps', 10, 6);
+  END IF;
+
+  RETURN v_meeting_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.close_meeting_with_validation(p_meeting_id uuid)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_meeting RECORD;
+  v_tenant_id INTEGER;
+  v_present_count INTEGER;
+  v_total_attendees INTEGER;
+  v_ratings_count INTEGER;
+  v_required_ratings INTEGER;
+  v_validation_errors TEXT[] := '{}';
+  v_current_user_id UUID;
+BEGIN
+  v_current_user_id := auth.uid();
+  SELECT m.*, t.id as tid INTO v_meeting FROM eos_meetings m JOIN tenants t ON t.id = m.tenant_id WHERE m.id = p_meeting_id;
+  IF NOT FOUND THEN RETURN json_build_object('success', false, 'error', 'Meeting not found'); END IF;
+  v_tenant_id := v_meeting.tid;
+  IF v_meeting.status != 'in_progress' THEN
+    RETURN json_build_object('success', false, 'error', 'Meeting must be in progress to close');
+  END IF;
+
+  SELECT COUNT(*) INTO v_present_count FROM eos_meeting_attendees
+    WHERE meeting_id = p_meeting_id AND attendance_status IN ('attended', 'late', 'left_early');
+  SELECT COUNT(*) INTO v_total_attendees FROM eos_meeting_attendees WHERE meeting_id = p_meeting_id;
+
+  IF v_total_attendees > 0 THEN
+    IF v_present_count < CEIL(v_total_attendees * 0.5) THEN
+      v_validation_errors := array_append(v_validation_errors,
+        format('Quorum not met: %s present, need %s', v_present_count, CEIL(v_total_attendees * 0.5)::INTEGER));
+    END IF;
+  END IF;
+
+  SELECT COUNT(*) INTO v_ratings_count FROM eos_meeting_ratings WHERE meeting_id = p_meeting_id;
+  v_required_ratings := GREATEST(1, FLOOR(v_present_count * 0.5));
+  IF v_ratings_count < v_required_ratings THEN
+    v_validation_errors := array_append(v_validation_errors,
+      format('Not enough ratings: %s submitted, need %s', v_ratings_count, v_required_ratings));
+  END IF;
+
+  IF array_length(v_validation_errors, 1) > 0 THEN
+    INSERT INTO audit_eos_events (tenant_id, meeting_id, entity, action, entity_id, user_id, details)
+    VALUES (v_tenant_id, p_meeting_id, 'meeting', 'meeting_validation_failed', p_meeting_id, v_current_user_id,
+      json_build_object('errors', v_validation_errors));
+    RETURN json_build_object('success', false, 'error', 'Validation failed', 'validation_errors', v_validation_errors);
+  END IF;
+
+  UPDATE eos_meetings SET status = 'closed', completed_at = NOW(), updated_at = NOW() WHERE id = p_meeting_id;
+
+  BEGIN
+    PERFORM generate_meeting_summary(p_meeting_id);
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+
+  INSERT INTO audit_eos_events (tenant_id, meeting_id, entity, action, entity_id, user_id, details)
+  VALUES (v_tenant_id, p_meeting_id, 'meeting', 'meeting_closed', p_meeting_id, v_current_user_id,
+    json_build_object('present_count', v_present_count, 'ratings_count', v_ratings_count));
+
+  RETURN json_build_object('success', true, 'message', 'Meeting closed successfully');
+END;
+$function$;
+
+-- 3. Recreate auto-seed trigger + functions
+CREATE OR REPLACE FUNCTION public.seed_system_agenda_templates()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_tenant RECORD;
+BEGIN
+  FOR v_tenant IN SELECT DISTINCT id FROM public.tenants
+  LOOP
+    INSERT INTO public.eos_agenda_templates (
+      tenant_id, meeting_type, template_name, description, segments, is_default, is_system, is_archived
+    )
+    SELECT v_tenant.id, 'L10', 'Level 10 Meeting',
+      'EOS canonical 90-minute weekly execution meeting. Follows exact EOS Level 10 agenda structure.',
+      '[{"name":"Segue","duration":5,"description":"Personal and business check-in. Share good news."},
+        {"name":"Scorecard","duration":5,"description":"Review weekly metrics. Flag any out-of-range numbers."},
+        {"name":"Rock Review","duration":5,"description":"Quick On-Track/Off-Track status for each Rock. No discussion."},
+        {"name":"Customer/Employee Headlines","duration":5,"description":"Customer/Employee headlines. Good news and FYIs."},
+        {"name":"IDS (Identify, Discuss, Solve)","duration":60,"description":"Identify, Discuss, Solve. Work through prioritised issues one at a time."},
+        {"name":"To-Do List","duration":5,"description":"Review last week To-Dos. Mark complete or carry forward."},
+        {"name":"Conclude / One Phrase Close","duration":5,"description":"Recap To-Dos and cascading messages. Rate meeting 1-10."}]'::jsonb,
+      true, true, false
+    WHERE NOT EXISTS (
+      SELECT 1 FROM public.eos_agenda_templates
+      WHERE tenant_id = v_tenant.id AND meeting_type = 'L10' AND is_system = true AND is_archived = false
+    );
+
+    INSERT INTO public.eos_agenda_templates (
+      tenant_id, meeting_type, template_name, description, segments, is_default, is_system, is_archived
+    )
+    SELECT v_tenant.id, 'Quarterly', 'Quarterly Meeting',
+      'EOS canonical Quarterly planning and review meeting.',
+      '[{"name":"Segue","duration":15,"description":"Check-in. Share personal and professional updates."},
+        {"name":"Review Previous Flight Plan","duration":60,"description":"Review previous quarter Rocks. Score as complete or incomplete."},
+        {"name":"Review Mission Control","duration":45,"description":"Review V/TO. Confirm vision, values, and targets."},
+        {"name":"Establish Next Quarter Rocks","duration":90,"description":"Set 3-7 company Rocks for the upcoming quarter."},
+        {"name":"Tackle Key Issues","duration":120,"description":"IDS on quarterly-level issues. Strategic problem solving."},
+        {"name":"Next Steps","duration":45,"description":"Cascade messages, assign action items, confirm accountability."},
+        {"name":"Conclude","duration":30,"description":"Summarise decisions. Rate the meeting. Schedule next quarterly."}]'::jsonb,
+      true, true, false
+    WHERE NOT EXISTS (
+      SELECT 1 FROM public.eos_agenda_templates
+      WHERE tenant_id = v_tenant.id AND meeting_type = 'Quarterly' AND is_system = true AND is_archived = false
+    );
+
+    INSERT INTO public.eos_agenda_templates (
+      tenant_id, meeting_type, template_name, description, segments, is_default, is_system, is_archived
+    )
+    SELECT v_tenant.id, 'Annual', 'Annual Strategic Planning',
+      'EOS canonical Annual Planning meeting. Two-day strategic planning session.',
+      '[{"name":"Day 1: Segue","duration":30,"description":"Check-in. Share personal and professional updates."},
+        {"name":"Day 1: Review Previous Mission Control","duration":60,"description":"Review last year V/TO. Score annual goals."},
+        {"name":"Day 1: Team Health","duration":90,"description":"Right People Right Seats. Address team dynamics."},
+        {"name":"Day 1: SWOT/Issues List","duration":120,"description":"Strategic SWOT analysis. Build annual issues list."},
+        {"name":"Day 1: Review Mission Control","duration":60,"description":"Update V/TO. Confirm 10-year target, 3-year picture."},
+        {"name":"Day 2: Establish Next Quarter Rocks","duration":120,"description":"Set Q1 Rocks aligned with annual priorities."},
+        {"name":"Day 2: Tackle Key Issues","duration":120,"description":"IDS on annual-level strategic issues."},
+        {"name":"Day 2: Conclude","duration":30,"description":"Cascade messages. Rate meeting. Confirm next steps."}]'::jsonb,
+      true, true, false
+    WHERE NOT EXISTS (
+      SELECT 1 FROM public.eos_agenda_templates
+      WHERE tenant_id = v_tenant.id AND meeting_type = 'Annual' AND is_system = true AND is_archived = false
+    );
+
+    INSERT INTO public.eos_agenda_templates (
+      tenant_id, meeting_type, template_name, description, segments, is_default, is_system, is_archived
+    )
+    SELECT v_tenant.id, 'Same_Page', 'Same Page Meeting',
+      'EOS Same Page Meeting for Visionary and Integrator alignment. 120-minute structured discussion.',
+      '[{"name":"Check-In","duration":10,"description":"Personal and professional updates between Visionary and Integrator."},
+        {"name":"Review V/TO","duration":20,"description":"Confirm alignment on vision, values, and targets."},
+        {"name":"Clarify Roles and Ownership","duration":20,"description":"Review Visionary vs Integrator responsibilities. Address any friction."},
+        {"name":"Discuss Key Issues","duration":40,"description":"Open discussion on strategic concerns, people issues, and priorities."},
+        {"name":"Align on Priorities","duration":20,"description":"Agree on top priorities for the upcoming period."},
+        {"name":"Decisions and Next Steps","duration":10,"description":"Capture decisions, assign actions, confirm follow-up."}]'::jsonb,
+      true, true, false
+    WHERE NOT EXISTS (
+      SELECT 1 FROM public.eos_agenda_templates
+      WHERE tenant_id = v_tenant.id AND meeting_type = 'Same_Page' AND is_system = true AND is_archived = false
+    );
+  END LOOP;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.seed_system_agenda_templates(p_tenant_id bigint)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_level10_segments JSONB;
+  v_quarterly_segments JSONB;
+  v_annual_segments JSONB;
+  v_template_id UUID;
+  v_version_id UUID;
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM eos_agenda_templates
+    WHERE tenant_id = p_tenant_id AND is_system = true
+  ) THEN
+    RETURN;
+  END IF;
+
+  v_level10_segments := '[
+    {"name": "Segue", "duration": 5},
+    {"name": "Scorecard", "duration": 5},
+    {"name": "Rock Review", "duration": 5},
+    {"name": "Customer/Employee Headlines", "duration": 5},
+    {"name": "IDS (Identify, Discuss, Solve)", "duration": 60},
+    {"name": "To-Do List", "duration": 5},
+    {"name": "Conclude / One Phrase Close", "duration": 5}
+  ]'::JSONB;
+
+  v_quarterly_segments := '[
+    {"name": "Segue", "duration": 15},
+    {"name": "Review Previous Flight Plan", "duration": 45},
+    {"name": "Review Mission Control", "duration": 60},
+    {"name": "Establish Next Quarter''s Rocks", "duration": 90},
+    {"name": "Tackle Key Issues", "duration": 120},
+    {"name": "Next Steps", "duration": 30},
+    {"name": "Conclude", "duration": 15}
+  ]'::JSONB;
+
+  v_annual_segments := '[
+    {"name": "Day 1: Segue", "duration": 15},
+    {"name": "Day 1: Review Previous Mission Control", "duration": 60},
+    {"name": "Day 1: Team Health", "duration": 45},
+    {"name": "Day 1: SWOT/Issues List", "duration": 90},
+    {"name": "Day 1: Review Mission Control", "duration": 120},
+    {"name": "Day 2: Establish Next Quarter''s Rocks", "duration": 120},
+    {"name": "Day 2: Tackle Key Issues", "duration": 180}
+  ]'::JSONB;
+
+  v_template_id := gen_random_uuid();
+  v_version_id := gen_random_uuid();
+  INSERT INTO eos_agenda_templates (id, tenant_id, template_name, meeting_type, segments, is_default, is_system, is_archived, description)
+  VALUES (v_template_id, p_tenant_id, 'Standard Level 10', 'L10', v_level10_segments, true, true, false, 'EOS canonical 90-minute weekly execution meeting agenda');
+  INSERT INTO eos_agenda_template_versions (id, template_id, version_number, segments_snapshot, change_summary, is_published, created_by)
+  VALUES (v_version_id, v_template_id, 1, v_level10_segments, 'Initial system template', true, NULL);
+  UPDATE eos_agenda_templates SET current_version_id = v_version_id WHERE id = v_template_id;
+
+  v_template_id := gen_random_uuid();
+  v_version_id := gen_random_uuid();
+  INSERT INTO eos_agenda_templates (id, tenant_id, template_name, meeting_type, segments, is_default, is_system, is_archived, description)
+  VALUES (v_template_id, p_tenant_id, 'Standard Quarterly Meeting', 'Quarterly', v_quarterly_segments, true, true, false, 'Full-day strategic session to review progress and set next quarter Flight Plan');
+  INSERT INTO eos_agenda_template_versions (id, template_id, version_number, segments_snapshot, change_summary, is_published, created_by)
+  VALUES (v_version_id, v_template_id, 1, v_quarterly_segments, 'Initial system template', true, NULL);
+  UPDATE eos_agenda_templates SET current_version_id = v_version_id WHERE id = v_template_id;
+
+  v_template_id := gen_random_uuid();
+  v_version_id := gen_random_uuid();
+  INSERT INTO eos_agenda_templates (id, tenant_id, template_name, meeting_type, segments, is_default, is_system, is_archived, description)
+  VALUES (v_template_id, p_tenant_id, 'Annual Strategic Planning', 'Annual', v_annual_segments, true, true, false, 'Two-day strategic planning covering Mission Control, long-term planning, and annual priorities');
+  INSERT INTO eos_agenda_template_versions (id, template_id, version_number, segments_snapshot, change_summary, is_published, created_by)
+  VALUES (v_version_id, v_template_id, 1, v_annual_segments, 'Initial system template', true, NULL);
+  UPDATE eos_agenda_templates SET current_version_id = v_version_id WHERE id = v_template_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.auto_seed_agenda_templates()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+BEGIN
+  PERFORM public.seed_system_agenda_templates(NEW.id);
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER seed_agenda_templates_on_tenant_create
+AFTER INSERT ON public.tenants
+FOR EACH ROW EXECUTE FUNCTION public.auto_seed_agenda_templates();
+
+-- 2. Recreate the dead versioning subsystem tables + functions
+CREATE TABLE public.eos_agenda_template_versions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id uuid NOT NULL REFERENCES public.eos_agenda_templates(id) ON DELETE CASCADE,
+  version_number integer NOT NULL DEFAULT 1,
+  segments_snapshot jsonb NOT NULL DEFAULT '[]'::jsonb,
+  change_summary text,
+  is_published boolean NOT NULL DEFAULT false,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE public.eos_template_audit_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  action text NOT NULL,
+  user_id uuid,
+  template_id uuid,
+  version_id uuid REFERENCES public.eos_agenda_template_versions(id) ON DELETE SET NULL,
+  tenant_id bigint NOT NULL,
+  change_summary text,
+  details jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION public.create_template_version(p_template_id uuid, p_segments jsonb, p_change_summary text, p_publish boolean)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_template RECORD;
+  v_new_version_number INT;
+  v_version_id UUID;
+  v_user_id UUID;
+  v_tenant_id BIGINT;
+BEGIN
+  v_user_id := auth.uid();
+
+  SELECT * INTO v_template
+  FROM public.eos_agenda_templates
+  WHERE id = p_template_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Template not found';
+  END IF;
+
+  v_tenant_id := v_template.tenant_id;
+
+  IF v_template.is_system THEN
+    RAISE EXCEPTION 'System templates cannot be edited. Duplicate the template first.';
+  END IF;
+
+  SELECT COALESCE(MAX(version_number), 0) + 1 INTO v_new_version_number
+  FROM public.eos_agenda_template_versions
+  WHERE template_id = p_template_id;
+
+  INSERT INTO public.eos_agenda_template_versions (
+    template_id, version_number, segments_snapshot, change_summary, is_published, created_by
+  ) VALUES (
+    p_template_id, v_new_version_number, p_segments, p_change_summary, p_publish, v_user_id
+  ) RETURNING id INTO v_version_id;
+
+  IF p_publish THEN
+    UPDATE public.eos_agenda_templates
+    SET segments = p_segments, current_version_id = v_version_id, updated_at = NOW()
+    WHERE id = p_template_id;
+  END IF;
+
+  INSERT INTO public.eos_template_audit_log (
+    action, user_id, template_id, version_id, tenant_id, change_summary, details
+  ) VALUES (
+    'template_version_created', v_user_id, p_template_id, v_version_id, v_tenant_id, p_change_summary,
+    jsonb_build_object('version_number', v_new_version_number, 'is_published', p_publish, 'segments_count', jsonb_array_length(p_segments))
+  );
+
+  RETURN v_version_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.restore_template_version(p_version_id uuid, p_restore_reason text)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_version RECORD;
+  v_template RECORD;
+  v_new_version_id UUID;
+  v_new_version_number INT;
+  v_user_id UUID;
+BEGIN
+  v_user_id := auth.uid();
+
+  SELECT * INTO v_version
+  FROM public.eos_agenda_template_versions
+  WHERE id = p_version_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Version not found';
+  END IF;
+
+  SELECT * INTO v_template
+  FROM public.eos_agenda_templates
+  WHERE id = v_version.template_id;
+
+  IF v_template.is_system THEN
+    RAISE EXCEPTION 'Cannot restore versions for system templates';
+  END IF;
+
+  SELECT COALESCE(MAX(version_number), 0) + 1 INTO v_new_version_number
+  FROM public.eos_agenda_template_versions
+  WHERE template_id = v_version.template_id;
+
+  INSERT INTO public.eos_agenda_template_versions (
+    template_id, version_number, segments_snapshot, change_summary, is_published, created_by
+  ) VALUES (
+    v_version.template_id, v_new_version_number, v_version.segments_snapshot,
+    p_restore_reason || ' (restored from v' || v_version.version_number || ')', TRUE, v_user_id
+  ) RETURNING id INTO v_new_version_id;
+
+  UPDATE public.eos_agenda_templates
+  SET segments = v_version.segments_snapshot, current_version_id = v_new_version_id, updated_at = NOW()
+  WHERE id = v_version.template_id;
+
+  INSERT INTO public.eos_template_audit_log (
+    action, user_id, template_id, version_id, tenant_id, change_summary, details
+  ) VALUES (
+    'template_version_restored', v_user_id, v_version.template_id, v_new_version_id, v_template.tenant_id, p_restore_reason,
+    jsonb_build_object('restored_from_version', v_version.version_number, 'new_version_number', v_new_version_number)
+  );
+
+  RETURN v_new_version_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.init_template_versions()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_template RECORD;
+  v_version_id UUID;
+BEGIN
+  IF NOT public.is_vivacity_team_safe(auth.uid()) THEN
+    RAISE EXCEPTION 'Forbidden: staff only';
+  END IF;
+
+  FOR v_template IN
+    SELECT * FROM public.eos_agenda_templates
+    WHERE current_version_id IS NULL
+  LOOP
+    INSERT INTO public.eos_agenda_template_versions (
+      template_id, version_number, segments_snapshot, change_summary,
+      is_published, created_by, created_at
+    ) VALUES (
+      v_template.id, 1, v_template.segments, 'Initial version',
+      TRUE, v_template.created_by, v_template.created_at
+    ) RETURNING id INTO v_version_id;
+
+    UPDATE public.eos_agenda_templates
+    SET current_version_id = v_version_id
+    WHERE id = v_template.id;
+  END LOOP;
+END;
+$function$;
+
+-- 1. Restore the FKs
+ALTER TABLE public.eos_agenda_templates
+  ADD CONSTRAINT eos_agenda_templates_current_version_id_fkey
+  FOREIGN KEY (current_version_id) REFERENCES public.eos_agenda_template_versions(id);
+ALTER TABLE public.eos_meetings
+  ADD CONSTRAINT eos_meetings_template_version_id_fkey
+  FOREIGN KEY (template_version_id) REFERENCES public.eos_agenda_template_versions(id);
+
+-- 0. Restore the 2 retired-type templates
+INSERT INTO public.eos_agenda_templates
+SELECT * FROM public._eos_retired_type_templates_backfill_20260723;
+
+NOTIFY pgrst, 'reload schema';
+
+COMMIT;
