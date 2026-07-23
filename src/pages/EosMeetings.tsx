@@ -10,6 +10,7 @@ import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, Re
 import { useEosMeetings } from '@/hooks/useEos';
 import { useMeetingSeries } from '@/hooks/useMeetingSeries';
 import { usePermission } from '@/hooks/usePermission';
+import { useEosConfigV2Flag } from '@/hooks/useEosConfigV2Flag';
 import { format, isPast, isToday } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
 import { AgendaTemplateLibrary } from '@/components/eos/AgendaTemplateLibrary';
@@ -35,6 +36,7 @@ function MeetingsContent() {
   const { upcomingMeetings, pastMeetings, isLoadingUpcoming, isLoadingPast } = useMeetingSeries();
   const canScheduleMeetingsPerm = usePermission('eos.meetings.l10.create');
   const canScheduleMeetings = () => canScheduleMeetingsPerm;
+  const { enabled: isConfigV2Enabled } = useEosConfigV2Flag();
   const [schedulerOpen, setSchedulerOpen] = useState(false);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
   const [timelineTab, setTimelineTab] = useState<'upcoming' | 'in_progress' | 'completed'>('upcoming');
@@ -199,13 +201,19 @@ function MeetingsContent() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setTemplateLibraryOpen(true)}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (isConfigV2Enabled) {
+                        navigate('/eos/configurations');
+                      } else {
+                        setTemplateLibraryOpen(true);
+                      }
+                    }}
                     disabled={!canScheduleMeetings()}
                   >
                     <Settings className="w-4 h-4 mr-2" />
-                    Manage Templates
+                    {isConfigV2Enabled ? 'Manage Configurations' : 'Manage Templates'}
                   </Button>
                 </span>
               </TooltipTrigger>

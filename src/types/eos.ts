@@ -231,6 +231,42 @@ export interface EosAgendaTemplate {
   updated_at: string;
 }
 
+export type ConfigMeetingType = 'L10' | 'Quarterly' | 'Annual' | 'Same_Page';
+export type EosConfigSegmentType = 'segue' | 'scorecard' | 'rocks' | 'headlines' | 'todos' | 'ids' | 'conclude' | 'general';
+export type ParticipantModel = 'whole_roster' | 'required_seats';
+export type ConfigFrequency = 'weekly' | 'quarterly' | 'annual' | 'on_demand';
+
+export interface EosConfigurationSegment {
+  id: number;
+  configuration_id: number;
+  sequence_order: number;
+  segment_type: EosConfigSegmentType;
+  label: string;
+  duration_minutes: number;
+  widget_key?: string;
+  is_required: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EosConfiguration {
+  id: number;
+  tenant_id: number;
+  meeting_type: ConfigMeetingType;
+  frequency: ConfigFrequency;
+  facilitator_seat_id?: string;
+  visionary_seat_id?: string;
+  integrator_seat_id?: string;
+  participant_model: ParticipantModel;
+  required_seat_ids: string[];
+  scorecard_metric_cap: number;
+  rocks_scope: string[];
+  description?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
 export interface EosAgendaTemplateVersion {
   id: string;
   template_id: string;
