@@ -70987,6 +70987,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_staff_safe_fields_only_changed: {
+        Args: { p_new_row: Database["public"]["Tables"]["users"]["Row"] }
+        Returns: boolean
+      }
       uuid_from_text: { Args: { p_text: string }; Returns: string }
       validate_document_readiness: {
         Args: { p_document_id: number; p_tenant_id?: number }
