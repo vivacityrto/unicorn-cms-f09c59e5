@@ -24,6 +24,7 @@ import {
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
+import { useEosConfigurations } from '@/hooks/useEosConfigurations';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { ClientBadge } from '@/components/eos/ClientBadge';
@@ -48,7 +49,7 @@ import {
   QuorumWarningPrompt,
 } from '@/components/eos/facilitator/FacilitatorPrompts';
 import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
-import type { EosMeetingSegment, MeetingType } from '@/types/eos';
+import type { EosMeetingSegment, MeetingType, ConfigMeetingType } from '@/types/eos';
 
 export const LiveMeetingView = () => {
   const { meetingId } = useParams<{ meetingId: string }>();
@@ -93,6 +94,17 @@ export const LiveMeetingView = () => {
   const { saveRating, getUserRating } = useMeetingOutcomes(meetingId);
   const { rocks } = useEosRocks();
   const { metrics } = useEosScorecardMetrics();
+
+  // Live-meeting Configuration for this tenant/type (Stage 1 config-driven
+  // constants). Resolved from the same useEosConfigurations hook Stage 1 uses;
+  // falls back to the prior hardcoded defaults if no Configuration is found
+  // (e.g. flag-off / unconfigured type), so behavior never regresses.
+  const { getConfigForType } = useEosConfigurations();
+  const configuration = meeting?.meeting_type
+    ? getConfigForType(meeting.meeting_type as ConfigMeetingType)
+    : undefined;
+  const scorecardCap = configuration?.scorecard_metric_cap ?? 5;
+  const rocksScope = configuration?.rocks_scope ?? ['company', 'team'];
 
   // Fetch owner names for rocks
   const ownerIds = useMemo(() => {
@@ -511,7 +523,7 @@ export const LiveMeetingView = () => {
               </p>
               <ScorecardPrompt />
             </Card>
-            {metrics?.slice(0, 5).map((metric) => (
+            {metrics?.slice(0, scorecardCap).map((metric) => (
               <ScorecardEntryGrid key={metric.id} metric={metric} />
             ))}
             {(!metrics || metrics.length === 0) && (
@@ -529,13 +541,15 @@ export const LiveMeetingView = () => {
         const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
         const currentYear = now.getFullYear();
         
-        // Filter to current quarter, Company + Team only (no Individual), exclude completed, sort by owner name
+        // Filter to current quarter, scoped by the Configuration's rocks_scope
+        // (defaults to Company + Team; empty array = show all levels), exclude
+        // completed, sort by owner name.
         const currentQuarterRocks = rocks
-          ?.filter(r => 
-            r.quarter_year === currentYear && 
-            r.quarter_number === currentQuarter && 
+          ?.filter(r =>
+            r.quarter_year === currentYear &&
+            r.quarter_number === currentQuarter &&
             r.status !== 'complete' &&
-            (r.rock_level === 'company' || r.rock_level === 'team')
+            (rocksScope.length === 0 || rocksScope.includes(r.rock_level ?? ''))
           )
           .sort((a, b) => {
             const nameA = rockOwners?.[a.owner_id || ''] || '';

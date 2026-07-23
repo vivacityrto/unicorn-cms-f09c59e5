@@ -38,7 +38,9 @@ function MeetingsContent() {
   const { upcomingMeetings, pastMeetings, isLoadingUpcoming, isLoadingPast } = useMeetingSeries();
   const canScheduleMeetingsPerm = usePermission('eos.meetings.l10.create');
   const canScheduleMeetings = () => canScheduleMeetingsPerm;
+  const canManageConfigurationsPerm = usePermission('eos.configurations.manage');
   const { enabled: isConfigV2Enabled } = useEosConfigV2Flag();
+  const canManageAgenda = () => (isConfigV2Enabled ? canManageConfigurationsPerm : canScheduleMeetings());
   const [schedulerOpen, setSchedulerOpen] = useState(false);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
   const [timelineTab, setTimelineTab] = useState<'upcoming' | 'in_progress' | 'completed'>('upcoming');
@@ -223,16 +225,16 @@ function MeetingsContent() {
                         setTemplateLibraryOpen(true);
                       }
                     }}
-                    disabled={!canScheduleMeetings()}
+                    disabled={!canManageAgenda()}
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     {isConfigV2Enabled ? 'Manage Configurations' : 'Manage Templates'}
                   </Button>
                 </span>
               </TooltipTrigger>
-              {!canScheduleMeetings() && (
+              {!canManageAgenda() && (
                 <TooltipContent>
-                  Managing templates requires Admin access.
+                  {isConfigV2Enabled ? 'Managing configurations requires Admin access.' : 'Managing templates requires Admin access.'}
                 </TooltipContent>
               )}
             </Tooltip>
