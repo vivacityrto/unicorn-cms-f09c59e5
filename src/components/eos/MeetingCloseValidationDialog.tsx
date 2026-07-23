@@ -131,13 +131,12 @@ export function MeetingCloseValidationDialog({
 }: MeetingCloseValidationDialogProps) {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { 
-    confirmations, 
-    ratings, 
-    validateClose, 
-    closeMeeting, 
-    saveConfirmation, 
-    saveRating,
+  const {
+    confirmations,
+    ratings,
+    validateClose,
+    closeMeeting,
+    saveConfirmation,
     hasConfirmation,
     getUserRating,
   } = useMeetingOutcomes(meetingId);
@@ -146,7 +145,8 @@ export function MeetingCloseValidationDialog({
   const [justifications, setJustifications] = useState<Record<OutcomeType, string>>({} as Record<OutcomeType, string>);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  
+  const [closeValidationErrors, setCloseValidationErrors] = useState<string[] | null>(null);
+
 
   const allOutcomes = getOutcomesForMeetingType(meetingType);
 
@@ -201,20 +201,17 @@ export function MeetingCloseValidationDialog({
     setValidation(result);
   };
 
-  const handleRatingSave = async (rating: number) => {
-    setSelectedRating(rating);
-    await saveRating.mutateAsync(rating);
-    // Refresh validation
-    const result = await validateClose.mutateAsync();
-    setValidation(result);
-  };
-
-  const handleCloseMeeting = async () => {
+  const handleCloseMeeting = async (force: boolean) => {
     try {
-      const result = await closeMeeting.mutateAsync(false);
+      const result = await closeMeeting.mutateAsync(force);
       if (result.success) {
         onOpenChange(false);
         navigate('/eos/meetings');
+      } else if (result.validation_errors?.length) {
+        // Quorum/ratings now genuinely gate closing (M6) - surface the exact
+        // reasons and offer the facilitator-only force override, rather than
+        // just toasting a generic error with no way to proceed.
+        setCloseValidationErrors(result.validation_errors);
       } else if (result.error) {
         toast.error(result.error);
       }
@@ -288,33 +285,46 @@ export function MeetingCloseValidationDialog({
             </Card>
           )}
 
-          {/* Meeting Rating - Required for L10 */}
+          {/* Meeting Rating - read-only status. Submission itself only lives in
+              the live view (every participant submits their own) - the close
+              dialog is only ever seen by the facilitator, so it can't be the
+              sole place ratings are collected. */}
           {meetingType === 'L10' && (
-            <div className="space-y-3">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Star className="h-4 w-4 text-primary" />
-                Rate this Meeting (1-10)
-              </h4>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                  <Button
-                    key={n}
-                    variant={selectedRating === n ? 'default' : 'outline'}
-                    size="sm"
-                    className="w-9 h-9"
-                    onClick={() => handleRatingSave(n)}
-                    disabled={saveRating.isPending}
-                  >
-                    {n}
-                  </Button>
-                ))}
-              </div>
-              {selectedRating && (
-                <p className="text-sm text-muted-foreground">
-                  Your rating: <span className="font-medium">{selectedRating}/10</span>
-                </p>
-              )}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Star className="h-4 w-4 text-primary" />
+              {ratings?.length || 0} rating{(ratings?.length || 0) === 1 ? '' : 's'} submitted
+              {selectedRating && <span>· your rating: {selectedRating}/10</span>}
             </div>
+          )}
+
+          {/* Quorum/ratings hard-gate failure (close_meeting_with_validation, M6) */}
+          {closeValidationErrors && closeValidationErrors.length > 0 && (
+            <Card className="p-4 border-destructive/50 bg-destructive/5">
+              <h4 className="font-semibold text-destructive flex items-center gap-2 mb-3">
+                <XCircle className="h-4 w-4" />
+                Can't Close Yet
+              </h4>
+              <ul className="space-y-2 mb-3">
+                {closeValidationErrors.map((err, idx) => (
+                  <li key={idx} className="text-sm flex items-start gap-2">
+                    <span className="text-destructive mt-0.5">•</span>
+                    <span>{err}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground mb-3">
+                As facilitator, you can close anyway for legitimate edge cases (e.g. quorum
+                genuinely wasn't achievable this week).
+              </p>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleCloseMeeting(true)}
+                disabled={closeMeeting.isPending}
+              >
+                Close Anyway
+              </Button>
+            </Card>
           )}
 
           {/* Captured Outcomes Summary */}
@@ -403,7 +413,7 @@ export function MeetingCloseValidationDialog({
             Continue Meeting
           </Button>
           <Button
-            onClick={handleCloseMeeting}
+            onClick={() => handleCloseMeeting(false)}
             disabled={closeMeeting.isPending || isValidating}
           >
             {closeMeeting.isPending ? (

@@ -11,7 +11,3 @@ export {
   QuorumWarningPrompt,
 } from './FacilitatorPrompts';
 export { RocksInsights } from './RocksInsights';
-export { QCInsights } from './QCInsights';
-export { FacilitatorOnboardingPanel } from './FacilitatorOnboardingPanel';
-export { FacilitatorHealthPanel } from './FacilitatorHealthPanel';
-export { FacilitatorAlertsPanel } from './FacilitatorAlertsPanel';

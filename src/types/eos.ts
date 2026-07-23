@@ -422,6 +422,7 @@ export interface EosMeetingSegment {
   id: string;
   meeting_id: string;
   segment_name: string;
+  segment_type: EosConfigSegmentType;
   sequence_order: number;
   duration_minutes: number;
   started_at?: string;

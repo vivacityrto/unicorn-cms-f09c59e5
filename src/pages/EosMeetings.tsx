@@ -19,12 +19,10 @@ import { ApplyTemplateDialog } from '@/components/eos/ApplyTemplateDialog';
 import { ChangeFacilitatorDialog } from '@/components/eos/ChangeFacilitatorDialog';
 import { DeleteMeetingDialog } from '@/components/eos/DeleteMeetingDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { PastMeetingSummary } from '@/components/eos/PastMeetingSummary';
 import { MeetingChainNav } from '@/components/eos/MeetingChainNav';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useEosConfigMeetingActions } from '@/hooks/useEosConfigMeetingActions';
 import type { MeetingType, EosMeeting } from '@/types/eos';
-import type { MeetingInstance } from '@/hooks/useMeetingSeries';
 
 export default function EosMeetings() {
   return (
@@ -49,8 +47,6 @@ function MeetingsContent() {
   const [meetingToDelete, setMeetingToDelete] = useState<{ id: string; title: string } | null>(null);
   const [applyTemplateDialogOpen, setApplyTemplateDialogOpen] = useState(false);
   const [meetingForTemplate, setMeetingForTemplate] = useState<EosMeeting | null>(null);
-  const [pastMeetingsOpen, setPastMeetingsOpen] = useState(false);
-  const [selectedPastMeeting, setSelectedPastMeeting] = useState<MeetingInstance | null>(null);
   const [changeFacilitatorMeetingId, setChangeFacilitatorMeetingId] = useState<string | null>(null);
   const [meetingToSkip, setMeetingToSkip] = useState<{ id: string; title: string } | null>(null);
   const { syncMeetingToConfiguration, skipMeetingOccurrence } = useEosConfigMeetingActions();
@@ -329,14 +325,6 @@ function MeetingsContent() {
           meetingType={meetingForTemplate.meeting_type}
           meetingTitle={meetingForTemplate.title}
           hasExistingSegments={true}
-        />
-      )}
-
-      {selectedPastMeeting && (
-        <PastMeetingSummary
-          open={!!selectedPastMeeting}
-          onOpenChange={(open) => !open && setSelectedPastMeeting(null)}
-          meeting={selectedPastMeeting}
         />
       )}
 
