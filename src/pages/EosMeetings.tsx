@@ -13,12 +13,16 @@ import { usePermission } from '@/hooks/usePermission';
 import { useEosConfigV2Flag } from '@/hooks/useEosConfigV2Flag';
 import { format, isPast, isToday } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
+import { SimpleMeetingScheduler } from '@/components/eos/SimpleMeetingScheduler';
 import { AgendaTemplateLibrary } from '@/components/eos/AgendaTemplateLibrary';
 import { ApplyTemplateDialog } from '@/components/eos/ApplyTemplateDialog';
+import { ChangeFacilitatorDialog } from '@/components/eos/ChangeFacilitatorDialog';
 import { DeleteMeetingDialog } from '@/components/eos/DeleteMeetingDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PastMeetingSummary } from '@/components/eos/PastMeetingSummary';
 import { MeetingChainNav } from '@/components/eos/MeetingChainNav';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { useEosConfigMeetingActions } from '@/hooks/useEosConfigMeetingActions';
 import type { MeetingType, EosMeeting } from '@/types/eos';
 import type { MeetingInstance } from '@/hooks/useMeetingSeries';
 
@@ -47,6 +51,9 @@ function MeetingsContent() {
   const [meetingForTemplate, setMeetingForTemplate] = useState<EosMeeting | null>(null);
   const [pastMeetingsOpen, setPastMeetingsOpen] = useState(false);
   const [selectedPastMeeting, setSelectedPastMeeting] = useState<MeetingInstance | null>(null);
+  const [changeFacilitatorMeetingId, setChangeFacilitatorMeetingId] = useState<string | null>(null);
+  const [meetingToSkip, setMeetingToSkip] = useState<{ id: string; title: string } | null>(null);
+  const { syncMeetingToConfiguration, skipMeetingOccurrence } = useEosConfigMeetingActions();
 
   // Categorize meetings by lifecycle state
   const { upcomingList, inProgressList, completedList } = useMemo(() => {
@@ -55,7 +62,10 @@ function MeetingsContent() {
     const completed: EosMeeting[] = [];
 
     (meetings || []).forEach((meeting) => {
-      if (meeting.status === 'closed' || meeting.status === 'completed' || meeting.is_complete) {
+      if (meeting.status === 'closed' || meeting.status === 'completed' || meeting.status === 'skipped' || meeting.is_complete) {
+        // Skipped meetings are resolved (the cadence already advanced past them),
+        // so they don't belong in "Upcoming" - but history stays honest via a
+        // distinct badge (getStatusBadge), never rendered as if it actually ran.
         completed.push(meeting);
       } else if (meeting.status === 'in_progress') {
         inProgress.push(meeting);
@@ -93,6 +103,13 @@ function MeetingsContent() {
   };
 
   const getStatusBadge = (meeting: EosMeeting) => {
+    if (meeting.status === 'skipped') {
+      return (
+        <Badge variant="outline" className="text-muted-foreground border-dashed">
+          Skipped
+        </Badge>
+      );
+    }
     if (meeting.status === 'closed' || meeting.status === 'completed' || meeting.is_complete) {
       return (
         <Badge variant="secondary" className="bg-muted text-muted-foreground">
@@ -247,15 +264,50 @@ function MeetingsContent() {
         </div>
       </div>
 
-      <MeetingScheduler
-        open={schedulerOpen}
-        onOpenChange={setSchedulerOpen}
-        onScheduled={() => window.location.reload()}
-      />
+      {isConfigV2Enabled ? (
+        <SimpleMeetingScheduler
+          open={schedulerOpen}
+          onOpenChange={setSchedulerOpen}
+          onScheduled={() => refetch()}
+        />
+      ) : (
+        <MeetingScheduler
+          open={schedulerOpen}
+          onOpenChange={setSchedulerOpen}
+          onScheduled={() => window.location.reload()}
+        />
+      )}
 
       <AgendaTemplateLibrary
         open={templateLibraryOpen}
         onOpenChange={setTemplateLibraryOpen}
+      />
+
+      {changeFacilitatorMeetingId && (
+        <ChangeFacilitatorDialog
+          open={!!changeFacilitatorMeetingId}
+          onOpenChange={(open) => !open && setChangeFacilitatorMeetingId(null)}
+          meetingId={changeFacilitatorMeetingId}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!meetingToSkip}
+        onOpenChange={(open) => !open && setMeetingToSkip(null)}
+        variant="warning"
+        title="Skip This Occurrence?"
+        description="Marks this meeting as skipped instead of run — it stays distinct from a real closed meeting in history, and the next occurrence still generates on schedule."
+        itemName={meetingToSkip?.title}
+        confirmText="Skip Occurrence"
+        isLoading={skipMeetingOccurrence.isPending}
+        onConfirm={() => {
+          if (meetingToSkip) {
+            skipMeetingOccurrence.mutate(
+              { meetingId: meetingToSkip.id },
+              { onSuccess: () => setMeetingToSkip(null) },
+            );
+          }
+        }}
       />
 
       <DeleteMeetingDialog
@@ -391,6 +443,10 @@ function MeetingsContent() {
                   onApplyTemplate={handleApplyTemplateClick}
                   onDelete={handleDeleteClick}
                   navigate={navigate}
+                  isConfigV2Enabled={isConfigV2Enabled}
+                  onSync={(id) => syncMeetingToConfiguration.mutate(id)}
+                  onSkip={(id, title) => setMeetingToSkip({ id, title })}
+                  onChangeFacilitator={setChangeFacilitatorMeetingId}
                 />
               ))
             ) : (
@@ -418,6 +474,10 @@ function MeetingsContent() {
                   onApplyTemplate={handleApplyTemplateClick}
                   onDelete={handleDeleteClick}
                   navigate={navigate}
+                  isConfigV2Enabled={isConfigV2Enabled}
+                  onSync={(id) => syncMeetingToConfiguration.mutate(id)}
+                  onSkip={(id, title) => setMeetingToSkip({ id, title })}
+                  onChangeFacilitator={setChangeFacilitatorMeetingId}
                   showResumeAction
                 />
               ))
@@ -446,10 +506,16 @@ function MeetingsContent() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <CardTitle className="text-lg">{meeting.title}</CardTitle>
-                          <Badge variant="secondary" className="bg-muted">
-                            <Lock className="w-3 h-3 mr-1" />
-                            Completed
-                          </Badge>
+                          {meeting.status === 'skipped' ? (
+                            <Badge variant="outline" className="text-muted-foreground border-dashed">
+                              Skipped
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-muted">
+                              <Lock className="w-3 h-3 mr-1" />
+                              Completed
+                            </Badge>
+                          )}
                           <Badge className={getMeetingTypeColor(meeting.meeting_type)}>
                             {meeting.meeting_type}
                           </Badge>
@@ -481,14 +547,20 @@ function MeetingsContent() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/eos/meetings/${meeting.id}/summary`)}
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      View Summary
-                    </Button>
+                    {meeting.status === 'skipped' ? (
+                      <p className="text-sm text-muted-foreground">
+                        This occurrence was skipped — no summary to view. The cadence continued on schedule.
+                      </p>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/eos/meetings/${meeting.id}/summary`)}
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        View Summary
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))
@@ -520,18 +592,27 @@ interface MeetingCardProps {
   onDelete: (id: string, title: string) => void;
   navigate: (path: string) => void;
   showResumeAction?: boolean;
+  isConfigV2Enabled?: boolean;
+  onSync?: (meetingId: string) => void;
+  onSkip?: (meetingId: string, title: string) => void;
+  onChangeFacilitator?: (meetingId: string) => void;
 }
 
-function MeetingCard({ 
-  meeting, 
-  getStatusBadge, 
-  getMeetingTypeColor, 
+function MeetingCard({
+  meeting,
+  getStatusBadge,
+  getMeetingTypeColor,
   canScheduleMeetings,
   onApplyTemplate,
   onDelete,
   navigate,
   showResumeAction = false,
+  isConfigV2Enabled = false,
+  onSync,
+  onSkip,
+  onChangeFacilitator,
 }: MeetingCardProps) {
+  const isScheduled = meeting.status === 'scheduled' && !meeting.is_complete;
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
@@ -588,15 +669,49 @@ function MeetingCard({
           </Button>
           {canScheduleMeetings() && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onApplyTemplate(meeting)}
-                title="Apply Agenda Template"
-              >
-                <LayoutTemplate className="w-4 h-4 mr-2" />
-                Apply Template
-              </Button>
+              {isConfigV2Enabled ? (
+                <>
+                  {isScheduled && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onSync?.(meeting.id)}
+                        title="Re-derive agenda, facilitator, and participants from the current Configuration"
+                      >
+                        <LayoutTemplate className="w-4 h-4 mr-2" />
+                        Sync to Configuration
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onChangeFacilitator?.(meeting.id)}
+                      >
+                        <Users className="w-4 h-4 mr-2" />
+                        Change Facilitator
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onSkip?.(meeting.id, meeting.title)}
+                        title="Skip this occurrence — still advances the cadence, keeps history honest"
+                      >
+                        Skip
+                      </Button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onApplyTemplate(meeting)}
+                  title="Apply Agenda Template"
+                >
+                  <LayoutTemplate className="w-4 h-4 mr-2" />
+                  Apply Template
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
