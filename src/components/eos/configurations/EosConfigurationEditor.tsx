@@ -294,7 +294,7 @@ export function EosConfigurationEditor() {
                     onChange={(e) => setNewSegmentDuration(parseInt(e.target.value) || 1)}
                   />
                 </div>
-                <Button size="sm" className="w-full" onClick={handleAddSegment} disabled={!newSegmentLabel.trim() || addSegment.isPending}>
+                <Button size="sm" className="w-full" onClick={handleAddSegment} disabled={!newSegmentLabel.trim() || addSegment.isPending || reorderSegments.isPending}>
                   <Plus className="h-3.5 w-3.5 mr-1" />
                   Add Segment
                 </Button>
