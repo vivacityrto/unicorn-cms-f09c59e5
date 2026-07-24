@@ -297,33 +297,59 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           {audit.report_generated_at ? (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 text-sm text-green-600">
                 <FileText className="h-4 w-4" />
                 Last generated: {new Date(audit.report_generated_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
               </div>
-              <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
-                <Download className="h-3 w-3 mr-1" /> Download PDF
-              </Button>
+              {(audit as any).report_pdf_path && (
+                <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
+                  <Download className="h-3 w-3 mr-1" /> Download PDF
+                </Button>
+              )}
+              {(audit as any).report_docx_path && (
+                <Button size="sm" variant="outline" onClick={handleDownloadDocx}>
+                  <Download className="h-3 w-3 mr-1" /> Download Word
+                </Button>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" /> No report generated yet
             </div>
           )}
-          <Button onClick={handleGenerateClick} disabled={generateReport.isPending || !canReport}>
-            {generateReport.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating PDF report...
-              </>
-            ) : (
-              <>
-                <FileText className="h-4 w-4 mr-2" />
-                {audit.report_generated_at ? 'Regenerate Report' : 'Generate Report'}
-              </>
-            )}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleGenerateClick} disabled={generateReport.isPending || !canReport}>
+              {generateReport.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating PDF report...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  {(audit as any).report_pdf_path ? 'Regenerate PDF' : 'Generate PDF'}
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => generateReportDocx.mutate()}
+              disabled={generateReportDocx.isPending || !canReport}
+            >
+              {generateReportDocx.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating Word...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  {(audit as any).report_docx_path ? 'Regenerate Word' : 'Generate Word'}
+                </>
+              )}
+            </Button>
+          </div>
           {incompleteCount > 0 && (
             <p className="text-xs text-muted-foreground">
               {incompleteCount} response(s) still need attention before this audit is complete.
