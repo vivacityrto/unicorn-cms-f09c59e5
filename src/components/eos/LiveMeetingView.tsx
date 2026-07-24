@@ -54,7 +54,7 @@ import type { EosMeetingSegment, MeetingType, ConfigMeetingType } from '@/types/
 export const LiveMeetingView = () => {
   const { meetingId } = useParams<{ meetingId: string }>();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [newHeadline, setNewHeadline] = useState('');
   const [isGoodNews, setIsGoodNews] = useState(true);
@@ -981,7 +981,7 @@ export const LiveMeetingView = () => {
                 <span>{facilitatorName}</span>
               </div>
             )}
-            {meeting?.status === 'in_progress' && (
+            {meeting?.status === 'in_progress' && (canControlMeeting || isSuperAdmin()) && (
               <Button
                 variant="ghost"
                 size="sm"
