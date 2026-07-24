@@ -196,6 +196,22 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
     window.open(data.signedUrl, '_blank', 'noopener');
   };
 
+  const handleDownloadDocx = async () => {
+    const path = (audit as any).report_docx_path as string | null | undefined;
+    if (!path) {
+      toast.error('No Word document available yet.');
+      return;
+    }
+    const { data, error } = await supabase.storage
+      .from('audit-reports')
+      .createSignedUrl(path, 60);
+    if (error || !data?.signedUrl) {
+      toast.error("Couldn't open the Word document. Try regenerating it.");
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener');
+  };
+
   const scrollToFirstIncomplete = () => {
     setSoftGuardOpen(false);
     // Best-effort: jump to the form tab. Sidebar amber dots will lead the eye.
