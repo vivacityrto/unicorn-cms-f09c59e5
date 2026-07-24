@@ -63,6 +63,8 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const EosIssues = lazy(() => import("./pages/EosIssues"));
  const EosTodos = lazy(() => import("./pages/EosTodos"));
  const EosMeetings = lazy(() => import("./pages/EosMeetings"));
+const EosConfigurations = lazy(() => import("./pages/EosConfigurations"));
+const EosConfigurationDetail = lazy(() => import("./pages/EosConfigurationDetail"));
  const EosScorecard = lazy(() => import("./pages/EosScorecard"));
  const EosVto = lazy(() => import("./pages/EosVto"));
  const EosMeetingSummary = lazy(() => import("./pages/EosMeetingSummary"));
@@ -779,16 +781,32 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/eos/meetings" 
+            <Route
+              path="/eos/meetings"
               element={
                 <ProtectedRoute>
                   <EosMeetings />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/eos/meetings/:meetingId/summary" 
+            <Route
+              path="/eos/configurations"
+              element={
+                <ProtectedRoute>
+                  <EosConfigurations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/eos/configurations/:id"
+              element={
+                <ProtectedRoute>
+                  <EosConfigurationDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/eos/meetings/:meetingId/summary"
               element={
                 <ProtectedRoute>
                   <EosMeetingSummary />

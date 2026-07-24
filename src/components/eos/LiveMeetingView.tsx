@@ -24,6 +24,7 @@ import {
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
+import { useEosConfigurations } from '@/hooks/useEosConfigurations';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { ClientBadge } from '@/components/eos/ClientBadge';
@@ -35,15 +36,25 @@ import { CreateIssueDialog } from '@/components/eos/CreateIssueDialog';
 import { MeetingCloseValidationDialog } from '@/components/eos/MeetingCloseValidationDialog';
 import { AttendancePanel } from '@/components/eos/AttendancePanel';
 import { FacilitatorSelectDialog } from '@/components/eos/FacilitatorSelectDialog';
+import { ChangeFacilitatorDialog } from '@/components/eos/ChangeFacilitatorDialog';
 import { OnlineUsersIndicator } from '@/components/eos/OnlineUsersIndicator';
 import { FacilitatorChecklist } from '@/components/eos/facilitator/FacilitatorChecklist';
-import { RockReviewPrompt, IDSPrompt, ScorecardPrompt, MeetingRatingPrompt } from '@/components/eos/facilitator/FacilitatorPrompts';
-import type { EosMeetingSegment, MeetingType } from '@/types/eos';
+import {
+  RockReviewPrompt,
+  IDSPrompt,
+  ScorecardPrompt,
+  MeetingRatingPrompt,
+  OffTrackRockPrompt,
+  IDSDecisionPrompt,
+  QuorumWarningPrompt,
+} from '@/components/eos/facilitator/FacilitatorPrompts';
+import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
+import type { EosMeetingSegment, MeetingType, ConfigMeetingType } from '@/types/eos';
 
 export const LiveMeetingView = () => {
   const { meetingId } = useParams<{ meetingId: string }>();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [newHeadline, setNewHeadline] = useState('');
   const [isGoodNews, setIsGoodNews] = useState(true);
@@ -52,6 +63,7 @@ export const LiveMeetingView = () => {
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [facilitatorDialogOpen, setFacilitatorDialogOpen] = useState(false);
+  const [changeFacilitatorOpen, setChangeFacilitatorOpen] = useState(false);
   const [editingRock, setEditingRock] = useState<any>(null);
   const [rockFormOpen, setRockFormOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
@@ -82,6 +94,17 @@ export const LiveMeetingView = () => {
   const { saveRating, getUserRating } = useMeetingOutcomes(meetingId);
   const { rocks } = useEosRocks();
   const { metrics } = useEosScorecardMetrics();
+
+  // Live-meeting Configuration for this tenant/type (Stage 1 config-driven
+  // constants). Resolved from the same useEosConfigurations hook Stage 1 uses;
+  // falls back to the prior hardcoded defaults if no Configuration is found
+  // (e.g. flag-off / unconfigured type), so behavior never regresses.
+  const { getConfigForType } = useEosConfigurations();
+  const configuration = meeting?.meeting_type
+    ? getConfigForType(meeting.meeting_type as ConfigMeetingType)
+    : undefined;
+  const scorecardCap = configuration?.scorecard_metric_cap ?? 5;
+  const rocksScope = configuration?.rocks_scope ?? ['company', 'team'];
 
   // Fetch owner names for rocks
   const ownerIds = useMemo(() => {
@@ -166,6 +189,9 @@ export const LiveMeetingView = () => {
     onHeadlineChange: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-headlines', meetingId] });
     },
+    onTodoChange: () => {
+      queryClient.invalidateQueries({ queryKey: ['meeting-todos', meetingId] });
+    },
   });
 
   // Attendance hook for auto-attendance
@@ -178,12 +204,51 @@ export const LiveMeetingView = () => {
   // Track if we've already auto-added the user this session
   const hasAutoAttended = useRef(false);
 
-  // Computed segment states
-  const currentSegment = useMemo(() => 
-    segments?.find(s => s.started_at && !s.completed_at), 
+  // Mirrors close_meeting_with_validation's own quorum formula (M6) so the
+  // proactive in-meeting warning (QuorumWarningPrompt) agrees with what
+  // would actually block closing, rather than a separately-invented check.
+  const quorumMet = useMemo(() => {
+    const total = attendees?.length ?? 0;
+    if (total === 0) return true;
+    const present = attendees?.filter(a =>
+      a.attendance_status === 'attended' || a.attendance_status === 'late' || a.attendance_status === 'left_early'
+    ).length ?? 0;
+    return present >= Math.ceil(total * 0.5);
+  }, [attendees]);
+
+  // Computed segment states.
+  // liveSegment = server state, facilitator-controlled - this is what's
+  // officially running, unchanged from before this split.
+  const liveSegment = useMemo(() =>
+    segments?.find(s => s.started_at && !s.completed_at),
     [segments]
   );
-  
+
+  // viewingSegment = local/client-only, per-user, never written to the DB.
+  // Defaults to following live (viewingSegmentId === null). Set by clicking
+  // any segment in the sidebar - segment content is already loaded
+  // client-side, so this never touches the network.
+  const [viewingSegmentId, setViewingSegmentId] = useState<string | null>(null);
+  const viewingSegment = useMemo(
+    () => (viewingSegmentId ? segments?.find(s => s.id === viewingSegmentId) : liveSegment),
+    [viewingSegmentId, segments, liveSegment],
+  );
+  const isViewingLive = viewingSegmentId === null || viewingSegmentId === liveSegment?.id;
+
+  // Tracks the live segment as of the last moment this viewer was actually
+  // following it, so the jump-to-live nudge can tell "the facilitator
+  // advanced while I was browsing elsewhere" apart from "I just clicked to
+  // browse away from an unchanged live position" - the latter isn't the
+  // facilitator moving anywhere and shouldn't say so.
+  const [lastSeenLiveSegmentId, setLastSeenLiveSegmentId] = useState<string | null>(null);
+  useEffect(() => {
+    if (isViewingLive) {
+      setLastSeenLiveSegmentId(liveSegment?.id ?? null);
+    }
+  }, [isViewingLive, liveSegment?.id]);
+  const facilitatorAdvancedWhileBrowsing =
+    !isViewingLive && !!liveSegment && liveSegment.id !== lastSeenLiveSegmentId;
+
   const completedSegments = useMemo(() => 
     segments?.filter(s => s.completed_at) || [], 
     [segments]
@@ -268,11 +333,12 @@ export const LiveMeetingView = () => {
     }
   };
 
-  const isFacilitator = participants === undefined
-    ? false
-    : participants.length === 0
-      ? true
-      : participants.some(p => p.user_id === profile?.user_uuid && p.role === 'Leader');
+  // Facilitator = current Leader, full stop. No zero-participants bootstrap
+  // fallback: advance_segment/go_to_previous_segment (M6) have no such
+  // allowance either, so a bootstrap "true" here would show a button that
+  // errors on click. If no Leader is assigned yet, use Change Facilitator
+  // to assign one — there is no scenario where nobody is facilitator.
+  const isFacilitator = participants?.some(p => p.user_id === profile?.user_uuid && p.role === 'Leader') ?? false;
 
   // Derive facilitator display name from the participant row with role='Leader'.
   const facilitatorParticipant = participants?.find((p: any) => p.role === 'Leader');
@@ -283,13 +349,29 @@ export const LiveMeetingView = () => {
   // Any signed-in Vivacity staff member who is listed as a meeting attendee can start
   // the meeting — not just the designated facilitator, and not gated on the separate
   // eos_meeting_participants sync which can lag behind the attendee list users see.
+  // Starting is a different tier from controlling: FacilitatorSelectDialog resolves/
+  // confirms who the facilitator will be via change_meeting_facilitator (its own
+  // Leader/Super-Admin/Integrator-or-above gate), independent of segment control.
   const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
   const isMeetingAttendee = attendees?.some(a => a.user_id === profile?.user_uuid) ?? false;
   const canStartMeeting = isVivacityStaff && isMeetingAttendee;
-  // Once the meeting is live, any Vivacity staff member can control it so
-  // navigation buttons stay consistent across every segment/page even if the
-  // attendee list hasn't synced this user yet.
-  const canControlMeeting = isVivacityStaff || isFacilitator;
+  // Segment control (advance/previous/close/IDS discuss-solve) is facilitator-only,
+  // full stop — no super-admin or "any staff" bypass. Matches advance_segment/
+  // go_to_previous_segment (M6), which removed that bypass at the RPC level;
+  // keeping this looser here would show buttons that error on click for
+  // non-facilitator staff. Use Change Facilitator (any time, incl. mid-meeting)
+  // for the deliberate escape hatch instead of a blanket staff bypass.
+  const canControlMeeting = isFacilitator;
+  // Change Facilitator is the one deliberate escape hatch (plan: "current
+  // Leader, super admin, or Integrator-or-above"), matching
+  // change_meeting_facilitator's own is_integrator_or_above() role list
+  // (Super Admin, Team Leader, Integrator) - broader than canControlMeeting
+  // on purpose, since reassigning control is not the same as driving it.
+  const canChangeFacilitator =
+    canControlMeeting ||
+    isSuperAdmin() ||
+    profile?.unicorn_role === 'Team Leader' ||
+    profile?.unicorn_role === 'Integrator';
 
 
   // Start first segment mutation
@@ -377,13 +459,19 @@ export const LiveMeetingView = () => {
     setIdsDialogOpen(true);
   };
 
-  // Throttled segment navigation handlers to prevent double-clicks
+  // Throttled segment navigation handlers to prevent double-clicks.
+  // Own action always snaps the acting facilitator's view back to live
+  // (no nudge needed for your own click) - other attendees who've browsed
+  // away keep their local viewingSegmentId and see the jump-to-live nudge
+  // instead, since realtime only invalidates the segments query, it never
+  // touches viewingSegmentId.
   const handleAdvanceSegment = async () => {
     if (isNavigatingRef.current || segmentsFetching) return;
     isNavigatingRef.current = true;
     setIsNavigatingUI(true);
     try {
       await advanceSegment.mutateAsync();
+      setViewingSegmentId(null);
     } finally {
       setTimeout(() => {
         isNavigatingRef.current = false;
@@ -398,6 +486,7 @@ export const LiveMeetingView = () => {
     setIsNavigatingUI(true);
     try {
       await goToPreviousSegment.mutateAsync();
+      setViewingSegmentId(null);
     } finally {
       setTimeout(() => {
         isNavigatingRef.current = false;
@@ -416,22 +505,16 @@ export const LiveMeetingView = () => {
     });
   };
 
-  // Segment content helper
-  const getSegmentType = (segmentName: string): string => {
-    const name = segmentName.toLowerCase();
-    if (name.includes('segue') || name.includes('check-in')) return 'segue';
-    if (name.includes('scorecard')) return 'scorecard';
-    if (name.includes('rock')) return 'rocks';
-    if (name.includes('headline')) return 'headlines';
-    if (name.includes('to-do') || name.includes('todo')) return 'todos';
-    if (name.includes('ids') || name.includes('issue') || name.includes('tackle')) return 'ids';
-    if (name.includes('conclude') || name.includes('next step') || name.includes('decisions')) return 'conclude';
-    return 'general';
-  };
-
-  // Render segment content based on type
+  // Render segment content based on type — segment_type is a real stored
+  // column (M9), always meaningfully derived at write time (from the
+  // Configuration directly, or via keyword-match for the one remaining
+  // legacy creation path - see M12) rather than re-derived here. A
+  // frontend fallback (tried in an earlier review round, reverted) can't
+  // tell "never classified" apart from a Configuration author
+  // deliberately picking "General" as a real segment type, so guessing
+  // client-side is wrong - fixed at the source instead.
   const renderSegmentContent = (segment: EosMeetingSegment) => {
-    const type = getSegmentType(segment.segment_name);
+    const type = segment.segment_type;
 
     switch (type) {
       case 'segue':
@@ -467,8 +550,9 @@ export const LiveMeetingView = () => {
               <p className="text-muted-foreground text-sm mb-4">
                 Review weekly metrics. Flag any numbers off track.
               </p>
+              <ScorecardPrompt />
             </Card>
-            {metrics?.slice(0, 5).map((metric) => (
+            {metrics?.slice(0, scorecardCap).map((metric) => (
               <ScorecardEntryGrid key={metric.id} metric={metric} />
             ))}
             {(!metrics || metrics.length === 0) && (
@@ -486,13 +570,15 @@ export const LiveMeetingView = () => {
         const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
         const currentYear = now.getFullYear();
         
-        // Filter to current quarter, Company + Team only (no Individual), exclude completed, sort by owner name
+        // Filter to current quarter, scoped by the Configuration's rocks_scope
+        // (defaults to Company + Team; empty array = show all levels), exclude
+        // completed, sort by owner name.
         const currentQuarterRocks = rocks
-          ?.filter(r => 
-            r.quarter_year === currentYear && 
-            r.quarter_number === currentQuarter && 
+          ?.filter(r =>
+            r.quarter_year === currentYear &&
+            r.quarter_number === currentQuarter &&
             r.status !== 'complete' &&
-            (r.rock_level === 'company' || r.rock_level === 'team')
+            (rocksScope.length === 0 || rocksScope.includes(r.rock_level ?? ''))
           )
           .sort((a, b) => {
             const nameA = rockOwners?.[a.owner_id || ''] || '';
@@ -509,6 +595,13 @@ export const LiveMeetingView = () => {
             <p className="text-muted-foreground text-sm mb-4">
               Quick status update only - On Track or Off Track. No discussion.
             </p>
+            <div className="space-y-3 mb-4">
+              <RockReviewPrompt />
+              {/* Same rocks_scope-filtered set as the list below, not the raw
+                  rocks array - otherwise insights (overdue/off-track counts)
+                  can reference rocks the segment itself isn't even showing. */}
+              <RocksInsights rocks={currentQuarterRocks.map(r => ({ ...r, owner_user_id: r.owner_id }))} />
+            </div>
             <div className="space-y-3">
               {currentQuarterRocks.map((rock) => (
                 <Card key={rock.id} className="p-4 bg-muted/20">
@@ -519,11 +612,18 @@ export const LiveMeetingView = () => {
                           <p className="font-medium">{rock.title}</p>
                           <ClientBadge clientId={rock.client_tenant_id} />
                           <Badge variant="outline" className={`text-xs ${
-                            rock.rock_level === 'company' 
-                              ? 'border-primary/40 text-primary' 
+                            rock.rock_level === 'company'
+                              ? 'border-primary/40 text-primary'
                               : 'border-accent-foreground/30 text-accent-foreground'
                           }`}>
-                            {rock.rock_level === 'company' ? 'Company' : 'Team'}
+                            {/* rocks_scope is now editable and can include 'individual'
+                                (round 1 fix) - show the real level instead of assuming
+                                every non-company rock is Team. */}
+                            {rock.rock_level === 'company'
+                              ? 'Company'
+                              : rock.rock_level === 'individual'
+                                ? 'Individual'
+                                : 'Team'}
                           </Badge>
                           <Badge variant="outline" className="text-xs">
                             Q{rock.quarter_number} {rock.quarter_year}
@@ -534,6 +634,7 @@ export const LiveMeetingView = () => {
                         )}
                       </div>
                     </div>
+                    {rock.status === 'off_track' && <OffTrackRockPrompt rockTitle={rock.title} />}
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
                         {rock.owner_id && rockOwners?.[rock.owner_id] && (
@@ -730,6 +831,10 @@ export const LiveMeetingView = () => {
             <p className="text-muted-foreground text-sm mb-4">
               Work through issues one at a time. Identify the real issue, Discuss, then Solve.
             </p>
+            <div className="space-y-3 mb-4">
+              <IDSPrompt />
+              <IDSDecisionPrompt />
+            </div>
             <IssuesQueue
               issues={issues || []}
               onSelectIssue={handleSelectIssue}
@@ -740,7 +845,15 @@ export const LiveMeetingView = () => {
           </Card>
         );
 
-      case 'conclude':
+      case 'conclude': {
+        // Rating input lives here, not only behind the post-advance
+        // "All Segments Complete" summary - close_meeting_with_validation
+        // (M6) hard-gates on >=50% of present attendees having rated, and
+        // the close dialog itself is read-only, so this is the only place
+        // most attendees will ever see a rating control before a facilitator
+        // tries to close and hits "Can't Close Yet" with no obvious path
+        // to actually submit one.
+        const myRating = profile?.user_uuid ? getUserRating(profile.user_uuid) : undefined;
         return (
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -748,6 +861,30 @@ export const LiveMeetingView = () => {
               Conclude / One Phrase Close
             </h3>
             <div className="space-y-4">
+              <MeetingRatingPrompt />
+              <div>
+                <p className="font-medium text-sm mb-2">Rate this meeting (1-10):</p>
+                <div className="flex gap-1 flex-wrap">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                    <Button
+                      key={n}
+                      variant={myRating === n ? 'default' : 'outline'}
+                      size="sm"
+                      className="w-9 h-9"
+                      onClick={() => saveRating.mutate(n)}
+                      disabled={saveRating.isPending}
+                    >
+                      {n}
+                    </Button>
+                  ))}
+                </div>
+                {myRating && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Your rating: <span className="font-medium">{myRating}/10</span>
+                  </p>
+                )}
+              </div>
+              {!quorumMet && <QuorumWarningPrompt />}
               <div>
                 <p className="font-medium text-sm mb-2">Recap To-Dos Created:</p>
                 <div className="space-y-1">
@@ -775,6 +912,7 @@ export const LiveMeetingView = () => {
             </div>
           </Card>
         );
+      }
 
       default:
         return (
@@ -864,6 +1002,21 @@ export const LiveMeetingView = () => {
                 <span>{facilitatorName}</span>
               </div>
             )}
+            {meeting?.status === 'in_progress' && canChangeFacilitator && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setChangeFacilitatorOpen(true)}
+              >
+                Change Facilitator
+              </Button>
+            )}
+            {segmentsFetching && (
+              <span className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Syncing...
+              </span>
+            )}
             <OnlineUsersIndicator onlineUsers={onlineUsers} attendees={attendees} />
 
             
@@ -893,7 +1046,7 @@ export const LiveMeetingView = () => {
               </Button>
             )}
             
-            {meetingStarted && canControlMeeting && currentSegment && (
+            {meetingStarted && canControlMeeting && liveSegment && (
               <Button 
                 onClick={handleAdvanceSegment} 
                 size="sm" 
@@ -954,25 +1107,28 @@ export const LiveMeetingView = () => {
 
             <div className="space-y-2">
               {segments.map((segment, idx) => {
-                const isActive = segment.id === currentSegment?.id;
+                const isLive = segment.id === liveSegment?.id;
+                const isBeingViewed = segment.id === viewingSegment?.id;
                 const isComplete = !!segment.completed_at;
-                const isPending = !segment.started_at && !segment.completed_at;
-                
+
                 return (
                   <Card
                     key={segment.id}
-                    className={`p-3 transition-all ${
-                      isActive
+                    onClick={() => setViewingSegmentId(segment.id)}
+                    className={`p-3 transition-all cursor-pointer ${
+                      isLive
                         ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2'
+                        : isBeingViewed
+                        ? 'ring-2 ring-primary/50'
                         : isComplete
-                        ? 'bg-muted/50 opacity-75'
+                        ? 'bg-muted/50 opacity-75 hover:opacity-100'
                         : 'hover:bg-muted/50'
                     }`}
                   >
                     <div className="flex items-start gap-2">
                       <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium shrink-0 mt-0.5 ${
                         isComplete ? 'bg-primary text-primary-foreground' :
-                        isActive ? 'bg-primary-foreground text-primary' :
+                        isLive ? 'bg-primary-foreground text-primary' :
                         'bg-muted text-muted-foreground'
                       }`}>
                         {isComplete ? <CheckCircle className="h-3 w-3" /> : idx + 1}
@@ -986,9 +1142,14 @@ export const LiveMeetingView = () => {
                           {segment.duration_minutes} min
                         </div>
                       </div>
-                      {isActive && (
+                      {isLive && (
                         <Badge variant="secondary" className="shrink-0 text-xs bg-primary-foreground text-primary">
                           Now
+                        </Badge>
+                      )}
+                      {!isLive && isBeingViewed && (
+                        <Badge variant="outline" className="shrink-0 text-xs">
+                          Viewing
                         </Badge>
                       )}
                     </div>
@@ -1061,18 +1222,37 @@ export const LiveMeetingView = () => {
               </div>
             )}
 
-            {/* Current Segment Header */}
-            {currentSegment && (
+            {/* Jump-to-live nudge - shown only when the facilitator has
+                genuinely advanced while this viewer was browsing elsewhere,
+                not merely because the viewer clicked away from an unchanged
+                live segment (never for the facilitator's own action either,
+                which snaps their view immediately in the handlers above). */}
+            {facilitatorAdvancedWhileBrowsing && (
+              <Card className="p-3 flex items-center justify-between gap-3 border-primary/30 bg-primary/5">
+                <p className="text-sm">
+                  Facilitator moved to <span className="font-medium">{liveSegment.segment_name}</span>
+                </p>
+                <Button size="sm" variant="outline" onClick={() => setViewingSegmentId(null)}>
+                  Jump to live
+                </Button>
+              </Card>
+            )}
+
+            {/* Segment Header - shows whichever segment this viewer is looking
+                at, which defaults to (and for the facilitator, always is) live. */}
+            {viewingSegment && (
               <Card className="p-6 bg-primary/5 border-primary/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Badge variant="outline" className="mb-2">Current Segment</Badge>
-                    <h2 className="text-2xl font-bold">{currentSegment.segment_name}</h2>
+                    <Badge variant="outline" className="mb-2">
+                      {isViewingLive ? 'Current Segment' : 'Viewing'}
+                    </Badge>
+                    <h2 className="text-2xl font-bold">{viewingSegment.segment_name}</h2>
                   </div>
                   <div className="text-right">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      <span className="text-lg font-mono">{currentSegment.duration_minutes}:00</span>
+                      <span className="text-lg font-mono">{viewingSegment.duration_minutes}:00</span>
                     </div>
                     <p className="text-xs text-muted-foreground">minutes allocated</p>
                   </div>
@@ -1081,7 +1261,7 @@ export const LiveMeetingView = () => {
             )}
 
             {/* Current Segment Content */}
-            {currentSegment && renderSegmentContent(currentSegment)}
+            {viewingSegment && renderSegmentContent(viewingSegment)}
 
             {/* All segments complete */}
             {allSegmentsComplete && (
@@ -1151,9 +1331,9 @@ export const LiveMeetingView = () => {
             <FacilitatorChecklist
               meetingType={(meeting?.meeting_type as MeetingType) || 'L10'}
               segments={segments}
-              currentSegmentId={currentSegment?.id}
+              currentSegmentId={liveSegment?.id}
               attendeesCount={attendees?.length || 0}
-              quorumMet={meeting?.quorum_status === 'met' || meeting?.quorum_status === 'overridden'}
+              quorumMet={quorumMet}
               meetingStartTime={meeting?.started_at}
             />
             
@@ -1181,7 +1361,7 @@ export const LiveMeetingView = () => {
         open={createIssueOpen}
         onOpenChange={setCreateIssueOpen}
         meetingId={meetingId}
-        meetingSegmentId={currentSegment?.id}
+        meetingSegmentId={liveSegment?.id}
         context="meeting_ids"
       />
 
@@ -1200,6 +1380,12 @@ export const LiveMeetingView = () => {
         meetingId={meetingId!}
         onStartMeeting={() => startFirstSegment.mutate()}
         isStarting={startFirstSegment.isPending}
+      />
+
+      <ChangeFacilitatorDialog
+        open={changeFacilitatorOpen}
+        onOpenChange={setChangeFacilitatorOpen}
+        meetingId={meetingId!}
       />
 
       <RockFormDialog

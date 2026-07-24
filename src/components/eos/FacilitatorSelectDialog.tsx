@@ -106,7 +106,7 @@ export const FacilitatorSelectDialog = ({
           </Button>
           <Button
             onClick={handleStartMeeting}
-            disabled={isPending}
+            disabled={isPending || !selectedFacilitator}
           >
             {isPending ? (
               <>

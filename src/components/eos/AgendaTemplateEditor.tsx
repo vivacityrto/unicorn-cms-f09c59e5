@@ -177,8 +177,6 @@ export const AgendaTemplateEditor = ({ open, onOpenChange, template }: AgendaTem
                   <SelectItem value="Same_Page">Same Page Meeting</SelectItem>
                   <SelectItem value="Quarterly">Quarterly Meeting</SelectItem>
                   <SelectItem value="Annual">Annual Strategic Planning</SelectItem>
-                  <SelectItem value="Focus_Day">Focus Day</SelectItem>
-                  <SelectItem value="Custom">Custom</SelectItem>
                 </SelectContent>
               </Select>
             </div>
