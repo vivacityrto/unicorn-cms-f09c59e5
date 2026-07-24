@@ -187,7 +187,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
       return;
     }
     const { data, error } = await supabase.storage
-      .from('audit-reports')
+      .from('audit-documents')
       .createSignedUrl(path, 60);
     if (error || !data?.signedUrl) {
       toast.error("Couldn't open the PDF. Try regenerating it.");
@@ -203,7 +203,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
       return;
     }
     const { data, error } = await supabase.storage
-      .from('audit-reports')
+      .from('audit-documents')
       .createSignedUrl(path, 60);
     if (error || !data?.signedUrl) {
       toast.error("Couldn't open the Word document. Try regenerating it.");
