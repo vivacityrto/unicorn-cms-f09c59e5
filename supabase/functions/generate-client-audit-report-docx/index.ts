@@ -273,11 +273,14 @@ Deno.serve(async (req) => {
     const templateSectionIds = sections.map((s) => s.template_section_id).filter(Boolean) as string[];
     let templateQuestions: any[] = [];
     if (templateSectionIds.length > 0) {
-      const { data: tq } = await admin
-        .from('audit_template_questions')
+      const { data: tq, error: tqError } = await admin
+        .from('compliance_template_questions')
         .select('id, section_id, clause, audit_statement, sort_order')
         .in('section_id', templateSectionIds)
         .order('sort_order', { ascending: true });
+      if (tqError) {
+        console.error('[generate-client-audit-report-docx] Failed to load compliance_template_questions:', tqError);
+      }
       templateQuestions = tq ?? [];
     }
 
