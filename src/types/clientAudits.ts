@@ -49,6 +49,7 @@ export interface ClientAudit {
   ai_analysis_status: AuditAiStatus;
   report_generated_at: string | null;
   report_pdf_path: string | null;
+  report_docx_path: string | null;
   doc_number: string | null;
   linked_stage_instance_id: number | null;
   opening_meeting_at: string | null;

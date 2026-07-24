@@ -15,6 +15,7 @@ export interface ClientAuditReport {
   report_acknowledged_at: string | null;
   report_acknowledged_by: string | null;
   report_pdf_path: string | null;
+  report_docx_path: string | null;
   executive_summary: string | null;
   overall_finding: string | null;
   lead_auditor_id: string | null;
@@ -29,7 +30,7 @@ export function useClientAuditReports(tenantId: number | null | undefined) {
     queryFn: async () => {
       const { data, error } = await (supabase
         .from('client_audits' as any)
-        .select('id, title, audit_type, conducted_at, risk_rating, score_pct, report_released_at, report_released_by, report_release_notes, report_acknowledged_at, report_acknowledged_by, report_pdf_path, executive_summary, overall_finding, lead_auditor_id, snapshot_rto_name, subject_tenant_id') as any)
+        .select('id, title, audit_type, conducted_at, risk_rating, score_pct, report_released_at, report_released_by, report_release_notes, report_acknowledged_at, report_acknowledged_by, report_pdf_path, report_docx_path, executive_summary, overall_finding, lead_auditor_id, snapshot_rto_name, subject_tenant_id') as any)
         .eq('subject_tenant_id', tenantId)
         .eq('report_client_visible', true)
         .order('report_released_at', { ascending: false });

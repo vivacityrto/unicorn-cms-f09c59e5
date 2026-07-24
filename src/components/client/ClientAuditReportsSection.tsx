@@ -39,6 +39,16 @@ function AuditReportCard({ report }: { report: ReturnType<typeof useClientAuditR
     }
   };
 
+  const handleDownloadDocx = async () => {
+    if (!(report as any).report_docx_path) return;
+    const { data } = await supabase.storage
+      .from('audit-reports')
+      .createSignedUrl((report as any).report_docx_path, 3600);
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, '_blank');
+    }
+  };
+
   const typeLabel = AUDIT_TYPE_LABELS[report.audit_type as keyof typeof AUDIT_TYPE_LABELS] || report.audit_type;
   const isAcknowledged = !!report.report_acknowledged_at;
 
@@ -95,6 +105,11 @@ function AuditReportCard({ report }: { report: ReturnType<typeof useClientAuditR
           {report.report_pdf_path && (
             <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
               <Download className="h-3.5 w-3.5 mr-1" /> Download Report PDF
+            </Button>
+          )}
+          {(report as any).report_docx_path && (
+            <Button size="sm" variant="outline" onClick={handleDownloadDocx}>
+              <Download className="h-3.5 w-3.5 mr-1" /> Download Word
             </Button>
           )}
           <Button size="sm" variant="outline" asChild>
