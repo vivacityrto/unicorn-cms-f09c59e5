@@ -234,23 +234,31 @@ Deno.serve(async (req) => {
     }
     const audit = auditRow as any;
 
-    const [findingsRes, actionsRes] = await Promise.all([
-      userClient
-        .from('client_audit_findings')
-        .select('id, summary, detail, priority, standard_reference, regulatory_reference, impact, finding_code')
-        .eq('audit_id', auditId),
-      userClient
-        .from('client_audit_actions')
-        .select('id, title, description, priority, status, due_date, extended_due_date, assigned_to, standard_reference, action_type, client_notes, finding_id, evidence_required')
-        .eq('audit_id', auditId),
-    ]);
-    const findings = (findingsRes.data ?? []) as any[];
-    const actions = (actionsRes.data ?? []) as any[];
-
-    // Resolve user names for auditors + assignees (best-effort)
+    // Use service-role for related rows so RLS on staff-only tables can't
+    // silently return zero findings/sections (mirrors the PDF generator).
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
+    const [findingsRes, actionsRes, sectionsRes] = await Promise.all([
+      admin
+        .from('client_audit_findings')
+        .select('id, summary, detail, priority, standard_reference, regulatory_reference, impact, finding_code, section_id')
+        .eq('audit_id', auditId),
+      admin
+        .from('client_audit_actions')
+        .select('id, title, description, priority, status, due_date, extended_due_date, assigned_to, standard_reference, action_type, client_notes, finding_id, evidence_required')
+        .eq('audit_id', auditId),
+      admin
+        .from('client_audit_sections')
+        .select('id, title, standard_code, risk_level, score_total, score_max, sort_order, section_summary')
+        .eq('audit_id', auditId)
+        .order('sort_order', { ascending: true }),
+    ]);
+    const findings = (findingsRes.data ?? []) as any[];
+    const actions = (actionsRes.data ?? []) as any[];
+    const sections = (sectionsRes.data ?? []) as any[];
+
+    // Resolve user names for auditors + assignees (best-effort)
     const userIds = new Set<string>();
     for (const k of ['lead_auditor_id', 'assisted_by_id', 'report_prepared_by_id']) {
       if (audit[k]) userIds.add(audit[k]);
@@ -272,33 +280,58 @@ Deno.serve(async (req) => {
     // 5. Build DOCX content
     const children: (Paragraph | Table)[] = [];
 
-    // ─── Cover page ─────────────────────────────────────────────
+    // ─── Cover page (Vivacity brand) ────────────────────────────
     children.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { before: 1200, after: 200 },
+        spacing: { before: 400, after: 40 },
+        children: [
+          new TextRun({ text: 'VIVACITY', bold: true, size: 56, color: '44235F', font: 'Calibri' }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 40 },
+        children: [
+          new TextRun({ text: 'Coaching & Consulting', italics: true, size: 24, color: '7130A0' }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 800 },
+        border: {
+          bottom: { style: BorderStyle.SINGLE, size: 12, color: 'ED1878', space: 4 },
+        },
+        children: [
+          new TextRun({ text: 'We make Compliance Simple!', size: 20, color: 'ED1878' }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 400, after: 120 },
         children: [
           new TextRun({
             text: AUDIT_TYPE_LABEL[audit.audit_type] || audit.audit_type || 'Audit Report',
             bold: true,
-            size: 44,
+            size: 48,
             color: '44235F',
           }),
         ],
       }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 120 },
+        spacing: { after: 200 },
         children: [new TextRun({ text: 'Compliance Audit Report', size: 28, color: '7130A0' })],
       }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 400 },
+        spacing: { after: 500 },
         children: [
           new TextRun({
             text: audit.snapshot_rto_name || audit.title || 'Client',
             bold: true,
-            size: 32,
+            size: 36,
+            color: '44235F',
           }),
         ],
       }),
@@ -308,6 +341,7 @@ Deno.serve(async (req) => {
     if (audit.snapshot_rto_number) coverRows.push(['RTO code', audit.snapshot_rto_number]);
     if (audit.snapshot_cricos_code) coverRows.push(['CRICOS code', audit.snapshot_cricos_code]);
     if (audit.doc_number) coverRows.push(['Document reference', audit.doc_number]);
+    coverRows.push(['Audit type', AUDIT_TYPE_LABEL[audit.audit_type] || audit.audit_type || '—']);
     coverRows.push(['Conducted', fmtDate(audit.conducted_at)]);
     coverRows.push(['Report generated', fmtDate(new Date().toISOString())]);
     if (audit.lead_auditor_id) coverRows.push(['Lead auditor', nameOf(audit.lead_auditor_id)]);
@@ -315,7 +349,53 @@ Deno.serve(async (req) => {
     if (audit.report_prepared_by_id) coverRows.push(['Report prepared by', nameOf(audit.report_prepared_by_id)]);
     if (coverRows.length > 0) children.push(infoTable(coverRows));
 
-    children.push(new Paragraph({ children: [new PageBreak()] }));
+    // Score + risk highlight strip
+    if (audit.risk_rating || audit.score_pct != null) {
+      const scoreText = audit.score_pct != null
+        ? `${audit.score_pct}%${audit.score_total != null && audit.score_max != null ? `  (${audit.score_total} of ${audit.score_max} points)` : ''}`
+        : '—';
+      const ratingText = audit.risk_rating ? String(audit.risk_rating).toUpperCase() : '—';
+      children.push(
+        new Paragraph({ spacing: { before: 400 }, children: [new TextRun('')] }),
+        new Table({
+          width: { size: 9360, type: WidthType.DXA },
+          columnWidths: [4680, 4680],
+          rows: [
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 4680, type: WidthType.DXA },
+                  shading: { fill: '7130A0', type: ShadingType.CLEAR, color: 'auto' },
+                  margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                  children: [
+                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'OVERALL SCORE', bold: true, size: 18, color: 'FFFFFF' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80 }, children: [new TextRun({ text: scoreText, bold: true, size: 40, color: 'FFFFFF' })] }),
+                  ],
+                }),
+                new TableCell({
+                  width: { size: 4680, type: WidthType.DXA },
+                  shading: { fill: 'ED1878', type: ShadingType.CLEAR, color: 'auto' },
+                  margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                  children: [
+                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'RISK RATING', bold: true, size: 18, color: 'FFFFFF' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80 }, children: [new TextRun({ text: ratingText, bold: true, size: 40, color: 'FFFFFF' })] }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      );
+    }
+
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 600, after: 40 },
+        children: [new TextRun({ text: 'CONFIDENTIAL — distribute only to the named provider above.', italics: true, size: 18, color: '44235F' })],
+      }),
+      new Paragraph({ children: [new PageBreak()] }),
+    );
 
     // ─── Overall Result ─────────────────────────────────────────
     children.push(h1('Overall Result'));
@@ -404,9 +484,72 @@ Deno.serve(async (req) => {
       ]),
     );
 
+    // ─── Section Rollup ────────────────────────────────────────
+    if (sections.length > 0) {
+      children.push(h1('Section Rollup'));
+      const riskColor: Record<string, string> = {
+        low: '2ECC71',
+        medium: 'F1C40F',
+        high: 'E67E22',
+        critical: 'C0392B',
+        extreme: '7B1E1E',
+      };
+      const headerBorder = { style: BorderStyle.SINGLE, size: 6, color: '7130A0' };
+      const rowBorder = { style: BorderStyle.SINGLE, size: 4, color: 'E2E2E2' };
+      const headerCells = ['Section', 'Score', 'Risk', 'Findings'].map((t, i) =>
+        new TableCell({
+          width: { size: i === 0 ? 4800 : 1520, type: WidthType.DXA },
+          borders: { top: headerBorder, bottom: headerBorder, left: headerBorder, right: headerBorder },
+          shading: { fill: '44235F', type: ShadingType.CLEAR, color: 'auto' },
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          children: [new Paragraph({ children: [new TextRun({ text: t, bold: true, size: 20, color: 'FFFFFF' })] })],
+        }),
+      );
+      const rollupRows = [new TableRow({ tableHeader: true, children: headerCells })];
+      for (const s of sections) {
+        const findingCount = findings.filter((f) => f.section_id === s.id).length;
+        const scoreLabel = s.score_total != null && s.score_max != null
+          ? `${s.score_total} / ${s.score_max}`
+          : 'Not scored';
+        const risk = (s.risk_level || 'low').toString();
+        const rowCells = [
+          new TableCell({
+            width: { size: 4800, type: WidthType.DXA },
+            borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
+            margins: { top: 60, bottom: 60, left: 120, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: s.title || s.standard_code || '—', size: 20 })] })],
+          }),
+          new TableCell({
+            width: { size: 1520, type: WidthType.DXA },
+            borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
+            margins: { top: 60, bottom: 60, left: 120, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: scoreLabel, size: 20 })] })],
+          }),
+          new TableCell({
+            width: { size: 1520, type: WidthType.DXA },
+            borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
+            margins: { top: 60, bottom: 60, left: 120, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: risk.toUpperCase(), bold: true, size: 20, color: riskColor[risk] || '333333' })] })],
+          }),
+          new TableCell({
+            width: { size: 1520, type: WidthType.DXA },
+            borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
+            margins: { top: 60, bottom: 60, left: 120, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: String(findingCount), size: 20 })] })],
+          }),
+        ];
+        rollupRows.push(new TableRow({ children: rowCells }));
+      }
+      children.push(new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [4800, 1520, 1520, 1520],
+        rows: rollupRows,
+      }));
+    }
+
     // ─── Findings ───────────────────────────────────────────────
     children.push(new Paragraph({ children: [new PageBreak()] }));
-    children.push(h1('Findings'));
+    children.push(h1(`Findings (${findings.length})`));
     if (findings.length === 0) {
       children.push(para('No findings recorded.', { italic: true }));
     } else {
