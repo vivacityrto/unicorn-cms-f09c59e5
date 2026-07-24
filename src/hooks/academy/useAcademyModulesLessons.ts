@@ -32,12 +32,25 @@ export interface AcademyLesson {
   content_markdown?: string | null;
 }
 
-export function useModulesWithLessons(courseId: number | null) {
+export function useModulesWithLessons(courseId: number | null, opts?: { admin?: boolean }) {
+  const admin = !!opts?.admin;
   return useQuery<AcademyModule[]>({
-    queryKey: [MODULES_KEY, courseId],
+    queryKey: [MODULES_KEY, courseId, admin ? "admin" : "outline"],
     enabled: !!courseId,
     queryFn: async () => {
       if (!courseId) return [];
+
+      const lessonsQuery = admin
+        ? supabase
+            .from("academy_lessons")
+            .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown")
+            .eq("course_id", courseId)
+            .order("sort_order")
+        : supabase
+            .from("v_academy_lesson_outline")
+            .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes")
+            .eq("course_id", courseId)
+            .order("sort_order");
 
       const [{ data: modules, error: mErr }, { data: lessons, error: lErr }] = await Promise.all([
         supabase
@@ -45,11 +58,7 @@ export function useModulesWithLessons(courseId: number | null) {
           .select("id, course_id, title, description, sort_order, is_published")
           .eq("course_id", courseId)
           .order("sort_order"),
-        supabase
-          .from("v_academy_lesson_outline")
-          .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes")
-          .eq("course_id", courseId)
-          .order("sort_order"),
+        lessonsQuery,
       ]);
 
       if (mErr) throw mErr;
@@ -70,6 +79,7 @@ export function useModulesWithLessons(courseId: number | null) {
     staleTime: 30_000,
   });
 }
+
 
 export function useCreateModule() {
   const qc = useQueryClient();

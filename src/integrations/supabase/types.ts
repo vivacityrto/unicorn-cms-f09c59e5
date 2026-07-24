@@ -11746,6 +11746,7 @@ export type Database = {
           report_acknowledged_at: string | null
           report_acknowledged_by: string | null
           report_client_visible: boolean
+          report_docx_path: string | null
           report_generated_at: string | null
           report_pdf_path: string | null
           report_prepared_by_id: string | null
@@ -11804,6 +11805,7 @@ export type Database = {
           report_acknowledged_at?: string | null
           report_acknowledged_by?: string | null
           report_client_visible?: boolean
+          report_docx_path?: string | null
           report_generated_at?: string | null
           report_pdf_path?: string | null
           report_prepared_by_id?: string | null
@@ -11862,6 +11864,7 @@ export type Database = {
           report_acknowledged_at?: string | null
           report_acknowledged_by?: string | null
           report_client_visible?: boolean
+          report_docx_path?: string | null
           report_generated_at?: string | null
           report_pdf_path?: string | null
           report_prepared_by_id?: string | null
