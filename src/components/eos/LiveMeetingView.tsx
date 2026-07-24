@@ -482,10 +482,28 @@ export const LiveMeetingView = () => {
   };
 
   // Render segment content based on type — segment_type is a real stored
-  // column (M9), not re-derived from the segment name. Replaces the old
-  // keyword-matching getSegmentType() helper.
+  // column (M9). 'general' is the column's DEFAULT, not a real classification:
+  // rows inserted by the legacy scheduler (create_meeting_from_template /
+  // create_meeting_basic - still the active path while eos_config_v2 is off)
+  // never set it, so they'd otherwise all render as a plain notes textarea
+  // and lose Scorecard/Rocks/Headlines/To-Dos/IDS entirely. Falls back to the
+  // same keyword match M9 used for its one-time backfill, only when the
+  // column itself is unclassified.
+  const deriveSegmentType = (segment: EosMeetingSegment) => {
+    if (segment.segment_type !== 'general') return segment.segment_type;
+    const name = segment.segment_name.toLowerCase();
+    if (name.includes('segue') || name.includes('check-in')) return 'segue';
+    if (name.includes('scorecard')) return 'scorecard';
+    if (name.includes('rock')) return 'rocks';
+    if (name.includes('headline')) return 'headlines';
+    if (name.includes('to-do') || name.includes('todo')) return 'todos';
+    if (name.includes('ids') || name.includes('issue') || name.includes('tackle')) return 'ids';
+    if (name.includes('conclude') || name.includes('next step') || name.includes('decisions')) return 'conclude';
+    return 'general';
+  };
+
   const renderSegmentContent = (segment: EosMeetingSegment) => {
-    const type = segment.segment_type;
+    const type = deriveSegmentType(segment);
 
     switch (type) {
       case 'segue':
@@ -806,7 +824,15 @@ export const LiveMeetingView = () => {
           </Card>
         );
 
-      case 'conclude':
+      case 'conclude': {
+        // Rating input lives here, not only behind the post-advance
+        // "All Segments Complete" summary - close_meeting_with_validation
+        // (M6) hard-gates on >=50% of present attendees having rated, and
+        // the close dialog itself is read-only, so this is the only place
+        // most attendees will ever see a rating control before a facilitator
+        // tries to close and hits "Can't Close Yet" with no obvious path
+        // to actually submit one.
+        const myRating = profile?.user_uuid ? getUserRating(profile.user_uuid) : undefined;
         return (
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -815,6 +841,28 @@ export const LiveMeetingView = () => {
             </h3>
             <div className="space-y-4">
               <MeetingRatingPrompt />
+              <div>
+                <p className="font-medium text-sm mb-2">Rate this meeting (1-10):</p>
+                <div className="flex gap-1 flex-wrap">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                    <Button
+                      key={n}
+                      variant={myRating === n ? 'default' : 'outline'}
+                      size="sm"
+                      className="w-9 h-9"
+                      onClick={() => saveRating.mutate(n)}
+                      disabled={saveRating.isPending}
+                    >
+                      {n}
+                    </Button>
+                  ))}
+                </div>
+                {myRating && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Your rating: <span className="font-medium">{myRating}/10</span>
+                  </p>
+                )}
+              </div>
               {!quorumMet && <QuorumWarningPrompt />}
               <div>
                 <p className="font-medium text-sm mb-2">Recap To-Dos Created:</p>
@@ -843,6 +891,7 @@ export const LiveMeetingView = () => {
             </div>
           </Card>
         );
+      }
 
       default:
         return (
