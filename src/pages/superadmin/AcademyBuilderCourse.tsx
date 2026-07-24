@@ -93,7 +93,7 @@ export default function AcademyBuilderCourse() {
   });
 
   // Modules & lessons
-  const { data: modules = [], isLoading: modulesLoading } = useModulesWithLessons(courseId);
+  const { data: modules = [], isLoading: modulesLoading } = useModulesWithLessons(courseId, { admin: true });
 
   // Mutations
   const updateCourse = useUpdateCourse();

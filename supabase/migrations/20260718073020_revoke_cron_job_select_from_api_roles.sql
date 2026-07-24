@@ -16,7 +16,7 @@ NOTIFY pgrst, 'reload schema';
 -- if the role holds the privilege directly OR via PUBLIC. So if PUBLIC still
 -- granted SELECT, these checks would fail. The PUBLIC grant itself is verified
 -- separately by inspecting cron.job's ACL.
-DO $
+DO $$
 BEGIN
   IF has_table_privilege('authenticated', 'cron.job', 'SELECT') THEN
     RAISE EXCEPTION 'expected has_table_privilege(authenticated, cron.job, SELECT) = false';
@@ -36,6 +36,6 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'expected PUBLIC to not hold SELECT on cron.job';
   END IF;
-END $;
+END $$;
 
 COMMIT;
