@@ -309,32 +309,28 @@ Deno.serve(async (req) => {
     // ─── Cover page (Vivacity brand) ────────────────────────────
     children.push(
       new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 400, after: 40 },
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 0, after: 40 },
+        shading: { type: ShadingType.CLEAR, fill: '7130A0', color: 'auto' },
         children: [
-          new TextRun({ text: 'VIVACITY', bold: true, size: 56, color: '44235F', font: 'Calibri' }),
+          new TextRun({ text: 'VIVACITY', bold: true, size: 56, color: 'FFFFFF', font: 'Calibri' }),
+          new TextRun({ text: '   Coaching & Consulting', italics: true, size: 24, color: 'FFFFFF' }),
         ],
       }),
       new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 40 },
-        children: [
-          new TextRun({ text: 'Coaching & Consulting', italics: true, size: 24, color: '7130A0' }),
-        ],
-      }),
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 800 },
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 200 },
+        shading: { type: ShadingType.CLEAR, fill: '7130A0', color: 'auto' },
         border: {
           bottom: { style: BorderStyle.SINGLE, size: 12, color: 'ED1878', space: 4 },
         },
         children: [
-          new TextRun({ text: 'We make Compliance Simple!', size: 20, color: 'ED1878' }),
+          new TextRun({ text: 'We make Compliance Simple!', size: 20, color: 'DFD8E8' }),
         ],
       }),
       new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 400, after: 120 },
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 600, after: 120 },
         children: [
           new TextRun({
             text: AUDIT_TYPE_LABEL[audit.audit_type] || audit.audit_type || 'Audit Report',
@@ -345,12 +341,12 @@ Deno.serve(async (req) => {
         ],
       }),
       new Paragraph({
-        alignment: AlignmentType.CENTER,
+        alignment: AlignmentType.LEFT,
         spacing: { after: 200 },
         children: [new TextRun({ text: 'Compliance Audit Report', size: 28, color: '7130A0' })],
       }),
       new Paragraph({
-        alignment: AlignmentType.CENTER,
+        alignment: AlignmentType.LEFT,
         spacing: { after: 500 },
         children: [
           new TextRun({
