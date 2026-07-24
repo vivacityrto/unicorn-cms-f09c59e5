@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
-    const [findingsRes, actionsRes, sectionsRes] = await Promise.all([
+    const [findingsRes, actionsRes, sectionsRes, responsesRes] = await Promise.all([
       admin
         .from('client_audit_findings')
         .select('id, summary, detail, priority, standard_reference, regulatory_reference, impact, finding_code, section_id')
@@ -250,13 +250,31 @@ Deno.serve(async (req) => {
         .eq('audit_id', auditId),
       admin
         .from('client_audit_sections')
-        .select('id, title, standard_code, risk_level, score_total, score_max, sort_order, section_summary')
+        .select('id, template_section_id, title, standard_code, risk_level, score_total, score_max, sort_order, section_summary')
         .eq('audit_id', auditId)
         .order('sort_order', { ascending: true }),
+      admin
+        .from('client_audit_responses')
+        .select('id, section_id, question_id, question_text, rating, notes, score, is_flagged, evidence_urls, responded_by, responded_at')
+        .eq('audit_id', auditId),
     ]);
     const findings = (findingsRes.data ?? []) as any[];
     const actions = (actionsRes.data ?? []) as any[];
     const sections = (sectionsRes.data ?? []) as any[];
+    const responses = (responsesRes.data ?? []) as any[];
+
+    // Load template questions for these sections so we can render each
+    // question's text + clause even when the response row doesn't cache it.
+    const templateSectionIds = sections.map((s) => s.template_section_id).filter(Boolean) as string[];
+    let templateQuestions: any[] = [];
+    if (templateSectionIds.length > 0) {
+      const { data: tq } = await admin
+        .from('audit_template_questions')
+        .select('id, section_id, clause, audit_statement, sort_order')
+        .in('section_id', templateSectionIds)
+        .order('sort_order', { ascending: true });
+      templateQuestions = tq ?? [];
+    }
 
     // Resolve user names for auditors + assignees (best-effort)
     const userIds = new Set<string>();
