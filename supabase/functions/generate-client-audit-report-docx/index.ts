@@ -234,18 +234,29 @@ Deno.serve(async (req) => {
     }
     const audit = auditRow as any;
 
-    const [findingsRes, actionsRes] = await Promise.all([
-      userClient
+    // Use service-role for related rows so RLS on staff-only tables can't
+    // silently return zero findings/sections (mirrors the PDF generator).
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+    const [findingsRes, actionsRes, sectionsRes] = await Promise.all([
+      admin
         .from('client_audit_findings')
-        .select('id, summary, detail, priority, standard_reference, regulatory_reference, impact, finding_code')
+        .select('id, summary, detail, priority, standard_reference, regulatory_reference, impact, finding_code, section_id')
         .eq('audit_id', auditId),
-      userClient
+      admin
         .from('client_audit_actions')
         .select('id, title, description, priority, status, due_date, extended_due_date, assigned_to, standard_reference, action_type, client_notes, finding_id, evidence_required')
         .eq('audit_id', auditId),
+      admin
+        .from('client_audit_sections')
+        .select('id, title, standard_code, risk_level, score_total, score_max, sort_order, section_summary')
+        .eq('audit_id', auditId)
+        .order('sort_order', { ascending: true }),
     ]);
     const findings = (findingsRes.data ?? []) as any[];
     const actions = (actionsRes.data ?? []) as any[];
+    const sections = (sectionsRes.data ?? []) as any[];
 
     // Resolve user names for auditors + assignees (best-effort)
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
