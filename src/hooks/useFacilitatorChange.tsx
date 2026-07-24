@@ -15,21 +15,36 @@ interface Participant {
 export const useFacilitatorChange = (meetingId: string | undefined) => {
   const queryClient = useQueryClient();
 
-  // Fetch participants for this meeting with explicit FK join
+  // Fetch participants, then names separately - eos_meeting_participants.user_id
+  // has a real FK to auth.users(id), not public.users, and there's no FK from
+  // public.users to auth.users either, so no PostgREST embed hint can ever
+  // resolve first_name/last_name in one request. Shares the same query key
+  // as LiveMeetingView's own participants fetch, so this must stay fixed the
+  // same way there too - a broken queryFn here would silently overwrite that
+  // cache entry whenever this dialog mounts/refetches.
   const { data: participants, isLoading: participantsLoading } = useQuery({
     queryKey: ['eos-meeting-participants', meetingId],
     queryFn: async () => {
       if (!meetingId) return [];
-      
-      // Type assertion needed - FK relationship exists but types.ts not regenerated
-      const { data, error } = await (supabase
+
+      const { data: rows, error } = await (supabase
         .from('eos_meeting_participants') as any)
-        .select('*, users!eos_meeting_participants_user_id_users_fkey(first_name, last_name)')
+        .select('*')
         .eq('meeting_id', meetingId);
-      
+
       if (error) throw error;
-      
-      return data as Participant[];
+
+      const userIds = (rows ?? []).map((p: any) => p.user_id);
+      const { data: userRows, error: userError } = userIds.length
+        ? await (supabase as any)
+            .from('users')
+            .select('user_uuid, first_name, last_name')
+            .in('user_uuid', userIds)
+        : { data: [], error: null };
+      if (userError) throw userError;
+
+      const userMap = new Map((userRows ?? []).map((u: any) => [u.user_uuid, u]));
+      return (rows ?? []).map((p: any) => ({ ...p, users: userMap.get(p.user_id) ?? null })) as Participant[];
     },
     enabled: !!meetingId,
   });
