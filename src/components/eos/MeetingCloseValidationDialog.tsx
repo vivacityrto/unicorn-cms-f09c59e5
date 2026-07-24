@@ -170,6 +170,7 @@ export function MeetingCloseValidationDialog({
   useEffect(() => {
     if (open) {
       setIsValidating(true);
+      setCloseValidationErrors(null);
       validateClose.mutateAsync()
         .then(result => {
           setValidation(result);
