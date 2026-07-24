@@ -757,6 +757,41 @@ Deno.serve(async (req) => {
               margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
             },
           },
+          headers: {
+            default: new Header({
+              children: [
+                new Paragraph({
+                  shading: { type: ShadingType.CLEAR, fill: '44235F', color: 'auto' },
+                  spacing: { before: 60, after: 60 },
+                  tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+                  children: [
+                    new TextRun({ text: 'VIVACITY', bold: true, color: 'FFFFFF', size: 28 }),
+                    new TextRun({ text: '   Coaching & Consulting', color: 'FFFFFF', size: 20 }),
+                    new TextRun({ text: '\t', color: 'FFFFFF' }),
+                    new TextRun({ text: 'AUDIT REPORT', bold: true, color: 'FFFFFF', size: 22 }),
+                  ],
+                }),
+              ],
+            }),
+          },
+          footers: {
+            default: new Footer({
+              children: [
+                new Paragraph({
+                  border: {
+                    top: { style: BorderStyle.SINGLE, size: 6, color: '44235F', space: 6 },
+                  },
+                  tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+                  children: [
+                    new TextRun({ text: `${audit.snapshot_rto_name || 'Client'}  |  Generated ${fmtDate(new Date().toISOString())}  |  CONFIDENTIAL`, size: 18, color: '666666' }),
+                    new TextRun({ text: '\t', size: 18 }),
+                    new TextRun({ text: 'Page ', size: 18, color: '666666' }),
+                    new TextRun({ children: [PageNumber.CURRENT], size: 18, color: '666666' }),
+                  ],
+                }),
+              ],
+            }),
+          },
           children,
         },
       ],
