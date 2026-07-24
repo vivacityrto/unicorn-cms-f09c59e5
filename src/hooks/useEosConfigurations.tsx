@@ -166,7 +166,15 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
       // DEFERRED specifically so this can run inside one transaction, but the
       // supabase-js client issues one request per call, so we push every
       // segment past the current max first, then assign final positions.
-      const offset = (segments?.length ?? 0) + 1000;
+      // Offset is derived from the current max sequence_order (not
+      // segments.length + 1000) so a retry after a failed mid-reorder -
+      // which can strand rows already in the 1000+ range - always lands
+      // above whatever's actually there instead of reusing the same
+      // fixed offset and risking a collision with those stranded rows.
+      const currentMax = segments?.length
+        ? Math.max(...segments.map((s) => s.sequence_order))
+        : 0;
+      const offset = currentMax + 1000;
       const phase1 = await Promise.all(
         orderedIds.map((id, index) =>
           (supabase as any)

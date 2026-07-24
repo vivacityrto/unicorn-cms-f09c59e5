@@ -10,6 +10,7 @@ import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, Re
 import { useEosMeetings } from '@/hooks/useEos';
 import { useMeetingSeries } from '@/hooks/useMeetingSeries';
 import { usePermission } from '@/hooks/usePermission';
+import { useAuth } from '@/hooks/useAuth';
 import { useEosConfigV2Flag } from '@/hooks/useEosConfigV2Flag';
 import { format, isPast, isToday } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
@@ -41,6 +42,16 @@ function MeetingsContent() {
   const canManageConfigurationsPerm = usePermission('eos.configurations.manage');
   const { enabled: isConfigV2Enabled } = useEosConfigV2Flag();
   const canManageAgenda = () => (isConfigV2Enabled ? canManageConfigurationsPerm : canScheduleMeetings());
+  // Change Facilitator's authorization tier is current Leader, Super Admin, or
+  // Integrator-or-above (change_meeting_facilitator's own gate) - narrower
+  // than eos.meetings.l10.create, which also lets roles that can schedule
+  // but can't hand off facilitation see this button and hit an RPC error.
+  // This list has no per-meeting participant data loaded, so "current
+  // Leader" can't be checked here; Super Admin/Integrator-or-above is what
+  // determines visibility (the RPC itself still enforces the Leader case).
+  const { profile, isSuperAdmin } = useAuth();
+  const canChangeFacilitatorPerm =
+    isSuperAdmin() || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Integrator';
   const [schedulerOpen, setSchedulerOpen] = useState(false);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
   const [timelineTab, setTimelineTab] = useState<'upcoming' | 'in_progress' | 'completed'>('upcoming');
@@ -437,6 +448,7 @@ function MeetingsContent() {
                   onSync={(id) => syncMeetingToConfiguration.mutate(id)}
                   onSkip={(id, title) => setMeetingToSkip({ id, title })}
                   onChangeFacilitator={setChangeFacilitatorMeetingId}
+                  canChangeFacilitator={canChangeFacilitatorPerm}
                 />
               ))
             ) : (
@@ -468,6 +480,7 @@ function MeetingsContent() {
                   onSync={(id) => syncMeetingToConfiguration.mutate(id)}
                   onSkip={(id, title) => setMeetingToSkip({ id, title })}
                   onChangeFacilitator={setChangeFacilitatorMeetingId}
+                  canChangeFacilitator={canChangeFacilitatorPerm}
                   showResumeAction
                 />
               ))
@@ -586,6 +599,7 @@ interface MeetingCardProps {
   onSync?: (meetingId: string) => void;
   onSkip?: (meetingId: string, title: string) => void;
   onChangeFacilitator?: (meetingId: string) => void;
+  canChangeFacilitator?: boolean;
 }
 
 function MeetingCard({
@@ -601,6 +615,7 @@ function MeetingCard({
   onSync,
   onSkip,
   onChangeFacilitator,
+  canChangeFacilitator = false,
 }: MeetingCardProps) {
   const isScheduled = meeting.status === 'scheduled' && !meeting.is_complete;
   return (
@@ -672,14 +687,16 @@ function MeetingCard({
                         <LayoutTemplate className="w-4 h-4 mr-2" />
                         Sync to Configuration
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onChangeFacilitator?.(meeting.id)}
-                      >
-                        <Users className="w-4 h-4 mr-2" />
-                        Change Facilitator
-                      </Button>
+                      {canChangeFacilitator && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onChangeFacilitator?.(meeting.id)}
+                        >
+                          <Users className="w-4 h-4 mr-2" />
+                          Change Facilitator
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
