@@ -348,6 +348,16 @@ export const LiveMeetingView = () => {
   // non-facilitator staff. Use Change Facilitator (any time, incl. mid-meeting)
   // for the deliberate escape hatch instead of a blanket staff bypass.
   const canControlMeeting = isFacilitator;
+  // Change Facilitator is the one deliberate escape hatch (plan: "current
+  // Leader, super admin, or Integrator-or-above"), matching
+  // change_meeting_facilitator's own is_integrator_or_above() role list
+  // (Super Admin, Team Leader, Integrator) - broader than canControlMeeting
+  // on purpose, since reassigning control is not the same as driving it.
+  const canChangeFacilitator =
+    canControlMeeting ||
+    isSuperAdmin() ||
+    profile?.unicorn_role === 'Team Leader' ||
+    profile?.unicorn_role === 'Integrator';
 
 
   // Start first segment mutation
@@ -482,28 +492,15 @@ export const LiveMeetingView = () => {
   };
 
   // Render segment content based on type — segment_type is a real stored
-  // column (M9). 'general' is the column's DEFAULT, not a real classification:
-  // rows inserted by the legacy scheduler (create_meeting_from_template /
-  // create_meeting_basic - still the active path while eos_config_v2 is off)
-  // never set it, so they'd otherwise all render as a plain notes textarea
-  // and lose Scorecard/Rocks/Headlines/To-Dos/IDS entirely. Falls back to the
-  // same keyword match M9 used for its one-time backfill, only when the
-  // column itself is unclassified.
-  const deriveSegmentType = (segment: EosMeetingSegment) => {
-    if (segment.segment_type !== 'general') return segment.segment_type;
-    const name = segment.segment_name.toLowerCase();
-    if (name.includes('segue') || name.includes('check-in')) return 'segue';
-    if (name.includes('scorecard')) return 'scorecard';
-    if (name.includes('rock')) return 'rocks';
-    if (name.includes('headline')) return 'headlines';
-    if (name.includes('to-do') || name.includes('todo')) return 'todos';
-    if (name.includes('ids') || name.includes('issue') || name.includes('tackle')) return 'ids';
-    if (name.includes('conclude') || name.includes('next step') || name.includes('decisions')) return 'conclude';
-    return 'general';
-  };
-
+  // column (M9), always meaningfully derived at write time (from the
+  // Configuration directly, or via keyword-match for the one remaining
+  // legacy creation path - see M12) rather than re-derived here. A
+  // frontend fallback (tried in an earlier review round, reverted) can't
+  // tell "never classified" apart from a Configuration author
+  // deliberately picking "General" as a real segment type, so guessing
+  // client-side is wrong - fixed at the source instead.
   const renderSegmentContent = (segment: EosMeetingSegment) => {
-    const type = deriveSegmentType(segment);
+    const type = segment.segment_type;
 
     switch (type) {
       case 'segue':
@@ -981,7 +978,7 @@ export const LiveMeetingView = () => {
                 <span>{facilitatorName}</span>
               </div>
             )}
-            {meeting?.status === 'in_progress' && (canControlMeeting || isSuperAdmin()) && (
+            {meeting?.status === 'in_progress' && canChangeFacilitator && (
               <Button
                 variant="ghost"
                 size="sm"
