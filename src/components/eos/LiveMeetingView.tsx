@@ -197,7 +197,7 @@ export const LiveMeetingView = () => {
     : 'Unknown';
 
   // Real-time sync with user identity
-  const { onlineUsers } = useMeetingRealtime({
+  const { onlineUsers, broadcastChange } = useMeetingRealtime({
     meetingId: meetingId!,
     userId: profile?.user_uuid,
     userName,
@@ -453,6 +453,7 @@ export const LiveMeetingView = () => {
       is_good_news: isGoodNews,
     });
     setNewHeadline('');
+    broadcastChange('headline_change');
   };
 
   const handleEndMeeting = useMutation({
@@ -491,6 +492,7 @@ export const LiveMeetingView = () => {
     try {
       await advanceSegment.mutateAsync();
       setViewingSegmentId(null);
+      broadcastChange('segment_change');
     } finally {
       setTimeout(() => {
         isNavigatingRef.current = false;
@@ -506,6 +508,7 @@ export const LiveMeetingView = () => {
     try {
       await goToPreviousSegment.mutateAsync();
       setViewingSegmentId(null);
+      broadcastChange('segment_change');
     } finally {
       setTimeout(() => {
         isNavigatingRef.current = false;
@@ -517,11 +520,12 @@ export const LiveMeetingView = () => {
 
   const handleToggleTodo = async (todo: any) => {
     const newStatus = todo.status === 'Complete' ? 'Open' : 'Complete';
-    await updateTodo.mutateAsync({ 
-      id: todo.id, 
+    await updateTodo.mutateAsync({
+      id: todo.id,
       status: newStatus,
       completed_at: newStatus === 'Complete' ? new Date().toISOString() : null
     });
+    broadcastChange('todo_change');
   };
 
   // Render segment content based on type — segment_type is a real stored
@@ -758,7 +762,9 @@ export const LiveMeetingView = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deleteHeadline.mutate(headline.id)}
+                      onClick={() => deleteHeadline.mutate(headline.id, {
+                        onSuccess: () => broadcastChange('headline_change'),
+                      })}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -834,6 +840,7 @@ export const LiveMeetingView = () => {
                 meetingId={meetingId!}
                 onTodoCreated={async (todo) => {
                   await createTodo.mutateAsync(todo);
+                  broadcastChange('todo_change');
                 }}
               />
             </div>
