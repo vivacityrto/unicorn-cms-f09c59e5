@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
     const fileName = `${(audit.snapshot_rto_name || 'audit-report').replace(/[^\w\-]+/g, '_')}-${ts}.docx`;
 
     const { error: upErr } = await admin.storage
-      .from('audit-reports')
+      .from('audit-documents')
       .upload(path, buffer, {
         contentType:
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
     }
 
     const { data: signed, error: signErr } = await admin.storage
-      .from('audit-reports')
+      .from('audit-documents')
       .createSignedUrl(path, 60 * 10);
     if (signErr || !signed?.signedUrl) {
       return json({ error: 'Failed to sign URL', details: signErr?.message }, 500);
