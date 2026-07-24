@@ -187,7 +187,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
       return;
     }
     const { data, error } = await supabase.storage
-      .from('audit-documents')
+      .from('audit-reports')
       .createSignedUrl(path, 60);
     if (error || !data?.signedUrl) {
       toast.error("Couldn't open the PDF. Try regenerating it.");

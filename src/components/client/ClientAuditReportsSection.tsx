@@ -32,7 +32,7 @@ function AuditReportCard({ report }: { report: ReturnType<typeof useClientAuditR
   const handleDownloadPdf = async () => {
     if (!report.report_pdf_path) return;
     const { data } = await supabase.storage
-      .from('audit-documents')
+      .from('audit-reports')
       .createSignedUrl(report.report_pdf_path, 3600);
     if (data?.signedUrl) {
       window.open(data.signedUrl, '_blank');
