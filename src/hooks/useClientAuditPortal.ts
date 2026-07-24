@@ -15,6 +15,7 @@ export interface ClientAuditReport {
   report_acknowledged_at: string | null;
   report_acknowledged_by: string | null;
   report_pdf_path: string | null;
+  report_docx_path: string | null;
   executive_summary: string | null;
   overall_finding: string | null;
   lead_auditor_id: string | null;
