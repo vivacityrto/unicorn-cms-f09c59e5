@@ -484,9 +484,72 @@ Deno.serve(async (req) => {
       ]),
     );
 
+    // ─── Section Rollup ────────────────────────────────────────
+    if (sections.length > 0) {
+      children.push(h1('Section Rollup'));
+      const riskColor: Record<string, string> = {
+        low: '2ECC71',
+        medium: 'F1C40F',
+        high: 'E67E22',
+        critical: 'C0392B',
+        extreme: '7B1E1E',
+      };
+      const headerBorder = { style: BorderStyle.SINGLE, size: 6, color: '7130A0' };
+      const rowBorder = { style: BorderStyle.SINGLE, size: 4, color: 'E2E2E2' };
+      const headerCells = ['Section', 'Score', 'Risk', 'Findings'].map((t, i) =>
+        new TableCell({
+          width: { size: i === 0 ? 4800 : 1520, type: WidthType.DXA },
+          borders: { top: headerBorder, bottom: headerBorder, left: headerBorder, right: headerBorder },
+          shading: { fill: '44235F', type: ShadingType.CLEAR, color: 'auto' },
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          children: [new Paragraph({ children: [new TextRun({ text: t, bold: true, size: 20, color: 'FFFFFF' })] })],
+        }),
+      );
+      const rollupRows = [new TableRow({ tableHeader: true, children: headerCells })];
+      for (const s of sections) {
+        const findingCount = findings.filter((f) => f.section_id === s.id).length;
+        const scoreLabel = s.score_total != null && s.score_max != null
+          ? `${s.score_total} / ${s.score_max}`
+          : 'Not scored';
+        const risk = (s.risk_level || 'low').toString();
+        const rowCells = [
+          new TableCell({
+            width: { size: 4800, type: WidthType.DXA },
+            borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
+            margins: { top: 60, bottom: 60, left: 120, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: s.title || s.standard_code || '—', size: 20 })] })],
+          }),
+          new TableCell({
+            width: { size: 1520, type: WidthType.DXA },
+            borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
+            margins: { top: 60, bottom: 60, left: 120, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: scoreLabel, size: 20 })] })],
+          }),
+          new TableCell({
+            width: { size: 1520, type: WidthType.DXA },
+            borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
+            margins: { top: 60, bottom: 60, left: 120, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: risk.toUpperCase(), bold: true, size: 20, color: riskColor[risk] || '333333' })] })],
+          }),
+          new TableCell({
+            width: { size: 1520, type: WidthType.DXA },
+            borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
+            margins: { top: 60, bottom: 60, left: 120, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: String(findingCount), size: 20 })] })],
+          }),
+        ];
+        rollupRows.push(new TableRow({ children: rowCells }));
+      }
+      children.push(new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [4800, 1520, 1520, 1520],
+        rows: rollupRows,
+      }));
+    }
+
     // ─── Findings ───────────────────────────────────────────────
     children.push(new Paragraph({ children: [new PageBreak()] }));
-    children.push(h1('Findings'));
+    children.push(h1(`Findings (${findings.length})`));
     if (findings.length === 0) {
       children.push(para('No findings recorded.', { italic: true }));
     } else {
