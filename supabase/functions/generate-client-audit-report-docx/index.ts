@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
-    const [findingsRes, actionsRes, sectionsRes] = await Promise.all([
+    const [findingsRes, actionsRes, sectionsRes, responsesRes] = await Promise.all([
       admin
         .from('client_audit_findings')
         .select('id, summary, detail, priority, standard_reference, regulatory_reference, impact, finding_code, section_id')
@@ -250,13 +250,31 @@ Deno.serve(async (req) => {
         .eq('audit_id', auditId),
       admin
         .from('client_audit_sections')
-        .select('id, title, standard_code, risk_level, score_total, score_max, sort_order, section_summary')
+        .select('id, template_section_id, title, standard_code, risk_level, score_total, score_max, sort_order, section_summary')
         .eq('audit_id', auditId)
         .order('sort_order', { ascending: true }),
+      admin
+        .from('client_audit_responses')
+        .select('id, section_id, question_id, question_text, rating, notes, score, is_flagged, evidence_urls, responded_by, responded_at')
+        .eq('audit_id', auditId),
     ]);
     const findings = (findingsRes.data ?? []) as any[];
     const actions = (actionsRes.data ?? []) as any[];
     const sections = (sectionsRes.data ?? []) as any[];
+    const responses = (responsesRes.data ?? []) as any[];
+
+    // Load template questions for these sections so we can render each
+    // question's text + clause even when the response row doesn't cache it.
+    const templateSectionIds = sections.map((s) => s.template_section_id).filter(Boolean) as string[];
+    let templateQuestions: any[] = [];
+    if (templateSectionIds.length > 0) {
+      const { data: tq } = await admin
+        .from('audit_template_questions')
+        .select('id, section_id, clause, audit_statement, sort_order')
+        .in('section_id', templateSectionIds)
+        .order('sort_order', { ascending: true });
+      templateQuestions = tq ?? [];
+    }
 
     // Resolve user names for auditors + assignees (best-effort)
     const userIds = new Set<string>();
@@ -545,6 +563,134 @@ Deno.serve(async (req) => {
         columnWidths: [4800, 1520, 1520, 1520],
         rows: rollupRows,
       }));
+    }
+
+    // ─── Detailed Responses ─────────────────────────────────────
+    {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+      children.push(h1(`Detailed Responses (${responses.length})`));
+
+      if (responses.length === 0 && templateQuestions.length === 0) {
+        children.push(para('No responses recorded.', { italic: true }));
+      } else {
+        const RATING_LABEL: Record<string, string> = {
+          compliant: 'Compliant',
+          at_risk: 'At Risk',
+          non_compliant: 'Non-Compliant',
+          not_applicable: 'N/A',
+          not_sighted: 'Not Sighted',
+        };
+        const RATING_COLOR: Record<string, string> = {
+          compliant: '2ECC71',
+          at_risk: 'F1C40F',
+          non_compliant: 'C0392B',
+          not_applicable: '888888',
+          not_sighted: '888888',
+        };
+
+        const responsesByQuestion = new Map<string, any>();
+        const responsesBySection = new Map<string, any[]>();
+        for (const r of responses) {
+          if (r.question_id) responsesByQuestion.set(r.question_id, r);
+          if (r.section_id) {
+            const arr = responsesBySection.get(r.section_id) ?? [];
+            arr.push(r);
+            responsesBySection.set(r.section_id, arr);
+          }
+        }
+        const questionsBySection = new Map<string, any[]>();
+        for (const q of templateQuestions) {
+          const arr = questionsBySection.get(q.section_id) ?? [];
+          arr.push(q);
+          questionsBySection.set(q.section_id, arr);
+        }
+
+        for (const s of sections) {
+          const tqs = (s.template_section_id && questionsBySection.get(s.template_section_id)) || [];
+          const sectionResps = responsesBySection.get(s.id) ?? [];
+          if (tqs.length === 0 && sectionResps.length === 0) continue;
+
+          children.push(h2(s.title || s.standard_code || 'Section'));
+          if (s.section_summary) {
+            children.push(para(s.section_summary, { italic: true }));
+          }
+
+          // Prefer template-question ordering; append any orphan responses at the end.
+          const seenResponseIds = new Set<string>();
+          const renderResponse = (
+            r: any | undefined,
+            fallbackText: string | null,
+            clause: string | null,
+          ) => {
+            const heading = [clause, fallbackText || r?.question_text || 'Question'].filter(Boolean).join(' — ');
+            children.push(
+              new Paragraph({
+                spacing: { before: 160, after: 40 },
+                children: [new TextRun({ text: heading, bold: true, size: 22 })],
+              }),
+            );
+            if (r?.rating) {
+              const ratingLabel = RATING_LABEL[r.rating] || r.rating;
+              const scoreText = r.score != null ? `   ·   Score ${r.score}` : '';
+              children.push(
+                new Paragraph({
+                  spacing: { after: 60 },
+                  children: [
+                    new TextRun({ text: 'Rating: ', bold: true, size: 20 }),
+                    new TextRun({
+                      text: ratingLabel,
+                      bold: true,
+                      size: 20,
+                      color: RATING_COLOR[r.rating] || '333333',
+                    }),
+                    ...(r.is_flagged
+                      ? [new TextRun({ text: '   ·   Flagged', bold: true, size: 20, color: 'C0392B' })]
+                      : []),
+                    ...(scoreText ? [new TextRun({ text: scoreText, size: 20 })] : []),
+                  ],
+                }),
+              );
+            } else {
+              children.push(para('Rating: not recorded', { italic: true }));
+            }
+            if (r?.notes) {
+              children.push(...multiPara(r.notes));
+            }
+            if (Array.isArray(r?.evidence_urls) && r.evidence_urls.length > 0) {
+              children.push(para(`Evidence: ${r.evidence_urls.length} attachment${r.evidence_urls.length === 1 ? '' : 's'}`, { italic: true }));
+            }
+          };
+
+          for (const q of tqs) {
+            const r = responsesByQuestion.get(q.id);
+            if (r) seenResponseIds.add(r.id);
+            renderResponse(r, q.audit_statement, q.clause);
+          }
+          for (const r of sectionResps) {
+            if (seenResponseIds.has(r.id)) continue;
+            renderResponse(r, r.question_text, null);
+          }
+        }
+
+        // Orphan responses that have no linked section
+        const orphans = responses.filter((r) => !r.section_id);
+        if (orphans.length > 0) {
+          children.push(h2('Other Responses'));
+          for (const r of orphans) {
+            const heading = r.question_text || 'Question';
+            children.push(
+              new Paragraph({
+                spacing: { before: 160, after: 40 },
+                children: [new TextRun({ text: heading, bold: true, size: 22 })],
+              }),
+            );
+            if (r.rating) {
+              children.push(para(`Rating: ${RATING_LABEL[r.rating] || r.rating}`, { bold: true, color: RATING_COLOR[r.rating] || '333333' }));
+            }
+            if (r.notes) children.push(...multiPara(r.notes));
+          }
+        }
+      }
     }
 
     // ─── Findings ───────────────────────────────────────────────
