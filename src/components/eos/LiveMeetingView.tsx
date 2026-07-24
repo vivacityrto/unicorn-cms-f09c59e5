@@ -235,6 +235,20 @@ export const LiveMeetingView = () => {
   );
   const isViewingLive = viewingSegmentId === null || viewingSegmentId === liveSegment?.id;
 
+  // Tracks the live segment as of the last moment this viewer was actually
+  // following it, so the jump-to-live nudge can tell "the facilitator
+  // advanced while I was browsing elsewhere" apart from "I just clicked to
+  // browse away from an unchanged live position" - the latter isn't the
+  // facilitator moving anywhere and shouldn't say so.
+  const [lastSeenLiveSegmentId, setLastSeenLiveSegmentId] = useState<string | null>(null);
+  useEffect(() => {
+    if (isViewingLive) {
+      setLastSeenLiveSegmentId(liveSegment?.id ?? null);
+    }
+  }, [isViewingLive, liveSegment?.id]);
+  const facilitatorAdvancedWhileBrowsing =
+    !isViewingLive && !!liveSegment && liveSegment.id !== lastSeenLiveSegmentId;
+
   const completedSegments = useMemo(() => 
     segments?.filter(s => s.completed_at) || [], 
     [segments]
@@ -1198,10 +1212,12 @@ export const LiveMeetingView = () => {
               </div>
             )}
 
-            {/* Jump-to-live nudge - shown only to attendees who've browsed away
-                from the live segment (never for the facilitator's own action,
+            {/* Jump-to-live nudge - shown only when the facilitator has
+                genuinely advanced while this viewer was browsing elsewhere,
+                not merely because the viewer clicked away from an unchanged
+                live segment (never for the facilitator's own action either,
                 which snaps their view immediately in the handlers above). */}
-            {!isViewingLive && liveSegment && (
+            {facilitatorAdvancedWhileBrowsing && (
               <Card className="p-3 flex items-center justify-between gap-3 border-primary/30 bg-primary/5">
                 <p className="text-sm">
                   Facilitator moved to <span className="font-medium">{liveSegment.segment_name}</span>
