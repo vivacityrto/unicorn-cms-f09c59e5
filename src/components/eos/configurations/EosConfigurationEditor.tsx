@@ -259,7 +259,7 @@ export function EosConfigurationEditor() {
                           key={segment.id}
                           segment={segment}
                           isSelected={selectedSegmentId === segment.id}
-                          canManage={canManage}
+                          canManage={canManage && !reorderSegments.isPending}
                           onClick={() => setSelectedSegmentId(segment.id)}
                           onRemove={() => setSegmentToRemove(segment.id)}
                         />
@@ -416,9 +416,14 @@ function ConfigurationSettingsPanel({
 
         <div className="space-y-2">
           <Label>Facilitator Seat</Label>
-          <Select value={facilitatorSeatId} onValueChange={setFacilitatorSeatId} disabled={!canManage}>
+          <Select
+            value={facilitatorSeatId || '__none__'}
+            onValueChange={(v) => setFacilitatorSeatId(v === '__none__' ? '' : v)}
+            disabled={!canManage}
+          >
             <SelectTrigger><SelectValue placeholder="No seat selected" /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="__none__">No seat selected</SelectItem>
               {seats.map((seat) => (
                 <SelectItem key={seat.id} value={seat.id}>
                   {seat.seat_name}{seat.holder_name ? ` — ${seat.holder_name}` : ' (vacant)'}
