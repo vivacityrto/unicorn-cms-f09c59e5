@@ -90,6 +90,25 @@ export const useMeetingRealtime = ({
           callbacksRef.current.onTodoChange?.(payload);
         }
       )
+      // Broadcast fallback: postgres_changes subscriptions for this project
+      // never actually register server-side (confirmed live 2026-07-24 -
+      // zero rows in realtime.subscription for eos_meeting_segments/
+      // eos_headlines/eos_todos despite an actively-joined channel with
+      // working presence), so no attendee ever receives a DB-driven change
+      // event. Presence on this same channel does work, so the mutating
+      // client now also broadcasts its own change directly over the
+      // channel - every other attendee's listener below reruns the same
+      // callback the postgres_changes handler above would have. Both stay
+      // wired in case Supabase's registration issue is fixed later.
+      .on('broadcast', { event: 'segment_change' }, ({ payload }) => {
+        callbacksRef.current.onSegmentChange?.(payload);
+      })
+      .on('broadcast', { event: 'headline_change' }, ({ payload }) => {
+        callbacksRef.current.onHeadlineChange?.(payload);
+      })
+      .on('broadcast', { event: 'todo_change' }, ({ payload }) => {
+        callbacksRef.current.onTodoChange?.(payload);
+      })
       .on('presence', { event: 'sync' }, () => {
         const state = meetingChannel.presenceState();
         const rawUsers = Object.values(state).flat() as unknown as OnlineUser[];
@@ -134,5 +153,15 @@ export const useMeetingRealtime = ({
     }
   };
 
-  return { channel, onlineUsers, updatePresence };
+  // See the broadcast fallback comment above - call this after a mutation
+  // that changes segments/headlines/todos succeeds, so other attendees'
+  // .on('broadcast', ...) listeners pick it up instead of relying on the
+  // still-registered-but-non-functional postgres_changes path.
+  const broadcastChange = async (event: 'segment_change' | 'headline_change' | 'todo_change') => {
+    if (channel) {
+      await channel.send({ type: 'broadcast', event, payload: {} });
+    }
+  };
+
+  return { channel, onlineUsers, updatePresence, broadcastChange };
 };
