@@ -158,16 +158,35 @@ export const LiveMeetingView = () => {
     enabled: todoOwnerIds.length > 0,
   });
 
-  // Fetch participants with explicit FK join
+  // Fetch participants, then names separately - eos_meeting_participants.user_id
+  // has a real FK to auth.users(id), not public.users, and there's no FK from
+  // public.users to auth.users either, so no PostgREST embed hint can ever
+  // resolve first_name/last_name in one request. This request was silently
+  // failing (400) before too, but the pre-Stage-3 permission model
+  // (isVivacityStaff || isFacilitator) never depended on `participants`
+  // resolving correctly, so nobody noticed - now that control is
+  // isFacilitator-only, a failed fetch here means canControlMeeting always
+  // reads false regardless of who's actually the Leader in the database.
   const { data: participants } = useQuery({
     queryKey: ['eos-meeting-participants', meetingId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data: rows, error } = await (supabase as any)
         .from('eos_meeting_participants')
-        .select('*, users!eos_meeting_participants_user_id_users_fkey(first_name, last_name)')
+        .select('*')
         .eq('meeting_id', meetingId!);
       if (error) throw error;
-      return data;
+
+      const userIds = (rows ?? []).map((p: any) => p.user_id);
+      const { data: userRows, error: userError } = userIds.length
+        ? await (supabase as any)
+            .from('users')
+            .select('user_uuid, first_name, last_name')
+            .in('user_uuid', userIds)
+        : { data: [], error: null };
+      if (userError) throw userError;
+
+      const userMap = new Map((userRows ?? []).map((u: any) => [u.user_uuid, u]));
+      return (rows ?? []).map((p: any) => ({ ...p, users: userMap.get(p.user_id) ?? null }));
     },
     enabled: !!meetingId,
   });
