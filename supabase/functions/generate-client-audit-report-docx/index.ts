@@ -280,33 +280,58 @@ Deno.serve(async (req) => {
     // 5. Build DOCX content
     const children: (Paragraph | Table)[] = [];
 
-    // ─── Cover page ─────────────────────────────────────────────
+    // ─── Cover page (Vivacity brand) ────────────────────────────
     children.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { before: 1200, after: 200 },
+        spacing: { before: 400, after: 40 },
+        children: [
+          new TextRun({ text: 'VIVACITY', bold: true, size: 56, color: '44235F', font: 'Calibri' }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 40 },
+        children: [
+          new TextRun({ text: 'Coaching & Consulting', italics: true, size: 24, color: '7130A0' }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 800 },
+        border: {
+          bottom: { style: BorderStyle.SINGLE, size: 12, color: 'ED1878', space: 4 },
+        },
+        children: [
+          new TextRun({ text: 'We make Compliance Simple!', size: 20, color: 'ED1878' }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 400, after: 120 },
         children: [
           new TextRun({
             text: AUDIT_TYPE_LABEL[audit.audit_type] || audit.audit_type || 'Audit Report',
             bold: true,
-            size: 44,
+            size: 48,
             color: '44235F',
           }),
         ],
       }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 120 },
+        spacing: { after: 200 },
         children: [new TextRun({ text: 'Compliance Audit Report', size: 28, color: '7130A0' })],
       }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 400 },
+        spacing: { after: 500 },
         children: [
           new TextRun({
             text: audit.snapshot_rto_name || audit.title || 'Client',
             bold: true,
-            size: 32,
+            size: 36,
+            color: '44235F',
           }),
         ],
       }),
@@ -316,6 +341,7 @@ Deno.serve(async (req) => {
     if (audit.snapshot_rto_number) coverRows.push(['RTO code', audit.snapshot_rto_number]);
     if (audit.snapshot_cricos_code) coverRows.push(['CRICOS code', audit.snapshot_cricos_code]);
     if (audit.doc_number) coverRows.push(['Document reference', audit.doc_number]);
+    coverRows.push(['Audit type', AUDIT_TYPE_LABEL[audit.audit_type] || audit.audit_type || '—']);
     coverRows.push(['Conducted', fmtDate(audit.conducted_at)]);
     coverRows.push(['Report generated', fmtDate(new Date().toISOString())]);
     if (audit.lead_auditor_id) coverRows.push(['Lead auditor', nameOf(audit.lead_auditor_id)]);
@@ -323,7 +349,53 @@ Deno.serve(async (req) => {
     if (audit.report_prepared_by_id) coverRows.push(['Report prepared by', nameOf(audit.report_prepared_by_id)]);
     if (coverRows.length > 0) children.push(infoTable(coverRows));
 
-    children.push(new Paragraph({ children: [new PageBreak()] }));
+    // Score + risk highlight strip
+    if (audit.risk_rating || audit.score_pct != null) {
+      const scoreText = audit.score_pct != null
+        ? `${audit.score_pct}%${audit.score_total != null && audit.score_max != null ? `  (${audit.score_total} of ${audit.score_max} points)` : ''}`
+        : '—';
+      const ratingText = audit.risk_rating ? String(audit.risk_rating).toUpperCase() : '—';
+      children.push(
+        new Paragraph({ spacing: { before: 400 }, children: [new TextRun('')] }),
+        new Table({
+          width: { size: 9360, type: WidthType.DXA },
+          columnWidths: [4680, 4680],
+          rows: [
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 4680, type: WidthType.DXA },
+                  shading: { fill: '7130A0', type: ShadingType.CLEAR, color: 'auto' },
+                  margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                  children: [
+                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'OVERALL SCORE', bold: true, size: 18, color: 'FFFFFF' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80 }, children: [new TextRun({ text: scoreText, bold: true, size: 40, color: 'FFFFFF' })] }),
+                  ],
+                }),
+                new TableCell({
+                  width: { size: 4680, type: WidthType.DXA },
+                  shading: { fill: 'ED1878', type: ShadingType.CLEAR, color: 'auto' },
+                  margins: { top: 200, bottom: 200, left: 200, right: 200 },
+                  children: [
+                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'RISK RATING', bold: true, size: 18, color: 'FFFFFF' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80 }, children: [new TextRun({ text: ratingText, bold: true, size: 40, color: 'FFFFFF' })] }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      );
+    }
+
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 600, after: 40 },
+        children: [new TextRun({ text: 'CONFIDENTIAL — distribute only to the named provider above.', italics: true, size: 18, color: '44235F' })],
+      }),
+      new Paragraph({ children: [new PageBreak()] }),
+    );
 
     // ─── Overall Result ─────────────────────────────────────────
     children.push(h1('Overall Result'));
