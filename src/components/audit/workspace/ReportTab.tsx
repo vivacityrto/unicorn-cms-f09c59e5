@@ -13,6 +13,7 @@ import {
   useDraftExecutiveSummary,
   useRecordExecutiveSummaryDecision,
   useGenerateClientAuditReport,
+  useGenerateClientAuditReportDocx,
   type ExecSummaryResponse,
 } from '@/hooks/useAuditReport';
 import { supabase } from '@/integrations/supabase/client';
