@@ -597,7 +597,10 @@ export const LiveMeetingView = () => {
             </p>
             <div className="space-y-3 mb-4">
               <RockReviewPrompt />
-              <RocksInsights rocks={(rocks ?? []).map(r => ({ ...r, owner_user_id: r.owner_id }))} />
+              {/* Same rocks_scope-filtered set as the list below, not the raw
+                  rocks array - otherwise insights (overdue/off-track counts)
+                  can reference rocks the segment itself isn't even showing. */}
+              <RocksInsights rocks={currentQuarterRocks.map(r => ({ ...r, owner_user_id: r.owner_id }))} />
             </div>
             <div className="space-y-3">
               {currentQuarterRocks.map((rock) => (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -29,11 +29,26 @@ export const ChangeFacilitatorDialog = ({ open, onOpenChange, meetingId }: Chang
   const { participantsLoading, currentFacilitator, changeFacilitator } = useFacilitatorChange(meetingId);
   const [selectedFacilitator, setSelectedFacilitator] = useState<string>('');
 
+  // Re-sync to the actual current facilitator once per dialog open, not on
+  // every render - the dialog stays mounted across open/close, and the
+  // prior "only if still empty" guard meant a stale pick (from a
+  // cancelled attempt, a different meeting, or an external facilitator
+  // change since) could persist and enable Save against the wrong
+  // person. Gated on participantsLoading (not just `open`) so it waits
+  // for real data instead of resetting to '' first and never
+  // recovering; the initializedRef guard (reset when the dialog closes)
+  // stops a background refetch from clobbering an in-progress pick.
+  const initializedRef = useRef(false);
   useEffect(() => {
-    if (currentFacilitator?.user_id && !selectedFacilitator) {
-      setSelectedFacilitator(currentFacilitator.user_id);
+    if (!open) {
+      initializedRef.current = false;
+      return;
     }
-  }, [currentFacilitator, selectedFacilitator]);
+    if (!initializedRef.current && !participantsLoading) {
+      setSelectedFacilitator(currentFacilitator?.user_id ?? '');
+      initializedRef.current = true;
+    }
+  }, [open, participantsLoading, currentFacilitator]);
 
   const handleSave = async () => {
     if (selectedFacilitator && selectedFacilitator !== currentFacilitator?.user_id) {
