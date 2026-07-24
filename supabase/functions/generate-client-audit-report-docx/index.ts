@@ -259,9 +259,6 @@ Deno.serve(async (req) => {
     const sections = (sectionsRes.data ?? []) as any[];
 
     // Resolve user names for auditors + assignees (best-effort)
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
     const userIds = new Set<string>();
     for (const k of ['lead_auditor_id', 'assisted_by_id', 'report_prepared_by_id']) {
       if (audit[k]) userIds.add(audit[k]);
