@@ -30,6 +30,11 @@ import {
   BorderStyle,
   ShadingType,
   PageBreak,
+  Header,
+  Footer,
+  PageNumber,
+  TabStopType,
+  TabStopPosition,
 } from 'npm:docx@8.5.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
