@@ -8,7 +8,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2, Zap, Target, LayoutTemplate, ChevronDown, History, Lock, CheckCircle, PlayCircle, Loader2 } from 'lucide-react';
 import { useEosMeetings } from '@/hooks/useEos';
-import { useMeetingSeries } from '@/hooks/useMeetingSeries';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/hooks/useAuth';
 import { useEosConfigV2Flag } from '@/hooks/useEosConfigV2Flag';
@@ -36,7 +35,6 @@ export default function EosMeetings() {
 function MeetingsContent() {
   const navigate = useNavigate();
   const { meetings, isLoading, error, refetch, deleteMeeting } = useEosMeetings();
-  const { upcomingMeetings, pastMeetings, isLoadingUpcoming, isLoadingPast } = useMeetingSeries();
   const canScheduleMeetingsPerm = usePermission('eos.meetings.l10.create');
   const canScheduleMeetings = () => canScheduleMeetingsPerm;
   const canManageConfigurationsPerm = usePermission('eos.configurations.manage');
