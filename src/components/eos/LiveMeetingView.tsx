@@ -1261,7 +1261,7 @@ export const LiveMeetingView = () => {
               segments={segments}
               currentSegmentId={liveSegment?.id}
               attendeesCount={attendees?.length || 0}
-              quorumMet={meeting?.quorum_status === 'met' || meeting?.quorum_status === 'overridden'}
+              quorumMet={quorumMet}
               meetingStartTime={meeting?.started_at}
             />
             

@@ -57,6 +57,12 @@ const FREQUENCY_OPTIONS = [
   { value: 'on_demand', label: 'On demand' },
 ];
 
+const ROCKS_SCOPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'company', label: 'Company' },
+  { value: 'team', label: 'Team' },
+  { value: 'individual', label: 'Individual' },
+];
+
 const MEETING_TYPE_LABEL: Record<string, string> = {
   L10: 'Level 10',
   Quarterly: 'Quarterly',
@@ -370,6 +376,7 @@ function ConfigurationSettingsPanel({
   const [facilitatorSeatId, setFacilitatorSeatId] = useState(config.facilitator_seat_id ?? '');
   const [requiredSeatIds, setRequiredSeatIds] = useState<string[]>(config.required_seat_ids ?? []);
   const [scorecardCap, setScorecardCap] = useState(config.scorecard_metric_cap);
+  const [rocksScope, setRocksScope] = useState<string[]>(config.rocks_scope ?? []);
 
   useEffect(() => {
     setFrequency(config.frequency);
@@ -377,6 +384,7 @@ function ConfigurationSettingsPanel({
     setFacilitatorSeatId(config.facilitator_seat_id ?? '');
     setRequiredSeatIds(config.required_seat_ids ?? []);
     setScorecardCap(config.scorecard_metric_cap);
+    setRocksScope(config.rocks_scope ?? []);
   }, [config]);
 
   const dirty =
@@ -384,7 +392,8 @@ function ConfigurationSettingsPanel({
     participantModel !== config.participant_model ||
     facilitatorSeatId !== (config.facilitator_seat_id ?? '') ||
     JSON.stringify(requiredSeatIds) !== JSON.stringify(config.required_seat_ids ?? []) ||
-    scorecardCap !== config.scorecard_metric_cap;
+    scorecardCap !== config.scorecard_metric_cap ||
+    JSON.stringify(rocksScope) !== JSON.stringify(config.rocks_scope ?? []);
 
   const content = (
     <Card>
@@ -478,6 +487,32 @@ function ConfigurationSettingsPanel({
           </p>
         </div>
 
+        <Separator />
+
+        <div className="space-y-2">
+          <Label>Rocks scope</Label>
+          {ROCKS_SCOPE_OPTIONS.map((opt) => (
+            <div key={opt.value} className="flex items-center space-x-2">
+              <Checkbox
+                id={`rocks-scope-${opt.value}`}
+                checked={rocksScope.includes(opt.value)}
+                disabled={!canManage}
+                onCheckedChange={(checked) =>
+                  setRocksScope((prev) =>
+                    checked ? [...prev, opt.value] : prev.filter((v) => v !== opt.value),
+                  )
+                }
+              />
+              <Label htmlFor={`rocks-scope-${opt.value}`} className="font-normal text-sm">
+                {opt.label}
+              </Label>
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            Rock levels shown during this meeting type's Rocks segment. None selected shows all levels.
+          </p>
+        </div>
+
         {canManage && (
           <Button
             disabled={!dirty}
@@ -488,6 +523,7 @@ function ConfigurationSettingsPanel({
                 facilitator_seat_id: facilitatorSeatId || null,
                 required_seat_ids: requiredSeatIds,
                 scorecard_metric_cap: scorecardCap,
+                rocks_scope: rocksScope,
               } as any)
             }
           >

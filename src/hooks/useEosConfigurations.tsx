@@ -110,7 +110,13 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
       duration_minutes: number;
     }) => {
       if (!configurationId) throw new Error('No configuration selected');
-      const nextOrder = (segments?.length ?? 0) + 1;
+      // Use max(sequence_order) + 1, not segments.length + 1 - deletes leave
+      // gaps, so length-based numbering can reuse an order still held by a
+      // surviving segment and hit the UNIQUE(configuration_id, sequence_order)
+      // constraint.
+      const nextOrder = (segments?.length
+        ? Math.max(...segments.map((s) => s.sequence_order))
+        : 0) + 1;
       const { data, error } = await (supabase as any)
         .from('eos_configuration_segments')
         .insert({
@@ -161,7 +167,7 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
       // supabase-js client issues one request per call, so we push every
       // segment past the current max first, then assign final positions.
       const offset = (segments?.length ?? 0) + 1000;
-      await Promise.all(
+      const phase1 = await Promise.all(
         orderedIds.map((id, index) =>
           (supabase as any)
             .from('eos_configuration_segments')
@@ -169,7 +175,10 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
             .eq('id', id),
         ),
       );
-      await Promise.all(
+      const phase1Error = phase1.find((r) => r.error)?.error;
+      if (phase1Error) throw phase1Error;
+
+      const phase2 = await Promise.all(
         orderedIds.map((id, index) =>
           (supabase as any)
             .from('eos_configuration_segments')
@@ -177,6 +186,8 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
             .eq('id', id),
         ),
       );
+      const phase2Error = phase2.find((r) => r.error)?.error;
+      if (phase2Error) throw phase2Error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-configuration-segments', configurationId] });
