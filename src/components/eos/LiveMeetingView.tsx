@@ -609,11 +609,18 @@ export const LiveMeetingView = () => {
                           <p className="font-medium">{rock.title}</p>
                           <ClientBadge clientId={rock.client_tenant_id} />
                           <Badge variant="outline" className={`text-xs ${
-                            rock.rock_level === 'company' 
-                              ? 'border-primary/40 text-primary' 
+                            rock.rock_level === 'company'
+                              ? 'border-primary/40 text-primary'
                               : 'border-accent-foreground/30 text-accent-foreground'
                           }`}>
-                            {rock.rock_level === 'company' ? 'Company' : 'Team'}
+                            {/* rocks_scope is now editable and can include 'individual'
+                                (round 1 fix) - show the real level instead of assuming
+                                every non-company rock is Team. */}
+                            {rock.rock_level === 'company'
+                              ? 'Company'
+                              : rock.rock_level === 'individual'
+                                ? 'Individual'
+                                : 'Team'}
                           </Badge>
                           <Badge variant="outline" className="text-xs">
                             Q{rock.quarter_number} {rock.quarter_year}
