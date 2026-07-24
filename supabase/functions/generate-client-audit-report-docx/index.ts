@@ -367,12 +367,19 @@ Deno.serve(async (req) => {
     if (audit.report_prepared_by_id) coverRows.push(['Report prepared by', nameOf(audit.report_prepared_by_id)]);
     if (coverRows.length > 0) children.push(infoTable(coverRows));
 
-    // Score + risk highlight strip
-    if (audit.risk_rating || audit.score_pct != null) {
+    // Score + risk highlight strip (with finding-count breakdown, matches PDF)
+    if (audit.risk_rating || audit.score_pct != null || findings.length > 0) {
       const scoreText = audit.score_pct != null
-        ? `${audit.score_pct}%${audit.score_total != null && audit.score_max != null ? `  (${audit.score_total} of ${audit.score_max} points)` : ''}`
+        ? `${audit.score_pct}%`
         : '—';
+      const scoreSub = audit.score_total != null && audit.score_max != null
+        ? `${audit.score_total} of ${audit.score_max} points`
+        : '';
       const ratingText = audit.risk_rating ? String(audit.risk_rating).toUpperCase() : '—';
+      const critN = findings.filter((f) => f.priority === 'critical').length;
+      const highN = findings.filter((f) => f.priority === 'high').length;
+      const medN = findings.filter((f) => f.priority === 'medium').length;
+      const ratingSub = `${critN} critical · ${highN} high · ${medN} medium`;
       children.push(
         new Paragraph({ spacing: { before: 400 }, children: [new TextRun('')] }),
         new Table({
@@ -388,6 +395,7 @@ Deno.serve(async (req) => {
                   children: [
                     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'OVERALL SCORE', bold: true, size: 18, color: 'FFFFFF' })] }),
                     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80 }, children: [new TextRun({ text: scoreText, bold: true, size: 40, color: 'FFFFFF' })] }),
+                    ...(scoreSub ? [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 40 }, children: [new TextRun({ text: scoreSub, size: 18, color: 'FFFFFF' })] })] : []),
                   ],
                 }),
                 new TableCell({
@@ -397,6 +405,7 @@ Deno.serve(async (req) => {
                   children: [
                     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'RISK RATING', bold: true, size: 18, color: 'FFFFFF' })] }),
                     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80 }, children: [new TextRun({ text: ratingText, bold: true, size: 40, color: 'FFFFFF' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 40 }, children: [new TextRun({ text: ratingSub, size: 18, color: 'FFFFFF' })] }),
                   ],
                 }),
               ],
@@ -410,100 +419,35 @@ Deno.serve(async (req) => {
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { before: 600, after: 40 },
+        children: [new TextRun({ text: `Report generated ${fmtDate(new Date().toISOString())}`, size: 18, color: '44235F' })],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 200, after: 40 },
         children: [new TextRun({ text: 'CONFIDENTIAL — distribute only to the named provider above.', italics: true, size: 18, color: '44235F' })],
       }),
       new Paragraph({ children: [new PageBreak()] }),
     );
 
-    // ─── Overall Result ─────────────────────────────────────────
-    children.push(h1('Overall Result'));
-    const rating = audit.risk_rating ? String(audit.risk_rating).toUpperCase() : 'Not rated';
-    children.push(
-      new Paragraph({
-        spacing: { after: 120 },
-        children: [
-          new TextRun({ text: 'Risk rating: ', bold: true }),
-          new TextRun({ text: rating, bold: true, color: '44235F' }),
-        ],
-      }),
-    );
-    if (audit.score_pct != null || audit.score_total != null) {
-      const scoreText =
-        audit.score_pct != null
-          ? `${audit.score_pct}%${audit.score_total != null && audit.score_max != null ? `  (${audit.score_total} / ${audit.score_max})` : ''}`
-          : `${audit.score_total} / ${audit.score_max ?? '—'}`;
-      children.push(
-        new Paragraph({
-          spacing: { after: 120 },
-          children: [
-            new TextRun({ text: 'Score: ', bold: true }),
-            new TextRun({ text: scoreText }),
-          ],
-        }),
-      );
-    }
-    if (audit.overall_finding) {
-      children.push(h3('Overall finding'));
-      children.push(...multiPara(audit.overall_finding));
-    }
-    if (audit.risk_rationale) {
-      children.push(h3('Risk rationale'));
-      children.push(...multiPara(audit.risk_rationale));
-    }
-
     // ─── Executive Summary ──────────────────────────────────────
     children.push(h1('Executive Summary'));
     children.push(...multiPara(audit.executive_summary));
 
-    // ─── Scope & Context ────────────────────────────────────────
-    children.push(h1('Scope & Context'));
-    const scope: Array<[string, string | null | undefined]> = [
-      ['Organisation', audit.snapshot_rto_name],
-      ['RTO code', audit.snapshot_rto_number],
-    ];
-    if (audit.is_cricos || audit.snapshot_cricos_code) scope.push(['CRICOS code', audit.snapshot_cricos_code]);
-    if (audit.snapshot_site_address) scope.push(['Site address', audit.snapshot_site_address]);
-    if (audit.snapshot_ceo) scope.push(['Chief Executive', audit.snapshot_ceo]);
-    if (audit.snapshot_phone) scope.push(['Phone', audit.snapshot_phone]);
-    if (audit.snapshot_email) scope.push(['Email', audit.snapshot_email]);
-    if (audit.snapshot_website) scope.push(['Website', audit.snapshot_website]);
-    if (audit.snapshot_other_contacts) scope.push(['Other contacts', audit.snapshot_other_contacts]);
-    if (audit.audit_location) scope.push(['Audit location', audit.audit_location]);
-    if (audit.audit_is_online != null) scope.push(['Mode', audit.audit_is_online ? 'Online' : 'On-site']);
-    if (audit.is_retrospective) scope.push(['Retrospective audit', 'Yes']);
-    children.push(infoTable(scope));
-
-    if (audit.is_cricos) {
-      children.push(h3('CRICOS profile'));
-      const cricos: Array<[string, string | null | undefined]> = [];
-      if (audit.snapshot_overseas_student_count != null)
-        cricos.push(['Overseas students', String(audit.snapshot_overseas_student_count)]);
-      if (audit.snapshot_education_agents) cricos.push(['Education agents', audit.snapshot_education_agents]);
-      if (audit.snapshot_prisms_users) cricos.push(['PRISMS users', audit.snapshot_prisms_users]);
-      if (audit.snapshot_dha_contact) cricos.push(['DHA contact', audit.snapshot_dha_contact]);
-      if (cricos.length > 0) children.push(infoTable(cricos));
+    // ─── Overall Finding ────────────────────────────────────────
+    if (audit.overall_finding) {
+      children.push(h1('Overall Finding'));
+      children.push(...multiPara(audit.overall_finding));
     }
 
-    if (Array.isArray(audit.training_products) && audit.training_products.length > 0) {
-      children.push(h3('Training products in scope'));
-      for (const tp of audit.training_products) children.push(bullet(String(tp)));
+    // ─── Risk Rating Rationale ──────────────────────────────────
+    if (audit.risk_rationale) {
+      children.push(h1('Risk Rating Rationale'));
+      children.push(...multiPara(audit.risk_rationale));
     }
-
-    // ─── Audit timeline ────────────────────────────────────────
-    children.push(h1('Audit Timeline'));
-    children.push(
-      infoTable([
-        ['Opening meeting', fmtDateTime(audit.opening_meeting_at)],
-        ['Conducted', fmtDateTime(audit.conducted_at)],
-        ['Document deadline', fmtDate(audit.document_deadline_at)],
-        ['Closing meeting', fmtDateTime(audit.closing_meeting_at)],
-        ['Closed', fmtDateTime(audit.closed_at)],
-        ['Next audit due', fmtDate(audit.next_audit_due)],
-      ]),
-    );
 
     // ─── Section Rollup ────────────────────────────────────────
     if (sections.length > 0) {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
       children.push(h1('Section Rollup'));
       const riskColor: Record<string, string> = {
         low: '2ECC71',
@@ -565,20 +509,128 @@ Deno.serve(async (req) => {
       }));
     }
 
+    // ─── Findings ───────────────────────────────────────────────
+    // Match PDF: each finding shows the standard/reg reference, the detail body,
+    // then a "Suggested corrective action:" (pulled from the linked action's
+    // description) and an "Impact:" block.
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(h1(`Findings (${findings.length})`));
+    if (findings.length === 0) {
+      children.push(para('No findings recorded.', { italic: true }));
+    } else {
+      const actionsByFinding = new Map<string, any[]>();
+      for (const a of actions) {
+        if (!a.finding_id) continue;
+        const arr = actionsByFinding.get(a.finding_id) ?? [];
+        arr.push(a);
+        actionsByFinding.set(a.finding_id, arr);
+      }
+
+      for (const p of PRIORITY_ORDER) {
+        const group = findings.filter((f) => f.priority === p);
+        if (group.length === 0) continue;
+        children.push(h2(`${PRIORITY_LABEL[p]} priority (${group.length})`));
+        for (const f of group) {
+          const heading = [f.finding_code, f.summary || 'Untitled finding'].filter(Boolean).join(' — ');
+          children.push(
+            new Paragraph({
+              spacing: { before: 200, after: 60 },
+              children: [
+                new TextRun({ text: heading, bold: true, size: 22, color: PRIORITY_COLOR[p] }),
+              ],
+            }),
+          );
+          const meta: string[] = [];
+          if (f.standard_reference) meta.push(f.standard_reference);
+          if (f.regulatory_reference) meta.push(f.regulatory_reference);
+          if (meta.length > 0) children.push(para(meta.join(' · '), { italic: true }));
+          if (f.detail) children.push(...multiPara(f.detail));
+
+          const linked = actionsByFinding.get(f.id) ?? [];
+          if (linked.length > 0) {
+            children.push(
+              new Paragraph({
+                spacing: { before: 120, after: 40 },
+                children: [new TextRun({ text: 'Suggested corrective action:', bold: true, size: 22, color: '44235F' })],
+              }),
+            );
+            for (const a of linked) {
+              if (a.description) {
+                children.push(...multiPara(a.description));
+              } else if (a.title) {
+                children.push(para(a.title));
+              }
+            }
+          }
+
+          if (f.impact) {
+            children.push(
+              new Paragraph({
+                spacing: { before: 120, after: 40 },
+                children: [new TextRun({ text: 'Impact:', bold: true, size: 22, color: '44235F' })],
+              }),
+            );
+            children.push(...multiPara(f.impact));
+          }
+        }
+      }
+    }
+
+    // ─── Action Plan ────────────────────────────────────────────
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    const openActions = actions.filter((a) => a.status !== 'complete' && a.status !== 'cancelled');
+    children.push(h1(`Action Plan (${openActions.length})`));
+    if (openActions.length === 0) {
+      children.push(para('No outstanding actions.', { italic: true }));
+    } else {
+      for (const a of openActions) {
+        const priorityKey = (a.priority || 'low').toString();
+        children.push(
+          new Paragraph({
+            spacing: { before: 200, after: 40 },
+            children: [
+              new TextRun({ text: `${a.title || 'Untitled action'}   `, bold: true, size: 22 }),
+              new TextRun({
+                text: (PRIORITY_LABEL[priorityKey] || priorityKey).toUpperCase(),
+                bold: true,
+                size: 18,
+                color: PRIORITY_COLOR[priorityKey] || '333333',
+              }),
+            ],
+          }),
+        );
+        const meta: string[] = [];
+        meta.push(`Owner: ${a.assigned_to ? nameOf(a.assigned_to) : 'TBC'}`);
+        const due = a.extended_due_date || a.due_date;
+        if (due) meta.push(`Due: ${fmtDate(due)}${a.extended_due_date ? ' (extended)' : ''}`);
+        meta.push(`Status: ${(a.status || 'open').toString().toUpperCase()}`);
+        children.push(para(meta.join(' · '), { italic: true }));
+        if (a.description) children.push(...multiPara(a.description));
+      }
+    }
+
+    const doneActions = actions.filter((a) => a.status === 'complete' || a.status === 'cancelled');
+    if (doneActions.length > 0) {
+      children.push(h2(`Completed / closed (${doneActions.length})`));
+      for (const a of doneActions) {
+        children.push(bullet(`${a.title || 'Untitled action'} — ${a.status}${a.due_date ? ` (due ${fmtDate(a.due_date)})` : ''}`));
+      }
+    }
+
     // ─── Detailed Responses ─────────────────────────────────────
     {
       children.push(new Paragraph({ children: [new PageBreak()] }));
-      children.push(h1(`Detailed Responses (${responses.length})`));
+      children.push(h1('Detailed Responses'));
 
       if (responses.length === 0 && templateQuestions.length === 0) {
         children.push(para('No responses recorded.', { italic: true }));
       } else {
         const RATING_LABEL: Record<string, string> = {
-          compliant: 'Compliant',
-          at_risk: 'At Risk',
-          non_compliant: 'Non-Compliant',
+          compliant: 'COMPLIANT',
+          at_risk: 'AT RISK',
+          non_compliant: 'NON-COMPLIANT',
           not_applicable: 'N/A',
-          not_sighted: 'Not Sighted',
+          not_sighted: 'NOT SIGHTED',
         };
         const RATING_COLOR: Record<string, string> = {
           compliant: '2ECC71',
@@ -611,18 +663,15 @@ Deno.serve(async (req) => {
           if (tqs.length === 0 && sectionResps.length === 0) continue;
 
           children.push(h2(s.title || s.standard_code || 'Section'));
-          if (s.section_summary) {
-            children.push(para(s.section_summary, { italic: true }));
-          }
 
-          // Prefer template-question ordering; append any orphan responses at the end.
           const seenResponseIds = new Set<string>();
           const renderResponse = (
             r: any | undefined,
             fallbackText: string | null,
             clause: string | null,
           ) => {
-            const heading = [clause, fallbackText || r?.question_text || 'Question'].filter(Boolean).join(' — ');
+            const label = clause ? `[${clause}] ` : '';
+            const heading = `${label}${fallbackText || r?.question_text || 'Question'}`;
             children.push(
               new Paragraph({
                 spacing: { before: 160, after: 40 },
@@ -630,13 +679,11 @@ Deno.serve(async (req) => {
               }),
             );
             if (r?.rating) {
-              const ratingLabel = RATING_LABEL[r.rating] || r.rating;
-              const scoreText = r.score != null ? `   ·   Score ${r.score}` : '';
+              const ratingLabel = RATING_LABEL[r.rating] || r.rating.toUpperCase();
               children.push(
                 new Paragraph({
                   spacing: { after: 60 },
                   children: [
-                    new TextRun({ text: 'Rating: ', bold: true, size: 20 }),
                     new TextRun({
                       text: ratingLabel,
                       bold: true,
@@ -644,14 +691,14 @@ Deno.serve(async (req) => {
                       color: RATING_COLOR[r.rating] || '333333',
                     }),
                     ...(r.is_flagged
-                      ? [new TextRun({ text: '   ·   Flagged', bold: true, size: 20, color: 'C0392B' })]
+                      ? [new TextRun({ text: '   FLAGGED', bold: true, size: 20, color: 'C0392B' })]
                       : []),
-                    ...(scoreText ? [new TextRun({ text: scoreText, size: 20 })] : []),
+                    ...(r.score != null ? [new TextRun({ text: `   ·   Score ${r.score}`, size: 20 })] : []),
                   ],
                 }),
               );
             } else {
-              children.push(para('Rating: not recorded', { italic: true }));
+              children.push(para('Not rated', { italic: true }));
             }
             if (r?.notes) {
               children.push(...multiPara(r.notes));
@@ -672,7 +719,6 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Orphan responses that have no linked section
         const orphans = responses.filter((r) => !r.section_id);
         if (orphans.length > 0) {
           children.push(h2('Other Responses'));
@@ -685,144 +731,12 @@ Deno.serve(async (req) => {
               }),
             );
             if (r.rating) {
-              children.push(para(`Rating: ${RATING_LABEL[r.rating] || r.rating}`, { bold: true, color: RATING_COLOR[r.rating] || '333333' }));
+              children.push(para(`${(RATING_LABEL[r.rating] || r.rating).toUpperCase()}${r.is_flagged ? '   FLAGGED' : ''}`, { bold: true, color: RATING_COLOR[r.rating] || '333333' }));
             }
             if (r.notes) children.push(...multiPara(r.notes));
           }
         }
       }
-    }
-
-    // ─── Findings ───────────────────────────────────────────────
-    children.push(new Paragraph({ children: [new PageBreak()] }));
-    children.push(h1(`Findings (${findings.length})`));
-    if (findings.length === 0) {
-      children.push(para('No findings recorded.', { italic: true }));
-    } else {
-      const counts = PRIORITY_ORDER.map((p) => ({
-        p,
-        n: findings.filter((f) => f.priority === p).length,
-      })).filter((x) => x.n > 0);
-      children.push(
-        new Paragraph({
-          spacing: { after: 160 },
-          children: [
-            new TextRun({ text: `Total findings: `, bold: true }),
-            new TextRun({ text: `${findings.length}   ` }),
-            ...counts.flatMap((c, i) => [
-              new TextRun({
-                text: `${PRIORITY_LABEL[c.p]} ${c.n}`,
-                bold: true,
-                color: PRIORITY_COLOR[c.p],
-              }),
-              new TextRun({ text: i < counts.length - 1 ? '   ' : '' }),
-            ]),
-          ],
-        }),
-      );
-      for (const p of PRIORITY_ORDER) {
-        const group = findings.filter((f) => f.priority === p);
-        if (group.length === 0) continue;
-        children.push(h2(`${PRIORITY_LABEL[p]} priority (${group.length})`));
-        for (const f of group) {
-          const heading = [f.finding_code, f.summary || 'Untitled finding'].filter(Boolean).join(' — ');
-          children.push(
-            new Paragraph({
-              spacing: { before: 160, after: 60 },
-              children: [
-                new TextRun({ text: heading, bold: true, size: 22, color: PRIORITY_COLOR[p] }),
-              ],
-            }),
-          );
-          const meta: string[] = [];
-          if (f.standard_reference) meta.push(`Standard: ${f.standard_reference}`);
-          if (f.regulatory_reference) meta.push(`Regulatory: ${f.regulatory_reference}`);
-          if (meta.length > 0) children.push(para(meta.join('   ·   '), { italic: true }));
-          if (f.detail) children.push(...multiPara(f.detail));
-          if (f.impact) {
-            children.push(
-              new Paragraph({
-                spacing: { after: 100 },
-                children: [
-                  new TextRun({ text: 'Impact: ', bold: true }),
-                  new TextRun({ text: f.impact }),
-                ],
-              }),
-            );
-          }
-        }
-      }
-    }
-
-    // ─── Action Plan ────────────────────────────────────────────
-    children.push(new Paragraph({ children: [new PageBreak()] }));
-    children.push(h1('Action Plan'));
-    const openActions = actions.filter((a) => a.status !== 'complete' && a.status !== 'cancelled');
-    if (openActions.length === 0) {
-      children.push(para('No outstanding actions.', { italic: true }));
-    } else {
-      for (const p of PRIORITY_ORDER) {
-        const group = openActions.filter((a) => a.priority === p);
-        if (group.length === 0) continue;
-        children.push(h2(`${PRIORITY_LABEL[p]} priority (${group.length})`));
-        for (const a of group) {
-          children.push(
-            new Paragraph({
-              spacing: { before: 140, after: 40 },
-              children: [
-                new TextRun({ text: a.title || 'Untitled action', bold: true, size: 22 }),
-              ],
-            }),
-          );
-          const meta: string[] = [];
-          const due = a.extended_due_date || a.due_date;
-          if (due) meta.push(`Due ${fmtDate(due)}${a.extended_due_date ? ' (extended)' : ''}`);
-          if (a.assigned_to) meta.push(`Owner ${nameOf(a.assigned_to)}`);
-          if (a.status) meta.push(`Status ${a.status}`);
-          if (a.action_type) meta.push(`Type ${a.action_type}`);
-          if (a.standard_reference) meta.push(`Ref ${a.standard_reference}`);
-          if (meta.length > 0) children.push(para(meta.join('   ·   '), { italic: true }));
-          if (a.description) children.push(...multiPara(a.description));
-          if (a.client_notes) {
-            children.push(
-              new Paragraph({
-                spacing: { after: 100 },
-                children: [
-                  new TextRun({ text: 'Client notes: ', bold: true }),
-                  new TextRun({ text: a.client_notes }),
-                ],
-              }),
-            );
-          }
-          if (a.evidence_required) {
-            children.push(para('Evidence required for closure.', { italic: true, color: '7130A0' }));
-          }
-        }
-      }
-    }
-
-    // Completed actions summary
-    const doneActions = actions.filter((a) => a.status === 'complete' || a.status === 'cancelled');
-    if (doneActions.length > 0) {
-      children.push(h2(`Completed / closed (${doneActions.length})`));
-      for (const a of doneActions) {
-        children.push(bullet(`${a.title || 'Untitled action'} — ${a.status}${a.due_date ? ` (due ${fmtDate(a.due_date)})` : ''}`));
-      }
-    }
-
-    // ─── Closing ────────────────────────────────────────────────
-    children.push(h1('Closing'));
-    children.push(
-      infoTable([
-        ['Closing meeting', fmtDateTime(audit.closing_meeting_at)],
-        ['Report generated', fmtDateTime(audit.report_generated_at || new Date().toISOString())],
-        ['Report released', fmtDateTime(audit.report_released_at)],
-        ['Next audit due', fmtDate(audit.next_audit_due)],
-      ]),
-    );
-    if (audit.report_release_notes) {
-      children.push(h3('Release notes'));
-      children.push(...multiPara(audit.report_release_notes));
     }
 
     // Build document
