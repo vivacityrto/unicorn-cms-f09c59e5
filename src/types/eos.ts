@@ -407,6 +407,16 @@ export interface EosHeadline {
   created_at: string;
 }
 
+export interface EosSegueShare {
+  id: string;
+  meeting_id: string;
+  user_id?: string;
+  personal_win: string;
+  professional_win: string;
+  rating?: number | null;
+  created_at: string;
+}
+
 export interface EosMeetingParticipant {
   id: string;
   meeting_id: string;

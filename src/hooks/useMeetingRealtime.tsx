@@ -17,6 +17,7 @@ interface UseRealtimeOptions {
   onSegmentChange?: (payload: any) => void;
   onHeadlineChange?: (payload: any) => void;
   onTodoChange?: (payload: any) => void;
+  onSegueChange?: (payload: any) => void;
   onPresenceChange?: (payload: any) => void;
 }
 
@@ -28,14 +29,15 @@ export const useMeetingRealtime = ({
   onSegmentChange,
   onHeadlineChange,
   onTodoChange,
+  onSegueChange,
   onPresenceChange,
 }: UseRealtimeOptions) => {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
-  
+
   // Use refs for callbacks to avoid re-subscribing on every render
-  const callbacksRef = useRef({ onSegmentChange, onHeadlineChange, onTodoChange, onPresenceChange });
-  callbacksRef.current = { onSegmentChange, onHeadlineChange, onTodoChange, onPresenceChange };
+  const callbacksRef = useRef({ onSegmentChange, onHeadlineChange, onTodoChange, onSegueChange, onPresenceChange });
+  callbacksRef.current = { onSegmentChange, onHeadlineChange, onTodoChange, onSegueChange, onPresenceChange };
 
   // Store user info in ref to avoid re-subscribing when it changes
   const userInfoRef = useRef({ userId, userName, avatarUrl });
@@ -90,6 +92,18 @@ export const useMeetingRealtime = ({
           callbacksRef.current.onTodoChange?.(payload);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'eos_segue_shares',
+          filter: `meeting_id=eq.${meetingId}`,
+        },
+        (payload) => {
+          callbacksRef.current.onSegueChange?.(payload);
+        }
+      )
       // Broadcast fallback: postgres_changes subscriptions for this project
       // never actually register server-side (confirmed live 2026-07-24 -
       // zero rows in realtime.subscription for eos_meeting_segments/
@@ -108,6 +122,9 @@ export const useMeetingRealtime = ({
       })
       .on('broadcast', { event: 'todo_change' }, ({ payload }) => {
         callbacksRef.current.onTodoChange?.(payload);
+      })
+      .on('broadcast', { event: 'segue_change' }, ({ payload }) => {
+        callbacksRef.current.onSegueChange?.(payload);
       })
       .on('presence', { event: 'sync' }, () => {
         const state = meetingChannel.presenceState();
@@ -157,7 +174,7 @@ export const useMeetingRealtime = ({
   // that changes segments/headlines/todos succeeds, so other attendees'
   // .on('broadcast', ...) listeners pick it up instead of relying on the
   // still-registered-but-non-functional postgres_changes path.
-  const broadcastChange = async (event: 'segment_change' | 'headline_change' | 'todo_change') => {
+  const broadcastChange = async (event: 'segment_change' | 'headline_change' | 'todo_change' | 'segue_change') => {
     if (channel) {
       await channel.send({ type: 'broadcast', event, payload: {} });
     }
