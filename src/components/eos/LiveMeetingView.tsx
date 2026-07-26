@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMeetingRealtime } from '@/hooks/useMeetingRealtime';
 import { useEosMeetingSegments } from '@/hooks/useEosMeetingSegments';
 import { useEosHeadlines } from '@/hooks/useEosHeadlines';
+import { useEosSegueShares } from '@/hooks/useEosSegueShares';
 import { useMeetingIssues } from '@/hooks/useMeetingIssues';
 import { useMeetingTodos } from '@/hooks/useMeetingTodos';
 import { useMeetingOutcomes } from '@/hooks/useMeetingOutcomes';
@@ -16,6 +17,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Play, SkipForward, SkipBack, CheckCircle, Clock, Users, X, Target, 
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
@@ -58,6 +60,9 @@ export const LiveMeetingView = () => {
   const queryClient = useQueryClient();
   const [newHeadline, setNewHeadline] = useState('');
   const [isGoodNews, setIsGoodNews] = useState(true);
+  const [personalWin, setPersonalWin] = useState('');
+  const [professionalWin, setProfessionalWin] = useState('');
+  const [segueRating, setSegueRating] = useState('');
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
   const [idsDialogOpen, setIdsDialogOpen] = useState(false);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
@@ -89,6 +94,7 @@ export const LiveMeetingView = () => {
   // Use custom hooks
   const { segments, isLoading: segmentsLoading, isFetching: segmentsFetching, advanceSegment, goToPreviousSegment, updateSegmentNotes } = useEosMeetingSegments(meetingId);
   const { headlines, createHeadline, deleteHeadline } = useEosHeadlines(meetingId);
+  const { segueShares, createSegueShare, deleteSegueShare } = useEosSegueShares(meetingId);
   const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
   const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
   const { saveRating, getUserRating } = useMeetingOutcomes(meetingId);
@@ -210,6 +216,9 @@ export const LiveMeetingView = () => {
     },
     onTodoChange: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-todos', meetingId] });
+    },
+    onSegueChange: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-segue-shares', meetingId] });
     },
   });
 
@@ -456,6 +465,20 @@ export const LiveMeetingView = () => {
     broadcastChange('headline_change');
   };
 
+  const handleAddSegueShare = async () => {
+    if (!personalWin.trim() || !professionalWin.trim()) return;
+    await createSegueShare.mutateAsync({
+      meeting_id: meetingId!,
+      personal_win: personalWin,
+      professional_win: professionalWin,
+      rating: segueRating ? Number(segueRating) : null,
+    });
+    setPersonalWin('');
+    setProfessionalWin('');
+    setSegueRating('');
+    broadcastChange('segue_change');
+  };
+
   const handleEndMeeting = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.rpc('generate_meeting_summary', {
@@ -545,19 +568,79 @@ export const LiveMeetingView = () => {
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-primary" />
-              Personal & Professional Check-in
+              Personal & Professional Check-in ({segueShares?.length || 0})
             </h3>
-            <div className="space-y-4">
-              <p className="text-muted-foreground">
-                Share one personal and one professional best from the week. Rate the week 1-10.
-              </p>
-              <Textarea 
-                placeholder="Meeting notes for this segment..."
-                value={segmentNotes[segment.id] || ''}
-                onChange={(e) => setSegmentNotes(prev => ({ ...prev, [segment.id]: e.target.value }))}
-                onBlur={() => handleSegmentNoteBlur(segment.id)}
-                rows={4}
+            <p className="text-muted-foreground text-sm mb-4">
+              Share one personal and one professional best from the week. Rate the week 1-10.
+            </p>
+
+            {/* Add new share */}
+            <div className="space-y-2 mb-4">
+              <Input
+                placeholder="Personal win..."
+                value={personalWin}
+                onChange={(e) => setPersonalWin(e.target.value)}
               />
+              <Input
+                placeholder="Professional win..."
+                value={professionalWin}
+                onChange={(e) => setProfessionalWin(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Select value={segueRating} onValueChange={setSegueRating}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Rating 1-10" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleAddSegueShare}
+                  disabled={!personalWin.trim() || !professionalWin.trim() || createSegueShare.isPending}
+                  size="sm"
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            {/* Shares list */}
+            <div className="space-y-2">
+              {segueShares?.map((share) => (
+                <div
+                  key={share.id}
+                  className="flex items-start gap-2 p-3 rounded bg-muted/50"
+                >
+                  <div className="flex-1 text-sm space-y-1">
+                    <p><span className="font-medium">Personal:</span> {share.personal_win}</p>
+                    <p><span className="font-medium">Professional:</span> {share.professional_win}</p>
+                  </div>
+                  {share.rating != null && (
+                    <Badge variant="secondary" className="shrink-0">
+                      {share.rating}/10
+                    </Badge>
+                  )}
+                  {share.user_id === profile?.user_uuid && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteSegueShare.mutate(share.id, {
+                        onSuccess: () => broadcastChange('segue_change'),
+                      })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {(!segueShares || segueShares.length === 0) && (
+                <p className="text-muted-foreground text-sm text-center py-4">
+                  No shares yet. Add the first one!
+                </p>
+              )}
             </div>
           </Card>
         );
