@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Search, Users, UserCheck, UserX, ArrowUpDown, Loader2, Download } from 'lucide-react';
 import { type PositionTypeOption, positionTypeLabel } from '@/lib/roles/positionType';
+import { MultiSelect } from '@/components/documents/bulk-generate/MultiSelect';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -64,12 +65,13 @@ export default function TenantUsers() {
   const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [tenantFilter, setTenantFilter] = useState('all');
+  const [tenantFilters, setTenantFilters] = useState<string[]>([]);
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [positionFilter, setPositionFilter] = useState('all');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [updatingPositionId, setUpdatingPositionId] = useState<string | null>(null);
 
   // Bulk action state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -84,12 +86,39 @@ export default function TenantUsers() {
 
   useEffect(() => {
     applyFilters();
-  }, [users, searchQuery, tenantFilter, roleFilter, statusFilter, positionFilter, sortField, sortDirection, positionTypeOptions]);
+  }, [users, searchQuery, tenantFilters, roleFilter, statusFilter, positionFilter, sortField, sortDirection, positionTypeOptions]);
 
   // Clear selection when filters change
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [searchQuery, tenantFilter, roleFilter, statusFilter, positionFilter]);
+  }, [searchQuery, tenantFilters, roleFilter, statusFilter, positionFilter]);
+
+  const handlePositionTypeChange = async (user: TenantUser, value: string) => {
+    if (!user.tenant_id) return;
+    setUpdatingPositionId(user.user_uuid);
+    try {
+      const { error } = await supabase
+        .from('tenant_users')
+        .update({ position_type: value || null })
+        .eq('tenant_id', user.tenant_id)
+        .eq('user_id', user.user_uuid);
+
+      if (error) throw error;
+
+      setUsers(prev => prev.map(u =>
+        u.user_uuid === user.user_uuid ? { ...u, position_type: value || null } : u
+      ));
+      toast({ title: 'Position type updated' });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingPositionId(null);
+    }
+  };
 
   const fetchPositionTypeOptions = async () => {
     const { data, error } = await supabase
@@ -246,8 +275,8 @@ export default function TenantUsers() {
     }
 
     // Tenant filter
-    if (tenantFilter !== 'all') {
-      filtered = filtered.filter(user => user.tenant_id === Number(tenantFilter));
+    if (tenantFilters.length > 0) {
+      filtered = filtered.filter(user => user.tenant_id != null && tenantFilters.includes(user.tenant_id.toString()));
     }
 
     // Role filter (Parent/Child)
@@ -461,19 +490,14 @@ export default function TenantUsers() {
                   className="pl-10"
                 />
               </div>
-              <Select value={tenantFilter} onValueChange={setTenantFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filter by tenant" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tenants</SelectItem>
-                  {tenants.map((tenant) => (
-                    <SelectItem key={tenant.id} value={tenant.id.toString()}>
-                      {tenant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelect
+                className="w-[220px]"
+                options={tenants.map((tenant) => ({ value: tenant.id.toString(), label: tenant.name }))}
+                values={tenantFilters}
+                onChange={setTenantFilters}
+                placeholder="All Tenants"
+                searchPlaceholder="Search tenants…"
+              />
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Role" />
@@ -653,11 +677,28 @@ export default function TenantUsers() {
                         )}
                       </TableCell>
                       <TableCell>{getRoleBadge(user.user_type)}</TableCell>
-                      <TableCell>
-                        {user.position_type ? (
-                          <Badge variant="outline" className="font-normal">
-                            {positionTypeLabel(user.position_type, positionTypeOptions)}
-                          </Badge>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {user.tenant_id ? (
+                          <Select
+                            value={user.position_type || ''}
+                            onValueChange={(value) => handlePositionTypeChange(user, value)}
+                            disabled={updatingPositionId === user.user_uuid}
+                          >
+                            <SelectTrigger className="w-[160px] h-8">
+                              <SelectValue placeholder="—">
+                                {user.position_type
+                                  ? positionTypeLabel(user.position_type, positionTypeOptions)
+                                  : undefined}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {positionTypeOptions.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
