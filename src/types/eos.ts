@@ -454,6 +454,7 @@ export interface EosMeetingSummary {
   rocks: any[];
   headlines: any[];
   cascades: any[];
+  segue_shares?: any[];
   vto_changes?: any[];
   chart_changes?: any[];
   emailed_at?: string;
