@@ -71,6 +71,9 @@ export interface ActionItem {
   recurrence_rule: string | null;
   completed_at: string | null;
   completed_by: string | null;
+  notify_staff_user_ids: string[];
+  notify_tenant_user_ids: string[];
+  notify_offset_days: number[];
   owner?: {
     first_name: string;
     last_name: string;
