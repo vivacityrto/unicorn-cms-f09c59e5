@@ -15,6 +15,8 @@ interface NotifyActionItemCreatedParams {
   dueDate?: string;
   createdByName?: string;
   recipients: ActionItemNotifyRecipient[];
+  /** 'created' (default) for a brand-new item, 'added' when notifying someone newly added on an edit. */
+  context?: 'created' | 'added';
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -52,9 +54,14 @@ function buildActionItemEmailHtml(opts: {
   dueDate?: string;
   createdByName?: string;
   actionUrl: string;
+  context: 'created' | 'added';
 }): string {
-  const { recipientName, tenantName, title, description, priority, dueDate, createdByName, actionUrl } = opts;
+  const { recipientName, tenantName, title, description, priority, dueDate, createdByName, actionUrl, context } = opts;
   const priorityColor = PRIORITY_COLORS[priority] || '#64748b';
+  const eyebrow = context === 'added' ? 'Added to an action item' : 'New action item';
+  const intro = context === 'added'
+    ? `Hi ${escapeHtml(recipientName)}, you've been added to notifications for an action item for <strong>${escapeHtml(tenantName)}</strong>.`
+    : `Hi ${escapeHtml(recipientName)}, a new action item has been created for <strong>${escapeHtml(tenantName)}</strong>.`;
 
   const rows: string[] = [];
   if (description) {
@@ -75,11 +82,11 @@ function buildActionItemEmailHtml(opts: {
   </div>
   <div style="border:1px solid #DFD8E8;border-top:none;border-radius:0 0 8px 8px;padding:28px;">
     <p style="margin:0 0 4px;color:#44235F;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">
-      New action item
+      ${eyebrow}
     </p>
     <h2 style="margin:0 0 16px;color:#1a1a1a;font-size:19px;">${escapeHtml(title)}</h2>
     <p style="margin:0 0 20px;color:#333;font-size:14px;">
-      Hi ${escapeHtml(recipientName)}, a new action item has been created for <strong>${escapeHtml(tenantName)}</strong>.
+      ${intro}
     </p>
     <table style="border-collapse:collapse;width:100%;font-size:14px;margin-bottom:24px;">
       ${rows.join('')}
@@ -97,9 +104,11 @@ function buildActionItemEmailHtml(opts: {
  * per recipient — one failure doesn't block the others.
  */
 export async function notifyActionItemCreated(params: NotifyActionItemCreatedParams): Promise<void> {
-  const { tenantId, tenantName, title, description, priority, dueDate, createdByName, recipients } = params;
+  const { tenantId, tenantName, title, description, priority, dueDate, createdByName, recipients, context = 'created' } = params;
   const actionUrl = `${window.location.origin}/tenant/${tenantId}?tab=actions`;
-  const subject = `New action item: ${title} — ${tenantName}`;
+  const subject = context === 'added'
+    ? `You've been added to an action item: ${title} — ${tenantName}`
+    : `New action item: ${title} — ${tenantName}`;
 
   await Promise.all(
     recipients
@@ -114,6 +123,7 @@ export async function notifyActionItemCreated(params: NotifyActionItemCreatedPar
           dueDate,
           createdByName,
           actionUrl,
+          context,
         });
 
         try {

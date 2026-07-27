@@ -106,6 +106,10 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const [notifyStaffUserIds, setNotifyStaffUserIds] = useState<string[]>([]);
   const [notifyTenantUserIds, setNotifyTenantUserIds] = useState<string[]>([]);
   const [notifyOffsetDays, setNotifyOffsetDays] = useState<number[]>([]);
+  // Snapshot of notify lists as loaded (on edit open) — used to detect newly
+  // added recipients on save, so only they get an "added" email, not everyone.
+  const [originalNotifyStaffUserIds, setOriginalNotifyStaffUserIds] = useState<string[]>([]);
+  const [originalNotifyTenantUserIds, setOriginalNotifyTenantUserIds] = useState<string[]>([]);
   const [itemType, setItemType] = useState<'client' | 'internal'>('client');
 
 
@@ -172,6 +176,8 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setNotifyStaffUserIds([]);
     setNotifyTenantUserIds([]);
     setNotifyOffsetDays([]);
+    setOriginalNotifyStaffUserIds([]);
+    setOriginalNotifyTenantUserIds([]);
     setItemType('client');
   };
 
@@ -189,6 +195,11 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setDueDate(item.due_date ? new Date(item.due_date) : undefined);
     setOwnerUserId(item.owner_user_id || undefined);
     setItemType((item.item_type as 'client' | 'internal') || 'internal');
+    setNotifyStaffUserIds(item.notify_staff_user_ids || []);
+    setNotifyTenantUserIds(item.notify_tenant_user_ids || []);
+    setNotifyOffsetDays(item.notify_offset_days || []);
+    setOriginalNotifyStaffUserIds(item.notify_staff_user_ids || []);
+    setOriginalNotifyTenantUserIds(item.notify_tenant_user_ids || []);
     setIsAddDialogOpen(true);
   };
 
@@ -206,7 +217,59 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
           owner_user_id: ownerUserId || null,
           item_type: itemType,
+          notify_staff_user_ids: notifyStaffUserIds,
+          notify_tenant_user_ids: notifyTenantUserIds,
+          notify_offset_days: notifyOffsetDays,
         });
+
+        // Only newly-added recipients get an "added" email/bell ping —
+        // re-saving an edit shouldn't re-notify people already on the list.
+        const newlyAddedStaffIds = notifyStaffUserIds.filter(id => !originalNotifyStaffUserIds.includes(id));
+        const newlyAddedTenantIds = notifyTenantUserIds.filter(id => !originalNotifyTenantUserIds.includes(id));
+
+        if (newlyAddedStaffIds.length > 0) {
+          try {
+            await supabase.functions.invoke("notify-action-shared", {
+              body: {
+                tenant_id: tenantId,
+                action_title: title,
+                notify_user_ids: newlyAddedStaffIds,
+              },
+            });
+          } catch (notifyErr) {
+            console.error('Failed to send notify notifications:', notifyErr);
+          }
+        }
+
+        if (newlyAddedStaffIds.length > 0 || newlyAddedTenantIds.length > 0) {
+          try {
+            const { data: tenantRow } = await supabase
+              .from('tenants')
+              .select('name')
+              .eq('id', tenantId)
+              .single();
+
+            const staffRecipients: ActionItemNotifyRecipient[] = vivacityTeam
+              .filter(u => newlyAddedStaffIds.includes(u.user_uuid))
+              .map(u => ({ user_uuid: u.user_uuid, first_name: u.first_name, email: u.email }));
+            const tenantRecipients: ActionItemNotifyRecipient[] = tenantUsers
+              .filter(u => newlyAddedTenantIds.includes(u.user_uuid))
+              .map(u => ({ user_uuid: u.user_uuid, first_name: u.first_name, email: u.email }));
+
+            await notifyActionItemCreated({
+              tenantId,
+              tenantName: tenantRow?.name || `Tenant #${tenantId}`,
+              title,
+              description: description || undefined,
+              priority,
+              dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
+              recipients: [...staffRecipients, ...tenantRecipients],
+              context: 'added',
+            });
+          } catch (e) {
+            console.error('Action item notify email error:', e);
+          }
+        }
       } else {
         const newId = await createItem({
           title,
@@ -843,7 +906,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                       <Button
                         key={offset}
                         type="button"
-                        disabled={!isAvailable}
+                        disabled={!isAvailable && !isSelected}
                         variant={isSelected ? "default" : "outline"}
                         size="sm"
                         onClick={() => setNotifyOffsetDays(prev =>
