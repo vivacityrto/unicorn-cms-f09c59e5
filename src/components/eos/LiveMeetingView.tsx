@@ -615,6 +615,9 @@ export const LiveMeetingView = () => {
                   className="flex items-start gap-2 p-3 rounded bg-muted/50"
                 >
                   <div className="flex-1 text-sm space-y-1">
+                    <p className="font-medium">
+                      {share.users ? `${share.users.first_name || ''} ${share.users.last_name || ''}`.trim() || 'Unknown' : 'Unknown'}
+                    </p>
                     <p><span className="font-medium">Personal:</span> {share.personal_win}</p>
                     <p><span className="font-medium">Professional:</span> {share.professional_win}</p>
                   </div>

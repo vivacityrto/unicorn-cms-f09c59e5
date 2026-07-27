@@ -415,6 +415,10 @@ export interface EosSegueShare {
   professional_win: string;
   rating?: number | null;
   created_at: string;
+  users?: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
 }
 
 export interface EosMeetingParticipant {
