@@ -8,17 +8,31 @@ export const useEosSegueShares = (meetingId: string | undefined) => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
 
+  // Fetch shares, then names separately - eos_segue_shares.user_id has no
+  // bridging FK to public.users (same as eos_meeting_participants), so no
+  // PostgREST embed hint can resolve first_name/last_name in one request.
   const { data: segueShares, isLoading } = useQuery({
     queryKey: ['eos-segue-shares', meetingId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data: rows, error } = await (supabase as any)
         .from('eos_segue_shares')
         .select('*')
         .eq('meeting_id', meetingId!)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as EosSegueShare[];
+
+      const userIds = (rows ?? []).map((s: any) => s.user_id).filter(Boolean);
+      const { data: userRows, error: userError } = userIds.length
+        ? await (supabase as any)
+            .from('users')
+            .select('user_uuid, first_name, last_name')
+            .in('user_uuid', userIds)
+        : { data: [], error: null };
+      if (userError) throw userError;
+
+      const userMap = new Map((userRows ?? []).map((u: any) => [u.user_uuid, u]));
+      return (rows ?? []).map((s: any) => ({ ...s, users: userMap.get(s.user_id) ?? null })) as EosSegueShare[];
     },
     enabled: !!meetingId,
   });
