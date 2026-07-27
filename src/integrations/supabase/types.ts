@@ -133,6 +133,141 @@ export type Database = {
           },
         ]
       }
+      _eos_retired_type_templates_backfill_20260723: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          current_version_id: string | null
+          description: string | null
+          id: string | null
+          is_archived: boolean | null
+          is_default: boolean | null
+          is_system: boolean | null
+          meeting_scope: string | null
+          meeting_type: string | null
+          segments: Json | null
+          template_name: string | null
+          tenant_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          current_version_id?: string | null
+          description?: string | null
+          id?: string | null
+          is_archived?: boolean | null
+          is_default?: boolean | null
+          is_system?: boolean | null
+          meeting_scope?: string | null
+          meeting_type?: string | null
+          segments?: Json | null
+          template_name?: string | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          current_version_id?: string | null
+          description?: string | null
+          id?: string | null
+          is_archived?: boolean | null
+          is_default?: boolean | null
+          is_system?: boolean | null
+          meeting_scope?: string | null
+          meeting_type?: string | null
+          segments?: Json | null
+          template_name?: string | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      _eos_template_backfill_20260723: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          current_version_id: string | null
+          description: string | null
+          id: string | null
+          is_archived: boolean | null
+          is_default: boolean | null
+          is_system: boolean | null
+          meeting_scope: string | null
+          meeting_type: string | null
+          segments: Json | null
+          template_name: string | null
+          tenant_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          current_version_id?: string | null
+          description?: string | null
+          id?: string | null
+          is_archived?: boolean | null
+          is_default?: boolean | null
+          is_system?: boolean | null
+          meeting_scope?: string | null
+          meeting_type?: string | null
+          segments?: Json | null
+          template_name?: string | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          current_version_id?: string | null
+          description?: string | null
+          id?: string | null
+          is_archived?: boolean | null
+          is_default?: boolean | null
+          is_system?: boolean | null
+          meeting_scope?: string | null
+          meeting_type?: string | null
+          segments?: Json | null
+          template_name?: string | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      _eos_template_versions_backfill_20260723: {
+        Row: {
+          change_summary: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          is_published: boolean | null
+          segments_snapshot: Json | null
+          template_id: string | null
+          version_number: number | null
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          is_published?: boolean | null
+          segments_snapshot?: Json | null
+          template_id?: string | null
+          version_number?: number | null
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          is_published?: boolean | null
+          segments_snapshot?: Json | null
+          template_id?: string | null
+          version_number?: number | null
+        }
+        Relationships: []
+      }
       academy_assessment_attempts: {
         Row: {
           answers_json: Json | null
@@ -3859,6 +3994,7 @@ export type Database = {
           clickup_enabled: boolean
           email_sending_enabled: boolean | null
           enable_checkpoint_phases: boolean
+          eos_config_v2: boolean
           generation_enabled: boolean | null
           generation_rate_limit_per_hour: number | null
           governance_overwrite_enabled: boolean | null
@@ -3892,6 +4028,7 @@ export type Database = {
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
           enable_checkpoint_phases?: boolean
+          eos_config_v2?: boolean
           generation_enabled?: boolean | null
           generation_rate_limit_per_hour?: number | null
           governance_overwrite_enabled?: boolean | null
@@ -3925,6 +4062,7 @@ export type Database = {
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
           enable_checkpoint_phases?: boolean
+          eos_config_v2?: boolean
           generation_enabled?: boolean | null
           generation_rate_limit_per_hour?: number | null
           governance_overwrite_enabled?: boolean | null
@@ -10180,6 +10318,99 @@ export type Database = {
           },
         ]
       }
+      client_action_item_reminder_log: {
+        Row: {
+          action_item_id: string
+          due_date: string
+          email: string
+          id: string
+          mailgun_message_id: string | null
+          offset_days: number
+          recipient_kind: string
+          recipient_user_id: string
+          sent_at: string
+        }
+        Insert: {
+          action_item_id: string
+          due_date: string
+          email: string
+          id?: string
+          mailgun_message_id?: string | null
+          offset_days: number
+          recipient_kind: string
+          recipient_user_id: string
+          sent_at?: string
+        }
+        Update: {
+          action_item_id?: string
+          due_date?: string
+          email?: string
+          id?: string
+          mailgun_message_id?: string | null
+          offset_days?: number
+          recipient_kind?: string
+          recipient_user_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_action_item_reminder_log_action_item_id_fkey"
+            columns: ["action_item_id"]
+            isOneToOne: false
+            referencedRelation: "client_action_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_action_item_reminder_log_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_action_item_reminder_log_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_action_item_reminder_log_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "client_action_item_reminder_log_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_action_item_reminder_log_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "client_action_item_reminder_log_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_action_item_reminder_log_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       client_action_items: {
         Row: {
           assignee_user_id: string | null
@@ -10192,6 +10423,9 @@ export type Database = {
           due_date: string | null
           id: string
           item_type: string
+          notify_offset_days: number[]
+          notify_staff_user_ids: string[]
+          notify_tenant_user_ids: string[]
           owner_user_id: string | null
           package_id: number | null
           package_instance_id: number | null
@@ -10219,6 +10453,9 @@ export type Database = {
           due_date?: string | null
           id?: string
           item_type?: string
+          notify_offset_days?: number[]
+          notify_staff_user_ids?: string[]
+          notify_tenant_user_ids?: string[]
           owner_user_id?: string | null
           package_id?: number | null
           package_instance_id?: number | null
@@ -10246,6 +10483,9 @@ export type Database = {
           due_date?: string | null
           id?: string
           item_type?: string
+          notify_offset_days?: number[]
+          notify_staff_user_ids?: string[]
+          notify_tenant_user_ids?: string[]
           owner_user_id?: string | null
           package_id?: number | null
           package_instance_id?: number | null
@@ -24217,47 +24457,6 @@ export type Database = {
           },
         ]
       }
-      eos_agenda_template_versions: {
-        Row: {
-          change_summary: string | null
-          created_at: string
-          created_by: string | null
-          id: string
-          is_published: boolean
-          segments_snapshot: Json
-          template_id: string
-          version_number: number
-        }
-        Insert: {
-          change_summary?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_published?: boolean
-          segments_snapshot?: Json
-          template_id: string
-          version_number?: number
-        }
-        Update: {
-          change_summary?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_published?: boolean
-          segments_snapshot?: Json
-          template_id?: string
-          version_number?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "eos_agenda_template_versions_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "eos_agenda_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       eos_agenda_templates: {
         Row: {
           created_at: string | null
@@ -24308,13 +24507,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "eos_agenda_templates_current_version_id_fkey"
-            columns: ["current_version_id"]
-            isOneToOne: false
-            referencedRelation: "eos_agenda_template_versions"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "fk_eos_agenda_templates_meeting_type"
             columns: ["meeting_type"]
@@ -24581,6 +24773,311 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "v_client_decisions_approvals"
             referencedColumns: ["meeting_id"]
+          },
+        ]
+      }
+      eos_configuration_segments: {
+        Row: {
+          configuration_id: number
+          created_at: string
+          duration_minutes: number
+          id: number
+          is_required: boolean
+          label: string
+          segment_type: Database["public"]["Enums"]["eos_segment_type"]
+          sequence_order: number
+          updated_at: string
+          widget_key: string | null
+        }
+        Insert: {
+          configuration_id: number
+          created_at?: string
+          duration_minutes: number
+          id?: never
+          is_required?: boolean
+          label: string
+          segment_type: Database["public"]["Enums"]["eos_segment_type"]
+          sequence_order: number
+          updated_at?: string
+          widget_key?: string | null
+        }
+        Update: {
+          configuration_id?: number
+          created_at?: string
+          duration_minutes?: number
+          id?: never
+          is_required?: boolean
+          label?: string
+          segment_type?: Database["public"]["Enums"]["eos_segment_type"]
+          sequence_order?: number
+          updated_at?: string
+          widget_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_configuration_segments_configuration_id_fkey"
+            columns: ["configuration_id"]
+            isOneToOne: false
+            referencedRelation: "eos_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eos_configurations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          facilitator_seat_id: string | null
+          frequency: string
+          id: number
+          integrator_seat_id: string | null
+          meeting_type: string
+          participant_model: string
+          required_seat_ids: string[]
+          rocks_scope: string[]
+          scorecard_metric_cap: number
+          tenant_id: number
+          updated_at: string
+          visionary_seat_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          facilitator_seat_id?: string | null
+          frequency: string
+          id?: never
+          integrator_seat_id?: string | null
+          meeting_type: string
+          participant_model?: string
+          required_seat_ids?: string[]
+          rocks_scope?: string[]
+          scorecard_metric_cap?: number
+          tenant_id: number
+          updated_at?: string
+          visionary_seat_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          facilitator_seat_id?: string | null
+          frequency?: string
+          id?: never
+          integrator_seat_id?: string | null
+          meeting_type?: string
+          participant_model?: string
+          required_seat_ids?: string[]
+          rocks_scope?: string[]
+          scorecard_metric_cap?: number
+          tenant_id?: number
+          updated_at?: string
+          visionary_seat_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_configurations_facilitator_seat_id_fkey"
+            columns: ["facilitator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_facilitator_seat_id_fkey"
+            columns: ["facilitator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_facilitator_seat_id_fkey"
+            columns: ["facilitator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_integrator_seat_id_fkey"
+            columns: ["integrator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_integrator_seat_id_fkey"
+            columns: ["integrator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_integrator_seat_id_fkey"
+            columns: ["integrator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_meeting_type_fkey"
+            columns: ["meeting_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_visionary_seat_id_fkey"
+            columns: ["visionary_seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_visionary_seat_id_fkey"
+            columns: ["visionary_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_configurations_visionary_seat_id_fkey"
+            columns: ["visionary_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
           },
         ]
       }
@@ -26087,6 +26584,7 @@ export type Database = {
           meeting_id: string
           notes: string | null
           segment_name: string
+          segment_type: Database["public"]["Enums"]["eos_segment_type"]
           sequence_order: number
           started_at: string | null
         }
@@ -26098,6 +26596,7 @@ export type Database = {
           meeting_id: string
           notes?: string | null
           segment_name: string
+          segment_type?: Database["public"]["Enums"]["eos_segment_type"]
           sequence_order: number
           started_at?: string | null
         }
@@ -26109,6 +26608,7 @@ export type Database = {
           meeting_id?: string
           notes?: string | null
           segment_name?: string
+          segment_type?: Database["public"]["Enums"]["eos_segment_type"]
           sequence_order?: number
           started_at?: string | null
         }
@@ -26321,6 +26821,7 @@ export type Database = {
           period_range: string | null
           rating: number | null
           rocks: Json | null
+          segue_shares: Json | null
           tenant_id: number
           todos: Json | null
           vto_changes: Json | null
@@ -26339,6 +26840,7 @@ export type Database = {
           period_range?: string | null
           rating?: number | null
           rocks?: Json | null
+          segue_shares?: Json | null
           tenant_id: number
           todos?: Json | null
           vto_changes?: Json | null
@@ -26357,6 +26859,7 @@ export type Database = {
           period_range?: string | null
           rating?: number | null
           rocks?: Json | null
+          segue_shares?: Json | null
           tenant_id?: number
           todos?: Json | null
           vto_changes?: Json | null
@@ -26720,13 +27223,6 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "eos_agenda_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eos_meetings_template_version_id_fkey"
-            columns: ["template_version_id"]
-            isOneToOne: false
-            referencedRelation: "eos_agenda_template_versions"
             referencedColumns: ["id"]
           },
           {
@@ -27903,53 +28399,78 @@ export type Database = {
           },
         ]
       }
-      eos_template_audit_log: {
+      eos_segue_shares: {
         Row: {
-          action: string
-          change_summary: string | null
-          created_at: string
-          details: Json | null
+          created_at: string | null
           id: string
-          template_id: string | null
-          tenant_id: number
+          meeting_id: string
+          personal_win: string
+          professional_win: string
+          rating: number | null
           user_id: string | null
-          version_id: string | null
+          workspace_id: string | null
         }
         Insert: {
-          action: string
-          change_summary?: string | null
-          created_at?: string
-          details?: Json | null
+          created_at?: string | null
           id?: string
-          template_id?: string | null
-          tenant_id: number
+          meeting_id: string
+          personal_win: string
+          professional_win: string
+          rating?: number | null
           user_id?: string | null
-          version_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
-          action?: string
-          change_summary?: string | null
-          created_at?: string
-          details?: Json | null
+          created_at?: string | null
           id?: string
-          template_id?: string | null
-          tenant_id?: number
+          meeting_id?: string
+          personal_win?: string
+          professional_win?: string
+          rating?: number | null
           user_id?: string | null
-          version_id?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "eos_template_audit_log_template_id_fkey"
-            columns: ["template_id"]
+            foreignKeyName: "eos_segue_shares_meeting_id_fkey"
+            columns: ["meeting_id"]
             isOneToOne: false
-            referencedRelation: "eos_agenda_templates"
+            referencedRelation: "eos_meeting_attendance_summary"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "eos_segue_shares_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "eos_template_audit_log_version_id_fkey"
-            columns: ["version_id"]
+            foreignKeyName: "eos_segue_shares_meeting_id_fkey"
+            columns: ["meeting_id"]
             isOneToOne: false
-            referencedRelation: "eos_agenda_template_versions"
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_segue_shares_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_segue_shares_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_decisions_approvals"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "eos_segue_shares_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -59600,13 +60121,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "eos_meetings_template_version_id_fkey"
-            columns: ["template_version_id"]
-            isOneToOne: false
-            referencedRelation: "eos_agenda_template_versions"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "fk_current_minutes_version"
             columns: ["current_minutes_version_id"]
             isOneToOne: false
@@ -59741,13 +60255,6 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "eos_agenda_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eos_meetings_template_version_id_fkey"
-            columns: ["template_version_id"]
-            isOneToOne: false
-            referencedRelation: "eos_agenda_template_versions"
             referencedColumns: ["id"]
           },
           {
@@ -68657,9 +69164,10 @@ export type Database = {
         Returns: Json
       }
       client_tga_link_verify: { Args: { p_tenant_id: number }; Returns: Json }
-      close_meeting_with_validation:
-        | { Args: { p_meeting_id: string }; Returns: Json }
-        | { Args: { p_force?: boolean; p_meeting_id: string }; Returns: Json }
+      close_meeting_with_validation: {
+        Args: { p_force?: boolean; p_meeting_id: string }
+        Returns: Json
+      }
       code_table_operation: {
         Args: {
           p_data?: Json
@@ -68845,57 +69353,34 @@ export type Database = {
             }
             Returns: string
           }
-      create_meeting_basic:
-        | {
-            Args: {
-              p_facilitator_id?: string
-              p_meeting_type: string
-              p_scheduled_date: string
-              p_tenant_id: number
-              p_title: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_duration_minutes: number
-              p_facilitator_id: string
-              p_meeting_type: string
-              p_scheduled_date: string
-              p_tenant_id: number
-              p_title: string
-            }
-            Returns: string
-          }
-      create_meeting_from_template:
-        | {
-            Args: {
-              p_facilitator_id: string
-              p_location?: string
-              p_participant_ids?: string[]
-              p_scheduled_date: string
-              p_scheduled_end_time: string
-              p_scribe_id: string
-              p_series_id?: string
-              p_template_id: string
-              p_tenant_id?: number
-              p_title?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_agenda_template_id: string
-              p_duration_minutes: number
-              p_facilitator_id: string
-              p_participant_ids?: string[]
-              p_scheduled_date: string
-              p_scribe_id?: string
-              p_tenant_id: number
-              p_title: string
-            }
-            Returns: string
-          }
+      create_meeting_basic: {
+        Args: {
+          p_duration_minutes: number
+          p_facilitator_id: string
+          p_meeting_type: string
+          p_scheduled_date: string
+          p_tenant_id: number
+          p_title: string
+        }
+        Returns: string
+      }
+      create_meeting_from_configuration: {
+        Args: { p_meeting_type: string; p_scheduled_date: string }
+        Returns: string
+      }
+      create_meeting_from_template: {
+        Args: {
+          p_agenda_template_id: string
+          p_duration_minutes: number
+          p_facilitator_id: string
+          p_participant_ids?: string[]
+          p_scheduled_date: string
+          p_scribe_id?: string
+          p_tenant_id: number
+          p_title: string
+        }
+        Returns: string
+      }
       create_meeting_series: {
         Args: {
           p_duration_minutes?: number
@@ -68931,15 +69416,6 @@ export type Database = {
       }
       create_targeted_bulk_document_job: {
         Args: { p_document_ids?: number[]; p_selections: Json }
-        Returns: string
-      }
-      create_template_version: {
-        Args: {
-          p_change_summary: string
-          p_publish?: boolean
-          p_segments: Json
-          p_template_id: string
-        }
         Returns: string
       }
       create_tenant: {
@@ -69644,6 +70120,10 @@ export type Database = {
         Args: { _meeting_id: string; _roles: string[]; _user_id: string }
         Returns: boolean
       }
+      has_permission: {
+        Args: { p_feature_key: string; p_min_level?: string }
+        Returns: boolean
+      }
       has_tenant_access: { Args: { _tenant_id: number }; Returns: boolean }
       has_tenant_access_safe: {
         Args: { p_tenant_id: number; p_user_id: string }
@@ -69658,7 +70138,6 @@ export type Database = {
         Args: { p_action_type: string; p_tenant_id: number }
         Returns: undefined
       }
-      init_template_versions: { Args: never; Returns: undefined }
       invite_user: {
         Args: { p_email: string; p_role?: string; p_tenant_id: string }
         Returns: string
@@ -70162,10 +70641,6 @@ export type Database = {
         Args: { p_reason: string; p_version_id: string }
         Returns: string
       }
-      restore_template_version: {
-        Args: { p_restore_reason?: string; p_version_id: string }
-        Returns: string
-      }
       resume_bulk_document_job: { Args: { p_job_id: string }; Returns: boolean }
       retry_bulk_document_job: { Args: { p_job_id: string }; Returns: boolean }
       retry_failed_generation: {
@@ -70646,9 +71121,6 @@ export type Database = {
         Args: { p_meeting_id: string }
         Returns: number
       }
-      seed_system_agenda_templates:
-        | { Args: never; Returns: undefined }
-        | { Args: { p_tenant_id: number }; Returns: undefined }
       set_active_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
       set_cohort_job_status: {
         Args: { p_caller_id?: string; p_job_id: string; p_status: string }
@@ -70671,6 +71143,10 @@ export type Database = {
       skip_bulk_document_job_items: {
         Args: { p_item_ids: number[]; p_job_id: string }
         Returns: number
+      }
+      skip_meeting_occurrence: {
+        Args: { p_meeting_id: string; p_reason?: string }
+        Returns: string
       }
       split_time_entry: {
         Args: { p_reason?: string; p_splits: Json; p_time_entry_id: string }
@@ -70713,6 +71189,10 @@ export type Database = {
       sync_l10_meeting_participants: {
         Args: { p_meeting_id: string }
         Returns: Json
+      }
+      sync_meeting_to_configuration: {
+        Args: { p_meeting_id: string }
+        Returns: undefined
       }
       sync_stage_template_to_packages: {
         Args: { p_stage_id: number }
@@ -71039,13 +71519,14 @@ export type Database = {
         | "participant"
         | "client_viewer"
       eos_segment_type:
-        | "Segue"
-        | "Scorecard"
-        | "Rocks"
-        | "Headlines"
-        | "Todos"
-        | "IDS"
-        | "Conclude"
+        | "segue"
+        | "scorecard"
+        | "rocks"
+        | "headlines"
+        | "todos"
+        | "ids"
+        | "conclude"
+        | "general"
       evidence_type:
         | "policy"
         | "procedure"
@@ -71255,13 +71736,14 @@ export const Constants = {
         "client_viewer",
       ],
       eos_segment_type: [
-        "Segue",
-        "Scorecard",
-        "Rocks",
-        "Headlines",
-        "Todos",
-        "IDS",
-        "Conclude",
+        "segue",
+        "scorecard",
+        "rocks",
+        "headlines",
+        "todos",
+        "ids",
+        "conclude",
+        "general",
       ],
       evidence_type: [
         "policy",
