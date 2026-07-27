@@ -273,6 +273,21 @@ export default function SuggestionDetail() {
       ...(isResolving ? { resolved_at: new Date().toISOString(), resolved_by: user.id } : {}),
       ...(isReleasing ? { released_at: new Date().toISOString(), released_by: user.id } : {}),
     });
+
+    if (isResolving && item?.reported_by) {
+      const { error: notifyErr } = await supabase.from('user_notifications').insert({
+        user_id: item.reported_by,
+        tenant_id: item.tenant_id,
+        type: 'suggestion_resolved',
+        title: 'Support ticket resolved',
+        message: `Your ticket "${title}" has been resolved.`,
+        link: `/client/support-tickets/${id}`,
+        created_by: user.id,
+        source_id: id,
+      } as any);
+      if (notifyErr) console.error('ticket-resolved notification insert failed', notifyErr);
+    }
+
     setDirty(false);
   };
 
