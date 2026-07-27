@@ -104,6 +104,9 @@ export function useTenantCSCAssignment(tenantId: number | null) {
       });
 
       if (error) throw error;
+      if (data && typeof data === 'object' && (data as { success?: boolean }).success === false) {
+        throw new Error((data as { error?: string }).error || 'CSC assignment was rejected');
+      }
       return data;
     },
     onSuccess: () => {
@@ -134,6 +137,9 @@ export function useTenantCSCAssignment(tenantId: number | null) {
       });
 
       if (error) throw error;
+      if (data && typeof data === 'object' && (data as { success?: boolean }).success === false) {
+        throw new Error((data as { error?: string }).error || 'CSC removal was rejected');
+      }
       return data;
     },
     onSuccess: () => {
