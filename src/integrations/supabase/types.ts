@@ -19974,6 +19974,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_position_type: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_relationship_role: {
         Row: {
           created_at: string
@@ -53935,6 +53962,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: number
+          position_type: string | null
           primary_contact: boolean | null
           relationship_role: string | null
           role: string
@@ -53947,6 +53975,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: number
+          position_type?: string | null
           primary_contact?: boolean | null
           relationship_role?: string | null
           role?: string
@@ -53959,6 +53988,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: number
+          position_type?: string | null
           primary_contact?: boolean | null
           relationship_role?: string | null
           role?: string
@@ -53967,6 +53997,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_tenant_users_position_type"
+            columns: ["position_type"]
+            isOneToOne: false
+            referencedRelation: "dd_position_type"
+            referencedColumns: ["value"]
+          },
           {
             foreignKeyName: "fk_tenant_users_relationship_role"
             columns: ["relationship_role"]

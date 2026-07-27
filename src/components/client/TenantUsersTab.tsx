@@ -93,6 +93,10 @@ import {
   legacyTenantUserPatch,
   isUniqueViolation,
 } from '@/lib/roles/relationshipRole';
+import {
+  type PositionTypeOption,
+  positionTypeLabel,
+} from '@/lib/roles/positionType';
 
 interface TenantUser {
   user_uuid: string;
@@ -115,6 +119,7 @@ interface TenantMemberInfo {
   primary_contact?: boolean | null;
   secondary_contact?: boolean | null;
   relationship_role?: RelationshipRole | null;
+  position_type?: string | null;
   users: TenantUser;
 }
 
@@ -140,6 +145,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const { isVivacityTeam } = useRBAC();
   const navigate = useNavigate();
   const [members, setMembers] = useState<TenantMemberInfo[]>([]);
+  const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -159,15 +165,29 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
   // Edit drawer state
   const [editingMember, setEditingMember] = useState<TenantMemberInfo | null>(null);
-  const [editForm, setEditForm] = useState({ job_title: '', phone: '', role: '', disabled: false });
+  const [editForm, setEditForm] = useState({ job_title: '', phone: '', role: '', position_type: '', disabled: false });
   const [drawerStats, setDrawerStats] = useState<{ totalLogins: number; lastLogin: string | null }>({ totalLogins: 0, lastLogin: null });
   const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     fetchMembers();
     fetchPendingInvites();
+    fetchPositionTypeOptions();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
+
+  const fetchPositionTypeOptions = async () => {
+    const { data, error } = await supabase
+      .from('dd_position_type')
+      .select('value, label, sort_order')
+      .eq('is_active', true)
+      .order('sort_order');
+    if (error) {
+      console.error('dd_position_type fetch error:', error);
+      return;
+    }
+    setPositionTypeOptions(data || []);
+  };
 
   // Detect ghost users (rows in public.users with no auth.users row) so staff
   // can offer one-click activation. Only Vivacity staff see the result.
@@ -652,6 +672,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           primary_contact,
           secondary_contact,
           relationship_role,
+          position_type,
           users!tenant_users_user_id_fkey (
             user_uuid,
             email,
@@ -707,6 +728,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       job_title: member.users.job_title || '',
       phone: member.users.phone || '',
       role: getMemberRelationshipRole(member),
+      position_type: member.position_type || '',
       disabled: member.users.disabled ?? false,
     });
     setDrawerStats({ totalLogins: 0, lastLogin: null });
@@ -728,6 +750,17 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         .eq('user_uuid', editingMember.users.user_uuid);
 
       if (userError) throw userError;
+
+      const positionTypeChanged = (editingMember.position_type || '') !== editForm.position_type;
+      if (positionTypeChanged) {
+        const { error: tuError } = await supabase
+          .from('tenant_users')
+          .update({ position_type: editForm.position_type || null })
+          .eq('tenant_id', tenantId)
+          .eq('user_id', editingMember.user_id);
+
+        if (tuError) throw tuError;
+      }
 
       if (disabledChanged) {
         const { data: statusResult, error: statusError } = await supabase.rpc(
@@ -758,6 +791,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
               role: legacy.role,
               primary_contact: legacy.primary_contact,
               secondary_contact: newRR === 'secondary_contact',
+              position_type: editForm.position_type || null,
               users: {
                 ...m.users,
                 job_title: editForm.job_title || null,
@@ -1056,6 +1090,11 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                           {user.job_title && (
                             <span className="text-sm text-muted-foreground">— {user.job_title}</span>
                           )}
+                          {member.position_type && (
+                            <Badge variant="outline" className="bg-muted font-normal">
+                              {positionTypeLabel(member.position_type, positionTypeOptions)}
+                            </Badge>
+                          )}
                           {(user.phone || user.mobile_phone) && (
                             <a href={`tel:${user.phone || user.mobile_phone}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary hover:underline" onClick={e => e.stopPropagation()}>
                               <Phone className="h-3 w-3" />
@@ -1248,6 +1287,30 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                 onChange={e => setEditForm(f => ({ ...f, job_title: e.target.value }))}
                 placeholder="e.g. Training Manager"
               />
+            </div>
+
+            {/* Position Type */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-position-type">Position Type</Label>
+              <Select
+                value={editForm.position_type}
+                onValueChange={value => setEditForm(f => ({ ...f, position_type: value }))}
+              >
+                <SelectTrigger id="edit-position-type">
+                  <SelectValue placeholder="Select a position type">
+                    {editForm.position_type
+                      ? positionTypeLabel(editForm.position_type, positionTypeOptions)
+                      : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {positionTypeOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Phone */}
