@@ -17,7 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Search, Users, UserCheck, UserX, ArrowUpDown, Loader2 } from 'lucide-react';
+import { Building2, Search, Users, UserCheck, UserX, ArrowUpDown, Loader2, Download } from 'lucide-react';
+import { type PositionTypeOption, positionTypeLabel } from '@/lib/roles/positionType';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -41,6 +42,7 @@ interface TenantUser {
   unicorn_role: string;
   tenant_id: number | null;
   tenant_name: string | null;
+  position_type: string | null;
   disabled: boolean;
   archived: boolean;
   last_sign_in_at: string | null;
@@ -51,7 +53,7 @@ interface Tenant {
   name: string;
 }
 
-type SortField = 'name' | 'tenant' | 'role' | 'status' | 'lastLogin';
+type SortField = 'name' | 'tenant' | 'role' | 'status' | 'lastLogin' | 'position';
 
 export default function TenantUsers() {
   const { toast } = useToast();
@@ -59,11 +61,13 @@ export default function TenantUsers() {
   const [users, setUsers] = useState<TenantUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<TenantUser[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [tenantFilter, setTenantFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [positionFilter, setPositionFilter] = useState('all');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -75,16 +79,30 @@ export default function TenantUsers() {
 
   useEffect(() => {
     fetchData();
+    fetchPositionTypeOptions();
   }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [users, searchQuery, tenantFilter, roleFilter, statusFilter, sortField, sortDirection]);
+  }, [users, searchQuery, tenantFilter, roleFilter, statusFilter, positionFilter, sortField, sortDirection, positionTypeOptions]);
 
   // Clear selection when filters change
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [searchQuery, tenantFilter, roleFilter, statusFilter]);
+  }, [searchQuery, tenantFilter, roleFilter, statusFilter, positionFilter]);
+
+  const fetchPositionTypeOptions = async () => {
+    const { data, error } = await supabase
+      .from('dd_position_type')
+      .select('value, label, sort_order')
+      .eq('is_active', true)
+      .order('sort_order');
+    if (error) {
+      console.error('dd_position_type fetch error:', error);
+      return;
+    }
+    setPositionTypeOptions(data || []);
+  };
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -174,27 +192,34 @@ export default function TenantUsers() {
           disabled,
           archived,
           last_sign_in_at,
-          tenants!tenant_id(name)
+          tenants!tenant_id(name),
+          tenant_users!tenant_users_user_id_fkey(tenant_id, position_type)
         `)
         .in('user_type', ['Client Parent', 'Client Child', 'Client'])
         .order('first_name', { ascending: true });
 
       if (error) throw error;
 
-      const tenantUsers: TenantUser[] = (data || []).map((user: any) => ({
-        user_uuid: user.user_uuid,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: user.email,
-        avatar_url: user.avatar_url,
-        user_type: user.user_type || 'Member',
-        unicorn_role: user.unicorn_role || 'User',
-        tenant_id: user.tenant_id,
-        tenant_name: user.tenants?.name || null,
-        disabled: user.disabled || false,
-        archived: user.archived || false,
-        last_sign_in_at: user.last_sign_in_at,
-      }));
+      const tenantUsers: TenantUser[] = (data || []).map((user: any) => {
+        const membershipRows = (user.tenant_users || []) as { tenant_id: number; position_type: string | null }[];
+        const membership = membershipRows.find(tu => tu.tenant_id === user.tenant_id);
+
+        return {
+          user_uuid: user.user_uuid,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: user.email,
+          avatar_url: user.avatar_url,
+          user_type: user.user_type || 'Member',
+          unicorn_role: user.unicorn_role || 'User',
+          tenant_id: user.tenant_id,
+          tenant_name: user.tenants?.name || null,
+          position_type: membership?.position_type ?? null,
+          disabled: user.disabled || false,
+          archived: user.archived || false,
+          last_sign_in_at: user.last_sign_in_at,
+        };
+      });
 
       setUsers(tenantUsers);
     } catch (error: any) {
@@ -237,6 +262,11 @@ export default function TenantUsers() {
       filtered = filtered.filter(user => user.disabled || user.archived);
     }
 
+    // Position type filter
+    if (positionFilter !== 'all') {
+      filtered = filtered.filter(user => user.position_type === positionFilter);
+    }
+
     // Sorting
     filtered.sort((a, b) => {
       let aVal: string | number;
@@ -262,6 +292,10 @@ export default function TenantUsers() {
         case 'lastLogin':
           aVal = a.last_sign_in_at || '';
           bVal = b.last_sign_in_at || '';
+          break;
+        case 'position':
+          aVal = positionTypeLabel(a.position_type, positionTypeOptions);
+          bVal = positionTypeLabel(b.position_type, positionTypeOptions);
           break;
         default:
           aVal = '';
@@ -290,6 +324,38 @@ export default function TenantUsers() {
       month: 'short',
       year: 'numeric',
     });
+  };
+
+  const exportCsv = (data: unknown[], filename: string) => {
+    if (!data || data.length === 0) return;
+    const headers = Object.keys(data[0] as object);
+    const csv = [
+      headers.join(','),
+      ...data.map(row =>
+        headers.map(h => JSON.stringify((row as Record<string, unknown>)[h] ?? '')).join(',')
+      )
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportCsv = () => {
+    const rows = filteredUsers.map(user => ({
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      tenant: user.tenant_name || '',
+      position_type: positionTypeLabel(user.position_type, positionTypeOptions),
+      role: user.user_type,
+      status: (user.disabled || user.archived) ? 'Inactive' : 'Active',
+      last_login: user.last_sign_in_at || '',
+    }));
+    exportCsv(rows, 'tenant_users');
   };
 
   const getRoleBadge = (userType: string) => {
@@ -429,6 +495,27 @@ export default function TenantUsers() {
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={positionFilter} onValueChange={setPositionFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Position Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Position Types</SelectItem>
+                  {positionTypeOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                onClick={handleExportCsv}
+                disabled={filteredUsers.length === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
             </div>
 
             {/* Bulk Action Toolbar */}
@@ -503,6 +590,12 @@ export default function TenantUsers() {
                     </Button>
                   </TableHead>
                   <TableHead>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 -ml-2 hover:bg-transparent" onClick={() => toggleSort('position')}>
+                      Position Type
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
                     <Button variant="ghost" size="sm" className="h-8 px-2 -ml-2 hover:bg-transparent" onClick={() => toggleSort('status')}>
                       Status
                       <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -519,7 +612,7 @@ export default function TenantUsers() {
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No tenant users found
                     </TableCell>
                   </TableRow>
@@ -560,6 +653,15 @@ export default function TenantUsers() {
                         )}
                       </TableCell>
                       <TableCell>{getRoleBadge(user.user_type)}</TableCell>
+                      <TableCell>
+                        {user.position_type ? (
+                          <Badge variant="outline" className="font-normal">
+                            {positionTypeLabel(user.position_type, positionTypeOptions)}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={user.disabled || user.archived ? 'destructive' : 'default'}>
                           {user.disabled || user.archived ? 'Inactive' : 'Active'}
