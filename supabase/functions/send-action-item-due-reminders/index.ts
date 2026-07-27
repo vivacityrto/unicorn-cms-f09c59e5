@@ -7,7 +7,9 @@
  * N days before the due date for any configured N, and if so emails every
  * configured recipient (notify_staff_user_ids + notify_tenant_user_ids) —
  * deduped against client_action_item_reminder_log so nobody is ever emailed
- * twice for the same (action item, offset).
+ * twice for the same (action item, offset, due date). due_date is part of
+ * the dedupe key so an edited due date that later crosses the same offset
+ * threshold again correctly fires a fresh reminder.
  *
  * Cron-only function: verify_jwt = false (see supabase/config.toml), no
  * per-request caller check — mirrors process-notification-outbox /
@@ -184,13 +186,16 @@ serve(async (req) => {
             continue;
           }
 
-          // Dedupe: has this exact (item, offset, recipient) already been sent?
+          // Dedupe: has this exact (item, offset, recipient, due_date) already
+          // been sent? due_date is part of the key so a genuinely new due
+          // date that later crosses the same offset threshold fires again.
           const { data: existingLog } = await supabase
             .from("client_action_item_reminder_log")
             .select("id")
             .eq("action_item_id", item.id)
             .eq("offset_days", offsetDays)
             .eq("recipient_user_id", recipientId)
+            .eq("due_date", item.due_date)
             .maybeSingle();
 
           if (existingLog) {
@@ -220,6 +225,7 @@ serve(async (req) => {
               recipient_kind: kind,
               email: recipientUser.email,
               mailgun_message_id: messageId,
+              due_date: item.due_date,
             });
             sent++;
           } catch (sendErr: any) {
