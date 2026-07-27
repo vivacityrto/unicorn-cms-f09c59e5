@@ -347,7 +347,8 @@ export const DashboardLayout = ({
     key: string,
     title: string,
     items: { icon: any; label: string; path: string }[],
-    sectionKey: keyof typeof sectionsOpen
+    sectionKey: keyof typeof sectionsOpen,
+    showAlertDot?: boolean
   ) => {
     if (items.length === 0) return null;
 
@@ -363,11 +364,16 @@ export const DashboardLayout = ({
           <CollapsibleTrigger className={`flex items-center justify-between w-full px-4 mb-2 py-2 rounded transition-colors ${
             showVivacityMenu ? "hover:bg-white/5" : "hover:bg-muted/20"
           }`}>
-            <p className={`text-xs font-semibold uppercase tracking-wider ${
-              showVivacityMenu ? "text-white/70" : "text-secondary"
-            }`}>
-              {title}
-            </p>
+            <span className="flex items-center gap-1.5">
+              <p className={`text-xs font-semibold uppercase tracking-wider ${
+                showVivacityMenu ? "text-white/70" : "text-secondary"
+              }`}>
+                {title}
+              </p>
+              {showAlertDot && (
+                <span className="h-2 w-2 rounded-full bg-destructive flex-shrink-0" aria-label={`${title} has unread items`} />
+              )}
+            </span>
             {sectionsOpen[sectionKey] ? (
               <ChevronDown className={`w-3 h-3 ${showVivacityMenu ? "text-white/70" : "text-secondary/50"}`} />
             ) : (
@@ -522,7 +528,8 @@ export const DashboardLayout = ({
                     }
                     return true;
                   }),
-                "clients"
+                "clients",
+                (teamUnreadCount || 0) + (myAssignedConvosCount || 0) + (supportTicketsCount || 0) > 0
               )}
 
               {/* 3. EOS Section - Role-Aware */}
