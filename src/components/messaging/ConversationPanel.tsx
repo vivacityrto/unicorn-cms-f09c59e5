@@ -143,7 +143,7 @@ export function ConversationPanel({
                     return (
                       <div key={msg.id} className="grid w-full min-w-0 max-w-full justify-items-end overflow-hidden">
                         <div className="box-border w-full min-w-0 max-w-[min(100%,42rem)] overflow-hidden rounded-2xl rounded-tr-sm bg-primary px-4 py-2 text-primary-foreground [overflow-wrap:anywhere] [word-break:break-word] sm:w-[75%]">
-                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-all] [hyphens:auto]">{normaliseMessageBody(msg.body)}</p>
+                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere] [hyphens:auto]">{normaliseMessageBody(msg.body)}</p>
                           {msg.attachments && msg.attachments.length > 0 && (
                             <MessageAttachments attachments={msg.attachments} />
                           )}
@@ -177,7 +177,7 @@ export function ConversationPanel({
                           "box-border w-full min-w-0 max-w-[min(100%,42rem)] overflow-hidden rounded-2xl rounded-tl-sm border px-4 py-2 [overflow-wrap:anywhere] [word-break:break-word] sm:w-[75%]",
                           isStaff ? "border-primary/30 bg-primary/5" : "border-border bg-card"
                          )}>
-                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed text-foreground whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-all] [hyphens:auto]">
+                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed text-foreground whitespace-pre-line break-words [overflow-wrap:anywhere] [hyphens:auto]">
                             {normaliseMessageBody(msg.body)}
                           </p>
                           {msg.attachments && msg.attachments.length > 0 && (
