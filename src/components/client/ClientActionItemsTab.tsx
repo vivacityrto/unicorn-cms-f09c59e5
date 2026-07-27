@@ -18,20 +18,21 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Plus, CheckSquare, MoreHorizontal, Edit, Trash2, 
-  Calendar as CalendarIcon, User, Clock, Filter, Loader2,
+import {
+  Plus, CheckSquare, MoreHorizontal, Edit, Trash2,
+  Calendar as CalendarIcon, User, Users, Clock, Filter, Loader2,
   CheckCircle2, Circle, AlertCircle, XCircle, PauseCircle,
-  Mic, MicOff, Mail, ExternalLink, Eye, EyeOff
+  Mic, MicOff, Mail, ExternalLink, Eye, EyeOff, BellRing
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { format, formatDistanceToNow, isPast, isToday } from 'date-fns';
+import { format, formatDistanceToNow, isPast, isToday, differenceInCalendarDays } from 'date-fns';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
-import { NotifyClientCheckbox } from './NotifyClientCheckbox';
-import { notifyClientPrimaryContact } from '@/lib/notifyClient';
+import { notifyActionItemCreated, ActionItemNotifyRecipient } from '@/lib/notifyActionItem';
 import { useActionPriorityOptions } from '@/hooks/useActionPriorityOptions';
 import { useActionStatusOptions } from '@/hooks/useActionStatusOptions';
+
+const REMINDER_OFFSET_PRESETS = [15, 7, 3, 1] as const;
 
 interface ClientActionItemsTabProps {
   tenantId: number;
@@ -102,11 +103,12 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const [actionStatus, setActionStatus] = useState('open');
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [ownerUserId, setOwnerUserId] = useState<string | undefined>();
-  const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
-  const [notifyClient, setNotifyClient] = useState(false);
+  const [notifyStaffUserIds, setNotifyStaffUserIds] = useState<string[]>([]);
+  const [notifyTenantUserIds, setNotifyTenantUserIds] = useState<string[]>([]);
+  const [notifyOffsetDays, setNotifyOffsetDays] = useState<number[]>([]);
   const [itemType, setItemType] = useState<'client' | 'internal'>('client');
-  
-  
+
+
   // Team members for assignment
   const [teamMembers, setTeamMembers] = useState<Array<{
     user_uuid: string;
@@ -115,9 +117,20 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     avatar_url: string | null;
   }>>([]);
 
+  // Tenant (client portal) users, for the "notify" tenant-user list
+  const [tenantUsers, setTenantUsers] = useState<Array<{
+    user_uuid: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    avatar_url: string | null;
+    relationship_role: string | null;
+  }>>([]);
+
   useEffect(() => {
     fetchTeamMembers();
-  }, []);
+    fetchTenantUsers();
+  }, [tenantId]);
 
   const fetchTeamMembers = async () => {
     const { data } = await supabase
@@ -126,8 +139,26 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
       .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
       .or('kpi_pod.is.null,kpi_pod.neq.qa')
       .order('first_name');
-    
+
     setTeamMembers(data || []);
+  };
+
+  const fetchTenantUsers = async () => {
+    if (!tenantId) return;
+    const { data } = await supabase
+      .from('tenant_users')
+      .select(`
+        relationship_role,
+        users!tenant_users_user_id_fkey (
+          user_uuid, first_name, last_name, email, avatar_url
+        )
+      `)
+      .eq('tenant_id', tenantId);
+
+    const rows = (data || [])
+      .map((row: any) => row.users ? { ...row.users, relationship_role: row.relationship_role } : null)
+      .filter(Boolean);
+    setTenantUsers(rows);
   };
 
   const resetForm = () => {
@@ -138,8 +169,9 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setDueDate(undefined);
     setOwnerUserId(undefined);
     setSelectedItem(null);
-    setNotifyUserIds([]);
-    setNotifyClient(false);
+    setNotifyStaffUserIds([]);
+    setNotifyTenantUserIds([]);
+    setNotifyOffsetDays([]);
     setItemType('client');
   };
 
@@ -194,17 +226,30 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
           else refresh();
         }
 
+        // Persist notify configuration (RPC does not accept it yet — same
+        // follow-up-update pattern as item_type above).
+        if (newId && (notifyStaffUserIds.length > 0 || notifyTenantUserIds.length > 0 || notifyOffsetDays.length > 0)) {
+          const { error: notifyConfigErr } = await supabase
+            .from('client_action_items')
+            .update({
+              notify_staff_user_ids: notifyStaffUserIds,
+              notify_tenant_user_ids: notifyTenantUserIds,
+              notify_offset_days: notifyOffsetDays,
+            })
+            .eq('id', newId);
+          if (notifyConfigErr) console.error('Failed to persist notify config:', notifyConfigErr);
+        }
 
-        // Send notifications to selected "Notify" users — relocated to
-        // service-role edge function (frontend can no longer insert
-        // user_notifications for other users post-Phase-3 RLS).
-        if (notifyUserIds.length > 0) {
+        // In-app bell for selected staff — relocated to service-role edge
+        // function (frontend can no longer insert user_notifications for
+        // other users post-Phase-3 RLS).
+        if (notifyStaffUserIds.length > 0) {
           try {
             await supabase.functions.invoke("notify-action-shared", {
               body: {
                 tenant_id: tenantId,
                 action_title: title,
-                notify_user_ids: notifyUserIds,
+                notify_user_ids: notifyStaffUserIds,
               },
             });
           } catch (notifyErr) {
@@ -212,8 +257,8 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
           }
         }
 
-        // Send client notification email if requested
-        if (notifyClient) {
+        // Email every selected recipient (internal staff + client contacts).
+        if (notifyStaffUserIds.length > 0 || notifyTenantUserIds.length > 0) {
           try {
             const { data: userData } = await supabase.auth.getUser();
             const currentUserId = userData.user?.id;
@@ -226,17 +271,31 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
               ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim()
               : undefined;
 
-            notifyClientPrimaryContact({
+            const { data: tenantRow } = await supabase
+              .from('tenants')
+              .select('name')
+              .eq('id', tenantId)
+              .single();
+
+            const staffRecipients: ActionItemNotifyRecipient[] = vivacityTeam
+              .filter(u => notifyStaffUserIds.includes(u.user_uuid))
+              .map(u => ({ user_uuid: u.user_uuid, first_name: u.first_name, email: u.email }));
+            const tenantRecipients: ActionItemNotifyRecipient[] = tenantUsers
+              .filter(u => notifyTenantUserIds.includes(u.user_uuid))
+              .map(u => ({ user_uuid: u.user_uuid, first_name: u.first_name, email: u.email }));
+
+            await notifyActionItemCreated({
               tenantId,
-              context: 'Action Created',
+              tenantName: tenantRow?.name || `Tenant #${tenantId}`,
               title,
               description: description || undefined,
               priority,
               dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
               createdByName: authorName || undefined,
+              recipients: [...staffRecipients, ...tenantRecipients],
             });
           } catch (e) {
-            console.error('Client notify error:', e);
+            console.error('Action item notify email error:', e);
           }
         }
       }
@@ -689,40 +748,120 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
             </div>
 
 
-            {/* Notify team members */}
-            <div className="space-y-1.5 rounded-md border p-2.5 bg-muted/30">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  <Mail className="h-3 w-3" />
-                  Notify (Optional)
-                </Label>
-                <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} />
+            {/* Notify */}
+            <div className="space-y-3 rounded-md border p-3 bg-muted/30">
+              <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <Mail className="h-3 w-3" />
+                Notify (Optional)
+              </Label>
+
+              {/* Internal Vivacity staff */}
+              <div className="space-y-1">
+                <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                  <Users className="h-3 w-3" />
+                  Internal Team
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {vivacityTeam.map((user) => (
+                    <Button
+                      key={user.user_uuid}
+                      type="button"
+                      variant={notifyStaffUserIds.includes(user.user_uuid) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setNotifyStaffUserIds(prev =>
+                        prev.includes(user.user_uuid)
+                          ? prev.filter(id => id !== user.user_uuid)
+                          : [...prev, user.user_uuid]
+                      )}
+                      className="gap-1 h-7 text-[11px] px-2"
+                    >
+                      <Avatar className="h-4 w-4">
+                        {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                        <AvatarFallback className="text-[8px]">
+                          {user.first_name?.[0]}{user.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.first_name}
+                    </Button>
+                  ))}
+                  {vivacityTeam.length === 0 && (
+                    <span className="text-xs text-muted-foreground">No team members available</span>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {vivacityTeam.map((user) => (
-                  <Button
-                    key={user.user_uuid}
-                    type="button"
-                    variant={notifyUserIds.includes(user.user_uuid) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setNotifyUserIds(prev => 
-                      prev.includes(user.user_uuid) 
-                        ? prev.filter(id => id !== user.user_uuid)
-                        : [...prev, user.user_uuid]
-                    )}
-                    className="gap-1 h-7 text-[11px] px-2"
-                  >
-                    <Avatar className="h-4 w-4">
-                      {user.avatar_url && <AvatarImage src={user.avatar_url} />}
-                      <AvatarFallback className="text-[8px]">
-                        {user.first_name?.[0]}{user.last_name?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    {user.first_name}
-                  </Button>
-                ))}
-                {vivacityTeam.length === 0 && (
-                  <span className="text-xs text-muted-foreground">No team members available</span>
+
+              {/* Tenant / client portal users */}
+              <div className="space-y-1">
+                <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                  <User className="h-3 w-3" />
+                  Client Contacts
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {tenantUsers.map((user) => (
+                    <Button
+                      key={user.user_uuid}
+                      type="button"
+                      variant={notifyTenantUserIds.includes(user.user_uuid) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setNotifyTenantUserIds(prev =>
+                        prev.includes(user.user_uuid)
+                          ? prev.filter(id => id !== user.user_uuid)
+                          : [...prev, user.user_uuid]
+                      )}
+                      className="gap-1 h-7 text-[11px] px-2"
+                    >
+                      <Avatar className="h-4 w-4">
+                        {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                        <AvatarFallback className="text-[8px]">
+                          {user.first_name?.[0]}{user.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.first_name}
+                      {user.relationship_role === 'primary_contact' && (
+                        <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5">Primary</Badge>
+                      )}
+                    </Button>
+                  ))}
+                  {tenantUsers.length === 0 && (
+                    <span className="text-xs text-muted-foreground">No client contacts on this tenant</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Due-date reminders */}
+              <div className="space-y-1">
+                <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                  <BellRing className="h-3 w-3" />
+                  Remind Before Due Date
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {REMINDER_OFFSET_PRESETS.map((offset) => {
+                    const daysUntilDue = dueDate ? differenceInCalendarDays(dueDate, new Date()) : undefined;
+                    const isAvailable = daysUntilDue !== undefined && daysUntilDue >= offset;
+                    const isSelected = notifyOffsetDays.includes(offset);
+                    return (
+                      <Button
+                        key={offset}
+                        type="button"
+                        disabled={!isAvailable}
+                        variant={isSelected ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setNotifyOffsetDays(prev =>
+                          prev.includes(offset) ? prev.filter(o => o !== offset) : [...prev, offset]
+                        )}
+                        className="h-7 text-[11px] px-2.5"
+                      >
+                        {offset === 1 ? '1 day before' : `${offset} days before`}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {!dueDate ? (
+                  <p className="text-[11px] text-muted-foreground">Set a due date to enable reminders.</p>
+                ) : (
+                  (notifyStaffUserIds.length === 0 && notifyTenantUserIds.length === 0) && notifyOffsetDays.length > 0 && (
+                    <p className="text-[11px] text-amber-600">Select at least one recipient above for reminders to be sent.</p>
+                  )
                 )}
               </div>
             </div>
