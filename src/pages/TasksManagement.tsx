@@ -9,6 +9,7 @@ import { CheckCircle2, Clock, AlertTriangle, Search, Calendar, CheckCheck, X, Pl
 import TaskNotesSidebar from "@/components/TaskNotesSidebar";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollableTableWrapper } from "@/components/ui/scrollable-table-wrapper";
 import { Combobox } from "@/components/ui/combobox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -1352,8 +1353,7 @@ export default function TasksManagement() {
       </div>
 
       {/* Tasks Table */}
-      <div className="rounded-lg border bg-card shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
+      <ScrollableTableWrapper className="rounded-lg border bg-card shadow-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
@@ -1569,8 +1569,7 @@ export default function TasksManagement() {
             })}
             </TableBody>
           </Table>
-        </div>
-      </div>
+      </ScrollableTableWrapper>
 
       {/* Pagination */}
       {filteredTasks.length > 0 && <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">

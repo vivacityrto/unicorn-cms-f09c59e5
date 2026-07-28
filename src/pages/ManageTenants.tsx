@@ -25,6 +25,7 @@ import { AddTenantDialog } from "@/components/AddTenantDialog";
 import { Unicorn1ImportDialog } from "@/components/Unicorn1ImportDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollableTableWrapper } from "@/components/ui/scrollable-table-wrapper";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { cn } from "@/lib/utils";
@@ -818,8 +819,7 @@ export default function ManageTenants() {
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-lg border bg-card shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
+        <ScrollableTableWrapper className="rounded-lg border bg-card shadow-lg overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2 hover:bg-transparent">
@@ -1111,8 +1111,7 @@ export default function ManageTenants() {
                 })}
               </TableBody>
             </Table>
-          </div>
-        </div>
+        </ScrollableTableWrapper>
       )}
 
       {filteredTenants.length > 0 && (

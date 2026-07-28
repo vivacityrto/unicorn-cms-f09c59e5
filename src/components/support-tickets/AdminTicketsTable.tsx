@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ArrowUpDown, ChevronUp, ChevronDown, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
 import type { AdminTicketRow } from './useAdminSupportTickets';
 
 type SortKey = 'title' | 'client' | 'type' | 'status' | 'urgency' | 'created';
@@ -103,7 +104,7 @@ export function AdminTicketsTable({ rows, isLoading }: Props) {
 
   return (
     <div className="bg-white">
-      <div className="overflow-x-auto">
+      <ScrollableTableWrapper className="overflow-x-auto">
         <table className="w-full">
           <colgroup>
             <col />
@@ -207,7 +208,7 @@ export function AdminTicketsTable({ rows, isLoading }: Props) {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollableTableWrapper>
 
       {!isLoading && sorted.length > 0 && (
         <div className="px-6 py-3 flex items-center justify-between border-t border-gray-100">
