@@ -11,26 +11,29 @@ interface ScrollableTableWrapperProps {
  * fade whenever there's more content to scroll to, so a cut-off column
  * doesn't read as a dead end.
  *
+ * The fade overlays live in a non-scrolling outer container so they stay
+ * pinned to the visible edges rather than scrolling away with the content.
+ *
  * Some tables (e.g. the shared `Table` primitive) already render their own
  * horizontally-scrolling wrapper one level deeper than this component - in
- * that case this container itself never overflows, so the fade tracks that
- * nested `.overflow-x-auto` element instead of adding a redundant scroll box.
- * For tables with no such descendant, pass `overflow-x-auto` in `className`
- * to make this container the scroll box directly.
+ * that case the inner container itself never overflows, so the fade tracks
+ * that nested `.overflow-x-auto` element instead of adding a redundant
+ * scroll box. For tables with no such descendant, pass `overflow-x-auto` in
+ * `className` to make the inner container the scroll box directly.
  */
 export function ScrollableTableWrapper({ children, className }: ScrollableTableWrapperProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
   const [showLeftShadow, setShowLeftShadow] = useState(false);
   const [showRightShadow, setShowRightShadow] = useState(false);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const inner = innerRef.current;
+    if (!inner) return;
 
     const scrollEl =
-      container.scrollWidth > container.clientWidth
-        ? container
-        : (container.querySelector<HTMLElement>(".overflow-x-auto") ?? container);
+      inner.scrollWidth > inner.clientWidth
+        ? inner
+        : (inner.querySelector<HTMLElement>(".overflow-x-auto") ?? inner);
 
     const updateShadows = () => {
       setShowLeftShadow(scrollEl.scrollLeft > 0);
@@ -49,8 +52,10 @@ export function ScrollableTableWrapper({ children, className }: ScrollableTableW
   }, [children]);
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
-      {children}
+    <div className="relative">
+      <div ref={innerRef} className={className}>
+        {children}
+      </div>
       {showLeftShadow && (
         <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black/10 dark:from-white/10 to-transparent" />
       )}
