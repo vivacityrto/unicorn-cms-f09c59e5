@@ -49,7 +49,7 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
       onClick={handleCardClick}
       className={cn(
         'group bg-card border border-border rounded-[var(--radius)] p-4 cursor-pointer',
-        'shadow-card hover:shadow-card-hover transition-shadow duration-200 ease-smooth motion-reduce:transition-none',
+        'shadow-elevated hover:shadow-elevated-hover transition-shadow duration-200 ease-smooth motion-reduce:transition-none',
       )}
     >
       <header className="flex items-start justify-between gap-2 mb-2">

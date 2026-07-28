@@ -69,8 +69,12 @@ export default {
 				'md': '0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06)',
 				'lg': '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.06)',
 				'xl': '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.06)',
-				'card': '0 2px 8px -2px rgb(0 0 0 / 0.06)',
-				'card-hover': '0 8px 16px -4px rgb(0 0 0 / 0.1)',
+				/* Named "elevated"/"elevated-hover", not "card"/"card-hover" — the
+				   latter collides with the `card` color token and Tailwind silently
+				   generates a shadow-color utility with the same class name that
+				   wins the cascade, rendering the shadow as invisible white. */
+				'elevated': '0 2px 8px -2px rgb(0 0 0 / 0.06)',
+				'elevated-hover': '0 8px 16px -4px rgb(0 0 0 / 0.1)',
 			},
 			transitionTimingFunction: {
 				'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',

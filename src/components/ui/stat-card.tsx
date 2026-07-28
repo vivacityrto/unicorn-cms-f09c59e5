@@ -63,7 +63,7 @@ export function StatCard({
     <Card 
       className={cn(
         'transition-all duration-200 group',
-        isClickable && 'cursor-pointer hover:shadow-card-hover hover:scale-[1.02]',
+        isClickable && 'cursor-pointer hover:shadow-elevated-hover hover:scale-[1.02]',
         className
       )}
       onClick={onClick}

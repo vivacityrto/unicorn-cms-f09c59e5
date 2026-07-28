@@ -107,7 +107,7 @@ function CalendarContent() {
       ) : (
         <div className="grid gap-4">
           {upcomingMeetings.map((meeting) => (
-            <Card key={meeting.id} className="hover:shadow-card-hover transition-shadow">
+            <Card key={meeting.id} className="hover:shadow-elevated-hover transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
