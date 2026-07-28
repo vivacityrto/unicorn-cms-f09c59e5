@@ -165,21 +165,34 @@ export default function ClientDetail() {
     { value: 'time', icon: Clock, label: 'Time' as React.ReactNode },
   ];
 
-  const tabsRowRef = useRef<HTMLDivElement>(null);
+  // A state-backed callback ref (rather than a plain useRef) so the
+  // measurement effect below reliably reruns the moment this element
+  // actually mounts - this page renders a loading skeleton in place of the
+  // real tab strip until data arrives, so a plain ref could stay null
+  // through the effect's first (and only, if its other deps happen not to
+  // change at the same moment) run.
+  const [tabsRowEl, setTabsRowEl] = useState<HTMLDivElement | null>(null);
   const tabMeasureRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const moreMeasureRef = useRef<HTMLButtonElement>(null);
+  const moreActiveMeasureRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [visibleTabCount, setVisibleTabCount] = useState(ALL_TABS.length);
 
   useLayoutEffect(() => {
-    const container = tabsRowRef.current;
-    if (!container) return;
+    if (!tabsRowEl) return;
 
     const GAP = 16; // matches gap-4 on the tab row
 
     const recompute = () => {
-      const containerWidth = container.clientWidth;
+      const containerWidth = tabsRowEl.clientWidth;
       const widths = tabMeasureRefs.current.map((el) => el?.offsetWidth ?? 0);
-      const moreWidth = moreMeasureRef.current?.offsetWidth ?? 90;
+      // The "More" trigger isn't always the short "More" label - when the
+      // active tab is one of the overflow ones, it swaps in that tab's own
+      // icon+label instead (e.g. "Login History"), which can be wider. Use
+      // whichever is widest so the reserved budget never comes up short.
+      const moreWidth = Math.max(
+        moreMeasureRef.current?.offsetWidth ?? 90,
+        ...moreActiveMeasureRefs.current.map((el) => el?.offsetWidth ?? 0),
+      );
 
       let total = 0;
       let count = 0;
@@ -201,10 +214,10 @@ export default function ClientDetail() {
 
     recompute();
     const resizeObserver = new ResizeObserver(recompute);
-    resizeObserver.observe(container);
+    resizeObserver.observe(tabsRowEl);
     return () => resizeObserver.disconnect();
     // Re-measure whenever tab labels can change width (counts/badges change).
-  }, [packages.length, userCount, messagesUnread]);
+  }, [tabsRowEl, packages.length, userCount, messagesUnread]);
 
   const visibleTabs = ALL_TABS.slice(0, visibleTabCount);
   const moreTabs = ALL_TABS.slice(visibleTabCount);
@@ -531,7 +544,7 @@ export default function ClientDetail() {
         {/* Tabs */}
         <div className="px-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div ref={tabsRowRef} className="flex items-center gap-4 min-w-0">
+            <div ref={setTabsRowEl} className="flex items-center gap-4 min-w-0">
               <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4 min-w-0">
                 {visibleTabs.map((t) => (
                   <TabsTrigger
@@ -609,6 +622,22 @@ export default function ClientDetail() {
               >
                 More <ChevronDown className="h-3.5 w-3.5" />
               </button>
+              {/* One clone per tab, matching the "More" trigger's own markup exactly,
+                  so its widest possible state (showing an active overflow tab's icon
+                  + label instead of the plain "More" text) is also accounted for. */}
+              {ALL_TABS.map((t, i) => (
+                <button
+                  key={`more-${t.value}`}
+                  ref={(el) => { moreActiveMeasureRefs.current[i] = el; }}
+                  type="button"
+                  tabIndex={-1}
+                  className="flex items-center gap-1.5 text-sm font-medium px-1 pb-3"
+                >
+                  <t.icon className="h-4 w-4" />
+                  {t.label}
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              ))}
             </div>
           </Tabs>
         </div>
