@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  CheckCircle, 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  TrendingUp,
+  TrendingDown,
+  CheckCircle,
   AlertCircle,
+  AlertTriangle,
   ChevronRight,
   Edit,
   Users,
@@ -57,9 +59,13 @@ export function RockCard({
   const hasChildren = rock.childStats && rock.childStats.total > 0;
   const milestones = Array.isArray(rock.milestones) ? rock.milestones : [];
   const completedMilestones = milestones.filter((m: any) => m.completed).length;
-  const milestoneProgress = milestones.length > 0 
-    ? Math.round((completedMilestones / milestones.length) * 100) 
+  const milestoneProgress = milestones.length > 0
+    ? Math.round((completedMilestones / milestones.length) * 100)
     : 0;
+  const hasStatusMilestoneMismatch = milestones.length > 0 && (
+    (status === 'complete' && milestoneProgress < 100) ||
+    (milestoneProgress === 100 && status !== 'complete')
+  );
 
   const getStatusConfig = (s: string) => {
     const configs: Record<string, { variant: 'default' | 'destructive' | 'secondary' | 'outline'; icon: typeof TrendingUp; label: string; className?: string }> = {
@@ -165,10 +171,28 @@ export function RockCard({
           </div>
 
           <div className="flex flex-col items-end gap-2 shrink-0">
-            <Badge variant={statusConfig.variant} className={cn('gap-1', statusConfig.className)}>
-              <StatusIcon className="w-3 h-3" />
-              {statusConfig.label}
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              {hasStatusMilestoneMismatch && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                      aria-label={`Status doesn't match milestone progress: ${milestoneProgress}% of milestones complete`}
+                    >
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Status doesn't match milestone progress ({milestoneProgress}% of milestones complete)</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <Badge variant={statusConfig.variant} className={cn('gap-1', statusConfig.className)}>
+                <StatusIcon className="w-3 h-3" />
+                {statusConfig.label}
+              </Badge>
+            </div>
           </div>
         </div>
       </CardHeader>
