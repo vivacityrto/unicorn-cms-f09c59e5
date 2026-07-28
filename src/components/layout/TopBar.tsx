@@ -41,14 +41,18 @@ import { HelpCircle } from "lucide-react";
 // Route to page title mapping
 const routeTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
+  "/triage-dashboard": "Triage Dashboard",
+  "/inbox": "Inbox",
   "/kpi": "KPI Dashboard",
   "/my-work": "My Work",
   "/tasks": "Tasks",
   "/time-inbox": "Time Inbox",
   "/email-triage": "Email Triage",
+  "/work/calendar": "My Calendar",
+  "/work/meetings": "Meetings",
   "/calendar": "Event Calendar",
   "/manage-tenants": "Clients",
-  
+
   "/manage-documents": "Documents",
   "/communications": "Communications",
   "/rto-tips": "RTO Tips",
@@ -56,6 +60,9 @@ const routeTitles: Record<string, string> = {
   "/suggestions/new": "New Suggestion",
   "/support-tickets": "Support Tickets",
   "/support-tickets/new": "New Support Ticket",
+  "/compliance-audits": "Compliance Auditor",
+  "/audits": "Audits",
+  "/clients/bulk-membership-certificates": "Cert & Contact Register",
   "/eos": "EOS Overview",
   "/eos/leadership": "Leadership Dashboard",
   "/eos/scorecard": "Scorecard",
