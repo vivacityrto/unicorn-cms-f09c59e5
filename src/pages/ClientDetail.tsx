@@ -17,6 +17,8 @@ import { useClientMessagesUnread } from '@/hooks/useClientMessagesUnread';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,7 +45,8 @@ import {
   ShieldAlert,
   Clock,
   Phone,
-  ExternalLink
+  ExternalLink,
+  ChevronDown
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { TenantRelationships } from '@/components/tenant/TenantRelationships';
@@ -77,6 +80,17 @@ interface TenantBasic {
   complyhub_membership_tier?: string | null;
 }
 
+// Less-frequently-used tabs, tucked behind a "More" menu instead of a
+// horizontally-scrolling tab strip.
+const MORE_TABS = [
+  { value: 'sharepoint', label: 'Client Files', icon: FolderOpen },
+  { value: 'timeline', label: 'Timeline', icon: Activity },
+  { value: 'logins', label: 'Login History', icon: LogIn },
+  { value: 'integrations', label: 'Integrations', icon: Link2 },
+  { value: 'time', label: 'Time', icon: Clock },
+] as const;
+const MORE_TAB_VALUES: string[] = MORE_TABS.map((t) => t.value);
+
 export default function ClientDetail() {
   const { tenantId } = useParams();
   const navigate = useNavigate();
@@ -85,6 +99,7 @@ export default function ClientDetail() {
   const [tenant, setTenant] = useState<TenantBasic | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'overview');
+  const activeMoreTab = MORE_TABS.find((t) => t.value === activeTab);
 
   // Sync activeTab when URL search params change (e.g. from View Task navigation)
   useEffect(() => {
@@ -447,115 +462,115 @@ export default function ClientDetail() {
         {/* Tabs */}
         <div className="px-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4 w-full max-w-full overflow-x-auto scrollbar-thin flex-nowrap">
-              <TabsTrigger
-                value="overview"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <Building2 className="h-4 w-4 mr-2" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="packages"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <Package2 className="h-4 w-4 mr-2" />
-                Packages ({packages.filter(p => !p.is_complete).length})
-              </TabsTrigger>
-              <TabsTrigger
-                value="documents"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Documents
-              </TabsTrigger>
-              <TabsTrigger
-                value="users"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Users{userCount !== null ? ` (${userCount})` : ''}
-              </TabsTrigger>
-              <TabsTrigger
-                value="notes"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <StickyNote className="h-4 w-4 mr-2" />
-                Notes
-                <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 h-4 border-amber-500/50 text-amber-600">
-                  <ShieldAlert className="h-2.5 w-2.5 mr-0.5" />
-                  Internal
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger
-                value="actions"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <CheckSquare className="h-4 w-4 mr-2" />
-                Actions
-              </TabsTrigger>
-              <TabsTrigger
-                value="audits"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <ClipboardCheck className="h-4 w-4 mr-2" />
-                Audits
-              </TabsTrigger>
-              <TabsTrigger
-                value="emails"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Emails
-              </TabsTrigger>
-              <TabsTrigger
-                value="messages"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Messages
-                {messagesUnread > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#ED1878] text-white text-[10px] font-semibold leading-none">
-                    {messagesUnread > 9 ? '9+' : messagesUnread}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger
-                value="sharepoint"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <FolderOpen className="h-4 w-4 mr-2" />
-                Client Files
-              </TabsTrigger>
-              <TabsTrigger
-                value="timeline"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <Activity className="h-4 w-4 mr-2" />
-                Timeline
-              </TabsTrigger>
-              <TabsTrigger
-                value="logins"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Login History
-              </TabsTrigger>
-              <TabsTrigger
-                value="integrations"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <Link2 className="h-4 w-4 mr-2" />
-                Integrations
-              </TabsTrigger>
-              <TabsTrigger
-                value="time"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Time
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex items-center gap-4">
+              <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4 min-w-0 flex-1 overflow-x-auto scrollbar-thin flex-nowrap">
+                <TabsTrigger
+                  value="overview"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger
+                  value="packages"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                >
+                  <Package2 className="h-4 w-4 mr-2" />
+                  Packages ({packages.filter(p => !p.is_complete).length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="documents"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Documents
+                </TabsTrigger>
+                <TabsTrigger
+                  value="users"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Users{userCount !== null ? ` (${userCount})` : ''}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="notes"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                >
+                  <StickyNote className="h-4 w-4 mr-2" />
+                  Notes
+                  <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 h-4 border-amber-500/50 text-amber-600">
+                    <ShieldAlert className="h-2.5 w-2.5 mr-0.5" />
+                    Internal
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="actions"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                >
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Actions
+                </TabsTrigger>
+                <TabsTrigger
+                  value="audits"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                >
+                  <ClipboardCheck className="h-4 w-4 mr-2" />
+                  Audits
+                </TabsTrigger>
+                <TabsTrigger
+                  value="emails"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Emails
+                </TabsTrigger>
+                <TabsTrigger
+                  value="messages"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Messages
+                  {messagesUnread > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#ED1878] text-white text-[10px] font-semibold leading-none">
+                      {messagesUnread > 9 ? '9+' : messagesUnread}
+                    </span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Overflow menu: less-frequently-used tabs, avoids a horizontal-scrolling tab strip */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'flex items-center gap-1.5 text-sm font-medium px-1 pb-3 rounded-none bg-transparent border-b-2 transition-colors shrink-0',
+                      MORE_TAB_VALUES.includes(activeTab)
+                        ? 'border-primary text-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {activeMoreTab ? (
+                      <>
+                        <activeMoreTab.icon className="h-4 w-4" />
+                        {activeMoreTab.label}
+                      </>
+                    ) : (
+                      'More'
+                    )}
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {MORE_TABS.map((t) => (
+                    <DropdownMenuItem key={t.value} onClick={() => setActiveTab(t.value)}>
+                      <t.icon className="h-4 w-4 mr-2" />
+                      {t.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </Tabs>
         </div>
       </div>
