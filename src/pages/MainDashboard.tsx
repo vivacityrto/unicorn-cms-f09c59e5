@@ -112,9 +112,13 @@ function Panel({
     <div
       className={`bg-white rounded-xl flex flex-col border border-border shadow-[0_1px_2px_rgba(17,24,39,0.04)] ${className ?? ""}`}
     >
-      <div className="px-3.5 pt-2.5 pb-1.5 border-b border-border flex items-center justify-between gap-2">
+      <div className="px-3.5 pt-2.5 pb-1.5 border-b border-border bg-brand-light-purple/20 rounded-t-xl flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {Icon && <Icon className="h-3.5 w-3.5 text-[#7130A0] shrink-0" />}
+          {Icon && (
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#7130A0]/10 shrink-0">
+              <Icon className="h-3 w-3 text-[#7130A0]" />
+            </div>
+          )}
           <div className="text-[13px] font-semibold text-foreground truncate">{title}</div>
         </div>
         {actions && <div className="shrink-0">{actions}</div>}
@@ -151,6 +155,7 @@ interface SummaryCardProps {
 function SummaryCard({ title, value, sub, onClick, accentColor, topAccent, icon: Icon }: SummaryCardProps) {
   const clickable = !!onClick;
   const Comp: any = clickable ? "button" : "div";
+  const glow = topAccent ?? "#7130A0";
   return (
     <Comp
       type={clickable ? "button" : undefined}
@@ -158,6 +163,7 @@ function SummaryCard({ title, value, sub, onClick, accentColor, topAccent, icon:
       className={`relative overflow-hidden bg-white rounded-xl px-4 py-3 flex flex-col justify-between min-h-[92px] border border-border shadow-[0_1px_2px_rgba(17,24,39,0.04)] text-left transition-all ${
         clickable ? "hover:border-[#7130A0]/40 hover:shadow-[0_2px_8px_rgba(113,48,160,0.10)] cursor-pointer" : ""
       }`}
+      style={{ backgroundImage: `linear-gradient(135deg, ${glow}0D 0%, transparent 55%)` }}
     >
       {topAccent && (
         <span
@@ -168,7 +174,14 @@ function SummaryCard({ title, value, sub, onClick, accentColor, topAccent, icon:
       )}
       <div className="flex items-center justify-between gap-2">
         <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{title}</div>
-        {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground/60" />}
+        {Icon && (
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded-full shrink-0"
+            style={{ backgroundColor: `${glow}1A` }}
+          >
+            <Icon className="h-3.5 w-3.5" style={{ color: glow }} />
+          </div>
+        )}
       </div>
       <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
         <div
@@ -266,7 +279,7 @@ function QuickActionTile({
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1 rounded-lg border border-border bg-white hover:bg-[#7130A0]/5 hover:border-[#7130A0]/40 transition-colors px-2 py-2.5 text-center"
+      className="flex flex-col items-center justify-center gap-1 rounded-lg border border-border bg-[#7130A0]/[0.03] hover:bg-[#7130A0]/10 hover:border-[#7130A0]/40 transition-colors px-2 py-2.5 text-center"
     >
       <Icon className="h-4 w-4 text-[#7130A0]" />
       <span className="text-[10.5px] font-medium text-foreground leading-tight">{label}</span>
@@ -987,16 +1000,22 @@ export default function MainDashboard() {
                 <ul className="space-y-1.5 max-h-[380px] overflow-auto pr-1">
                   {rocks.list.slice(0, 8).map((r: any) => {
                     const s = (r.status ?? "").toLowerCase().replace(/\s+/g, "_");
-                    const badgeColor =
+                    // Brand compliance-state tokens (index.css --state-*) instead of
+                    // generic Material Design colors — on_track=compliant(purple),
+                    // at_risk=review(macaron), off_track=risk(fuchsia),
+                    // done/complete=info(aqua), unknown=draft(light purple).
+                    const stateVar =
                       s === "on_track"
-                        ? "#4CAF50"
+                        ? "--state-compliant"
                         : s === "at_risk"
-                        ? "#FFC107"
+                        ? "--state-review"
                         : s === "off_track"
-                        ? "#F44336"
+                        ? "--state-risk"
                         : s === "done" || s === "complete"
-                        ? "#2196F3"
-                        : "#9CA3AF";
+                        ? "--state-info"
+                        : "--state-draft";
+                    const badgeColor = `hsl(var(${stateVar}))`;
+                    const badgeTint = `hsl(var(${stateVar}) / 0.14)`;
                     const label = (r.status ?? "unknown").replace(/_/g, " ");
                     const pct =
                       typeof r.completion_percentage === "number"
@@ -1016,7 +1035,7 @@ export default function MainDashboard() {
                           <span className="text-sm text-foreground flex-1 truncate">{r.title}</span>
                           <span
                             className="text-[10px] font-medium px-1.5 py-0.5 rounded capitalize shrink-0"
-                            style={{ backgroundColor: `${badgeColor}20`, color: badgeColor }}
+                            style={{ backgroundColor: badgeTint, color: badgeColor }}
                           >
                             {label}
                           </span>
