@@ -79,7 +79,7 @@ export function ScoreboardSection({ flightPlan, canEdit, onSave, isSaving }: Sco
             <label className="text-sm font-medium">Profit (%)</label>
             <Input
               type="text"
-              placeholder="Break-even or target amount"
+              placeholder="e.g. 20%"
               value={profitTarget}
               onChange={(e) => setProfitTarget(e.target.value)}
               disabled={!canEdit}
