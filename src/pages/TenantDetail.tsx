@@ -823,17 +823,17 @@ export default function TenantDetail() {
                             </span>
                           </TableCell>
                           <TableCell className="border-r">
-                            {isReleased ? <Badge variant="default" className="gap-1 bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+                            {isReleased ? <Badge variant="default" className="gap-1 bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem]">
                                 <CheckCircle2 className="h-3 w-3" />
                                 Released
-                              </Badge> : <Badge variant="default" className="gap-1 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+                              </Badge> : <Badge variant="default" className="gap-1 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem]">
                                 <Clock className="h-3 w-3" />
                                 Pending
                               </Badge>}
                           </TableCell>
                           <TableCell>
                             {doc.source === 'tenant' ? (
-                              <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap bg-amber-500/10 text-amber-600 border-amber-600">
+                              <Badge variant="outline" className="text-xs font-medium py-[3px] whitespace-nowrap bg-amber-500/10 text-amber-600 border-amber-600">
                                 Sent to Tenant
                               </Badge>
                             ) : packageName ? (

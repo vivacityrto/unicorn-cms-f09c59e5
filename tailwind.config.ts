@@ -18,6 +18,21 @@ export default {
 			}
 		},
 		/* ============================================================
+		   BRAND TYPEFACES
+		   - display (Anton): page/hero titles — free, loaded via Google Fonts
+		   - heading (Binate): section headings — Monotype-licensed font;
+		     falls back to Calibri/system sans until licensed font files
+		     are added to the project (not currently present in this repo)
+		   - sans (Calibri): body copy — ships with Windows/Office, so this
+		     just names it for users who have it installed; Carlito is a
+		     metric-compatible open fallback for everyone else
+		   ============================================================ */
+		fontFamily: {
+			sans: ['Calibri', 'Carlito', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+			heading: ['Binate', 'Calibri', 'Carlito', 'ui-sans-serif', 'sans-serif'],
+			display: ['Anton', 'Impact', 'sans-serif'],
+		},
+		/* ============================================================
 		   TYPOGRAPHY SCALE – 1.25 ratio
 		   12 / 15 / 18 / 24 / 30 / 37 / 46
 		   ============================================================ */

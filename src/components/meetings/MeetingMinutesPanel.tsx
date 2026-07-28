@@ -98,6 +98,7 @@ function AiPreviewPanel({
             Actions {confidenceBadge(proposed.confidence?.actions || 'medium')}
           </div>
           <div className="border rounded overflow-hidden mt-1">
+            <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
                 <tr>
@@ -118,6 +119,7 @@ function AiPreviewPanel({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -221,6 +223,7 @@ function CopilotPreviewPanel({
             Actions {confidenceBadge(extracted.confidence?.actions || 'medium')}
           </div>
           <div className="border rounded overflow-hidden mt-1">
+            <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
                 <tr>
@@ -241,6 +244,7 @@ function CopilotPreviewPanel({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -799,6 +803,7 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
               )}
             </div>
             <div className="border rounded overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-muted/50">
                   <tr>
@@ -850,6 +855,7 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Task summary */}
