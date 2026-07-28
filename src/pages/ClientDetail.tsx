@@ -133,9 +133,10 @@ export default function ClientDetail() {
   // width render directly; the rest collapse into a "More" menu - measured
   // dynamically (see tabsRowRef effect below) so widening the window (or
   // collapsing the sidebar) reveals more tabs instead of a fixed split.
+  const incompletePackagesCount = packages.filter(p => !p.is_complete).length;
   const ALL_TABS = [
     { value: 'overview', icon: Building2, label: 'Overview' as React.ReactNode },
-    { value: 'packages', icon: Package2, label: `Packages (${packages.filter(p => !p.is_complete).length})` as React.ReactNode },
+    { value: 'packages', icon: Package2, label: `Packages (${incompletePackagesCount})` as React.ReactNode },
     { value: 'documents', icon: FileText, label: 'Documents' as React.ReactNode },
     { value: 'users', icon: Users, label: `Users${userCount !== null ? ` (${userCount})` : ''}` as React.ReactNode },
     {
@@ -194,15 +195,23 @@ export default function ClientDetail() {
         ...moreActiveMeasureRefs.current.map((el) => el?.offsetWidth ?? 0),
       );
 
+      // If every tab fits on its own, show them all - no need to reserve
+      // room for "More" at all. Only once we know some tabs won't fit does
+      // reserving moreWidth on every candidate become correct; reserving it
+      // unconditionally (including on the case where nothing needs to
+      // overflow) was leaving fitting tabs stranded behind "More" with dead
+      // space next to it - the exact thing this fix exists to prevent.
+      const fullTotal = widths.reduce((sum, w, i) => sum + w + (i > 0 ? GAP : 0), 0);
+      if (fullTotal <= containerWidth) {
+        setVisibleTabCount(widths.length);
+        return;
+      }
+
       let total = 0;
       let count = 0;
       for (let i = 0; i < widths.length; i++) {
         const withThis = total + widths[i] + (i > 0 ? GAP : 0);
-        const isLast = i === widths.length - 1;
-        // Reserve room for the "More" button unless this is the last tab
-        // (i.e. showing it would mean nothing is left to put in "More").
-        const budget = isLast ? containerWidth : containerWidth - moreWidth - GAP;
-        if (withThis <= budget) {
+        if (withThis + GAP + moreWidth <= containerWidth) {
           total = withThis;
           count = i + 1;
         } else {
@@ -217,7 +226,7 @@ export default function ClientDetail() {
     resizeObserver.observe(tabsRowEl);
     return () => resizeObserver.disconnect();
     // Re-measure whenever tab labels can change width (counts/badges change).
-  }, [tabsRowEl, packages.length, userCount, messagesUnread]);
+  }, [tabsRowEl, incompletePackagesCount, userCount, messagesUnread]);
 
   const visibleTabs = ALL_TABS.slice(0, visibleTabCount);
   const moreTabs = ALL_TABS.slice(visibleTabCount);
@@ -578,6 +587,7 @@ export default function ClientDetail() {
                         <>
                           <activeMoreTab.icon className="h-4 w-4" />
                           {activeMoreTab.label}
+                          {activeMoreTab.badge}
                         </>
                       ) : (
                         'More'
@@ -590,6 +600,7 @@ export default function ClientDetail() {
                       <DropdownMenuItem key={t.value} onClick={() => setActiveTab(t.value)}>
                         <t.icon className="h-4 w-4 mr-2" />
                         {t.label}
+                        {t.badge}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -635,6 +646,7 @@ export default function ClientDetail() {
                 >
                   <t.icon className="h-4 w-4" />
                   {t.label}
+                  {t.badge}
                   <ChevronDown className="h-3.5 w-3.5" />
                 </button>
               ))}
