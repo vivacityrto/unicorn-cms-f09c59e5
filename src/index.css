@@ -386,6 +386,34 @@
     --state-info: var(--brand-aqua-400);
     --state-draft: var(--brand-light-purple-600);
   }
+
+  /* ============================================================
+     LEGACY BRANDING ROLLBACK FLAG
+     Toggled by public.public_branding_config.legacy_branding_enabled
+     (see useLegacyBrandingFlag) — applied as a class on <html> by
+     the app root. Reverts the 2026-07-28 Purple primary color +
+     Anton/Binate/Calibri fonts back to the previous Aqua color and
+     default fonts. Flip the flag via Supabase SQL — no redeploy.
+     ============================================================ */
+  :root.legacy-branding {
+    --primary: 190 74% 50%;
+    --ring: 190 74% 50%;
+  }
+
+  .dark.legacy-branding {
+    --primary: 190 74% 58%;
+    --ring: 190 74% 58%;
+  }
+
+  .legacy-branding body,
+  .legacy-branding h1,
+  .legacy-branding h2,
+  .legacy-branding h3,
+  .legacy-branding h4,
+  .legacy-branding h5,
+  .legacy-branding h6 {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
 }
 
 @layer base {
