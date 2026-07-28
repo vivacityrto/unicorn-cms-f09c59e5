@@ -357,14 +357,10 @@ export default function ManageTenants() {
       filtered = filtered.filter(tenant => tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) || tenant.slug.toLowerCase().includes(searchQuery.toLowerCase()));
     }
 
-    // Status filter — "all" and "active" match raw status;
-    // "suspended" and "closed" match lifecycle_status (derived column)
+    // Status filter — options come from dd_status (raw status column),
+    // so always compare against tenant.status, not the derived lifecycle_status.
     if (statusFilter !== "all") {
-      filtered = filtered.filter(tenant =>
-        statusFilter === "active"
-          ? tenant.status === statusFilter
-          : tenant.lifecycle_status === statusFilter
-      );
+      filtered = filtered.filter(tenant => tenant.status === statusFilter);
     }
 
     // Package filter
