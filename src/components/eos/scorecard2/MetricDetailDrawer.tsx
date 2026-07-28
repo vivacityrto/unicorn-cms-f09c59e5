@@ -135,6 +135,7 @@ export function MetricDetailDrawer({ metric, open, onOpenChange, onEdit }: Metri
               13-Week History
             </h3>
             <div className="rounded-md border border-border overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-muted/50">
@@ -175,6 +176,7 @@ export function MetricDetailDrawer({ metric, open, onOpenChange, onEdit }: Metri
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           </section>
         </div>

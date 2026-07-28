@@ -100,6 +100,7 @@ export function BulkMessageHistory() {
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-muted/50">
           <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -161,6 +162,7 @@ export function BulkMessageHistory() {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

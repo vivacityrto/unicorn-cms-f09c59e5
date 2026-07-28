@@ -51,7 +51,7 @@ export function ClientRocksList() {
   return (
     <div className="grid gap-4">
       {rocks.map((rock) => (
-        <Card key={rock.id} className="hover:shadow-card-hover transition-shadow">
+        <Card key={rock.id} className="hover:shadow-elevated-hover transition-shadow">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">

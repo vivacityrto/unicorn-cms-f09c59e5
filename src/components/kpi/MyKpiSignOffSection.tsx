@@ -163,7 +163,7 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           <TrafficLight pct={s.email_sla_pct} target={80} label="SLA" />
         </div>
         {emails.length > 0 ? (
-          <div className="mt-2 rounded border max-h-[240px] overflow-y-auto">
+          <div className="mt-2 rounded border max-h-[240px] overflow-y-auto overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-left">
                 <tr>
@@ -311,7 +311,7 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           <TrafficLight pct={sla2Pct} target={90} label="SLA 2" />
         </div>
         {emails.length > 0 && (
-          <div className="rounded border max-h-[240px] overflow-y-auto">
+          <div className="rounded border max-h-[240px] overflow-y-auto overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-left">
                 <tr>
@@ -351,7 +351,7 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           <TrafficLight pct={tasksPct} target={80} label="Tasks" />
         </div>
         {tasks.length > 0 ? (
-          <div className="rounded border">
+          <div className="rounded border overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-left">
                 <tr>
@@ -470,7 +470,7 @@ function DevDetail({ uuid, start, end }: { uuid: string; start: string; end: str
       <section>
         <h4 className="text-sm font-semibold mb-2">Milestones</h4>
         {milestones.length > 0 ? (
-          <div className="rounded border">
+          <div className="rounded border overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-left">
                 <tr>

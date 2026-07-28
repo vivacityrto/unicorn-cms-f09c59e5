@@ -115,7 +115,7 @@ export default function AcademyDashboardPage() {
         <h2 className="text-3xl font-bold text-white leading-tight">
           {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
         </h2>
-        <p className="text-sm text-white/85 mt-1">
+        <p className="text-sm text-white/85 mt-1.5">
           Pick up where you left off, or explore a new pathway below.
         </p>
       </div>

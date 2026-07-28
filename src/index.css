@@ -192,8 +192,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 270 47% 26%;
 
-    /* PRIMARY = Aqua #23C0DD – main action colour */
-    --primary: 190 74% 50%;
+    /* PRIMARY = Purple #7130A0 – main action colour (per docs/DESIGN_SYSTEM.md: "Purple = Primary action") */
+    --primary: 275 55% 41%;
     --primary-foreground: 0 0% 100%;
 
     /* SECONDARY = Acai #44235F – structural, headings */
@@ -214,7 +214,7 @@
 
     --border: 270 20% 87%;
     --input: 270 20% 91%;
-    --ring: 190 74% 50%; /* Aqua – focus rings match primary */
+    --ring: 275 55% 41%; /* Purple – focus rings match primary */
 
     --radius: 0.75rem; /* 12px card radius */
 
@@ -359,8 +359,8 @@
     --popover: 270 40% 12%;
     --popover-foreground: 0 0% 95%;
 
-    /* Aqua adjusted for dark contrast */
-    --primary: 190 74% 58%;
+    /* Purple 500 – adjusted for dark contrast (per docs/DESIGN_SYSTEM.md dark mode rule) */
+    --primary: 275 55% 48%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 270 35% 50%;
@@ -377,7 +377,7 @@
 
     --border: 270 25% 22%;
     --input: 270 25% 20%;
-    --ring: 190 74% 58%;
+    --ring: 275 55% 48%;
 
     /* Dark mode compliance states */
     --state-compliant: var(--brand-purple-500);
@@ -385,6 +385,34 @@
     --state-risk: var(--brand-fuchsia-500);
     --state-info: var(--brand-aqua-400);
     --state-draft: var(--brand-light-purple-600);
+  }
+
+  /* ============================================================
+     LEGACY BRANDING ROLLBACK FLAG
+     Toggled by public.public_branding_config.legacy_branding_enabled
+     (see useLegacyBrandingFlag) — applied as a class on <html> by
+     the app root. Reverts the 2026-07-28 Purple primary color +
+     Anton/Binate/Calibri fonts back to the previous Aqua color and
+     default fonts. Flip the flag via Supabase SQL — no redeploy.
+     ============================================================ */
+  :root.legacy-branding {
+    --primary: 190 74% 50%;
+    --ring: 190 74% 50%;
+  }
+
+  .dark.legacy-branding {
+    --primary: 190 74% 58%;
+    --ring: 190 74% 58%;
+  }
+
+  .legacy-branding body,
+  .legacy-branding h1,
+  .legacy-branding h2,
+  .legacy-branding h3,
+  .legacy-branding h4,
+  .legacy-branding h5,
+  .legacy-branding h6 {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   }
 }
 
@@ -404,7 +432,7 @@
   }
   
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: hidden;
@@ -419,26 +447,30 @@
   
   /* Typography scale: 46 / 37 / 30 / 24 / 18 / 15 / 12 */
   h1 {
+    @apply font-heading;
     font-size: 1.875rem; /* 30px – Page title */
     font-weight: 600;
     line-height: 1.2;
     color: hsl(var(--secondary)); /* Acai for major headings */
   }
-  
+
   h2 {
+    @apply font-heading;
     font-size: 1.5rem; /* 24px – Section title */
     font-weight: 600;
     line-height: 1.25;
     color: hsl(var(--secondary));
   }
-  
+
   h3 {
+    @apply font-heading;
     font-size: 1.125rem; /* 18px – Card title */
     font-weight: 600;
     line-height: 1.3;
   }
-  
+
   h4, h5, h6 {
+    @apply font-heading;
     font-size: 0.9375rem; /* 15px */
     font-weight: 600;
     line-height: 1.4;

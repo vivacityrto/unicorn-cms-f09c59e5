@@ -51,7 +51,7 @@ export default function TaskNotesSidebar({ isOpen, onClose, userId }: Props) {
       <aside
         className={cn(
           'w-[360px] shrink-0 border-l border-border bg-background flex flex-col',
-          'h-[calc(100vh-0px)] sticky top-0 self-start max-h-screen overflow-hidden shadow-card',
+          'h-[calc(100vh-0px)] sticky top-0 self-start max-h-screen overflow-hidden shadow-elevated',
         )}
         aria-label="Daily Notes"
       >

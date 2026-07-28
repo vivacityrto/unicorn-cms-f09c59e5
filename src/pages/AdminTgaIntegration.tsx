@@ -457,6 +457,7 @@ export default function AdminTgaIntegration() {
 
             <TabsContent value="products">
               <ScrollArea className="h-64">
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
@@ -491,11 +492,13 @@ export default function AdminTgaIntegration() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </ScrollArea>
             </TabsContent>
 
             <TabsContent value="units">
               <ScrollArea className="h-64">
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
@@ -530,11 +533,13 @@ export default function AdminTgaIntegration() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </ScrollArea>
             </TabsContent>
 
             <TabsContent value="orgs">
               <ScrollArea className="h-64">
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
@@ -569,6 +574,7 @@ export default function AdminTgaIntegration() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </ScrollArea>
             </TabsContent>
           </Tabs>

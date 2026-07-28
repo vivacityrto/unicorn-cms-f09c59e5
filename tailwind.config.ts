@@ -18,6 +18,21 @@ export default {
 			}
 		},
 		/* ============================================================
+		   BRAND TYPEFACES
+		   - display (Anton): page/hero titles — free, loaded via Google Fonts
+		   - heading (Binate): section headings — Monotype-licensed font;
+		     falls back to Calibri/system sans until licensed font files
+		     are added to the project (not currently present in this repo)
+		   - sans (Calibri): body copy — ships with Windows/Office, so this
+		     just names it for users who have it installed; Carlito is a
+		     metric-compatible open fallback for everyone else
+		   ============================================================ */
+		fontFamily: {
+			sans: ['Calibri', 'Carlito', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+			heading: ['Binate', 'Calibri', 'Carlito', 'ui-sans-serif', 'sans-serif'],
+			display: ['Anton', 'Impact', 'sans-serif'],
+		},
+		/* ============================================================
 		   TYPOGRAPHY SCALE – 1.25 ratio
 		   12 / 15 / 18 / 24 / 30 / 37 / 46
 		   ============================================================ */
@@ -54,8 +69,12 @@ export default {
 				'md': '0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06)',
 				'lg': '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.06)',
 				'xl': '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.06)',
-				'card': '0 2px 8px -2px rgb(0 0 0 / 0.06)',
-				'card-hover': '0 8px 16px -4px rgb(0 0 0 / 0.1)',
+				/* Named "elevated"/"elevated-hover", not "card"/"card-hover" — the
+				   latter collides with the `card` color token and Tailwind silently
+				   generates a shadow-color utility with the same class name that
+				   wins the cascade, rendering the shadow as invisible white. */
+				'elevated': '0 1px 2px rgb(0 0 0 / 0.06), 0 4px 12px -4px rgb(0 0 0 / 0.08)',
+				'elevated-hover': '0 2px 6px rgb(0 0 0 / 0.08), 0 12px 24px -8px rgb(0 0 0 / 0.12)',
 			},
 			transitionTimingFunction: {
 				'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',

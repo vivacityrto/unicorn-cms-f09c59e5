@@ -63,7 +63,7 @@ export function ClientSummariesList() {
         const solvedIssues = issuesList.filter((i: any) => i.status === 'Solved').length;
 
         return (
-          <Card key={summary.id} className="hover:shadow-card-hover transition-shadow">
+          <Card key={summary.id} className="hover:shadow-elevated-hover transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>

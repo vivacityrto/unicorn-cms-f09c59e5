@@ -41,7 +41,7 @@ export function ClientIssuesList() {
         const StatusIcon = statusConfig.icon;
         
         return (
-          <Card key={issue.id} className="hover:shadow-card-hover transition-shadow">
+          <Card key={issue.id} className="hover:shadow-elevated-hover transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3 flex-1">
