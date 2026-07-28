@@ -8,7 +8,7 @@ const TABS: { key: StatusTab; label: string }[] = [
   { key: 'triaged', label: 'Under Review' },
   { key: 'in_progress', label: 'In Progress' },
   { key: 'resolved', label: 'Resolved' },
-  { key: 'closed', label: 'Closed' },
+  { key: 'closed', label: 'Closed (All)' },
   { key: 'declined', label: 'Declined' },
 ];
 
@@ -20,7 +20,7 @@ interface Props {
 
 export function AdminTicketStatusTabs({ value, onChange, counts }: Props) {
   return (
-    <div className="border-b border-gray-200 px-6 flex gap-0 overflow-x-auto">
+    <div className="border-b border-gray-200 px-6 flex gap-0 overflow-x-auto scrollbar-thin">
       {TABS.map((t) => {
         const active = value === t.key;
         return (
