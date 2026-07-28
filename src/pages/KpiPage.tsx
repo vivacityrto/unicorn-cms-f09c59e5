@@ -139,7 +139,7 @@ export default function KpiPage() {
       <div className="p-6 space-y-6">
         {/* Compact page header row: role subtitle + welcome / last updated */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div className="min-w-0">
+          <div className="min-w-0 space-y-1">
             {roleLabel && (
               <div className="font-binate text-sm text-muted-foreground">
                 {roleLabel}
