@@ -819,8 +819,8 @@ export default function ManageTenants() {
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2 hover:bg-transparent">
-                  <TableHead className="bg-muted/30 h-14 w-12 border-r border-border/50 px-3">
-                    {bulkSelectionEnabled ? (
+                  {bulkSelectionEnabled && (
+                    <TableHead className="bg-muted/30 h-14 w-12 border-r border-border/50 px-3">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -837,19 +837,8 @@ export default function ManageTenants() {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    ) : (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="inline-flex"><Checkbox disabled aria-label="Bulk select disabled" /></span>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-[240px]">
-                            Filter by a specific CSC above to enable bulk reassignment.
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </TableHead>
+                    </TableHead>
+                  )}
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Tenant Name</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Hours</TableHead>
@@ -886,17 +875,18 @@ export default function ManageTenants() {
                     )}
                     onClick={() => navigate(`/tenant/${tenant.id}`)}
                   >
-                    <TableCell
-                      className="py-6 border-r border-border/50 w-12 px-3"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Checkbox
-                        aria-label={`Select ${tenant.name}`}
-                        disabled={!bulkSelectionEnabled}
-                        checked={selectedTenantIds.has(tenant.id)}
-                        onCheckedChange={(c) => toggleRowSelected(tenant.id, !!c)}
-                      />
-                    </TableCell>
+                    {bulkSelectionEnabled && (
+                      <TableCell
+                        className="py-6 border-r border-border/50 w-12 px-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          aria-label={`Select ${tenant.name}`}
+                          checked={selectedTenantIds.has(tenant.id)}
+                          onCheckedChange={(c) => toggleRowSelected(tenant.id, !!c)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="py-6 border-r border-border/50 min-w-[280px] pr-8">
                       <div>
                         <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">

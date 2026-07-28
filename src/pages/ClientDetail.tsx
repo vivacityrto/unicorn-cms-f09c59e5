@@ -419,7 +419,7 @@ export default function ClientDetail() {
                 onLogoChange={setLogoPath}
               />
               <div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-2xl font-bold">{tenant.name}</h1>
                   {canEdit && (
                     canRenameTenant(profile?.rto_number) ? (
@@ -481,7 +481,7 @@ export default function ClientDetail() {
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Open this RTO on training.gov.au"
-                      className="inline-flex items-center gap-1 rounded-full bg-muted hover:bg-muted/80 px-2 py-0.5 text-xs font-medium text-foreground border border-border transition-colors"
+                      className="inline-flex items-center shrink-0 whitespace-nowrap gap-1 rounded-full bg-muted hover:bg-muted/80 px-2 py-0.5 text-xs font-medium text-foreground border border-border transition-colors"
                     >
                       View on TGA <ExternalLink className="h-3 w-3" />
                     </a>
@@ -526,7 +526,7 @@ export default function ClientDetail() {
                 tenantId={tenantIdNum!}
                 tenantName={tenant.name}
               />
-              {tenantIdNum && <ClientQuickNav currentTenantId={tenantIdNum} />}
+              {tenantIdNum && <ClientQuickNav currentTenantId={tenantIdNum} size="default" />}
               {activeTab === 'overview' && canEdit && (
                 <Button
                   onClick={() => triggerProfileSave?.()}

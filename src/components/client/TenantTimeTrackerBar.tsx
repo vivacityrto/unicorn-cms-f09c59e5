@@ -181,11 +181,11 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
           <div className="h-5 w-px bg-border" />
 
           {/* Month total */}
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md">
+          <Badge variant="outline" className="h-7 gap-1.5 px-2.5 text-xs font-medium">
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-sm font-medium">{monthHours.toFixed(1)}h</span>
-            <span className="text-xs text-muted-foreground hidden sm:inline">used</span>
-          </div>
+            {monthHours.toFixed(1)}h
+            <span className="text-muted-foreground hidden sm:inline">used</span>
+          </Badge>
 
           {/* Membership usage */}
           {totalIncluded > 0 && (
@@ -194,7 +194,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
                 <TooltipTrigger asChild>
                   <Badge
                     variant={isOverBudget ? 'destructive' : isNearLimit ? 'secondary' : 'outline'}
-                    className={`text-xs gap-1 cursor-default ${isNearLimit && !isOverBudget ? 'border-yellow-500 text-yellow-700' : ''}`}
+                    className={`h-7 gap-1 px-2.5 text-xs cursor-default ${isNearLimit && !isOverBudget ? 'border-yellow-500 text-yellow-700' : ''}`}
                   >
                     {isOverBudget && <AlertTriangle className="h-3 w-3" />}
                     {formatHours(totalUsed)} / {formatHours(totalIncluded)}
@@ -216,7 +216,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
             href={`https://unicorn-cms.com.au/clients/${tenantId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-md px-3 h-8 text-sm font-medium text-white transition-colors hover:opacity-90"
+            className="inline-flex items-center justify-center gap-1 rounded-full h-7 px-2.5 text-xs font-medium text-white transition-colors hover:opacity-90"
             style={{ backgroundColor: '#D4842A' }}
           >
             Unicorn 1.0

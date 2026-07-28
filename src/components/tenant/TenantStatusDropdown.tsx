@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -183,11 +184,12 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
           >
             <Badge
               variant={isActive ? 'default' : 'destructive'}
-              className={
+              className={cn(
+                'whitespace-nowrap shrink-0',
                 isActive
-                  ? 'bg-green-500/20 text-green-600 hover:bg-green-500/30 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
-                  : 'bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
-              }
+                  ? 'bg-green-500/20 text-green-600 hover:bg-green-500/30 border border-green-600'
+                  : 'bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-600'
+              )}
             >
               {saving ? (
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />

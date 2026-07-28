@@ -684,7 +684,7 @@ export default function MainDashboard() {
             style={{ background: "linear-gradient(180deg, #ED1878 0%, #7130A0 100%)" }}
           />
           <div className="flex items-center justify-between gap-4 flex-wrap px-5 py-5 pl-6">
-            <div className="flex items-center gap-3.5 min-w-0">
+            <div className="flex items-center gap-4 min-w-0">
               <Avatar className="h-12 w-12 border-2 border-[#23C0DD]/20 shadow-sm">
                 <AvatarImage src={profile?.avatar_url || undefined} />
                 <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-[#7130A0] to-[#ED1878] text-white">
@@ -693,7 +693,7 @@ export default function MainDashboard() {
               </Avatar>
               <div className="min-w-0">
                 <h1
-                  className="text-foreground flex items-baseline gap-3 flex-wrap"
+                  className="text-foreground flex items-baseline gap-4 flex-wrap"
                   style={{ fontFamily: "Anton, sans-serif", fontSize: "24px", lineHeight: 1.15 }}
                 >
                   Welcome back, {firstName}!
@@ -705,7 +705,7 @@ export default function MainDashboard() {
                   </span>
                 </h1>
                 <p
-                  className="text-muted-foreground mt-1"
+                  className="text-muted-foreground mt-1.5"
                   style={{ fontFamily: "Calibri, sans-serif", fontSize: "14px" }}
                 >
                   Here's what's happening today.

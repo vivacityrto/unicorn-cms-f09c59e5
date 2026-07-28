@@ -49,7 +49,7 @@ export function RiskLevelBadge({ riskLevel, onUpdate, disabled, onRiskChanged }:
       <DropdownMenu>
         <DropdownMenuTrigger asChild disabled={disabled || isUpdating}>
           <button
-            className="inline-flex items-center rounded-full border border-dashed px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer hover:bg-muted/50 text-muted-foreground"
+            className="inline-flex items-center shrink-0 whitespace-nowrap rounded-full border border-dashed px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer hover:bg-muted/50 text-muted-foreground"
           >
             Set Risk Level
             <Pencil className="h-3 w-3 ml-1" />
@@ -79,7 +79,7 @@ export function RiskLevelBadge({ riskLevel, onUpdate, disabled, onRiskChanged }:
       <DropdownMenuTrigger asChild disabled={disabled || isUpdating}>
         <button
           className={cn(
-            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer",
+            "inline-flex items-center shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer",
             currentLevel.className
           )}
           onMouseEnter={() => setIsHovered(true)}

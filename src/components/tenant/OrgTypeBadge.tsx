@@ -76,7 +76,7 @@ export function OrgTypeBadge({ orgType, rtoNumber, cricosNumber, className }: Or
       return (
         <span
           className={cn(
-            'inline-flex items-center rounded-full px-3 py-0.5 text-xs font-bold tracking-wide uppercase bg-brand-light-purple text-brand-acai border border-brand-light-purple-400/60 shadow-sm',
+            'inline-flex items-center shrink-0 whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-bold tracking-wide uppercase bg-brand-light-purple text-brand-acai border border-brand-light-purple-400/60 shadow-sm',
             isButton && 'cursor-pointer',
             className
           )}
@@ -89,7 +89,7 @@ export function OrgTypeBadge({ orgType, rtoNumber, cricosNumber, className }: Or
     return (
       <span
         className={cn(
-          'inline-flex items-center rounded-full px-3 py-0.5 text-xs font-bold tracking-wide uppercase shadow-sm',
+          'inline-flex items-center shrink-0 whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-bold tracking-wide uppercase shadow-sm',
           config.className,
           isButton && 'cursor-pointer hover:opacity-90 transition-opacity',
           className

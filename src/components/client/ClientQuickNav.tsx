@@ -5,13 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 interface ClientQuickNavProps {
   currentTenantId: number;
   triggerClassName?: string;
+  /** "default" matches Button's h-10 default size (e.g. to sit next to ViewAsClientButton); "sm" (default) keeps the existing compact h-8 look. */
+  size?: "default" | "sm";
 }
 
-export function ClientQuickNav({ currentTenantId, triggerClassName }: ClientQuickNavProps) {
+export function ClientQuickNav({ currentTenantId, triggerClassName, size = "sm" }: ClientQuickNavProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [tenants, setTenants] = useState<{ id: number; name: string }[]>([]);
@@ -40,10 +43,10 @@ export function ClientQuickNav({ currentTenantId, triggerClassName }: ClientQuic
       <PopoverTrigger asChild>
         <Button
           variant={triggerClassName ? "ghost" : "outline"}
-          size={triggerClassName ? "default" : "sm"}
-          className={triggerClassName ?? "h-8 gap-1.5 text-xs font-normal"}
+          size={triggerClassName ? "default" : size}
+          className={triggerClassName ?? cn("gap-1.5 font-normal", size === "sm" ? "h-8 text-xs" : "text-sm")}
         >
-          <Search className={triggerClassName ? "h-4 w-4 opacity-60" : "h-3.5 w-3.5 opacity-60"} />
+          <Search className={cn(size === "sm" && !triggerClassName ? "h-3.5 w-3.5" : "h-4 w-4", "opacity-60")} />
           Jump to client…
         </Button>
       </PopoverTrigger>
