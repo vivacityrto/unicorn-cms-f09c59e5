@@ -141,7 +141,14 @@ export function MetricRow({
               title={hasThisWeekEntry ? 'Update this week\'s entry' : 'Record this week\'s result'}
             >
               {latestValue != null ? (
-                <span>{latestValue} <span className="text-xs font-normal text-muted-foreground">{metric.unit}</span></span>
+                <span>
+                  {latestValue} <span className="text-xs font-normal text-muted-foreground">{metric.unit}</span>
+                  {!hasThisWeekEntry && metric.latestEntry?.week_ending && (
+                    <span className="block text-[10px] font-normal text-muted-foreground italic">
+                      as of {format(new Date(metric.latestEntry.week_ending), 'MMM d')}
+                    </span>
+                  )}
+                </span>
               ) : (
                 <span className="text-muted-foreground text-xs italic hover:text-primary">+ Add</span>
               )}
