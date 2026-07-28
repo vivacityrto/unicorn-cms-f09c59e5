@@ -31,7 +31,7 @@ export default function EosRockAnalysis() {
   const canView = usePermission('eos.rock_analysis.view');
   const [activeTab, setActiveTab] = useState<'overview' | 'seats' | 'detail'>('overview');
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
-  if (!canView) return <Navigate to="/eos/overview" replace />;
+  if (!canView) return <Navigate to="/eos" replace />;
   
   const { data: availableQuarters, isLoading: quartersLoading } = useAvailableQuarters();
   const { data: summaries, isLoading: summariesLoading } = useQuarterlySummary();

@@ -53,7 +53,7 @@ export default function EosLeadershipDashboard() {
 
   // Gate Leadership Dashboard via permission matrix
   if (!canViewLeadership) {
-    return <Navigate to="/eos/overview" replace />;
+    return <Navigate to="/eos" replace />;
   }
 
   return (
