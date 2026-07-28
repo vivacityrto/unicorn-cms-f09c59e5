@@ -103,7 +103,7 @@ export function QuarterlyRocksSection({ rocks, isLoading, quarter, year }: Quart
                   {rock.issue && (
                     <div>
                       <p className="text-xs font-medium uppercase text-muted-foreground mb-1">Issue</p>
-                      <p className="text-sm">{rock.issue}</p>
+                      <p className="text-sm line-clamp-2">{rock.issue}</p>
                     </div>
                   )}
 
@@ -111,7 +111,7 @@ export function QuarterlyRocksSection({ rocks, isLoading, quarter, year }: Quart
                   {rock.outcome && (
                     <div>
                       <p className="text-xs font-medium uppercase text-muted-foreground mb-1">The problem this solves</p>
-                      <p className="text-sm">{rock.outcome}</p>
+                      <p className="text-sm line-clamp-2">{rock.outcome}</p>
                     </div>
                   )}
 
