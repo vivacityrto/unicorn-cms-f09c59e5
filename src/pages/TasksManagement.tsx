@@ -185,7 +185,7 @@ export default function TasksManagement() {
 
       // Fetch action items scoped to the current user
       const [{ data: clientActions }, { data: opsActions }] = await Promise.all([
-        supabase.from("client_action_items").select("id, title, description, priority, status, due_date, tenant_id, assignee_user_id, created_at, created_by_user_id, package_id").not('status', 'in', '("done","cancelled")').or(`owner_user_id.eq.${userId},assignee_user_id.eq.${userId}`),
+        supabase.from("client_action_items").select("id, title, description, priority, status, due_date, tenant_id, assignee_user_id, created_at, created_by, package_id").not('status', 'in', '("done","cancelled")').or(`owner_user_id.eq.${userId},assignee_user_id.eq.${userId}`),
         supabase.from("ops_work_items").select("id, title, description, priority, status, due_at, tenant_id, owner_user_uuid, created_at, created_by, package_instance_id").not('status', 'in', '("done","cancelled")').or(`owner_user_uuid.eq.${userId},created_by.eq.${userId}`),
       ]);
 
@@ -229,7 +229,7 @@ export default function TasksManagement() {
       const followerIds = [...new Set(tasksData?.flatMap((task: any) => task.followers || []).filter(Boolean))] as string[];
       const actionUserIds = [
         ...(clientActions || []).map((a: any) => a.assignee_user_id).filter(Boolean),
-        ...(clientActions || []).map((a: any) => a.created_by_user_id).filter(Boolean),
+        ...(clientActions || []).map((a: any) => a.created_by).filter(Boolean),
         ...(opsActions || []).map((a: any) => a.owner_user_uuid).filter(Boolean),
         ...(opsActions || []).map((a: any) => a.created_by).filter(Boolean),
       ];
@@ -294,14 +294,14 @@ export default function TasksManagement() {
           due_date: a.due_date || new Date().toISOString().slice(0, 10),
           status: a.status === 'open' ? 'not_started' : a.status,
           completed: a.status === 'done',
-          created_by: a.created_by_user_id,
+          created_by: a.created_by,
           followers: a.assignee_user_id ? [a.assignee_user_id] : [],
           created_at: a.created_at,
           tenant_name: tenantsMap.get(a.tenant_id) || "N/A",
           package_name: pkg?.name || null,
           package_created_at: pkg?.created_at || null,
           package_full_text: pkg?.full_text || null,
-          created_by_name: getUserName(a.created_by_user_id),
+          created_by_name: getUserName(a.created_by),
           follower_users: a.assignee_user_id ? [usersMap.get(a.assignee_user_id)].filter(Boolean) as any : [],
           file_paths: [],
           source: 'action' as const,
