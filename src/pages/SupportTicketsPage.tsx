@@ -152,10 +152,7 @@ export default function SupportTicketsPage() {
         style={{ background: 'linear-gradient(135deg, #7130A0 0%, #ED1878 100%)' }}
       >
         <div>
-          <h1
-            className="text-4xl font-normal text-white tracking-wide"
-            style={{ fontFamily: "'Anton', sans-serif" }}
-          >
+          <h1 className="text-4xl font-normal font-display text-white tracking-wide">
             Support Tickets
           </h1>
           <p className="text-sm text-white/75 mt-1">

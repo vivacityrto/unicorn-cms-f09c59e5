@@ -706,20 +706,17 @@ export default function MainDashboard() {
               </Avatar>
               <div className="min-w-0">
                 <h1
-                  className="text-foreground flex items-baseline gap-4 flex-wrap"
-                  style={{ fontFamily: "Anton, sans-serif", fontSize: "24px", lineHeight: 1.15 }}
+                  className="text-foreground font-display flex items-baseline gap-4 flex-wrap"
+                  style={{ fontSize: "24px", lineHeight: 1.15 }}
                 >
                   Welcome back, {firstName}!
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground bg-muted rounded-full px-2.5 py-1"
-                    style={{ fontFamily: "Calibri, sans-serif" }}
-                  >
+                  <span className="inline-flex items-center gap-1 font-sans text-xs font-normal text-muted-foreground bg-muted rounded-full px-2.5 py-1">
                     <CalendarClock className="h-3.5 w-3.5" /> {todayLabel}
                   </span>
                 </h1>
                 <p
                   className="text-muted-foreground mt-1.5"
-                  style={{ fontFamily: "Calibri, sans-serif", fontSize: "14px" }}
+                  style={{ fontSize: "14px" }}
                 >
                   Here's what's happening today.
                 </p>
