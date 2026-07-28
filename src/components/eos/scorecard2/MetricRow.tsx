@@ -20,7 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { format, startOfWeek } from 'date-fns';
+import { format, startOfWeek, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from './StatusBadge';
 import { TrendSparkline } from './TrendSparkline';
@@ -145,7 +145,7 @@ export function MetricRow({
                   {latestValue} <span className="text-xs font-normal text-muted-foreground">{metric.unit}</span>
                   {!hasThisWeekEntry && metric.latestEntry?.week_ending && (
                     <span className="block text-[10px] font-normal text-muted-foreground italic">
-                      as of {format(new Date(metric.latestEntry.week_ending), 'MMM d')}
+                      as of {format(parseISO(metric.latestEntry.week_ending), 'MMM d')}
                     </span>
                   )}
                 </span>
