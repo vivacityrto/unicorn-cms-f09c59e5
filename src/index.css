@@ -447,7 +447,7 @@
   
   /* Typography scale: 46 / 37 / 30 / 24 / 18 / 15 / 12 */
   h1 {
-    @apply font-display;
+    @apply font-heading;
     font-size: 1.875rem; /* 30px – Page title */
     font-weight: 600;
     line-height: 1.2;
