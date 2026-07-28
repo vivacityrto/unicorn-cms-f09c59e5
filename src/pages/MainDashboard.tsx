@@ -706,7 +706,7 @@ export default function MainDashboard() {
               </Avatar>
               <div className="min-w-0">
                 <h1
-                  className="text-foreground font-display flex items-baseline gap-4 flex-wrap"
+                  className="text-foreground flex items-baseline gap-4 flex-wrap"
                   style={{ fontSize: "24px", lineHeight: 1.15 }}
                 >
                   Welcome back, {firstName}!

@@ -14,7 +14,6 @@ import { LazyLoadFallback } from "./components/LazyLoadFallback";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ChunkErrorBoundary } from "./components/ChunkErrorBoundary";
 import { startVersionChecking, stopVersionChecking } from "./utils/versionCheck";
-import { useLegacyBrandingFlag } from "./hooks/useLegacyBrandingFlag";
 import { DevDiagnosticsPanel } from "./components/DevDiagnosticsPanel";
 import { CelebrationProvider } from "./components/ui/celebration";
 
@@ -273,23 +272,8 @@ function VersionGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/**
- * Applies/removes the `legacy-branding` class on <html> based on the
- * public_branding_config.legacy_branding_enabled flag, reverting the
- * Purple primary color + brand fonts back to Aqua + default fonts
- * without a redeploy. See useLegacyBrandingFlag.
- */
-function BrandingFlagGuard({ children }: { children: React.ReactNode }) {
-  const { enabled } = useLegacyBrandingFlag();
-  useEffect(() => {
-    document.documentElement.classList.toggle("legacy-branding", enabled);
-  }, [enabled]);
-  return <>{children}</>;
-}
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
-  <BrandingFlagGuard>
   <VersionGuard>
     <TooltipProvider>
       <Toaster />
@@ -1265,7 +1249,6 @@ const App = () => (
     </TooltipProvider>
     <DevDiagnosticsPanel />
   </VersionGuard>
-  </BrandingFlagGuard>
   </QueryClientProvider>
 );
 
