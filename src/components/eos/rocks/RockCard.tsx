@@ -175,7 +175,13 @@ export function RockCard({
               {hasStatusMilestoneMismatch && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                      aria-label={`Status doesn't match milestone progress: ${milestoneProgress}% of milestones complete`}
+                    >
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Status doesn't match milestone progress ({milestoneProgress}% of milestones complete)</p>
