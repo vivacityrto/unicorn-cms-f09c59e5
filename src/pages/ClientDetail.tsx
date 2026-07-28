@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -80,17 +80,6 @@ interface TenantBasic {
   complyhub_membership_tier?: string | null;
 }
 
-// Less-frequently-used tabs, tucked behind a "More" menu instead of a
-// horizontally-scrolling tab strip.
-const MORE_TABS = [
-  { value: 'sharepoint', label: 'Client Files', icon: FolderOpen },
-  { value: 'timeline', label: 'Timeline', icon: Activity },
-  { value: 'logins', label: 'Login History', icon: LogIn },
-  { value: 'integrations', label: 'Integrations', icon: Link2 },
-  { value: 'time', label: 'Time', icon: Clock },
-] as const;
-const MORE_TAB_VALUES: string[] = MORE_TABS.map((t) => t.value);
-
 export default function ClientDetail() {
   const { tenantId } = useParams();
   const navigate = useNavigate();
@@ -99,7 +88,6 @@ export default function ClientDetail() {
   const [tenant, setTenant] = useState<TenantBasic | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'overview');
-  const activeMoreTab = MORE_TABS.find((t) => t.value === activeTab);
 
   // Sync activeTab when URL search params change (e.g. from View Task navigation)
   useEffect(() => {
@@ -135,11 +123,114 @@ export default function ClientDetail() {
     updateRegistryLink 
   } = useClientProfile(tenantIdNum);
   
-  const { 
-    packages, 
-    loading: packagesLoading, 
-    refreshPackages 
+  const {
+    packages,
+    loading: packagesLoading,
+    refreshPackages
   } = useClientPackages(tenantIdNum);
+
+  // All client detail tabs, in priority order. As many as fit the available
+  // width render directly; the rest collapse into a "More" menu - measured
+  // dynamically (see tabsRowRef effect below) so widening the window (or
+  // collapsing the sidebar) reveals more tabs instead of a fixed split.
+  const incompletePackagesCount = packages.filter(p => !p.is_complete).length;
+  const ALL_TABS = [
+    { value: 'overview', icon: Building2, label: 'Overview' as React.ReactNode },
+    { value: 'packages', icon: Package2, label: `Packages (${incompletePackagesCount})` as React.ReactNode },
+    { value: 'documents', icon: FileText, label: 'Documents' as React.ReactNode },
+    { value: 'users', icon: Users, label: `Users${userCount !== null ? ` (${userCount})` : ''}` as React.ReactNode },
+    {
+      value: 'notes', icon: StickyNote, label: 'Notes' as React.ReactNode,
+      badge: (
+        <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 h-4 border-amber-500/50 text-amber-600">
+          <ShieldAlert className="h-2.5 w-2.5 mr-0.5" />
+          Internal
+        </Badge>
+      ),
+    },
+    { value: 'actions', icon: CheckSquare, label: 'Actions' as React.ReactNode },
+    { value: 'audits', icon: ClipboardCheck, label: 'Audits' as React.ReactNode },
+    { value: 'emails', icon: Mail, label: 'Emails' as React.ReactNode },
+    {
+      value: 'messages', icon: MessageSquare, label: 'Messages' as React.ReactNode,
+      badge: messagesUnread > 0 ? (
+        <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#ED1878] text-white text-[10px] font-semibold leading-none">
+          {messagesUnread > 9 ? '9+' : messagesUnread}
+        </span>
+      ) : null,
+    },
+    { value: 'sharepoint', icon: FolderOpen, label: 'Client Files' as React.ReactNode },
+    { value: 'timeline', icon: Activity, label: 'Timeline' as React.ReactNode },
+    { value: 'logins', icon: LogIn, label: 'Login History' as React.ReactNode },
+    { value: 'integrations', icon: Link2, label: 'Integrations' as React.ReactNode },
+    { value: 'time', icon: Clock, label: 'Time' as React.ReactNode },
+  ];
+
+  // A state-backed callback ref (rather than a plain useRef) so the
+  // measurement effect below reliably reruns the moment this element
+  // actually mounts - this page renders a loading skeleton in place of the
+  // real tab strip until data arrives, so a plain ref could stay null
+  // through the effect's first (and only, if its other deps happen not to
+  // change at the same moment) run.
+  const [tabsRowEl, setTabsRowEl] = useState<HTMLDivElement | null>(null);
+  const tabMeasureRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const moreMeasureRef = useRef<HTMLButtonElement>(null);
+  const moreActiveMeasureRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [visibleTabCount, setVisibleTabCount] = useState(ALL_TABS.length);
+
+  useLayoutEffect(() => {
+    if (!tabsRowEl) return;
+
+    const GAP = 16; // matches gap-4 on the tab row
+
+    const recompute = () => {
+      const containerWidth = tabsRowEl.clientWidth;
+      const widths = tabMeasureRefs.current.map((el) => el?.offsetWidth ?? 0);
+      // The "More" trigger isn't always the short "More" label - when the
+      // active tab is one of the overflow ones, it swaps in that tab's own
+      // icon+label instead (e.g. "Login History"), which can be wider. Use
+      // whichever is widest so the reserved budget never comes up short.
+      const moreWidth = Math.max(
+        moreMeasureRef.current?.offsetWidth ?? 90,
+        ...moreActiveMeasureRefs.current.map((el) => el?.offsetWidth ?? 0),
+      );
+
+      // If every tab fits on its own, show them all - no need to reserve
+      // room for "More" at all. Only once we know some tabs won't fit does
+      // reserving moreWidth on every candidate become correct; reserving it
+      // unconditionally (including on the case where nothing needs to
+      // overflow) was leaving fitting tabs stranded behind "More" with dead
+      // space next to it - the exact thing this fix exists to prevent.
+      const fullTotal = widths.reduce((sum, w, i) => sum + w + (i > 0 ? GAP : 0), 0);
+      if (fullTotal <= containerWidth) {
+        setVisibleTabCount(widths.length);
+        return;
+      }
+
+      let total = 0;
+      let count = 0;
+      for (let i = 0; i < widths.length; i++) {
+        const withThis = total + widths[i] + (i > 0 ? GAP : 0);
+        if (withThis + GAP + moreWidth <= containerWidth) {
+          total = withThis;
+          count = i + 1;
+        } else {
+          break;
+        }
+      }
+      setVisibleTabCount(count);
+    };
+
+    recompute();
+    const resizeObserver = new ResizeObserver(recompute);
+    resizeObserver.observe(tabsRowEl);
+    return () => resizeObserver.disconnect();
+    // Re-measure whenever tab labels can change width (counts/badges change).
+  }, [tabsRowEl, incompletePackagesCount, userCount, messagesUnread]);
+
+  const visibleTabs = ALL_TABS.slice(0, visibleTabCount);
+  const moreTabs = ALL_TABS.slice(visibleTabCount);
+  const activeMoreTab = moreTabs.find((t) => t.value === activeTab);
 
   // Get user's role for this tenant
   const { isSuperAdmin: checkSuperAdmin, hasTenantAdmin } = useAuth();
@@ -462,114 +553,103 @@ export default function ClientDetail() {
         {/* Tabs */}
         <div className="px-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="flex items-center gap-4">
-              <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4 min-w-0 flex-1 overflow-x-auto scrollbar-thin flex-nowrap">
-                <TabsTrigger
-                  value="overview"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-                >
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger
-                  value="packages"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-                >
-                  <Package2 className="h-4 w-4 mr-2" />
-                  Packages ({packages.filter(p => !p.is_complete).length})
-                </TabsTrigger>
-                <TabsTrigger
-                  value="documents"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Documents
-                </TabsTrigger>
-                <TabsTrigger
-                  value="users"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Users{userCount !== null ? ` (${userCount})` : ''}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="notes"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-                >
-                  <StickyNote className="h-4 w-4 mr-2" />
-                  Notes
-                  <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 h-4 border-amber-500/50 text-amber-600">
-                    <ShieldAlert className="h-2.5 w-2.5 mr-0.5" />
-                    Internal
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="actions"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-                >
-                  <CheckSquare className="h-4 w-4 mr-2" />
-                  Actions
-                </TabsTrigger>
-                <TabsTrigger
-                  value="audits"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-                >
-                  <ClipboardCheck className="h-4 w-4 mr-2" />
-                  Audits
-                </TabsTrigger>
-                <TabsTrigger
-                  value="emails"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Emails
-                </TabsTrigger>
-                <TabsTrigger
-                  value="messages"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Messages
-                  {messagesUnread > 0 && (
-                    <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#ED1878] text-white text-[10px] font-semibold leading-none">
-                      {messagesUnread > 9 ? '9+' : messagesUnread}
-                    </span>
-                  )}
-                </TabsTrigger>
+            <div ref={setTabsRowEl} className="flex items-center gap-4 min-w-0">
+              <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4 min-w-0">
+                {visibleTabs.map((t) => (
+                  <TabsTrigger
+                    key={t.value}
+                    value={t.value}
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                  >
+                    <t.icon className="h-4 w-4 mr-2" />
+                    {t.label}
+                    {t.badge}
+                  </TabsTrigger>
+                ))}
               </TabsList>
 
-              {/* Overflow menu: less-frequently-used tabs, avoids a horizontal-scrolling tab strip */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      'flex items-center gap-1.5 text-sm font-medium px-1 pb-3 rounded-none bg-transparent border-b-2 transition-colors shrink-0',
-                      MORE_TAB_VALUES.includes(activeTab)
-                        ? 'border-primary text-foreground'
-                        : 'border-transparent text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    {activeMoreTab ? (
-                      <>
-                        <activeMoreTab.icon className="h-4 w-4" />
-                        {activeMoreTab.label}
-                      </>
-                    ) : (
-                      'More'
-                    )}
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {MORE_TABS.map((t) => (
-                    <DropdownMenuItem key={t.value} onClick={() => setActiveTab(t.value)}>
-                      <t.icon className="h-4 w-4 mr-2" />
-                      {t.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Overflow menu: whichever tabs don't fit the available width, so the
+                  strip never scrolls or silently clips - see the width-measurement
+                  effect above for how many tabs render directly vs. land here. */}
+              {moreTabs.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        'flex items-center gap-1.5 text-sm font-medium px-1 pb-3 rounded-none bg-transparent border-b-2 transition-colors shrink-0',
+                        activeMoreTab
+                          ? 'border-primary text-foreground'
+                          : 'border-transparent text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {activeMoreTab ? (
+                        <>
+                          <activeMoreTab.icon className="h-4 w-4" />
+                          {activeMoreTab.label}
+                          {activeMoreTab.badge}
+                        </>
+                      ) : (
+                        'More'
+                      )}
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {moreTabs.map((t) => (
+                      <DropdownMenuItem key={t.value} onClick={() => setActiveTab(t.value)}>
+                        <t.icon className="h-4 w-4 mr-2" />
+                        {t.label}
+                        {t.badge}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+
+            {/* Hidden clones used only to measure each tab's natural rendered
+                width - never shown, kept in sync with the real tab content above
+                so the width-measurement effect stays accurate. */}
+            <div aria-hidden className="absolute invisible h-0 overflow-hidden flex items-center gap-4 pointer-events-none">
+              {ALL_TABS.map((t, i) => (
+                <button
+                  key={t.value}
+                  ref={(el) => { tabMeasureRefs.current[i] = el; }}
+                  type="button"
+                  tabIndex={-1}
+                  className="inline-flex items-center whitespace-nowrap text-sm font-medium px-1 pb-3"
+                >
+                  <t.icon className="h-4 w-4 mr-2" />
+                  {t.label}
+                  {t.badge}
+                </button>
+              ))}
+              <button
+                ref={moreMeasureRef}
+                type="button"
+                tabIndex={-1}
+                className="flex items-center gap-1.5 text-sm font-medium px-1 pb-3"
+              >
+                More <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+              {/* One clone per tab, matching the "More" trigger's own markup exactly,
+                  so its widest possible state (showing an active overflow tab's icon
+                  + label instead of the plain "More" text) is also accounted for. */}
+              {ALL_TABS.map((t, i) => (
+                <button
+                  key={`more-${t.value}`}
+                  ref={(el) => { moreActiveMeasureRefs.current[i] = el; }}
+                  type="button"
+                  tabIndex={-1}
+                  className="flex items-center gap-1.5 text-sm font-medium px-1 pb-3"
+                >
+                  <t.icon className="h-4 w-4" />
+                  {t.label}
+                  {t.badge}
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              ))}
             </div>
           </Tabs>
         </div>
