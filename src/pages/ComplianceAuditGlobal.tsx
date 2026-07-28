@@ -41,7 +41,7 @@ const ComplianceAuditGlobal = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
 
-  const { data: audits = [], isLoading } = useQuery({
+  const { data: audits = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['compliance-audits-global'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -53,7 +53,7 @@ const ComplianceAuditGlobal = () => {
           audit_date,
           score_pct,
           created_at,
-          tenants!inner(company_name),
+          tenants!inner(name),
           compliance_templates!inner(name)
         `)
         .order('created_at', { ascending: false });
@@ -67,7 +67,7 @@ const ComplianceAuditGlobal = () => {
         audit_date: row.audit_date,
         score_pct: row.score_pct,
         created_at: row.created_at,
-        tenant_name: row.tenants?.company_name ?? 'Unknown',
+        tenant_name: row.tenants?.name ?? 'Unknown',
         template_name: row.compliance_templates?.name ?? 'Unknown',
       })) as AuditRow[];
     },
@@ -101,7 +101,12 @@ const ComplianceAuditGlobal = () => {
           />
         </div>
 
-        {isLoading ? (
+        {isError ? (
+          <div className="flex flex-col items-center justify-center py-8 gap-4">
+            <p className="text-muted-foreground">Failed to load audits. Please try again.</p>
+            <Button variant="outline" onClick={() => refetch()}>Retry</Button>
+          </div>
+        ) : isLoading ? (
           <div className="text-muted-foreground py-8 text-center">Loading audits…</div>
         ) : filtered.length === 0 ? (
           <div className="text-muted-foreground py-8 text-center">
