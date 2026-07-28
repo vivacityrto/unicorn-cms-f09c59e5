@@ -463,7 +463,7 @@ export default function ClientDetail() {
         <div className="px-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex items-center gap-4">
-              <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4">
+              <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4 min-w-0 flex-1 overflow-x-auto scrollbar-thin flex-nowrap">
                 <TabsTrigger
                   value="overview"
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
