@@ -15,7 +15,7 @@ export default function EosClientImpact() {
   const navigate = useNavigate();
   const canView = usePermission('eos.client_impact.view');
   const [activeTab, setActiveTab] = useState<'all' | 'published' | 'draft'>('all');
-  if (!canView) return <Navigate to="/eos/overview" replace />;
+  if (!canView) return <Navigate to="/eos" replace />;
   
   const { data: reports, isLoading } = useClientImpactReports();
   const generateReport = useGenerateImpactReport();

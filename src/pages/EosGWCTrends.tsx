@@ -8,7 +8,7 @@ import { usePermission } from '@/hooks/usePermission';
 
 export default function EosGWCTrends() {
   const canView = usePermission('eos.gwc_trends.view');
-  if (!canView) return <Navigate to="/eos/overview" replace />;
+  if (!canView) return <Navigate to="/eos" replace />;
 
   return (
     <DashboardLayout>
