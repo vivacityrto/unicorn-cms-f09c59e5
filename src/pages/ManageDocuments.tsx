@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollableTableWrapper } from "@/components/ui/scrollable-table-wrapper";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -1809,7 +1810,7 @@ export default function ManageDocuments() {
       )}
 
       {/* Documents Table */}
-      <div className="rounded-lg border-0 bg-card shadow-lg overflow-x-auto">
+      <ScrollableTableWrapper className="rounded-lg border-0 bg-card shadow-lg">
           <Table className="min-w-[1600px]">
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
@@ -2064,7 +2065,7 @@ export default function ManageDocuments() {
           })}
             </TableBody>
           </Table>
-      </div>
+      </ScrollableTableWrapper>
 
       {/* Pagination */}
       {filteredDocuments.length > 0 && <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
