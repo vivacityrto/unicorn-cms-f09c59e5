@@ -73,8 +73,8 @@ export default {
 				   latter collides with the `card` color token and Tailwind silently
 				   generates a shadow-color utility with the same class name that
 				   wins the cascade, rendering the shadow as invisible white. */
-				'elevated': '0 1px 3px rgb(0 0 0 / 0.10), 0 6px 16px -4px rgb(0 0 0 / 0.12)',
-				'elevated-hover': '0 4px 8px rgb(0 0 0 / 0.12), 0 16px 32px -8px rgb(0 0 0 / 0.18)',
+				'elevated': '0 1px 2px rgb(0 0 0 / 0.06), 0 4px 12px -4px rgb(0 0 0 / 0.08)',
+				'elevated-hover': '0 2px 6px rgb(0 0 0 / 0.08), 0 12px 24px -8px rgb(0 0 0 / 0.12)',
 			},
 			transitionTimingFunction: {
 				'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
