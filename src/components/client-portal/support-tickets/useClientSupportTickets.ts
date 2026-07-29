@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientPreview } from '@/contexts/ClientPreviewContext';
 
 export interface ClientTicketRow {
   id: string;
@@ -32,16 +33,23 @@ const SELECT = `
 
 export function useClientSupportTickets() {
   const { user } = useAuth();
+  const { isPreviewMode, actingUserId } = useClientPreview();
+  // Impersonation never swaps the real Supabase auth session — it only sets
+  // actingUserId in ClientPreviewContext. Reading tickets against the real
+  // staff user.id here would surface the staff member's own internal
+  // tickets instead of the impersonated client's. Never fall back to the
+  // staff id while in preview mode with no acting user resolved.
+  const effectiveUserId = isPreviewMode ? actingUserId : user?.id ?? null;
   return useQuery({
-    queryKey: ['client-support-tickets', user?.id],
-    enabled: !!user?.id,
+    queryKey: ['client-support-tickets', effectiveUserId],
+    enabled: !!effectiveUserId,
     staleTime: 30_000,
     queryFn: async (): Promise<ClientTicketRow[]> => {
       const { data, error } = await supabase
         .from('suggest_items')
         .select(SELECT)
         .eq('is_deleted', false)
-        .eq('reported_by', user!.id)
+        .eq('reported_by', effectiveUserId!)
         .order('created_at', { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as ClientTicketRow[];
@@ -51,15 +59,18 @@ export function useClientSupportTickets() {
 
 export function useClientSupportTicket(id: string | undefined) {
   const { user } = useAuth();
+  const { isPreviewMode, actingUserId } = useClientPreview();
+  const effectiveUserId = isPreviewMode ? actingUserId : user?.id ?? null;
   return useQuery({
-    queryKey: ['client-support-ticket', id, user?.id],
-    enabled: !!id && !!user?.id,
+    queryKey: ['client-support-ticket', id, effectiveUserId],
+    enabled: !!id && !!effectiveUserId,
     queryFn: async (): Promise<ClientTicketRow | null> => {
       const { data, error } = await supabase
         .from('suggest_items')
         .select(SELECT)
         .eq('id', id!)
         .eq('is_deleted', false)
+        .eq('reported_by', effectiveUserId!)
         .maybeSingle();
       if (error) throw error;
       return (data as unknown as ClientTicketRow) ?? null;
