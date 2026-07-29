@@ -37,26 +37,41 @@ import { toast as sonnerToast } from 'sonner';
 import { BulkGenerateButton } from '@/components/documents/bulk-generate/BulkGenerateButton';
 import { DocumentAdditionalStagesField } from '@/components/documents/DocumentAdditionalStagesField';
 
-// Default Stage preference for new documents — stored per-browser (no
-// per-user preference table exists for this yet). Falls back to
-// "RTO Documentation - 2025" (stage id 1114) until a staff member sets
-// their own default via the gear icon next to the Stage field.
-const DEFAULT_STAGE_STORAGE_KEY = 'manage_documents_default_stage_id';
-const FALLBACK_DEFAULT_STAGE_ID = '1114';
-
-const getDefaultStageId = (): string => {
-  try {
-    return localStorage.getItem(DEFAULT_STAGE_STORAGE_KEY) || FALLBACK_DEFAULT_STAGE_ID;
-  } catch {
-    return FALLBACK_DEFAULT_STAGE_ID;
-  }
+// Default Stage preference for new documents, keyed by Framework Type —
+// stored per-browser (no per-user preference table exists for this yet).
+// "" is the fallback used when no framework is derived/selected. RTO ships
+// with a confident out-of-the-box default ("RTO Documentation - 2025", id
+// 1114); GTO/CRICOS deliberately ship with no default — the stages table
+// has several ambiguous legacy duplicates for both (e.g. "GTO Documents"
+// vs "GTO Documents - NSW/VIC", "CRICOS Documentation" vs "(v2)") with no
+// unique unambiguous pick, so guessing would be worse than leaving it for
+// staff to configure via the gear icon next to the Stage field.
+const DEFAULT_STAGE_BY_FRAMEWORK_STORAGE_KEY = 'manage_documents_default_stage_by_framework';
+const FALLBACK_DEFAULT_STAGE_BY_FRAMEWORK: Record<string, string> = {
+  '': '',
+  RTO: '1114',
+  GTO: '',
+  CRICOS: '',
 };
 
-const setDefaultStageId = (id: string): void => {
+const getDefaultStageMap = (): Record<string, string> => {
   try {
-    localStorage.setItem(DEFAULT_STAGE_STORAGE_KEY, id);
+    const raw = localStorage.getItem(DEFAULT_STAGE_BY_FRAMEWORK_STORAGE_KEY);
+    if (raw) return { ...FALLBACK_DEFAULT_STAGE_BY_FRAMEWORK, ...JSON.parse(raw) };
   } catch {
-    // localStorage unavailable (private mode) — default just won't persist
+    // malformed JSON or localStorage unavailable — fall through to defaults
+  }
+  return { ...FALLBACK_DEFAULT_STAGE_BY_FRAMEWORK };
+};
+
+const getDefaultStageIdForFramework = (frameworkValue: string | null | undefined): string =>
+  getDefaultStageMap()[frameworkValue || ''] || '';
+
+const setDefaultStageMap = (map: Record<string, string>): void => {
+  try {
+    localStorage.setItem(DEFAULT_STAGE_BY_FRAMEWORK_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // localStorage unavailable (private mode) — defaults just won't persist
   }
 };
 
@@ -129,52 +144,70 @@ interface Document {
 }
 
 // Gear icon next to the Stage field — lets staff set which stage new
-// documents default to (see getDefaultStageId/setDefaultStageId above).
-// Only configures the future default; it never touches the form currently
-// open, so setting it mid-create doesn't surprise-change the document being
-// created right now.
-function DefaultStageSettingButton({ stagesList }: { stagesList: { id: number; name: string }[] | undefined }) {
+// documents default to, per Framework Type (see getDefaultStageMap/
+// setDefaultStageMap above). Only configures the future defaults; it never
+// touches the form currently open, so setting it mid-create doesn't
+// surprise-change the document being created right now.
+function DefaultStageSettingButton({
+  stagesList,
+  frameworks,
+}: {
+  stagesList: { id: number; name: string }[] | undefined;
+  frameworks: { value: string; label: string }[] | undefined;
+}) {
   const [open, setOpen] = useState(false);
-  const [pendingId, setPendingId] = useState(() => getDefaultStageId());
+  const [pending, setPending] = useState<Record<string, string>>(() => getDefaultStageMap());
+
+  const rows = [{ key: '', label: 'No framework detected' }, ...(frameworks || []).map((f) => ({ key: f.value, label: f.label }))];
 
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setPendingId(getDefaultStageId()); }}>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setPending(getDefaultStageMap()); }}>
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="ghost"
           size="icon"
           className="h-5 w-5 text-muted-foreground hover:text-foreground"
-          title="Set default stage for new documents"
+          title="Set default stage per framework type"
         >
           <Settings2 className="h-3.5 w-3.5" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 space-y-3" align="start">
+      <PopoverContent className="w-80 space-y-3" align="start">
         <div>
-          <p className="text-sm font-medium">Default stage for new documents</p>
+          <p className="text-sm font-medium">Default stage by framework</p>
           <p className="text-xs text-muted-foreground">
-            Pre-selected on the Stage field whenever you create a document. Saved on this browser only.
+            Pre-selected on the Stage field based on the document's Framework Type. Saved on this browser only.
           </p>
         </div>
-        <Select value={pendingId || '__none__'} onValueChange={(v) => setPendingId(v === '__none__' ? '' : v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="None" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">None</SelectItem>
-            {stagesList?.map((s) => (
-              <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="space-y-2">
+          {rows.map((row) => (
+            <div key={row.key} className="grid gap-1">
+              <Label className="text-xs text-muted-foreground">{row.label}</Label>
+              <Select
+                value={pending[row.key] || '__none__'}
+                onValueChange={(v) => setPending((prev) => ({ ...prev, [row.key]: v === '__none__' ? '' : v }))}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {stagesList?.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
         <Button
           type="button"
           size="sm"
           className="w-full"
-          onClick={() => { setDefaultStageId(pendingId); setOpen(false); }}
+          onClick={() => { setDefaultStageMap(pending); setOpen(false); }}
         >
-          Save as default
+          Save defaults
         </Button>
       </PopoverContent>
     </Popover>
@@ -334,7 +367,7 @@ export default function ManageDocuments() {
     isclientdoc: false,
     categories: [] as string[],
     framework_type: "" as string,
-    stage: getDefaultStageId() as string,
+    stage: getDefaultStageIdForFramework(null) as string,
     standard_set: "",
     is_core: true,
     is_tenant_downloadable: true,
@@ -864,6 +897,7 @@ export default function ManageDocuments() {
 
     const matchedFrameworkValue = deriveFrameworkFromRootFolder(rootFolderName, frameworks || []);
     const matchedFramework = (frameworks || []).find((f: any) => f.value === matchedFrameworkValue);
+    const frameworkStageDefault = getDefaultStageIdForFramework(matchedFrameworkValue);
 
     setFormData((prev) => ({
       ...prev,
@@ -871,6 +905,7 @@ export default function ManageDocuments() {
       format: derivedFormat,
       categories: matchedCategory ? [matchedCategory.id.toString()] : prev.categories,
       framework_type: matchedFrameworkValue || prev.framework_type,
+      stage: frameworkStageDefault || prev.stage,
       versionlastupdated: new Date(),
     }));
     setCreateStep('metadata');
@@ -1020,7 +1055,7 @@ export default function ManageDocuments() {
         isclientdoc: false,
         categories: [],
         framework_type: "",
-        stage: getDefaultStageId(),
+        stage: getDefaultStageIdForFramework(null),
         standard_set: "",
         is_core: true,
         is_tenant_downloadable: true,
@@ -1449,7 +1484,7 @@ export default function ManageDocuments() {
               isclientdoc: false,
               categories: [],
               framework_type: "",
-              stage: getDefaultStageId(),
+              stage: getDefaultStageIdForFramework(null),
               standard_set: "",
               is_core: true,
               is_tenant_downloadable: true,
@@ -1656,7 +1691,7 @@ export default function ManageDocuments() {
                   <div className="grid gap-2">
                     <Label className="flex items-center gap-1.5">
                       Stage (Template Association)
-                      <DefaultStageSettingButton stagesList={stagesList as any} />
+                      <DefaultStageSettingButton stagesList={stagesList as any} frameworks={frameworks} />
                     </Label>
                     <Select
                       value={formData.stage || '__none__'}
