@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Users, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -109,47 +110,49 @@ export function TeamCapacityWidget() {
               </Alert>
             )}
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Consultant</TableHead>
-                  <TableHead className="text-xs text-right">Capacity %</TableHead>
-                  <TableHead className="text-xs text-right">High Risk</TableHead>
-                  <TableHead className="text-xs text-right">Overdue</TableHead>
-                  <TableHead className="text-xs">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {consultants.slice(0, 15).map((c: any) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="text-xs font-medium">{c.consultant_name}</TableCell>
-                    <TableCell className={cn(
-                      'text-xs text-right font-medium',
-                      c.capacity_utilisation_percentage >= 100 && 'text-destructive'
-                    )}>
-                      {c.capacity_utilisation_percentage}%
-                    </TableCell>
-                    <TableCell className={cn(
-                      'text-xs text-right',
-                      c.high_risk_stages_count > 0 && 'text-destructive'
-                    )}>
-                      {c.high_risk_stages_count}
-                    </TableCell>
-                    <TableCell className={cn(
-                      'text-xs text-right',
-                      c.overdue_tasks_count > 0 && 'text-destructive'
-                    )}>
-                      {c.overdue_tasks_count}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn('text-[10px]', STATUS_BADGE[c.overload_risk_status])}>
-                        {c.overload_risk_status}
-                      </Badge>
-                    </TableCell>
+            <ScrollableTableWrapper>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Consultant</TableHead>
+                    <TableHead className="text-xs text-right">Capacity %</TableHead>
+                    <TableHead className="text-xs text-right">High Risk</TableHead>
+                    <TableHead className="text-xs text-right">Overdue</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {consultants.slice(0, 15).map((c: any) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="text-xs font-medium">{c.consultant_name}</TableCell>
+                      <TableCell className={cn(
+                        'text-xs text-right font-medium',
+                        c.capacity_utilisation_percentage >= 100 && 'text-destructive'
+                      )}>
+                        {c.capacity_utilisation_percentage}%
+                      </TableCell>
+                      <TableCell className={cn(
+                        'text-xs text-right',
+                        c.high_risk_stages_count > 0 && 'text-destructive'
+                      )}>
+                        {c.high_risk_stages_count}
+                      </TableCell>
+                      <TableCell className={cn(
+                        'text-xs text-right',
+                        c.overdue_tasks_count > 0 && 'text-destructive'
+                      )}>
+                        {c.overdue_tasks_count}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn('text-[10px]', STATUS_BADGE[c.overload_risk_status])}>
+                          {c.overload_risk_status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollableTableWrapper>
           </div>
         )}
       </CardContent>

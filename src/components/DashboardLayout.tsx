@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download, Gauge, Activity, AlertTriangle, Radar, Compass, Network, UserPlus } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronUp, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download, Gauge, Activity, AlertTriangle, Radar, Compass, Network, UserPlus } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -181,8 +181,11 @@ export const DashboardLayout = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => typeof window === "undefined" || window.innerWidth >= 768
+  );
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+  const [showScrollUpIndicator, setShowScrollUpIndicator] = useState(false);
   const [sectionsOpen, setSectionsOpen] = useState({
     work: false,
     clients: false,
@@ -241,7 +244,9 @@ export const DashboardLayout = ({
     const element = e.currentTarget;
     const hasScroll = element.scrollHeight > element.clientHeight;
     const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10;
+    const isAtTop = element.scrollTop <= 10;
     setShowScrollIndicator(hasScroll && !isAtBottom);
+    setShowScrollUpIndicator(hasScroll && !isAtTop);
   };
 
   // Determine if we should show Vivacity Team menu or Client menu
@@ -497,6 +502,12 @@ export const DashboardLayout = ({
           className="flex-1 py-4 overflow-y-auto scrollbar-hide relative"
           onScroll={checkScrollable}
         >
+          {/* Scroll Up Indicator */}
+          {showScrollUpIndicator && (
+            <div className="sticky top-0 left-1/2 w-5 -translate-x-1/2 pointer-events-none animate-bounce z-10">
+              <ChevronUp className={`w-5 h-5 ${showVivacityMenu ? "text-white/60" : "text-secondary/40"}`} />
+            </div>
+          )}
           {showVivacityMenu ? (
             <>
               {/* 1. WORK Section - All Vivacity Team */}
