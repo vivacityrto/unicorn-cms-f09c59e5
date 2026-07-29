@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, Clock, AlertTriangle, Search, Calendar, CheckCheck, X, Plus, AlertCircle, ListTodo, CalendarIcon, ClipboardList, CalendarClock, Upload, File as FileIcon, Building, Download, User, UserCheck, Pencil, Trash2, Users, NotebookPen } from "lucide-react";
-import TaskNotesSidebar from "@/components/TaskNotesSidebar";
+import { CheckCircle2, Clock, AlertTriangle, Search, Calendar, CheckCheck, X, Plus, AlertCircle, ListTodo, CalendarIcon, ClipboardList, CalendarClock, Upload, File as FileIcon, Building, Download, User, UserCheck, Pencil, Trash2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollableTableWrapper } from "@/components/ui/scrollable-table-wrapper";
@@ -69,7 +68,6 @@ export default function TasksManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
@@ -583,10 +581,6 @@ export default function TasksManagement() {
           <p className="text-muted-foreground">View and manage your tasks</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsNotesOpen(o => !o)}>
-            <NotebookPen className="h-4 w-4 mr-2" />
-            Notes
-          </Button>
           <Dialog open={isCreateDialogOpen} onOpenChange={open => {
           setIsCreateDialogOpen(open);
           if (!open) {
@@ -1816,8 +1810,5 @@ export default function TasksManagement() {
         </SheetContent>
       </Sheet>
       </main>
-      {isNotesOpen && user?.id && (
-        <TaskNotesSidebar isOpen={isNotesOpen} onClose={() => setIsNotesOpen(false)} userId={user.id} />
-      )}
     </div>;
 }
