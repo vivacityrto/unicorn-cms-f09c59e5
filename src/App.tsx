@@ -703,15 +703,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/admin/email-templates"
-              element={
-                <ProtectedRoute>
-                  <ManageEmailTemplatesWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
+            <Route
               path="/team-settings" 
               element={
                 <ProtectedRoute>
