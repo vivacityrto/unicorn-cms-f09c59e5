@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off, ExternalLink } from "lucide-react";
+import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off, ExternalLink, Settings2, Loader2, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { Combobox } from "@/components/ui/combobox";
@@ -36,6 +36,76 @@ import { SharePointTemplateBrowser, type SelectedTemplate } from '@/components/d
 import { toast as sonnerToast } from 'sonner';
 import { BulkGenerateButton } from '@/components/documents/bulk-generate/BulkGenerateButton';
 import { DocumentAdditionalStagesField } from '@/components/documents/DocumentAdditionalStagesField';
+
+// Default Stage preference for new documents, keyed by Framework Type —
+// stored per-browser (no per-user preference table exists for this yet).
+// "" is the fallback used when no framework is derived/selected. RTO ships
+// with a confident out-of-the-box default ("RTO Documentation - 2025", id
+// 1114); GTO/CRICOS deliberately ship with no default — the stages table
+// has several ambiguous legacy duplicates for both (e.g. "GTO Documents"
+// vs "GTO Documents - NSW/VIC", "CRICOS Documentation" vs "(v2)") with no
+// unique unambiguous pick, so guessing would be worse than leaving it for
+// staff to configure via the gear icon next to the Stage field.
+const DEFAULT_STAGE_BY_FRAMEWORK_STORAGE_KEY = 'manage_documents_default_stage_by_framework';
+const FALLBACK_DEFAULT_STAGE_BY_FRAMEWORK: Record<string, string> = {
+  '': '',
+  RTO: '1114',
+  GTO: '',
+  CRICOS: '',
+};
+
+const getDefaultStageMap = (): Record<string, string> => {
+  try {
+    const raw = localStorage.getItem(DEFAULT_STAGE_BY_FRAMEWORK_STORAGE_KEY);
+    if (raw) return { ...FALLBACK_DEFAULT_STAGE_BY_FRAMEWORK, ...JSON.parse(raw) };
+  } catch {
+    // malformed JSON or localStorage unavailable — fall through to defaults
+  }
+  return { ...FALLBACK_DEFAULT_STAGE_BY_FRAMEWORK };
+};
+
+const getDefaultStageIdForFramework = (frameworkValue: string | null | undefined): string =>
+  getDefaultStageMap()[frameworkValue || ''] || '';
+
+const setDefaultStageMap = (map: Record<string, string>): void => {
+  try {
+    localStorage.setItem(DEFAULT_STAGE_BY_FRAMEWORK_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // localStorage unavailable (private mode) — defaults just won't persist
+  }
+};
+
+// Derives a category from a filename's leading code token (e.g. "CP" in
+// "CP.S3-Validation-Credentials-Policy-2026.03.00") by matching it against
+// the first segment of each category's slug (dd_document_categories.value,
+// e.g. "cp-credential_policy" -> "cp"). Only auto-selects on a unique match —
+// several categories share a prefix (the GTO/CRICOS sub-categories), and
+// guessing wrong is worse than leaving it for the user to pick.
+const deriveCategoryFromFilename = (
+  fileName: string,
+  categoryOptions: { id: string; name: string }[],
+): string | null => {
+  const match = fileName.match(/^([A-Za-z0-9]+)[.\-_]/);
+  if (!match) return null;
+  const code = match[1].toLowerCase();
+  const matches = categoryOptions.filter((c) => c.id.split(/[-_]/)[0].toLowerCase() === code);
+  return matches.length === 1 ? matches[0].id : null;
+};
+
+// Derives Framework Type from the top-level SharePoint folder the selected
+// file lives under (e.g. a file under Root/RTO/... implies framework "RTO").
+const deriveFrameworkFromRootFolder = (
+  rootFolderName: string | null,
+  frameworkOptions: { value: string; label: string }[],
+): string | null => {
+  if (!rootFolderName) return null;
+  const normalized = rootFolderName.trim().toLowerCase();
+  const exact = frameworkOptions.find((f) => f.value.toLowerCase() === normalized);
+  if (exact) return exact.value;
+  const prefixed = frameworkOptions.find((f) => normalized.startsWith(f.value.toLowerCase()));
+  return prefixed ? prefixed.value : null;
+};
+
 type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload';
 interface Document {
   id: number;
@@ -72,6 +142,78 @@ interface Document {
     published_at: string | null;
   }> | null;
 }
+
+// Gear icon next to the Stage field — lets staff set which stage new
+// documents default to, per Framework Type (see getDefaultStageMap/
+// setDefaultStageMap above). Only configures the future defaults; it never
+// touches the form currently open, so setting it mid-create doesn't
+// surprise-change the document being created right now.
+function DefaultStageSettingButton({
+  stagesList,
+  frameworks,
+}: {
+  stagesList: { id: number; name: string }[] | undefined;
+  frameworks: { value: string; label: string }[] | undefined;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState<Record<string, string>>(() => getDefaultStageMap());
+
+  const rows = [{ key: '', label: 'No framework detected' }, ...(frameworks || []).map((f) => ({ key: f.value, label: f.label }))];
+
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setPending(getDefaultStageMap()); }}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5 text-muted-foreground hover:text-foreground"
+          title="Set default stage per framework type"
+        >
+          <Settings2 className="h-3.5 w-3.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 space-y-3" align="start">
+        <div>
+          <p className="text-sm font-medium">Default stage by framework</p>
+          <p className="text-xs text-muted-foreground">
+            Pre-selected on the Stage field based on the document's Framework Type. Saved on this browser only.
+          </p>
+        </div>
+        <div className="space-y-2">
+          {rows.map((row) => (
+            <div key={row.key} className="grid gap-1">
+              <Label className="text-xs text-muted-foreground">{row.label}</Label>
+              <Select
+                value={pending[row.key] || '__none__'}
+                onValueChange={(v) => setPending((prev) => ({ ...prev, [row.key]: v === '__none__' ? '' : v }))}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {stagesList?.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          className="w-full"
+          onClick={() => { setDefaultStageMap(pending); setOpen(false); }}
+        >
+          Save defaults
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function ManageDocuments() {
   const {
     toast
@@ -214,7 +356,7 @@ export default function ManageDocuments() {
   }[]>([]);
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     title: "",
     description: "",
     format: "",
@@ -225,17 +367,18 @@ export default function ManageDocuments() {
     isclientdoc: false,
     categories: [] as string[],
     framework_type: "" as string,
-    stage: "" as string,
+    stage: getDefaultStageIdForFramework(null) as string,
     standard_set: "",
-    is_core: false,
-    is_tenant_downloadable: false,
-  });
+    is_core: true,
+    is_tenant_downloadable: true,
+  }));
 
   // Two-step Create flow state (browse SharePoint → prefill metadata)
   const [createStep, setCreateStep] = useState<'browse' | 'metadata'>('browse');
   const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
   const [importingTemplate, setImportingTemplate] = useState(false);
   const [pendingImportDocId, setPendingImportDocId] = useState<number | null>(null);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
   useEffect(() => {
     fetchCurrentUser();
     fetchCategories();
@@ -706,25 +849,68 @@ export default function ManageDocuments() {
     return '';
   };
 
+  // Fire-and-forget AI description draft. Never overwrites text the user
+  // has already typed — only fills in if description is still blank when
+  // the response lands, since staff can type faster than a round trip.
+  const maybeGenerateDescription = async (
+    filename: string,
+    categoryLabel: string | null,
+    frameworkLabel: string | null,
+  ) => {
+    setGeneratingDescription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-document-description', {
+        body: { filename, category: categoryLabel, framework: frameworkLabel },
+      });
+      if (error) throw error;
+      const description = (data?.description || '').trim();
+      if (description) {
+        setFormData((prev) => (prev.description ? prev : { ...prev, description }));
+      }
+    } catch (err: unknown) {
+      console.error('AI description generation failed:', err);
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
+
   // Advance from the Browse step: prefill the metadata form from the selection.
+
   const handleNextFromBrowse = () => {
     if (!selectedTemplate) return;
-    const { file, folderName } = selectedTemplate;
+    const { file, folderName, rootFolderName } = selectedTemplate;
     const titleWithoutExt = file.name.replace(/\.[^./\\]+$/, '');
     const derivedFormat = deriveFormatFromFile(file.name, file.mimeType);
 
     // Match folder name against dd_document_categories.sharepoint_folder_name
-    const matchedCategory = categories.find(
+    // first (that column is currently unpopulated for every category, but
+    // prefer it if it's ever backfilled); fall back to deriving the category
+    // from the filename's leading code (e.g. "CP" in "CP.S3-...").
+    const folderMatchedCategory = categories.find(
       (c) => (c.sharepoint_folder_name || '').toLowerCase() === folderName.toLowerCase(),
     );
+    const filenameMatchedCategoryId = folderMatchedCategory
+      ? null
+      : deriveCategoryFromFilename(file.name, categories);
+    const matchedCategory =
+      folderMatchedCategory || categories.find((c) => c.id === filenameMatchedCategoryId);
+
+    const matchedFrameworkValue = deriveFrameworkFromRootFolder(rootFolderName, frameworks || []);
+    const matchedFramework = (frameworks || []).find((f: any) => f.value === matchedFrameworkValue);
+    const frameworkStageDefault = getDefaultStageIdForFramework(matchedFrameworkValue);
 
     setFormData((prev) => ({
       ...prev,
       title: titleWithoutExt,
       format: derivedFormat,
       categories: matchedCategory ? [matchedCategory.id.toString()] : prev.categories,
+      framework_type: matchedFrameworkValue || prev.framework_type,
+      stage: frameworkStageDefault || prev.stage,
+      versionlastupdated: new Date(),
     }));
     setCreateStep('metadata');
+
+    void maybeGenerateDescription(file.name, matchedCategory?.name ?? null, matchedFramework?.label ?? null);
   };
 
   const handleCreateDocument = async () => {
@@ -869,10 +1055,10 @@ export default function ManageDocuments() {
         isclientdoc: false,
         categories: [],
         framework_type: "",
-        stage: "",
+        stage: getDefaultStageIdForFramework(null),
         standard_set: "",
-        is_core: false,
-        is_tenant_downloadable: false,
+        is_core: true,
+        is_tenant_downloadable: true,
       });
       setUploadedFiles([]);
       setExistingFiles([]);
@@ -1298,10 +1484,10 @@ export default function ManageDocuments() {
               isclientdoc: false,
               categories: [],
               framework_type: "",
-              stage: "",
+              stage: getDefaultStageIdForFramework(null),
               standard_set: "",
-              is_core: false,
-              is_tenant_downloadable: false,
+              is_core: true,
+              is_tenant_downloadable: true,
             });
             setUploadedFiles([]);
             setExistingFiles([]);
@@ -1359,11 +1545,19 @@ export default function ManageDocuments() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description" className="flex items-center gap-1.5">
+                      Description
+                      {generatingDescription && (
+                        <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          AI drafting…
+                        </span>
+                      )}
+                    </Label>
                     <Input id="description" value={formData.description} onChange={e => setFormData({
                     ...formData,
                     description: e.target.value
-                  })} />
+                  })} placeholder={generatingDescription ? 'AI is drafting a description…' : undefined} />
                   </div>
 
                   
@@ -1495,7 +1689,10 @@ export default function ManageDocuments() {
 
                   {/* Stage (Template Association) */}
                   <div className="grid gap-2">
-                    <Label>Stage (Template Association)</Label>
+                    <Label className="flex items-center gap-1.5">
+                      Stage (Template Association)
+                      <DefaultStageSettingButton stagesList={stagesList as any} frameworks={frameworks} />
+                    </Label>
                     <Select
                       value={formData.stage || '__none__'}
                       onValueChange={(v) => setFormData({ ...formData, stage: v === '__none__' ? '' : v })}

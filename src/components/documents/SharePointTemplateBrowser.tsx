@@ -19,6 +19,8 @@ export interface SelectedTemplate {
   file: SharePointItem;
   driveId: string;
   folderName: string;
+  /** Name of the top-level folder navigated into from Root (e.g. "RTO", "GTO", "CRICOS"), or null if the file sits directly at Root. */
+  rootFolderName: string | null;
 }
 
 interface BreadcrumbEntry {
@@ -123,7 +125,10 @@ export function SharePointTemplateBrowser({
   const handleSelectFile = (file: SharePointItem) => {
     setSelectedFile(file);
     if (driveId) {
-      onSelectionChange({ file, driveId, folderName: currentFolderName });
+      // breadcrumbs[0] is always the synthetic "Root" entry, so [1] is the
+      // first real folder the user navigated into.
+      const rootFolderName = breadcrumbs.length > 1 ? breadcrumbs[1].name : null;
+      onSelectionChange({ file, driveId, folderName: currentFolderName, rootFolderName });
     }
   };
 
