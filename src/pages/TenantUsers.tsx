@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -17,11 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Search, Users, UserCheck, UserX, ArrowUpDown, Loader2, Download } from 'lucide-react';
+import { Building2, Search, Users, UserCheck, UserX, ArrowUpDown, Loader2, Download, X } from 'lucide-react';
 import { type PositionTypeOption, positionTypeLabel } from '@/lib/roles/positionType';
-import { MultiSelect } from '@/components/documents/bulk-generate/MultiSelect';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { TenantFilterDialog } from '@/components/tenant-users/TenantFilterDialog';
+import { ExportColumnsDialog, type ExportColumnOption } from '@/components/tenant-users/ExportColumnsDialog';
+import { useCscAssignments } from '@/hooks/useCscAssignments';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,9 +55,44 @@ interface TenantUser {
 interface Tenant {
   id: number;
   name: string;
+  status: string | null;
+}
+
+interface EnrichedTenant extends Tenant {
+  csc_user_id: string | null;
+}
+
+interface CscFilterOption {
+  user_uuid: string;
+  first_name: string;
+  last_name: string;
+  archived: boolean;
+}
+
+interface FilterChip {
+  key: string;
+  label: string;
+  onRemove: () => void;
 }
 
 type SortField = 'name' | 'tenant' | 'role' | 'status' | 'lastLogin' | 'position';
+
+const ROLE_LABELS: Record<string, string> = {
+  'Client Parent': 'Parent',
+  'Client Child': 'Child',
+  Client: 'Client',
+};
+
+const EXPORT_COLUMNS: ExportColumnOption[] = [
+  { key: 'first_name', label: 'First Name' },
+  { key: 'last_name', label: 'Last Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'tenant', label: 'Tenant' },
+  { key: 'position_type', label: 'Position Type' },
+  { key: 'role', label: 'Role' },
+  { key: 'status', label: 'Status' },
+  { key: 'last_login', label: 'Last Login' },
+];
 
 export default function TenantUsers() {
   const { toast } = useToast();
@@ -63,6 +101,8 @@ export default function TenantUsers() {
   const [filteredUsers, setFilteredUsers] = useState<TenantUser[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
+  const [tenantStatusOptions, setTenantStatusOptions] = useState<{ value: string; description: string }[]>([]);
+  const [cscFilterOptions, setCscFilterOptions] = useState<CscFilterOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [tenantFilters, setTenantFilters] = useState<string[]>([]);
@@ -72,6 +112,22 @@ export default function TenantUsers() {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [updatingPositionId, setUpdatingPositionId] = useState<string | null>(null);
+  const [tenantFilterDialogOpen, setTenantFilterDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+
+  const tenantIds = useMemo(() => tenants.map(t => t.id), [tenants]);
+  const cscQuery = useCscAssignments(tenantIds);
+
+  // Enriches each tenant with its CSC assignment so the "Filter by Tenant"
+  // modal can narrow its own ~400-row list by status/CSC before selection —
+  // CSC/status are tenant-level attributes, not per-user ones.
+  const enrichedTenants = useMemo<EnrichedTenant[]>(() => {
+    const cscMap = cscQuery.data || {};
+    return tenants.map(t => ({
+      ...t,
+      csc_user_id: cscMap[t.id]?.csc_user_id ?? null,
+    }));
+  }, [tenants, cscQuery.data]);
 
   // Bulk action state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -82,6 +138,8 @@ export default function TenantUsers() {
   useEffect(() => {
     fetchData();
     fetchPositionTypeOptions();
+    fetchTenantStatusOptions();
+    fetchCscFilterOptions();
   }, []);
 
   useEffect(() => {
@@ -131,6 +189,43 @@ export default function TenantUsers() {
       return;
     }
     setPositionTypeOptions(data || []);
+  };
+
+  const fetchTenantStatusOptions = async () => {
+    const { data, error } = await supabase
+      .from('dd_status')
+      .select('value, description')
+      .gte('code', 100)
+      .order('code');
+    if (error) {
+      console.error('dd_status fetch error:', error);
+      return;
+    }
+    setTenantStatusOptions(data || []);
+  };
+
+  const fetchCscFilterOptions = async () => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('user_uuid, first_name, last_name, staff_teams, staff_team, archived')
+      .eq('disabled', false)
+      .order('archived', { ascending: true })
+      .order('first_name', { ascending: true });
+    if (error) {
+      console.error('CSC options fetch error:', error);
+      return;
+    }
+    const cscUsers = (data || []).filter(user => {
+      const hasInTeams = user.staff_teams?.includes('client_success');
+      const hasInTeam = user.staff_team === 'client_success';
+      return hasInTeams || hasInTeam;
+    });
+    setCscFilterOptions(cscUsers.map(u => ({
+      user_uuid: u.user_uuid,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      archived: u.archived || false,
+    })));
   };
 
   const toggleSort = (field: SortField) => {
@@ -201,9 +296,9 @@ export default function TenantUsers() {
       // Fetch tenants
       const { data: tenantsData } = await supabase
         .from('tenants')
-        .select('id, name')
+        .select('id, name, status')
         .order('name');
-      
+
       setTenants(tenantsData || []);
 
       // Fetch tenant users - include only client user types
@@ -373,17 +468,24 @@ export default function TenantUsers() {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportCsv = () => {
-    const rows = filteredUsers.map(user => ({
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
-      tenant: user.tenant_name || '',
-      position_type: positionTypeLabel(user.position_type, positionTypeOptions),
-      role: user.user_type,
-      status: (user.disabled || user.archived) ? 'Inactive' : 'Active',
-      last_login: user.last_sign_in_at || '',
-    }));
+  const buildExportRow = (user: TenantUser): Record<string, string> => ({
+    first_name: user.first_name,
+    last_name: user.last_name,
+    email: user.email,
+    tenant: user.tenant_name || '',
+    position_type: positionTypeLabel(user.position_type, positionTypeOptions),
+    role: user.user_type,
+    status: (user.disabled || user.archived) ? 'Inactive' : 'Active',
+    last_login: user.last_sign_in_at || '',
+  });
+
+  const handleConfirmExport = (selectedKeys: string[]) => {
+    const rows = filteredUsers.map(user => {
+      const full = buildExportRow(user);
+      const row: Record<string, string> = {};
+      selectedKeys.forEach(key => { row[key] = full[key]; });
+      return row;
+    });
     exportCsv(rows, 'tenant_users');
   };
 
@@ -398,6 +500,42 @@ export default function TenantUsers() {
       default:
         return <Badge variant="outline">{userType}</Badge>;
     }
+  };
+
+  const activeFilterChips: FilterChip[] = [];
+  if (searchQuery) {
+    activeFilterChips.push({ key: 'search', label: `Search: "${searchQuery}"`, onRemove: () => setSearchQuery('') });
+  }
+  if (tenantFilters.length > 0) {
+    const label = tenantFilters.length === 1
+      ? (tenants.find(t => t.id.toString() === tenantFilters[0])?.name ?? '1 tenant')
+      : `${tenantFilters.length} tenants`;
+    activeFilterChips.push({ key: 'tenant', label: `Tenant: ${label}`, onRemove: () => setTenantFilters([]) });
+  }
+  if (roleFilter !== 'all') {
+    activeFilterChips.push({ key: 'role', label: `Role: ${ROLE_LABELS[roleFilter] ?? roleFilter}`, onRemove: () => setRoleFilter('all') });
+  }
+  if (statusFilter !== 'all') {
+    activeFilterChips.push({
+      key: 'status',
+      label: `User Status: ${statusFilter === 'active' ? 'Active' : 'Inactive'}`,
+      onRemove: () => setStatusFilter('all'),
+    });
+  }
+  if (positionFilter !== 'all') {
+    activeFilterChips.push({
+      key: 'position',
+      label: `Position: ${positionTypeLabel(positionFilter, positionTypeOptions)}`,
+      onRemove: () => setPositionFilter('all'),
+    });
+  }
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setTenantFilters([]);
+    setRoleFilter('all');
+    setStatusFilter('all');
+    setPositionFilter('all');
   };
 
   const stats = {
@@ -480,8 +618,8 @@ export default function TenantUsers() {
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
+            <div className="flex flex-col md:flex-row md:flex-wrap gap-4">
+              <div className="relative flex-1 min-w-[220px]">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, email, or tenant..."
@@ -490,14 +628,23 @@ export default function TenantUsers() {
                   className="pl-10"
                 />
               </div>
-              <MultiSelect
-                className="w-[220px]"
-                options={tenants.map((tenant) => ({ value: tenant.id.toString(), label: tenant.name }))}
-                values={tenantFilters}
-                onChange={setTenantFilters}
-                placeholder="All Tenants"
-                searchPlaceholder="Search tenants…"
-              />
+              <Button
+                variant="outline"
+                onClick={() => setTenantFilterDialogOpen(true)}
+                className={cn(
+                  'w-full md:w-[220px] justify-between font-normal min-w-0',
+                  tenantFilters.length === 0 && 'text-muted-foreground',
+                )}
+              >
+                <span className="truncate">
+                  {tenantFilters.length === 0
+                    ? 'All Tenants'
+                    : tenantFilters.length === 1
+                      ? tenants.find(t => t.id.toString() === tenantFilters[0])?.name ?? '1 tenant'
+                      : `${tenantFilters.length} tenants selected`}
+                </span>
+                <Building2 className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+              </Button>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Role" />
@@ -510,11 +657,11 @@ export default function TenantUsers() {
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="User Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="all">All User Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
@@ -534,13 +681,44 @@ export default function TenantUsers() {
               </Select>
               <Button
                 variant="outline"
-                onClick={handleExportCsv}
+                onClick={() => setExportDialogOpen(true)}
                 disabled={filteredUsers.length === 0}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
               </Button>
             </div>
+
+            {/* Active Filters Summary */}
+            {activeFilterChips.length > 0 && (
+              <div className="flex items-center flex-wrap gap-2 mt-4 pt-4 border-t">
+                <span className="text-sm text-muted-foreground shrink-0">Active filters:</span>
+                {activeFilterChips.map((chip) => (
+                  <Badge
+                    key={chip.key}
+                    variant="secondary"
+                    className="font-normal gap-1 pr-1 max-w-[260px]"
+                  >
+                    <span className="truncate">{chip.label}</span>
+                    <button
+                      type="button"
+                      onClick={chip.onRemove}
+                      className="rounded-full p-0.5 hover:bg-muted-foreground/20 shrink-0"
+                      aria-label={`Remove filter: ${chip.label}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="text-sm text-primary hover:underline ml-1"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
 
             {/* Bulk Action Toolbar */}
             {selectedIds.size > 0 && (
@@ -667,9 +845,13 @@ export default function TenantUsers() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[200px]">
                         {user.tenant_name ? (
-                          <Badge variant="outline" className="font-normal">
+                          <Badge
+                            variant="outline"
+                            className="font-normal max-w-full truncate inline-block"
+                            title={user.tenant_name}
+                          >
                             {user.tenant_name}
                           </Badge>
                         ) : (
@@ -718,6 +900,26 @@ export default function TenantUsers() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Tenant Filter Dialog */}
+        <TenantFilterDialog
+          open={tenantFilterDialogOpen}
+          onOpenChange={setTenantFilterDialogOpen}
+          tenants={enrichedTenants}
+          statusOptions={tenantStatusOptions}
+          cscOptions={cscFilterOptions}
+          selected={tenantFilters}
+          onApply={setTenantFilters}
+        />
+
+        {/* Export Column Selection Dialog */}
+        <ExportColumnsDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          columns={EXPORT_COLUMNS}
+          rowCount={filteredUsers.length}
+          onConfirm={handleConfirmExport}
+        />
 
         {/* Bulk Action Confirmation Dialog */}
         <AlertDialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
