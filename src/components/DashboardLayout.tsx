@@ -105,7 +105,6 @@ const administrationMenuItems = [
   { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
   { icon: Send, label: "Cohort Sender", path: "/admin/cohort-sender", superAdminOnly: true },
   { icon: ShieldCheck, label: "User Audit", path: "/admin/user-audit", superAdminOnly: true },
-  { icon: ScrollText, label: "Audit Logs", path: "/audit-logs", superAdminOnly: true },
   { icon: Mail, label: "Email Templates", path: "/admin/email-templates", superAdminOnly: true },
 ];
 
