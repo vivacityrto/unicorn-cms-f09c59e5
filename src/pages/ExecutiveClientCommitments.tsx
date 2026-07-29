@@ -321,6 +321,7 @@ export default function ExecutiveClientCommitments() {
                       r.status === 'met' ? 'bg-green-100 text-green-700' :
                       r.status === 'missed' ? 'bg-destructive/10 text-destructive' :
                       r.status === 'at_risk' ? 'bg-amber-100 text-amber-700' :
+                      r.status === 'pending' ? 'bg-blue-100 text-blue-700' :
                       'bg-muted text-muted-foreground'
                     }`}>{r.status.replace(/_/g, ' ')}</span>
                   </TableCell>
@@ -329,6 +330,7 @@ export default function ExecutiveClientCommitments() {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
                         r.impact_level === 'critical' ? 'bg-destructive/10 text-destructive' :
                         r.impact_level === 'high' ? 'bg-amber-100 text-amber-700' :
+                        r.impact_level === 'medium' ? 'bg-violet-100 text-violet-700' :
                         'bg-muted text-muted-foreground'
                       }`}>{r.impact_level}</span>
                     )}

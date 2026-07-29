@@ -24,6 +24,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatEnumLabel } from "@/lib/eosOptionLabels";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import {
@@ -532,7 +533,7 @@ export default function AcademyEnrolmentsPage() {
                             <span className="truncate">{e.tenant?.name || "—"}</span>
                             {e.tenant?.tenant_type && (
                               <Badge variant="outline" className="text-[10px] uppercase w-fit mt-0.5">
-                                {e.tenant.tenant_type}
+                                {formatEnumLabel(e.tenant.tenant_type)}
                               </Badge>
                             )}
                           </div>

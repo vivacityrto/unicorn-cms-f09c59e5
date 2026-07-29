@@ -157,6 +157,12 @@ export default function AcademyCertificatesPage() {
     return <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>;
   };
 
+  const statusCounts = useMemo(() => {
+    const counts = { all: certs.length, active: 0, revoked: 0, expired: 0 };
+    for (const c of certs) counts[getCertStatus(c)]++;
+    return counts;
+  }, [certs]);
+
   const statusTabs: { value: StatusFilter; label: string }[] = [
     { value: "all", label: "All" },
     { value: "active", label: "Active" },
@@ -278,13 +284,14 @@ export default function AcademyCertificatesPage() {
               key={tab.value}
               onClick={() => setStatusFilter(tab.value)}
               className={cn(
-                "px-3 py-1.5 text-sm rounded-md transition-colors font-medium",
+                "px-3 py-1.5 text-sm rounded-md transition-colors font-medium flex items-center gap-2",
                 statusFilter === tab.value
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               {tab.label}
+              <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{statusCounts[tab.value]}</Badge>
             </button>
           ))}
         </div>
