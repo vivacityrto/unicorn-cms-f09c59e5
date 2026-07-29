@@ -6,11 +6,18 @@
  * differ, shows a persistent Sonner toast with a "Refresh" action instead of
  * silently reloading. sessionStorage guards against re-showing the toast for
  * the same build in the same session.
+ *
+ * Every build gets a fresh buildId (see vite.config.ts), so on a day with
+ * several deploys, a tab left open would otherwise detect each one as a
+ * distinct "new build" and stack a separate toast per deploy. The toast uses
+ * a stable `id` so a later detection updates the existing toast in place
+ * instead of piling up another one.
  */
 
 import { toast } from "sonner";
 
 const RELOAD_KEY = "did_reload_for_new_build";
+const NEW_BUILD_TOAST_ID = "new-build-available";
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -43,6 +50,7 @@ export async function checkForNewBuild(): Promise<void> {
     sessionStorage.setItem(RELOAD_KEY, buildId);
 
     toast("A new version of Unicorn is available.", {
+      id: NEW_BUILD_TOAST_ID,
       duration: Infinity,
       action: {
         label: "Refresh",
