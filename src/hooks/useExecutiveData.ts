@@ -77,10 +77,7 @@ export function useConsultantDistribution() {
   return useQuery({
     queryKey: ['executive-consultant-dist'],
     queryFn: async (): Promise<ConsultantDistRow[]> => {
-      const { data, error } = await supabase
-        .from('v_executive_consultant_distribution' as any)
-        .select('*')
-        .order('immediate_count', { ascending: false });
+      const { data, error } = await supabase.rpc('get_executive_consultant_distribution' as any);
       if (error) throw error;
       return (data ?? []) as unknown as ConsultantDistRow[];
     },

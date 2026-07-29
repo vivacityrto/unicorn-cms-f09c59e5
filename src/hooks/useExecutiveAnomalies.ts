@@ -55,10 +55,7 @@ export function useExecutiveAnomalies() {
   return useQuery({
     queryKey: ['executive-anomalies'],
     queryFn: async (): Promise<AnomalyRow[]> => {
-      const { data, error } = await supabase
-        .from('v_executive_anomalies_30d' as any)
-        .select('*')
-        .order('anomaly_rank', { ascending: true });
+      const { data, error } = await supabase.rpc('get_executive_anomalies_30d' as any);
       if (error) throw error;
       return (data ?? []) as unknown as AnomalyRow[];
     },

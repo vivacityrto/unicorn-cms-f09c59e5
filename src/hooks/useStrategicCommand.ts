@@ -52,9 +52,7 @@ export function usePortfolioRisk() {
   return useQuery({
     queryKey: ['strategic-portfolio-risk'],
     queryFn: async (): Promise<PortfolioRiskRow[]> => {
-      const { data, error } = await supabase
-        .from('v_strategic_portfolio_risk' as any)
-        .select('*');
+      const { data, error } = await supabase.rpc('get_strategic_portfolio_risk' as any);
       if (error) throw error;
       return (data ?? []) as unknown as PortfolioRiskRow[];
     },
@@ -66,10 +64,7 @@ export function useCapacityPressure() {
   return useQuery({
     queryKey: ['strategic-capacity-pressure'],
     queryFn: async (): Promise<CapacityPressureRow[]> => {
-      const { data, error } = await supabase
-        .from('v_strategic_capacity_pressure' as any)
-        .select('*')
-        .order('capacity_utilisation_percentage', { ascending: false });
+      const { data, error } = await supabase.rpc('get_strategic_capacity_pressure' as any);
       if (error) throw error;
       return (data ?? []) as unknown as CapacityPressureRow[];
     },

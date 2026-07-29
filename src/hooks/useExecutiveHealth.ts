@@ -110,10 +110,7 @@ export function useExecutiveHealth() {
   const { data: rawData, isLoading, error } = useQuery({
     queryKey: ['executive-health'],
     queryFn: async (): Promise<ExecutiveHealthRow[]> => {
-      const { data, error } = await supabase
-        .from('v_executive_client_health' as any)
-        .select('*')
-        .order('operational_risk_score', { ascending: false });
+      const { data, error } = await supabase.rpc('get_executive_client_health' as any);
       if (error) throw error;
       return (data ?? []) as unknown as ExecutiveHealthRow[];
     },
