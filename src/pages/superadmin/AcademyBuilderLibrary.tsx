@@ -208,7 +208,7 @@ export default function AcademyBuilderLibrary() {
             >
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">{course.title}</h3>
+                  <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2 min-h-9">{course.title}</h3>
                   <Badge className={`text-[10px] shrink-0 ml-2 ${statusColors[course.status ?? "draft"]}`}>
                     {course.status ?? "draft"}
                   </Badge>
