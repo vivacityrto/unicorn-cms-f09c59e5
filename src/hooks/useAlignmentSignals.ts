@@ -27,11 +27,7 @@ export function useAlignmentSignals() {
   return useQuery({
     queryKey: ['alignment-signals-7d'],
     queryFn: async (): Promise<AlignmentSignal[]> => {
-      const { data, error } = await supabase
-        .from('v_exec_alignment_signals_7d' as any)
-        .select('*')
-        .order('priority_rank', { ascending: true })
-        .limit(20);
+      const { data, error } = await supabase.rpc('get_exec_alignment_signals_7d' as any);
       if (error) throw error;
       return (data ?? []) as unknown as AlignmentSignal[];
     },
