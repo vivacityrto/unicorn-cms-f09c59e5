@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Lightbulb,
   LifeBuoy,
+  NotebookPen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { FloatingSuggestionsDialog } from "./FloatingSuggestionsDialog";
 import { SupportTicketsPanel } from "@/components/support-tickets/SupportTicketsPanel";
+import { DailyNotesPanel } from "@/components/task-notes/DailyNotesPanel";
 
 import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
@@ -162,6 +164,29 @@ function SupportTicketsButton() {
   );
 }
 
+function DailyNotesButton() {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  if (!user?.id) return null;
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        className="gap-1.5 text-xs"
+        onClick={() => setOpen(prev => !prev)}
+        title="Daily Notes"
+      >
+        <NotebookPen className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Daily Notes</span>
+      </Button>
+      <DailyNotesPanel open={open} onOpenChange={setOpen} userId={user.id} />
+    </>
+  );
+}
+
 interface TopBarProps {
   showSearch?: boolean;
 }
@@ -267,6 +292,8 @@ export function TopBar({ showSearch = false }: TopBarProps) {
 
       {/* Right: Actions & Avatar - never pushed off-screen */}
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {/* Daily Notes button */}
+        <DailyNotesButton />
         {/* Support Tickets button */}
         <SupportTicketsButton />
         <TooltipProvider>
