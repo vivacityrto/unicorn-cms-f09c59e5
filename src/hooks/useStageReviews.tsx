@@ -48,7 +48,7 @@ export function useStageReviews() {
         .from('stage_release_reviews')
         .select(`
           *,
-          reviewer:users!stage_release_reviews_reviewer_user_id_fkey(first_name, last_name, email),
+          reviewer:users!stage_release_reviews_reviewer_user_id_public_users_fkey(first_name, last_name, email),
           stage_release:stage_releases(
             id, status, tenant_id, stage_id,
             stage:stages(name),
@@ -83,7 +83,7 @@ export function useStageReviews() {
         .from('stage_release_reviews')
         .select(`
           *,
-          reviewer:users!stage_release_reviews_reviewer_user_id_fkey(first_name, last_name, email)
+          reviewer:users!stage_release_reviews_reviewer_user_id_public_users_fkey(first_name, last_name, email)
         `)
         .eq('stage_release_id', stageReleaseId)
         .order('requested_at', { ascending: false })
