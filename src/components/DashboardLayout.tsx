@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download, Gauge } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download, Gauge, Activity, AlertTriangle, Radar, Compass, Network, UserPlus } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,6 +104,7 @@ const administrationMenuItems = [
   
   { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
   { icon: Send, label: "Cohort Sender", path: "/admin/cohort-sender", superAdminOnly: true },
+  { icon: UserPlus, label: "Bulk Invite", path: "/admin/bulk-invite", superAdminOnly: true },
   { icon: ShieldCheck, label: "User Audit", path: "/admin/user-audit", superAdminOnly: true },
   { icon: ScrollText, label: "Audit Logs", path: "/audit-logs", superAdminOnly: true },
   { icon: Mail, label: "Email Templates", path: "/admin/email-templates", superAdminOnly: true },
@@ -116,6 +117,7 @@ const academyBuilderMenuItems = [
   { icon: Award, label: "Certificates", path: "/superadmin/academy/certificates" },
   { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
   { icon: GraduationCap, label: "Package → Course Rules", path: "/superadmin/academy/package-course-rules" },
+  { icon: ClipboardList, label: "Workforce PDP", path: "/superadmin/workforce-pdp" },
 ];
 
 // 7. SYSTEM CONFIG Section - Super Admin Only
@@ -127,8 +129,11 @@ const systemConfigMenuItems = [
   { icon: Cog, label: "EOS Processes", path: "/admin/eos-processes" },
   { icon: Library, label: "Knowledge Library", path: "/admin/knowledge" },
   { icon: Bot, label: "AI Assistant", path: "/admin/assistant" },
+  { icon: Flag, label: "Ask Viv Flags", path: "/internal/ask-viv/flags" },
   { icon: Puzzle, label: "Add-in Settings", path: "/admin/addin-settings" },
+  { icon: Activity, label: "Add-in Diagnostics", path: "/admin/addin-diagnostics" },
   { icon: MapPin, label: "ClickUp Mapping", path: "/admin/clickup-mapping" },
+  { icon: Download, label: "ClickUp Import", path: "/admin/clickup-import" },
   { icon: Database, label: "Code Tables", path: "/admin/code-tables" },
   { icon: ShieldCheck, label: "Role Permissions", path: "/administration/role-permissions" },
   { icon: ClipboardList, label: "Lifecycle Checklists", path: "/admin/lifecycle-checklists" },
@@ -136,6 +141,20 @@ const systemConfigMenuItems = [
   { icon: FileCheck, label: "Governance Documents", path: "/admin/governance-documents" },
   { icon: Globe, label: "SharePoint Sites", path: "/admin/sharepoint-sites" },
   { icon: BellRing, label: "Reporting Obligations", path: "/admin/settings/reporting-obligations" },
+  { icon: Activity, label: "Operations Dashboard", path: "/admin/operations" },
+  { icon: FileCheck, label: "Compliance Packs", path: "/admin/compliance-packs" },
+  { icon: AlertTriangle, label: "Zero-Progress Packages", path: "/admin/diagnostics/zero-progress-packages" },
+];
+
+// 7b. STRATEGIC INTELLIGENCE Section - Super Admin Only
+// Cross-tenant analytics/orchestration tools surfaced as widgets on the Executive Dashboard
+const strategicIntelligenceMenuItems = [
+  { icon: Globe, label: "Regulator Watch", path: "/admin/regulator-watch" },
+  { icon: Radar, label: "Risk Radar", path: "/admin/risk-radar" },
+  { icon: Search, label: "Template Gap Analysis", path: "/admin/template-gap-analysis" },
+  { icon: Compass, label: "Strategic Command", path: "/admin/strategic-command" },
+  { icon: TrendingUp, label: "Workflow Optimisation", path: "/admin/workflow-optimisation" },
+  { icon: Network, label: "Strategic Orchestration", path: "/admin/strategic-orchestration" },
 ];
 
 // Client-facing menu items (for Admin/User roles and "View as Client" mode)
@@ -173,6 +192,7 @@ export const DashboardLayout = ({
     administration: false,
     academyBuilder: false,
     systemConfig: false,
+    strategicIntelligence: false,
     // Legacy for client view
     main: false,
     team: false,
@@ -567,6 +587,10 @@ export const DashboardLayout = ({
                     if (item.path === "/superadmin/academy/package-course-rules") {
                       return isSuperAdmin || isTeamLeader || isIntegrator;
                     }
+                    // Workforce PDP: route is requireSuperAdmin, so SA only
+                    if (item.path === "/superadmin/workforce-pdp") {
+                      return isSuperAdmin;
+                    }
                     // All other academy items: SA + TL (hide from Integrator)
                     return isSuperAdmin || isTeamLeader;
                   }),
@@ -580,6 +604,15 @@ export const DashboardLayout = ({
                   "System Config",
                   systemConfigMenuItems,
                   "systemConfig"
+                )}
+
+              {/* 8. STRATEGIC INTELLIGENCE Section - Super Admin Only */}
+              {isSuperAdmin &&
+                renderSection(
+                  "strategicIntelligence",
+                  "Strategic Intelligence",
+                  strategicIntelligenceMenuItems,
+                  "strategicIntelligence"
                 )}
             </>
           ) : (

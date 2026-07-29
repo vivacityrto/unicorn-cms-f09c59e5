@@ -137,9 +137,11 @@ export default function AdminStageAnalytics() {
                   <Layers className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {kpisLoading ? <Skeleton className="h-8 w-12" /> : kpis.totalStages}
-                  </p>
+                  {kpisLoading ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    <p className="text-2xl font-bold">{kpis.totalStages}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Total Phases</p>
                 </div>
               </div>
@@ -153,9 +155,11 @@ export default function AdminStageAnalytics() {
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {kpisLoading ? <Skeleton className="h-8 w-12" /> : kpis.certifiedStages}
-                  </p>
+                  {kpisLoading ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    <p className="text-2xl font-bold">{kpis.certifiedStages}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Certified</p>
                 </div>
               </div>
@@ -169,9 +173,11 @@ export default function AdminStageAnalytics() {
                   <Archive className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {kpisLoading ? <Skeleton className="h-8 w-12" /> : kpis.archivedStages}
-                  </p>
+                  {kpisLoading ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    <p className="text-2xl font-bold">{kpis.archivedStages}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Archived</p>
                 </div>
               </div>
@@ -185,9 +191,11 @@ export default function AdminStageAnalytics() {
                   <Package className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {kpisLoading ? <Skeleton className="h-8 w-12" /> : kpis.stagesInPackages}
-                  </p>
+                  {kpisLoading ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    <p className="text-2xl font-bold">{kpis.stagesInPackages}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">In Packages</p>
                 </div>
               </div>
@@ -201,9 +209,11 @@ export default function AdminStageAnalytics() {
                   <Users className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {kpisLoading ? <Skeleton className="h-8 w-12" /> : kpis.stagesWithActiveClients}
-                  </p>
+                  {kpisLoading ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    <p className="text-2xl font-bold">{kpis.stagesWithActiveClients}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Active Use</p>
                 </div>
               </div>

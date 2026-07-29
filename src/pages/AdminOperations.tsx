@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +58,7 @@ export default function AdminOperations() {
   const emailDisabled = settings && !settings.email_sending_enabled;
 
   return (
+    <DashboardLayout>
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -319,5 +321,6 @@ export default function AdminOperations() {
         </TabsContent>
       </Tabs>
     </div>
+    </DashboardLayout>
   );
 }

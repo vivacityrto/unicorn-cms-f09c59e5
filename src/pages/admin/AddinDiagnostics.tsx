@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -170,6 +171,7 @@ export default function AddinDiagnostics() {
   };
 
   return (
+    <DashboardLayout>
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -193,9 +195,11 @@ export default function AddinDiagnostics() {
           <CardContent className="pt-6">
             <div className="text-center">
               <Mail className="h-6 w-6 mx-auto mb-2 text-primary" />
-              <p className="text-2xl font-bold">
-                {statsLoading ? <Skeleton className="h-8 w-12 mx-auto" /> : usageStats?.total_email_captures || 0}
-              </p>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-12 mx-auto" />
+              ) : (
+                <p className="text-2xl font-bold">{usageStats?.total_email_captures || 0}</p>
+              )}
               <p className="text-sm text-muted-foreground">Emails Captured</p>
             </div>
           </CardContent>
@@ -204,9 +208,11 @@ export default function AddinDiagnostics() {
           <CardContent className="pt-6">
             <div className="text-center">
               <Calendar className="h-6 w-6 mx-auto mb-2 text-primary" />
-              <p className="text-2xl font-bold">
-                {statsLoading ? <Skeleton className="h-8 w-12 mx-auto" /> : usageStats?.total_meeting_captures || 0}
-              </p>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-12 mx-auto" />
+              ) : (
+                <p className="text-2xl font-bold">{usageStats?.total_meeting_captures || 0}</p>
+              )}
               <p className="text-sm text-muted-foreground">Meetings Captured</p>
             </div>
           </CardContent>
@@ -215,9 +221,11 @@ export default function AddinDiagnostics() {
           <CardContent className="pt-6">
             <div className="text-center">
               <FileText className="h-6 w-6 mx-auto mb-2 text-primary" />
-              <p className="text-2xl font-bold">
-                {statsLoading ? <Skeleton className="h-8 w-12 mx-auto" /> : usageStats?.total_attachments_linked || 0}
-              </p>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-12 mx-auto" />
+              ) : (
+                <p className="text-2xl font-bold">{usageStats?.total_attachments_linked || 0}</p>
+              )}
               <p className="text-sm text-muted-foreground">Attachments Linked</p>
             </div>
           </CardContent>
@@ -226,9 +234,11 @@ export default function AddinDiagnostics() {
           <CardContent className="pt-6">
             <div className="text-center">
               <Clock className="h-6 w-6 mx-auto mb-2 text-primary" />
-              <p className="text-2xl font-bold">
-                {statsLoading ? <Skeleton className="h-8 w-12 mx-auto" /> : usageStats?.total_time_drafts || 0}
-              </p>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-12 mx-auto" />
+              ) : (
+                <p className="text-2xl font-bold">{usageStats?.total_time_drafts || 0}</p>
+              )}
               <p className="text-sm text-muted-foreground">Time Drafts</p>
             </div>
           </CardContent>
@@ -237,9 +247,11 @@ export default function AddinDiagnostics() {
           <CardContent className="pt-6">
             <div className="text-center">
               <AlertTriangle className="h-6 w-6 mx-auto mb-2 text-destructive" />
-              <p className="text-2xl font-bold">
-                {statsLoading ? <Skeleton className="h-8 w-12 mx-auto" /> : usageStats?.total_failed_actions || 0}
-              </p>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-12 mx-auto" />
+              ) : (
+                <p className="text-2xl font-bold">{usageStats?.total_failed_actions || 0}</p>
+              )}
               <p className="text-sm text-muted-foreground">Failed Actions</p>
             </div>
           </CardContent>
@@ -423,5 +435,6 @@ export default function AddinDiagnostics() {
         </TabsContent>
       </Tabs>
     </div>
+    </DashboardLayout>
   );
 }
