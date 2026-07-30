@@ -610,17 +610,17 @@ export function PackageBuilderEditor() {
   return (
     <div className="h-[calc(100vh-120px)] flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b mb-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-4 border-b mb-4">
+        <div className="flex items-center gap-4 min-w-0">
           <Button variant="ghost" size="icon" onClick={() => navigate('/admin/manage-packages')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-muted-foreground">{formData.name}</span>
-                <span className="text-lg">—</span>
-                <h1 className="text-lg font-bold">{formData.full_text || 'Untitled Package'}</h1>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-lg font-semibold text-muted-foreground shrink-0">{formData.name}</span>
+                <span className="text-lg shrink-0">—</span>
+                <h1 className="text-lg font-bold truncate">{formData.full_text || 'Untitled Package'}</h1>
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="outline" className="text-xs capitalize">
@@ -636,7 +636,11 @@ export function PackageBuilderEditor() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        {/* flex-wrap: this row can hold up to 6 buttons (Add Recommended,
+            Standards Coverage, AI, Duplicate, Archive, Save) - without wrap,
+            the row silently overflows past the page's overflow-x-hidden
+            wrapper, clipping Save off-screen entirely at ~1024px and below. */}
+        <div className="flex flex-wrap items-center gap-2">
           {(formData.package_type === 'rto' || formData.package_type === 'membership') && (
             <Button 
               variant="outline" 
@@ -782,7 +786,7 @@ export function PackageBuilderEditor() {
                     <TabsTrigger value="details">Package Details</TabsTrigger>
                     <TabsTrigger value="phases">Phases</TabsTrigger>
                     {selectedStage && (
-                      <TabsTrigger value="stage">
+                      <TabsTrigger value="stage" className="max-w-[220px] truncate" title={selectedStage.stage?.title || 'Selected Stage'}>
                         {selectedStage.stage?.title || 'Selected Stage'}
                       </TabsTrigger>
                     )}

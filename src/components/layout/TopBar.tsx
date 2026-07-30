@@ -178,15 +178,20 @@ function SupportTicketsButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button
-        size="sm"
-        className="gap-1.5 text-xs bg-brand-aqua text-white hover:bg-brand-aqua-600"
-        onClick={() => setOpen(prev => !prev)}
-        title="Support Tickets"
-      >
-        <LifeBuoy className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Support Tickets</span>
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            size="icon"
+            className="h-10 w-10 rounded-full bg-brand-aqua text-white hover:bg-brand-aqua-600"
+            onClick={() => setOpen(prev => !prev)}
+          >
+            <LifeBuoy className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Support Tickets</p>
+        </TooltipContent>
+      </Tooltip>
       <SupportTicketsPanel open={open} onOpenChange={setOpen} />
     </>
   );
@@ -200,16 +205,21 @@ function DailyNotesButton() {
 
   return (
     <>
-      <Button
-        size="sm"
-        variant="outline"
-        className="gap-1.5 text-xs"
-        onClick={() => setOpen(prev => !prev)}
-        title="Daily Notes"
-      >
-        <NotebookPen className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Daily Notes</span>
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10"
+            onClick={() => setOpen(prev => !prev)}
+          >
+            <NotebookPen className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Daily Notes</p>
+        </TooltipContent>
+      </Tooltip>
       <DailyNotesPanel open={open} onOpenChange={setOpen} userId={user.id} />
     </>
   );
@@ -320,11 +330,11 @@ export function TopBar({ showSearch = false }: TopBarProps) {
 
       {/* Right: Actions & Avatar - never pushed off-screen */}
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-        {/* Daily Notes button */}
-        <DailyNotesButton />
-        {/* Support Tickets button */}
-        <SupportTicketsButton />
         <TooltipProvider>
+          {/* Daily Notes button */}
+          <DailyNotesButton />
+          {/* Support Tickets button */}
+          <SupportTicketsButton />
           {/* Help Center button - Client roles only, gated to primary/secondary contacts */}
           {isClientRole && helpCenter.canAccess && (
             <Tooltip>
