@@ -563,7 +563,14 @@ export default function ClientDetail() {
         {/* Tabs */}
         <div className="px-6">
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <div ref={setTabsRowEl} className="flex items-center gap-4 min-w-0">
+            {/* items-end, not items-center: tabs with taller content (e.g. Notes'
+                "Internal" badge) make the TabsList box taller than the plain
+                "More" button next to it. Centering both on the same midpoint
+                left More's bottom border a few px above the other tabs'
+                underlines - aligning bottoms instead keeps every tab's
+                underline, including More's, on the same baseline regardless
+                of content height differences. */}
+            <div ref={setTabsRowEl} className="flex items-end gap-4 min-w-0">
               <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4 min-w-0">
                 {visibleTabs.map((t) => (
                   <TabsTrigger
