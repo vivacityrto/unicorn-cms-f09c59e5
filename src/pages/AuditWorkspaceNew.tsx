@@ -214,7 +214,12 @@ export default function AuditWorkspaceNew() {
           {/* Tabs */}
           <div className="p-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-4">
+              {/* max-w-full + overflow-x-auto: with 7 tabs this list is 809px wide
+                  and was silently clipped by an ancestor's overflow-x-hidden on
+                  narrow viewports (375px) - Documents/Findings/Actions/Report
+                  (4 of 7 tabs) were entirely off-screen with no way to reach
+                  them. Scrolling the list itself keeps every tab reachable. */}
+              <TabsList className="mb-4 max-w-full overflow-x-auto">
                 <TabsTrigger value="overview" className="gap-1.5">
                   <LayoutDashboard className="h-3.5 w-3.5" /> Overview
                 </TabsTrigger>
