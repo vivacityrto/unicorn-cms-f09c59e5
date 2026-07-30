@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { format } from "date-fns";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -338,6 +339,13 @@ export default function ManageInvites() {
           icon: XCircle,
           label: 'Failed',
           color: 'bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600'
+        };
+      case 'revoked':
+        return {
+          variant: 'outline' as const,
+          icon: Ban,
+          label: 'Revoked',
+          color: 'bg-muted text-muted-foreground border border-border'
         };
       default:
         return {
@@ -899,7 +907,7 @@ export default function ManageInvites() {
                       <TableCell className="text-sm text-foreground font-medium py-6 border-r border-border/50">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {createdDate.toLocaleDateString()}
+                          {format(createdDate, 'dd/MM/yyyy')}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground py-6 border-r border-border/50">{invite.email}</TableCell>
@@ -939,7 +947,7 @@ export default function ManageInvites() {
                             const Icon = clicked ? MousePointerClick : Eye;
                             const count = clicked ? (invite.click_count ?? 0) : (invite.open_count ?? 0);
                             const firstAt = clicked ? invite.first_clicked_at! : invite.first_opened_at!;
-                            const firstAtLabel = new Date(firstAt).toLocaleString();
+                            const firstAtLabel = format(new Date(firstAt), 'dd/MM/yyyy h:mm a');
                             const noun = clicked ? 'click' : 'open';
                             const tip = `${label} ${count} time${count === 1 ? '' : 's'} — first ${noun} ${firstAtLabel}`;
                             return (

@@ -277,7 +277,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   };
 
   return (
-    <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-20">
+    <header className="h-16 bg-card border-b border-border flex items-center justify-between pl-16 pr-6 md:px-6 sticky top-0 z-20">
       {/* Left: Logo, Page Title & Breadcrumbs - shrinks to accommodate right side */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <img
@@ -291,11 +291,11 @@ export function TopBar({ showSearch = false }: TopBarProps) {
         <img
           src={vivacityLogo}
           alt="Vivacity Coaching & Consulting"
-          className="h-10 flex-shrink-0"
+          className="h-10 flex-shrink-0 hidden sm:block"
           loading="eager"
         />
-        
-        <div className="h-8 w-px bg-border flex-shrink-0" />
+
+        <div className="h-8 w-px bg-border flex-shrink-0 hidden sm:block" />
         
         <div className="flex flex-col min-w-0">
           {showBreadcrumbs && (
