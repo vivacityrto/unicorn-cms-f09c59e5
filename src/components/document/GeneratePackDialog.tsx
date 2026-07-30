@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -207,7 +208,7 @@ export function GeneratePackDialog({
               </div>
 
               <div className="text-sm text-muted-foreground">
-                Expires: {new Date(generatedPack.expires_at).toLocaleDateString()}
+                Expires: {format(new Date(generatedPack.expires_at), 'dd/MM/yyyy')}
               </div>
 
               <div className="border rounded-md max-h-60 overflow-y-auto">

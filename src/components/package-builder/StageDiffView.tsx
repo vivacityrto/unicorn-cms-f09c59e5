@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -261,7 +262,7 @@ export function StageDiffView({ packageId, stageId, stageName }: StageDiffViewPr
           <DiffSummaryBar summary={diffSummary} />
           {lastSyncedAt && (
             <span className="text-xs text-muted-foreground">
-              Last synced: {new Date(lastSyncedAt).toLocaleDateString()}
+              Last synced: {format(new Date(lastSyncedAt), 'dd/MM/yyyy')}
             </span>
           )}
         </div>

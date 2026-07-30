@@ -5,6 +5,7 @@
  * and portfolio health into a single strategic view.
  */
 
+import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useNavigate } from 'react-router-dom';
@@ -279,7 +280,7 @@ export default function StrategicCommandCentre() {
                       <div>
                         <p className="text-xs">{s.signal_summary}</p>
                         <span className="text-[10px] text-muted-foreground">
-                          {new Date(s.generated_at).toLocaleDateString()}
+                          {format(new Date(s.generated_at), 'dd/MM/yyyy')}
                         </span>
                       </div>
                     </div>

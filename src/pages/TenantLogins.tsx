@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -166,7 +167,7 @@ export default function TenantLogins() {
                     <TableCell className="border-r border-border/50">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{new Date(record.login_time).toLocaleDateString()}</span>
+                        <span>{format(new Date(record.login_time), 'dd/MM/yyyy')}</span>
                         <Clock className="h-4 w-4 text-muted-foreground ml-2" />
                         <span>{new Date(record.login_time).toLocaleTimeString()}</span>
                       </div>

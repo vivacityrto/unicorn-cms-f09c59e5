@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { Dialog, DialogPortal, DialogOverlay, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from '@/components/ui/button';
@@ -220,7 +221,7 @@ export function AddPackageDialog({
         <DialogFooter className="flex-row items-center justify-between sm:justify-between">
           <div className="flex items-center gap-2 text-muted-foreground" style={{ fontSize: '14px' }}>
             <Calendar className="h-4 w-4" />
-            <span>Created {new Date().toLocaleDateString()}</span>
+            <span>Created {format(new Date(), 'dd/MM/yyyy')}</span>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving} className="hover:bg-[#40c6e524] hover:text-black">

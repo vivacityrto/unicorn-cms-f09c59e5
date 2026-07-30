@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -165,7 +166,7 @@ function VtoContent() {
                       <div>
                         <CardTitle className="text-lg">Mission Control</CardTitle>
                         <CardDescription>
-                          Last updated {new Date(version.updated_at || version.created_at).toLocaleDateString()}
+                          Last updated {format(new Date(version.updated_at || version.created_at), 'dd/MM/yyyy')}
                         </CardDescription>
                       </div>
                       <Button variant="outline" size="sm">

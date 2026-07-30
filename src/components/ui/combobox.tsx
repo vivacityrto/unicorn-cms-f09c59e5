@@ -1,4 +1,5 @@
 import * as React from "react"
+import { format } from "date-fns"
 import { Check, ArrowUpDown, Calendar, Mail, FolderOpen, Search, LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -191,7 +192,7 @@ export function Combobox({
                   {showCreatedAt && option.createdAt && (
                     <span className="text-xs text-muted-foreground/70 flex items-center gap-1 shrink-0 ml-auto">
                       <Calendar className="h-3 w-3" />
-                      {new Date(option.createdAt).toLocaleDateString()}
+                      {format(new Date(option.createdAt), 'dd/MM/yyyy')}
                     </span>
                   )}
                   {!hideCheck && isSelected && (

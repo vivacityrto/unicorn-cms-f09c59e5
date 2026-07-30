@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Compass, Heart, Users, Rocket, Target, Calendar, Sparkles, Shield } from 'lucide-react';
@@ -17,7 +18,7 @@ export function VtoViewer({ vto }: VtoViewerProps) {
             <div>
               <CardTitle>Mission Control</CardTitle>
               <CardDescription>
-                Last updated {new Date(vto.updated_at || vto.created_at).toLocaleDateString()}
+                Last updated {format(new Date(vto.updated_at || vto.created_at), 'dd/MM/yyyy')}
               </CardDescription>
             </div>
           </div>

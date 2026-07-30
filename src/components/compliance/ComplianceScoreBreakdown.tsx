@@ -5,6 +5,7 @@
  * and human-readable caps list.
  */
 
+import { format } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -129,7 +130,7 @@ export function ComplianceScoreBreakdown({ score, className }: ComplianceScoreBr
 
       {/* Timestamp */}
       <p className="text-xs text-muted-foreground pt-2 border-t">
-        Calculated {new Date(score.calculated_at).toLocaleString()}
+        Calculated {format(new Date(score.calculated_at), 'dd/MM/yyyy h:mm a')}
       </p>
     </div>
   );

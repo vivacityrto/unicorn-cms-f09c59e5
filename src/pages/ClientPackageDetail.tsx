@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useClientPackageInstances, ClientPackageInstance, ClientPackageStage } from '@/hooks/useClientPackageInstances';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -235,7 +236,7 @@ export default function ClientPackageDetail() {
           <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
-              Started {new Date(packageData.start_date).toLocaleDateString()}
+              Started {format(new Date(packageData.start_date), 'dd/MM/yyyy')}
             </div>
             {packageData.assigned_csc_user_id && (
               <div className="flex items-center gap-1">
@@ -402,7 +403,7 @@ export default function ClientPackageDetail() {
                                       {task.due_date && (
                                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                                           <Clock className="h-3 w-3" />
-                                          Due {new Date(task.due_date).toLocaleDateString()}
+                                          Due {format(new Date(task.due_date), 'dd/MM/yyyy')}
                                         </p>
                                       )}
                                     </div>
@@ -526,7 +527,7 @@ export default function ClientPackageDetail() {
                             <p className="font-medium">{task.name}</p>
                             <p className="text-sm text-muted-foreground">
                               {stage.stage?.title}
-                              {task.due_date && ` • Due ${new Date(task.due_date).toLocaleDateString()}`}
+                              {task.due_date && ` • Due ${format(new Date(task.due_date), 'dd/MM/yyyy')}`}
                             </p>
                           </div>
                         </div>
@@ -578,7 +579,7 @@ export default function ClientPackageDetail() {
                         </div>
                         {email.sent_date && (
                           <p className="text-sm text-muted-foreground">
-                            Sent {new Date(email.sent_date).toLocaleString()}
+                            Sent {format(new Date(email.sent_date), 'dd/MM/yyyy h:mm a')}
                           </p>
                         )}
                       </div>

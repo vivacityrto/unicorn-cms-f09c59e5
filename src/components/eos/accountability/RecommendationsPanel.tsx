@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -358,7 +359,7 @@ function HistoryCard({ recommendation }: { recommendation: SeatRebalancingRecomm
       <div className="flex-1 min-w-0">
         <p className="text-[11px] truncate">{recommendation.title}</p>
         <p className="text-[10px]">
-          {isResolved ? 'Resolved' : 'Dismissed'} • {new Date(recommendation.created_at).toLocaleDateString()}
+          {isResolved ? 'Resolved' : 'Dismissed'} • {format(new Date(recommendation.created_at), 'dd/MM/yyyy')}
         </p>
       </div>
       <Badge variant="outline" className="text-[9px] shrink-0">

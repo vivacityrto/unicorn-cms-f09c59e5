@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import { format } from "date-fns";
 import {
   Accordion,
   AccordionContent,
@@ -98,7 +99,7 @@ export function AskVivExplainPanel({ explain, className }: AskVivExplainPanelPro
 
   const formatTimestamp = (iso: string) => {
     try {
-      return new Date(iso).toLocaleString();
+      return format(new Date(iso), 'dd/MM/yyyy h:mm a');
     } catch {
       return iso;
     }

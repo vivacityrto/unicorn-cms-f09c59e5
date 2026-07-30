@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -96,7 +97,7 @@ export function AIAnalysisSummaryCard({
         </div>
         {lastRunAt && (
           <CardDescription className="text-xs">
-            Last analyzed: {new Date(lastRunAt).toLocaleString()}
+            Last analyzed: {format(new Date(lastRunAt), 'dd/MM/yyyy h:mm a')}
           </CardDescription>
         )}
       </CardHeader>

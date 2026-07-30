@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
@@ -977,7 +978,7 @@ export function AskVivPanel() {
                                         "text-[10px]",
                                         isStale ? "text-destructive" : "text-muted-foreground"
                                       )}>
-                                        Retrieved {retrievedAt.toLocaleDateString()}
+                                        Retrieved {format(retrievedAt, 'dd/MM/yyyy')}
                                         {isStale && " ⚠ Older than 7 days"}
                                       </span>
                                     </div>

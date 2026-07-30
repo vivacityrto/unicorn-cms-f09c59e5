@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { differenceInDays, formatDistanceToNow, parseISO } from "date-fns";
+import { differenceInDays, format, formatDistanceToNow, parseISO } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -212,7 +212,7 @@ function DeliveryBadges({ row }: { row: ClientTenantUserRow }) {
             const count = clicked ? row.click_count ?? 0 : row.open_count ?? 0;
             const firstAt = clicked ? row.first_clicked_at! : row.first_opened_at!;
             const noun = clicked ? "click" : "open";
-            const tip = `${label} ${count} time${count === 1 ? "" : "s"} — first ${noun} ${new Date(firstAt).toLocaleString()}`;
+            const tip = `${label} ${count} time${count === 1 ? "" : "s"} — first ${noun} ${format(new Date(firstAt), 'dd/MM/yyyy h:mm a')}`;
             return (
               <Tooltip>
                 <TooltipTrigger asChild>

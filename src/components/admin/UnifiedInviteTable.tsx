@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -144,7 +145,7 @@ export default function UnifiedInviteTable() {
       return {
         status: "verified",
         label: "Verified",
-        date: new Date(userStatus.email_confirmed_at).toLocaleString(),
+        date: format(new Date(userStatus.email_confirmed_at), 'dd/MM/yyyy h:mm a'),
         icon: CheckCircle,
       };
     }
@@ -152,7 +153,7 @@ export default function UnifiedInviteTable() {
     return {
       status: "pending",
       label: "Waiting for Verification",
-      date: new Date(userStatus.created_at).toLocaleString(),
+      date: format(new Date(userStatus.created_at), 'dd/MM/yyyy h:mm a'),
       icon: Clock,
     };
   };
@@ -240,7 +241,7 @@ export default function UnifiedInviteTable() {
                     return (
                       <TableRow key={invite.id}>
                         <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                          {new Date(invite.created_at).toLocaleString()}
+                          {format(new Date(invite.created_at), 'dd/MM/yyyy h:mm a')}
                         </TableCell>
                         <TableCell className="whitespace-nowrap font-medium">{invite.email}</TableCell>
                         <TableCell className="whitespace-nowrap">

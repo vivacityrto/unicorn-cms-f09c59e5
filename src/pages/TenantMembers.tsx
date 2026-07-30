@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -197,7 +198,7 @@ export default function TenantMembers() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(member.created_at).toLocaleDateString()}
+                      {format(new Date(member.created_at), 'dd/MM/yyyy')}
                     </TableCell>
                   </TableRow>
                 ))

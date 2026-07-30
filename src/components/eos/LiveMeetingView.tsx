@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { format } from 'date-fns';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -762,7 +763,7 @@ export const LiveMeetingView = () => {
                           </div>
                         )}
                         <span className="text-xs text-muted-foreground">
-                          Due: {rock.due_date ? new Date(rock.due_date).toLocaleDateString() : 'Not set'}
+                          Due: {rock.due_date ? format(new Date(rock.due_date), 'dd/MM/yyyy') : 'Not set'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -901,7 +902,7 @@ export const LiveMeetingView = () => {
                         {todo.title}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Due: {todo.due_date ? new Date(todo.due_date).toLocaleDateString() : 'Not set'}
+                        Due: {todo.due_date ? format(new Date(todo.due_date), 'dd/MM/yyyy') : 'Not set'}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Assigned to: {todo.owner_id ? (todoOwners?.[todo.owner_id] ?? 'Unassigned') : 'Unassigned'}
@@ -1103,7 +1104,7 @@ export const LiveMeetingView = () => {
             <div className="border-l pl-4">
               <h1 className="text-2xl font-bold">{meeting.title}</h1>
               <p className="text-muted-foreground text-sm">
-                {new Date(meeting.scheduled_date).toLocaleString()} • {meeting.meeting_type} Meeting
+                {format(new Date(meeting.scheduled_date), 'dd/MM/yyyy h:mm a')} • {meeting.meeting_type} Meeting
               </p>
             </div>
           </div>

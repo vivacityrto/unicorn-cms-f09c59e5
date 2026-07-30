@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -470,7 +471,7 @@ export default function AdminDocumentAIReview() {
                       <TableCell>
                         <span className="text-sm text-muted-foreground">
                           {doc.ai_last_run_at 
-                            ? new Date(doc.ai_last_run_at).toLocaleDateString()
+                            ? format(new Date(doc.ai_last_run_at), 'dd/MM/yyyy')
                             : 'Never'
                           }
                         </span>

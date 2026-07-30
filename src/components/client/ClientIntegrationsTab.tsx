@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { SharePointFolderConfig } from '@/components/client/SharePointFolderConfig';
 import { ComplyHubCard } from '@/components/client/ComplyHubCard';
 import { XeroCard } from '@/components/client/XeroCard';
@@ -972,7 +973,7 @@ export function ClientIntegrationsTab({
                       This client is linked to TGA.
                       {tgaLinkRow?.last_sync_at && (
                         <span className="block mt-1">
-                          Last synced: {new Date(tgaLinkRow.last_sync_at).toLocaleString()} ({tgaLinkRow.last_sync_status || 'unknown'})
+                          Last synced: {format(new Date(tgaLinkRow.last_sync_at), 'dd/MM/yyyy h:mm a')} ({tgaLinkRow.last_sync_status || 'unknown'})
                         </span>
                       )}
                     </AlertDescription>
@@ -1737,7 +1738,7 @@ export function ClientIntegrationsTab({
                     </div>
                     <div>
                       <p className="text-muted-foreground">Last Fetched</p>
-                      <p>{new Date(debugInfo.debugPayload.fetched_at).toLocaleString()}</p>
+                      <p>{format(new Date(debugInfo.debugPayload.fetched_at), 'dd/MM/yyyy h:mm a')}</p>
                     </div>
 
                     {(debugInfo.debugPayload.payload?.rawXmlHash || debugInfo.debugPayload.payload?.raw_xml_hash) && (

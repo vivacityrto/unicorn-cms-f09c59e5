@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { Calendar, Share2, Plus, Trash2, Info, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -131,7 +132,7 @@ export function CalendarTab() {
                       <div>
                         <p className="font-medium">{share.viewer_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          Shared {new Date(share.created_at).toLocaleDateString()}
+                          Shared {format(new Date(share.created_at), 'dd/MM/yyyy')}
                         </p>
                       </div>
                     </div>
