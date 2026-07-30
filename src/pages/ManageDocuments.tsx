@@ -1448,14 +1448,14 @@ export default function ManageDocuments() {
   const isSuperAdmin = currentUserRole === "Super Admin" || currentUserRole === "SuperAdmin";
   return <div className="space-y-6 p-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-[28px] font-bold">Manage Documents</h1>
           <p className="text-muted-foreground">
             {isSuperAdmin ? "View and manage all system documents" : "View your documents"}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <BulkGenerateButton />
           {isSuperAdmin && selectedDocuments.length > 0 && (
               <Button variant="destructive" className="gap-2" onClick={() => setIsBulkDeleteDialogOpen(true)}>
@@ -1909,7 +1909,7 @@ export default function ManageDocuments() {
             </Button>
           )}
 
-          <div className="w-full md:flex-1 md:min-w-[200px]">
+          <div className="flex-1 min-w-[200px]">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 justify-between font-semibold rounded-lg shadow-sm transition-all">
@@ -1956,7 +1956,7 @@ export default function ManageDocuments() {
           {/* Framework Filter */}
           {isSuperAdmin && (
             <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
-              <SelectTrigger className="w-full md:flex-1 md:min-w-[180px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+              <SelectTrigger className="flex-1 min-w-[180px] h-12 bg-card border-border/50 rounded-lg font-semibold">
                 <SelectValue placeholder="Framework" />
               </SelectTrigger>
               <SelectContent>
@@ -1972,7 +1972,7 @@ export default function ManageDocuments() {
           {/* SharePoint Status Filter */}
           {isSuperAdmin && (
             <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
-              <SelectTrigger className="w-full md:flex-1 md:min-w-[170px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+              <SelectTrigger className="flex-1 min-w-[170px] h-12 bg-card border-border/50 rounded-lg font-semibold">
                 <SelectValue placeholder="SP Status" />
               </SelectTrigger>
               <SelectContent>
@@ -2168,7 +2168,7 @@ export default function ManageDocuments() {
                           </div>
                           <span className="text-xs text-muted-foreground flex items-center gap-1 pt-[5px]">
                             <CalendarIcon className="h-3 w-3" />
-                            Created: {doc.createdat ? format(new Date(doc.createdat), "MM/dd/yyyy") : "—"}
+                            Created: {doc.createdat ? format(new Date(doc.createdat), "dd/MM/yyyy") : "—"}
                             {doc.creator?.first_name && <span className="ml-2">by: {doc.creator.first_name}{doc.creator.last_name ? ` ${doc.creator.last_name}` : ''}</span>}
                           </span>
                         </div>
