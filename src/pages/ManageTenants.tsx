@@ -847,8 +847,12 @@ export default function ManageTenants() {
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2 hover:bg-transparent">
+                  {/* !pr-3 overrides TableHead's built-in [&:has([role=checkbox])]:pr-0 rule -
+                      that selector has higher specificity than a plain px-3, so without
+                      !important the checkbox rendered flush against the column's right
+                      border (0 right padding vs 12px left) instead of centered. */}
                   {bulkSelectionEnabled && (
-                    <TableHead className="bg-muted/30 h-14 w-12 border-r border-border/50 px-3">
+                    <TableHead className="bg-muted/30 h-14 w-12 border-r border-border/50 px-3 !pr-3">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -905,7 +909,7 @@ export default function ManageTenants() {
                   >
                     {bulkSelectionEnabled && (
                       <TableCell
-                        className="py-6 border-r border-border/50 w-12 px-3"
+                        className="py-6 border-r border-border/50 w-12 px-3 !pr-3"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
