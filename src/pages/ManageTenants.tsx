@@ -67,7 +67,16 @@ interface Tenant {
   hours_used_minutes?: number;
   hours_included_minutes?: number;
   registration_end_date?: string | null;
+  archived_at?: string | null;
 }
+
+// Aggregate status buckets the summary stat cards use — there is no literal
+// 'suspended' or 'closed' value in tenants.status (real values include
+// inactive/active/on_hold/disabled/terminated/cancelled/archived); these
+// group the real values so the stat cards' counts and their click-through
+// filters stay in sync.
+const SUSPENDED_STATUSES = ["inactive", "on_hold", "disabled"];
+const CLOSED_STATUSES = ["terminated", "cancelled", "archived"];
 
 interface CSCFilterOption {
   user_uuid: string;
@@ -168,8 +177,8 @@ export default function ManageTenants() {
   const stats = useMemo(() => {
     const totalMembers = tenants.reduce((sum, t) => sum + (t.member_count || 0), 0);
     const active = tenants.filter(t => t.status === "active").length;
-    const suspended = tenants.filter(t => t.status === "inactive" || t.status === "on_hold" || t.status === "disabled").length;
-    const closed = tenants.filter(t => t.status === "terminated" || t.status === "cancelled").length;
+    const suspended = tenants.filter(t => SUSPENDED_STATUSES.includes(t.status)).length;
+    const closed = tenants.filter(t => CLOSED_STATUSES.includes(t.status)).length;
     return { total: tenants.length, active, suspended, closed, totalMembers };
   }, [tenants]);
 
@@ -352,14 +361,28 @@ export default function ManageTenants() {
   const applyFiltersAndSort = () => {
     let filtered = [...tenants];
 
+    // Archived tenants are hidden by default regardless of status filter —
+    // archived_at is an independent flag (a tenant can be archived while its
+    // status is still e.g. 'active'), not a status value itself. SuperAdmin
+    // can reveal them via the "Show Archived" toggle.
+    if (!showArchived) {
+      filtered = filtered.filter(tenant => !tenant.archived_at);
+    }
+
     // Search
     if (searchQuery) {
       filtered = filtered.filter(tenant => tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) || tenant.slug.toLowerCase().includes(searchQuery.toLowerCase()));
     }
 
-    // Status filter — options come from dd_status (raw status column),
-    // so always compare against tenant.status, not the derived lifecycle_status.
-    if (statusFilter !== "all") {
+    // Status filter — options come from dd_status (raw status column), so
+    // always compare against tenant.status, not the derived lifecycle_status.
+    // "suspended"/"closed" (set by the summary stat cards) are aggregate
+    // groupings, not real dd_status values — see SUSPENDED_STATUSES/CLOSED_STATUSES.
+    if (statusFilter === "suspended") {
+      filtered = filtered.filter(tenant => SUSPENDED_STATUSES.includes(tenant.status));
+    } else if (statusFilter === "closed") {
+      filtered = filtered.filter(tenant => CLOSED_STATUSES.includes(tenant.status));
+    } else if (statusFilter !== "all") {
       filtered = filtered.filter(tenant => tenant.status === statusFilter);
     }
 
@@ -671,13 +694,17 @@ export default function ManageTenants() {
         );
       })()}
 
-      {/* Filters and Search */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search clients by name or slug..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
-        </div>
+      {/* Filters and Search — search always gets its own full-width row so it
+          never has to compete with the fixed-width filter comboboxes for
+          space; the filters wrap onto as many lines as the viewport needs
+          instead of squeezing the search box down to an unusable sliver. */}
+      <div className="space-y-4">
+      <div className="relative w-full">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Search clients by name or slug..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px] w-full" />
+      </div>
 
+      <div className="flex flex-wrap gap-4">
         <Combobox
           options={[
             { value: "all", label: "All Packages", icon: Package2, iconColor: "text-muted-foreground" },
@@ -784,6 +811,7 @@ export default function ManageTenants() {
             <Label htmlFor="show-archived" className="text-sm whitespace-nowrap cursor-pointer">Show Archived</Label>
           </div>
         )}
+      </div>
       </div>
 
       {/* Bulk action bar */}
