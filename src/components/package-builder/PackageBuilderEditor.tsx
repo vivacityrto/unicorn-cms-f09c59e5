@@ -707,8 +707,12 @@ export function PackageBuilderEditor() {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full rounded-lg border">
-          {/* Left Panel - Stage Timeline */}
-          <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
+          {/* Left Panel - Stage Timeline. minSize raised from 20 to 32: below
+              that, the stage badges ("Once-off", "No version") no longer fit
+              their own wrapped line and get clipped by the panel's overflow
+              instead of wrapping - confirmed live at a 900px viewport where a
+              20% panel left only ~65px of usable badge width. */}
+          <ResizablePanel defaultSize={32} minSize={32} maxSize={40}>
             <div className="h-full flex flex-col bg-muted/20">
               <div className="p-4 border-b bg-background">
                 <div className="flex items-center justify-between mb-2">
@@ -726,7 +730,13 @@ export function PackageBuilderEditor() {
                 </p>
               </div>
               
-              <ScrollArea className="flex-1 p-3">
+              {/* viewportClassName: Radix's ScrollArea Viewport renders its
+                  children in an internal wrapper that defaults to
+                  display:table (shrink-to-content), so the stage rows'
+                  natural content width (badges etc.) ignored this panel's
+                  actual width entirely and got silently clipped by the
+                  ScrollArea's own overflow-hidden instead of wrapping. */}
+              <ScrollArea className="flex-1 p-3" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {packageStages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                     <Layers className="h-10 w-10 text-muted-foreground mb-3" />
@@ -749,7 +759,7 @@ export function PackageBuilderEditor() {
                       items={packageStages.map(ps => ps.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <div className="space-y-2">
+                      <div className="space-y-2 w-full min-w-0">
                         {packageStages.map((ps, index) => (
                           <SortableStageItem
                             key={ps.id}

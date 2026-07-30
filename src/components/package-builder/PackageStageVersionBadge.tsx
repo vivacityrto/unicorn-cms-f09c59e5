@@ -28,12 +28,12 @@ export function PackageStageVersionBadge({
   } = usePackageStageVersion(packageId, stageId);
 
   if (isLoading) {
-    return <Badge variant="outline" className="animate-pulse">Loading...</Badge>;
+    return <Badge variant="outline" className="text-xs animate-pulse whitespace-nowrap">Loading...</Badge>;
   }
 
   if (!currentVersion) {
     return (
-      <Badge variant="secondary" className="gap-1">
+      <Badge variant="secondary" className="text-xs gap-1 whitespace-nowrap">
         No version
       </Badge>
     );
@@ -44,9 +44,9 @@ export function PackageStageVersionBadge({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge 
+            <Badge
               variant={hasUpdateAvailable ? 'outline' : 'secondary'}
-              className={hasUpdateAvailable ? 'border-amber-500/30 text-amber-600' : ''}
+              className={`text-xs whitespace-nowrap ${hasUpdateAvailable ? 'border-amber-500/30 text-amber-600' : ''}`}
             >
               {hasUpdateAvailable ? (
                 <ArrowUp className="h-3 w-3 mr-1" />
