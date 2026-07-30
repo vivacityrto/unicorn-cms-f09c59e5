@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +36,7 @@ import { AUDIT_STAGE_IDS, STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink
 import { PhaseGroupHeader } from './PhaseGroupHeader';
 import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
 import { usePhaseProgress } from '@/hooks/usePhaseProgress';
-import { useStageCounts } from '@/hooks/useStageCounts';
+import { useStageCountsBatch } from '@/hooks/useStageCounts';
 import { useTaskStatusOptions, getStatusIcon, getStatusColor, getStatusLabel } from '@/hooks/useTaskStatusOptions';
 import {
   Loader2,
@@ -93,9 +93,11 @@ interface StageRowProps {
   packageInstanceId?: number;
   onUpdate: () => void;
   profile: any;
+  counts: { staffTasks: number; clientTasks: number; documents: number; emails: number };
+  countsLoading: boolean;
 }
 
-function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
+function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, packageInstanceId, onUpdate, profile, counts, countsLoading }: StageRowProps) {
 
   const { statuses } = useTaskStatusOptions();
   const { toast } = useToast();
@@ -106,23 +108,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
   const StatusIcon = getStatusIcon(statusCode);
   const statusColor = getStatusColor(statusCode);
   const statusLabel = statuses.find(s => s.code === statusCode)?.label || `Status ${statusCode}`;
-  const { staffTasks, clientTasks, documents, emails, loading: countsLoading } = useStageCounts(stage.id);
-
-  // Count of CTIs already converted to client_action_items — drives the
-  // "Publish" vs "Republish" label on the new portal-publish button.
-  const { data: publishedCount = 0 } = useQuery({
-    queryKey: ['stage-published-count', stage.id],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('client_task_instances')
-        .select('id', { count: 'exact', head: true })
-        .eq('stageinstance_id', stage.id)
-        .not('published_action_item_id', 'is', null);
-      if (error) throw error;
-      return count ?? 0;
-    },
-    enabled: !!stage.id,
-  });
+  const { staffTasks, clientTasks, documents, emails, publishedCount } = counts;
 
   const handlePublishToPortal = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -142,7 +128,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
       } else {
         toast({ title: 'No tasks to publish' });
       }
-      queryClient.invalidateQueries({ queryKey: ['stage-published-count', stage.id] });
+      queryClient.invalidateQueries({ queryKey: ['stage-counts-batch'] });
       queryClient.invalidateQueries({ queryKey: ['client_package_stages'] });
       queryClient.invalidateQueries({ queryKey: ['client-all-tasks'] });
       onUpdate();
@@ -357,7 +343,10 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
   const { toast } = useToast();
   const { profile } = useAuth();
   const { statuses } = useTaskStatusOptions();
-  const [stages, setStages] = useState<StageInstance[]>([]);
+  // Raw stage rows as fetched — status is left unresolved (may be numeric
+  // code, canonical text value, or null) so resolution can be redone
+  // whenever `statuses` changes, independent of when the fetch completed.
+  const [rawStages, setRawStages] = useState<StageInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
   const [packageInstanceId, setPackageInstanceId] = useState<number | null>(null);
@@ -418,10 +407,10 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
 
   // Auto-expand stage when navigated via deep link
   useEffect(() => {
-    if (autoExpandStageInstanceId && stages.length > 0) {
+    if (autoExpandStageInstanceId && rawStages.length > 0) {
       setExpandedStages(prev => new Set(prev).add(autoExpandStageInstanceId));
     }
-  }, [autoExpandStageInstanceId, stages]);
+  }, [autoExpandStageInstanceId, rawStages]);
 
   const fetchStages = async () => {
     setLoading(true);
@@ -442,7 +431,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
         if (instanceError) throw instanceError;
 
         if (!instanceData) {
-          setStages([]);
+          setRawStages([]);
           setLoading(false);
           return;
         }
@@ -465,7 +454,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       if (stageError) throw stageError;
 
       if (!stageData || stageData.length === 0) {
-        setStages([]);
+        setRawStages([]);
         setLoading(false);
         return;
       }
@@ -482,36 +471,19 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       // Create a lookup map for stage metadata
       const stageMap = new Map(stagesMetadata?.map(s => [s.id, s]) || []);
 
-      // Dual-read shim: stage_instances.status may contain a numeric code as
-      // text ('0'..'6'), a canonical dd_status.value ('not_started',
-      // 'completed', ...), a raw number, or null. Resolve every row to a
-      // numeric code the existing UI already understands. Remove once Phase C
-      // backfill is complete and every row stores a canonical value.
-      const valueToCode = new Map(statuses.map((s) => [s.value, s.code]));
-      const resolveStatusCode = (raw: unknown, stageType: string | null): number => {
-        if (raw === null || raw === undefined || raw === '') {
-          return (stageType === 'monitor' || stageType === 'monitoring') ? 6 : 0;
-        }
-        if (typeof raw === 'number') return raw;
-        if (typeof raw === 'string' && /^[0-9]+$/.test(raw)) return parseInt(raw, 10);
-        if (typeof raw === 'string') {
-          const code = valueToCode.get(raw);
-          if (typeof code === 'number') return code;
-        }
-        return (stageType === 'monitor' || stageType === 'monitoring') ? 6 : 0;
-      };
-
+      // Status is left unresolved here (may be a numeric code, canonical
+      // text value, or null) — see the `stages` useMemo below for
+      // resolution against the current `statuses` list.
       const transformed: StageInstance[] = stageData.map((row: any) => {
         const meta = stageMap.get(row.stage_id);
         const stageType = (meta as any)?.stage_type || null;
-        const resolvedStatus = resolveStatusCode(row.status, stageType);
         return {
           id: row.id,
           stage_id: row.stage_id,
           stage_name: meta?.name || `Stage ${row.stage_id}`,
           shortname: meta?.shortname || null,
           stage_type: stageType,
-          status: resolvedStatus,
+          status: row.status,
           status_date: row.status_date || null,
           completion_date: row.completion_date,
           comment: row.comment || null,
@@ -523,7 +495,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
         };
       });
 
-      setStages(transformed);
+      setRawStages(transformed);
     } catch (error: any) {
       console.error('Error fetching stage instances:', error);
       toast({ title: 'Error', description: 'Failed to load stages', variant: 'destructive' });
@@ -531,6 +503,43 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       setLoading(false);
     }
   };
+
+  // Resolve each stage's raw status against the current `statuses` list.
+  // Kept separate from the fetch above so a cold load (statuses not yet
+  // cached — see useTaskStatusOptions) re-resolves the moment statuses
+  // arrive, instead of permanently falling back to "Not Started" for a
+  // fetch that ran before the status list was ready.
+  //
+  // Dual-read shim: stage_instances.status may contain a numeric code as
+  // text ('0'..'6'), a canonical dd_status.value ('not_started',
+  // 'completed', ...), a raw number, or null. Remove the string-parsing
+  // branches once Phase C backfill is complete and every row stores a
+  // canonical value.
+  const stages = useMemo<StageInstance[]>(() => {
+    const valueToCode = new Map(statuses.map((s) => [s.value, s.code]));
+    const resolveStatusCode = (raw: unknown, stageType: string | null): number => {
+      if (raw === null || raw === undefined || raw === '') {
+        return (stageType === 'monitor' || stageType === 'monitoring') ? 6 : 0;
+      }
+      if (typeof raw === 'number') return raw;
+      if (typeof raw === 'string' && /^[0-9]+$/.test(raw)) return parseInt(raw, 10);
+      if (typeof raw === 'string') {
+        const code = valueToCode.get(raw);
+        if (typeof code === 'number') return code;
+      }
+      return (stageType === 'monitor' || stageType === 'monitoring') ? 6 : 0;
+    };
+
+    return rawStages.map((s) => ({
+      ...s,
+      status: resolveStatusCode(s.status, s.stage_type),
+    }));
+  }, [rawStages, statuses]);
+
+  // Batched task/document/email counts for every stage row, in 4 requests
+  // total instead of 4 per row (see useStageCounts.ts).
+  const stageIds = useMemo(() => stages.map((s) => s.id), [stages]);
+  const { getCounts, loading: countsLoading } = useStageCountsBatch(stageIds);
 
   const updateStageStatus = async (stageInstanceId: number, newStatus: number) => {
     setUpdating(stageInstanceId);
@@ -655,6 +664,8 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       packageInstanceId={packageInstanceId ?? undefined}
       onUpdate={fetchStages}
       profile={profile}
+      counts={getCounts(stage.id)}
+      countsLoading={countsLoading}
     />
   );
 

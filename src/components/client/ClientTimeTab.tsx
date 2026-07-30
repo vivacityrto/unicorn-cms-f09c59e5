@@ -1069,18 +1069,27 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     isVivacityStaffRole(profile?.unicorn_role) ||
     profile?.unicorn_role === 'Admin';
 
-  // Fetch active packages for filter dropdown
+  // Fetch active packages for filter dropdown.
+  // Two-step fetch since there's no FK between package_instances and packages
+  // (the embedded `packages:package_id(name)` select 400s otherwise).
   const { data: activePackages } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data: instances } = await (supabase as any)
         .from('package_instances')
-        .select('id, package_id, packages:package_id(name)')
+        .select('id, package_id')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false);
-      return (data || []).map((p: any) => ({
+
+      const packageIds = [...new Set((instances || []).map((p: any) => p.package_id))];
+      const { data: pkgs } = packageIds.length > 0
+        ? await supabase.from('packages').select('id, name').in('id', packageIds)
+        : { data: [] };
+      const nameMap = new Map((pkgs || []).map((p: any) => [p.id, p.name]));
+
+      return (instances || []).map((p: any) => ({
         id: p.package_id,
-        name: p.packages?.name || `Package #${p.package_id}`,
+        name: nameMap.get(p.package_id) || `Package #${p.package_id}`,
       }));
     },
   });

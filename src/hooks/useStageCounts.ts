@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface StageCounts {
@@ -6,67 +6,62 @@ interface StageCounts {
   clientTasks: number;
   documents: number;
   emails: number;
-  loading: boolean;
+  /** CTIs already converted to client_action_items — drives the "Publish" vs "Republish" label. */
+  publishedCount: number;
 }
 
-export function useStageCounts(stageInstanceId: number): StageCounts {
-  const [counts, setCounts] = useState<Omit<StageCounts, 'loading'>>({
-    staffTasks: 0,
-    clientTasks: 0,
-    documents: 0,
-    emails: 0,
+const EMPTY_COUNTS: StageCounts = { staffTasks: 0, clientTasks: 0, documents: 0, emails: 0, publishedCount: 0 };
+
+/**
+ * Staff/client task, document, email, and published-count figures for every
+ * stage in a package, fetched in 5 batched queries total rather than 5 per
+ * stage row. A package with N stages previously issued 5N requests (e.g. 37
+ * stages == 185 requests) just to render count badges and the
+ * Publish/Republish button label — this fetches once for the whole set and
+ * tallies client-side.
+ */
+export function useStageCountsBatch(stageInstanceIds: number[]) {
+  const idsKey = [...stageInstanceIds].sort((a, b) => a - b).join(',');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['stage-counts-batch', idsKey],
+    queryFn: async () => {
+      const [staffRes, clientRes, docRes, emailRes, publishedRes] = await Promise.all([
+        supabase.from('staff_task_instances').select('stageinstance_id').in('stageinstance_id', stageInstanceIds),
+        supabase.from('client_task_instances').select('stageinstance_id').in('stageinstance_id', stageInstanceIds).is('is_archived', false),
+        supabase.from('document_instances').select('stageinstance_id').in('stageinstance_id', stageInstanceIds),
+        supabase.from('email_instances').select('stageinstance_id').in('stageinstance_id', stageInstanceIds),
+        supabase.from('client_task_instances').select('stageinstance_id').in('stageinstance_id', stageInstanceIds).not('published_action_item_id', 'is', null),
+      ]);
+
+      const tally = (rows: { stageinstance_id: number }[] | null) => {
+        const map = new Map<number, number>();
+        (rows || []).forEach((r) => map.set(r.stageinstance_id, (map.get(r.stageinstance_id) || 0) + 1));
+        return map;
+      };
+
+      const staffMap = tally(staffRes.data);
+      const clientMap = tally(clientRes.data);
+      const docMap = tally(docRes.data);
+      const emailMap = tally(emailRes.data);
+      const publishedMap = tally(publishedRes.data);
+
+      const countsByStage: Record<number, StageCounts> = {};
+      stageInstanceIds.forEach((id) => {
+        countsByStage[id] = {
+          staffTasks: staffMap.get(id) || 0,
+          clientTasks: clientMap.get(id) || 0,
+          documents: docMap.get(id) || 0,
+          emails: emailMap.get(id) || 0,
+          publishedCount: publishedMap.get(id) || 0,
+        };
+      });
+      return countsByStage;
+    },
+    enabled: stageInstanceIds.length > 0,
   });
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!stageInstanceId) {
-      setLoading(false);
-      return;
-    }
+  const getCounts = (stageInstanceId: number): StageCounts => (data && data[stageInstanceId]) || EMPTY_COUNTS;
 
-    let cancelled = false;
-
-    const fetchCounts = async () => {
-      setLoading(true);
-      try {
-        const [staffRes, clientRes, docRes, emailRes] = await Promise.all([
-          supabase
-            .from('staff_task_instances')
-            .select('id', { count: 'exact', head: true })
-            .eq('stageinstance_id', stageInstanceId),
-          supabase
-            .from('client_task_instances')
-            .select('id', { count: 'exact', head: true })
-            .eq('stageinstance_id', stageInstanceId)
-            .is('is_archived', false),
-          supabase
-            .from('document_instances')
-            .select('id', { count: 'exact', head: true })
-            .eq('stageinstance_id', stageInstanceId),
-          supabase
-            .from('email_instances')
-            .select('id', { count: 'exact', head: true })
-            .eq('stageinstance_id', stageInstanceId),
-        ]);
-
-        if (!cancelled) {
-          setCounts({
-            staffTasks: staffRes.count ?? 0,
-            clientTasks: clientRes.count ?? 0,
-            documents: docRes.count ?? 0,
-            emails: emailRes.count ?? 0,
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching stage counts:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    fetchCounts();
-    return () => { cancelled = true; };
-  }, [stageInstanceId]);
-
-  return { ...counts, loading };
+  return { getCounts, loading: isLoading };
 }
