@@ -65,7 +65,6 @@ import { TenantUsersPreviewCard } from '@/components/client/TenantUsersPreviewCa
 
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
 import { ClientQuickNav } from '@/components/client/ClientQuickNav';
-import { AssignPackageDialog } from '@/components/client/AssignPackageDialog';
 import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
 import { TenantLogoUpload } from '@/components/tenant/TenantLogoUpload';
 import { OrgTypeBadge } from '@/components/tenant/OrgTypeBadge';
@@ -96,10 +95,21 @@ export default function ClientDetail() {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
+
+  // Tab switches from clicking within the page (as opposed to the URL-sync
+  // effect above) also need to write back to the URL, so refresh/share/back
+  // land on the tab actually being viewed instead of snapping back to
+  // whatever ?tab= was in the address bar when the page first loaded.
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setSearchParams(prev => {
+      prev.set('tab', value);
+      return prev;
+    });
+  };
   const [primaryContactName, setPrimaryContactName] = useState<string>('');
   const [primaryContactEmail, setPrimaryContactEmail] = useState<string>('');
   const [secondaryContactName, setSecondaryContactName] = useState<string>('');
-  const [assignPackageOpen, setAssignPackageOpen] = useState(false);
   const [profileHasChanges, setProfileHasChanges] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [triggerProfileSave, setTriggerProfileSave] = useState<(() => void) | null>(null);
@@ -552,7 +562,7 @@ export default function ClientDetail() {
 
         {/* Tabs */}
         <div className="px-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <div ref={setTabsRowEl} className="flex items-center gap-4 min-w-0">
               <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4 min-w-0">
                 {visibleTabs.map((t) => (
@@ -597,7 +607,7 @@ export default function ClientDetail() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     {moreTabs.map((t) => (
-                      <DropdownMenuItem key={t.value} onClick={() => setActiveTab(t.value)}>
+                      <DropdownMenuItem key={t.value} onClick={() => handleTabChange(t.value)}>
                         <t.icon className="h-4 w-4 mr-2" />
                         {t.label}
                         {t.badge}
@@ -667,7 +677,7 @@ export default function ClientDetail() {
               <div className="lg:col-span-2">
                 <ClientTimeSummaryCard clientId={tenantIdNum!} />
               </div>
-              <TenantUsersPreviewCard tenantId={tenantIdNum!} onViewAll={() => setActiveTab('users')} />
+              <TenantUsersPreviewCard tenantId={tenantIdNum!} onViewAll={() => handleTabChange('users')} />
             </div>
 
             {/* Related Organisations */}
@@ -705,18 +715,10 @@ export default function ClientDetail() {
               tenantName={tenant.name}
               packages={packages}
               loading={packagesLoading}
-              onAddPackage={() => setAssignPackageOpen(true)}
               onRefresh={refreshPackages}
               complyhubTier={tenant?.complyhub_membership_tier}
               autoExpandPackageInstanceId={searchParams.get('packageInstance') ? parseInt(searchParams.get('packageInstance')!, 10) : undefined}
               autoExpandStageInstanceId={searchParams.get('stageInstance') ? parseInt(searchParams.get('stageInstance')!, 10) : undefined}
-            />
-            <AssignPackageDialog
-              open={assignPackageOpen}
-              onOpenChange={setAssignPackageOpen}
-              tenantId={tenantIdNum!}
-              tenantName={tenant.name}
-              onSuccess={refreshPackages}
             />
           </TabsContent>
 

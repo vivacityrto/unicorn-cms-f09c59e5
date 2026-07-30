@@ -71,9 +71,11 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
       const packageIds = (tenantData as any).package_ids || (tenantData.package_id ? [tenantData.package_id] : []);
       if (packageIds.length === 0) return [];
 
+      // Two-step fetch — there's no FK between documents.package_id and
+      // packages, so the embedded `packages:package_id(name)` select 400s.
       let query = (supabase as any)
         .from('documents')
-        .select('*, packages:package_id(name)')
+        .select('*')
         .in('package_id', packageIds)
         .eq('is_auto_generated', true);
 
@@ -85,9 +87,12 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
       const { data, error } = await query.order('createdat', { ascending: false });
       if (error) throw error;
 
+      const { data: pkgs } = await supabase.from('packages').select('id, name').in('id', packageIds);
+      const nameMap = new Map((pkgs || []).map((p: any) => [p.id, p.name]));
+
       return (data || []).map((doc: any) => ({
         ...doc,
-        package_name: doc.packages?.name || null,
+        package_name: nameMap.get(doc.package_id) || null,
       }));
     },
     enabled: !!tenantId,

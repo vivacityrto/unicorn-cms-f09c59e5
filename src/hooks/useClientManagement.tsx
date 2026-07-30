@@ -666,11 +666,15 @@ export function useClientPackages(tenantId: number | null) {
       }, {} as Record<number, { name: string; stage_type: string | null }>);
 
       // Build package data with stage info
+      // A stage counts as done once it's 'completed' or 'core_complete' — the
+      // old '3' literal here was dd_status code 3, which is 'na' (Not
+      // Applicable), not completed; it was never a valid "done" marker.
+      const isDoneStatus = (status: unknown) => status === 'completed' || status === 'core_complete';
       const packageData: ClientPackage[] = (instances || []).map(inst => {
         const pkg = packagesMap[inst.package_id];
         const pkgStages = stageInstances.filter((s: any) => s.packageinstance_id === inst.id);
         const totalStages = pkgStages.length;
-        const completedStages = pkgStages.filter((s: any) => s.status === 'completed' || s.status === '3').length;
+        const completedStages = pkgStages.filter((s: any) => isDoneStatus(s.status)).length;
         const hasBlocked = pkgStages.some((s: any) => s.status === 'blocked');
 
         // Trackable stages exclude offboarding/monitor/finalise
@@ -678,13 +682,13 @@ export function useClientPackages(tenantId: number | null) {
           const sType = stageMetaMap[s.stage_id]?.stage_type?.toLowerCase();
           return !NON_TRACKABLE_STAGE_TYPES.includes(sType || '');
         });
-        const trackableCompleted = trackableStages.filter((s: any) => s.status === 'completed' || s.status === '3').length;
+        const trackableCompleted = trackableStages.filter((s: any) => isDoneStatus(s.status)).length;
         const monitorStages = pkgStages.filter((s: any) => {
           const sType = stageMetaMap[s.stage_id]?.stage_type?.toLowerCase();
           return sType === 'monitor';
         }).length;
-        const activeStage = pkgStages.find((s: any) => 
-          s.status !== 'completed' && s.status !== '3' && s.status !== 'na' && s.status !== 'not_started'
+        const activeStage = pkgStages.find((s: any) =>
+          !isDoneStatus(s.status) && s.status !== 'na' && s.status !== 'not_started'
         ) || pkgStages.find((s: any) => s.status === 'not_started');
 
         // Total hours = included_minutes (canonical) fallback to hours_included (deprecated) + added

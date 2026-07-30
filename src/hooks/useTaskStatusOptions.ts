@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   AlertCircle,
   Eye,
+  Lock,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ const ICON_MAP: Record<number, LucideIcon> = {
   4: ShieldCheck,
   5: AlertCircle,
   6: Eye,
+  7: Lock,
 };
 
 const COLOR_MAP: Record<number, string> = {
@@ -37,6 +39,7 @@ const COLOR_MAP: Record<number, string> = {
   4: 'text-emerald-500',
   5: 'text-red-600',
   6: 'text-amber-600',
+  7: 'text-slate-500',
 };
 
 const DEFAULT_ICON = Circle;

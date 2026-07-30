@@ -31,23 +31,31 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
   const [preselectedAuditType, setPreselectedAuditType] = useState<AuditType | undefined>(undefined);
   const [activeStageInstanceId, setActiveStageInstanceId] = useState<number | undefined>(undefined);
 
-  // Detect active audit-type stage instance without a linked audit
+  // Detect active audit-type stage instance without a linked audit.
+  // stage_instances.packageinstance_id has no FK to package_instances, so
+  // PostgREST can't embed package_instances!inner() — that always 400ed.
+  // Two-step fetch instead: resolve this tenant's package instance ids first,
+  // then filter stage_instances by those ids directly.
   useEffect(() => {
     const detectActiveStage = async () => {
+      const { data: tenantInstances } = await supabase
+        .from('package_instances')
+        .select('id')
+        .eq('tenant_id', tenantId);
+      const instanceIds = (tenantInstances || []).map((i) => i.id);
+      if (instanceIds.length === 0) return;
+
       const { data } = await supabase
         .from('stage_instances' as any)
-        .select('id, stage_id, linked_audit_id, packageinstance_id, package_instances!inner(tenant_id)')
+        .select('id, stage_id, linked_audit_id, packageinstance_id')
         .in('stage_id', AUDIT_STAGE_IDS)
+        .in('packageinstance_id', instanceIds)
         .is('linked_audit_id', null)
-        .neq('status', 2) // not completed
+        .not('status', 'in', '(completed,core_complete)')
         .order('id', { ascending: false });
 
       if (data && (data as any[]).length > 0) {
-        // Find one that belongs to this tenant
-        const match = (data as any[]).find(d => d.package_instances?.tenant_id === tenantId);
-        if (match) {
-          setActiveStageInstanceId(match.id);
-        }
+        setActiveStageInstanceId((data as any[])[0].id);
       }
     };
     detectActiveStage();

@@ -73,7 +73,6 @@ interface ClientPackagesTabProps {
   tenantName?: string;
   packages: ClientPackage[];
   loading: boolean;
-  onAddPackage?: () => void;
   onRefresh?: () => void;
   complyhubTier?: string | null;
   autoExpandPackageInstanceId?: number;
@@ -100,7 +99,7 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
   cancelled: <XCircle className="h-3 w-3" />
 };
 
-export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, onRefresh, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
+export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onRefresh, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
   const { data: membershipStateOptions } = useMembershipStateOptions();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
@@ -134,7 +133,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
     if (autoExpandPackageInstanceId && packages.length > 0) {
       const targetPkg = packages.find(p => parseInt(p.id, 10) === autoExpandPackageInstanceId);
       if (targetPkg) {
-        setExpandedPackages(prev => new Set(prev).add(targetPkg.package_id));
+        setExpandedPackages(prev => new Set(prev).add(parseInt(targetPkg.id, 10)));
         if (targetPkg.is_complete) setViewMode('history');
       }
     }
@@ -143,7 +142,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   // Auto-expand all active packages on first load
   useEffect(() => {
     if (packages.length > 0 && expandedPackages.size === 0 && !autoExpandPackageInstanceId) {
-      const activeIds = new Set(activePackages.map(p => p.package_id));
+      const activeIds = new Set(activePackages.map(p => parseInt(p.id, 10)));
       setExpandedPackages(activeIds);
     }
   }, [packages]);
@@ -212,7 +211,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
 
       toast.success(`${finaliseTarget.package_name} finalised successfully${renewPackage ? ' — renewal created' : ''}`);
       setFinaliseTarget(null);
-      onAddPackage?.();
+      onRefresh?.();
     } catch (err: any) {
       console.error('Finalise error:', err);
       toast.error(err.message || 'Failed to finalise package');
@@ -326,7 +325,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
       }
 
       toast.success(`${pkg.package_name} has been resumed`);
-      window.location.reload();
+      onRefresh?.();
     } catch (err: any) {
       toast.error(err.message || 'Failed to resume package');
     }
@@ -407,7 +406,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           onOpenChange={setStartPackageOpen}
           tenantId={tenantId}
           tenantName={tenantName || 'Client'}
-          onSuccess={() => onAddPackage?.()}
+          onSuccess={() => onRefresh?.()}
         />
       </>
     );
@@ -463,9 +462,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
         onOpenChange={setDataManagerOpen}
         tenantId={tenantId}
         tenantName={tenantName}
-        onSuccess={() => {
-          // Trigger a refresh if parent provides onAddPackage callback pattern
-        }}
+        onSuccess={() => onRefresh?.()}
       />
 
       {/* Start Package Dialog */}
@@ -474,7 +471,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
         onOpenChange={setStartPackageOpen}
         tenantId={tenantId}
         tenantName={tenantName || 'Client'}
-        onSuccess={() => onAddPackage?.()}
+        onSuccess={() => onRefresh?.()}
       />
 
       {/* Package Cards */}
@@ -490,9 +487,10 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
         </Card>
       )}
       {displayedPackages.map((pkg) => {
-        const isExpanded = expandedPackages.has(pkg.package_id);
+        const pkgInstanceId = parseInt(pkg.id, 10);
+        const isExpanded = expandedPackages.has(pkgInstanceId);
         return (
-          <Collapsible key={pkg.id} open={isExpanded} onOpenChange={() => togglePackage(pkg.package_id)}>
+          <Collapsible key={pkg.id} open={isExpanded} onOpenChange={() => togglePackage(pkgInstanceId)}>
             <Card className={cn("hover:shadow-md transition-shadow", pkg.membership_state === 'warning' && !pkg.is_complete && "border-red-500 border-2")}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-4">
@@ -555,7 +553,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                                       const title = `** PACKAGE STATUS "${stateOpt.label.toUpperCase()}" — ${pkg.package_name} — ALL ACTIVITY HALTED **`;
                                       navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
                                     } else {
-                                      window.location.reload();
+                                      onRefresh?.();
                                     }
                                   } catch (err: any) {
                                     toast.error(err.message || 'Failed to change state');
@@ -574,18 +572,18 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                     <div className="flex items-center gap-6 text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <CalendarIcon className="h-4 w-4" />
-                        <span>Started {new Date(pkg.membership_started_at).toLocaleDateString()}</span>
+                        <span>Started {format(new Date(pkg.membership_started_at), 'dd/MM/yyyy')}</span>
                       </div>
                       {pkg.last_renewed_date && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <RefreshCw className="h-3.5 w-3.5" />
-                          <span>Renewed {new Date(pkg.last_renewed_date).toLocaleDateString()}</span>
+                          <span>Renewed {format(new Date(pkg.last_renewed_date), 'dd/MM/yyyy')}</span>
                         </div>
                       )}
                       {pkg.is_complete && pkg.completed_at && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <CheckCircle2 className="h-4 w-4" />
-                          <span>Completed {new Date(pkg.completed_at).toLocaleDateString()}</span>
+                          <span>Completed {format(new Date(pkg.completed_at), 'dd/MM/yyyy')}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-1 text-muted-foreground">
