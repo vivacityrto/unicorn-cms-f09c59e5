@@ -194,7 +194,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(85vh-120px)] pr-4">
+        <ScrollArea className="max-h-[calc(85vh-120px)] pr-4" viewportClassName="[&>div]:!block [&>div]:w-full">
           <div className="space-y-6">
             {/* Stage Header */}
             <div className="space-y-3">

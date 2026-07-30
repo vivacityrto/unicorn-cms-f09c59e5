@@ -93,7 +93,7 @@ export function StageDependencySelector({
               className="h-9"
             />
           </div>
-          <ScrollArea className="h-[250px]">
+          <ScrollArea className="h-[250px]" viewportClassName="[&>div]:!block [&>div]:w-full">
             {filteredStages.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">
                 No stages found

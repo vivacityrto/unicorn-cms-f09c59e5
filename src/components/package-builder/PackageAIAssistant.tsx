@@ -250,7 +250,7 @@ export function PackageAIAssistant({
         </div>
       </div>
       
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-4" viewportClassName="[&>div]:!block [&>div]:w-full">
         {suggestions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <CheckCircle2 className="h-12 w-12 text-emerald-500 mb-4" />

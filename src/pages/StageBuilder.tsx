@@ -550,7 +550,7 @@ export default function StageBuilder() {
                       Add Task
                     </Button>
                   </div>
-                  <ScrollArea className="max-h-[200px]">
+                  <ScrollArea className="max-h-[200px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                     <div className="space-y-2">
                       {state.teamTasks.map((task, index) => (
                         <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
@@ -611,7 +611,7 @@ export default function StageBuilder() {
                       Add Task
                     </Button>
                   </div>
-                  <ScrollArea className="max-h-[200px]">
+                  <ScrollArea className="max-h-[200px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                     <div className="space-y-2">
                       {state.clientTasks.map((task, index) => (
                         <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
@@ -650,7 +650,7 @@ export default function StageBuilder() {
                       Add Email
                     </Button>
                   </div>
-                  <ScrollArea className="max-h-[250px]">
+                  <ScrollArea className="max-h-[250px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                     <div className="space-y-2">
                       {state.emails.map((email, index) => (
                         <div key={email.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">

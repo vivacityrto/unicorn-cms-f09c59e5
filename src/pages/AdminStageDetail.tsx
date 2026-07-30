@@ -1521,7 +1521,7 @@ export default function AdminStageDetail() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="h-[400px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                     {teamTasks.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-center">
                         <Users className="h-10 w-10 text-muted-foreground mb-3" />
@@ -1571,7 +1571,7 @@ export default function AdminStageDetail() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="h-[400px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                     {clientTasks.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-center">
                         <CheckSquare className="h-10 w-10 text-muted-foreground mb-3" />
@@ -1633,7 +1633,7 @@ export default function AdminStageDetail() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="h-[400px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                     {stageEmails.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-center">
                         <Mail className="h-10 w-10 text-muted-foreground mb-3" />
@@ -1845,7 +1845,7 @@ export default function AdminStageDetail() {
                     </p>
                   </div>
                 ) : (
-                  <ScrollArea className="h-[500px]">
+                  <ScrollArea className="h-[500px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                     <div className="space-y-2">
                       {auditEvents.map((event) => (
                         <Collapsible key={event.id}>

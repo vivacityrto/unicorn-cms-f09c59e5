@@ -132,7 +132,7 @@ export function AddRecommendedStagesDialog({
         </DialogHeader>
 
         {hasRecommendations && (
-          <ScrollArea className="max-h-[400px]">
+          <ScrollArea className="max-h-[400px]" viewportClassName="[&>div]:!block [&>div]:w-full">
             <div className="space-y-3 pr-4">
               {stageMatches.map((match, index) => (
                 <div 

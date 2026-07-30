@@ -89,7 +89,7 @@ export function StageMessagesPanel({ stageId, tenantId, onSendMessage }: StageMe
             <p className="text-muted-foreground">No messages configured</p>
           </div>
         ) : (
-          <ScrollArea className="h-[460px] pr-3">
+          <ScrollArea className="h-[460px] pr-3" viewportClassName="[&>div]:!block [&>div]:w-full">
             <div className="space-y-3">
               {templates.map((t) => {
                 const preview = t.body.length > 120 ? `${t.body.slice(0, 120)}…` : t.body;

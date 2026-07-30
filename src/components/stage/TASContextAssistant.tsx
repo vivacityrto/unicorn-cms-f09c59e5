@@ -388,7 +388,7 @@ export function TASContextAssistant({ tenantId, stageInstanceId, tenantName }: T
                     >
                       <Edit2 className="h-3 w-3" /> Edit
                     </Button>
-                    <ScrollArea className="max-h-[400px]">
+                    <ScrollArea className="max-h-[400px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                       <div className="text-xs prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap pr-16">
                         {brief.brief_markdown}
                       </div>

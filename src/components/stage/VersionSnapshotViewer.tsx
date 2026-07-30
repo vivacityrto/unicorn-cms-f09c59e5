@@ -49,7 +49,7 @@ export function VersionSnapshotViewer({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[60vh]">
+        <ScrollArea className="h-[60vh]" viewportClassName="[&>div]:!block [&>div]:w-full">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="overview">Overview</TabsTrigger>

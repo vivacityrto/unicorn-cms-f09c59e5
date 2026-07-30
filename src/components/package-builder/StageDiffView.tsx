@@ -288,7 +288,7 @@ export function StageDiffView({ packageId, stageId, stageName }: StageDiffViewPr
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="h-[400px] mt-4">
+          <ScrollArea className="h-[400px] mt-4" viewportClassName="[&>div]:!block [&>div]:w-full">
             <TabsContent value="team-tasks" className="m-0">
               <ContentSection
                 title="Team Tasks"

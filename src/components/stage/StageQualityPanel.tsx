@@ -160,7 +160,7 @@ export function StageQualityPanel({ result, isLoading, onRefresh }: StageQuality
             growing with however many checks each has) doesn't stretch the
             whole two-column header row and leave the short left column
             stranded above a huge empty gap. */}
-        <ScrollArea className="h-[300px]">
+        <ScrollArea className="h-[300px]" viewportClassName="[&>div]:!block [&>div]:w-full">
           <div className="space-y-3">
             {categoryOrder.map((category) => {
               const checks = checksByCategory[category];

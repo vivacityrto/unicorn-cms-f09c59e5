@@ -677,7 +677,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[350px]">
+              <ScrollArea className="h-[350px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {displayTeamTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Users className="h-10 w-10 text-muted-foreground mb-3" />
@@ -764,7 +764,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[350px]">
+              <ScrollArea className="h-[350px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {displayEmails.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Mail className="h-10 w-10 text-muted-foreground mb-3" />
@@ -841,7 +841,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[350px]">
+              <ScrollArea className="h-[350px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {displayClientTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <CheckSquare className="h-10 w-10 text-muted-foreground mb-3" />
@@ -907,7 +907,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[350px]">
+                <ScrollArea className="h-[350px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                   {displayDocuments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <FileText className="h-10 w-10 text-muted-foreground mb-3" />
