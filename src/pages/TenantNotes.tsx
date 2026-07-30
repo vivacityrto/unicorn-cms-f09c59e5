@@ -438,14 +438,14 @@ export default function TenantNotes() {
         </Button>
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold text-foreground pb-2.5">{packageAbbr ? `${packageAbbr} Notes` : "Notes"}</h1>
               <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Building2 className="h-4 w-4" />{tenantName}</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             {noteSource === 'notes' && (
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[0.8rem] py-1.5 px-3 rounded-full font-medium gap-2">
                 <Timer className="h-4 w-4" />

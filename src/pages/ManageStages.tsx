@@ -264,12 +264,12 @@ export default function ManageStages() {
         </Button>
       </div>
       
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+        <div className="min-w-0">
           <h1 className="text-[28px] font-bold">Manage Phases</h1>
           <p className="text-muted-foreground">Create and manage document phases</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 self-start sm:self-auto">
           <Plus className="mr-2 h-4 w-4" />
           New Phase
         </Button>
