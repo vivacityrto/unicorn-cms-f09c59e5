@@ -206,7 +206,7 @@ export function StageLibraryDialog({
             </div>
 
             {/* Stage List */}
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-[400px] pr-4" viewportClassName="[&>div]:!block [&>div]:w-full">
               {filteredStages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Layers className="h-10 w-10 text-muted-foreground mb-3" />
