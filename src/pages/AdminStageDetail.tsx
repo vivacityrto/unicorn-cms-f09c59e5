@@ -1060,9 +1060,14 @@ export default function AdminStageDetail() {
         </Button>
       </div>
 
-      {/* Two-Column Header Layout: Stage Info + Quality Check */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mb-6">
-        {/* Left Column: Header Info */}
+      {/* Main content (left, wider) + meta sidebar (right, narrower): the
+          Settings/tabs form is the actual reason to visit this page, so it
+          gets the dominant column; Quality Check + Stage Impact stack in a
+          slim sidebar instead of forcing a shared-height 2-col row against
+          the much shorter header text above them. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+        {/* Main column: header info + warnings + tabs */}
+        <div className="min-w-0 space-y-6">
         <div className="space-y-3 min-w-0">
           {/* Stage Header */}
           {isLoading ? (
@@ -1159,25 +1164,9 @@ export default function AdminStageDetail() {
           )}
         </div>
 
-        {/* Right Column: Quality Check + Impact Panel */}
+        {/* Warnings */}
         {stage && (
-          <div className="lg:sticky lg:top-6 self-start grid grid-cols-2 gap-4">
-            <StageQualityPanel 
-              result={qualityResult} 
-              isLoading={qualityLoading}
-              onRefresh={refetchQuality}
-            />
-            <StageImpactPanel
-              stageId={stage.id}
-              stageName={stage.title}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Warnings - Full Width */}
-      {stage && (
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3">
           {isUsedByActiveClients && (
             <Alert className="border-destructive/30 bg-destructive/5">
               <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -1900,6 +1889,25 @@ export default function AdminStageDetail() {
           </TabsContent>
         </Tabs>
       )}
+        </div>
+
+        {/* Meta sidebar: Quality Check + Stage Impact, stacked (not
+            side-by-side) so they read as compact secondary info next to
+            the main settings/tabs content, not a competing block. */}
+        {stage && (
+          <div className="lg:sticky lg:top-6 space-y-4">
+            <StageQualityPanel
+              result={qualityResult}
+              isLoading={qualityLoading}
+              onRefresh={refetchQuality}
+            />
+            <StageImpactPanel
+              stageId={stage.id}
+              stageName={stage.title}
+            />
+          </div>
+        )}
+      </div>
       {/* Dialogs */}
       
       {/* Add Staff Task Dialog */}

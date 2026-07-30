@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   CheckCircle2, 
   AlertTriangle, 
@@ -154,35 +155,41 @@ export function StageQualityPanel({ result, isLoading, onRefresh }: StageQuality
           )}
         </div>
 
-        {/* Checks by category */}
-        <div className="space-y-3">
-          {categoryOrder.map((category) => {
-            const checks = checksByCategory[category];
-            if (!checks || checks.length === 0) return null;
+        {/* Checks by category - capped and scrollable to match the Stage
+            Impact panel's height, so this uncapped list (5 categories,
+            growing with however many checks each has) doesn't stretch the
+            whole two-column header row and leave the short left column
+            stranded above a huge empty gap. */}
+        <ScrollArea className="h-[300px]">
+          <div className="space-y-3">
+            {categoryOrder.map((category) => {
+              const checks = checksByCategory[category];
+              if (!checks || checks.length === 0) return null;
 
-            return (
-              <div key={category} className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  {CATEGORY_ICONS[category]}
-                  <span>{CATEGORY_LABELS[category]}</span>
+              return (
+                <div key={category} className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    {CATEGORY_ICONS[category]}
+                    <span>{CATEGORY_LABELS[category]}</span>
+                  </div>
+                  <div className="space-y-1 pl-6">
+                    {checks.map((check) => (
+                      <div
+                        key={check.check_key}
+                        className="flex items-start gap-2 text-xs"
+                      >
+                        {STATUS_ICONS[check.status]}
+                        <span className={check.status === 'pass' ? 'text-muted-foreground' : ''}>
+                          {check.message}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-1 pl-6">
-                  {checks.map((check) => (
-                    <div 
-                      key={check.check_key} 
-                      className="flex items-start gap-2 text-xs"
-                    >
-                      {STATUS_ICONS[check.status]}
-                      <span className={check.status === 'pass' ? 'text-muted-foreground' : ''}>
-                        {check.message}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );
