@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoResizeTextarea } from '@/hooks/useAutoResizeTextarea';
 import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -62,6 +63,10 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const [description, setDescription] = useState(rock?.description || '');
   const [issue, setIssue] = useState((rock as any)?.issue || '');
   const [problemSolved, setProblemSolved] = useState((rock as any)?.outcome || '');
+
+  const descriptionRef = useAutoResizeTextarea<HTMLTextAreaElement>(description, 400);
+  const issueRef = useAutoResizeTextarea<HTMLTextAreaElement>(issue, 400);
+  const problemSolvedRef = useAutoResizeTextarea<HTMLTextAreaElement>(problemSolved, 400);
   const [milestones, setMilestones] = useState<Milestone[]>(() => {
     const savedMilestones = (rock as any)?.milestones;
     if (Array.isArray(savedMilestones)) {
@@ -350,7 +355,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto scrollbar-thin">
         <DialogHeader>
           <DialogTitle>{rock ? 'Edit Rock' : 'Create New Rock'}</DialogTitle>
         </DialogHeader>
@@ -502,11 +507,13 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
+              ref={descriptionRef}
               id="description"
               placeholder="Details about this rock..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
+              rows={4}
+              className="resize-none overflow-hidden"
             />
           </div>
 
@@ -514,11 +521,13 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
           <div className="space-y-2">
             <Label htmlFor="issue">Issue This Rock Addresses</Label>
             <Textarea
+              ref={issueRef}
               id="issue"
               placeholder="What issue or challenge does this rock address?"
               value={issue}
               onChange={(e) => setIssue(e.target.value)}
               rows={2}
+              className="resize-none overflow-hidden"
             />
           </div>
 
@@ -526,11 +535,13 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
           <div className="space-y-2">
             <Label htmlFor="problem">The Problem This Solves</Label>
             <Textarea
+              ref={problemSolvedRef}
               id="problem"
               placeholder="What outcome will be achieved when this rock is complete?"
               value={problemSolved}
               onChange={(e) => setProblemSolved(e.target.value)}
               rows={2}
+              className="resize-none overflow-hidden"
             />
           </div>
 

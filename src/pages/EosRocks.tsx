@@ -27,6 +27,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useOverflowTabs } from '@/hooks/useOverflowTabs';
+import { cn } from '@/lib/utils';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { usePermission } from '@/hooks/usePermission';
@@ -139,6 +141,17 @@ function RocksHierarchyContent() {
   const filteredCompanyRocks = filterRocks(companyRocks);
   const filteredTeamRocks = filterRocks(teamRocks);
   const filteredIndividualRocks = filterRocks(individualRocks);
+
+  const ROCKS_TABS = [
+    { key: 'company', label: 'Company', icon: Building2, count: filteredCompanyRocks.length },
+    { key: 'team', label: 'Team', icon: Users, count: filteredTeamRocks.length },
+    { key: 'individual', label: 'Individual', icon: User, count: filteredIndividualRocks.length },
+    { key: 'cascade', label: 'Cascade', icon: GitBranch, count: 0 },
+  ] as const;
+  const { containerRef: tabsContainerRef, itemRef: tabItemRef, moreMeasureRef: tabsMoreMeasureRef, activeMoreMeasureRef: tabsActiveMoreMeasureRef, visibleCount: visibleTabCount } = useOverflowTabs(ROCKS_TABS.length, 0);
+  const visibleRocksTabs = ROCKS_TABS.slice(0, visibleTabCount);
+  const moreRocksTabs = ROCKS_TABS.slice(visibleTabCount);
+  const activeMoreRocksTab = moreRocksTabs.find((t) => t.key === activeTab);
 
   // Stats
   const stats = {
@@ -367,30 +380,114 @@ function RocksHierarchyContent() {
         )}
       </div>
 
-      {/* Tabs - responsive */}
+      {/* Tabs - as many as fit render directly; the rest collapse into a
+          "More" dropdown, measured dynamically - never via horizontal
+          scroll (see useOverflowTabs / feedback_no_tab_scroll). */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:max-w-lg sm:grid-cols-4">
-            <TabsTrigger value="company" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
-              <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Company</span>
-              <Badge variant="secondary" className="text-xs ml-1">{filteredCompanyRocks.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="team" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
-              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Team</span>
-              <Badge variant="secondary" className="text-xs ml-1">{filteredTeamRocks.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="individual" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
-              <User className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Individual</span>
-              <Badge variant="secondary" className="text-xs ml-1">{filteredIndividualRocks.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="cascade" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
-              <GitBranch className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Cascade</span>
-            </TabsTrigger>
+        <div ref={tabsContainerRef} className="flex items-center gap-0 min-w-0">
+          <TabsList>
+            {visibleRocksTabs.map((t) => {
+              const Icon = t.icon;
+              return (
+                <TabsTrigger key={t.key} value={t.key} className="flex items-center gap-1.5 text-sm whitespace-nowrap">
+                  <Icon className="h-4 w-4" />
+                  {t.label}
+                  {!!t.count && <Badge variant="secondary" className="text-xs ml-1">{t.count}</Badge>}
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
+
+          {moreRocksTabs.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'ml-1 inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all shrink-0',
+                    activeMoreRocksTab
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {activeMoreRocksTab ? (
+                    <>
+                      <activeMoreRocksTab.icon className="h-4 w-4" />
+                      {activeMoreRocksTab.label}
+                      {!!activeMoreRocksTab.count && (
+                        <Badge variant="secondary" className="text-xs ml-1">{activeMoreRocksTab.count}</Badge>
+                      )}
+                    </>
+                  ) : (
+                    'More'
+                  )}
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {moreRocksTabs.map((t) => {
+                  const Icon = t.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={t.key}
+                      onClick={() => setActiveTab(t.key)}
+                      className={cn('gap-1.5', activeTab === t.key && 'font-semibold bg-accent')}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {t.label}
+                      {!!t.count && <Badge variant="secondary" className="text-xs ml-auto">{t.count}</Badge>}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Hidden measurement clones — never shown, kept in sync with the
+              real markup above so the width-measurement effect stays accurate. */}
+          <div aria-hidden className="absolute invisible h-0 overflow-hidden flex items-center gap-0 pointer-events-none">
+            {ROCKS_TABS.map((t, i) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.key}
+                  ref={tabItemRef(i) as React.Ref<HTMLButtonElement>}
+                  type="button"
+                  tabIndex={-1}
+                  className="inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap"
+                >
+                  <Icon className="h-4 w-4" />
+                  {t.label}
+                  {!!t.count && <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full">{t.count}</span>}
+                </button>
+              );
+            })}
+            <button
+              ref={tabsMoreMeasureRef as React.Ref<HTMLButtonElement>}
+              type="button"
+              tabIndex={-1}
+              className="ml-1 inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap"
+            >
+              More <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            {ROCKS_TABS.map((t, i) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={`more-${t.key}`}
+                  ref={tabsActiveMoreMeasureRef(i) as React.Ref<HTMLButtonElement>}
+                  type="button"
+                  tabIndex={-1}
+                  className="ml-1 inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap"
+                >
+                  <Icon className="h-4 w-4" />
+                  {t.label}
+                  {!!t.count && <span className="text-xs px-1.5 py-0.5 rounded-full">{t.count}</span>}
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Company Rocks Tab */}
