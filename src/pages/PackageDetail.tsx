@@ -924,15 +924,15 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       {!tenantId && !selectedStage && <div className="space-y-4 animate-fade-in">
           <Card className="border-0 shadow-lg overflow-hidden">
             <div className="bg-muted/50 px-6 py-4 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1 min-w-0">
                   <h3 className="text-base font-semibold text-foreground">Clients</h3>
                   <p className="text-sm text-muted-foreground flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     {allTenants.length} client{allTenants.length !== 1 ? 's' : ''} assigned to this package
                   </p>
                 </div>
-                <Button className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 gap-2" onClick={() => setIsAddDialogOpen(true)}>
+                <Button className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 gap-2 self-start sm:self-auto" onClick={() => setIsAddDialogOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Setup Client
                 </Button>
@@ -1090,12 +1090,12 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
               </div>
             </div>
             <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="relative flex-1 max-w-md">
+              <div className="flex flex-wrap items-center gap-3 justify-between">
+                <div className="relative flex-1 min-w-[220px] max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input placeholder="Search stages..." value={stageSearchQuery} onChange={e => setStageSearchQuery(e.target.value)} className="pl-10 h-10" />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button variant="outline" className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
                     boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
                     border: "1px solid #00000052"
