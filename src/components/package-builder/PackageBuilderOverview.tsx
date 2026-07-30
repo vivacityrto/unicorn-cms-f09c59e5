@@ -277,44 +277,46 @@ export function PackageBuilderOverview() {
         </Card>
       </div>
 
-      {/* Filters and Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-[300px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search packages..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Draft</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {packageTypes.map((pt) => (
-                <SelectItem key={pt.id} value={pt.code}>{pt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Filters and Actions - flex-wrap (not a col/row breakpoint switch) so
+          the row degrades gracefully at any width, including the "wide
+          viewport, narrow content area" case caused by the persistent left
+          sidebar, where a hard sm:flex-row switch left Add Package clipped
+          off-screen past the page's overflow wrapper. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] sm:max-w-[300px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search packages..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
-        <Button 
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Draft</SelectItem>
+            <SelectItem value="archived">Archived</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {packageTypes.map((pt) => (
+              <SelectItem key={pt.id} value={pt.code}>{pt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
           onClick={() => setIsCreateDialogOpen(true)}
-          className="bg-primary hover:bg-primary/90"
+          className="bg-primary hover:bg-primary/90 ml-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Package
