@@ -348,7 +348,7 @@ function SimulationResultsStep({
           </TabsTrigger>
         </TabsList>
 
-        <ScrollArea className="flex-1 mt-4 pr-4">
+        <ScrollArea className="flex-1 mt-4 pr-4" viewportClassName="[&>div]:!block [&>div]:w-full">
           <TabsContent value="summary" className="mt-0">
             <SummaryTab summary={summary} />
           </TabsContent>

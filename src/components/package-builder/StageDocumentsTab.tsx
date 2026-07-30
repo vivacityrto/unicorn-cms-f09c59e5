@@ -364,7 +364,7 @@ export function StageDocumentsTab({
           </div>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[350px]">
+          <ScrollArea className="h-[350px]" viewportClassName="[&>div]:!block [&>div]:w-full">
             {stageDocuments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mb-3" />
@@ -462,7 +462,7 @@ export function StageDocumentsTab({
             )}
           </div>
 
-          <ScrollArea className="h-[400px] border rounded-lg">
+          <ScrollArea className="h-[400px] border rounded-lg" viewportClassName="[&>div]:!block [&>div]:w-full">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

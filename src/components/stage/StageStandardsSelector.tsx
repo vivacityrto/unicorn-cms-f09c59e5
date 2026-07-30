@@ -162,7 +162,7 @@ export function StageStandardsSelector({
             </div>
           </div>
 
-          <ScrollArea className="h-[300px]">
+          <ScrollArea className="h-[300px]" viewportClassName="[&>div]:!block [&>div]:w-full">
             <div className="p-2">
               {Object.entries(groupedStandards).map(([framework, stds]) => (
                 <div key={framework} className="mb-4">

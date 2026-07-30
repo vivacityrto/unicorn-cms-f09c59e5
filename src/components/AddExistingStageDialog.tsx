@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Layers, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { htmlToText } from "@/lib/sanitize";
 
 interface AddExistingStageDialogProps {
   open: boolean;
@@ -206,7 +207,7 @@ export function AddExistingStageDialog({
                       )}
                       {stage.description && (
                         <p className="text-xs text-muted-foreground mt-1 truncate">
-                          {stage.description}
+                          {htmlToText(stage.description)}
                         </p>
                       )}
                     </div>
@@ -245,7 +246,7 @@ export function AddExistingStageDialog({
                   )}
                   {confirmStage.description && (
                     <div className="text-xs text-muted-foreground">
-                      {confirmStage.description}
+                      {htmlToText(confirmStage.description)}
                     </div>
                   )}
                 </div>

@@ -64,7 +64,7 @@ export function PackageStandardsCoverageDialog({
           </div>
         )}
 
-        <ScrollArea className="max-h-[400px]">
+        <ScrollArea className="max-h-[400px]" viewportClassName="[&>div]:!block [&>div]:w-full">
           <div className="space-y-4">
             {/* Covered Standards */}
             {coveredStandards.length > 0 && (

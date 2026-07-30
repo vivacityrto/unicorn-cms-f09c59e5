@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -604,11 +605,11 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
 
               <div className="space-y-2">
                 <Label>Description</Label>
-                <Textarea
+                <RichTextEditor
                   value={stage?.description || ''}
-                  onChange={(e) => handleUpdateStage({ description: e.target.value })}
+                  onChange={(html) => handleUpdateStage({ description: html })}
                   placeholder="Describe what this stage involves..."
-                  rows={3}
+                  minHeight="100px"
                 />
               </div>
 
@@ -676,7 +677,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[350px]">
+              <ScrollArea className="h-[350px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {displayTeamTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Users className="h-10 w-10 text-muted-foreground mb-3" />
@@ -763,7 +764,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[350px]">
+              <ScrollArea className="h-[350px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {displayEmails.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Mail className="h-10 w-10 text-muted-foreground mb-3" />
@@ -840,7 +841,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[350px]">
+              <ScrollArea className="h-[350px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {displayClientTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <CheckSquare className="h-10 w-10 text-muted-foreground mb-3" />
@@ -906,7 +907,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[350px]">
+                <ScrollArea className="h-[350px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                   {displayDocuments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <FileText className="h-10 w-10 text-muted-foreground mb-3" />

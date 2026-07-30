@@ -366,7 +366,7 @@ export function PackagePhasesTab({ packageId, packageStageIds, stageMap }: Packa
               Select a stage from this package to assign to the phase.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[400px]">
+          <ScrollArea className="max-h-[400px]" viewportClassName="[&>div]:!block [&>div]:w-full">
             <div className="space-y-1">
               {packageStageIds.map(stageId => {
                 const meta = stageMap.get(stageId);

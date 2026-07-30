@@ -555,7 +555,7 @@ export function StageDocumentsPanel({
               </div>
             </div>
           ) : (
-            <ScrollArea className="h-[600px]">
+            <ScrollArea className="h-[600px]" viewportClassName="[&>div]:!block [&>div]:w-full">
               <div className="space-y-2">
                 {documents
                   .filter(doc => {
@@ -581,14 +581,14 @@ export function StageDocumentsPanel({
                   const isMultiStage = stageCount > 1;
                   
                   return (
-                    <div 
-                      key={doc.id} 
-                      className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 group cursor-pointer hover:bg-muted/50"
+                    <div
+                      key={doc.id}
+                      className="flex items-center flex-wrap gap-3 p-3 rounded-lg border bg-muted/30 group cursor-pointer hover:bg-muted/50"
                       onClick={() => docData && handleDocumentClick(doc)}
                     >
                       <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab opacity-50 group-hover:opacity-100" />
                       <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-[180px]">
                         <div className="flex items-center gap-2">
                           <span className="font-medium block truncate">{docData?.title || 'Unknown Document'}</span>
                           {isMultiStage && (
@@ -648,7 +648,7 @@ export function StageDocumentsPanel({
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center flex-wrap gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
                           <Label htmlFor={`core-${doc.id}`} className="text-xs text-muted-foreground hidden sm:inline">
                             Core

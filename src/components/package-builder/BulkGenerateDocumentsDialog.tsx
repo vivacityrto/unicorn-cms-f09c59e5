@@ -263,7 +263,7 @@ export function BulkGenerateDocumentsDialog({
             </div>
 
             {selectionMode === 'selected' && (
-              <ScrollArea className="h-[200px] border rounded-lg p-2">
+              <ScrollArea className="h-[200px] border rounded-lg p-2" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {isLoadingTenants ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -323,7 +323,7 @@ export function BulkGenerateDocumentsDialog({
 
             <div className="space-y-2">
               <p className="text-sm font-medium">Documents to generate:</p>
-              <ScrollArea className="h-[150px] border rounded-lg p-2">
+              <ScrollArea className="h-[150px] border rounded-lg p-2" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {stageDocuments.map((doc) => (
                   <div key={doc.id} className="flex items-center gap-2 py-1">
                     <FileText className="h-3 w-3 text-muted-foreground" />
@@ -361,7 +361,7 @@ export function BulkGenerateDocumentsDialog({
               <span>{results.length} / {totalDocumentsToGenerate}</span>
             </div>
 
-            <ScrollArea className="h-[150px] border rounded-lg p-2">
+            <ScrollArea className="h-[150px] border rounded-lg p-2" viewportClassName="[&>div]:!block [&>div]:w-full">
               {results.slice(-10).reverse().map((result, idx) => (
                 <div key={idx} className="flex items-center gap-2 py-1 text-sm">
                   {result.success ? (
@@ -404,7 +404,7 @@ export function BulkGenerateDocumentsDialog({
             </div>
 
             {failureCount > 0 && (
-              <ScrollArea className="h-[100px] border rounded-lg p-2">
+              <ScrollArea className="h-[100px] border rounded-lg p-2" viewportClassName="[&>div]:!block [&>div]:w-full">
                 {results.filter(r => !r.success).map((result, idx) => (
                   <div key={idx} className="flex items-center gap-2 py-1 text-sm text-red-600">
                     <XCircle className="h-3 w-3" />

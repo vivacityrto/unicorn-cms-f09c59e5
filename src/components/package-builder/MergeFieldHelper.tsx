@@ -67,7 +67,7 @@ export function MergeFieldHelper({ onInsert }: MergeFieldHelperProps) {
         </Badge>
       </div>
 
-      <ScrollArea className="h-[300px]">
+      <ScrollArea className="h-[300px]" viewportClassName="[&>div]:!block [&>div]:w-full">
         <div className="space-y-1">
           {filteredFields.map((field) => (
             <TooltipProvider key={field.id}>

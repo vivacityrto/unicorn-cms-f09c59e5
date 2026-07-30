@@ -65,7 +65,12 @@ export function StageImpactPanel({ stageId, stageName }: StageImpactPanelProps) 
     <>
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          {/* Stacked, not side-by-side: this card lives in a narrow (320px)
+              sidebar, and title+description competing with the "Sync to
+              Packages" button for one row forced the title to wrap
+              mid-word. A full-width button below reads better than a
+              cramped inline pair at this width. */}
+          <div className="space-y-2">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 <Package className="h-4 w-4" />
@@ -76,9 +81,10 @@ export function StageImpactPanel({ stageId, stageName }: StageImpactPanelProps) 
               </CardDescription>
             </div>
             {packageCount > 0 && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
+                className="w-full"
                 onClick={() => setShowSyncConfirm(true)}
                 disabled={syncing}
               >
@@ -114,7 +120,7 @@ export function StageImpactPanel({ stageId, stageName }: StageImpactPanelProps) 
               </div>
 
               {/* Package list */}
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-[300px]" viewportClassName="[&>div]:!block [&>div]:w-full">
                 <div className="space-y-2">
                   {packages.map(pkg => (
                     <div 
