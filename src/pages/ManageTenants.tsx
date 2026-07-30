@@ -719,7 +719,7 @@ export default function ManageTenants() {
           placeholder="Filter by package..."
           searchPlaceholder="Search packages..."
           emptyText="No packages found."
-          className="w-full md:w-[220px] h-[48px]"
+          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
           showIcons
           showSeparators
         />
@@ -742,7 +742,7 @@ export default function ManageTenants() {
           placeholder="Filter by CSC..."
           searchPlaceholder="Search CSC..."
           emptyText="No CSC users found."
-          className="w-full md:w-[220px] h-[48px]"
+          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
           showIcons
           showSeparators
         />
@@ -762,7 +762,7 @@ export default function ManageTenants() {
           placeholder="Filter by anniversary..."
           searchPlaceholder="Search..."
           emptyText="No options."
-          className="w-full md:w-[220px] h-[48px]"
+          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
           showIcons
           showSeparators
         />
@@ -780,7 +780,7 @@ export default function ManageTenants() {
           placeholder="Filter by reg end..."
           searchPlaceholder="Search..."
           emptyText="No options."
-          className="w-full md:w-[220px] h-[48px]"
+          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
           showIcons
           showSeparators
         />
@@ -799,7 +799,7 @@ export default function ManageTenants() {
           placeholder="Filter by status..."
           searchPlaceholder="Search filters..."
           emptyText="No filters found."
-          className="w-full md:w-[220px] h-[48px]"
+          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
           showIcons
           showSeparators
         />
