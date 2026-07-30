@@ -963,13 +963,18 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     <>
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          {/* flex-col on narrow screens + flex-wrap on the filter group: this
+              row previously forced the title plus up to 4 conditional
+              filters, Tags, Date, and Add Note onto one unbreakable line,
+              overflowing the card horizontally with no way to reach the
+              later buttons. */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <CardTitle className="flex items-center gap-2">
               <StickyNote className="h-5 w-5" />
               Structured Notes
               <Badge variant="secondary" className="ml-2">{unifiedItems.length}</Badge>
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
                 <SelectTrigger className="w-[200px] h-9">
                   <div className="flex items-center gap-2">
