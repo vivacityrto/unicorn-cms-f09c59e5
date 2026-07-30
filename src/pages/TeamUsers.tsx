@@ -332,17 +332,17 @@ export default function TeamUsers() {
     <DashboardLayout>
       <div className="space-y-6 p-6 animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h1 className="text-[28px] font-bold tracking-tight flex items-center gap-2">
-              <Shield className="h-7 w-7 text-purple-600" />
+              <Shield className="h-7 w-7 text-purple-600 shrink-0" />
               Team Users
             </h1>
             <p className="text-muted-foreground mt-1">
               Manage Vivacity team members and SuperAdmin users
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setInviteDialogOpen(true)}>
               <UserPlus className="h-4 w-4 mr-2" />
               Quick Invite

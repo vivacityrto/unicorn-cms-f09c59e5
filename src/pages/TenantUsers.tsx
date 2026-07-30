@@ -618,7 +618,7 @@ export default function TenantUsers() {
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row md:flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4">
               <div className="relative flex-1 min-w-[220px]">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -632,7 +632,7 @@ export default function TenantUsers() {
                 variant="outline"
                 onClick={() => setTenantFilterDialogOpen(true)}
                 className={cn(
-                  'w-full md:w-[220px] justify-between font-normal min-w-0',
+                  'w-[220px] justify-between font-normal min-w-0',
                   tenantFilters.length === 0 && 'text-muted-foreground',
                 )}
               >
