@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -63,7 +64,7 @@ export const RocksRetrospectivePane = ({ rocks, meetingType }: RocksRetrospectiv
                   <div>
                     <span className="text-muted-foreground">Due:</span>
                     <span className="ml-2 font-medium">
-                      {new Date(rock.due_date).toLocaleDateString()}
+                      {format(new Date(rock.due_date), 'dd/MM/yyyy')}
                     </span>
                   </div>
                 </div>

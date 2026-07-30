@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -316,7 +317,7 @@ export function SeatScorecardBuilder({
                     <div key={version.id} className="flex items-center justify-between text-sm">
                       <span>v{version.version_number}: {version.change_summary}</span>
                       <span className="text-muted-foreground">
-                        {new Date(version.created_at).toLocaleDateString()}
+                        {format(new Date(version.created_at), 'dd/MM/yyyy')}
                       </span>
                     </div>
                   ))}

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MembershipActivity, MembershipTask } from '@/types/membership';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface MembershipActivityFeedProps {
@@ -162,7 +162,7 @@ export function MembershipActivityFeed({
                               'text-xs mt-0.5',
                               isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'
                             )}>
-                              Due: {new Date(task.due_date).toLocaleDateString()}
+                              Due: {format(new Date(task.due_date), 'dd/MM/yyyy')}
                             </p>
                           )}
                         </div>

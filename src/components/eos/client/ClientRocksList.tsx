@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { useEosRocks } from '@/hooks/useEos';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -92,7 +93,7 @@ export function ClientRocksList() {
             <Progress value={rock.progress || 0} className="h-2" />
             {rock.due_date && (
               <p className="text-xs text-muted-foreground">
-                Due: {new Date(rock.due_date).toLocaleDateString()}
+                Due: {format(new Date(rock.due_date), 'dd/MM/yyyy')}
               </p>
             )}
           </CardContent>

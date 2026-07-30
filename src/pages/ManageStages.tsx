@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -355,7 +356,7 @@ export default function ManageStages() {
                     )}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm whitespace-nowrap">
-                    {new Date(stage.created_at).toLocaleDateString()}
+                    {format(new Date(stage.created_at), 'dd/MM/yyyy')}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
                     <div className="flex justify-center">

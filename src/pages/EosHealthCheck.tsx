@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -272,7 +273,7 @@ export default function EosHealthCheck() {
         {/* Last Run Info */}
         {lastRun && (
           <p className="text-sm text-muted-foreground text-center">
-            Last run: {lastRun.toLocaleString()}
+            Last run: {format(lastRun, 'dd/MM/yyyy h:mm a')}
           </p>
         )}
       </div>

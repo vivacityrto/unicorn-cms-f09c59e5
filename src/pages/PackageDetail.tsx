@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -1050,7 +1051,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                               <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <Calendar className="h-4 w-4" />
-                                  {new Date(tenant.created_at).toLocaleDateString()}
+                                  {format(new Date(tenant.created_at), 'dd/MM/yyyy')}
                                 </div>
                               </TableCell>
                               <TableCell className="py-6 whitespace-nowrap text-center">
@@ -1191,7 +1192,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                     <h2 className="font-semibold pb-[5px]" style={{ fontSize: '17px' }}>{selectedStage.stage_name}</h2>
                     <p className="flex items-center gap-2 text-sm mt-1 text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      Created {new Date(selectedStage.created_at).toLocaleDateString()}
+                      Created {format(new Date(selectedStage.created_at), 'dd/MM/yyyy')}
                     </p>
                   </div>
                   <Button variant="ghost" onClick={() => setSelectedStage(null)} className="gap-2 bg-white hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{

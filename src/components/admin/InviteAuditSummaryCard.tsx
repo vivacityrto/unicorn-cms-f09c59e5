@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -130,7 +131,7 @@ export default function InviteAuditSummaryCard() {
                     {row.failures}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {new Date(row.last_seen).toLocaleString()}
+                    {format(new Date(row.last_seen), 'dd/MM/yyyy h:mm a')}
                   </td>
                   <td className="px-4 py-3">
                     <SuccessRateBar

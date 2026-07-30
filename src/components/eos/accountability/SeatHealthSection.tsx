@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -183,7 +184,7 @@ export function SeatHealthSection({ health, onNavigate }: SeatHealthSectionProps
 
         {/* Last Calculated */}
         <p className="text-[10px] text-muted-foreground text-right">
-          Last calculated: {new Date(health.calculated_at).toLocaleString()}
+          Last calculated: {format(new Date(health.calculated_at), 'dd/MM/yyyy h:mm a')}
         </p>
       </CardContent>
     </Card>

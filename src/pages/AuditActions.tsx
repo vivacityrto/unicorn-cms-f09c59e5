@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuditDetails, useAudits } from '@/hooks/useAudits';
 import { useAuth } from '@/hooks/useAuth';
@@ -107,7 +108,7 @@ export default function AuditActions() {
                               </Badge>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              <p>Due: {new Date(action.due_date).toLocaleDateString()}</p>
+                              <p>Due: {format(new Date(action.due_date), 'dd/MM/yyyy')}</p>
                             </div>
                           </div>
                         </CardContent>

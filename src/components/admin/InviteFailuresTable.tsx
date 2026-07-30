@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -95,7 +96,7 @@ export default function InviteFailuresTable() {
                 {rows.map((r, i) => (
                   <TableRow key={i}>
                     <TableCell className="whitespace-nowrap">
-                      {new Date(r.created_at).toLocaleString()}
+                      {format(new Date(r.created_at), 'dd/MM/yyyy h:mm a')}
                     </TableCell>
                     <TableCell>{r.email}</TableCell>
                     <TableCell>{r.tenant_name ?? `Tenant ${r.tenant_id}`}</TableCell>

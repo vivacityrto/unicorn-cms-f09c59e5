@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
+import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuditDetails } from '@/hooks/useAudits';
 import { Button } from '@/components/ui/button';
@@ -57,7 +58,7 @@ export default function AuditReport() {
             </p>
             {auditReport?.audit.completed_at && (
               <p className="text-sm text-muted-foreground">
-                Completed: {new Date(auditReport.audit.completed_at).toLocaleDateString()}
+                Completed: {format(new Date(auditReport.audit.completed_at), 'dd/MM/yyyy')}
               </p>
             )}
           </div>
@@ -150,7 +151,7 @@ export default function AuditReport() {
                             {action.description}
                           </p>
                           <p className="text-xs text-muted-foreground mt-2">
-                            Due: {new Date(action.due_date).toLocaleDateString()}
+                            Due: {format(new Date(action.due_date), 'dd/MM/yyyy')}
                           </p>
                         </div>
                         <Badge variant={action.status === 'done' ? 'default' : 'secondary'}>

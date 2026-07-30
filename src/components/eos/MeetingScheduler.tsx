@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -159,7 +160,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
     };
     
     const endText = endRule === 'date' && endDate 
-      ? `, ending ${new Date(endDate).toLocaleDateString()}` 
+      ? `, ending ${format(new Date(endDate), 'dd/MM/yyyy')}`
       : ', no end date';
     
     return `Repeats ${typeLabels[frequency]}${endText}`;
