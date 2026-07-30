@@ -56,8 +56,16 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
 
   // Sync external value changes (e.g. on dialog open)
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value, { emitUpdate: false });
+    if (!editor || editor.isDestroyed) return;
+    try {
+      if (value !== editor.getHTML()) {
+        editor.commands.setContent(value, { emitUpdate: false });
+      }
+    } catch {
+      // Defensive: on some mount timings the editor's ProseMirror schema
+      // isn't fully ready yet when this effect fires, and getHTML() throws.
+      // Skipping the sync here is safe - the editor already has the right
+      // initial content from the `content: value` passed to useEditor.
     }
   }, [value]); // intentionally omit editor to avoid loops
 
