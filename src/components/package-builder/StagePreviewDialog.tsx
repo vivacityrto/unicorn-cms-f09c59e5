@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { Stage } from '@/hooks/usePackageBuilder';
 import { useStageDependencyCheck } from '@/hooks/useStageDependencies';
 import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper, getStageTypeLabel as getStageTypeLabelHelper } from '@/hooks/useStageTypeOptions';
@@ -232,7 +233,10 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
               )}
               
               {stage.description && (
-                <p className="text-sm text-muted-foreground">{stage.description}</p>
+                <div
+                  className="text-sm text-muted-foreground [&_p]:mb-2 [&_p:last-child]:mb-0"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(stage.description) }}
+                />
               )}
 
               {stage.video_url && (

@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StageVersion } from '@/hooks/useStageVersions';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { format } from 'date-fns';
 import { 
   FileText, 
@@ -87,7 +88,10 @@ export function VersionSnapshotViewer({
                   {snapshot.stage.description && (
                     <div className="pt-2 border-t">
                       <span className="text-muted-foreground block mb-1">Description</span>
-                      <p>{snapshot.stage.description}</p>
+                      <div
+                        className="[&_p]:mb-2 [&_p:last-child]:mb-0"
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(snapshot.stage.description) }}
+                      />
                     </div>
                   )}
                 </CardContent>

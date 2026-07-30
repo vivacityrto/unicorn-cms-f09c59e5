@@ -56,6 +56,7 @@ import { SortableStaffTaskList } from '@/components/stage/SortableStaffTaskList'
 import StageMessagesPanelWithProvider from '@/components/stage/StageMessagesPanel';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 // Stage types loaded dynamically via useStageTypeOptions hook
@@ -1101,7 +1102,10 @@ export default function AdminStageDetail() {
               )}
 
               {stage.description && (
-                <p className="text-muted-foreground">{stage.description}</p>
+                <div
+                  className="text-muted-foreground [&_p]:mb-2 [&_p:last-child]:mb-0"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(stage.description) }}
+                />
               )}
 
               {/* Action Buttons Row */}
@@ -1317,11 +1321,11 @@ export default function AdminStageDetail() {
 
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea
+                  <RichTextEditor
                     value={settingsDraft.description}
-                    onChange={(e) => setSettingsDraft(d => ({ ...d, description: e.target.value }))}
+                    onChange={(html) => setSettingsDraft(d => ({ ...d, description: html }))}
                     placeholder="Describe what this stage involves..."
-                    rows={3}
+                    minHeight="100px"
                   />
                 </div>
 

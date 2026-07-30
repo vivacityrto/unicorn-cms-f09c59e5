@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { htmlToText } from '@/lib/sanitize';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
@@ -244,7 +246,7 @@ export function StageLibraryDialog({
                           </div>
                           {stage.description && (
                             <p className="text-sm text-muted-foreground line-clamp-2">
-                              {stage.description}
+                              {htmlToText(stage.description)}
                             </p>
                           )}
                         </div>
@@ -335,11 +337,11 @@ export function StageLibraryDialog({
 
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea
+              <RichTextEditor
                 value={newStage.description}
-                onChange={(e) => setNewStage({ ...newStage, description: e.target.value })}
+                onChange={(html) => setNewStage({ ...newStage, description: html })}
                 placeholder="Describe what this stage involves..."
-                rows={3}
+                minHeight="100px"
               />
             </div>
 

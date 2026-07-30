@@ -5,7 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { htmlToText } from '@/lib/sanitize';
 import {
   Table,
   TableBody,
@@ -331,7 +332,7 @@ export default function ManageStages() {
                     </div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
-                    <span className="text-muted-foreground text-sm max-w-xs truncate whitespace-nowrap block">{stage.description || 'No description added'}</span>
+                    <span className="text-muted-foreground text-sm max-w-xs truncate whitespace-nowrap block">{stage.description ? htmlToText(stage.description) : 'No description added'}</span>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
                     {stage.video_url ? (
@@ -492,12 +493,11 @@ export default function ManageStages() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="create-description">Description</Label>
-              <Textarea
-                id="create-description"
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(html) => setFormData({ ...formData, description: html })}
                 placeholder="Enter description"
-                rows={3}
+                minHeight="100px"
               />
             </div>
             <div className="space-y-2">
@@ -549,12 +549,11 @@ export default function ManageStages() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(html) => setFormData({ ...formData, description: html })}
                 placeholder="Enter description"
-                rows={3}
+                minHeight="100px"
               />
             </div>
             <div className="space-y-2">

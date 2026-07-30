@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -604,11 +605,11 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
 
               <div className="space-y-2">
                 <Label>Description</Label>
-                <Textarea
+                <RichTextEditor
                   value={stage?.description || ''}
-                  onChange={(e) => handleUpdateStage({ description: e.target.value })}
+                  onChange={(html) => handleUpdateStage({ description: html })}
                   placeholder="Describe what this stage involves..."
-                  rows={3}
+                  minHeight="100px"
                 />
               </div>
 

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -508,11 +509,11 @@ export default function StageBuilder() {
 
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea
+                  <RichTextEditor
                     value={state.description}
-                    onChange={(e) => setState(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(html) => setState(prev => ({ ...prev, description: html }))}
                     placeholder="Describe what this stage involves..."
-                    rows={3}
+                    minHeight="100px"
                   />
                 </div>
 
