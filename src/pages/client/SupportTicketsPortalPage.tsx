@@ -2,13 +2,20 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, LifeBuoy, SearchX, Plus } from 'lucide-react';
+import { Loader2, LifeBuoy, SearchX, Plus, ChevronDown } from 'lucide-react';
 import { TICKET_TYPES } from '@/components/support-tickets/ticketTypeConfig';
 import { useClientSupportTickets } from '@/components/client-portal/support-tickets/useClientSupportTickets';
 import { ClientNewTicketModal } from '@/components/client-portal/support-tickets/ClientNewTicketModal';
 import { ClientTicketCard } from '@/components/client-portal/support-tickets/ClientTicketCard';
 import { CLIENT_STATUS_LABEL } from '@/components/client-portal/support-tickets/statusDisplay';
 import { cn } from '@/lib/utils';
+import { useOverflowTabs } from '@/hooks/useOverflowTabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type TabKey = 'active' | 'new' | 'triaged' | 'in_progress' | 'resolved' | 'closed';
 
@@ -71,6 +78,14 @@ export default function SupportTicketsPortalPage() {
     setTab('active');
   };
 
+  // As many tabs as fit render directly; the rest collapse into a "More"
+  // dropdown - measured dynamically, not via horizontal scroll (see
+  // feedback_no_tab_scroll / useOverflowTabs).
+  const { containerRef, itemRef, moreMeasureRef, activeMoreMeasureRef, visibleCount } = useOverflowTabs(TABS.length, 4);
+  const visibleTabs = TABS.slice(0, visibleCount);
+  const moreTabs = TABS.slice(visibleCount);
+  const activeMoreTab = moreTabs.find((t) => t.key === tab);
+
   return (
     <div className="px-4 sm:px-6 py-6 max-w-5xl mx-auto">
       {/* Header */}
@@ -90,8 +105,8 @@ export default function SupportTicketsPortalPage() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-4">
-        <div className="flex gap-1 overflow-x-auto">
-          {TABS.map((t) => {
+        <div ref={containerRef} className="flex items-end gap-1 min-w-0">
+          {visibleTabs.map((t) => {
             const active = tab === t.key;
             return (
               <button
@@ -116,6 +131,87 @@ export default function SupportTicketsPortalPage() {
               </button>
             );
           })}
+
+          {moreTabs.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'relative px-3 py-2 text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 shrink-0',
+                    activeMoreTab ? 'text-[#7130A0] font-semibold' : 'text-gray-500 hover:text-gray-700'
+                  )}
+                >
+                  {activeMoreTab ? (
+                    <>
+                      {activeMoreTab.label}
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-[#7130A0]/10 text-[#7130A0]">
+                        {tabCounts[activeMoreTab.key]}
+                      </span>
+                    </>
+                  ) : (
+                    'More'
+                  )}
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  {activeMoreTab && (
+                    <span className="absolute left-0 right-0 bottom-[-1px] h-0.5 bg-[#7130A0]" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {moreTabs.map((t) => (
+                  <DropdownMenuItem
+                    key={t.key}
+                    onClick={() => setTab(t.key)}
+                    className={cn(tab === t.key && 'font-semibold bg-accent')}
+                  >
+                    {t.label}
+                    <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                      {tabCounts[t.key]}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Hidden measurement clones — never shown, kept in sync with the
+              real markup above so the width-measurement effect stays accurate. */}
+          <div aria-hidden className="absolute invisible h-0 overflow-hidden flex items-center gap-1 pointer-events-none">
+            {TABS.map((t, i) => (
+              <button
+                key={t.key}
+                ref={itemRef(i) as React.Ref<HTMLButtonElement>}
+                type="button"
+                tabIndex={-1}
+                className="px-3 py-2 text-sm whitespace-nowrap flex items-center gap-2"
+              >
+                {t.label}
+                <span className="text-xs px-1.5 py-0.5 rounded-full">{tabCounts[t.key]}</span>
+              </button>
+            ))}
+            <button
+              ref={moreMeasureRef as React.Ref<HTMLButtonElement>}
+              type="button"
+              tabIndex={-1}
+              className="px-3 py-2 text-sm flex items-center gap-1.5"
+            >
+              More <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            {TABS.map((t, i) => (
+              <button
+                key={`more-${t.key}`}
+                ref={activeMoreMeasureRef(i) as React.Ref<HTMLButtonElement>}
+                type="button"
+                tabIndex={-1}
+                className="px-3 py-2 text-sm flex items-center gap-1.5"
+              >
+                {t.label}
+                <span className="text-xs px-1.5 py-0.5 rounded-full">{tabCounts[t.key]}</span>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

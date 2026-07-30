@@ -4,7 +4,9 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, LayoutDashboard, CalendarClock, ClipboardList, FileText, AlertTriangle, CheckSquare, FileBarChart, Info } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, CalendarClock, ClipboardList, FileText, AlertTriangle, CheckSquare, FileBarChart, Info, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useOverflowTabs } from '@/hooks/useOverflowTabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAudit } from '@/hooks/useClientAudits';
 import { useAuditSections, useAuditResponses, useAuditFindings, useAuditActions, useAuditStatusTransition, useInternalUsers } from '@/hooks/useAuditWorkspace';
@@ -66,6 +68,23 @@ export default function AuditWorkspaceNew() {
   const [purchaserName, setPurchaserName] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const findingCount = findings?.length || 0;
+  const actionCount = actions?.length || 0;
+
+  const AUDIT_TABS = [
+    { key: 'overview', label: 'Overview', icon: LayoutDashboard, count: 0 },
+    { key: 'schedule', label: 'Schedule', icon: CalendarClock, count: 0 },
+    { key: 'form', label: 'Audit Form', icon: ClipboardList, count: 0 },
+    { key: 'documents', label: 'Documents', icon: FileText, count: 0 },
+    { key: 'findings', label: 'Findings', icon: AlertTriangle, count: findingCount },
+    { key: 'actions', label: 'Actions', icon: CheckSquare, count: actionCount },
+    { key: 'report', label: 'Report', icon: FileBarChart, count: 0 },
+  ];
+  const { containerRef, itemRef, moreMeasureRef, activeMoreMeasureRef, visibleCount } = useOverflowTabs(AUDIT_TABS.length, 0);
+  const visibleAuditTabs = AUDIT_TABS.slice(0, visibleCount);
+  const moreAuditTabs = AUDIT_TABS.slice(visibleCount);
+  const activeMoreAuditTab = moreAuditTabs.find((t) => t.key === activeTab);
+
   useEffect(() => {
     const tid = audit?.subject_tenant_id;
     if (!tid) return;
@@ -109,9 +128,6 @@ export default function AuditWorkspaceNew() {
   const handleStatusChange = (status: AuditStatus) => {
     statusTransition.mutate({ status, audit });
   };
-
-  const findingCount = findings?.length || 0;
-  const actionCount = actions?.length || 0;
 
   return (
     <UnsavedAuditWorkProvider>
@@ -214,39 +230,125 @@ export default function AuditWorkspaceNew() {
           {/* Tabs */}
           <div className="p-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="overview" className="gap-1.5">
-                  <LayoutDashboard className="h-3.5 w-3.5" /> Overview
-                </TabsTrigger>
-                <TabsTrigger value="schedule" className="gap-1.5">
-                  <CalendarClock className="h-3.5 w-3.5" /> Schedule
-                </TabsTrigger>
-                <TabsTrigger value="form" className="gap-1.5">
-                  <ClipboardList className="h-3.5 w-3.5" /> Audit Form
-                </TabsTrigger>
-                <TabsTrigger value="documents" className="gap-1.5">
-                  <FileText className="h-3.5 w-3.5" /> Documents
-                </TabsTrigger>
-                <TabsTrigger value="findings" className="gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5" /> Findings
-                  {findingCount > 0 && (
-                    <span className="ml-1 bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
-                      {findingCount}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="actions" className="gap-1.5">
-                  <CheckSquare className="h-3.5 w-3.5" /> Actions
-                  {actionCount > 0 && (
-                    <span className="ml-1 bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
-                      {actionCount}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="report" className="gap-1.5">
-                  <FileBarChart className="h-3.5 w-3.5" /> Report
-                </TabsTrigger>
-              </TabsList>
+              {/* As many tabs as fit render directly; the rest collapse into a
+                  "More" dropdown - measured dynamically, never via horizontal
+                  scroll (see useOverflowTabs / feedback_no_tab_scroll). */}
+              <div ref={containerRef} className="mb-4 flex items-end gap-0 min-w-0">
+                <TabsList>
+                  {visibleAuditTabs.map((t) => {
+                    const Icon = t.icon;
+                    return (
+                      <TabsTrigger key={t.key} value={t.key} className="gap-1.5">
+                        <Icon className="h-3.5 w-3.5" /> {t.label}
+                        {!!t.count && (
+                          <span className="ml-1 bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
+                            {t.count}
+                          </span>
+                        )}
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+
+                {moreAuditTabs.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className={cn(
+                          'ml-1 inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all shrink-0',
+                          activeMoreAuditTab
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {activeMoreAuditTab ? (
+                          <>
+                            <activeMoreAuditTab.icon className="h-3.5 w-3.5" />
+                            {activeMoreAuditTab.label}
+                            {!!activeMoreAuditTab.count && (
+                              <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
+                                {activeMoreAuditTab.count}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          'More'
+                        )}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {moreAuditTabs.map((t) => {
+                        const Icon = t.icon;
+                        return (
+                          <DropdownMenuItem
+                            key={t.key}
+                            onClick={() => setActiveTab(t.key)}
+                            className={cn('gap-1.5', activeTab === t.key && 'font-semibold bg-accent')}
+                          >
+                            <Icon className="h-3.5 w-3.5" /> {t.label}
+                            {!!t.count && (
+                              <span className="ml-auto bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
+                                {t.count}
+                              </span>
+                            )}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {/* Hidden measurement clones — never shown, kept in sync with
+                    the real markup above so the width-measurement effect stays
+                    accurate. */}
+                <div aria-hidden className="absolute invisible h-0 overflow-hidden flex items-center gap-0 pointer-events-none">
+                  {AUDIT_TABS.map((t, i) => {
+                    const Icon = t.icon;
+                    return (
+                      <button
+                        key={t.key}
+                        ref={itemRef(i) as React.Ref<HTMLButtonElement>}
+                        type="button"
+                        tabIndex={-1}
+                        className="inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap"
+                      >
+                        <Icon className="h-3.5 w-3.5" /> {t.label}
+                        {!!t.count && (
+                          <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full">{t.count}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  <button
+                    ref={moreMeasureRef as React.Ref<HTMLButtonElement>}
+                    type="button"
+                    tabIndex={-1}
+                    className="ml-1 inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap"
+                  >
+                    More <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                  {AUDIT_TABS.map((t, i) => {
+                    const Icon = t.icon;
+                    return (
+                      <button
+                        key={`more-${t.key}`}
+                        ref={activeMoreMeasureRef(i) as React.Ref<HTMLButtonElement>}
+                        type="button"
+                        tabIndex={-1}
+                        className="ml-1 inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap"
+                      >
+                        <Icon className="h-3.5 w-3.5" /> {t.label}
+                        {!!t.count && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full">{t.count}</span>
+                        )}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <TabsContent value="overview">
                 <OverviewTab audit={audit} />
