@@ -74,7 +74,12 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="font-medium text-foreground/80 truncate max-w-[200px]">
+                {/* shrink-0: without it, flexbox's default shrink behaviour was
+                    squeezing this span well below its own max-w-[200px] (even
+                    "No tenant selected" truncated to "No ten…" at 1000px with
+                    plenty of total footer width free) since it's the only
+                    unprotected shrinkable item on this side of the footer. */}
+                <span className="font-medium text-foreground/80 truncate max-w-[200px] shrink-0">
                   {activeTenantName || "No tenant selected"}
                 </span>
               </TooltipTrigger>
@@ -86,7 +91,12 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
 
           <span className="text-muted-foreground/50">|</span>
 
-          <Badge variant={getRoleBadgeVariant(userRole)} className="text-xs h-5">
+          {/* leading-none: text-xs's default line-height (16.8px) overflows the
+              h-5 badge's available content box (20px - 2px border - 4px padding
+              = 14px), so the pill border visually cut through the text's
+              ascenders/descenders. Tightening line-height to 1 (12px) fits it
+              cleanly within the fixed height. */}
+          <Badge variant={getRoleBadgeVariant(userRole)} className="text-xs h-5 leading-none">
             {userRole}
           </Badge>
 
