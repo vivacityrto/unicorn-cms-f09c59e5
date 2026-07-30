@@ -458,30 +458,39 @@ export default function TenantNotes() {
           </div>
         </div>
 
-        {/* Source + Search + Sort bar */}
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Source selector */}
-          <Select value={noteSource} onValueChange={(v) => setNoteSource(v as 'notes' | 'clickup')}>
-            <SelectTrigger className="w-full md:w-[200px] h-[48px]">
-              <div className="flex items-center gap-2">
-                {noteSource === 'notes' ? <StickyNote className="h-4 w-4 text-muted-foreground" /> : <ListTodo className="h-4 w-4 text-muted-foreground" />}
-                <SelectValue />
-              </div>
-            </SelectTrigger>
-            <SelectContent className="bg-background">
-              <SelectItem value="notes">All Notes</SelectItem>
-              <SelectItem value="clickup">ClickUp Task Comments</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Source + Search + Sort bar — search always gets its own full-width
+            row so the fixed-width selects below can't squeeze it (same fix
+            as the Clients list filter row: see hotfix/clients-list-filter-
+            bugs-and-responsive-search). */}
+        <div className="space-y-4">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={noteSource === 'notes' ? "Search keyword or by name..." : "Search tasks..."}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-10 h-[48px] w-full"
+            />
+          </div>
 
-          {noteSource === 'notes' && (
-            <>
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search keyword or by name..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
-              </div>
+          <div className="flex flex-wrap gap-4">
+            {/* Source selector */}
+            <Select value={noteSource} onValueChange={(v) => setNoteSource(v as 'notes' | 'clickup')}>
+              <SelectTrigger className="w-full md:flex-1 md:min-w-[200px] h-[48px]">
+                <div className="flex items-center gap-2">
+                  {noteSource === 'notes' ? <StickyNote className="h-4 w-4 text-muted-foreground" /> : <ListTodo className="h-4 w-4 text-muted-foreground" />}
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-background">
+                <SelectItem value="notes">All Notes</SelectItem>
+                <SelectItem value="clickup">ClickUp Task Comments</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {noteSource === 'notes' && (
               <Select value={sortPriority} onValueChange={setSortPriority}>
-                <SelectTrigger className="w-full md:w-[220px] h-[48px]">
+                <SelectTrigger className="w-full md:flex-1 md:min-w-[200px] h-[48px]">
                   <div className="flex items-center gap-2">
                     <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
                     <SelectValue placeholder="All Priorities" />
@@ -496,15 +505,8 @@ export default function TenantNotes() {
                   <SelectItem value="low">Low</SelectItem>
                 </SelectContent>
               </Select>
-            </>
-          )}
-
-          {noteSource === 'clickup' && (
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search tasks..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Notes Table */}

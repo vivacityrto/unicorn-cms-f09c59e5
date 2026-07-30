@@ -1881,101 +1881,108 @@ export default function ManageDocuments() {
 
         </div>}
 
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
+      {/* Search and Filters — search always gets its own full-width row so
+          the fixed-width filters below can't squeeze it (same fix as the
+          Clients list filter row: see hotfix/clients-list-filter-bugs-and-
+          responsive-search). Measured 64px search width at 1000px viewport
+          before this fix - 3 fixed filters (200+180+170px) left almost
+          nothing for the flex-1 search box. */}
+      <div className="space-y-4">
+        <div className="relative w-full">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground/60" />
-          <Input placeholder="Search by ID, name, or description..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12 h-12 bg-card border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-lg font-medium placeholder:text-muted-foreground/50" />
+          <Input placeholder="Search by ID, name, or description..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12 h-12 w-full bg-card border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-lg font-medium placeholder:text-muted-foreground/50" />
         </div>
 
-        {/* Duplicates Filter */}
-        {isSuperAdmin && duplicateDocCount > 0 && (
-          <Button
-            variant={showDuplicatesOnly ? "default" : "outline"}
-            className={cn(
-              "h-12 gap-2 rounded-lg font-semibold whitespace-nowrap",
-              showDuplicatesOnly && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            )}
-            onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
-          >
-            <Copy className="h-4 w-4" />
-            Duplicates ({duplicateDocCount})
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-4">
+          {/* Duplicates Filter */}
+          {isSuperAdmin && duplicateDocCount > 0 && (
+            <Button
+              variant={showDuplicatesOnly ? "default" : "outline"}
+              className={cn(
+                "h-12 gap-2 rounded-lg font-semibold whitespace-nowrap",
+                showDuplicatesOnly && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              )}
+              onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+            >
+              <Copy className="h-4 w-4" />
+              Duplicates ({duplicateDocCount})
+            </Button>
+          )}
 
-        <div className="w-full md:w-[200px]">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 justify-between font-semibold rounded-lg shadow-sm transition-all">
-                <span className="text-foreground truncate">
-                  {categoryFilter === "all" ? "All Categories" : categories.find(c => c.id.toString() === categoryFilter)?.name || "Category"}
-                </span>
-                <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/60 shrink-0" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-2 min-w-[240px] rounded-lg shadow-lg border-border/50 bg-popover z-50" align="start">
-              <div className="relative mb-2">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search..." value={categorySearchQuery} onChange={e => setCategorySearchQuery(e.target.value)} className="pl-9 h-9 text-sm rounded-md" />
-              </div>
-              <div className="max-h-[200px] overflow-y-auto">
-                <div className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2 whitespace-nowrap", categoryFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
-                  setCategoryFilter("all");
-                  setCategorySearchQuery("");
-                }}>
-                  <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                  All Categories
+          <div className="w-full md:flex-1 md:min-w-[200px]">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 justify-between font-semibold rounded-lg shadow-sm transition-all">
+                  <span className="text-foreground truncate">
+                    {categoryFilter === "all" ? "All Categories" : categories.find(c => c.id.toString() === categoryFilter)?.name || "Category"}
+                  </span>
+                  <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/60 shrink-0" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-2 min-w-[240px] rounded-lg shadow-lg border-border/50 bg-popover z-50" align="start">
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search..." value={categorySearchQuery} onChange={e => setCategorySearchQuery(e.target.value)} className="pl-9 h-9 text-sm rounded-md" />
                 </div>
-                <div className="mx-2 my-1 border-b border-border/50" />
-                {filteredCategoriesForDropdown.map((cat, index) => (
-                  <div key={cat.id}>
-                    <div className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2 whitespace-nowrap", categoryFilter === cat.id.toString() ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
-                      setCategoryFilter(cat.id.toString());
-                      setCategorySearchQuery("");
-                    }}>
-                      <FolderOpen className={cn("h-4 w-4 shrink-0", categoryFilter === cat.id.toString() ? "text-primary" : "text-blue-600")} />
-                      <span className="truncate">{cat.name}</span>
-                    </div>
-                    {index < filteredCategoriesForDropdown.length - 1 && (
-                      <div className="mx-2 my-1 border-b border-border/50" />
-                    )}
+                <div className="max-h-[200px] overflow-y-auto">
+                  <div className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2 whitespace-nowrap", categoryFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
+                    setCategoryFilter("all");
+                    setCategorySearchQuery("");
+                  }}>
+                    <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                    All Categories
                   </div>
+                  <div className="mx-2 my-1 border-b border-border/50" />
+                  {filteredCategoriesForDropdown.map((cat, index) => (
+                    <div key={cat.id}>
+                      <div className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2 whitespace-nowrap", categoryFilter === cat.id.toString() ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
+                        setCategoryFilter(cat.id.toString());
+                        setCategorySearchQuery("");
+                      }}>
+                        <FolderOpen className={cn("h-4 w-4 shrink-0", categoryFilter === cat.id.toString() ? "text-primary" : "text-blue-600")} />
+                        <span className="truncate">{cat.name}</span>
+                      </div>
+                      {index < filteredCategoriesForDropdown.length - 1 && (
+                        <div className="mx-2 my-1 border-b border-border/50" />
+                      )}
+                    </div>
+                  ))}
+                  {filteredCategoriesForDropdown.length === 0 && categorySearchQuery && <p className="text-xs text-muted-foreground text-center py-2">No categories found</p>}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Framework Filter */}
+          {isSuperAdmin && (
+            <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
+              <SelectTrigger className="w-full md:flex-1 md:min-w-[180px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+                <SelectValue placeholder="Framework" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Frameworks</SelectItem>
+                <SelectItem value="__none__">No Framework</SelectItem>
+                {frameworks?.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
                 ))}
-                {filteredCategoriesForDropdown.length === 0 && categorySearchQuery && <p className="text-xs text-muted-foreground text-center py-2">No categories found</p>}
-              </div>
-            </PopoverContent>
-          </Popover>
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* SharePoint Status Filter */}
+          {isSuperAdmin && (
+            <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
+              <SelectTrigger className="w-full md:flex-1 md:min-w-[170px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+                <SelectValue placeholder="SP Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All SP Status</SelectItem>
+                <SelectItem value="has_url">Has SP URL</SelectItem>
+                <SelectItem value="no_url">No SP URL</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
-
-        {/* Framework Filter */}
-        {isSuperAdmin && (
-          <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
-            <SelectTrigger className="w-full md:w-[180px] h-12 bg-card border-border/50 rounded-lg font-semibold">
-              <SelectValue placeholder="Framework" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Frameworks</SelectItem>
-              <SelectItem value="__none__">No Framework</SelectItem>
-              {frameworks?.map((f) => (
-                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* SharePoint Status Filter */}
-        {isSuperAdmin && (
-          <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
-            <SelectTrigger className="w-full md:w-[170px] h-12 bg-card border-border/50 rounded-lg font-semibold">
-              <SelectValue placeholder="SP Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All SP Status</SelectItem>
-              <SelectItem value="has_url">Has SP URL</SelectItem>
-              <SelectItem value="no_url">No SP URL</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
       </div>
 
       {/* File Status Filter */}
