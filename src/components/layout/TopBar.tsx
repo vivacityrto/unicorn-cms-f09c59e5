@@ -174,6 +174,12 @@ const getBreadcrumbs = (pathname: string) => {
   return breadcrumbs;
 };
 
+// Shared shape for the two utility buttons below: same size/shape/border
+// framework so they read as a matched pair, with each keeping its own
+// accent (Support Tickets' brand-aqua fill) so they stay distinguishable
+// from one another at a glance.
+const UTILITY_BUTTON_CLASS = 'h-10 w-10 rounded-full shrink-0';
+
 function SupportTicketsButton() {
   const [open, setOpen] = useState(false);
   return (
@@ -182,7 +188,7 @@ function SupportTicketsButton() {
         <TooltipTrigger asChild>
           <Button
             size="icon"
-            className="h-10 w-10 rounded-full bg-brand-aqua text-white hover:bg-brand-aqua-600"
+            className={`${UTILITY_BUTTON_CLASS} bg-brand-aqua text-white hover:bg-brand-aqua-600 border border-transparent`}
             onClick={() => setOpen(prev => !prev)}
           >
             <LifeBuoy className="h-4 w-4" />
@@ -208,12 +214,12 @@ function DailyNotesButton() {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-10 w-10"
+            className={UTILITY_BUTTON_CLASS}
             onClick={() => setOpen(prev => !prev)}
           >
-            <NotebookPen className="h-5 w-5" />
+            <NotebookPen className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>
