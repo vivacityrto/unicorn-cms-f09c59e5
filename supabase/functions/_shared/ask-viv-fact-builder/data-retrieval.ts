@@ -120,6 +120,7 @@ export async function retrieveFactData(
       // hours_included nor hours_added set (e.g. an unlimited/legacy package).
       total_hours: instanceTotal > 0 ? instanceTotal : (pkg.total_hours ?? null),
       used_hours: inst.hours_used ?? null,
+      is_unlimited_override: !!inst.is_unlimited_override,
       updated_at: inst.created_at,
     };
   });
@@ -240,6 +241,9 @@ export async function retrieveFactData(
     .limit(ACTION_ITEM_LIMIT);
   if (scope.package_id) {
     actionItemQuery = actionItemQuery.eq("package_id", parseInt(scope.package_id, 10));
+  }
+  if (scope.phase_id) {
+    actionItemQuery = actionItemQuery.eq("stage_id", parseInt(scope.phase_id, 10));
   }
   const { data: actionItemsData } = await actionItemQuery;
 

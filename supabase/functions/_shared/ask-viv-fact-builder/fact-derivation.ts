@@ -134,7 +134,10 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
 
     // Consult hours tracking — now backed by package_instances' own
     // hours_included/hours_added/hours_used counters (see data-retrieval.ts),
-    // not a stale total that never included used_hours.
+    // not a stale total that never included used_hours. Skip
+    // exhausted/nearly-exhausted reasoning entirely for unlimited-override
+    // packages — total_hours there is not a real cap, so a client that's
+    // used more than the nominal total is expected and not a problem.
     if (pkg.total_hours !== null && pkg.total_hours !== undefined) {
       const usedHours = pkg.used_hours || 0;
       const remainingHours = pkg.total_hours - usedHours;
@@ -151,8 +154,11 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
           used_hours: usedHours,
           remaining_hours: remainingHours,
           percent_used: percentUsed,
+          is_unlimited_override: pkg.is_unlimited_override ?? false,
         },
-        reason: percentUsed >= 90 ? "Hours nearly exhausted" : null,
+        reason: pkg.is_unlimited_override
+          ? null
+          : percentUsed >= 90 ? "Hours nearly exhausted" : null,
         source_table: "package_instances",
         source_ids: [pkg.id.toString()],
         derived_at: nowIso,
@@ -572,6 +578,7 @@ export function derivePhaseBlockers(
   // 3. Hours exceeded — now reachable, since used_hours is actually populated
   // from package_instances.hours_used (previously always undefined -> 0).
   for (const pkg of packages) {
+    if (pkg.is_unlimited_override) continue;
     if (pkg.total_hours && pkg.used_hours && pkg.used_hours >= pkg.total_hours) {
       blockers.push({
         type: "hours_exceeded",

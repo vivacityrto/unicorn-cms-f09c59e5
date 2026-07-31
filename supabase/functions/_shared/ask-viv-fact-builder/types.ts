@@ -122,6 +122,9 @@ export interface PackageFactData {
   package_type?: string | null;
   total_hours?: number | null;
   used_hours?: number | null;
+  // When true, hours_included/hours_added is not a real cap — never derive
+  // "nearly exhausted"/"exceeded" reasoning from total_hours vs used_hours.
+  is_unlimited_override?: boolean;
   updated_at?: string | null;
 }
 
