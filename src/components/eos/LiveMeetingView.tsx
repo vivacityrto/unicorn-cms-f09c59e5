@@ -221,6 +221,9 @@ export const LiveMeetingView = () => {
     onSegueChange: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-segue-shares', meetingId] });
     },
+    onIssueChange: () => {
+      queryClient.invalidateQueries({ queryKey: ['meeting-issues', meetingId] });
+    },
   });
 
   // Attendance hook for auto-attendance
@@ -1468,11 +1471,13 @@ export const LiveMeetingView = () => {
         issue={selectedIssue}
         isFacilitator={isFacilitator}
         meetingId={meetingId}
+        onIssueChanged={() => broadcastChange('issue_change')}
       />
 
       <CreateIssueDialog
         open={createIssueOpen}
         onOpenChange={setCreateIssueOpen}
+        onCreated={() => broadcastChange('issue_change')}
         meetingId={meetingId}
         meetingSegmentId={liveSegment?.id}
         context="meeting_ids"

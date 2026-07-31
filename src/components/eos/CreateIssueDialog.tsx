@@ -14,6 +14,8 @@ interface CreateIssueDialogProps {
   context?: FormContext;
   /** Meeting type for source tracking (L10, Quarterly, Annual) */
   meetingType?: string;
+  /** Called after the issue is successfully created - used to broadcast the change to other live-meeting attendees */
+  onCreated?: () => void;
 }
 
 export function CreateIssueDialog({
@@ -26,6 +28,7 @@ export function CreateIssueDialog({
   linkedRockId,
   context = meetingId ? 'meeting_ids' : 'ro_page',
   meetingType,
+  onCreated,
 }: CreateIssueDialogProps) {
   const { createItem } = useRisksOpportunities();
 
@@ -55,7 +58,8 @@ export function CreateIssueDialog({
       meeting_segment_id: meetingSegmentId,
       source: getSource(),
     });
-    
+
+    onCreated?.();
     onOpenChange(false);
   };
 
