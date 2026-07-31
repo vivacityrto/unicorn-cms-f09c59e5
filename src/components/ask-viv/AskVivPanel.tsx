@@ -95,7 +95,7 @@ interface Thread {
  */
 export function AskVivPanel() {
   const { user, profile, loading } = useAuth();
-  const { isSuperAdmin, isVivacityTeam } = useRBAC();
+  const { canAccessAskViv } = useRBAC();
   const { isOpen, closePanel, selectedMode } = useAskViv();
   const { flags } = useAskVivFeatureFlags();
   const location = useLocation();
@@ -219,8 +219,9 @@ export function AskVivPanel() {
     return null;
   }
 
-  // Only render for SuperAdmins or Vivacity Team
-  if (!isSuperAdmin && !isVivacityTeam) {
+  // Gate through the single documented ask_viv:access permission rather than
+  // duplicating the Vivacity-staff role check inline.
+  if (!canAccessAskViv()) {
     return null;
   }
 

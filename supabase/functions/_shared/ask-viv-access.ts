@@ -52,15 +52,10 @@ export async function validateAskVivAccess(
     };
   }
 
-  // Check if user is archived
-  if (profile?.status === "archived" || profile?.status === "inactive") {
-    await logDeniedAccess(supabase, userId, profile?.unicorn_role || "unknown", endpoint, "user_archived");
-    
-    return {
-      allowed: false,
-      reason: "Your account is no longer active.",
-    };
-  }
+  // Note: no separate active-state check here — verifyAuth() (auth-helpers.ts) already
+  // gates on profile.state ('inactive'/'suspended') and nulls the profile before this
+  // function is ever reached, so a second check on a nonexistent `profile.status` field
+  // was dead code. Don't re-add without checking why verifyAuth's gate stopped applying.
 
   return { allowed: true };
 }
