@@ -29,6 +29,8 @@ interface IDSDialogProps {
   issue: EosIssue | null;
   isFacilitator: boolean;
   meetingId?: string;
+  /** Called after the issue's status changes - used to broadcast the change to other live-meeting attendees */
+  onIssueChanged?: () => void;
 }
 
 interface TodoItem {
@@ -37,7 +39,7 @@ interface TodoItem {
   due_date: string;
 }
 
-export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId }: IDSDialogProps) {
+export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId, onIssueChanged }: IDSDialogProps) {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('identify');
@@ -112,6 +114,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-issues'] });
       queryClient.invalidateQueries({ queryKey: ['meeting-issues'] });
+      onIssueChanged?.();
       toast({ title: 'Discussion notes saved' });
     },
     onError: (error: Error) => {
@@ -150,13 +153,14 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['eos-issues'] });
       queryClient.invalidateQueries({ queryKey: ['meeting-issues'] });
-      
+      onIssueChanged?.();
+
       // Auto-advance tab after successful status change
       if (result?.autoAdvanceTab) {
         const newTab = getTabFromStatus(result.status);
         setActiveTab(newTab);
       }
-      
+
       toast({ title: 'Issue status updated' });
     },
     onError: (error: Error) => {
