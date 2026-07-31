@@ -156,7 +156,9 @@ export async function retrieveFactData(
   phases = (stageStateData || []).map((s: any) => {
     const def: any = stageDefMap.get(s.stage_id) ?? {};
     const title = def.name ?? `Stage ${s.stage_id}`;
-    labels.set(`client_package_stage_state:${s.id}`, title);
+    // Key labels by stage_id (not the client_package_stage_state row id) —
+    // see the recordIds note below for why.
+    labels.set(`client_package_stage_state:${s.stage_id}`, title);
     return {
       id: s.stage_id,
       title,
@@ -171,11 +173,17 @@ export async function retrieveFactData(
   });
 
   if (stageStateData && stageStateData.length > 0) {
-    // Record the real per-client progress rows for the audit trail, even
-    // though PhaseFactData.id (above) intentionally stays the stage template
-    // id for scope/inference compatibility — see the doc comment on
-    // PhaseFactData in types.ts.
-    recordIds.push({ table: "client_package_stage_state", ids: stageStateData.map((s: any) => s.id.toString()) });
+    // Use stage_id here, not the client_package_stage_state row id. An
+    // earlier version of this fix used the row id for record-link precision,
+    // but that put record links in a different ID space than
+    // PhaseFactData.id / scope.phase_id / inferScope everywhere else,
+    // producing links that pointed at the wrong identifier entirely
+    // (caught by review). Consistency of the ID space wins over per-row
+    // audit precision for this one table.
+    recordIds.push({
+      table: "client_package_stage_state",
+      ids: [...new Set((stageStateData as any[]).map((s: any) => s.stage_id.toString()))],
+    });
   }
 
   // 4. Fetch tasks from tasks_tenants — the real per-client task table.

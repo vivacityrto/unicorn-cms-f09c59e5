@@ -130,10 +130,18 @@ export interface PackageFactData {
  *
  * `id` is deliberately the STAGE TEMPLATE id (stages.id), not the
  * client_package_stage_state row id — this keeps it in the same ID space
- * that scope.phase_id / inferScope / findLabelForId already use throughout
- * compliance-assistant. The real per-client progress row id is not exposed
- * here; it's only used internally in data-retrieval.ts to build the
- * client_package_stage_state record_ids entry for the audit trail.
+ * that scope.phase_id / inferScope / findLabelForId / record-links.ts all
+ * use throughout compliance-assistant. The real per-client progress row id
+ * (client_package_stage_state.id) is never exposed anywhere, including in
+ * record_ids/labels — an earlier version used it there for audit precision,
+ * but that put record links in a different ID space than everything else,
+ * producing links that pointed at the wrong identifier. Consistency wins.
+ *
+ * Note: the same stage template can appear more than once per tenant if
+ * it's reused across multiple packages (client_package_stage_state is
+ * unique on (tenant_id, package_id, stage_id), not (tenant_id, stage_id)) —
+ * always pair `id` with `package_id` when matching against tasks or other
+ * per-stage data, never match on `id` alone.
  */
 export interface PhaseFactData {
   id: number;                        // stages.id (stage template / "phase" id)

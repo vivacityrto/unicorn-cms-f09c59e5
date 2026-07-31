@@ -203,7 +203,12 @@ export function derivePhaseFacts(
     });
 
     // Completion from the tasks that actually belong to this stage.
-    const stageTasks = tasks.filter(t => t.stage_id === phase.id);
+    // client_package_stage_state is unique on (tenant_id, package_id,
+    // stage_id) — the same stage template can be reused across more than
+    // one package for the same client, so stage_id alone is not a unique
+    // key. Match package_id too, or two packages sharing a stage would
+    // compute completion from the same (or the wrong) tasks_tenants rows.
+    const stageTasks = tasks.filter(t => t.stage_id === phase.id && t.package_id === phase.package_id);
     if (stageTasks.length > 0) {
       const completedCount = stageTasks.filter(t => t.completed).length;
       const completionPercent = Math.round((completedCount / stageTasks.length) * 100);
@@ -212,6 +217,7 @@ export function derivePhaseFacts(
         key: "phase_completion",
         value: {
           phase_id: phase.id,
+          package_id: phase.package_id,
           completion_percent: completionPercent,
           task_count: stageTasks.length,
         },
@@ -365,8 +371,10 @@ export function deriveActionItemFacts(items: ActionItemFactData[], nowIso: strin
     });
   }
 
+  // Exclude items already counted as overdue above — an item due yesterday
+  // is not "upcoming".
   const upcoming = openItems
-    .filter(i => i.due_date)
+    .filter(i => i.due_date && new Date(i.due_date) >= now)
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
     .slice(0, 5);
 
