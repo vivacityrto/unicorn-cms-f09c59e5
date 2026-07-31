@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -87,6 +89,35 @@ function MeetingsContent() {
       completedList: completed.sort((a, b) => new Date(b.scheduled_date).getTime() - new Date(a.scheduled_date).getTime()),
     };
   }, [meetings]);
+
+  // "Resume Meeting" should only show for someone who has personally joined
+  // this in-progress meeting before (LiveMeetingView marks attendance_status
+  // 'attended' the moment they open it) - everyone else should see "Join
+  // Meeting" instead, even though the meeting itself is already in progress.
+  const inProgressIds = useMemo(() => inProgressList.map(m => m.id), [inProgressList]);
+  const { data: myAttendance } = useQuery({
+    queryKey: ['my-meeting-attendance', profile?.user_uuid, inProgressIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_meeting_attendees')
+        .select('meeting_id, attendance_status')
+        .eq('user_id', profile!.user_uuid)
+        .in('meeting_id', inProgressIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.user_uuid && inProgressIds.length > 0,
+  });
+
+  const joinedMeetingIds = useMemo(() => {
+    const ids = new Set<string>();
+    myAttendance?.forEach(a => {
+      if (a.attendance_status === 'attended' || a.attendance_status === 'late') {
+        ids.add(a.meeting_id);
+      }
+    });
+    return ids;
+  }, [myAttendance]);
 
   const handleApplyTemplateClick = (meeting: EosMeeting) => {
     setMeetingForTemplate(meeting);
@@ -479,7 +510,7 @@ function MeetingsContent() {
                   onSkip={(id, title) => setMeetingToSkip({ id, title })}
                   onChangeFacilitator={setChangeFacilitatorMeetingId}
                   canChangeFacilitator={canChangeFacilitatorPerm}
-                  showResumeAction
+                  hasJoined={joinedMeetingIds.has(meeting.id)}
                 />
               ))
             ) : (
@@ -592,7 +623,7 @@ interface MeetingCardProps {
   onApplyTemplate: (meeting: EosMeeting) => void;
   onDelete: (id: string, title: string) => void;
   navigate: (path: string) => void;
-  showResumeAction?: boolean;
+  hasJoined?: boolean;
   isConfigV2Enabled?: boolean;
   onSync?: (meetingId: string) => void;
   onSkip?: (meetingId: string, title: string) => void;
@@ -608,7 +639,7 @@ function MeetingCard({
   onApplyTemplate,
   onDelete,
   navigate,
-  showResumeAction = false,
+  hasJoined = false,
   isConfigV2Enabled = false,
   onSync,
   onSkip,
@@ -668,7 +699,9 @@ function MeetingCard({
             onClick={() => navigate(`/eos/meetings/${meeting.id}/live`)}
           >
             <Play className="w-4 h-4 mr-2" />
-            {showResumeAction ? 'Resume Meeting' : 'Start Meeting'}
+            {meeting.status === 'in_progress'
+              ? (hasJoined ? 'Resume Meeting' : 'Join Meeting')
+              : 'Start Meeting'}
           </Button>
           {canScheduleMeetings() && (
             <>
