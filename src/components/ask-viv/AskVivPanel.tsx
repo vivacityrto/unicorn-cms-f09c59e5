@@ -170,16 +170,20 @@ export function AskVivPanel() {
       if (!user?.id || selectedMode !== "compliance") return;
 
       try {
-        const { data: tenantMember } = await (supabase as any)
+        const { data: tenantMember } = await supabase
           .from("tenant_members")
-          .select("tenant_id, tenants(id, name)")
+          .select("tenant_id")
           .eq("user_id", user.id)
           .eq("status", "active")
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (tenantMember?.tenant_id) {
-          const tenantData = tenantMember.tenants as any;
+          const { data: tenantData } = await supabase
+            .from("tenants")
+            .select("id, name")
+            .eq("id", tenantMember.tenant_id)
+            .maybeSingle();
           setContext({
             tenant_id: tenantMember.tenant_id,
             tenant_name: tenantData?.name || `Tenant ${tenantMember.tenant_id}`,
