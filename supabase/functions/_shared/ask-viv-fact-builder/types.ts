@@ -79,12 +79,14 @@ export interface InferenceDecision {
 
 // ============= Blocker Types =============
 
-export type BlockerType = 
+export type BlockerType =
   | "missing_task"
   | "missing_evidence"
   | "hours_exceeded"
   | "overdue_task"
-  | "phase_incomplete";
+  | "phase_incomplete"
+  | "stage_blocked"
+  | "stage_waiting";
 
 export interface PhaseBlocker {
   type: BlockerType;
@@ -122,26 +124,52 @@ export interface PackageFactData {
   package_type?: string | null;
   total_hours?: number | null;
   used_hours?: number | null;
+  // When true, hours_included/hours_added is not a real cap — never derive
+  // "nearly exhausted"/"exceeded" reasoning from total_hours vs used_hours.
+  is_unlimited_override?: boolean;
   updated_at?: string | null;
 }
 
+/**
+ * Phase (stage) progress for one client's package.
+ *
+ * `id` is deliberately the STAGE TEMPLATE id (stages.id), not the
+ * client_package_stage_state row id — this keeps it in the same ID space
+ * that scope.phase_id / inferScope / findLabelForId / record-links.ts all
+ * use throughout compliance-assistant. The real per-client progress row id
+ * (client_package_stage_state.id) is never exposed anywhere, including in
+ * record_ids/labels — an earlier version used it there for audit precision,
+ * but that put record links in a different ID space than everything else,
+ * producing links that pointed at the wrong identifier. Consistency wins.
+ *
+ * Note: the same stage template can appear more than once per tenant if
+ * it's reused across multiple packages (client_package_stage_state is
+ * unique on (tenant_id, package_id, stage_id), not (tenant_id, stage_id)) —
+ * always pair `id` with `package_id` when matching against tasks or other
+ * per-stage data, never match on `id` alone.
+ */
 export interface PhaseFactData {
-  id: number;
+  id: number;                        // stages.id (stage template / "phase" id)
   title: string;
-  status: string;
+  status: string;                    // client_package_stage_state.status
   stage_type?: string | null;
-  due_date?: string | null;
+  due_date?: string | null;          // client_package_stage_state.due_at
+  blocked_reason?: string | null;
+  waiting_reason?: string | null;
+  package_id?: number | null;
   updated_at?: string | null;
 }
 
 export interface TaskFactData {
-  id: string;
+  id: string;                        // tasks_tenants.id (uuid)
   task_name: string;
   status: string;
+  completed: boolean;
   priority?: string | null;
-  due_date?: string | null;
-  is_mandatory?: boolean;
-  phase_id?: number | null;
+  due_date?: string | null;          // tasks_tenants.due_date (NOT NULL)
+  escalated_at?: string | null;
+  package_id?: number | null;
+  stage_id?: number | null;          // links a task to a PhaseFactData.id
   updated_at?: string | null;
 }
 
@@ -155,12 +183,25 @@ export interface EvidenceFactData {
   updated_at?: string | null;
 }
 
-export interface ConsultFactData {
-  id: string;
-  date: string;
-  hours: number;
-  task?: string | null;
-  consultant?: string | null;
+export interface ActionItemFactData {
+  id: string;                        // client_action_items.id (uuid)
+  title: string;
+  status: string;
+  priority: string;
+  item_type: string;                 // 'client' | 'internal'
+  due_date?: string | null;
+  completed_at?: string | null;
+  package_id?: number | null;
+  stage_id?: number | null;
+}
+
+export interface TimeFactData {
+  id: string;                        // time_entries.id (uuid)
+  start_at: string;
+  duration_minutes: number;
+  work_type?: string | null;
+  is_billable: boolean;
+  notes?: string | null;
 }
 
 // ============= Constants =============

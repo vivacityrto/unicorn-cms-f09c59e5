@@ -1,6 +1,6 @@
 /**
  * Fact Derivation
- * 
+ *
  * Derives facts from retrieved data.
  * No raw rows returned - only derived, timestamped, traceable facts.
  */
@@ -12,7 +12,8 @@ import type {
   PhaseFactData,
   TaskFactData,
   EvidenceFactData,
-  ConsultFactData,
+  ActionItemFactData,
+  TimeFactData,
   PhaseBlocker,
 } from "./types.ts";
 
@@ -131,12 +132,17 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
       derived_at: nowIso,
     });
 
-    // Consult hours tracking
+    // Consult hours tracking — now backed by package_instances' own
+    // hours_included/hours_added/hours_used counters (see data-retrieval.ts),
+    // not a stale total that never included used_hours. Skip
+    // exhausted/nearly-exhausted reasoning entirely for unlimited-override
+    // packages — total_hours there is not a real cap, so a client that's
+    // used more than the nominal total is expected and not a problem.
     if (pkg.total_hours !== null && pkg.total_hours !== undefined) {
       const usedHours = pkg.used_hours || 0;
       const remainingHours = pkg.total_hours - usedHours;
-      const percentUsed = pkg.total_hours > 0 
-        ? Math.round((usedHours / pkg.total_hours) * 100) 
+      const percentUsed = pkg.total_hours > 0
+        ? Math.round((usedHours / pkg.total_hours) * 100)
         : 0;
 
       facts.push({
@@ -148,8 +154,11 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
           used_hours: usedHours,
           remaining_hours: remainingHours,
           percent_used: percentUsed,
+          is_unlimited_override: pkg.is_unlimited_override ?? false,
         },
-        reason: percentUsed >= 90 ? "Hours nearly exhausted" : null,
+        reason: pkg.is_unlimited_override
+          ? null
+          : percentUsed >= 90 ? "Hours nearly exhausted" : null,
         source_table: "package_instances",
         source_ids: [pkg.id.toString()],
         derived_at: nowIso,
@@ -161,10 +170,14 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
 }
 
 /**
- * Derive phase facts with completion percentage.
+ * Derive phase facts with real completion percentage (from the tasks that
+ * actually belong to that stage) and real blocked/waiting reasons — this
+ * function previously accepted a `tasks` parameter and never used it,
+ * computing an identical, meaningless completion_percent for every phase
+ * from the phases array itself.
  */
 export function derivePhaseFacts(
-  phases: PhaseFactData[], 
+  phases: PhaseFactData[],
   tasks: TaskFactData[],
   nowIso: string
 ): DerivedFact[] {
@@ -172,8 +185,9 @@ export function derivePhaseFacts(
 
   if (phases.length === 0) return facts;
 
+  const now = new Date(nowIso);
+
   for (const phase of phases) {
-    // Current phase status
     facts.push({
       key: "phase_status",
       value: {
@@ -181,33 +195,61 @@ export function derivePhaseFacts(
         title: phase.title,
         status: phase.status,
         stage_type: phase.stage_type,
+        due_date: phase.due_date,
+        blocked_reason: phase.blocked_reason,
+        waiting_reason: phase.waiting_reason,
       },
-      reason: null,
-      source_table: "stages",
+      reason:
+        phase.status === "blocked" ? (phase.blocked_reason || "Stage is blocked")
+        : phase.status === "waiting" ? (phase.waiting_reason || "Stage is waiting")
+        : null,
+      source_table: "client_package_stage_state",
       source_ids: [phase.id.toString()],
       derived_at: nowIso,
     });
 
-    // Completion percentage (derive from tasks if available)
-    // For now, we use a simple heuristic
-    const completedCount = phases.filter(p => 
-      p.status === "complete" || p.status === "completed"
-    ).length;
-    const completionPercent = phases.length > 0 
-      ? Math.round((completedCount / phases.length) * 100)
-      : 0;
+    // Completion from the tasks that actually belong to this stage.
+    // client_package_stage_state is unique on (tenant_id, package_id,
+    // stage_id) — the same stage template can be reused across more than
+    // one package for the same client, so stage_id alone is not a unique
+    // key. Match package_id too, or two packages sharing a stage would
+    // compute completion from the same (or the wrong) tasks_tenants rows.
+    const stageTasks = tasks.filter(t => t.stage_id === phase.id && t.package_id === phase.package_id);
+    if (stageTasks.length > 0) {
+      const completedCount = stageTasks.filter(t => t.completed).length;
+      const completionPercent = Math.round((completedCount / stageTasks.length) * 100);
 
-    facts.push({
-      key: "phase_completion",
-      value: {
-        phase_id: phase.id,
-        completion_percent: completionPercent,
-      },
-      reason: completionPercent < 50 ? "Less than 50% complete" : null,
-      source_table: "stages",
-      source_ids: [phase.id.toString()],
-      derived_at: nowIso,
-    });
+      facts.push({
+        key: "phase_completion",
+        value: {
+          phase_id: phase.id,
+          package_id: phase.package_id,
+          completion_percent: completionPercent,
+          task_count: stageTasks.length,
+        },
+        reason: completionPercent < 50 ? "Less than 50% complete" : null,
+        source_table: "tasks_tenants",
+        source_ids: stageTasks.map(t => t.id),
+        derived_at: nowIso,
+      });
+    }
+
+    // Overdue phase (real due_at from client_package_stage_state, not a guess)
+    if (
+      phase.due_date &&
+      phase.status !== "complete" &&
+      phase.status !== "skipped" &&
+      new Date(phase.due_date) < now
+    ) {
+      facts.push({
+        key: "phase_overdue",
+        value: { phase_id: phase.id, due_date: phase.due_date },
+        reason: "Stage is overdue",
+        source_table: "client_package_stage_state",
+        source_ids: [phase.id.toString()],
+        derived_at: nowIso,
+      });
+    }
 
     // Last activity date
     if (phase.updated_at) {
@@ -215,7 +257,7 @@ export function derivePhaseFacts(
         key: "phase_last_activity",
         value: phase.updated_at,
         reason: null,
-        source_table: "stages",
+        source_table: "client_package_stage_state",
         source_ids: [phase.id.toString()],
         derived_at: nowIso,
       });
@@ -226,18 +268,17 @@ export function derivePhaseFacts(
 }
 
 /**
- * Derive task facts.
+ * Derive task facts. `completed` (a proper boolean on tasks_tenants) is the
+ * authority for whether a task is done — not a string-match against `status`,
+ * which is free text.
  */
 export function deriveTaskFacts(tasks: TaskFactData[], nowIso: string): DerivedFact[] {
   const facts: DerivedFact[] = [];
 
   if (tasks.length === 0) return facts;
 
-  // Count incomplete mandatory tasks (assume all tasks are mandatory for now)
-  const incompleteTasks = tasks.filter(t => 
-    t.status !== "complete" && t.status !== "done" && t.status !== "completed"
-  );
-  
+  const incompleteTasks = tasks.filter(t => !t.completed);
+
   // Count overdue tasks
   const now = new Date(nowIso);
   const overdueTasks = incompleteTasks.filter(t => {
@@ -245,11 +286,15 @@ export function deriveTaskFacts(tasks: TaskFactData[], nowIso: string): DerivedF
     return new Date(t.due_date) < now;
   });
 
+  // Escalated tasks — a real signal (tasks_tenants.escalated_at) the previous
+  // tasks source had no equivalent for.
+  const escalatedTasks = incompleteTasks.filter(t => !!t.escalated_at);
+
   facts.push({
     key: "tasks_incomplete_count",
     value: incompleteTasks.length,
     reason: incompleteTasks.length > 10 ? "Many incomplete tasks" : null,
-    source_table: "tasks",
+    source_table: "tasks_tenants",
     source_ids: incompleteTasks.map(t => t.id),
     derived_at: nowIso,
   });
@@ -258,10 +303,21 @@ export function deriveTaskFacts(tasks: TaskFactData[], nowIso: string): DerivedF
     key: "tasks_overdue_count",
     value: overdueTasks.length,
     reason: overdueTasks.length > 0 ? `${overdueTasks.length} tasks overdue` : null,
-    source_table: "tasks",
+    source_table: "tasks_tenants",
     source_ids: overdueTasks.map(t => t.id),
     derived_at: nowIso,
   });
+
+  if (escalatedTasks.length > 0) {
+    facts.push({
+      key: "tasks_escalated_count",
+      value: escalatedTasks.length,
+      reason: `${escalatedTasks.length} tasks escalated and still open`,
+      source_table: "tasks_tenants",
+      source_ids: escalatedTasks.map(t => t.id),
+      derived_at: nowIso,
+    });
+  }
 
   // Next due task
   const upcomingTasks = incompleteTasks
@@ -278,8 +334,68 @@ export function deriveTaskFacts(tasks: TaskFactData[], nowIso: string): DerivedF
         due_date: nextTask.due_date,
       },
       reason: null,
-      source_table: "tasks",
+      source_table: "tasks_tenants",
       source_ids: [nextTask.id],
+      derived_at: nowIso,
+    });
+  }
+
+  return facts;
+}
+
+/**
+ * Derive action-item facts from client_action_items — the CSC/client-facing
+ * action-item workboard, distinct from tasks_tenants and from audit
+ * remediation actions.
+ */
+export function deriveActionItemFacts(items: ActionItemFactData[], nowIso: string): DerivedFact[] {
+  const facts: DerivedFact[] = [];
+
+  if (items.length === 0) return facts;
+
+  const now = new Date(nowIso);
+  const openItems = items.filter(i => i.status !== "done" && i.status !== "cancelled");
+  const overdueItems = openItems.filter(i => i.due_date && new Date(i.due_date) < now);
+
+  facts.push({
+    key: "action_items_open_count",
+    value: openItems.length,
+    reason: null,
+    source_table: "client_action_items",
+    source_ids: openItems.map(i => i.id),
+    derived_at: nowIso,
+  });
+
+  if (overdueItems.length > 0) {
+    facts.push({
+      key: "action_items_overdue_count",
+      value: overdueItems.length,
+      reason: `${overdueItems.length} action items overdue`,
+      source_table: "client_action_items",
+      source_ids: overdueItems.map(i => i.id),
+      derived_at: nowIso,
+    });
+  }
+
+  // Exclude items already counted as overdue above — an item due yesterday
+  // is not "upcoming".
+  const upcoming = openItems
+    .filter(i => i.due_date && new Date(i.due_date) >= now)
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+    .slice(0, 5);
+
+  if (upcoming.length > 0) {
+    facts.push({
+      key: "action_items_upcoming",
+      value: upcoming.map(i => ({
+        id: i.id,
+        title: i.title,
+        due_date: i.due_date,
+        item_type: i.item_type,
+      })),
+      reason: null,
+      source_table: "client_action_items",
+      source_ids: upcoming.map(i => i.id),
       derived_at: nowIso,
     });
   }
@@ -297,7 +413,7 @@ export function deriveEvidenceFacts(evidence: EvidenceFactData[], nowIso: string
 
   // Count unreleased/missing evidence
   const unreleasedEvidence = evidence.filter(e => !e.is_released);
-  
+
   facts.push({
     key: "evidence_unreleased_count",
     value: unreleasedEvidence.length,
@@ -345,50 +461,48 @@ export function deriveEvidenceFacts(evidence: EvidenceFactData[], nowIso: string
 }
 
 /**
- * Derive consult facts.
+ * Derive time-logging facts from time_entries — the real, actively-populated
+ * time ledger (fed by Calendar Time Capture / Time Inbox). Replaces the
+ * previous consult_logs-derived facts; consult_logs is a legacy import table
+ * that is completely empty in production, so this is a straight replacement.
  */
-export function deriveConsultFacts(consults: ConsultFactData[], nowIso: string): DerivedFact[] {
+export function deriveTimeFacts(entries: TimeFactData[], nowIso: string): DerivedFact[] {
   const facts: DerivedFact[] = [];
 
-  // Consult count last 30 days
   facts.push({
-    key: "consult_count_30d",
-    value: consults.length,
+    key: "time_entry_count_30d",
+    value: entries.length,
     reason: null,
-    source_table: "consult_logs",
-    source_ids: consults.map(c => c.id),
+    source_table: "time_entries",
+    source_ids: entries.map(e => e.id),
     derived_at: nowIso,
   });
 
-  // Total hours logged
-  const totalHours = consults.reduce((sum, c) => sum + c.hours, 0);
+  const totalHours = Math.round((entries.reduce((sum, e) => sum + e.duration_minutes, 0) / 60) * 10) / 10;
   facts.push({
-    key: "consult_hours_30d",
-    value: Math.round(totalHours * 10) / 10,
+    key: "time_hours_30d",
+    value: totalHours,
     reason: null,
-    source_table: "consult_logs",
-    source_ids: consults.map(c => c.id),
+    source_table: "time_entries",
+    source_ids: entries.map(e => e.id),
     derived_at: nowIso,
   });
 
-  // Last consult summary
-  if (consults.length > 0) {
-    const sortedConsults = [...consults].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-    const lastConsult = sortedConsults[0];
+  if (entries.length > 0) {
+    const sorted = [...entries].sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime());
+    const last = sorted[0];
 
     facts.push({
-      key: "last_consult",
+      key: "last_time_entry",
       value: {
-        date: lastConsult.date,
-        task: lastConsult.task,
-        consultant: lastConsult.consultant,
-        hours: lastConsult.hours,
+        date: last.start_at,
+        work_type: last.work_type,
+        hours: Math.round((last.duration_minutes / 60) * 10) / 10,
+        notes: last.notes,
       },
       reason: null,
-      source_table: "consult_logs",
-      source_ids: [lastConsult.id],
+      source_table: "time_entries",
+      source_ids: [last.id],
       derived_at: nowIso,
     });
   }
@@ -397,9 +511,13 @@ export function deriveConsultFacts(consults: ConsultFactData[], nowIso: string):
 }
 
 /**
- * Derive phase blockers (v1).
+ * Derive phase blockers (v2) — now prepends real, human-authored blockers
+ * from client_package_stage_state (blocked_reason / waiting_reason) ahead
+ * of the heuristic-based ones, and correctly detects hours_exceeded now that
+ * used_hours is actually populated.
  */
 export function derivePhaseBlockers(
+  phases: PhaseFactData[],
   tasks: TaskFactData[],
   evidence: EvidenceFactData[],
   packages: PackageFactData[],
@@ -410,10 +528,31 @@ export function derivePhaseBlockers(
 
   const now = new Date(nowIso);
 
+  // 0. Real, human-authored stage blockers/waits — the strongest signal
+  // available, and previously never read at all.
+  const blockedPhases = phases.filter(p => p.status === "blocked");
+  if (blockedPhases.length > 0) {
+    blockers.push({
+      type: "stage_blocked",
+      label: blockedPhases[0].blocked_reason || "Stage blocked",
+      count: blockedPhases.length,
+      source_ids: blockedPhases.map(p => p.id.toString()),
+    });
+    sourceIds.push(...blockedPhases.map(p => p.id.toString()));
+  }
+  const waitingPhases = phases.filter(p => p.status === "waiting");
+  if (waitingPhases.length > 0) {
+    blockers.push({
+      type: "stage_waiting",
+      label: waitingPhases[0].waiting_reason || "Stage waiting",
+      count: waitingPhases.length,
+      source_ids: waitingPhases.map(p => p.id.toString()),
+    });
+    sourceIds.push(...waitingPhases.map(p => p.id.toString()));
+  }
+
   // 1. Missing mandatory tasks (incomplete tasks)
-  const incompleteTasks = tasks.filter(t => 
-    t.status !== "complete" && t.status !== "done" && t.status !== "completed"
-  );
+  const incompleteTasks = tasks.filter(t => !t.completed);
   if (incompleteTasks.length > 0) {
     blockers.push({
       type: "missing_task",
@@ -436,8 +575,10 @@ export function derivePhaseBlockers(
     sourceIds.push(...unreleasedEvidence.map(e => e.id.toString()));
   }
 
-  // 3. Consult hours exceeded
+  // 3. Hours exceeded — now reachable, since used_hours is actually populated
+  // from package_instances.hours_used (previously always undefined -> 0).
   for (const pkg of packages) {
+    if (pkg.is_unlimited_override) continue;
     if (pkg.total_hours && pkg.used_hours && pkg.used_hours >= pkg.total_hours) {
       blockers.push({
         type: "hours_exceeded",
