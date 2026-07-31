@@ -1,9 +1,11 @@
 /**
  * Ask Viv Fact Builder Types
- * 
+ *
  * Canonical types for the deterministic fact builder service.
  * All facts are derived, traceable, and audit-safe.
  */
+
+import { VIVACITY_STAFF_ROLES } from "../auth-helpers.ts";
 
 // ============= Inputs =============
 
@@ -163,11 +165,10 @@ export interface ConsultFactData {
 
 // ============= Constants =============
 
-export const VIVACITY_INTERNAL_ROLES = [
-  "Super Admin",
-  "Team Leader", 
-  "Team Member",
-];
+// Was a hand-rolled, stale 3-role list (missing CSC/Integrator/BGT/CET) that silently
+// 500'd every compliance-assistant request from those roles via validateInput() below —
+// re-export the canonical list instead of maintaining a second copy.
+export const VIVACITY_INTERNAL_ROLES = VIVACITY_STAFF_ROLES;
 
 export const MAX_TASKS_FOR_DERIVATION = 200;
 export const MAX_DOCUMENTS_FOR_DERIVATION = 100;
