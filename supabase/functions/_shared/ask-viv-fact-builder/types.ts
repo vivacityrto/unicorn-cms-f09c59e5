@@ -77,12 +77,14 @@ export interface InferenceDecision {
 
 // ============= Blocker Types =============
 
-export type BlockerType = 
+export type BlockerType =
   | "missing_task"
   | "missing_evidence"
   | "hours_exceeded"
   | "overdue_task"
-  | "phase_incomplete";
+  | "phase_incomplete"
+  | "stage_blocked"
+  | "stage_waiting";
 
 export interface PhaseBlocker {
   type: BlockerType;
@@ -123,23 +125,38 @@ export interface PackageFactData {
   updated_at?: string | null;
 }
 
+/**
+ * Phase (stage) progress for one client's package.
+ *
+ * `id` is deliberately the STAGE TEMPLATE id (stages.id), not the
+ * client_package_stage_state row id — this keeps it in the same ID space
+ * that scope.phase_id / inferScope / findLabelForId already use throughout
+ * compliance-assistant. The real per-client progress row id is not exposed
+ * here; it's only used internally in data-retrieval.ts to build the
+ * client_package_stage_state record_ids entry for the audit trail.
+ */
 export interface PhaseFactData {
-  id: number;
+  id: number;                        // stages.id (stage template / "phase" id)
   title: string;
-  status: string;
+  status: string;                    // client_package_stage_state.status
   stage_type?: string | null;
-  due_date?: string | null;
+  due_date?: string | null;          // client_package_stage_state.due_at
+  blocked_reason?: string | null;
+  waiting_reason?: string | null;
+  package_id?: number | null;
   updated_at?: string | null;
 }
 
 export interface TaskFactData {
-  id: string;
+  id: string;                        // tasks_tenants.id (uuid)
   task_name: string;
   status: string;
+  completed: boolean;
   priority?: string | null;
-  due_date?: string | null;
-  is_mandatory?: boolean;
-  phase_id?: number | null;
+  due_date?: string | null;          // tasks_tenants.due_date (NOT NULL)
+  escalated_at?: string | null;
+  package_id?: number | null;
+  stage_id?: number | null;          // links a task to a PhaseFactData.id
   updated_at?: string | null;
 }
 
@@ -153,12 +170,25 @@ export interface EvidenceFactData {
   updated_at?: string | null;
 }
 
-export interface ConsultFactData {
-  id: string;
-  date: string;
-  hours: number;
-  task?: string | null;
-  consultant?: string | null;
+export interface ActionItemFactData {
+  id: string;                        // client_action_items.id (uuid)
+  title: string;
+  status: string;
+  priority: string;
+  item_type: string;                 // 'client' | 'internal'
+  due_date?: string | null;
+  completed_at?: string | null;
+  package_id?: number | null;
+  stage_id?: number | null;
+}
+
+export interface TimeFactData {
+  id: string;                        // time_entries.id (uuid)
+  start_at: string;
+  duration_minutes: number;
+  work_type?: string | null;
+  is_billable: boolean;
+  notes?: string | null;
 }
 
 // ============= Constants =============

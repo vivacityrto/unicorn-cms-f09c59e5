@@ -25,8 +25,9 @@ import {
   derivePackageFacts,
   derivePhaseFacts,
   deriveTaskFacts,
+  deriveActionItemFacts,
   deriveEvidenceFacts,
-  deriveConsultFacts,
+  deriveTimeFacts,
   derivePhaseBlockers,
 } from "./fact-derivation.ts";
 import { buildRecordLinks, deduplicateLinks } from "./record-links.ts";
@@ -113,6 +114,14 @@ export async function buildAskVivFacts(
     gaps.push("No tasks found");
   }
 
+  // Action item facts (client_action_items — distinct from tasks_tenants)
+  if (data.actionItems.length > 0) {
+    const actionItemFacts = deriveActionItemFacts(data.actionItems, input.now_iso);
+    facts.push(...actionItemFacts);
+  } else {
+    gaps.push("No action items found for this tenant");
+  }
+
   // Evidence facts
   if (data.evidence.length > 0) {
     const evidenceFacts = deriveEvidenceFacts(data.evidence, input.now_iso);
@@ -121,12 +130,13 @@ export async function buildAskVivFacts(
     gaps.push("No documents/evidence found for this tenant");
   }
 
-  // Consult facts
-  const consultFacts = deriveConsultFacts(data.consults, input.now_iso);
-  facts.push(...consultFacts);
+  // Time-logging facts
+  const timeFacts = deriveTimeFacts(data.timeEntries, input.now_iso);
+  facts.push(...timeFacts);
 
   // Phase blockers (derived fact)
   const { fact: blockerFact } = derivePhaseBlockers(
+    data.phases,
     data.tasks,
     data.evidence,
     data.packages,
@@ -137,7 +147,7 @@ export async function buildAskVivFacts(
   }
 
   // 7. Build record links
-  const rawLinks = buildRecordLinks(data.record_ids, inference.scope);
+  const rawLinks = buildRecordLinks(data.record_ids, inference.scope, data.labels);
   const recordLinks = deduplicateLinks(rawLinks);
 
   // 8. Build audit trail

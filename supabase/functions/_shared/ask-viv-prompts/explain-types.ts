@@ -124,11 +124,14 @@ function inferSourceTable(factKey: string): string {
   const tablePatterns: Record<string, string> = {
     "tenant_": "tenants",
     "client_": "clients",
-    "package_": "packages",
-    "phase_": "stages",
-    "task_": "phase_tasks",
+    "package_": "package_instances",
+    "phase_": "client_package_stage_state",
+    "tasks_": "tasks_tenants",
+    "next_due_task": "tasks_tenants",
+    "action_items_": "client_action_items",
     "document_": "documents",
-    "consult_": "consult_logs",
+    "time_": "time_entries",
+    "last_time_entry": "time_entries",
     "evidence_": "documents",
     "risk_": "tenants",
   };

@@ -1,6 +1,6 @@
 /**
  * Record Link Mapping
- * 
+ *
  * Creates navigable links for all source records.
  */
 
@@ -9,6 +9,11 @@ import type { RecordLink } from "./types.ts";
 /**
  * Build record links for navigation.
  * Maps source tables to internal routes.
+ *
+ * `labels`, when provided, is keyed `${table}:${id}` and gives a real display
+ * name (package/stage/task/action-item title etc.) instead of the generic
+ * `"Task 8f2..."` fallback — callers should populate it from names they
+ * already fetched in data-retrieval.ts rather than re-querying here.
  */
 export function buildRecordLinks(
   recordIds: { table: string; ids: string[] }[],
@@ -16,7 +21,8 @@ export function buildRecordLinks(
     client_id: string | null;
     package_id: string | null;
     phase_id: string | null;
-  }
+  },
+  labels?: Map<string, string>
 ): RecordLink[] {
   const links: RecordLink[] = [];
   const seenKeys = new Set<string>();
@@ -27,7 +33,7 @@ export function buildRecordLinks(
       if (seenKeys.has(key)) continue;
       seenKeys.add(key);
 
-      const link = createRecordLink(table, id, scope);
+      const link = createRecordLink(table, id, scope, labels?.get(key));
       if (link) {
         links.push(link);
       }
@@ -47,7 +53,8 @@ function createRecordLink(
     client_id: string | null;
     package_id: string | null;
     phase_id: string | null;
-  }
+  },
+  label?: string
 ): RecordLink | null {
   const clientId = scope.client_id || "unknown";
   const packageId = scope.package_id || "unknown";
@@ -57,7 +64,7 @@ function createRecordLink(
       return {
         table: "tenants",
         id,
-        label: `Tenant ${id}`,
+        label: label ?? `Tenant ${id}`,
         path: `/tenant/${id}`,
       };
 
@@ -66,66 +73,70 @@ function createRecordLink(
       return {
         table: "clients",
         id,
-        label: `Client ${id}`,
+        label: label ?? `Client ${id}`,
         path: `/clients/${id}`,
       };
 
-    case "packages":
+    case "package_instances":
       return {
-        table: "packages",
+        table: "package_instances",
         id,
-        label: `Package ${id}`,
+        label: label ?? `Package ${id}`,
         path: `/tenant/${clientId}/packages/${id}`,
       };
 
-    case "stages":
+    case "client_package_stage_state":
       return {
-        table: "stages",
+        table: "client_package_stage_state",
         id,
-        label: `Phase ${id}`,
+        label: label ?? `Stage ${id}`,
         path: `/tenant/${clientId}/packages/${packageId}/phases/${id}`,
       };
 
-    case "tasks":
+    case "tasks_tenants":
       return {
-        table: "tasks",
+        table: "tasks_tenants",
         id,
-        label: `Task ${id}`,
-        path: `/tasks/${id}`,
+        label: label ?? `Task ${id}`,
+        path: `/tenant/${clientId}/tasks/${id}`,
+      };
+
+    case "client_action_items":
+      return {
+        table: "client_action_items",
+        id,
+        label: label ?? `Action item ${id}`,
+        path: `/tenant/${clientId}/actions/${id}`,
       };
 
     case "documents":
       return {
         table: "documents",
         id,
-        label: `Document ${id}`,
+        label: label ?? `Document ${id}`,
         path: `/documents/${id}`,
       };
 
-    case "consult_logs":
+    case "time_entries":
       return {
-        table: "consult_logs",
+        table: "time_entries",
         id,
-        label: `Consult ${id}`,
-        path: `/consults/${id}`,
+        label: label ?? `Time entry ${id}`,
+        path: `/tenant/${clientId}/time`,
       };
 
     case "eos_issues":
       return {
         table: "eos_issues",
         id,
-        label: `Issue ${id}`,
+        label: label ?? `Issue ${id}`,
         path: `/eos/issues/${id}`,
       };
 
     default:
-      // Unknown table - provide generic link
-      return {
-        table,
-        id,
-        label: `${table} ${id}`,
-        path: `/${table}/${id}`,
-      };
+      // Unknown table - no fabricated route. A generic /${table}/${id} path
+      // for an unrecognised table is almost never a real page.
+      return null;
   }
 }
 

@@ -77,6 +77,21 @@ const DENIED_KEY_FRAGMENTS = [
   "consultant_phone",
 ];
 
+/** Shared builder for tasks / tasks_tenants facts — extracted so both source_table
+ * spellings resolve to the same friendly-label logic. */
+function buildTaskLabel(f: DerivedFact): string | null {
+  const v = (f.value ?? {}) as Record<string, unknown>;
+  const title = (v.title as string | undefined) ?? (v.label as string | undefined);
+  if (!title) return null;
+  // Owner-substitution: if owner is a Vivacity staff user, swap to "Vivacity".
+  const ownerTenantId = (v.owner_tenant_id as number | undefined) ?? null;
+  const ownerName = (v.owner_name as string | undefined) ?? null;
+  if (ownerTenantId === VIVACITY_TENANT_ID || (ownerName && /vivacity/i.test(ownerName))) {
+    return `Task: ${title} (Vivacity)`;
+  }
+  return `Task: ${title}`;
+}
+
 /** Whitelist of source_table → friendly-label builder. Anything not here is suppressed. */
 const LABEL_BUILDERS: Record<string, (fact: DerivedFact) => string | null> = {
   client_audits: (f) => {
@@ -100,18 +115,11 @@ const LABEL_BUILDERS: Record<string, (fact: DerivedFact) => string | null> = {
     const label = (v.filename as string | undefined) ?? (v.label as string | undefined) ?? (v.title as string | undefined);
     return label ? `Evidence: ${label}` : null;
   },
-  tasks: (f) => {
-    const v = (f.value ?? {}) as Record<string, unknown>;
-    const title = (v.title as string | undefined) ?? (v.label as string | undefined);
-    if (!title) return null;
-    // Owner-substitution: if owner is a Vivacity staff user, swap to "Vivacity".
-    const ownerTenantId = (v.owner_tenant_id as number | undefined) ?? null;
-    const ownerName = (v.owner_name as string | undefined) ?? null;
-    if (ownerTenantId === VIVACITY_TENANT_ID || (ownerName && /vivacity/i.test(ownerName))) {
-      return `Task: ${title} (Vivacity)`;
-    }
-    return `Task: ${title}`;
-  },
+  // "tasks_tenants" is the real per-client task table (Phase 1 fact-source
+  // correction); "tasks" is kept as an alias to the same builder in case any
+  // other still-live fact producer emits that source_table.
+  tasks: (f) => buildTaskLabel(f),
+  tasks_tenants: (f) => buildTaskLabel(f),
   eos_rocks: (f) => {
     const v = (f.value ?? {}) as Record<string, unknown>;
     const title = (v.title as string | undefined) ?? (v.label as string | undefined);

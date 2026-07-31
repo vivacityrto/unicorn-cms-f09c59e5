@@ -334,28 +334,54 @@ Deno.serve(async (req) => {
       derived_at: string;
     } | null = null;
     try {
+      // Ladder of tenant-scoped activity sources, most to least direct.
+      // The previous version queried audit_events.tenant_id (a column that
+      // doesn't exist on that table at all — it's keyed by generic
+      // entity/entity_id, not tenant) and tasks.tenant_id (a column that
+      // doesn't exist on that table either — see the Phase 1 fact-source
+      // correction notes on `tasks` vs `tasks_tenants`). Both silently failed
+      // via this try/catch, every time, for every tenant — freshness has
+      // effectively never worked.
       let lastActivityAt: string | null = null;
-      const { data: auditRow } = await supabase
-        .from("audit_events")
-        .select("created_at")
+
+      let taskQuery = supabase
+        .from("tasks_tenants")
+        .select("updated_at")
         .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      lastActivityAt = auditRow?.created_at ?? null;
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (context.package_id) {
+        taskQuery = taskQuery.eq("package_id", context.package_id);
+      }
+      const { data: taskRow } = await taskQuery.maybeSingle();
+      lastActivityAt = taskRow?.updated_at ?? null;
 
       if (!lastActivityAt) {
-        let q = supabase
-          .from("tasks")
+        let timeQuery = supabase
+          .from("time_entries")
+          .select("start_at")
+          .eq("client_id", tenantId)
+          .order("start_at", { ascending: false })
+          .limit(1);
+        if (context.package_id) {
+          timeQuery = timeQuery.eq("package_id", context.package_id);
+        }
+        const { data: timeRow } = await timeQuery.maybeSingle();
+        lastActivityAt = timeRow?.start_at ?? null;
+      }
+
+      if (!lastActivityAt) {
+        let stageQuery = supabase
+          .from("client_package_stage_state")
           .select("updated_at")
           .eq("tenant_id", tenantId)
           .order("updated_at", { ascending: false })
           .limit(1);
         if (context.package_id) {
-          q = q.eq("package_instance_id", context.package_id);
+          stageQuery = stageQuery.eq("package_id", context.package_id);
         }
-        const { data: taskRow } = await q.maybeSingle();
-        lastActivityAt = taskRow?.updated_at ?? null;
+        const { data: stageRow } = await stageQuery.maybeSingle();
+        lastActivityAt = stageRow?.updated_at ?? null;
       }
 
       const days = lastActivityAt
@@ -681,14 +707,16 @@ function generateFactBasedAnswer(
       bullets.push(`- ${unreleasedFact.value} documents pending release`);
     }
 
-    // Consult hours from facts
-    const consultHoursFact = factsResult.facts.find(f => f.key === "consult_hours_30d");
-    const consultCountFact = factsResult.facts.find(f => f.key === "consult_count_30d");
-    if (consultHoursFact) {
-      bullets.push(`- ${consultHoursFact.value}h consultation logged (last 30 days)`);
+    // Time logged from facts (time_entries — see Phase 1 fact-source
+    // correction notes; previously read consult_logs, a table confirmed
+    // completely empty in production)
+    const timeHoursFact = factsResult.facts.find(f => f.key === "time_hours_30d");
+    const timeCountFact = factsResult.facts.find(f => f.key === "time_entry_count_30d");
+    if (timeHoursFact) {
+      bullets.push(`- ${timeHoursFact.value}h logged (last 30 days)`);
     }
-    if (consultCountFact) {
-      bullets.push(`- ${consultCountFact.value} consultation sessions`);
+    if (timeCountFact) {
+      bullets.push(`- ${timeCountFact.value} time entries`);
     }
 
     bullets.push("");
