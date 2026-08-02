@@ -45,10 +45,54 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 import vivIcon from "@/assets/viv-icon.png";
 
 // Local storage key for explain sources toggle
 const EXPLAIN_SOURCES_STORAGE_KEY = "ask_viv_explain_sources_enabled";
+// Last tenant a staff member viewed via a route match, used as a fallback
+// context when the current page itself doesn't embed a tenant ID (e.g. the
+// dashboard). Never used in place of a route match, only in its absence.
+const LAST_TENANT_STORAGE_KEY = "askviv:lastTenantId";
+
+/**
+ * Resolve a tenant ID from the current route, if the route embeds one.
+ * Every `/tenant/:id...` variant, `/tenant-detail/:id`, `/client-portal/:id/documents`,
+ * `/admin/package/:id/tenant/:id...`, and `/compliance-audits/:id...` share a
+ * `/<prefix>/<tenantId>` shape once the fixed prefix is stripped, so a small
+ * ordered list of prefix regexes covers every current route.
+ */
+function resolveTenantIdFromPath(pathname: string): number | null {
+  const patterns = [
+    /^\/tenant\/(\d+)/,
+    /^\/tenant-detail\/(\d+)/,
+    /^\/client-portal\/(\d+)\/documents/,
+    /^\/admin\/package\/\d+\/tenant\/(\d+)/,
+    /^\/compliance-audits\/(\d+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = pathname.match(pattern);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+  }
+  return null;
+}
+
+/**
+ * Extract just the "## Answer" section's body from a tiered markdown response.
+ * Compliance-mode responses also contain "## Key records used", "## Confidence",
+ * "## Gaps", and "## Next safe actions" sections, but those are already
+ * rendered as dedicated UI below the message bubble (confidence badge, gaps
+ * list, records-accessed collapsible) — showing them again as raw markdown
+ * inside the bubble would just duplicate that. A no-op (returns the input
+ * unchanged) for any content without an "## Answer" heading, so Knowledge and
+ * Web-backed mode plain-prose answers pass through untouched.
+ */
+function extractAnswerSection(content: string): string {
+  const match = content.match(/##\s*Answer\s*\n([\s\S]*?)(?=\n##\s|$)/i);
+  return match ? match[1].trim() : content;
+}
 
 interface FreshnessData {
   last_activity_at: string | null;
@@ -109,13 +153,14 @@ export function AskVivPanel() {
   const [scopeSelectorOpen, setScopeSelectorOpen] = useState(false);
   
   // Session scope management
-  const { 
-    sessionScope, 
-    scopeConfirmed, 
-    confirmScope, 
+  const {
+    sessionScope,
+    scopeConfirmed,
+    confirmScope,
     setSessionScope,
     clearSessionScope,
-    logScopeConfirmation 
+    ensureScopeForTenant,
+    logScopeConfirmation
   } = useAskVivSessionScope();
   
   // Explain sources toggle - persisted in localStorage
@@ -164,55 +209,79 @@ export function AskVivPanel() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, closePanel]);
 
-  // Load user's primary tenant context for compliance mode
+  // Resolve tenant context for compliance mode: the current route always
+  // wins (a staff member looking at Test RTO A's page must get Test RTO A,
+  // never their own Vivacity membership); a last-viewed tenant persisted in
+  // localStorage is used only when the current page doesn't embed a tenant
+  // ID at all (e.g. the dashboard); otherwise there is no context, and the
+  // existing "Tenant Required" toast on send already handles that case.
+  // Deliberately never falls back to the staff member's own tenant_members
+  // row — that was the source of Ask Viv silently answering about Vivacity's
+  // own tenant while a CSC was looking at a client's page.
   useEffect(() => {
     async function loadTenantContext() {
       if (!user?.id || selectedMode !== "compliance") return;
 
+      const routeTenantId = resolveTenantIdFromPath(location.pathname);
+
+      let resolvedTenantId: number | null = routeTenantId;
+      if (resolvedTenantId === null) {
+        try {
+          const stored = localStorage.getItem(LAST_TENANT_STORAGE_KEY);
+          if (stored) {
+            resolvedTenantId = parseInt(stored, 10) || null;
+          }
+        } catch {
+          resolvedTenantId = null;
+        }
+      }
+
+      if (resolvedTenantId === null) {
+        setContext({ tenant_id: null });
+        ensureScopeForTenant(null);
+        return;
+      }
+
       try {
-        const { data: tenantMember } = await supabase
-          .from("tenant_members")
-          .select("tenant_id")
-          .eq("user_id", user.id)
-          .eq("status", "active")
-          .limit(1)
+        const { data: tenantData } = await supabase
+          .from("tenants")
+          .select("id, name")
+          .eq("id", resolvedTenantId)
           .maybeSingle();
 
-        if (tenantMember?.tenant_id) {
-          const { data: tenantData } = await supabase
-            .from("tenants")
-            .select("id, name")
-            .eq("id", tenantMember.tenant_id)
-            .maybeSingle();
-          setContext({
-            tenant_id: tenantMember.tenant_id,
-            tenant_name: tenantData?.name || `Tenant ${tenantMember.tenant_id}`,
-          });
-        } else if (!tenantMember) {
-          // Fallback: parse tenant ID from URL (e.g. /tenant/7505)
-          const match = location.pathname.match(/\/tenant\/(\d+)/);
-          if (match) {
-            const urlTenantId = parseInt(match[1], 10);
-            const { data: tenantData } = await supabase
-              .from("tenants")
-              .select("id, name")
-              .eq("id", urlTenantId)
-              .single();
-            if (tenantData) {
-              setContext({
-                tenant_id: tenantData.id,
-                tenant_name: tenantData.name,
-              });
+        if (!tenantData) {
+          // Stale/deleted tenant in a persisted fallback — don't keep offering it.
+          if (routeTenantId === null) {
+            try {
+              localStorage.removeItem(LAST_TENANT_STORAGE_KEY);
+            } catch {
+              // ignore
             }
+          }
+          setContext({ tenant_id: null });
+          ensureScopeForTenant(null);
+          return;
+        }
+
+        setContext({ tenant_id: tenantData.id, tenant_name: tenantData.name });
+        ensureScopeForTenant(tenantData.id);
+
+        if (routeTenantId !== null) {
+          try {
+            localStorage.setItem(LAST_TENANT_STORAGE_KEY, String(tenantData.id));
+          } catch {
+            // Non-fatal — just means the dashboard fallback won't have a value.
           }
         }
       } catch (err) {
         console.debug("No tenant context available:", err);
+        setContext({ tenant_id: null });
+        ensureScopeForTenant(null);
       }
     }
 
     loadTenantContext();
-  }, [user?.id, selectedMode, location]);
+  }, [user?.id, selectedMode, location.pathname, ensureScopeForTenant]);
 
   // Wait for auth to load before checking access
   if (loading || !profile) {
@@ -571,14 +640,16 @@ export function AskVivPanel() {
   }
 
   function handleConfirmScope(scopeLock: ScopeLock) {
-    confirmScope(scopeLock);
+    if (context.tenant_id === null) return;
+    confirmScope(scopeLock, context.tenant_id);
     if (user?.id) {
       logScopeConfirmation(user.id, scopeLock);
     }
   }
 
   function handleScopeChange(newScope: SelectedScope) {
-    setSessionScope(newScope);
+    if (context.tenant_id === null) return;
+    setSessionScope(newScope, context.tenant_id);
     // Update context to reflect new scope for UI display
     setContext((prev) => ({
       ...prev,
@@ -820,7 +891,32 @@ export function AskVivPanel() {
                         : "bg-muted text-foreground rounded-bl-md"
                     )}
                   >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    {message.role === "user" ? (
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    ) : (
+                      <ReactMarkdown
+                        components={{
+                          h2: ({ node, ...props }) => (
+                            <h2
+                              className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-3 mb-1 first:mt-0"
+                              {...props}
+                            />
+                          ),
+                          ul: ({ node, ...props }) => (
+                            <ul className="space-y-1 pl-4" {...props} />
+                          ),
+                          ol: ({ node, ...props }) => (
+                            <ol className="space-y-1 pl-4" {...props} />
+                          ),
+                          li: ({ node, ...props }) => (
+                            <li className="text-sm list-disc" {...props} />
+                          ),
+                          p: ({ node, ...props }) => <p className="text-sm" {...props} />,
+                        }}
+                      >
+                        {isComplianceMode ? extractAnswerSection(message.content) : message.content}
+                      </ReactMarkdown>
+                    )}
                   </div>
 
                   {/* Compliance response metadata */}
