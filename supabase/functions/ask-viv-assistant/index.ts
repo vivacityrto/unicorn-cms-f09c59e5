@@ -24,6 +24,13 @@
  * existing match_srto_chunks RPC / srto_corpus — the same regulatory corpus
  * the existing Compliance mode panel already searches — so this assistant
  * can also answer standards/clause questions, not just client-specific ones.
+ *
+ * Phase H (added after live user testing surfaced a real gap): staff-to-
+ * client lookups. Prior to this, asking "which clients does X manage" got
+ * an honest "I don't have a tool for that" — every existing tool resolves
+ * FROM a client, none resolve FROM a staff member. list_clients_for_staff
+ * uses tenant_csc_assignments (the authoritative CSC-assignment table) to
+ * close that gap.
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -142,6 +149,18 @@ const TOOLS: AnthropicToolDefinition[] = [
         query: { type: "string", description: "What to search for, in natural language" },
       },
       required: ["tenant_id", "query"],
+    },
+  },
+  {
+    name: "list_clients_for_staff",
+    description:
+      "Find which clients/tenants a Vivacity staff member currently manages, as CSC (Client Success Consultant). Give a name (first name is fine) and this resolves the staff member and returns their active client assignments. If the name is ambiguous (matches multiple staff), it returns the candidates instead — ask the user which one is meant rather than guessing.",
+    input_schema: {
+      type: "object",
+      properties: {
+        staff_name: { type: "string", description: "The staff member's name (first name, last name, or both) as mentioned by the user" },
+      },
+      required: ["staff_name"],
     },
   },
   {
@@ -409,6 +428,94 @@ async function executeTool(
         summary: `search_documents(${tenantId}, "${query}") failed`,
       };
     }
+  }
+
+  if (name === "list_clients_for_staff") {
+    const staffName = String(input.staff_name ?? "").trim();
+    if (!staffName) {
+      return { result: { error: "No staff_name provided" }, summary: "list_clients_for_staff called with no name" };
+    }
+
+    const { data: staffMatches, error: staffErr } = await supabase
+      .from("users")
+      .select("user_uuid, first_name, last_name, email, unicorn_role")
+      .eq("is_vivacity_internal", true)
+      .eq("disabled", false)
+      .eq("archived", false)
+      .or(`first_name.ilike.%${staffName}%,last_name.ilike.%${staffName}%,email.ilike.%${staffName}%`)
+      .limit(10);
+
+    if (staffErr) {
+      return { result: { error: staffErr.message }, summary: `list_clients_for_staff("${staffName}") failed` };
+    }
+
+    const staff = staffMatches || [];
+    if (staff.length === 0) {
+      return { result: { matches: [] }, summary: `list_clients_for_staff("${staffName}") — no staff matched` };
+    }
+    if (staff.length > 1) {
+      return {
+        result: {
+          staff_matches: staff.map((s: any) => ({
+            user_id: s.user_uuid,
+            name: `${s.first_name} ${s.last_name}`,
+            email: s.email,
+            role: s.unicorn_role,
+          })),
+        },
+        summary: `list_clients_for_staff("${staffName}") — ${staff.length} staff match(es), ambiguous`,
+      };
+    }
+
+    const staffMember = staff[0];
+    // No FK constraint exists from tenant_csc_assignments.tenant_id to
+    // tenants.id, so PostgREST can't auto-embed — fetch tenants separately
+    // and merge client-side. Filter matches useCscAssignments.ts exactly
+    // (the hook behind Manage Clients' own CSC filter): is_primary = true
+    // and ended_at is null — deliberately NOT also checking superseded_at,
+    // to stay consistent with what that page already shows for this staff
+    // member.
+    const { data: assignments, error: assignErr } = await supabase
+      .from("tenant_csc_assignments")
+      .select("tenant_id, role_label, is_primary, assigned_since")
+      .eq("csc_user_id", staffMember.user_uuid)
+      .eq("is_primary", true)
+      .is("ended_at", null);
+
+    if (assignErr) {
+      return {
+        result: { error: assignErr.message },
+        summary: `list_clients_for_staff("${staffName}") — assignment lookup failed`,
+      };
+    }
+
+    const tenantIds = (assignments || []).map((a: any) => a.tenant_id);
+    const tenantsById = new Map<number, { name: string; status: string }>();
+    if (tenantIds.length > 0) {
+      const { data: tenantRows } = await supabase.from("tenants").select("id, name, status").in("id", tenantIds);
+      for (const t of tenantRows || []) {
+        tenantsById.set(t.id, { name: t.name, status: t.status });
+      }
+    }
+
+    const clients = (assignments || []).map((a: any) => ({
+      tenant_id: a.tenant_id,
+      name: tenantsById.get(a.tenant_id)?.name ?? null,
+      status: tenantsById.get(a.tenant_id)?.status ?? null,
+      role_label: a.role_label,
+      is_primary: a.is_primary,
+      assigned_since: a.assigned_since,
+    }));
+
+    return {
+      result: {
+        staff: { name: `${staffMember.first_name} ${staffMember.last_name}`, email: staffMember.email, role: staffMember.unicorn_role },
+        clients,
+      },
+      summary:
+        `list_clients_for_staff("${staffName}") — resolved to ${staffMember.first_name} ${staffMember.last_name}, ` +
+        `${clients.length} active client(s)`,
+    };
   }
 
   if (name === "search_standards") {
