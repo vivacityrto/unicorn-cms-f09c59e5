@@ -24,13 +24,24 @@
  *    storage_path.
  *  - compliance_pack_exports WHERE status = 'success' → bucket
  *    'compliance-packs', path = storage_path.
+ *  - document_versions WHERE status = 'published' AND storage_path is
+ *    non-empty (real governance templates imported from SharePoint via
+ *    import-sharepoint-template — most rows here are metadata-only with an
+ *    empty storage_path, so the non-empty check is the real "is this row
+ *    real" test, same role document_version_id/status played for the other
+ *    sources) → bucket 'document-files', path = storage_path. Joined to
+ *    documents for tenant_id/title (document_versions has no tenant_id of
+ *    its own — these are governance templates, often tenant_id null/global).
  * A download failure on any resolved path is logged and skipped, never
  * treated as a hard error — a storage/DB inconsistency shouldn't fail the
  * whole run.
  *
  * Text extraction is copied verbatim from analyse-evidence/index.ts
  * (extractFromPdf/extractFromDocx/extractFromXlsx/extractAny) — same
- * unpdf/mammoth/xlsx versions, same dispatch-by-extension logic.
+ * unpdf/mammoth/xlsx versions, same dispatch-by-extension logic. A
+ * .pptx extractor is added on top (document_versions includes real
+ * PowerPoint templates), using the same JSZip + `<a:t>` slide-text-run
+ * pattern already established in analyze-document/index.ts.
  *
  * Same two invocation modes as embed-ask-viv-corpus: steady-state (cron,
  * empty body, cursor-based) and ad-hoc backfill/test (tenant_id and/or
@@ -47,7 +58,12 @@ import { generateEmbeddingsBatch, EMBEDDING_DIMENSIONS as EMBED_DIMS } from '../
 const TARGET_TOKENS = 800;
 const OVERLAP_TOKENS = 150;
 const EMBED_BATCH = 100;
-const DEFAULT_LIMIT_PER_SOURCE = 50; // heavier per-row cost than prose sources — smaller batches
+// Heavier per-row cost than prose sources — smaller batches. Hit
+// WORKER_RESOURCE_LIMIT during Phase G backfill testing at batch sizes as low
+// as 15 (document_versions can include large real docx/pptx templates), so
+// the unattended steady-state cron default needs real headroom, not just the
+// happy-path estimate.
+const DEFAULT_LIMIT_PER_SOURCE = 10;
 const MAX_DOC_BYTES = 25 * 1024 * 1024; // 25 MB per file, matches analyse-evidence's cap
 const MAX_TEXT_CHARS = 200_000; // matches analyse-evidence's cap
 
@@ -132,16 +148,39 @@ function extractFromXlsx(bytes: Uint8Array): string {
   return parts.join('\n\n');
 }
 
+/** Same JSZip + `<a:t>` slide-text-run pattern already used in analyze-document/index.ts. */
+async function extractFromPptx(bytes: Uint8Array): Promise<string> {
+  const JSZip = (await import('https://esm.sh/jszip@3.10.1')).default;
+  const zip = await JSZip.loadAsync(bytes);
+  const slideFiles = Object.keys(zip.files)
+    .filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f))
+    .sort((a, b) => {
+      const na = parseInt(a.match(/slide(\d+)\.xml/)![1], 10);
+      const nb = parseInt(b.match(/slide(\d+)\.xml/)![1], 10);
+      return na - nb;
+    });
+
+  const parts: string[] = [];
+  for (const slideFile of slideFiles) {
+    const xml = await zip.files[slideFile].async('string');
+    const texts = [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]);
+    if (texts.length > 0) parts.push(texts.join(' '));
+  }
+  return parts.join('\n\n');
+}
+
 async function extractAny(path: string, bytes: Uint8Array): Promise<string> {
   const lower = path.toLowerCase();
   try {
     if (lower.endsWith('.pdf')) return await extractFromPdf(bytes);
     if (lower.endsWith('.docx')) return await extractFromDocx(bytes);
+    if (lower.endsWith('.pptx')) return await extractFromPptx(bytes);
     if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) return extractFromXlsx(bytes);
     if (lower.endsWith('.txt') || lower.endsWith('.csv') || lower.endsWith('.md')) {
       return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
     }
-    return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    // Unknown/binary format (e.g. images) — skip rather than decode garbage as text.
+    return '';
   } catch (e) {
     console.error(`Extract failed for ${path}:`, (e as Error).message);
     return '';
@@ -188,6 +227,22 @@ const SOURCES: SourceConfig[] = [
     pathOf: (row) => row.storage_path,
     headingOf: (row) => row.file_name,
     tenantOf: (row) => row.tenant_id ?? null,
+  },
+  {
+    // Real SharePoint-imported governance templates (import-sharepoint-template).
+    // Most document_versions rows are metadata-only with an empty storage_path —
+    // that emptiness, not just status, is the real "is this row real" test here.
+    table: 'document_versions',
+    // published_at is nullable (34 of 44 real rows have it null) — a .gt()
+    // cursor comparison against NULL never matches, silently excluding those
+    // rows forever. created_at is NOT NULL, so it's the safe cursor choice.
+    cursorColumn: 'created_at',
+    select: 'id, document_id, storage_path, file_name, status, created_at, documents!document_versions_document_id_fkey(tenant_id, title)',
+    extraFilter: (q) => q.eq('status', 'published').not('storage_path', 'is', null).neq('storage_path', ''),
+    bucket: 'document-files',
+    pathOf: (row) => row.storage_path,
+    headingOf: (row) => row.documents?.title ?? row.file_name,
+    tenantOf: (row) => row.documents?.tenant_id ?? null,
   },
 ];
 
