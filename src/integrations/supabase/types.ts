@@ -3392,6 +3392,7 @@ export type Database = {
       ai_interaction_logs: {
         Row: {
           chunks_used: number | null
+          conversation_id: string | null
           created_at: string
           id: string
           mode: string
@@ -3405,6 +3406,7 @@ export type Database = {
         }
         Insert: {
           chunks_used?: number | null
+          conversation_id?: string | null
           created_at?: string
           id?: string
           mode: string
@@ -3418,6 +3420,7 @@ export type Database = {
         }
         Update: {
           chunks_used?: number | null
+          conversation_id?: string | null
           created_at?: string
           id?: string
           mode?: string
@@ -3430,6 +3433,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_interaction_logs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ask_viv_conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_interaction_logs_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -3990,7 +4000,14 @@ export type Database = {
           ai_meeting_summary_enabled: boolean
           ai_phase_check_enabled: boolean
           ai_risk_radar_enabled: boolean
+          ask_viv_assistant_all_staff: boolean
+          ask_viv_assistant_beta_user_ids: string[]
+          ask_viv_assistant_daily_token_cap: number
+          ask_viv_assistant_enabled: boolean
           ask_viv_floating_launcher_enabled: boolean
+          ask_viv_llm_generation_all_staff: boolean
+          ask_viv_llm_generation_beta_user_ids: string[]
+          ask_viv_llm_generation_enabled: boolean
           clickup_enabled: boolean
           email_sending_enabled: boolean | null
           enable_checkpoint_phases: boolean
@@ -4024,7 +4041,14 @@ export type Database = {
           ai_meeting_summary_enabled?: boolean
           ai_phase_check_enabled?: boolean
           ai_risk_radar_enabled?: boolean
+          ask_viv_assistant_all_staff?: boolean
+          ask_viv_assistant_beta_user_ids?: string[]
+          ask_viv_assistant_daily_token_cap?: number
+          ask_viv_assistant_enabled?: boolean
           ask_viv_floating_launcher_enabled?: boolean
+          ask_viv_llm_generation_all_staff?: boolean
+          ask_viv_llm_generation_beta_user_ids?: string[]
+          ask_viv_llm_generation_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
           enable_checkpoint_phases?: boolean
@@ -4058,7 +4082,14 @@ export type Database = {
           ai_meeting_summary_enabled?: boolean
           ai_phase_check_enabled?: boolean
           ai_risk_radar_enabled?: boolean
+          ask_viv_assistant_all_staff?: boolean
+          ask_viv_assistant_beta_user_ids?: string[]
+          ask_viv_assistant_daily_token_cap?: number
+          ask_viv_assistant_enabled?: boolean
           ask_viv_floating_launcher_enabled?: boolean
+          ask_viv_llm_generation_all_staff?: boolean
+          ask_viv_llm_generation_beta_user_ids?: string[]
+          ask_viv_llm_generation_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
           enable_checkpoint_phases?: boolean
@@ -4085,6 +4116,176 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      ask_viv_assistant_usage: {
+        Row: {
+          id: string
+          input_tokens: number
+          output_tokens: number
+          request_count: number
+          updated_at: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          input_tokens?: number
+          output_tokens?: number
+          request_count?: number
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          input_tokens?: number
+          output_tokens?: number
+          request_count?: number
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ask_viv_conversations: {
+        Row: {
+          context_summary: string | null
+          context_summary_covers_turns: number
+          created_at: string
+          id: string
+          tenant_id: number | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context_summary?: string | null
+          context_summary_covers_turns?: number
+          created_at?: string
+          id?: string
+          tenant_id?: number | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context_summary?: string | null
+          context_summary_covers_turns?: number
+          created_at?: string
+          id?: string
+          tenant_id?: number | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ask_viv_corpus: {
+        Row: {
+          chunk_index: number
+          chunk_total: number
+          content: string
+          content_hash: string
+          created_at: string
+          embedding: string
+          heading: string | null
+          id: string
+          metadata: Json
+          source_id: string
+          source_table: string
+          source_type: string
+          tenant_id: number | null
+          token_count: number
+          updated_at: string
+        }
+        Insert: {
+          chunk_index: number
+          chunk_total: number
+          content: string
+          content_hash: string
+          created_at?: string
+          embedding: string
+          heading?: string | null
+          id?: string
+          metadata?: Json
+          source_id: string
+          source_table: string
+          source_type: string
+          tenant_id?: number | null
+          token_count: number
+          updated_at?: string
+        }
+        Update: {
+          chunk_index?: number
+          chunk_total?: number
+          content?: string
+          content_hash?: string
+          created_at?: string
+          embedding?: string
+          heading?: string | null
+          id?: string
+          metadata?: Json
+          source_id?: string
+          source_table?: string
+          source_type?: string
+          tenant_id?: number | null
+          token_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ask_viv_corpus_ingestion_state: {
+        Row: {
+          last_run_at: string
+          source_table: string
+          updated_at: string
+        }
+        Insert: {
+          last_run_at?: string
+          source_table: string
+          updated_at?: string
+        }
+        Update: {
+          last_run_at?: string
+          source_table?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ask_viv_turns: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          mode: string | null
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          mode?: string | null
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          mode?: string | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ask_viv_turns_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ask_viv_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       assistant_audit_log: {
         Row: {
@@ -15726,6 +15927,139 @@ export type Database = {
             referencedRelation: "stage_releases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       compliance_plans: {
@@ -19923,6 +20257,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_position_type: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_priority: {
         Row: {
           code: number
@@ -19971,33 +20332,6 @@ export type Database = {
           is_active?: boolean
           label?: string
           sort_order?: number
-        }
-        Relationships: []
-      }
-      dd_position_type: {
-        Row: {
-          created_at: string
-          id: number
-          is_active: boolean
-          label: string
-          sort_order: number
-          value: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          is_active?: boolean
-          label: string
-          sort_order?: number
-          value: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          is_active?: boolean
-          label?: string
-          sort_order?: number
-          value?: string
         }
         Relationships: []
       }
@@ -41308,6 +41642,24 @@ export type Database = {
           },
         ]
       }
+      public_branding_config: {
+        Row: {
+          id: number
+          legacy_branding_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          legacy_branding_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          legacy_branding_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       qualification_cache: {
         Row: {
           data: Json
@@ -46182,6 +46534,55 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "stage_release_reviews_reviewer_user_id_public_users_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "stage_release_reviews_reviewer_user_id_public_users_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "stage_release_reviews_reviewer_user_id_public_users_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "stage_release_reviews_reviewer_user_id_public_users_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "stage_release_reviews_reviewer_user_id_public_users_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "stage_release_reviews_reviewer_user_id_public_users_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "stage_release_reviews_reviewer_user_id_public_users_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "stage_release_reviews_stage_release_id_fkey"
             columns: ["stage_release_id"]
             isOneToOne: false
@@ -46251,8 +46652,148 @@ export type Database = {
             foreignKeyName: "stage_releases_stage_id_fkey"
             columns: ["stage_id"]
             isOneToOne: false
-            referencedRelation: "documents_stages"
+            referencedRelation: "stages"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_releases_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_stages"
+            referencedColumns: ["stage_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -46572,6 +47113,55 @@ export type Database = {
           videourl?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
           {
             foreignKeyName: "stages_successor_of_fkey"
             columns: ["successor_of"]
@@ -69702,6 +70292,10 @@ export type Database = {
         Args: { p_campaign_id: string }
         Returns: undefined
       }
+      fn_truncate_preview: {
+        Args: { input: string; max_len?: number }
+        Returns: string
+      }
       format_code_label: { Args: { input_label: string }; Returns: string }
       generate_certificate_number: { Args: never; Returns: string }
       generate_findings: {
@@ -69859,6 +70453,134 @@ export type Database = {
         Args: { p_tenant_id: number }
         Returns: Json
       }
+      get_exec_alignment_signals_7d: {
+        Args: never
+        Returns: {
+          client_name: string | null
+          deep_link_href: string | null
+          detail: string | null
+          happened_at: string | null
+          owner_name: string | null
+          owner_user_uuid: string | null
+          package_instance_id: number | null
+          priority_rank: number | null
+          severity: string | null
+          signal_type: string | null
+          source_key: string | null
+          suggested_discussion: string | null
+          tenant_id: number | null
+          title: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "v_exec_alignment_signals_7d"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_executive_anomalies_30d: {
+        Args: never
+        Returns: {
+          anomaly_rank: number | null
+          anomaly_type: string | null
+          baseline_value: number | null
+          current_value: number | null
+          delta_value: number | null
+          detected_at: string | null
+          package_instance_id: number | null
+          severity: string | null
+          source: string | null
+          tenant_id: number | null
+          window_days: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "v_executive_anomalies_30d"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_executive_client_health: {
+        Args: never
+        Returns: {
+          active_risks: number | null
+          caps_applied: Json | null
+          client_name: string | null
+          compliance_baseline_at: string | null
+          compliance_calculated_at: string | null
+          compliance_spark_confidence: string | null
+          compliance_spark_days: string[] | null
+          compliance_spark_scores: number[] | null
+          consult_health: number | null
+          current_phase: string | null
+          days_since_latest_compliance: number | null
+          days_since_latest_predictive: number | null
+          days_stale: number | null
+          delta_confidence_compliance_7d: string | null
+          delta_confidence_predictive_7d: string | null
+          delta_consult_health_7d: number | null
+          delta_days_stale_7d: number | null
+          delta_docs_coverage_7d: number | null
+          delta_operational_risk_7d: number | null
+          delta_overall_score_7d: number | null
+          delta_phase_completion_7d: number | null
+          delta_risk_health_7d: number | null
+          documentation_coverage: number | null
+          documents_pending_upload: number | null
+          has_active_critical: boolean | null
+          hours_included: number | null
+          hours_remaining: number | null
+          operational_risk_score: number | null
+          overall_score: number | null
+          owner_user_uuid: string | null
+          package_id: number | null
+          package_instance_id: number | null
+          package_name: string | null
+          package_type: string | null
+          phase_completion: number | null
+          predictive_baseline_at: string | null
+          predictive_calculated_at: string | null
+          predictive_flags: Json | null
+          predictive_spark_confidence: string | null
+          predictive_spark_days: string[] | null
+          predictive_spark_scores: number[] | null
+          risk_band: string | null
+          risk_band_change_7d: string | null
+          risk_health: number | null
+          snapshots_last_7d_compliance: number | null
+          snapshots_last_7d_predictive: number | null
+          t7_distance_seconds_compliance: number | null
+          t7_distance_seconds_predictive: number | null
+          tenant_id: number | null
+          total_actions_remaining: number | null
+          updated_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "v_executive_client_health"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_executive_consultant_distribution: {
+        Args: never
+        Returns: {
+          at_risk_count: number | null
+          avg_score: number | null
+          avg_score_delta_7d: number | null
+          client_count: number | null
+          consultant_name: string | null
+          consultant_uuid: string | null
+          immediate_count: number | null
+          stalled_count: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "v_executive_consultant_distribution"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_membership_rollups: {
         Args: never
         Returns: {
@@ -69954,6 +70676,38 @@ export type Database = {
       get_stage_version_diff: {
         Args: { p_version_from: string; p_version_to: string }
         Returns: Json
+      }
+      get_strategic_capacity_pressure: {
+        Args: never
+        Returns: {
+          capacity_utilisation_percentage: number | null
+          consultant_name: string | null
+          high_risk_stages_count: number | null
+          overdue_tasks_count: number | null
+          overload_risk_status: string | null
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "v_strategic_capacity_pressure"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_strategic_portfolio_risk: {
+        Args: never
+        Returns: {
+          avg_index: number | null
+          elevated_plus_count: number | null
+          forecast_risk_status: string | null
+          tenant_count: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "v_strategic_portfolio_risk"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_system_tenant_id: { Args: never; Returns: number }
       get_team_users: {
@@ -70373,6 +71127,27 @@ export type Database = {
         Returns: string
       }
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
+      match_ask_viv_corpus: {
+        Args: {
+          filter_source_type?: string
+          filter_tenant_id?: number
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          chunk_index: number
+          content: string
+          heading: string
+          id: string
+          metadata: Json
+          similarity: number
+          source_id: string
+          source_table: string
+          source_type: string
+          tenant_id: number
+        }[]
+      }
       match_srto_chunks: {
         Args: {
           filter_clause?: string
