@@ -4,16 +4,22 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAskViv } from "@/hooks/useAskViv";
+import { useAskVivAssistantWidget } from "@/hooks/useAskVivAssistantWidget";
 import { useRBAC } from "@/hooks/useRBAC";
 import vivIcon from "@/assets/viv-icon.png";
 
 /**
  * AskVivButton - Top menu bar entry point for Ask Viv
  * Visible to SuperAdmins and Vivacity Team members
+ *
+ * Opens the new Ask Viv Assistant widget (Claude Sonnet, tool-use, RAG),
+ * not the original AskVivPanel/compliance-assistant — that older panel is
+ * still fully intact and reachable via its own floating launcher
+ * (AskVivFloatingLauncher, feature-flag gated) and useAskViv(), just no
+ * longer the topbar's entry point as of this change.
  */
 export function AskVivButton() {
-  const { isOpen, openPanel } = useAskViv();
+  const { openWidget } = useAskVivAssistantWidget();
   const { isSuperAdmin, isVivacityTeam } = useRBAC();
 
   // Only render for Vivacity Team (includes SuperAdmins)
@@ -28,7 +34,7 @@ export function AskVivButton() {
           variant="ghost"
           size="icon"
           className="relative h-10 w-10 rounded-full hover:bg-primary/10 transition-colors p-1"
-          onClick={openPanel}
+          onClick={openWidget}
           aria-label="Open Ask Viv"
         >
           <img src={vivIcon} alt="Ask Viv" className="h-8 w-8 object-contain" />
