@@ -156,6 +156,10 @@ export function AskVivPanel() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentThread, setCurrentThread] = useState<Thread | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  // Phase 6: portfolio-wide scope — every internal staff role can see the
+  // whole active client base, ranked with their own assigned clients first.
+  // Not a fourth mode; a toggle within compliance mode.
+  const [portfolioScope, setPortfolioScope] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [conversationList, setConversationList] = useState<ConversationSummary[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -397,6 +401,37 @@ export function AskVivPanel() {
   }
 
   async function sendComplianceMessage(userMessage: string) {
+    if (portfolioScope) {
+      const portfolioResponse = await supabase.functions.invoke("compliance-assistant", {
+        body: {
+          question: userMessage,
+          scope_kind: "portfolio",
+          conversation_id: currentConversationId,
+        },
+      });
+
+      if (portfolioResponse.error) {
+        throw new Error(portfolioResponse.error.message || "Failed to get portfolio response");
+      }
+
+      const portfolioResult = portfolioResponse.data;
+      return {
+        content: portfolioResult.answer_markdown,
+        records_accessed: portfolioResult.records_accessed,
+        confidence: portfolioResult.confidence,
+        gaps: portfolioResult.gaps,
+        reasoning_tiers: portfolioResult.reasoning_tiers,
+        governance: portfolioResult.governance,
+        validation: portfolioResult.validation,
+        scope_lock: undefined,
+        freshness: undefined,
+        explain: undefined,
+        ai_interaction_log_id: portfolioResult.ai_interaction_log_id ?? null,
+        audit_logged: portfolioResult.audit_logged ?? false,
+        conversation_id: portfolioResult.conversation_id ?? null,
+      };
+    }
+
     if (!context.tenant_id) {
       throw new Error("No tenant context available. Please select a tenant first.");
     }
@@ -531,8 +566,8 @@ export function AskVivPanel() {
   async function sendMessage() {
     if (!inputMessage.trim()) return;
 
-    // Check context for compliance mode
-    if (selectedMode === "compliance" && !context.tenant_id) {
+    // Check context for compliance mode (portfolio scope needs no tenant context)
+    if (selectedMode === "compliance" && !portfolioScope && !context.tenant_id) {
       toast({
         title: "Tenant Required",
         description: "Please ensure you have access to a tenant to use Compliance Assistant.",
@@ -659,19 +694,18 @@ export function AskVivPanel() {
   // history for one client is far more useful than a mixed cross-tenant
   // list). Lazy-loaded when the history dropdown opens.
   async function loadConversationHistory() {
-    if (!user?.id || !context.tenant_id) {
+    if (!user?.id || (!portfolioScope && !context.tenant_id)) {
       setConversationList([]);
       return;
     }
     setLoadingHistory(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("ask_viv_conversations")
         .select("id, title, updated_at")
-        .eq("user_id", user.id)
-        .eq("tenant_id", context.tenant_id)
-        .order("updated_at", { ascending: false })
-        .limit(20);
+        .eq("user_id", user.id);
+      query = portfolioScope ? query.is("tenant_id", null) : query.eq("tenant_id", context.tenant_id);
+      const { data, error } = await query.order("updated_at", { ascending: false }).limit(20);
       if (error) throw error;
       setConversationList(data || []);
     } catch (err) {
@@ -680,6 +714,11 @@ export function AskVivPanel() {
     } finally {
       setLoadingHistory(false);
     }
+  }
+
+  function togglePortfolioScope() {
+    setPortfolioScope((prev) => !prev);
+    startNewChat();
   }
 
   function toggleHistory() {
@@ -877,7 +916,7 @@ export function AskVivPanel() {
             </div>
             {loadingHistory ? (
               <div className="p-3 text-xs text-muted-foreground text-center">Loading…</div>
-            ) : !context.tenant_id ? (
+            ) : !portfolioScope && !context.tenant_id ? (
               <div className="p-3 text-xs text-muted-foreground text-center">Select a tenant to see its conversation history</div>
             ) : conversationList.length === 0 ? (
               <div className="p-3 text-xs text-muted-foreground text-center">No past conversations for this tenant</div>
@@ -912,10 +951,21 @@ export function AskVivPanel() {
       <div className="px-4 py-2 space-y-2 border-b border-border bg-muted/10">
         <AskVivCapabilitiesBanner mode={selectedMode} />
         {isComplianceMode && (
-          <AskVivContextChips
-            context={context}
-            onClearContext={context.tenant_id ? clearContext : undefined}
-          />
+          <div className="flex items-center justify-between gap-2">
+            <AskVivContextChips
+              context={context}
+              onClearContext={context.tenant_id && !portfolioScope ? clearContext : undefined}
+            />
+            <Button
+              variant={portfolioScope ? "default" : "outline"}
+              size="sm"
+              className="h-6 text-[10px] px-2 flex-shrink-0"
+              onClick={togglePortfolioScope}
+              title="Ask across your whole active client base instead of one tenant"
+            >
+              {portfolioScope ? "Portfolio view" : "All clients"}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -935,11 +985,15 @@ export function AskVivPanel() {
               )} />
             </div>
             <h4 className="font-medium text-foreground mb-2">
-              {isComplianceMode ? "Ask about your tenant data" : isWebMode ? "Web-backed research" : "How can I help you?"}
+              {isComplianceMode
+                ? portfolioScope ? "Ask about your whole portfolio" : "Ask about your tenant data"
+                : isWebMode ? "Web-backed research" : "How can I help you?"}
             </h4>
             <p className="text-sm text-muted-foreground mb-4">
               {isComplianceMode
-                ? "Query clients, phases, tasks, documents, and time entries."
+                ? portfolioScope
+                  ? "Ask what needs attention across all active clients, ranked with yours first."
+                  : "Query clients, phases, tasks, documents, and time entries."
                 : isWebMode
                 ? "Ask questions with real-time web citations. Paste URLs for targeted scraping."
                 : "Ask about Unicorn procedures, EOS processes, or internal policies."}
@@ -1320,7 +1374,11 @@ export function AskVivPanel() {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isComplianceMode ? "Ask about tenant data..." : "Ask about procedures..."}
+            placeholder={
+              isComplianceMode
+                ? portfolioScope ? "Ask about your whole portfolio..." : "Ask about tenant data..."
+                : "Ask about procedures..."
+            }
             disabled={isLoading}
             className="flex-1 bg-background border-border/50"
           />

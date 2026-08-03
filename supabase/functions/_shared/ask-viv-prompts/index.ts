@@ -77,6 +77,28 @@ export type { SafetyMeta, SafetyPipelineResult } from "./askVivSafetyPipeline.ts
 export { validateAskVivResponse } from "./response-validator-v2.ts";
 
 /**
+ * Phase 6: extra instruction injected for portfolio-wide scope requests.
+ * Reuses the "compliance" mode prompt pack, response validator, and safety
+ * pipeline unchanged (same required sections: Answer / Key records used /
+ * Confidence / Gaps / Next safe actions) — only the injected facts and this
+ * instruction differ from a single-tenant compliance request, the same
+ * mechanism already used for DECISION_REQUEST_REFRAME_INSTRUCTION.
+ */
+export const PORTFOLIO_SCOPE_INSTRUCTION = `SPECIAL HANDLING — PORTFOLIO-WIDE SCOPE
+
+This question is about the WHOLE active client portfolio, not one tenant. FACTS now contains per-client attention data across many tenants, not one client's records:
+- "portfolio_summary": totals across all active clients.
+- "my_clients_attention": every client assigned to this CSC, each with an attention_score, overdue_tasks_count, days_since_activity, burn_risk_status, days_to_renewal, and top_driver.
+- "portfolio_top_attention" (if present): the highest-attention clients elsewhere in the portfolio, for broader awareness — not this user's own assignments.
+
+Rules specific to this mode:
+- Always mention the caller's OWN assigned clients ("my_clients_attention") before any others — that is what "your clients" means, and it must be surfaced first, not buried.
+- attention_score is a relative ranking signal, not a percentage or a compliance determination — never say a client "is compliant" or "is not compliant" based on it.
+- "Key records used" should list each client tenant referenced as "<tenant_name> (tenant_id:<id>)", not table:id pairs.
+- If gaps mention additional clients not shown, say so plainly rather than implying the list is exhaustive.
+- Every client actually named in your answer must come from the FACTS payload — never invent a client name, score, or driver not present there.`;
+
+/**
  * Build the complete system prompt pack for a given mode
  */
 export function buildPromptPack(mode: "compliance" | "knowledge"): {

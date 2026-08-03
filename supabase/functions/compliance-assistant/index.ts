@@ -48,6 +48,7 @@ import {
   type AskVivFactsResult,
   type DerivedFact,
 } from "../_shared/ask-viv-fact-builder/index.ts";
+import { buildPortfolioFacts } from "../_shared/ask-viv-fact-builder/portfolio-facts.ts";
 import {
   buildScopeLock,
   type ScopeLock,
@@ -82,6 +83,9 @@ import {
   type SafetyMeta,
 } from "../_shared/ask-viv-prompts/index.ts";
 
+// Phase 6: portfolio-wide scope
+import { PORTFOLIO_SCOPE_INSTRUCTION } from "../_shared/ask-viv-prompts/index.ts";
+
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 const corsHeaders = {
@@ -105,6 +109,10 @@ interface RequestPayload {
   question: string;
   context: RequestContext;
   conversation_id?: string | null;
+  // Phase 6: "portfolio" requests skip the tenant_id requirement entirely —
+  // context is ignored in that case. Defaults to "tenant" for callers that
+  // don't send this field (backward compatible).
+  scope_kind?: "tenant" | "portfolio";
 }
 
 interface RecordAccessed {
@@ -291,9 +299,17 @@ Deno.serve(async (req) => {
     }
 
     const { question, context } = payload;
-    
+
     if (!question || typeof question !== "string" || question.trim().length === 0) {
       return jsonError(400, "BAD_REQUEST", "Question is required");
+    }
+
+    // Phase 6: portfolio-wide scope skips the tenant_id requirement entirely —
+    // every internal staff role can see the whole active client base by
+    // design (see portfolio-facts.ts header comment).
+    const scopeKind: "tenant" | "portfolio" = payload.scope_kind === "portfolio" ? "portfolio" : "tenant";
+    if (scopeKind === "portfolio") {
+      return await handlePortfolioRequest(supabase, user, profile, question, payload.conversation_id ?? null);
     }
 
     // Validate tenant access
@@ -683,7 +699,7 @@ Deno.serve(async (req) => {
 async function resolveOrCreateConversation(
   supabase: any,
   userId: string,
-  tenantId: number,
+  tenantId: number | null,
   requestedConversationId: string | null | undefined,
   question: string
 ): Promise<string> {
@@ -736,6 +752,218 @@ async function logTurn(
     }
   } catch (err) {
     console.error(`Failed to log ${role} turn:`, err);
+  }
+}
+
+/**
+ * Phase 6: handle a portfolio-wide scope request. Kept as a self-contained
+ * path rather than threading a scope_kind branch through the entire
+ * tenant-scoped handler above — the response shape (no scope_lock/freshness/
+ * explain, no per-tenant record links) and fact source are different enough
+ * that a shared code path would need as much branching as this does anyway,
+ * for less clarity. Reuses conversation resolution, turn logging, intent
+ * classification, and the two-write audit model unchanged.
+ */
+async function handlePortfolioRequest(
+  supabase: any,
+  user: { id: string; email?: string },
+  profile: UserProfile,
+  question: string,
+  requestedConversationId: string | null
+): Promise<Response> {
+  const conversationId = await resolveOrCreateConversation(supabase, user.id, null, requestedConversationId, question);
+  await logTurn(supabase, conversationId, "user", question);
+
+  const intentResult = classifyAskVivIntent(question);
+
+  const { data: preflightAudit, error: preflightAuditError } = await supabase
+    .from("ai_interaction_logs")
+    .insert({
+      user_id: user.id,
+      tenant_id: null,
+      mode: "compliance",
+      prompt_text: question,
+      response_text: "(pending)",
+      records_accessed: [],
+      conversation_id: conversationId,
+      request_context: {
+        status: "pending",
+        scope_kind: "portfolio",
+        user_role: profile.unicorn_role,
+        ...buildIntentAuditEntry(intentResult),
+      },
+    })
+    .select("id")
+    .single();
+
+  if (preflightAuditError || !preflightAudit) {
+    console.error("Portfolio pre-flight audit insert failed, aborting request:", preflightAuditError);
+    return jsonError(503, "AUDIT_UNAVAILABLE", "Unable to establish an audit record for this request. Please try again.");
+  }
+  const auditLogId: string = preflightAudit.id;
+
+  if (isBlockedIntent(intentResult.intent)) {
+    const blockedMarkdown = getBlockedResponse(intentResult.intent, "compliance");
+    await updateAuditLog(supabase, auditLogId, {
+      answer_markdown: blockedMarkdown,
+      records_accessed: [],
+      confidence: "low",
+      gaps: ["Request blocked by intent classifier before portfolio data was queried."],
+    } as ComplianceResponse, { blocked: true, intent: buildIntentAuditEntry(intentResult), profile, context: { tenant_id: null } });
+    await logTurn(supabase, conversationId, "assistant", blockedMarkdown);
+    return jsonRaw({
+      answer_markdown: blockedMarkdown,
+      records_accessed: [],
+      confidence: "low",
+      gaps: ["Request blocked by intent classifier before portfolio data was queried."],
+      scope_kind: "portfolio",
+      ai_interaction_log_id: auditLogId,
+      audit_logged: true,
+      conversation_id: conversationId,
+    });
+  }
+
+  const portfolioFacts = await buildPortfolioFacts(supabase, user.id);
+  const llmEnabled = await isLlmGenerationEnabledForUser(supabase, user.id, profile);
+
+  let answerMarkdown: string;
+  let confidence: "high" | "medium" | "low";
+  const gaps = [...portfolioFacts.gaps];
+  let generationMode: "llm" | "unavailable" = "unavailable";
+
+  if (llmEnabled && portfolioFacts.facts.length > 0) {
+    try {
+      const systemPrompt = buildFullPrompt("compliance", {
+        facts: portfolioFacts.facts,
+        record_links: [],
+        gaps: portfolioFacts.gaps,
+        question,
+        extra_instructions: PORTFOLIO_SCOPE_INSTRUCTION,
+      });
+      const rawText = await callLovableGateway(systemPrompt, question);
+
+      const safetyMeta: SafetyMeta = {
+        mode: "compliance",
+        gaps_in: gaps,
+        records_accessed_in: [],
+        request_id: crypto.randomUUID(),
+        user_id: user.id,
+        tenant_id: null,
+      };
+      const pipelineResult = await runAskVivSafetyPipeline({
+        mode: "compliance",
+        raw_text: rawText,
+        meta: safetyMeta,
+        repairOnce: (repairPrompt: string) => callLovableGateway(systemPrompt, repairPrompt),
+      });
+
+      const { sanitized } = sanitizeResponse(pipelineResult.final_text);
+      answerMarkdown = sanitized;
+      // No deterministic per-tenant confidence scorer applies across an
+      // entire portfolio — a simple heuristic (gaps present -> medium, none
+      // -> high) stands in for it, reconciled against the LLM's own stated
+      // confidence the same way tenant-scoped requests are.
+      const heuristicConfidence: "high" | "medium" | "low" = gaps.length === 0 ? "high" : "medium";
+      const llmConfidence = extractConfidenceFromMarkdown(pipelineResult.final_text);
+      confidence = llmConfidence ? pickLowerConfidence(llmConfidence, heuristicConfidence) : heuristicConfidence;
+      generationMode = "llm";
+    } catch (err) {
+      console.error("Portfolio LLM generation failed:", err);
+      answerMarkdown = buildPortfolioFallbackMarkdown(portfolioFacts);
+      confidence = "low";
+      gaps.push("Real-time portfolio narration was unavailable — showing a minimal summary instead.");
+    }
+  } else {
+    answerMarkdown = buildPortfolioFallbackMarkdown(portfolioFacts);
+    confidence = "low";
+    if (!llmEnabled) {
+      gaps.push("Portfolio narration requires real-time generation, which is not yet enabled for this account.");
+    }
+  }
+
+  const recordsAccessed: RecordAccessed[] = portfolioFacts.tenant_ids_touched.map(id => ({
+    table: "v_dashboard_attention_ranked",
+    id,
+    label: `tenant:${id}`,
+  }));
+
+  const response: ComplianceResponse = {
+    answer_markdown: answerMarkdown,
+    records_accessed: recordsAccessed,
+    confidence,
+    gaps,
+    chunks_used: 0,
+    source_types_used: [],
+    governance: { read_only: true, human_action_required: false, caution_banners: [] },
+    validation: { valid: true, warnings: 0, sanitized: false },
+  };
+
+  const auditLogged = await updateAuditLog(supabase, auditLogId, response, {
+    blocked: false,
+    profile,
+    context: { tenant_id: null },
+  });
+  await updateAuditLogPortfolioExtras(supabase, auditLogId, portfolioFacts.tenant_ids_touched, generationMode, portfolioFacts.tables_queried);
+  await logTurn(supabase, conversationId, "assistant", answerMarkdown);
+
+  return jsonRaw({
+    ...response,
+    scope_kind: "portfolio",
+    scope_lock: null,
+    freshness: null,
+    explain: null,
+    ai_interaction_log_id: auditLogId,
+    audit_logged: auditLogged,
+    conversation_id: conversationId,
+  });
+}
+
+/** Minimal, honest fallback when portfolio LLM narration isn't available — just the raw summary counts, no fabricated narrative. */
+function buildPortfolioFallbackMarkdown(portfolioFacts: { facts: DerivedFact[] }): string {
+  const summary = portfolioFacts.facts.find(f => f.key === "portfolio_summary")?.value as
+    | { total_active_clients: number; my_clients_count: number; total_overdue_tasks: number }
+    | undefined;
+  const lines = ["## Answer"];
+  if (summary) {
+    lines.push(`- ${summary.total_active_clients} active clients across the portfolio`);
+    lines.push(`- ${summary.my_clients_count} clients assigned to you`);
+    lines.push(`- ${summary.total_overdue_tasks} overdue tasks portfolio-wide`);
+  } else {
+    lines.push("- Portfolio data is not available right now.");
+  }
+  lines.push("", "## Key records used", "- None", "", "## Confidence", "**Low**", "", "## Gaps",
+    "- Real-time portfolio narration is not available for this account.", "",
+    "## Next safe actions", "- Review the attention/dashboard views directly for full detail.");
+  return lines.join("\n");
+}
+
+/** Records portfolio-specific audit context that doesn't fit the tenant-scoped updateAuditLog's shape. */
+async function updateAuditLogPortfolioExtras(
+  supabase: any,
+  auditLogId: string,
+  tenantIdsTouched: number[],
+  generationMode: string,
+  tablesQueried: string[]
+): Promise<void> {
+  try {
+    const { data: existing } = await supabase
+      .from("ai_interaction_logs")
+      .select("request_context")
+      .eq("id", auditLogId)
+      .single();
+    await supabase
+      .from("ai_interaction_logs")
+      .update({
+        request_context: {
+          ...(existing?.request_context ?? {}),
+          tenant_ids_touched: tenantIdsTouched,
+          generation_mode: generationMode,
+          tables_queried: tablesQueried,
+        },
+      })
+      .eq("id", auditLogId);
+  } catch (err) {
+    console.error("Failed to record portfolio audit extras:", err);
   }
 }
 
