@@ -52,19 +52,46 @@ export interface IntentAuditEntry {
 }
 
 /**
- * Blocked intents that should not proceed to Fact Builder
+ * Intents that hard-block before Fact Builder — genuine boundary violations
+ * only (prompt injection / policy bypass attempts, unrelated small talk).
+ *
+ * decision_request is deliberately NOT in this list. "Does this meet the
+ * Standard?" / "Is this enough?" is the single most valuable question a CSC
+ * asks — blocking it doesn't remove the need, it just pushes the CSC to
+ * guess or ask an ungrounded general chatbot. It's reframed instead (see
+ * DECISION_REQUEST_REFRAME_INSTRUCTION) into a fixed, four-part structure
+ * that can't be mistaken for a determination.
  */
 export const BLOCKED_INTENTS: readonly AskVivIntent[] = [
-  "decision_request",
   "out_of_scope",
 ] as const;
 
 /**
- * Check if an intent is blocked
+ * Check if an intent is hard-blocked (never reaches Fact Builder or the LLM).
  */
 export function isBlockedIntent(intent: AskVivIntent): boolean {
   return BLOCKED_INTENTS.includes(intent);
 }
+
+/**
+ * Extra prompt instruction injected only for decision_request questions.
+ * Forces a fixed structure that answers the real underlying need (what the
+ * Standard requires, what the client's records show, what isn't evidenced,
+ * what to check next) without ever asserting a compliance determination.
+ */
+export const DECISION_REQUEST_REFRAME_INSTRUCTION = `SPECIAL HANDLING — DECISION-SHAPED QUESTION
+
+This question asks whether something meets a Standard, is compliant, or is "enough" — a compliance-determination-shaped question. Do not refuse it and do not make a determination. It is one of the most valuable questions a CSC can ask; answer the real underlying need instead.
+
+Structure the "## Answer" section as exactly these four parts, in this order, each as its own bullet or short paragraph:
+1. What the Standard requires — a paraphrased requirement with a citation from STANDARDS_CITATIONS (clause + source document). If no matching citation was injected, say plainly that the specific clause could not be retrieved and stop after this line — do not guess at Standards content.
+2. What this client's records show — cite only facts from FACTS/RECORD_LINKS. Never invent detail not present there.
+3. What is not evidenced — name the specific gap between what the Standard requires and what the records show, or state there is none found.
+4. What a CSC should check next — one concrete, human-actionable step.
+
+End the Answer section with this exact sentence on its own line: "This is not a compliance determination — a Vivacity consultant or the client's own review is required to confirm readiness."
+
+Never use the words "compliant", "non-compliant", "meets the standard", or "does not meet the standard" anywhere in the response, including in this reframed structure.`;
 
 // ============================================================
 // Keyword and phrase sets for each intent class

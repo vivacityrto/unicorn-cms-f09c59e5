@@ -68,6 +68,22 @@ import {
   GLOBAL_SYSTEM_PROMPT,
 } from "../_shared/ask-viv-prompts/index.ts";
 
+// Phase 3: intent classification, real LLM generation, and the safety pipeline
+import {
+  classifyAskVivIntent,
+  isBlockedIntent,
+  getBlockedResponse,
+  buildIntentAuditEntry,
+  DECISION_REQUEST_REFRAME_INSTRUCTION,
+  runAskVivSafetyPipeline,
+  buildSafetyAuditEntry,
+  type IntentResult,
+  type IntentAuditEntry,
+  type SafetyMeta,
+} from "../_shared/ask-viv-prompts/index.ts";
+
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": 
@@ -116,6 +132,95 @@ function citationLabel(vr: VectorResult): string {
   return vr.clause
     ? `${vr.source_document}, clause ${vr.clause}`
     : `${vr.source_document}, chunk ${vr.chunk_index}`;
+}
+
+/**
+ * Phase 3: whether this user gets real LLM generation, or the deterministic
+ * template path. Master kill switch first (instant off with no deploy),
+ * then rollout rings: Super Admin always once the master flag is on, named
+ * beta users next, then everyone once ask_viv_llm_generation_all_staff flips.
+ */
+async function isLlmGenerationEnabledForUser(
+  supabase: any,
+  userId: string,
+  profile: UserProfile
+): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("ask_viv_llm_generation_enabled, ask_viv_llm_generation_beta_user_ids, ask_viv_llm_generation_all_staff")
+      .limit(1)
+      .maybeSingle();
+
+    if (!data?.ask_viv_llm_generation_enabled) return false;
+    if (data.ask_viv_llm_generation_all_staff) return true;
+    if (checkSuperAdmin(profile)) return true;
+    const betaUserIds: string[] = data.ask_viv_llm_generation_beta_user_ids || [];
+    return betaUserIds.includes(userId);
+  } catch (err) {
+    console.error("Failed to check LLM generation flag, defaulting to deterministic path:", err);
+    return false;
+  }
+}
+
+/**
+ * Call the Lovable AI Gateway (house standard for LLM calls — used by 18
+ * other edge functions in this codebase, including compliance-assistant's
+ * client-facing sibling). Direct OpenAI stays embeddings-only; the gateway
+ * doesn't support them.
+ */
+async function callLovableGateway(systemPrompt: string, userMessage: string): Promise<string> {
+  if (!LOVABLE_API_KEY) {
+    throw new Error("LOVABLE_API_KEY not configured");
+  }
+
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+      max_tokens: 1200,
+      temperature: 0.2,
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`Lovable Gateway error: ${resp.status} ${errText}`);
+  }
+
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("Lovable Gateway returned no content");
+  }
+  return content as string;
+}
+
+/** Extract the LLM's own stated confidence from its "## Confidence" section. */
+function extractConfidenceFromMarkdown(markdown: string): "high" | "medium" | "low" | null {
+  const match = markdown.match(/##\s*Confidence\s*\n\s*\*\*(High|Medium|Low)\*\*/i);
+  return match ? (match[1].toLowerCase() as "high" | "medium" | "low") : null;
+}
+
+/**
+ * Confidence stays authoritative from the deterministic ai-brain scorer — if
+ * the LLM's stated confidence disagrees, take the lower one. Never let the
+ * model talk itself up on a regulatory surface.
+ */
+function pickLowerConfidence(
+  a: "high" | "medium" | "low",
+  b: "high" | "medium" | "low"
+): "high" | "medium" | "low" {
+  const rank = { low: 0, medium: 1, high: 2 } as const;
+  return rank[a] <= rank[b] ? a : b;
 }
 
 interface ComplianceResponse {
@@ -201,6 +306,74 @@ Deno.serve(async (req) => {
       return jsonError(403, "FORBIDDEN", "You do not have access to this tenant");
     }
 
+    // Phase 3: classify intent before touching any tenant data. Only
+    // out_of_scope (genuine boundary violations — prompt injection, policy
+    // bypass, unrelated small talk) hard-blocks; decision_request ("does
+    // this meet the standard") is reframed later, not blocked, since it's
+    // the single most valuable question a CSC asks.
+    const intentResult = classifyAskVivIntent(question);
+
+    // Two-write audit model: a pre-flight insert BEFORE any tenant data is
+    // queried. Fail closed — if this fails, no fact-builder/vector-search
+    // queries run at all, and the request is rejected outright, since by the
+    // time a second write could fail the data would already have been read
+    // with no audit record of it.
+    const { data: preflightAudit, error: preflightAuditError } = await supabase
+      .from("ai_interaction_logs")
+      .insert({
+        user_id: user.id,
+        tenant_id: tenantId,
+        mode: "compliance",
+        prompt_text: question,
+        response_text: "(pending)",
+        records_accessed: [],
+        request_context: {
+          status: "pending",
+          tenant_id: tenantId,
+          client_id: context.client_id || null,
+          package_id: context.package_id || null,
+          phase_id: context.phase_id || null,
+          user_role: profile.unicorn_role,
+          ...buildIntentAuditEntry(intentResult),
+        },
+      })
+      .select("id")
+      .single();
+
+    if (preflightAuditError || !preflightAudit) {
+      console.error("Pre-flight audit insert failed, aborting request:", preflightAuditError);
+      return jsonError(503, "AUDIT_UNAVAILABLE", "Unable to establish an audit record for this request. Please try again.");
+    }
+    const auditLogId: string = preflightAudit.id;
+
+    if (isBlockedIntent(intentResult.intent)) {
+      const blockedMarkdown = getBlockedResponse(intentResult.intent, "compliance");
+      const blockedResponse: ComplianceResponse = {
+        answer_markdown: blockedMarkdown,
+        records_accessed: [],
+        confidence: "low",
+        gaps: ["Request blocked by intent classifier before any tenant data was queried."],
+        chunks_used: 0,
+        source_types_used: [],
+        governance: { read_only: true, human_action_required: false, caution_banners: [] },
+        validation: { valid: true, warnings: 0, sanitized: false },
+      };
+      const auditLogged = await updateAuditLog(supabase, auditLogId, blockedResponse, {
+        blocked: true,
+        intent: buildIntentAuditEntry(intentResult),
+        profile,
+        context,
+      });
+      return jsonRaw({
+        ...blockedResponse,
+        scope_lock: null,
+        freshness: null,
+        explain: null,
+        ai_interaction_log_id: auditLogId,
+        audit_logged: auditLogged,
+      });
+    }
+
     // Vector search uses OpenAI direct for embeddings (gateway no longer supports them).
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
@@ -262,14 +435,23 @@ Deno.serve(async (req) => {
       data: dataForFacts,
     });
 
-    // Generate answer using facts (not raw DB results)
-    const response = generateFactBasedAnswer(
-      question, 
-      factsResult,
-      brainResult,
-      vectorResults,
-      context
-    );
+    // Phase 3: generate the answer via a real LLM call when this user is in
+    // the rollout, falling back to the deterministic template path on any
+    // failure (flag off, gateway error, safety pipeline exhausted) so a
+    // broken rollout never takes down the feature for anyone.
+    const llmEnabled = await isLlmGenerationEnabledForUser(supabase, user.id, profile);
+    let response: ComplianceResponse;
+    if (llmEnabled) {
+      try {
+        response = await generateLlmAnswer(question, factsResult, brainResult, vectorResults, intentResult, user.id);
+      } catch (llmErr) {
+        console.error("LLM generation failed, falling back to deterministic template:", llmErr);
+        response = generateFactBasedAnswer(question, factsResult, brainResult, vectorResults, context);
+        response.gaps.push("Real-time generation was unavailable — showing the deterministic summary instead.");
+      }
+    } else {
+      response = generateFactBasedAnswer(question, factsResult, brainResult, vectorResults, context);
+    }
 
     // V4 restore: build scope_lock from fact-builder result
     let scope_lock: ScopeLock | null = null;
@@ -441,22 +623,29 @@ Deno.serve(async (req) => {
       explain = null;
     }
 
-    // Log interaction with enhanced audit trail
-    const aiInteractionLogId = await logInteraction(
-      supabase, 
-      user.id, 
-      tenantId, 
-      profile, 
-      question, 
-      response, 
+    // Two-write audit model, second write: update the pre-flight row with
+    // the real outcome. Best-effort — if this fails, the response still
+    // returns (the request itself succeeded), but audit_logged: false tells
+    // the UI to show a real "not logged" state instead of a false-positive
+    // "Audit logged" badge.
+    const auditLogged = await updateAuditLog(supabase, auditLogId, response, {
+      blocked: false,
+      profile,
       context,
       factsResult,
-      brainResult
-    );
+      brainResult,
+    });
 
     // Strip internal safety_meta before returning to client
     const { safety_meta: _safetyMeta, ...responseClean } = response as typeof response & { safety_meta?: unknown };
-    return jsonRaw({ ...responseClean, scope_lock, freshness, explain, ai_interaction_log_id: aiInteractionLogId });
+    return jsonRaw({
+      ...responseClean,
+      scope_lock,
+      freshness,
+      explain,
+      ai_interaction_log_id: auditLogId,
+      audit_logged: auditLogged,
+    });
 
   } catch (err) {
     console.error("Compliance assistant error:", err);
@@ -893,6 +1082,130 @@ function generateFactBasedAnswer(
     safety_meta: {
       validation: validationResult,
       modifications,
+      generation_mode: "deterministic" as const,
+    },
+  };
+}
+
+/**
+ * Phase 3: Generate answer via a real LLM call (Lovable Gateway), wired
+ * through the safety pipeline (phrase filter → response validator → one
+ * repair pass), with the deterministic confidence scorer kept authoritative.
+ * Only called when isLlmGenerationEnabledForUser() is true; any failure here
+ * is caught by the caller and falls back to generateFactBasedAnswer.
+ */
+async function generateLlmAnswer(
+  question: string,
+  factsResult: AskVivFactsResult,
+  brainResult: {
+    context: AIContext;
+    factSet: FactSet;
+    reasoning: ReasoningOutput;
+    confidence: ConfidenceResult;
+  },
+  vectorResults: VectorResult[],
+  intentResult: IntentResult,
+  userId: string
+): Promise<ComplianceResponse> {
+  const gaps: string[] = [...factsResult.gaps];
+  const sourceTypesUsed = new Set<string>();
+  for (const vr of vectorResults) sourceTypesUsed.add(vr.source_type);
+  if (vectorResults.length === 0) {
+    gaps.push("No indexed vector data - using live database only");
+  }
+
+  const records: RecordAccessed[] = factsToRecordsAccessed(factsResult.facts);
+  for (const vr of vectorResults) {
+    records.push({ table: vr.source_type, id: vr.id, label: citationLabel(vr) });
+  }
+
+  const extraInstructions =
+    intentResult.intent === "decision_request" ? DECISION_REQUEST_REFRAME_INSTRUCTION : undefined;
+
+  const systemPrompt = buildFullPrompt("compliance", {
+    facts: factsResult.facts,
+    record_links: factsResult.record_links,
+    gaps: factsResult.gaps,
+    vector_results: vectorResults.map(vr => ({
+      source_document: vr.source_document,
+      framework: vr.framework,
+      clause: vr.clause,
+      chunk_index: vr.chunk_index,
+      content: vr.content,
+    })),
+    question,
+    extra_instructions: extraInstructions,
+  });
+
+  const rawText = await callLovableGateway(systemPrompt, question);
+
+  const safetyMeta: SafetyMeta = {
+    mode: "compliance",
+    gaps_in: gaps,
+    records_accessed_in: records.map(r => ({ table: r.table, id: String(r.id), label: r.label })),
+    request_id: crypto.randomUUID(),
+    user_id: userId,
+    tenant_id: String(factsResult.context.tenant_id),
+  };
+
+  const pipelineResult = await runAskVivSafetyPipeline({
+    mode: "compliance",
+    raw_text: rawText,
+    meta: safetyMeta,
+    repairOnce: (repairPrompt: string) => callLovableGateway(systemPrompt, repairPrompt),
+  });
+
+  const llmConfidence = extractConfidenceFromMarkdown(pipelineResult.final_text);
+  const deterministicConfidence = brainResult.confidence.level;
+  let finalConfidence = deterministicConfidence;
+  if (llmConfidence && llmConfidence !== deterministicConfidence) {
+    finalConfidence = pickLowerConfidence(llmConfidence, deterministicConfidence);
+    gaps.push(
+      `Confidence discrepancy: model stated ${llmConfidence}, computed ${deterministicConfidence} from facts — using the lower value.`
+    );
+  }
+
+  const governance = buildGovernanceInfo(brainResult.confidence, brainResult.reasoning.escalation_triggers);
+  if (pipelineResult.blocked) {
+    governance.caution_banners.push("⚠️ Response required a safety correction before display");
+  }
+
+  const { sanitized, modifications } = sanitizeResponse(pipelineResult.final_text);
+
+  return {
+    answer_markdown: sanitized,
+    records_accessed: records,
+    confidence: finalConfidence,
+    gaps,
+    chunks_used: vectorResults.length,
+    source_types_used: Array.from(sourceTypesUsed),
+    reasoning_tiers: brainResult.reasoning.tiers.map(t => ({
+      tier: t.tier,
+      finding_count: t.findings.length,
+      critical_count: t.findings.filter(f => f.severity === "critical").length,
+    })),
+    escalation_count: brainResult.reasoning.escalation_triggers.length,
+    governance: {
+      read_only: true,
+      human_action_required: governance.human_action_required,
+      caution_banners: governance.caution_banners,
+    },
+    validation: {
+      valid: pipelineResult.validator.ok,
+      warnings: pipelineResult.validator.errors.length,
+      sanitized: modifications.length > 0 || pipelineResult.repaired,
+    },
+    // Internal-only: stripped before returning to client; used to build explain payload + audit trail
+    safety_meta: {
+      validation: {
+        valid: pipelineResult.validator.ok,
+        errors: pipelineResult.validator.errors,
+        warnings: [] as { code: string; message: string }[],
+      },
+      modifications,
+      generation_mode: "llm" as const,
+      intent: buildIntentAuditEntry(intentResult),
+      safety_audit: buildSafetyAuditEntry(pipelineResult),
     },
   };
 }
@@ -1159,77 +1472,80 @@ function generateBrainPoweredAnswer(
   };
 }
 
-/**
- * V3: Log the interaction to ai_interaction_logs with full audit trail
- */
-async function logInteraction(
-  supabase: any,
-  userId: string,
-  tenantId: number,
-  profile: UserProfile,
-  question: string,
-  response: ComplianceResponse,
-  context: RequestContext,
-  factsResult?: AskVivFactsResult,
+interface AuditUpdateExtra {
+  blocked: boolean;
+  intent?: IntentAuditEntry;
+  profile?: UserProfile;
+  context?: RequestContext;
+  factsResult?: AskVivFactsResult;
   brainResult?: {
     context: AIContext;
     factSet: FactSet;
     reasoning: ReasoningOutput;
     confidence: ConfidenceResult;
-  }
-): Promise<string | null> {
+  };
+}
+
+/**
+ * Two-write audit model, second write: UPDATE the pre-flight row created
+ * before any tenant data was queried. Best-effort — a failure here doesn't
+ * fail the request (the answer was already generated), but the caller
+ * reports it as audit_logged: false so the UI never shows a false-positive
+ * "Audit logged" badge.
+ */
+async function updateAuditLog(
+  supabase: any,
+  auditLogId: string,
+  response: ComplianceResponse,
+  extra: AuditUpdateExtra
+): Promise<boolean> {
   try {
-    // V3: Build records_accessed from Fact Builder audit data
-    const recordsAccessed = factsResult 
-      ? factsResult.audit.record_ids_accessed.flatMap(({ table, ids }) => 
+    const recordsAccessed = extra.factsResult
+      ? extra.factsResult.audit.record_ids_accessed.flatMap(({ table, ids }) =>
           ids.map(id => ({ table, id, label: `${table}:${id}` }))
         )
       : response.records_accessed;
 
-    const { data, error } = await supabase
+    const safetyMeta = (response as { safety_meta?: { generation_mode?: string } }).safety_meta;
+
+    const { error } = await supabase
       .from("ai_interaction_logs")
-      .insert({
-        user_id: userId,
-        tenant_id: tenantId,
-        mode: "compliance",
-        prompt_text: question,
+      .update({
         response_text: response.answer_markdown,
         records_accessed: recordsAccessed,
         request_context: {
-          tenant_id: tenantId,
-          client_id: context.client_id || null,
-          package_id: context.package_id || null,
-          phase_id: context.phase_id || null,
-          user_role: profile.unicorn_role,
+          status: extra.blocked ? "blocked" : "completed",
+          client_id: extra.context?.client_id ?? null,
+          package_id: extra.context?.package_id ?? null,
+          phase_id: extra.context?.phase_id ?? null,
+          user_role: extra.profile?.unicorn_role,
           confidence: response.confidence,
           gaps_count: response.gaps.length,
-          // V3: Fact Builder tracking
           ai_brain_version: "3.0",
           fact_builder_version: "1.0",
+          generation_mode: safetyMeta?.generation_mode ?? "deterministic",
           reasoning_tiers: response.reasoning_tiers,
           escalation_count: response.escalation_count,
-          fact_count: factsResult?.facts.length || brainResult?.factSet.fact_count || 0,
-          categories_analyzed: brainResult?.factSet.categories || [],
-          // V3: Audit trail from Fact Builder
-          tables_queried: factsResult?.audit.tables_queried || [],
-          inference_decisions: factsResult?.audit.inference_decisions || [],
-          query_duration_ms: factsResult?.audit.duration_ms || 0,
-          gaps: factsResult?.gaps || [],
+          fact_count: extra.factsResult?.facts.length || extra.brainResult?.factSet.fact_count || 0,
+          categories_analyzed: extra.brainResult?.factSet.categories || [],
+          tables_queried: extra.factsResult?.audit.tables_queried || [],
+          inference_decisions: extra.factsResult?.audit.inference_decisions || [],
+          query_duration_ms: extra.factsResult?.audit.duration_ms || 0,
+          gaps: extra.factsResult?.gaps || [],
+          ...(extra.intent ?? {}),
         },
         chunks_used: response.chunks_used || 0,
         source_types_used: response.source_types_used || [],
       })
-      .select("id")
-      .single();
+      .eq("id", auditLogId);
 
     if (error) {
-      console.error("Failed to log interaction:", error);
-      return null;
+      console.error("Failed to update audit log:", error);
+      return false;
     }
-    return (data?.id as string) ?? null;
+    return true;
   } catch (err) {
-    console.error("Failed to log interaction:", err);
-    // Non-blocking - don't fail the request
-    return null;
+    console.error("Failed to update audit log:", err);
+    return false;
   }
 }

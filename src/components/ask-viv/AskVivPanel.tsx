@@ -120,6 +120,7 @@ interface Message {
   freshness?: FreshnessData;
   micro_explain?: MicroExplainPayload;
   ai_interaction_log_id?: string | null;
+  audit_logged?: boolean;
   web_citations?: WebCitation[];
   research_job_id?: string;
   reasoning_tiers?: { tier: string; finding_count: number; critical_count: number }[];
@@ -429,6 +430,7 @@ export function AskVivPanel() {
       freshness: result.freshness ?? undefined,
       explain: result.explain ?? undefined,
       ai_interaction_log_id: result.ai_interaction_log_id ?? null,
+      audit_logged: result.audit_logged ?? false,
     };
   }
 
@@ -598,6 +600,7 @@ export function AskVivPanel() {
           freshness: result.freshness,
           explain: result.explain,
           ai_interaction_log_id: result.ai_interaction_log_id,
+          audit_logged: result.audit_logged,
           created_at: new Date().toISOString(),
         };
       }
@@ -927,6 +930,29 @@ export function AskVivPanel() {
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                           {getConfidenceIcon(message.confidence)}
                           <span>Confidence: {message.confidence}</span>
+                        </div>
+                      )}
+
+                      {/* Real per-message audit status — reflects whether the
+                          two-write audit model's post-response update actually
+                          succeeded, not a static "always on" badge. */}
+                      {message.ai_interaction_log_id && (
+                        <div
+                          className={cn(
+                            "flex items-center gap-1.5 text-xs",
+                            message.audit_logged ? "text-muted-foreground" : "text-amber-600"
+                          )}
+                        >
+                          {message.audit_logged ? (
+                            <CheckCircle className="h-3.5 w-3.5" />
+                          ) : (
+                            <AlertCircle className="h-3.5 w-3.5" />
+                          )}
+                          <span>
+                            {message.audit_logged
+                              ? "Audit logged"
+                              : "Audit not logged — this response may not be fully traceable"}
+                          </span>
                         </div>
                       )}
 
