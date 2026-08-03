@@ -15,9 +15,15 @@
  * against. Still read-only, still cites sources, still never fabricates beyond
  * what a tool actually returned.
  *
- * Phase D: all planned tools now exist — search_clients, get_client_context,
- * search_notes_and_emails, search_eos, and search_documents (RAG over real
- * generated-document content, populated by embed-ask-viv-documents).
+ * Phase D: all originally-planned tools exist — search_clients,
+ * get_client_context, search_notes_and_emails, search_eos, and
+ * search_documents (RAG over real generated-document content, populated by
+ * embed-ask-viv-documents).
+ *
+ * Phase F (added after the original plan): search_standards, reusing the
+ * existing match_srto_chunks RPC / srto_corpus — the same regulatory corpus
+ * the existing Compliance mode panel already searches — so this assistant
+ * can also answer standards/clause questions, not just client-specific ones.
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -138,6 +144,18 @@ const TOOLS: AnthropicToolDefinition[] = [
       required: ["tenant_id", "query"],
     },
   },
+  {
+    name: "search_standards",
+    description:
+      "Semantic search over the regulatory standards corpus — Standards for RTOs 2025, National Code 2018, ESOS Act, and related practice guides (the same corpus the existing Compliance mode panel uses). Not tenant/client-specific. Use this for questions about what a specific standard, clause, or regulatory requirement actually says, as distinct from a question about a specific client's own compliance status.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "What to search for, in natural language" },
+      },
+      required: ["query"],
+    },
+  },
 ];
 
 const SYSTEM_PROMPT = `You are Ask Viv Assistant, an internal conversational assistant for Vivacity staff working with Unicorn, the RTO compliance management platform.
@@ -147,6 +165,8 @@ You are read-only. You never create, update, delete, approve, or submit anything
 You have tools to look up real data (clients, facts, notes, documents). Use them whenever a question needs real information you don't already have from earlier in this conversation — never fabricate a client name, fact, date, or figure that a tool didn't actually return. If a tool returns nothing relevant, say so plainly rather than guessing.
 
 When you reference something a tool returned, make it clear what it's based on (e.g. "according to the client record...") so the person you're talking to can tell what's grounded in real data versus your own general knowledge.
+
+When search_standards returns regulatory text (Standards for RTOs, National Code, ESOS Act, practice guides), paraphrase it in your own words rather than reproducing it at length — short quotes (a clause title, a key phrase) are fine, but don't dump long verbatim passages. The retrieved text is a draft aid for you, not the final word — note that the approved policy suite and a Vivacity consultant's advice are the authoritative source for regulatory interpretation.
 
 Write naturally — you don't need to follow any fixed section structure. Keep answers focused and easy to read.`;
 
@@ -387,6 +407,47 @@ async function executeTool(
       return {
         result: { error: err instanceof Error ? err.message : String(err) },
         summary: `search_documents(${tenantId}, "${query}") failed`,
+      };
+    }
+  }
+
+  if (name === "search_standards") {
+    const query = String(input.query ?? "").trim();
+    if (!query) {
+      return { result: { error: "query is required" }, summary: "search_standards called with no query" };
+    }
+    try {
+      const embedding = await generateEmbedding(query);
+      const { data, error } = await supabase.rpc("match_srto_chunks", {
+        query_embedding: embedding,
+        match_threshold: 0.5,
+        match_count: 8,
+        filter_source_type: null,
+        filter_framework: null,
+        filter_clause: null,
+      });
+      if (error) throw new Error(error.message);
+      const matches = data || [];
+      return {
+        result: {
+          matches: matches.map((m: any) => ({
+            source_document: m.source_document,
+            framework: m.framework,
+            clause: m.clause,
+            heading: m.heading,
+            content: m.content,
+            similarity: m.similarity,
+          })),
+        },
+        summary:
+          matches.length === 0
+            ? `search_standards("${query}") — no matches`
+            : `search_standards("${query}") — ${matches.length} match(es)`,
+      };
+    } catch (err) {
+      return {
+        result: { error: err instanceof Error ? err.message : String(err) },
+        summary: `search_standards("${query}") failed`,
       };
     }
   }
