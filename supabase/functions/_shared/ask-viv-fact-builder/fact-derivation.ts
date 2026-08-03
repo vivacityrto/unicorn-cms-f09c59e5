@@ -15,7 +15,18 @@ import type {
   ActionItemFactData,
   TimeFactData,
   PhaseBlocker,
+  CommsFactData,
+  AuditFactData,
+  AuditFindingFactData,
+  AuditActionFactData,
+  TenantUserFactData,
 } from "./types.ts";
+
+/** Strip HTML tags and collapse whitespace — note/email previews come as raw HTML. */
+function stripHtml(html: string | null | undefined): string {
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+}
 
 /**
  * Derive tenant facts.
@@ -619,4 +630,219 @@ export function derivePhaseBlockers(
   };
 
   return { fact, blockers };
+}
+
+/**
+ * Derive recent notes/emails facts from the pre-aggregated dashboard view.
+ * Kept small (previews truncated, HTML stripped) since this feeds directly
+ * into the LLM prompt's facts payload.
+ */
+export function deriveCommsFacts(comms: CommsFactData, nowIso: string): DerivedFact[] {
+  const facts: DerivedFact[] = [];
+
+  if (comms.recent_notes.length > 0) {
+    facts.push({
+      key: "recent_notes",
+      value: comms.recent_notes.slice(0, 5).map(n => ({
+        type: n.type,
+        title: n.title,
+        preview: stripHtml(n.preview).slice(0, 200),
+        created_at: n.created_at,
+      })),
+      reason: null,
+      source_table: "client_notes",
+      source_ids: comms.recent_notes.slice(0, 5).map(n => n.id),
+      derived_at: nowIso,
+    });
+  }
+
+  if (comms.recent_emails.length > 0) {
+    facts.push({
+      key: "recent_emails",
+      value: comms.recent_emails.slice(0, 5).map(e => ({
+        subject: e.subject,
+        sender_name: e.sender_name,
+        preview: stripHtml(e.preview).slice(0, 200),
+        created_at: e.created_at,
+      })),
+      reason: null,
+      source_table: "email_messages",
+      source_ids: comms.recent_emails.slice(0, 5).map(e => e.id),
+      derived_at: nowIso,
+    });
+  }
+
+  return facts;
+}
+
+/**
+ * Derive compliance audit register facts: last audit, open findings, and
+ * outstanding remediation actions. Findings have no status of their own
+ * (only their child actions do) — "open" here means the audit's own child
+ * actions are still unresolved, not that a finding was closed independently.
+ */
+export function deriveAuditRegisterFacts(
+  audits: AuditFactData[],
+  findings: AuditFindingFactData[],
+  actions: AuditActionFactData[],
+  nowIso: string
+): DerivedFact[] {
+  const facts: DerivedFact[] = [];
+
+  if (audits.length === 0) return facts;
+
+  // Prefer the most recently CLOSED audit as "last audit" — a more recently
+  // conducted draft/in-progress audit hasn't produced a risk_rating or
+  // overall_finding yet, so naively taking audits[0] (most recent by
+  // conducted_at) can silently bury the last actually-completed assessment
+  // behind a still-in-progress one. Fall back to the most recent audit
+  // overall only if none are closed yet.
+  const closedAudits = [...audits]
+    .filter(a => a.closed_at)
+    .sort((a, b) => new Date(b.closed_at!).getTime() - new Date(a.closed_at!).getTime());
+  const lastAudit = closedAudits[0] ?? audits[0];
+  const isUnclosedFallback = !lastAudit.closed_at;
+
+  facts.push({
+    key: "last_audit",
+    value: {
+      id: lastAudit.id,
+      audit_type: lastAudit.audit_type,
+      status: lastAudit.status,
+      risk_rating: lastAudit.risk_rating,
+      overall_finding: lastAudit.overall_finding,
+      conducted_at: lastAudit.conducted_at,
+      closed_at: lastAudit.closed_at,
+      next_audit_due: lastAudit.next_audit_due,
+    },
+    reason: isUnclosedFallback
+      ? `This tenant has no completed (closed) audit yet — showing the most recent audit, still ${lastAudit.status}`
+      : lastAudit.risk_rating ? `Last audit risk rating: ${lastAudit.risk_rating}` : null,
+    source_table: "client_audits",
+    source_ids: [lastAudit.id],
+    derived_at: nowIso,
+  });
+
+  if (findings.length > 0) {
+    facts.push({
+      key: "audit_findings",
+      value: findings.slice(0, 10).map(f => ({
+        audit_id: f.audit_id,
+        summary: f.summary,
+        priority: f.priority,
+        impact: f.impact,
+        standard_reference: f.standard_reference,
+        regulatory_reference: f.regulatory_reference,
+      })),
+      reason: `${findings.length} finding(s) recorded across this tenant's audit register`,
+      source_table: "client_audit_findings",
+      source_ids: findings.slice(0, 10).map(f => f.id),
+      derived_at: nowIso,
+    });
+  }
+
+  // status is free text, not a fixed enum — treat anything not explicitly a
+  // resolved-sounding value as still outstanding, rather than an allowlist
+  // of exact "open" strings that would silently miss future status values.
+  const resolvedStatuses = new Set(["completed", "closed", "done", "resolved", "verified", "cancelled"]);
+  const now = new Date(nowIso);
+  const openActions = actions.filter(a => !resolvedStatuses.has((a.status || "").toLowerCase()));
+
+  if (openActions.length > 0) {
+    facts.push({
+      key: "open_audit_actions",
+      value: openActions.slice(0, 10).map(a => ({
+        title: a.title,
+        status: a.status,
+        due_date: a.due_date,
+        overdue: !!(a.due_date && new Date(a.due_date) < now),
+        evidence_required: a.evidence_required,
+        verification_status: a.verification_status,
+      })),
+      reason: `${openActions.length} outstanding remediation action(s) from the audit register`,
+      source_table: "client_audit_actions",
+      source_ids: openActions.slice(0, 10).map(a => a.id),
+      derived_at: nowIso,
+    });
+  }
+
+  return facts;
+}
+
+/**
+ * Derive tenant portal user roster facts from v_client_tenant_users: active
+ * user count, primary/secondary contacts, anyone invited but never signed
+ * in, and any expired/failed pending invite.
+ */
+export function deriveTenantUsersFacts(users: TenantUserFactData[], nowIso: string): DerivedFact[] {
+  const facts: DerivedFact[] = [];
+
+  if (users.length === 0) return facts;
+
+  const activeUsers = users.filter(u => u.row_type === "active");
+
+  facts.push({
+    key: "tenant_users_count",
+    value: activeUsers.length,
+    reason: activeUsers.length === 0 ? "No active portal users found for this tenant" : null,
+    source_table: "v_client_tenant_users",
+    source_ids: activeUsers.map(u => u.user_id),
+    derived_at: nowIso,
+  });
+
+  const primary = activeUsers.find(u => u.primary_contact);
+  if (primary) {
+    facts.push({
+      key: "tenant_primary_contact",
+      value: { name: primary.display_name, email: primary.email, last_sign_in_at: primary.last_sign_in_at },
+      reason: !primary.last_sign_in_at ? "Primary contact has never signed in" : null,
+      source_table: "v_client_tenant_users",
+      source_ids: [primary.user_id],
+      derived_at: nowIso,
+    });
+  }
+
+  const secondary = activeUsers.find(u => u.secondary_contact);
+  if (secondary) {
+    facts.push({
+      key: "tenant_secondary_contact",
+      value: { name: secondary.display_name, email: secondary.email, last_sign_in_at: secondary.last_sign_in_at },
+      reason: !secondary.last_sign_in_at ? "Secondary contact has never signed in" : null,
+      source_table: "v_client_tenant_users",
+      source_ids: [secondary.user_id],
+      derived_at: nowIso,
+    });
+  }
+
+  const neverSignedIn = activeUsers.filter(u => u.invited_at && !u.last_sign_in_at);
+  if (neverSignedIn.length > 0) {
+    facts.push({
+      key: "tenant_users_never_signed_in",
+      value: neverSignedIn.map(u => ({ name: u.display_name, email: u.email, invited_at: u.invited_at })),
+      reason: `${neverSignedIn.length} invited user(s) have never signed in`,
+      source_table: "v_client_tenant_users",
+      source_ids: neverSignedIn.map(u => u.user_id),
+      derived_at: nowIso,
+    });
+  }
+
+  const now = new Date(nowIso);
+  const inviteIssues = users.filter(u =>
+    u.row_type === "invited" && (
+      (u.invite_expires_at && new Date(u.invite_expires_at) < now) ||
+      (u.delivery_status ? ["bounced", "failed", "undelivered"].includes(u.delivery_status.toLowerCase()) : false)
+    )
+  );
+  if (inviteIssues.length > 0) {
+    facts.push({
+      key: "tenant_invite_issues",
+      value: inviteIssues.map(u => ({ name: u.display_name, email: u.email, delivery_status: u.delivery_status, invite_expires_at: u.invite_expires_at })),
+      reason: `${inviteIssues.length} pending invite(s) expired or failed to deliver`,
+      source_table: "v_client_tenant_users",
+      source_ids: inviteIssues.map(u => u.user_id),
+      derived_at: nowIso,
+    });
+  }
+
+  return facts;
 }

@@ -133,6 +133,14 @@ function createRecordLink(
         path: `/eos/issues/${id}`,
       };
 
+    case "client_audits":
+      return {
+        table: "client_audits",
+        id,
+        label: label ?? `Audit ${id}`,
+        path: `/audits/${id}`,
+      };
+
     default:
       // Unknown table - no fabricated route. A generic /${table}/${id} path
       // for an unrecognised table is almost never a real page.
