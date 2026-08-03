@@ -15,10 +15,9 @@
  * against. Still read-only, still cites sources, still never fabricates beyond
  * what a tool actually returned.
  *
- * Phase C: search_clients, get_client_context (deterministic Fact Builder
- * snapshot), search_notes_and_emails and search_eos (vector RAG retrieval
- * over ask_viv_corpus, populated by embed-ask-viv-corpus) all exist. Phase D
- * adds search_documents (RAG over generated document content) on top.
+ * Phase D: all planned tools now exist — search_clients, get_client_context,
+ * search_notes_and_emails, search_eos, and search_documents (RAG over real
+ * generated-document content, populated by embed-ask-viv-documents).
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -124,6 +123,19 @@ const TOOLS: AnthropicToolDefinition[] = [
         query: { type: "string", description: "What to search for, in natural language" },
       },
       required: ["query"],
+    },
+  },
+  {
+    name: "search_documents",
+    description:
+      "Semantic search over the extracted text content of a client's real generated documents (release documents, compliance pack exports, generated Excel deliverables) — not the document metadata get_client_context returns, the actual document content. Use this when the user asks what a specific generated document actually says or contains. May return no matches even for a client with documents listed elsewhere, since not every generated-document row has real extractable content (some are placeholders with no underlying file).",
+    input_schema: {
+      type: "object",
+      properties: {
+        tenant_id: { type: "number", description: "The tenant's numeric id" },
+        query: { type: "string", description: "What to search for, in natural language" },
+      },
+      required: ["tenant_id", "query"],
     },
   },
 ];
@@ -343,6 +355,38 @@ async function executeTool(
       return {
         result: { error: err instanceof Error ? err.message : String(err) },
         summary: `search_eos("${query}") failed`,
+      };
+    }
+  }
+
+  if (name === "search_documents") {
+    const tenantId = Number(input.tenant_id);
+    const query = String(input.query ?? "").trim();
+    if (!tenantId || Number.isNaN(tenantId) || !query) {
+      return { result: { error: "tenant_id and query are both required" }, summary: "search_documents called with missing params" };
+    }
+    try {
+      const embedding = await generateEmbedding(query);
+      const { data, error } = await supabase.rpc("match_ask_viv_corpus", {
+        query_embedding: embedding,
+        match_threshold: 0.3,
+        match_count: 8,
+        filter_tenant_id: tenantId,
+        filter_source_type: "document",
+      });
+      if (error) throw new Error(error.message);
+      const matches = data || [];
+      return {
+        result: { matches: matches.map((m: any) => ({ heading: m.heading, content: m.content, similarity: m.similarity })) },
+        summary:
+          matches.length === 0
+            ? `search_documents(${tenantId}, "${query}") — no matches`
+            : `search_documents(${tenantId}, "${query}") — ${matches.length} match(es)`,
+      };
+    } catch (err) {
+      return {
+        result: { error: err instanceof Error ? err.message : String(err) },
+        summary: `search_documents(${tenantId}, "${query}") failed`,
       };
     }
   }
