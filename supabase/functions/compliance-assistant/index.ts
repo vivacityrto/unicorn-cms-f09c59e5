@@ -104,6 +104,7 @@ interface RequestContext {
 interface RequestPayload {
   question: string;
   context: RequestContext;
+  conversation_id?: string | null;
 }
 
 interface RecordAccessed {
@@ -306,6 +307,20 @@ Deno.serve(async (req) => {
       return jsonError(403, "FORBIDDEN", "You do not have access to this tenant");
     }
 
+    // Phase 5: resolve or create the conversation this turn belongs to. A
+    // conversation is a lightweight, user-deletable container distinct from
+    // the permanent ai_interaction_logs audit trail — creating/touching it
+    // doesn't read any tenant data, so this can happen ahead of intent
+    // classification and the audit pre-flight insert.
+    const conversationId = await resolveOrCreateConversation(
+      supabase,
+      user.id,
+      tenantId,
+      payload.conversation_id,
+      question
+    );
+    await logTurn(supabase, conversationId, "user", question);
+
     // Phase 3: classify intent before touching any tenant data. Only
     // out_of_scope (genuine boundary violations — prompt injection, policy
     // bypass, unrelated small talk) hard-blocks; decision_request ("does
@@ -327,6 +342,7 @@ Deno.serve(async (req) => {
         prompt_text: question,
         response_text: "(pending)",
         records_accessed: [],
+        conversation_id: conversationId,
         request_context: {
           status: "pending",
           tenant_id: tenantId,
@@ -364,6 +380,7 @@ Deno.serve(async (req) => {
         profile,
         context,
       });
+      await logTurn(supabase, conversationId, "assistant", blockedMarkdown);
       return jsonRaw({
         ...blockedResponse,
         scope_lock: null,
@@ -371,6 +388,7 @@ Deno.serve(async (req) => {
         explain: null,
         ai_interaction_log_id: auditLogId,
         audit_logged: auditLogged,
+        conversation_id: conversationId,
       });
     }
 
@@ -635,6 +653,7 @@ Deno.serve(async (req) => {
       factsResult,
       brainResult,
     });
+    await logTurn(supabase, conversationId, "assistant", response.answer_markdown);
 
     // Strip internal safety_meta before returning to client
     const { safety_meta: _safetyMeta, ...responseClean } = response as typeof response & { safety_meta?: unknown };
@@ -645,6 +664,7 @@ Deno.serve(async (req) => {
       explain,
       ai_interaction_log_id: auditLogId,
       audit_logged: auditLogged,
+      conversation_id: conversationId,
     });
 
   } catch (err) {
@@ -652,6 +672,72 @@ Deno.serve(async (req) => {
     return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
+
+/**
+ * Phase 5: resolve an existing conversation (if the caller passed one they
+ * actually own) or create a new one. Conversation history is a convenience
+ * layer, not the audit trail — a failure to create/verify one never fails
+ * the request; it falls back to a fresh in-memory id so turn logging still
+ * has somewhere consistent to point, even if no row ends up persisted.
+ */
+async function resolveOrCreateConversation(
+  supabase: any,
+  userId: string,
+  tenantId: number,
+  requestedConversationId: string | null | undefined,
+  question: string
+): Promise<string> {
+  if (requestedConversationId) {
+    const { data } = await supabase
+      .from("ask_viv_conversations")
+      .select("id")
+      .eq("id", requestedConversationId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (data) {
+      await supabase
+        .from("ask_viv_conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", requestedConversationId);
+      return requestedConversationId;
+    }
+    // Requested id doesn't exist or isn't owned by this user — fall through
+    // and start a fresh conversation rather than failing the request.
+  }
+
+  const title = question.length > 80 ? `${question.slice(0, 77)}...` : question;
+  const { data: created, error } = await supabase
+    .from("ask_viv_conversations")
+    .insert({ user_id: userId, tenant_id: tenantId, title })
+    .select("id")
+    .single();
+
+  if (error || !created) {
+    console.error("Failed to create ask_viv_conversations row:", error);
+    return crypto.randomUUID();
+  }
+  return created.id;
+}
+
+/** Best-effort turn log. Never fails the request — conversation history is a convenience layer, not the audit trail. */
+async function logTurn(
+  supabase: any,
+  conversationId: string,
+  role: "user" | "assistant",
+  content: string
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from("ask_viv_turns")
+      .insert({ conversation_id: conversationId, role, content, mode: "compliance" });
+    if (error) {
+      console.error(`Failed to log ${role} turn:`, error);
+    }
+  } catch (err) {
+    console.error(`Failed to log ${role} turn:`, err);
+  }
+}
 
 /**
  * Validate that the user has access to the specified tenant
