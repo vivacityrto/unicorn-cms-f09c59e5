@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,9 +39,19 @@ export default function AskVivAssistant() {
 
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     loadConversationHistory();
+    // Deep link from the floating widget's "open full page" button — continue
+    // the same conversation instead of landing on an empty one.
+    const conversationParam = searchParams.get("conversation");
+    if (conversationParam) {
+      openConversation(conversationParam).catch((err) => {
+        console.error("Failed to open linked conversation:", err);
+      });
+      setSearchParams({}, { replace: true });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -117,7 +128,7 @@ export default function AskVivAssistant() {
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-2">
-            <ScrollArea className="h-full">
+            <ScrollArea className="h-full" viewportClassName="[&>div]:!block">
               <div className="space-y-1">
                 {loadingHistory ? (
                   <div className="p-3 text-xs text-muted-foreground text-center">Loading…</div>
@@ -143,7 +154,7 @@ export default function AskVivAssistant() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate text-sm">{c.title || "Untitled conversation"}</span>
+                          <span className="min-w-0 flex-1 truncate text-sm">{c.title || "Untitled conversation"}</span>
                         </div>
                         <button
                           onClick={(e) => handleDelete(c.id, e)}
