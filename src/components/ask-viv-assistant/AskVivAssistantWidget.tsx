@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAskVivAssistantChat } from "@/hooks/useAskVivAssistantChat";
 import { useAskVivAssistantAccess } from "@/hooks/useAskVivAssistantAccess";
+import { useAskVivAssistantWidget } from "@/hooks/useAskVivAssistantWidget";
 import { AssistantMessageBubble } from "@/components/ask-viv-assistant/AssistantMessageBubble";
 import { X, Send, Loader2, Sparkles, History, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,10 @@ import vivIcon from "@/assets/viv-icon.png";
  * history-dropdown pattern already used in the existing panel, for quick
  * inline questions without leaving the current page. The full two-pane
  * experience with a real sidebar lives at /ask-viv.
+ *
+ * Open/closed state lives in useAskVivAssistantWidget (shared, not local) so
+ * the topbar Ask Viv button (AskVivButton.tsx) can open this same widget
+ * instance from a different part of the component tree.
  */
 export function AskVivAssistantWidget() {
   const { toast } = useToast();
@@ -38,7 +43,7 @@ export function AskVivAssistantWidget() {
     sendMessage,
   } = useAskVivAssistantChat();
 
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, openWidget, closeWidget } = useAskVivAssistantWidget();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -94,7 +99,7 @@ export function AskVivAssistantWidget() {
   if (!isOpen) {
     return (
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={openWidget}
         className="fixed bottom-6 left-6 z-50 h-16 w-16 rounded-full bg-background shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group hover:scale-105 border border-border"
         aria-label="Open Ask Viv Assistant"
       >
@@ -118,7 +123,7 @@ export function AskVivAssistantWidget() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleHistory} title="Conversation history">
             <History className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(false)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeWidget}>
             <X className="h-4 w-4" />
           </Button>
         </div>
