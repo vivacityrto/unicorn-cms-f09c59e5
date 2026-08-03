@@ -436,20 +436,32 @@ async function executeTool(
       return { result: { error: "No staff_name provided" }, summary: "list_clients_for_staff called with no name" };
     }
 
-    const { data: staffMatches, error: staffErr } = await supabase
+    // A "First Last" query never matches first_name or last_name individually
+    // via a single ilike (neither column contains the full combined string) —
+    // match per word instead, against any of the three fields, then prefer
+    // candidates where every word appears somewhere across name+email.
+    const words = staffName.split(/\s+/).filter(Boolean);
+    const orConditions = words.flatMap((w) => [`first_name.ilike.%${w}%`, `last_name.ilike.%${w}%`, `email.ilike.%${w}%`]).join(",");
+
+    const { data: candidates, error: staffErr } = await supabase
       .from("users")
       .select("user_uuid, first_name, last_name, email, unicorn_role")
       .eq("is_vivacity_internal", true)
       .eq("disabled", false)
       .eq("archived", false)
-      .or(`first_name.ilike.%${staffName}%,last_name.ilike.%${staffName}%,email.ilike.%${staffName}%`)
-      .limit(10);
+      .or(orConditions)
+      .limit(25);
 
     if (staffErr) {
       return { result: { error: staffErr.message }, summary: `list_clients_for_staff("${staffName}") failed` };
     }
 
-    const staff = staffMatches || [];
+    const allCandidates = candidates || [];
+    const fullMatches = allCandidates.filter((u: any) => {
+      const haystack = `${u.first_name ?? ""} ${u.last_name ?? ""} ${u.email ?? ""}`.toLowerCase();
+      return words.every((w) => haystack.includes(w.toLowerCase()));
+    });
+    const staff = (fullMatches.length > 0 ? fullMatches : allCandidates).slice(0, 10);
     if (staff.length === 0) {
       return { result: { matches: [] }, summary: `list_clients_for_staff("${staffName}") — no staff matched` };
     }
