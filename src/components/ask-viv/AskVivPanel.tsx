@@ -44,9 +44,10 @@ import {
   Globe,
   History,
   Trash2,
+  FilePlus2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import vivIcon from "@/assets/viv-icon.png";
 
@@ -152,6 +153,7 @@ export function AskVivPanel() {
   const { isOpen, closePanel, selectedMode } = useAskViv();
   const { flags } = useAskVivFeatureFlags();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentThread, setCurrentThread] = useState<Thread | null>(null);
@@ -785,6 +787,46 @@ export function AskVivPanel() {
     }
   }
 
+  // Phase 7: draft a note from an Ask Viv answer, without a new save path.
+  // Writes into the SAME localStorage draft key NoteFormDialog already
+  // auto-restores from (note-draft-<tenantId>-new) — the CSC opens "Add
+  // Note" on the real Notes page themselves, sees the draft pre-filled,
+  // edits it, and presses Save through the existing, unmodified save logic.
+  // No approval queue, no new insert path, never auto-saved.
+  function draftNoteFromMessage(message: Message) {
+    if (!context.tenant_id) return;
+    const answerBody = isComplianceMode ? extractAnswerSection(message.content) : message.content;
+    const content = `Drafted from an Ask Viv answer — review before saving.\n\n${answerBody}`;
+    try {
+      localStorage.setItem(
+        `note-draft-${context.tenant_id}-new`,
+        JSON.stringify({
+          // Left blank deliberately — NoteFormDialog's existing AI title
+          // extraction (extract-note-title) generates one from `content`
+          // once restored, the same as if the CSC had typed it themselves.
+          title: "",
+          content,
+          noteType: "general",
+          priority: "normal",
+          status: "noted",
+          duration: "",
+          isPinned: false,
+          packageInstanceId: "none",
+          assignees: [],
+          savedAt: Date.now(),
+        })
+      );
+      toast({
+        title: "Draft ready",
+        description: "Opening Notes — click \"Add Note\" to review and save the draft.",
+      });
+      navigate(`/tenant/${context.tenant_id}/notes`);
+    } catch (err) {
+      console.error("Failed to prepare note draft:", err);
+      toast({ title: "Error", description: "Failed to prepare a note draft.", variant: "destructive" });
+    }
+  }
+
   function handleScopeChange(newScope: SelectedScope) {
     if (context.tenant_id === null) return;
     setSessionScope(newScope, context.tenant_id);
@@ -1225,7 +1267,7 @@ export function AskVivPanel() {
                         <AskVivExplainPanel explain={message.explain} />
                       )}
 
-                      {/* Flag for CSC review button */}
+                      {/* Flag / escalate buttons */}
                       {message.scope_lock && context.tenant_id && (
                         <AskVivFlagButton
                           scopeLock={message.scope_lock}
@@ -1233,6 +1275,19 @@ export function AskVivPanel() {
                           tenantId={context.tenant_id}
                           className="mt-2"
                         />
+                      )}
+
+                      {/* Draft a note from this answer — single-tenant only, not portfolio scope */}
+                      {context.tenant_id && !portfolioScope && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-muted-foreground hover:text-foreground mt-1"
+                          onClick={() => draftNoteFromMessage(message)}
+                        >
+                          <FilePlus2 className="h-3 w-3 mr-1" />
+                          Draft a note from this
+                        </Button>
                       )}
                     </div>
                   )}

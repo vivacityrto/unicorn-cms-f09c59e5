@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Flag, Loader2 } from "lucide-react";
+import { Flag, Loader2, ArrowUpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AskVivFlagModal } from "./AskVivFlagModal";
@@ -16,8 +16,18 @@ interface AskVivFlagButtonProps {
 }
 
 /**
- * AskVivFlagButton - Flags an AI interaction for CSC review
- * 
+ * AskVivFlagButton - Two distinct actions on an Ask Viv answer (Phase 7):
+ *
+ * - "Flag for review": a lightweight quality flag into ai_review_flags,
+ *   for whoever owns Ask Viv's quality — unchanged from the original
+ *   single-button behaviour.
+ * - "Escalate to my Team Leader": a genuine escalation. Looks up the
+ *   caller's own manager (users.manager_uuid — confirmed populated for
+ *   every internal staff role, unlike clients_legacy.manager which is
+ *   dead) and writes a real in-app notification via user_notifications,
+ *   so it actually reaches someone rather than sitting on a page nobody
+ *   opens.
+ *
  * Only visible when:
  * - mode = compliance
  * - scope_lock.client.id is not null
@@ -33,6 +43,8 @@ export function AskVivFlagButton({
   const [modalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFlagged, setIsFlagged] = useState(false);
+  const [isEscalating, setIsEscalating] = useState(false);
+  const [isEscalated, setIsEscalated] = useState(false);
 
   // Only show if client scope exists and we have an interaction log id
   if (!scopeLock.client.id || !aiInteractionLogId) {
@@ -68,8 +80,8 @@ export function AskVivFlagButton({
       setIsFlagged(true);
       setModalOpen(false);
       toast({
-        title: "Flagged for CSC review",
-        description: "This interaction has been marked for follow-up.",
+        title: "Flagged for review",
+        description: "This interaction has been marked for Ask Viv quality follow-up.",
       });
     } catch (err) {
       console.error("Error flagging interaction:", err);
@@ -83,31 +95,113 @@ export function AskVivFlagButton({
     }
   }
 
-  if (isFlagged) {
-    return (
-      <div className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", className)}>
-        <Flag className="h-3 w-3" />
-        <span>Flagged for CSC review</span>
-      </div>
-    );
+  async function handleEscalate() {
+    if (!user?.id || !aiInteractionLogId) return;
+
+    setIsEscalating(true);
+
+    try {
+      const { data: me, error: meError } = await supabase
+        .from("users")
+        .select("manager_uuid, first_name, last_name")
+        .eq("user_uuid", user.id)
+        .maybeSingle();
+
+      if (meError || !me?.manager_uuid) {
+        toast({
+          title: "No Team Leader on file",
+          description: "Your account doesn't have a manager assigned to escalate to. Contact your Team Leader directly.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const staffName = [me.first_name, me.last_name].filter(Boolean).join(" ") || "A team member";
+      const clientLabel = scopeLock.client.label || "a client";
+
+      const { error: notifyError } = await supabase.from("user_notifications").insert({
+        user_id: me.manager_uuid,
+        tenant_id: tenantId,
+        type: "ask_viv_escalation",
+        title: "Ask Viv escalation",
+        message: `${staffName} escalated an Ask Viv answer about ${clientLabel} for your review.`,
+        link: `/tenant/${tenantId}`,
+        created_by: user.id,
+        metadata: { ai_interaction_log_id: aiInteractionLogId, tenant_id: tenantId },
+      });
+
+      if (notifyError) {
+        console.error("Failed to escalate:", notifyError);
+        toast({
+          title: "Failed to escalate",
+          description: notifyError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsEscalated(true);
+      toast({
+        title: "Escalated to your Team Leader",
+        description: "They've been notified and can review this from their notifications.",
+      });
+    } catch (err) {
+      console.error("Error escalating interaction:", err);
+      toast({
+        title: "Error",
+        description: "Failed to escalate this interaction.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEscalating(false);
+    }
   }
 
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn("h-7 text-xs text-muted-foreground hover:text-foreground", className)}
-        onClick={() => setModalOpen(true)}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-        ) : (
-          <Flag className="h-3 w-3 mr-1" />
-        )}
-        Flag for CSC review
-      </Button>
+    <div className={cn("flex items-center gap-2 flex-wrap", className)}>
+      {isFlagged ? (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Flag className="h-3 w-3" />
+          <span>Flagged for review</span>
+        </div>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => setModalOpen(true)}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          ) : (
+            <Flag className="h-3 w-3 mr-1" />
+          )}
+          Flag for review
+        </Button>
+      )}
+
+      {isEscalated ? (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ArrowUpCircle className="h-3 w-3" />
+          <span>Escalated to your Team Leader</span>
+        </div>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-muted-foreground hover:text-foreground"
+          onClick={handleEscalate}
+          disabled={isEscalating}
+        >
+          {isEscalating ? (
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          ) : (
+            <ArrowUpCircle className="h-3 w-3 mr-1" />
+          )}
+          Escalate to my Team Leader
+        </Button>
+      )}
 
       <AskVivFlagModal
         open={modalOpen}
@@ -116,6 +210,6 @@ export function AskVivFlagButton({
         isSubmitting={isSubmitting}
         clientName={scopeLock.client.label || "Unknown client"}
       />
-    </>
+    </div>
   );
 }
