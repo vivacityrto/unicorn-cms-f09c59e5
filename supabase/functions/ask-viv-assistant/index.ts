@@ -15,10 +15,10 @@
  * against. Still read-only, still cites sources, still never fabricates beyond
  * what a tool actually returned.
  *
- * Phase B: search_clients (resolve a client by name) + get_client_context
- * (the deterministic Fact Builder's full structured snapshot for one tenant)
- * exist. Later phases add search_notes_and_emails / search_documents /
- * search_eos (RAG retrieval) on top.
+ * Phase C: search_clients, get_client_context (deterministic Fact Builder
+ * snapshot), search_notes_and_emails and search_eos (vector RAG retrieval
+ * over ask_viv_corpus, populated by embed-ask-viv-corpus) all exist. Phase D
+ * adds search_documents (RAG over generated document content) on top.
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -31,6 +31,7 @@ import {
   formatFactsForLLM,
   type AskVivFactBuilderInput,
 } from "../_shared/ask-viv-fact-builder/index.ts";
+import { generateEmbedding } from "../_shared/openai-embeddings.ts";
 import {
   callAnthropic,
   callAnthropicHaiku,
@@ -98,6 +99,31 @@ const TOOLS: AnthropicToolDefinition[] = [
         },
       },
       required: ["tenant_id"],
+    },
+  },
+  {
+    name: "search_notes_and_emails",
+    description:
+      "Semantic search over a client's full historical notes and emails — not just the most-recent handful get_client_context returns. Use this when the user asks about something from the past that might not be recent, e.g. \"what did we discuss with them about X\" or \"has this come up before\". Requires a tenant_id (resolve via search_clients first if you don't already have it).",
+    input_schema: {
+      type: "object",
+      properties: {
+        tenant_id: { type: "number", description: "The tenant's numeric id" },
+        query: { type: "string", description: "What to search for, in natural language" },
+      },
+      required: ["tenant_id", "query"],
+    },
+  },
+  {
+    name: "search_eos",
+    description:
+      "Semantic search over Vivacity's own internal EOS (Entrepreneurial Operating System) meeting content — headlines, issues, to-dos, rocks, and cascading messages from leadership meetings. Not tenant/client-specific. Use this for questions about Vivacity's own internal operations, priorities, or meeting history.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "What to search for, in natural language" },
+      },
+      required: ["query"],
     },
   },
 ];
@@ -248,6 +274,75 @@ async function executeTool(
       return {
         result: { error: err instanceof Error ? err.message : String(err) },
         summary: `get_client_context(${tenantId}) failed`,
+      };
+    }
+  }
+
+  if (name === "search_notes_and_emails") {
+    const tenantId = Number(input.tenant_id);
+    const query = String(input.query ?? "").trim();
+    if (!tenantId || Number.isNaN(tenantId) || !query) {
+      return { result: { error: "tenant_id and query are both required" }, summary: "search_notes_and_emails called with missing params" };
+    }
+    try {
+      const embedding = await generateEmbedding(query);
+      const { data, error } = await supabase.rpc("match_ask_viv_corpus", {
+        query_embedding: embedding,
+        match_threshold: 0.3,
+        match_count: 16,
+        filter_tenant_id: tenantId,
+        filter_source_type: null,
+      });
+      if (error) throw new Error(error.message);
+      const matches = (data || [])
+        .filter((r: any) => r.source_type === "note" || r.source_type === "email")
+        .slice(0, 8);
+      return {
+        result: {
+          matches: matches.map((m: any) => ({
+            source_type: m.source_type,
+            heading: m.heading,
+            content: m.content,
+            similarity: m.similarity,
+          })),
+        },
+        summary:
+          matches.length === 0
+            ? `search_notes_and_emails(${tenantId}, "${query}") — no matches`
+            : `search_notes_and_emails(${tenantId}, "${query}") — ${matches.length} match(es)`,
+      };
+    } catch (err) {
+      return {
+        result: { error: err instanceof Error ? err.message : String(err) },
+        summary: `search_notes_and_emails(${tenantId}, "${query}") failed`,
+      };
+    }
+  }
+
+  if (name === "search_eos") {
+    const query = String(input.query ?? "").trim();
+    if (!query) {
+      return { result: { error: "query is required" }, summary: "search_eos called with no query" };
+    }
+    try {
+      const embedding = await generateEmbedding(query);
+      const { data, error } = await supabase.rpc("match_ask_viv_corpus", {
+        query_embedding: embedding,
+        match_threshold: 0.3,
+        match_count: 8,
+        filter_tenant_id: null,
+        filter_source_type: "eos",
+      });
+      if (error) throw new Error(error.message);
+      const matches = data || [];
+      return {
+        result: { matches: matches.map((m: any) => ({ heading: m.heading, content: m.content, similarity: m.similarity })) },
+        summary: matches.length === 0 ? `search_eos("${query}") — no matches` : `search_eos("${query}") — ${matches.length} match(es)`,
+      };
+    } catch (err) {
+      return {
+        result: { error: err instanceof Error ? err.message : String(err) },
+        summary: `search_eos("${query}") failed`,
       };
     }
   }
