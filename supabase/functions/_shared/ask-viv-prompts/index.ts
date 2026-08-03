@@ -55,6 +55,27 @@ export {
 // Response templates
 export { RESPONSE_TEMPLATES } from "./response-templates.ts";
 
+// Intent classifier (pre-Fact-Builder routing)
+export {
+  classifyAskVivIntent,
+  isBlockedIntent,
+  getBlockedResponse,
+  buildIntentAuditEntry,
+  DECISION_REQUEST_REFRAME_INSTRUCTION,
+  INTENT_CLASSIFIER_VERSION,
+} from "./intentClassifier.ts";
+export type { AskVivIntent, IntentConfidence, IntentResult, IntentAuditEntry } from "./intentClassifier.ts";
+
+// Safety pipeline (phrase filter + response validator, with one repair pass)
+export {
+  runAskVivSafetyPipeline,
+  buildSafetyAuditEntry,
+  extractExplainSafety,
+  PIPELINE_VERSION,
+} from "./askVivSafetyPipeline.ts";
+export type { SafetyMeta, SafetyPipelineResult } from "./askVivSafetyPipeline.ts";
+export { validateAskVivResponse } from "./response-validator-v2.ts";
+
 /**
  * Build the complete system prompt pack for a given mode
  */
@@ -89,16 +110,23 @@ export function buildFullPrompt(
     gaps?: string[];
     vector_results?: unknown[];
     question: string;
+    extra_instructions?: string;
   }
 ): string {
   const pack = buildPromptPack(mode);
+  const extra = context.extra_instructions ? `\n\n${context.extra_instructions}` : "";
 
   if (mode === "compliance") {
+    // Standards citations (srto_corpus vector search results) were previously
+    // accepted on this context object but never actually injected into the
+    // prompt — this was pure dead weight, the LLM path never existed to read
+    // it. Now that Phase 3 wires a real LLM call, these need to actually
+    // reach the model so it can cite real clauses instead of inventing them.
     return `${pack.global}
 
 ${pack.mode_specific}
 
-${pack.developer}
+${pack.developer}${extra}
 
 ---
 INJECTED CONTEXT:
@@ -108,6 +136,9 @@ ${JSON.stringify(context.facts || [], null, 2)}
 
 RECORD_LINKS:
 ${JSON.stringify(context.record_links || [], null, 2)}
+
+STANDARDS_CITATIONS (from srto_corpus vector search — cite these exactly; never invent a source_document, clause, or chunk_index not listed here):
+${JSON.stringify(context.vector_results || [], null, 2)}
 
 GAPS:
 ${JSON.stringify(context.gaps || [])}
@@ -124,7 +155,7 @@ Now answer the question following all rules and the required output format.`;
 
 ${pack.mode_specific}
 
-${pack.developer}
+${pack.developer}${extra}
 
 ---
 INJECTED CONTEXT:
