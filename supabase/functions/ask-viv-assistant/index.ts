@@ -712,11 +712,17 @@ Deno.serve(async (req) => {
         system: systemText,
         messages: loopMessages,
         tools: TOOLS,
-        max_tokens: 2048,
+        max_tokens: 4096,
       });
       allResponses.push(response);
 
       if (response.stop_reason !== "tool_use") {
+        if (response.stop_reason === "max_tokens") {
+          // Response was cut off mid-generation, not a natural completion —
+          // log it so a real truncation is visible in edge function logs
+          // rather than silently shipping partial text as if it were final.
+          console.warn("Ask Viv Assistant response hit max_tokens and was truncated");
+        }
         finalText = extractText(response);
         break;
       }
@@ -741,7 +747,7 @@ Deno.serve(async (req) => {
           model: CLAUDE_SONNET_MODEL,
           system: systemText,
           messages: loopMessages,
-          max_tokens: 2048,
+          max_tokens: 4096,
         });
         allResponses.push(forced);
         finalText = extractText(forced).trim();
