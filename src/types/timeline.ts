@@ -40,6 +40,7 @@ export const TIMELINE_EVENT_TYPES = [
   'note_created',
   'note_pinned',
   'note_unpinned',
+  'structured_note_added',
   // Time
   'time_posted',
   'time_ignored',
