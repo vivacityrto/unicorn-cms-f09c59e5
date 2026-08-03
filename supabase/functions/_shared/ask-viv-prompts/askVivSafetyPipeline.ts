@@ -92,6 +92,30 @@ export interface SafetyAuditEntry {
 }
 
 /**
+ * Build a repair prompt for a phrase-filter block. Distinct from
+ * response-validator-v2's buildRepairPrompt (structural failures) — this
+ * names the exact banned words/phrases and asks for a wording-only rewrite,
+ * since the fix here is never "add a missing section," it's "say the same
+ * true thing without this specific word."
+ */
+function buildPhraseFilterRepairPrompt(originalResponse: string, matches: string[]): string {
+  const matchList = matches.map(m => `"${m}"`).join(", ");
+  return `Rewrite the following Ask Viv response to remove these exact banned words/phrases: ${matchList}.
+
+## RULES:
+- Do not use any of the banned words/phrases above anywhere in the rewrite, in any form (hyphenated, capitalised, or as part of a longer word).
+- Preserve all facts, citations, and section structure exactly — this is a wording-only rewrite, not a content change.
+- If the original text was quoting or closely paraphrasing a source record's own wording (e.g. an audit finding), describe the substance in different words instead of using the banned term. Still cite the source record so a human can read the original wording themselves.
+- Keep the same required section headings, in the same order.
+- Confidence must remain exactly "High", "Medium", or "Low".
+
+## ORIGINAL RESPONSE:
+${originalResponse}
+
+## REWRITTEN RESPONSE (same facts, without the banned words):`;
+}
+
+/**
  * Build phrase filter outcome from result
  */
 function buildPhraseFilterOutcome(result: PhraseFilterResult): PhraseFilterOutcome {
@@ -138,20 +162,77 @@ export async function runAskVivSafetyPipeline(args: {
   const phraseFilterResult = detectBannedPhrases(raw_text);
 
   if (phraseFilterResult.blocked) {
-    // Phrase filter blocked - return safe fallback immediately
-    // Do not run validator, do not attempt repair
+    // One rewrite-and-recheck attempt before failing closed. The filter
+    // cannot distinguish an accurate quote of a real source record (e.g. an
+    // audit's overall_finding literally containing "non-compliant") from
+    // the model asserting its own improper determination — both trip the
+    // same bare-word match. A single targeted repair, naming the exact
+    // banned words, gives the model a chance to describe the same facts in
+    // different words before we give up. Never more than one repair
+    // round-trip total, matching the structural-failure path below.
+    const phraseRepairPrompt = buildPhraseFilterRepairPrompt(raw_text, phraseFilterResult.matches);
+
+    let repairedText: string;
+    try {
+      repairedText = await repairOnce(phraseRepairPrompt);
+    } catch (error) {
+      return {
+        ok: false,
+        final_text: buildPhraseFilterFallback(mode, phraseFilterResult.matches),
+        blocked: true,
+        repaired: false,
+        phrase_filter: buildPhraseFilterOutcome(phraseFilterResult),
+        validator: {
+          ok: false,
+          errors: ["Skipped - phrase filter blocked response, repair call failed"],
+          repaired: false,
+          version: VALIDATOR_VERSION,
+        },
+      };
+    }
+
+    const repairedPhraseFilterResult = detectBannedPhrases(repairedText);
+
+    if (repairedPhraseFilterResult.blocked) {
+      // Still using a banned word after one rewrite attempt - fail closed.
+      return {
+        ok: false,
+        final_text: buildPhraseFilterFallback(mode, repairedPhraseFilterResult.matches),
+        blocked: true,
+        repaired: true,
+        phrase_filter: buildPhraseFilterOutcome(repairedPhraseFilterResult),
+        validator: {
+          ok: false,
+          errors: ["Skipped - repaired response still blocked by phrase filter"],
+          repaired: true,
+          version: VALIDATOR_VERSION,
+        },
+      };
+    }
+
+    // Passed the phrase filter - now check structure, same as any other response.
+    const repairedValidatorResult = validateAskVivResponse(repairedText, meta);
+
+    if (repairedValidatorResult.ok) {
+      return {
+        ok: true,
+        final_text: repairedText,
+        blocked: false,
+        repaired: true,
+        phrase_filter: buildPhraseFilterOutcome(repairedPhraseFilterResult),
+        validator: buildValidatorOutcome(repairedValidatorResult, true),
+      };
+    }
+
+    // Cleared the phrase filter but broke structure - the one repair
+    // attempt is already spent, so fail closed rather than looping further.
     return {
       ok: false,
-      final_text: buildPhraseFilterFallback(mode, phraseFilterResult.matches),
-      blocked: true,
-      repaired: false,
-      phrase_filter: buildPhraseFilterOutcome(phraseFilterResult),
-      validator: {
-        ok: false,
-        errors: ["Skipped - phrase filter blocked response"],
-        repaired: false,
-        version: VALIDATOR_VERSION,
-      },
+      final_text: buildValidatorFallback(meta),
+      blocked: false,
+      repaired: true,
+      phrase_filter: buildPhraseFilterOutcome(repairedPhraseFilterResult),
+      validator: buildValidatorOutcome(repairedValidatorResult, true),
     };
   }
 

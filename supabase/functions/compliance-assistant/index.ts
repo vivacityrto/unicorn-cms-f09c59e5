@@ -1820,7 +1820,9 @@ async function updateAuditLog(
         )
       : response.records_accessed;
 
-    const safetyMeta = (response as { safety_meta?: { generation_mode?: string } }).safety_meta;
+    const safetyMeta = (response as {
+      safety_meta?: { generation_mode?: string; safety_audit?: Record<string, unknown> };
+    }).safety_meta;
 
     const { error } = await supabase
       .from("ai_interaction_logs")
@@ -1846,6 +1848,11 @@ async function updateAuditLog(
           inference_decisions: extra.factsResult?.audit.inference_decisions || [],
           query_duration_ms: extra.factsResult?.audit.duration_ms || 0,
           gaps: extra.factsResult?.gaps || [],
+          // Diagnostic: previously computed but discarded — the phrase
+          // filter's matched phrases/categories were never persisted
+          // anywhere, making a blocked response unexplainable after the
+          // fact. Surfaces exactly which pattern tripped it.
+          ...(safetyMeta?.safety_audit ?? {}),
           ...(extra.intent ?? {}),
         },
         chunks_used: response.chunks_used || 0,
