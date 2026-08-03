@@ -42,6 +42,8 @@ import {
   HelpCircle,
   Link as LinkIcon,
   Globe,
+  History,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
@@ -134,6 +136,12 @@ interface Thread {
   title: string;
 }
 
+interface ConversationSummary {
+  id: string;
+  title: string | null;
+  updated_at: string;
+}
+
 /**
  * AskVivPanel - Main chatbot panel wrapper with mode selector
  * Supports both Knowledge and Compliance Assistant modes
@@ -147,6 +155,10 @@ export function AskVivPanel() {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentThread, setCurrentThread] = useState<Thread | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [conversationList, setConversationList] = useState<ConversationSummary[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -409,6 +421,7 @@ export function AskVivPanel() {
           package_id: effectiveScope.package_id ? parseInt(effectiveScope.package_id, 10) : null,
           phase_id: effectiveScope.phase_id ? parseInt(effectiveScope.phase_id, 10) : null,
         },
+        conversation_id: currentConversationId,
       },
     });
 
@@ -417,7 +430,7 @@ export function AskVivPanel() {
     }
 
     const result = response.data;
-    
+
     return {
       content: result.answer_markdown,
       records_accessed: result.records_accessed,
@@ -431,6 +444,7 @@ export function AskVivPanel() {
       explain: result.explain ?? undefined,
       ai_interaction_log_id: result.ai_interaction_log_id ?? null,
       audit_logged: result.audit_logged ?? false,
+      conversation_id: result.conversation_id ?? null,
     };
   }
 
@@ -586,6 +600,9 @@ export function AskVivPanel() {
         }
       } else {
         const result = await sendComplianceMessage(userMessage);
+        if (result.conversation_id) {
+          setCurrentConversationId(result.conversation_id);
+        }
         assistantResponse = {
           id: "compliance-" + Date.now(),
           role: "assistant",
@@ -633,8 +650,87 @@ export function AskVivPanel() {
 
   function startNewChat() {
     setCurrentThread(null);
+    setCurrentConversationId(null);
     setMessages([]);
     clearSessionScope();
+  }
+
+  // Phase 5: conversation history — scoped to the current tenant (a CSC's
+  // history for one client is far more useful than a mixed cross-tenant
+  // list). Lazy-loaded when the history dropdown opens.
+  async function loadConversationHistory() {
+    if (!user?.id || !context.tenant_id) {
+      setConversationList([]);
+      return;
+    }
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from("ask_viv_conversations")
+        .select("id, title, updated_at")
+        .eq("user_id", user.id)
+        .eq("tenant_id", context.tenant_id)
+        .order("updated_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      setConversationList(data || []);
+    } catch (err) {
+      console.error("Failed to load Ask Viv conversation history:", err);
+      setConversationList([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
+  function toggleHistory() {
+    const next = !historyOpen;
+    setHistoryOpen(next);
+    if (next) loadConversationHistory();
+  }
+
+  // Historical turns don't carry the rich per-message metadata (confidence,
+  // records_accessed, scope_lock etc.) that a live response has — the
+  // permanent audit trail with all of that lives in ai_interaction_logs
+  // regardless. This view is for conversational continuity, not re-deriving
+  // the audit record.
+  async function openConversation(conversationId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("ask_viv_turns")
+        .select("id, role, content, created_at")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+
+      const loadedMessages: Message[] = (data || []).map((t: any) => ({
+        id: t.id,
+        role: t.role,
+        content: t.content,
+        created_at: t.created_at,
+      }));
+      setMessages(loadedMessages);
+      setCurrentConversationId(conversationId);
+      setHistoryOpen(false);
+    } catch (err) {
+      console.error("Failed to load Ask Viv conversation:", err);
+      toast({ title: "Error", description: "Failed to load conversation", variant: "destructive" });
+    }
+  }
+
+  async function deleteConversation(conversationId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    try {
+      const { error } = await supabase.from("ask_viv_conversations").delete().eq("id", conversationId);
+      if (error) throw error;
+      setConversationList((prev) => prev.filter((c) => c.id !== conversationId));
+      if (currentConversationId === conversationId) {
+        setCurrentConversationId(null);
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error("Failed to delete Ask Viv conversation:", err);
+      toast({ title: "Error", description: "Failed to delete conversation", variant: "destructive" });
+    }
   }
 
   function clearContext() {
@@ -745,17 +841,71 @@ export function AskVivPanel() {
       </div>
 
       {/* Mode Selector + Explain Toggle */}
-      <div className="px-4 py-2 border-b border-border bg-muted/20">
+      <div className="relative px-4 py-2 border-b border-border bg-muted/20">
         <div className="flex items-center justify-between gap-2">
           <AskVivModeSelector />
-          {/* Explain sources toggle - only for compliance mode and Vivacity internal */}
-          {isComplianceMode && flags.explainSourcesEnabled && (
-            <AskVivExplainSourcesToggle
-              enabled={explainSourcesEnabled}
-              onToggle={handleExplainSourcesToggle}
-            />
-          )}
+          <div className="flex items-center gap-1">
+            {/* Conversation history — compliance mode only, scoped to the current tenant */}
+            {isComplianceMode && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={toggleHistory}
+                title="Conversation history"
+              >
+                <History className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {/* Explain sources toggle - only for compliance mode and Vivacity internal */}
+            {isComplianceMode && flags.explainSourcesEnabled && (
+              <AskVivExplainSourcesToggle
+                enabled={explainSourcesEnabled}
+                onToggle={handleExplainSourcesToggle}
+              />
+            )}
+          </div>
         </div>
+
+        {historyOpen && isComplianceMode && (
+          <div className="absolute top-full left-2 right-2 z-20 mt-1 bg-card border border-border rounded-xl shadow-lg max-h-64 overflow-y-auto">
+            <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-medium text-foreground">Recent conversations</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setHistoryOpen(false)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+            {loadingHistory ? (
+              <div className="p-3 text-xs text-muted-foreground text-center">Loading…</div>
+            ) : !context.tenant_id ? (
+              <div className="p-3 text-xs text-muted-foreground text-center">Select a tenant to see its conversation history</div>
+            ) : conversationList.length === 0 ? (
+              <div className="p-3 text-xs text-muted-foreground text-center">No past conversations for this tenant</div>
+            ) : (
+              <div className="p-1">
+                {conversationList.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => openConversation(c.id)}
+                    className={cn(
+                      "flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted/50 text-xs",
+                      currentConversationId === c.id && "bg-muted"
+                    )}
+                  >
+                    <span className="truncate flex-1 text-foreground">{c.title || "Untitled conversation"}</span>
+                    <button
+                      onClick={(e) => deleteConversation(c.id, e)}
+                      className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                      title="Delete conversation"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Capabilities Banner & Context */}
