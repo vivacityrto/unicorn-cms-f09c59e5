@@ -84,6 +84,9 @@ import {
 // Phase 6: portfolio-wide scope
 import { PORTFOLIO_SCOPE_INSTRUCTION } from "../_shared/ask-viv-prompts/index.ts";
 
+// Phase 5 conversation helpers — shared with ask-viv-assistant, not duplicated
+import { resolveOrCreateConversation, logTurn } from "../_shared/ask-viv-conversations.ts";
+
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 const corsHeaders = {
@@ -686,72 +689,6 @@ Deno.serve(async (req) => {
     return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
-
-/**
- * Phase 5: resolve an existing conversation (if the caller passed one they
- * actually own) or create a new one. Conversation history is a convenience
- * layer, not the audit trail — a failure to create/verify one never fails
- * the request; it falls back to a fresh in-memory id so turn logging still
- * has somewhere consistent to point, even if no row ends up persisted.
- */
-async function resolveOrCreateConversation(
-  supabase: any,
-  userId: string,
-  tenantId: number | null,
-  requestedConversationId: string | null | undefined,
-  question: string
-): Promise<string> {
-  if (requestedConversationId) {
-    const { data } = await supabase
-      .from("ask_viv_conversations")
-      .select("id")
-      .eq("id", requestedConversationId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (data) {
-      await supabase
-        .from("ask_viv_conversations")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", requestedConversationId);
-      return requestedConversationId;
-    }
-    // Requested id doesn't exist or isn't owned by this user — fall through
-    // and start a fresh conversation rather than failing the request.
-  }
-
-  const title = question.length > 80 ? `${question.slice(0, 77)}...` : question;
-  const { data: created, error } = await supabase
-    .from("ask_viv_conversations")
-    .insert({ user_id: userId, tenant_id: tenantId, title })
-    .select("id")
-    .single();
-
-  if (error || !created) {
-    console.error("Failed to create ask_viv_conversations row:", error);
-    return crypto.randomUUID();
-  }
-  return created.id;
-}
-
-/** Best-effort turn log. Never fails the request — conversation history is a convenience layer, not the audit trail. */
-async function logTurn(
-  supabase: any,
-  conversationId: string,
-  role: "user" | "assistant",
-  content: string
-): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from("ask_viv_turns")
-      .insert({ conversation_id: conversationId, role, content, mode: "compliance" });
-    if (error) {
-      console.error(`Failed to log ${role} turn:`, error);
-    }
-  } catch (err) {
-    console.error(`Failed to log ${role} turn:`, err);
-  }
-}
 
 /**
  * Phase 6: handle a portfolio-wide scope request. Kept as a self-contained

@@ -12,6 +12,7 @@ import { ClientFooter } from "@/components/client/ClientFooter";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 
 import { AskVivPanel, AskVivFloatingLauncher } from "@/components/ask-viv";
+import { AskVivAssistantWidget } from "@/components/ask-viv-assistant/AskVivAssistantWidget";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
@@ -29,6 +30,7 @@ import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 // 1. WORK Section - All Vivacity Team Roles
 const workMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Sparkles, label: "Ask Viv", path: "/ask-viv" },
   { icon: LayoutDashboard, label: "Triage Dashboard", path: "/triage-dashboard" },
   { icon: BarChart3, label: "Executive Dashboard", path: "/executive", leadershipOnly: true },
   { icon: Inbox, label: "Inbox", path: "/inbox" },
@@ -720,6 +722,8 @@ export const DashboardLayout = ({
         {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
         <AskVivPanel />
         <AskVivFloatingLauncher />
+        {/* Ask Viv Assistant - new, separate conversational RAG bot (self-gated, rollout-flagged) */}
+        <AskVivAssistantWidget />
         <ScrollToTopButton />
 
         {/* Help Center Drawer (available for client roles) */}

@@ -157,6 +157,7 @@ const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
 const ProcessForm = lazy(() => import("./pages/ProcessForm"));
 const RoleReference = lazy(() => import("./pages/RoleReference"));
 const AdminAssistant = lazy(() => import("./pages/AdminAssistant"));
+const AskVivAssistant = lazy(() => import("./pages/AskVivAssistant"));
 const AdminKnowledgeLibrary = lazy(() => import("./pages/AdminKnowledgeLibrary"));
 const AdminEOSProcesses = lazy(() => import("./pages/AdminEOSProcesses"));
 const EosHealthCheck = lazy(() => import("./pages/EosHealthCheck"));
@@ -1126,6 +1127,8 @@ const App = () => (
             <Route path="/kpi" element={<ProtectedRoute><KpiPage /></ProtectedRoute>} />
             {/* AI Assistant - SuperAdmin only */}
             <Route path="/admin/assistant" element={<ProtectedRoute requireSuperAdmin><AdminAssistant /></ProtectedRoute>} />
+            {/* Ask Viv Assistant - new conversational RAG bot, Vivacity staff only (self-gated inside the page via canAccessAskViv() + rollout flags) */}
+            <Route path="/ask-viv" element={<ProtectedRoute><AskVivAssistant /></ProtectedRoute>} />
            <Route path="/admin/knowledge" element={<ProtectedRoute requireSuperAdmin><AdminKnowledgeLibrary /></ProtectedRoute>} />
            <Route path="/admin/eos-processes" element={<ProtectedRoute requireSuperAdmin><AdminEOSProcesses /></ProtectedRoute>} />
             {/* QA Responsive Harness - SuperAdmin/VivacityTeam only */}
