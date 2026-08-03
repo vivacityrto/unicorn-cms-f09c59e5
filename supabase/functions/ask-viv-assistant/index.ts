@@ -210,13 +210,18 @@ async function isAssistantEnabledForUser(supabase: any, userId: string, profile:
 }
 
 /** Check today's cumulative usage against the configured daily cap, before doing any real work. */
-async function checkUsageCap(supabase: any, userId: string): Promise<{ withinCap: boolean; used: number; cap: number }> {
+async function checkUsageCap(
+  supabase: any,
+  userId: string
+): Promise<{ withinCap: boolean; used: number; cap: number; unlimited: boolean }> {
   const { data: settings } = await supabase
     .from("app_settings")
-    .select("ask_viv_assistant_daily_token_cap")
+    .select("ask_viv_assistant_daily_token_cap, ask_viv_assistant_unlimited_user_ids")
     .limit(1)
     .maybeSingle();
   const cap = settings?.ask_viv_assistant_daily_token_cap ?? 500_000;
+  const unlimitedUserIds: string[] = settings?.ask_viv_assistant_unlimited_user_ids || [];
+  const unlimited = unlimitedUserIds.includes(userId);
 
   const today = new Date().toISOString().slice(0, 10);
   const { data: usage } = await supabase
@@ -227,7 +232,9 @@ async function checkUsageCap(supabase: any, userId: string): Promise<{ withinCap
     .maybeSingle();
   const used = (usage?.input_tokens ?? 0) + (usage?.output_tokens ?? 0);
 
-  return { withinCap: used < cap, used, cap };
+  // Exempt users skip the cap entirely — still tracked (recordUsage runs
+  // unconditionally below) so their usage is visible, just never blocking.
+  return { withinCap: unlimited || used < cap, used, cap, unlimited };
 }
 
 /** Record actual token usage from this request, upserting today's row. */

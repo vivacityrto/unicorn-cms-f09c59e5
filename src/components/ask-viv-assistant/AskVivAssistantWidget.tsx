@@ -7,7 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAskVivAssistantChat } from "@/hooks/useAskVivAssistantChat";
 import { useAskVivAssistantAccess } from "@/hooks/useAskVivAssistantAccess";
 import { useAskVivAssistantWidget } from "@/hooks/useAskVivAssistantWidget";
+import { useAskVivAssistantUsage } from "@/hooks/useAskVivAssistantUsage";
 import { AssistantMessageBubble } from "@/components/ask-viv-assistant/AssistantMessageBubble";
+import { AssistantUsageGauge } from "@/components/ask-viv-assistant/AssistantUsageGauge";
 import { X, Send, Loader2, Sparkles, History, MessageSquare, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import vivIcon from "@/assets/viv-icon.png";
@@ -46,6 +48,7 @@ export function AskVivAssistantWidget() {
   } = useAskVivAssistantChat();
 
   const { isOpen, openWidget, closeWidget } = useAskVivAssistantWidget();
+  const { refetchUsage } = useAskVivAssistantUsage();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -78,6 +81,7 @@ export function AskVivAssistantWidget() {
     setInputMessage("");
     try {
       await sendMessage(text);
+      refetchUsage();
     } catch (err) {
       toast({
         title: "Error",
@@ -126,7 +130,8 @@ export function AskVivAssistantWidget() {
             <p className="text-xs text-muted-foreground">Assistant</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <AssistantUsageGauge compact />
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleHistory} title="Conversation history">
             <History className="h-4 w-4" />
           </Button>

@@ -274,13 +274,15 @@ async function ingestSource(
   const errors: string[] = [];
 
   let since: string | null = null;
+  let sinceId: string | null = null;
   if (opts.tenantIdFilter === null) {
     const { data: state } = await admin
       .from('ask_viv_corpus_ingestion_state')
-      .select('last_run_at')
+      .select('last_run_at, last_id')
       .eq('source_table', config.table)
       .maybeSingle();
     since = (state?.last_run_at as string | undefined) ?? '1970-01-01T00:00:00Z';
+    sinceId = (state?.last_id as string | null | undefined) ?? null;
   }
 
   let query = admin.from(config.table).select(config.select);
@@ -288,9 +290,17 @@ async function ingestSource(
   if (opts.tenantIdFilter !== null) {
     query = query.eq('tenant_id', opts.tenantIdFilter);
   } else if (since) {
-    query = query.gt(config.cursorColumn, since);
+    // Plain `.gt(cursorColumn, since)` silently drops every row past the
+    // first batch whenever more rows share the exact same cursorColumn
+    // value than fit in one batch — tiebreak on id once a prior run has
+    // recorded one (same fix as embed-ask-viv-corpus).
+    if (sinceId) {
+      query = query.or(`${config.cursorColumn}.gt.${since},and(${config.cursorColumn}.eq.${since},id.gt.${sinceId})`);
+    } else {
+      query = query.gt(config.cursorColumn, since);
+    }
   }
-  query = query.order(config.cursorColumn, { ascending: true }).limit(opts.limit);
+  query = query.order(config.cursorColumn, { ascending: true }).order('id', { ascending: true }).limit(opts.limit);
 
   const { data: rows, error: fetchErr } = await query;
   if (fetchErr) {
@@ -301,12 +311,12 @@ async function ingestSource(
     return { rows_processed, docs_skipped, chunks_inserted, chunks_deleted, errors };
   }
 
-  let maxCursor: string | null = null;
+  const lastRow = (rows as any[])[rows.length - 1];
+  const maxCursor: string | null = lastRow[config.cursorColumn] ?? null;
+  const maxId: string | null = lastRow.id ? String(lastRow.id) : null;
 
   for (const row of rows as any[]) {
     rows_processed++;
-    const cursorValue = row[config.cursorColumn];
-    if (cursorValue && (!maxCursor || cursorValue > maxCursor)) maxCursor = cursorValue;
 
     const path = config.pathOf(row);
     if (!path) {
@@ -393,7 +403,7 @@ async function ingestSource(
 
   if (opts.tenantIdFilter === null && maxCursor) {
     await admin.from('ask_viv_corpus_ingestion_state').upsert(
-      { source_table: config.table, last_run_at: maxCursor, updated_at: new Date().toISOString() },
+      { source_table: config.table, last_run_at: maxCursor, last_id: maxId, updated_at: new Date().toISOString() },
       { onConflict: 'source_table' }
     );
   }

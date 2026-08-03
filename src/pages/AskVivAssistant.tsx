@@ -9,7 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAskVivAssistantChat } from "@/hooks/useAskVivAssistantChat";
 import { useAskVivAssistantAccess } from "@/hooks/useAskVivAssistantAccess";
+import { useAskVivAssistantUsage } from "@/hooks/useAskVivAssistantUsage";
 import { AssistantMessageBubble } from "@/components/ask-viv-assistant/AssistantMessageBubble";
+import { AssistantUsageGauge } from "@/components/ask-viv-assistant/AssistantUsageGauge";
 import { Sparkles, Plus, Trash2, Send, Loader2, MessageSquare } from "lucide-react";
 import vivIcon from "@/assets/viv-icon.png";
 
@@ -37,6 +39,7 @@ export default function AskVivAssistant() {
     sendMessage,
   } = useAskVivAssistantChat();
 
+  const { refetchUsage } = useAskVivAssistantUsage();
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -85,6 +88,7 @@ export default function AskVivAssistant() {
     try {
       await sendMessage(text);
       loadConversationHistory();
+      refetchUsage();
     } catch (err) {
       toast({
         title: "Error",
@@ -176,6 +180,9 @@ export default function AskVivAssistant() {
         {/* Right panel — active conversation */}
         <Card className="flex-1 flex flex-col">
           <CardContent className="flex-1 flex flex-col p-4 overflow-hidden">
+            <div className="flex items-center justify-end mb-2">
+              <AssistantUsageGauge />
+            </div>
             <ScrollArea className="flex-1 pr-2">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4 py-12">
