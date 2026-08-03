@@ -52,9 +52,6 @@ export {
   sanitizeResponse,
 } from "./response-validator.ts";
 
-// Response templates
-export { RESPONSE_TEMPLATES } from "./response-templates.ts";
-
 // Intent classifier (pre-Fact-Builder routing)
 export {
   classifyAskVivIntent,
