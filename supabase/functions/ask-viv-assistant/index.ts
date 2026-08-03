@@ -15,10 +15,10 @@
  * against. Still read-only, still cites sources, still never fabricates beyond
  * what a tool actually returned.
  *
- * Phase A: only one real tool exists (search_clients) — enough to prove the
- * agentic loop, usage cap, summarization, and conversation persistence all work
- * end to end before later phases add get_client_context / search_notes_and_emails
- * / search_documents / search_eos on top.
+ * Phase B: search_clients (resolve a client by name) + get_client_context
+ * (the deterministic Fact Builder's full structured snapshot for one tenant)
+ * exist. Later phases add search_notes_and_emails / search_documents /
+ * search_eos (RAG retrieval) on top.
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -26,6 +26,11 @@ import { extractToken, verifyAuth, checkSuperAdmin, UserProfile } from "../_shar
 import { jsonError, jsonRaw } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { resolveOrCreateConversation, logTurn, loadConversationContext } from "../_shared/ask-viv-conversations.ts";
+import {
+  buildAskVivFacts,
+  formatFactsForLLM,
+  type AskVivFactBuilderInput,
+} from "../_shared/ask-viv-fact-builder/index.ts";
 import {
   callAnthropic,
   callAnthropicHaiku,
@@ -78,6 +83,21 @@ const TOOLS: AnthropicToolDefinition[] = [
         name: { type: "string", description: "The client/company name to search for, as mentioned by the user" },
       },
       required: ["name"],
+    },
+  },
+  {
+    name: "get_client_context",
+    description:
+      "Get a combined snapshot of structured facts for one client/tenant: package and phase status, tasks, action items, documents, hours logged, recent notes/emails, the compliance audit register, the portal user roster and invite status, and recent cross-source timeline activity. Call this after resolving a tenant_id via search_clients (or if you already know it from earlier in this conversation) whenever the user asks about a specific client's current state, history, or activity.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tenant_id: {
+          type: "number",
+          description: "The tenant's numeric id, from an earlier search_clients call or already known from this conversation",
+        },
+      },
+      required: ["tenant_id"],
     },
   },
 ];
@@ -169,11 +189,12 @@ async function recordUsage(supabase: any, userId: string, inputTokens: number, o
   }
 }
 
-/** Execute a tool call by name. Phase A: only search_clients exists. */
+/** Execute a tool call by name. Phase B: search_clients + get_client_context. */
 async function executeTool(
   name: string,
   input: Record<string, unknown>,
-  supabase: any
+  supabase: any,
+  profile: UserProfile
 ): Promise<{ result: unknown; summary: string }> {
   if (name === "search_clients") {
     const nameQuery = String(input.name ?? "").trim();
@@ -197,6 +218,38 @@ async function executeTool(
           ? `search_clients("${nameQuery}") — no matches`
           : `search_clients("${nameQuery}") — ${matches.length} match(es): ${matches.map((m: any) => m.name).join(", ")}`,
     };
+  }
+
+  if (name === "get_client_context") {
+    const tenantId = Number(input.tenant_id);
+    if (!tenantId || Number.isNaN(tenantId)) {
+      return { result: { error: "No valid tenant_id provided" }, summary: "get_client_context called with no valid tenant_id" };
+    }
+
+    try {
+      const factBuilderInput: AskVivFactBuilderInput = {
+        user_id: profile.user_uuid,
+        tenant_id: tenantId,
+        role: profile.unicorn_role || "unknown",
+        now_iso: new Date().toISOString(),
+        timezone: "Australia/Sydney",
+      };
+      const factsResult = await buildAskVivFacts(supabase, factBuilderInput);
+
+      if (factsResult.facts.length === 0 && factsResult.gaps.includes("Tenant not found or access denied")) {
+        return { result: { error: "Tenant not found" }, summary: `get_client_context(${tenantId}) — tenant not found` };
+      }
+
+      return {
+        result: { facts_summary: formatFactsForLLM(factsResult.facts), gaps: factsResult.gaps },
+        summary: `get_client_context(${tenantId}) — ${factsResult.facts.length} fact(s), ${factsResult.gaps.length} gap(s)`,
+      };
+    } catch (err) {
+      return {
+        result: { error: err instanceof Error ? err.message : String(err) },
+        summary: `get_client_context(${tenantId}) failed`,
+      };
+    }
   }
 
   return { result: { error: `Unknown tool: ${name}` }, summary: `Unknown tool: ${name}` };
@@ -365,7 +418,7 @@ Deno.serve(async (req) => {
       const toolUses = extractToolUses(response);
       const toolResultBlocks = [];
       for (const tu of toolUses) {
-        const { result, summary } = await executeTool(tu.name, tu.input, supabase);
+        const { result, summary } = await executeTool(tu.name, tu.input, supabase, profile);
         toolCalls.push({ name: tu.name, input: tu.input, summary });
         toolResultBlocks.push({ type: "tool_result" as const, tool_use_id: tu.id, content: JSON.stringify(result) });
       }

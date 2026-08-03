@@ -32,6 +32,7 @@ import {
   deriveCommsFacts,
   deriveAuditRegisterFacts,
   deriveTenantUsersFacts,
+  deriveTimelineEventFacts,
 } from "./fact-derivation.ts";
 import { buildRecordLinks, deduplicateLinks } from "./record-links.ts";
 
@@ -170,6 +171,14 @@ export async function buildAskVivFacts(
     facts.push(...tenantUserFacts);
   } else {
     gaps.push("No portal users found for this tenant");
+  }
+
+  // Recent cross-source activity timeline (notes, action items, account lifecycle)
+  if (data.timelineEvents.length > 0) {
+    const timelineFacts = deriveTimelineEventFacts(data.timelineEvents, input.now_iso);
+    facts.push(...timelineFacts);
+  } else {
+    gaps.push("No recent timeline events found for this tenant");
   }
 
   // 7. Build record links

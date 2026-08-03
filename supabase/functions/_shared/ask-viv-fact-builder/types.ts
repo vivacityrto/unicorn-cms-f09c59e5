@@ -263,6 +263,21 @@ export interface AuditActionFactData {
 }
 
 /**
+ * One row from client_timeline_events — a cross-source activity feed
+ * (notes, action items, account lifecycle) distinct from the narrower
+ * comms/audit/task sources above.
+ */
+export interface TimelineEventFactData {
+  id: string;                        // client_timeline_events.id (uuid)
+  event_type: string;
+  title: string;
+  body?: string | null;
+  occurred_at: string;
+  entity_type?: string | null;
+  entity_id?: string | null;
+}
+
+/**
  * One row per tenant portal user, from v_client_tenant_users.
  * row_type distinguishes an active membership from a pending invite —
  * always check row_type, not just status, since a disabled member and a

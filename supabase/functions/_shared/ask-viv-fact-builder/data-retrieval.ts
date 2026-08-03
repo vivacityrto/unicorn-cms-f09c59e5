@@ -19,6 +19,7 @@ import type {
   AuditFindingFactData,
   AuditActionFactData,
   TenantUserFactData,
+  TimelineEventFactData,
   MAX_TASKS_FOR_DERIVATION,
   MAX_DOCUMENTS_FOR_DERIVATION,
   CONSULT_LOOKBACK_DAYS,
@@ -30,6 +31,7 @@ export const DOC_LIMIT = 100;
 export const CONSULT_DAYS = 30;
 export const ACTION_ITEM_LIMIT = 100;
 export const TIME_ENTRY_LIMIT = 200;
+export const TIMELINE_EVENT_LIMIT = 20;
 
 export interface RetrievedData {
   tenant: TenantFactData | null;
@@ -44,6 +46,7 @@ export interface RetrievedData {
   auditFindings: AuditFindingFactData[];
   auditActions: AuditActionFactData[];
   tenantUsers: TenantUserFactData[];
+  timelineEvents: TimelineEventFactData[];
   tables_queried: string[];
   record_ids: { table: string; ids: string[] }[];
   // Keyed `${table}:${id}` — real display names for record links, built
@@ -452,6 +455,33 @@ export async function retrieveFactData(
     delivery_status: u.delivery_status,
   }));
 
+  // 11. Recent cross-source activity timeline. Queried directly rather than
+  // through the table's own RPC, which is SECURITY INVOKER and can under-serve
+  // plain Team Member staff due to an RLS quirk — a direct service-role query
+  // with an explicit tenant_id filter avoids that gap the same way every
+  // other source here does.
+  tablesQueried.push("client_timeline_events");
+  const { data: timelineEventsData } = await supabase
+    .from("client_timeline_events")
+    .select("id, event_type, title, body, occurred_at, entity_type, entity_id")
+    .eq("tenant_id", tenantId)
+    .order("occurred_at", { ascending: false })
+    .limit(TIMELINE_EVENT_LIMIT);
+
+  const timelineEvents: TimelineEventFactData[] = (timelineEventsData || []).map((e: any) => ({
+    id: e.id,
+    event_type: e.event_type,
+    title: e.title,
+    body: e.body,
+    occurred_at: e.occurred_at,
+    entity_type: e.entity_type,
+    entity_id: e.entity_id,
+  }));
+
+  if (timelineEvents.length > 0) {
+    recordIds.push({ table: "client_timeline_events", ids: timelineEvents.map(e => e.id) });
+  }
+
   return {
     tenant,
     packages,
@@ -465,6 +495,7 @@ export async function retrieveFactData(
     auditFindings,
     auditActions,
     tenantUsers,
+    timelineEvents,
     tables_queried: tablesQueried,
     record_ids: recordIds,
     labels,

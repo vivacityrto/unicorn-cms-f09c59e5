@@ -20,6 +20,7 @@ import type {
   AuditFindingFactData,
   AuditActionFactData,
   TenantUserFactData,
+  TimelineEventFactData,
 } from "./types.ts";
 
 /** Strip HTML tags and collapse whitespace — note/email previews come as raw HTML. */
@@ -843,6 +844,32 @@ export function deriveTenantUsersFacts(users: TenantUserFactData[], nowIso: stri
       derived_at: nowIso,
     });
   }
+
+  return facts;
+}
+
+/**
+ * Derive a recent-activity-timeline fact from client_timeline_events — a
+ * broader, cross-source activity feed (notes, action items, account
+ * lifecycle) distinct from the narrower comms/audit/task sources above.
+ */
+export function deriveTimelineEventFacts(events: TimelineEventFactData[], nowIso: string): DerivedFact[] {
+  const facts: DerivedFact[] = [];
+
+  if (events.length === 0) return facts;
+
+  facts.push({
+    key: "recent_timeline_events",
+    value: events.slice(0, 15).map(e => ({
+      event_type: e.event_type,
+      title: e.title,
+      occurred_at: e.occurred_at,
+    })),
+    reason: `${events.length} recent timeline event(s) recorded for this tenant`,
+    source_table: "client_timeline_events",
+    source_ids: events.slice(0, 15).map(e => e.id),
+    derived_at: nowIso,
+  });
 
   return facts;
 }
