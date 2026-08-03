@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,7 +8,7 @@ import { useAskVivAssistantChat } from "@/hooks/useAskVivAssistantChat";
 import { useAskVivAssistantAccess } from "@/hooks/useAskVivAssistantAccess";
 import { useAskVivAssistantWidget } from "@/hooks/useAskVivAssistantWidget";
 import { AssistantMessageBubble } from "@/components/ask-viv-assistant/AssistantMessageBubble";
-import { X, Send, Loader2, Sparkles, History, MessageSquare } from "lucide-react";
+import { X, Send, Loader2, Sparkles, History, MessageSquare, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import vivIcon from "@/assets/viv-icon.png";
 
@@ -29,6 +30,7 @@ import vivIcon from "@/assets/viv-icon.png";
  */
 export function AskVivAssistantWidget() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { enabled, isLoading: accessLoading } = useAskVivAssistantAccess();
   const {
     conversationId,
@@ -63,6 +65,11 @@ export function AskVivAssistantWidget() {
     const next = !historyOpen;
     setHistoryOpen(next);
     if (next) loadConversationHistory();
+  };
+
+  const handleOpenFullPage = () => {
+    navigate(conversationId ? `/ask-viv?conversation=${conversationId}` : "/ask-viv");
+    closeWidget();
   };
 
   const handleSend = async () => {
@@ -123,6 +130,9 @@ export function AskVivAssistantWidget() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleHistory} title="Conversation history">
             <History className="h-4 w-4" />
           </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleOpenFullPage} title="Open full page">
+            <Maximize2 className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeWidget}>
             <X className="h-4 w-4" />
           </Button>
@@ -154,7 +164,7 @@ export function AskVivAssistantWidget() {
                       conversationId === c.id && "bg-muted"
                     )}
                   >
-                    <span className="truncate flex-1 text-foreground">{c.title || "Untitled conversation"}</span>
+                    <span className="min-w-0 flex-1 truncate text-foreground">{c.title || "Untitled conversation"}</span>
                     <button
                       onClick={(e) => handleDelete(c.id, e)}
                       className="text-muted-foreground hover:text-destructive flex-shrink-0"
