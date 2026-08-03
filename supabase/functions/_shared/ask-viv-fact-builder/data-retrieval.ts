@@ -14,6 +14,11 @@ import type {
   EvidenceFactData,
   ActionItemFactData,
   TimeFactData,
+  CommsFactData,
+  AuditFactData,
+  AuditFindingFactData,
+  AuditActionFactData,
+  TenantUserFactData,
   MAX_TASKS_FOR_DERIVATION,
   MAX_DOCUMENTS_FOR_DERIVATION,
   CONSULT_LOOKBACK_DAYS,
@@ -34,6 +39,11 @@ export interface RetrievedData {
   evidence: EvidenceFactData[];
   actionItems: ActionItemFactData[];
   timeEntries: TimeFactData[];
+  comms: CommsFactData;
+  audits: AuditFactData[];
+  auditFindings: AuditFindingFactData[];
+  auditActions: AuditActionFactData[];
+  tenantUsers: TenantUserFactData[];
   tables_queried: string[];
   record_ids: { table: string; ids: string[] }[];
   // Keyed `${table}:${id}` — real display names for record links, built
@@ -328,6 +338,120 @@ export async function retrieveFactData(
     recordIds.push({ table: "time_entries", ids: timeEntries.map(t => t.id) });
   }
 
+  // 8. Recent notes + emails from the pre-aggregated dashboard view — already
+  // limited to the top 5 of each per tenant, so no separate union query is
+  // needed at current note/email volumes.
+  tablesQueried.push("v_dashboard_tenant_recent_comms");
+  const { data: commsRow } = await supabase
+    .from("v_dashboard_tenant_recent_comms")
+    .select("recent_notes_json, recent_emails_json")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  const comms: CommsFactData = {
+    recent_notes: (commsRow?.recent_notes_json || []) as CommsFactData["recent_notes"],
+    recent_emails: (commsRow?.recent_emails_json || []) as CommsFactData["recent_emails"],
+  };
+
+  // 9. Compliance audit register — client_audits (linked via subject_tenant_id),
+  // plus child findings/actions for whichever audits this tenant has. This is
+  // a tenant-level register, not package/phase-scoped.
+  tablesQueried.push("client_audits");
+  const { data: auditsData } = await supabase
+    .from("client_audits")
+    .select("id, audit_type, status, risk_rating, risk_rationale, overall_finding, conducted_at, closed_at, next_audit_due, created_at")
+    .eq("subject_tenant_id", tenantId)
+    .order("conducted_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const audits: AuditFactData[] = (auditsData || []).map((a: any) => ({
+    id: a.id,
+    audit_type: a.audit_type,
+    status: a.status,
+    risk_rating: a.risk_rating,
+    risk_rationale: a.risk_rationale,
+    overall_finding: a.overall_finding,
+    conducted_at: a.conducted_at,
+    closed_at: a.closed_at,
+    next_audit_due: a.next_audit_due,
+    created_at: a.created_at,
+  }));
+
+  if (audits.length > 0) {
+    recordIds.push({ table: "client_audits", ids: audits.map(a => a.id) });
+  }
+
+  let auditFindings: AuditFindingFactData[] = [];
+  let auditActions: AuditActionFactData[] = [];
+  const auditIds = audits.map(a => a.id);
+
+  if (auditIds.length > 0) {
+    tablesQueried.push("client_audit_findings");
+    const { data: findingsData } = await supabase
+      .from("client_audit_findings")
+      .select("id, audit_id, summary, standard_reference, regulatory_reference, impact, priority")
+      .in("audit_id", auditIds)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    auditFindings = (findingsData || []).map((f: any) => ({
+      id: f.id,
+      audit_id: f.audit_id,
+      summary: f.summary,
+      standard_reference: f.standard_reference,
+      regulatory_reference: f.regulatory_reference,
+      impact: f.impact,
+      priority: f.priority,
+    }));
+
+    tablesQueried.push("client_audit_actions");
+    const { data: actionsData } = await supabase
+      .from("client_audit_actions")
+      .select("id, audit_id, finding_id, title, status, due_date, evidence_required, verification_status")
+      .in("audit_id", auditIds)
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .limit(30);
+
+    auditActions = (actionsData || []).map((a: any) => ({
+      id: a.id,
+      audit_id: a.audit_id,
+      finding_id: a.finding_id,
+      title: a.title,
+      status: a.status,
+      due_date: a.due_date,
+      evidence_required: a.evidence_required,
+      verification_status: a.verification_status,
+    }));
+  }
+
+  // 10. Tenant portal user roster + invite status, from v_client_tenant_users
+  // (already merges membership, invite lifecycle, and auth activity per user).
+  tablesQueried.push("v_client_tenant_users");
+  const { data: tenantUsersData } = await supabase
+    .from("v_client_tenant_users")
+    .select("row_type, user_id, display_name, email, relationship_role, primary_contact, secondary_contact, access_scope, status, last_active_at, last_sign_in_at, member_since, invited_at, invite_expires_at, delivery_status")
+    .eq("tenant_id", tenantId)
+    .limit(50);
+
+  const tenantUsers: TenantUserFactData[] = (tenantUsersData || []).map((u: any) => ({
+    row_type: u.row_type,
+    user_id: u.user_id,
+    display_name: u.display_name,
+    email: u.email,
+    relationship_role: u.relationship_role,
+    primary_contact: u.primary_contact,
+    secondary_contact: u.secondary_contact,
+    access_scope: u.access_scope,
+    status: u.status,
+    last_active_at: u.last_active_at,
+    last_sign_in_at: u.last_sign_in_at,
+    member_since: u.member_since,
+    invited_at: u.invited_at,
+    invite_expires_at: u.invite_expires_at,
+    delivery_status: u.delivery_status,
+  }));
+
   return {
     tenant,
     packages,
@@ -336,6 +460,11 @@ export async function retrieveFactData(
     evidence,
     actionItems,
     timeEntries,
+    comms,
+    audits,
+    auditFindings,
+    auditActions,
+    tenantUsers,
     tables_queried: tablesQueried,
     record_ids: recordIds,
     labels,

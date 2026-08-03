@@ -204,6 +204,88 @@ export interface TimeFactData {
   notes?: string | null;
 }
 
+/**
+ * Recent notes/emails from v_dashboard_tenant_recent_comms — a pre-aggregated
+ * dashboard view, already limited to the top 5 of each per tenant. Note
+ * items can themselves have type: "email" (a logged/manual email note),
+ * distinct from recent_emails which is the synced inbox (email_messages).
+ */
+export interface CommsFactData {
+  recent_notes: Array<{
+    id: string;
+    type: string | null;
+    title: string | null;
+    preview: string | null;
+    author_id: string | null;
+    created_at: string;
+  }>;
+  recent_emails: Array<{
+    id: string;
+    subject: string | null;
+    preview: string | null;
+    sender_name: string | null;
+    created_at: string;
+  }>;
+}
+
+export interface AuditFactData {
+  id: string;                        // client_audits.id (uuid)
+  audit_type?: string | null;
+  status: string;
+  risk_rating?: string | null;
+  risk_rationale?: string | null;
+  overall_finding?: string | null;
+  conducted_at?: string | null;
+  closed_at?: string | null;
+  next_audit_due?: string | null;
+  created_at?: string | null;
+}
+
+export interface AuditFindingFactData {
+  id: string;                        // client_audit_findings.id (uuid)
+  audit_id: string;
+  summary: string;
+  standard_reference?: string | null;
+  regulatory_reference?: string | null;
+  impact?: string | null;
+  priority?: string | null;
+}
+
+export interface AuditActionFactData {
+  id: string;                        // client_audit_actions.id (uuid)
+  audit_id: string;
+  finding_id?: string | null;
+  title: string;
+  status: string;
+  due_date?: string | null;
+  evidence_required?: boolean | null;
+  verification_status?: string | null;
+}
+
+/**
+ * One row per tenant portal user, from v_client_tenant_users.
+ * row_type distinguishes an active membership from a pending invite —
+ * always check row_type, not just status, since a disabled member and a
+ * pending invite are very different conditions for a CSC to know about.
+ */
+export interface TenantUserFactData {
+  row_type: string;                  // 'active' | 'invited'
+  user_id: string;
+  display_name?: string | null;
+  email?: string | null;
+  relationship_role?: string | null;
+  primary_contact?: boolean | null;
+  secondary_contact?: boolean | null;
+  access_scope?: string | null;
+  status?: string | null;
+  last_active_at?: string | null;
+  last_sign_in_at?: string | null;
+  member_since?: string | null;
+  invited_at?: string | null;
+  invite_expires_at?: string | null;
+  delivery_status?: string | null;
+}
+
 // ============= Constants =============
 
 // Was a hand-rolled, stale 3-role list (missing CSC/Integrator/BGT/CET) that silently

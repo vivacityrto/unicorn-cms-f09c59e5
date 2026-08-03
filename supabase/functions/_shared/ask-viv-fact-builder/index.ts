@@ -29,6 +29,9 @@ import {
   deriveEvidenceFacts,
   deriveTimeFacts,
   derivePhaseBlockers,
+  deriveCommsFacts,
+  deriveAuditRegisterFacts,
+  deriveTenantUsersFacts,
 } from "./fact-derivation.ts";
 import { buildRecordLinks, deduplicateLinks } from "./record-links.ts";
 
@@ -144,6 +147,29 @@ export async function buildAskVivFacts(
   );
   if (blockerFact) {
     facts.push(blockerFact);
+  }
+
+  // Recent notes/emails
+  const commsFacts = deriveCommsFacts(data.comms, input.now_iso);
+  facts.push(...commsFacts);
+  if (data.comms.recent_notes.length === 0 && data.comms.recent_emails.length === 0) {
+    gaps.push("No recent notes or emails found for this tenant");
+  }
+
+  // Compliance audit register (last audit, open findings, outstanding actions)
+  if (data.audits.length > 0) {
+    const auditRegisterFacts = deriveAuditRegisterFacts(data.audits, data.auditFindings, data.auditActions, input.now_iso);
+    facts.push(...auditRegisterFacts);
+  } else {
+    gaps.push("No compliance audit history found for this tenant");
+  }
+
+  // Tenant portal user roster / invite status
+  if (data.tenantUsers.length > 0) {
+    const tenantUserFacts = deriveTenantUsersFacts(data.tenantUsers, input.now_iso);
+    facts.push(...tenantUserFacts);
+  } else {
+    gaps.push("No portal users found for this tenant");
   }
 
   // 7. Build record links
