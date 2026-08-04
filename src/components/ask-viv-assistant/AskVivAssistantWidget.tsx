@@ -8,6 +8,7 @@ import { useAskVivAssistantChat } from "@/hooks/useAskVivAssistantChat";
 import { useAskVivAssistantAccess } from "@/hooks/useAskVivAssistantAccess";
 import { useAskVivAssistantWidget } from "@/hooks/useAskVivAssistantWidget";
 import { useAskVivAssistantUsage } from "@/hooks/useAskVivAssistantUsage";
+import { useAskVivSuggestedFaqs } from "@/hooks/useAskVivSuggestedFaqs";
 import { AssistantMessageBubble } from "@/components/ask-viv-assistant/AssistantMessageBubble";
 import { AssistantUsageGauge } from "@/components/ask-viv-assistant/AssistantUsageGauge";
 import { X, Send, Loader2, Sparkles, History, MessageSquare, Maximize2 } from "lucide-react";
@@ -49,6 +50,7 @@ export function AskVivAssistantWidget() {
 
   const { isOpen, openWidget, closeWidget } = useAskVivAssistantWidget();
   const { refetchUsage } = useAskVivAssistantUsage();
+  const { faqs: suggestedFaqs } = useAskVivSuggestedFaqs();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -105,6 +107,11 @@ export function AskVivAssistantWidget() {
     } catch {
       toast({ title: "Error", description: "Failed to delete conversation", variant: "destructive" });
     }
+  };
+
+  const handleSuggestionClick = (prompt: string) => {
+    setInputMessage(prompt);
+    inputRef.current?.focus();
   };
 
   if (!isOpen) {
@@ -193,7 +200,20 @@ export function AskVivAssistantWidget() {
               <Sparkles className="h-8 w-8 text-primary" />
             </div>
             <h4 className="font-medium text-foreground mb-2">Ask Viv Assistant</h4>
-            <p className="text-sm text-muted-foreground">Ask about a client, a note, an audit, or anything else.</p>
+            <p className="text-sm text-muted-foreground mb-3">Ask about a client, a note, an audit, or anything else.</p>
+            {suggestedFaqs.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {suggestedFaqs.slice(0, 5).map((faq) => (
+                  <button
+                    key={faq.id}
+                    onClick={() => handleSuggestionClick(faq.prompt)}
+                    className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted/50 hover:bg-muted text-foreground transition-colors text-left"
+                  >
+                    {faq.prompt}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
