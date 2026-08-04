@@ -469,12 +469,6 @@ export default function ClientDetail() {
                     }}
                     clientId={tenant.id.toString()}
                   />
-                  <TenantLifecycleActions
-                    tenantId={tenant.id}
-                    tenantName={tenant.name}
-                    lifecycleStatus={tenant.lifecycle_status}
-                    onSuccess={fetchTenantBasic}
-                  />
                   <RiskLevelBadge
                     riskLevel={profile?.risk_level}
                     onUpdate={async (newLevel) => {
@@ -543,6 +537,12 @@ export default function ClientDetail() {
               <ViewAsClientButton
                 tenantId={tenantIdNum!}
                 tenantName={tenant.name}
+              />
+              <TenantLifecycleActions
+                tenantId={tenant.id}
+                tenantName={tenant.name}
+                lifecycleStatus={tenant.lifecycle_status}
+                onSuccess={fetchTenantBasic}
               />
               {tenantIdNum && <ClientQuickNav currentTenantId={tenantIdNum} size="default" />}
               {activeTab === 'overview' && canEdit && (
