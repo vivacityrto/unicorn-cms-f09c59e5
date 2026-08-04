@@ -28,7 +28,7 @@ function MiniRow({ row }: { row: Row }) {
   const width = row.pct == null ? 0 : Math.min(100, Math.max(4, row.pct));
   const Icon = row.icon;
   return (
-    <div className="group rounded-lg border border-border bg-white hover:border-[#23C0DD]/40 transition-colors px-2.5 py-2">
+    <div className="group rounded-lg border border-border bg-card hover:border-[#23C0DD]/40 transition-colors px-2.5 py-2">
       <div className="flex items-center gap-2">
         <span
           className="flex h-7 w-7 items-center justify-center rounded-md shrink-0"
