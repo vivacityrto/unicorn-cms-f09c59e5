@@ -115,8 +115,8 @@ function Panel({
       <div className="px-3.5 pt-2.5 pb-1.5 border-b border-border bg-brand-light-purple/20 rounded-t-xl flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {Icon && (
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#7130A0]/10 shrink-0">
-              <Icon className="h-3 w-3 text-[#7130A0]" />
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 shrink-0">
+              <Icon className="h-3 w-3 text-primary" />
             </div>
           )}
           <div className="text-[13px] font-semibold text-foreground truncate">{title}</div>
@@ -131,7 +131,7 @@ function Panel({
             if (onFooterClick) onFooterClick();
             else if (footerHref) navigate(footerHref);
           }}
-          className="text-xs font-medium text-[#7130A0] hover:text-[#ED1878] px-3.5 py-2 border-t border-border inline-flex items-center gap-1 transition-colors"
+          className="text-xs font-medium text-primary hover:text-[#ED1878] px-3.5 py-2 border-t border-border inline-flex items-center gap-1 transition-colors"
         >
           {footerLabel ?? "View all"} <ArrowRight className="h-3 w-3" />
         </button>
@@ -279,9 +279,9 @@ function QuickActionTile({
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1 rounded-lg border border-border bg-[#7130A0]/[0.03] hover:bg-[#7130A0]/10 hover:border-[#7130A0]/40 transition-colors px-2 py-2.5 text-center"
+      className="flex flex-col items-center justify-center gap-1 rounded-lg border border-border bg-primary/[0.03] hover:bg-primary/10 hover:border-primary/40 transition-colors px-2 py-2.5 text-center"
     >
-      <Icon className="h-4 w-4 text-[#7130A0]" />
+      <Icon className="h-4 w-4 text-primary" />
       <span className="text-[10.5px] font-medium text-foreground leading-tight">{label}</span>
     </button>
   );
@@ -815,7 +815,7 @@ export default function MainDashboard() {
             <Panel title="Recent Client Broadcasts" icon={Megaphone} footerHref="/communications">
               {broadcasts.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-                  <Megaphone className="h-6 w-6 text-[#7130A0]/25" />
+                  <Megaphone className="h-6 w-6 text-primary/25" />
                   <div className="text-sm text-muted-foreground">No broadcasts yet.</div>
                 </div>
               ) : (
@@ -855,7 +855,7 @@ export default function MainDashboard() {
                 if (recent.length === 0) {
                   return (
                     <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-                      <ListChecks className="h-6 w-6 text-[#7130A0]/25" />
+                      <ListChecks className="h-6 w-6 text-primary/25" />
                       <div className="text-sm text-muted-foreground">No active tasks.</div>
                     </div>
                   );
@@ -948,7 +948,7 @@ export default function MainDashboard() {
             <Panel title="Client Messages" icon={MessageSquare} footerHref="/communications">
               {clientMsgs.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-                  <MessageSquare className="h-6 w-6 text-[#7130A0]/25" />
+                  <MessageSquare className="h-6 w-6 text-primary/25" />
                   <div className="text-sm text-muted-foreground">No client messages.</div>
                 </div>
               ) : (
@@ -990,7 +990,7 @@ export default function MainDashboard() {
             <Panel title="Rocks (Quarterly Priorities)" icon={Target} footerHref="/eos/rocks">
               {!rocks || rocks.list.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-                  <Target className="h-6 w-6 text-[#7130A0]/25" />
+                  <Target className="h-6 w-6 text-primary/25" />
                   <div className="text-sm text-muted-foreground">No active rocks.</div>
                 </div>
               ) : (
@@ -1074,7 +1074,7 @@ export default function MainDashboard() {
         <Panel title="Upcoming Calendar" icon={CalendarClock} footerHref="/calendar">
           {upcoming.length === 0 ? (
             <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-              <CalendarClock className="h-6 w-6 text-[#7130A0]/25" />
+              <CalendarClock className="h-6 w-6 text-primary/25" />
               <div className="text-sm text-muted-foreground">No upcoming events.</div>
             </div>
           ) : (
@@ -1118,7 +1118,7 @@ export default function MainDashboard() {
               })}
               <button
                 onClick={() => navigate("/calendar")}
-                className="shrink-0 w-[160px] rounded-lg border border-dashed border-border text-muted-foreground hover:text-[#7130A0] hover:border-[#7130A0]/40 transition-colors p-3 flex flex-col items-center justify-center gap-1"
+                className="shrink-0 w-[160px] rounded-lg border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors p-3 flex flex-col items-center justify-center gap-1"
               >
                 <ChevronRight className="h-4 w-4" />
                 <span className="text-xs font-medium">See full week</span>
