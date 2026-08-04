@@ -59,6 +59,7 @@ const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   note_created: FileText,
   note_pinned: Pin,
   note_unpinned: PinOff,
+  structured_note_added: FileText,
   time_posted: Clock,
   time_ignored: Clock,
   account_invited: UserPlus,
@@ -101,6 +102,7 @@ const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   note_created: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   note_pinned: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   note_unpinned: 'bg-muted text-muted-foreground',
+  structured_note_added: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   time_posted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   time_ignored: 'bg-muted text-muted-foreground',
   account_invited: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -119,7 +121,7 @@ function getModuleChip(eventType: string): string | null {
   if (eventType.startsWith('email')) return 'Emails';
   if (eventType.startsWith('sharepoint') || eventType.startsWith('document')) return 'Documents';
   if (eventType.startsWith('task')) return 'Tasks';
-  if (eventType.startsWith('note')) return 'Notes';
+  if (eventType.startsWith('note') || eventType.startsWith('structured_note')) return 'Notes';
   if (eventType.startsWith('account')) return 'Accounts';
   return null;
 }
