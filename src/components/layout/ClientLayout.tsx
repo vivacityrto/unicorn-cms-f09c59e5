@@ -88,7 +88,10 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   }, [activeTenantId, currentUserUuid, navigate, queryClient]);
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    // "light" pins the client portal to the light palette regardless of the
+    // staff user's dark mode preference — see the .light block in index.css.
+    // Dark mode for the client portal is a separate, not-yet-scoped feature.
+    <div className="light min-h-screen bg-background overflow-x-hidden">
       {/* Impersonation Banner (in flow, not fixed) */}
       {isPreview && (
         <>

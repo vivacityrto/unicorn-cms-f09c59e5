@@ -31,13 +31,13 @@ export function AskVivButton() {
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          className="relative h-10 w-10 rounded-full hover:bg-primary/10 transition-colors p-1"
+          className="relative h-10 w-10 rounded-full shrink-0 p-1.5"
           onClick={openWidget}
           aria-label="Open Ask Viv"
         >
-          <img src={vivIcon} alt="Ask Viv" className="h-8 w-8 object-contain" />
+          <img src={vivIcon} alt="Ask Viv" className="h-full w-full object-contain" />
           {/* Status indicator using success color */}
           <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-[hsl(var(--success,142_76%_36%))] border border-background" />
         </Button>

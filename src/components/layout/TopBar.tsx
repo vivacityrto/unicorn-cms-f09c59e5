@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
 import {
   Bell,
   LogOut,
@@ -9,6 +10,8 @@ import {
   Lightbulb,
   LifeBuoy,
   NotebookPen,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,6 +206,29 @@ function SupportTicketsButton() {
   );
 }
 
+function ThemeToggleButton() {
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === "dark";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className={UTILITY_BUTTON_CLASS}
+          onClick={() => setTheme(isDark ? "light" : "dark")}
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{isDark ? "Switch to light mode" : "Switch to dark mode"}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function DailyNotesButton() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -337,6 +363,8 @@ export function TopBar({ showSearch = false }: TopBarProps) {
       {/* Right: Actions & Avatar - never pushed off-screen */}
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
         <TooltipProvider>
+          {/* Dark mode toggle */}
+          <ThemeToggleButton />
           {/* Daily Notes button */}
           <DailyNotesButton />
           {/* Support Tickets button */}

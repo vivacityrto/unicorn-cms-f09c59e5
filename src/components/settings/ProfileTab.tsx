@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { useTheme } from 'next-themes';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin } from 'lucide-react';
+import { Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Moon, Sun } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -37,6 +39,8 @@ export function ProfileTab({
 }: ProfileTabProps) {
   const { toast } = useToast();
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === 'dark';
 
   const handleChangePassword = async () => {
     if (!formData.newPassword || !formData.confirmPassword) {
@@ -275,6 +279,29 @@ export function ProfileTab({
                 <Lock className="mr-2 h-4 w-4" />
                 {passwordLoading ? 'Changing...' : 'Change Password'}
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Appearance Settings */}
+        <Card className="border-0 shadow-lg overflow-hidden h-fit">
+          <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
+            <h2 className="font-semibold">Appearance</h2>
+          </div>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="dark-mode-toggle" className="flex items-center">
+                  {isDark ? <Moon className="inline h-4 w-4 mr-2" /> : <Sun className="inline h-4 w-4 mr-2" />}
+                  Dark Mode
+                </Label>
+                <p className="text-sm text-muted-foreground">Switch between light and dark theme</p>
+              </div>
+              <Switch
+                id="dark-mode-toggle"
+                checked={isDark}
+                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+              />
             </div>
           </CardContent>
         </Card>

@@ -75,12 +75,11 @@ export const NotificationDropdown = () => {
       <Popover>
         <PopoverTrigger asChild>
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="relative rounded-full bg-white transition-all duration-200 hover:bg-white hover:scale-105 hover:shadow-md"
-            style={{ boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px' }}
+            className="relative h-10 w-10 rounded-full shrink-0 transition-transform duration-200 hover:scale-105"
           >
-            <Bell className="w-5 h-5 text-foreground" />
+            <Bell className="w-4 h-4 text-foreground" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 h-5 w-5 bg-destructive rounded-full flex items-center justify-center text-destructive-foreground text-xs font-bold">
                 {unreadCount > 9 ? '9+' : unreadCount}
