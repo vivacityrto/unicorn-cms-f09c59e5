@@ -62,6 +62,8 @@ export const TIMELINE_EVENT_TYPES = [
   'stage_status_changed',
   // Client portal page-view digest (internal-only)
   'portal_activity_summary',
+  // Tenant lifecycle status (internal-only)
+  'tenant_status_changed',
 ] as const;
 
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];

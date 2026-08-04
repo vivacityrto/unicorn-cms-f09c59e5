@@ -467,7 +467,6 @@ export default function ClientDetail() {
                         return prev;
                       });
                     }}
-                    clientId={tenant.id.toString()}
                   />
                   <RiskLevelBadge
                     riskLevel={profile?.risk_level}

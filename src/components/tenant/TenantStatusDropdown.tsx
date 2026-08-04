@@ -41,11 +41,9 @@ interface TenantStatusDropdownProps {
   currentStatus: string;
   onStatusChange: (newStatus: string) => void;
   onNonActiveChange?: (statusDescription: string) => void;
-  /** If provided, auto-inserts a note on status change */
-  clientId?: string | null;
 }
 
-export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, onNonActiveChange, clientId }: TenantStatusDropdownProps) {
+export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, onNonActiveChange }: TenantStatusDropdownProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
@@ -130,26 +128,12 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
       queryClient.invalidateQueries({ queryKey: ['dashboard-triage'] });
       queryClient.invalidateQueries({ queryKey: ['portfolio-cockpit'] });
 
-      // Auto-insert a note recording the status change
-      if (clientId) {
-        const fromDesc = options.find(o => o.value === currentStatus)?.description || currentStatus;
-        const toDesc = options.find(o => o.value === newStatus)?.description || newStatus;
-        const userName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown';
-        const timestamp = new Date().toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' });
-        
-        const { error: noteError } = await supabase.rpc('rpc_create_client_note', {
-          p_tenant_id: tenantId,
-          p_client_id: clientId,
-          p_note_type: 'status_change',
-          p_title: `Tenant status changed to ${toDesc}`,
-          p_content: `Status changed from "${fromDesc}" to "${toDesc}" by ${userName} on ${timestamp}.${closePackages ? ' Open packages were also closed.' : ''}`,
-          p_tags: ['status-change'],
-          p_related_entity_type: 'tenant',
-          p_related_entity_id: String(tenantId),
-          p_is_pinned: false
-        });
-        if (noteError) console.error('Auto-note insert failed:', noteError);
-      }
+      // Note: the timeline event for this status change is recorded by a DB
+      // trigger (fn_tenant_status_timeline_trigger) on the tenants.status
+      // UPDATE above — no app-level insert needed here. (This used to call
+      // rpc_create_client_note with p_note_type: 'status_change', which isn't
+      // in that RPC's valid note-type list, so it always failed silently and
+      // never actually recorded anything.)
 
       toast({
         title: 'Status Updated',
