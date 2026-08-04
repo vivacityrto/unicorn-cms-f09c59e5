@@ -54,6 +54,10 @@ export const TIMELINE_EVENT_TYPES = [
   'client_login',
   // Messaging (client-visible)
   'message_sent',
+  // Vivacity Academy activity (internal-only)
+  'academy_enrolled',
+  'academy_lesson_completed',
+  'academy_certificate_issued',
 ] as const;
 
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
