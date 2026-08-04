@@ -15,7 +15,7 @@ import {
   Activity, FileText, Mail, CheckSquare, StickyNote,
   Clock, Loader2, RefreshCw, Calendar, Timer, Search,
   Plus, X, ChevronDown, ChevronUp, Pin, PinOff, Link2, UserCog, LogIn, MessageSquare,
-  GraduationCap, ListChecks,
+  GraduationCap, ListChecks, MousePointerClick,
 } from 'lucide-react';
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns';
 
@@ -35,6 +35,7 @@ const FILTER_OPTIONS = [
   { value: 'logins', label: 'Logins', icon: LogIn, staffOnly: true },
   { value: 'academy', label: 'Academy', icon: GraduationCap, staffOnly: true },
   { value: 'stages', label: 'Stages', icon: ListChecks, staffOnly: true },
+  { value: 'portal_activity', label: 'Portal Activity', icon: MousePointerClick, staffOnly: true },
   { value: 'microsoft', label: 'Microsoft', icon: Link2 },
 ];
 

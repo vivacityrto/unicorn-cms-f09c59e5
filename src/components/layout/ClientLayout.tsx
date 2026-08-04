@@ -24,6 +24,7 @@ import {
 import vivIcon from "@/assets/viv-icon.png";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { useClientRequestActions } from "@/hooks/useClientRequestActions";
+import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import type { DocumentRequestPrefill } from "@/components/client/DocumentRequestModal";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,10 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentUserUuid = profile?.user_uuid ?? null;
-  
+
+  // Real client-portal users only — excluded during staff preview/impersonation
+  // so QA click-throughs don't pollute the activity digest.
+  usePageViewTracking(!isPreview);
 
   useEffect(() => {
     if (!activeTenantId) return;

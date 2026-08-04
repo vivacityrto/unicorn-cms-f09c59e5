@@ -60,6 +60,8 @@ export const TIMELINE_EVENT_TYPES = [
   'academy_certificate_issued',
   // Stage progression (internal-only)
   'stage_status_changed',
+  // Client portal page-view digest (internal-only)
+  'portal_activity_summary',
 ] as const;
 
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
