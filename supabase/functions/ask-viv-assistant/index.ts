@@ -44,6 +44,16 @@
  * and list_document_templates (the master template catalogue behind the
  * Manage Documents admin page — distinct from any client's own document
  * records or content).
+ *
+ * Phase J (added after live user testing surfaced a chronology gap):
+ * search_eos is semantic search only — it has no way to know which meeting
+ * is "the most recent," so "what happened at the last L10" style questions
+ * got an honest but unhelpful "I can't be sure this is the latest one."
+ * list_eos_meetings and get_eos_meeting_details query eos_meetings joined to
+ * eos_meeting_summaries directly (deterministic, date-grounded), the same
+ * "facts vs RAG" split already used for client data — get_eos_meeting_details
+ * defaults to the most recently HELD meeting of a given type when no
+ * meeting_id is given, resolving owner_id/user_id references to real names.
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -320,6 +330,32 @@ const TOOLS: AnthropicToolDefinition[] = [
       required: [],
     },
   },
+  {
+    name: "list_eos_meetings",
+    description:
+      "Chronological list of Vivacity's own internal EOS (Entrepreneurial Operating System) leadership meetings that actually took place — skipped or not-yet-held meetings are excluded — most recent first. Returns a one-line synopsis of each (date, rating, headline/issue/rock counts) so you can identify a specific one to look into with get_eos_meeting_details. Not tenant/client-specific.",
+    input_schema: {
+      type: "object",
+      properties: {
+        meeting_type: { type: "string", description: "Meeting type — 'L10' (default, weekly leadership meeting), 'Quarterly', 'Annual', or 'Same_Page'." },
+        limit: { type: "number", description: "Max meetings to return, most recent first. Default 8." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_eos_meeting_details",
+    description:
+      "Full details of one specific Vivacity internal EOS meeting — headlines, issues (with resolution/status), to-dos (with owner and due date), rocks (with status and owner), attendance, personal/professional wins shared, and any VTO/scorecard changes. Omit meeting_id to get the MOST RECENT held meeting of the given type (default 'L10') — use this for 'what happened at the last L10 meeting' style questions, since search_eos is semantic search only and cannot reliably identify 'the most recent' meeting. Pass a meeting_id from list_eos_meetings to get a specific past meeting instead.",
+    input_schema: {
+      type: "object",
+      properties: {
+        meeting_id: { type: "string", description: "Optional: a specific meeting's id, from list_eos_meetings. Omit for the most recent held meeting." },
+        meeting_type: { type: "string", description: "Only used when meeting_id is omitted — which meeting type to find the latest of. Default 'L10'." },
+      },
+      required: [],
+    },
+  },
 ];
 
 const SYSTEM_PROMPT = `You are Ask Viv Assistant, an internal conversational assistant for Vivacity staff working with Unicorn, the RTO compliance management platform.
@@ -331,6 +367,8 @@ You have tools to look up real data (clients, facts, notes, documents). Use them
 When you reference something a tool returned, make it clear what it's based on (e.g. "according to the client record...") so the person you're talking to can tell what's grounded in real data versus your own general knowledge.
 
 When search_standards returns regulatory text (Standards for RTOs, National Code, ESOS Act, practice guides), paraphrase it in your own words rather than reproducing it at length — short quotes (a clause title, a key phrase) are fine, but don't dump long verbatim passages. The retrieved text is a draft aid for you, not the final word — note that the approved policy suite and a Vivacity consultant's advice are the authoritative source for regulatory interpretation.
+
+For questions about a specific EOS meeting's recency ("what happened at the last L10", "what came up in this week's meeting"), use get_eos_meeting_details (omit meeting_id for the most recent held meeting) or list_eos_meetings — these are exact, date-grounded lookups. Only use search_eos (semantic search) for topic-based questions across meeting history ("has X ever come up in a meeting") — it cannot reliably tell you which meeting was most recent.
 
 Write naturally — you don't need to follow any fixed section structure. Keep answers focused and easy to read.`;
 
@@ -1320,6 +1358,141 @@ async function executeTool(
       };
     } catch (err) {
       return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "list_document_templates failed" };
+    }
+  }
+
+  if (name === "list_eos_meetings") {
+    const meetingType = typeof input.meeting_type === "string" && input.meeting_type.trim() ? input.meeting_type.trim() : "L10";
+    const limit = Math.min(Math.max(Number(input.limit) || 8, 1), 25);
+    try {
+      // No .order()/.limit() on the SQL side here — PostgREST's order-on-
+      // embedded-resource syntax (order by eos_meetings.scheduled_date via
+      // { foreignTable: "eos_meetings" }) silently no-ops on this
+      // supabase-js version instead of erroring, returning arbitrary row
+      // order (confirmed live: it returned the OLDEST L10 meeting as
+      // "most recent"). Only ~24 L10 rows exist total, so fetching all
+      // matches and sorting/slicing here in JS is cheap and deterministic.
+      const { data, error } = await supabase
+        .from("eos_meeting_summaries")
+        .select("id, meeting_id, rating, headlines, issues, rocks, eos_meetings!inner(scheduled_date, title, status, meeting_type)")
+        .eq("eos_meetings.meeting_type", meetingType)
+        .limit(500);
+      if (error) throw new Error(error.message);
+
+      const meetings = (data || [])
+        .map((row: any) => {
+          const issues = Array.isArray(row.issues) ? row.issues : [];
+          const rocks = Array.isArray(row.rocks) ? row.rocks : [];
+          const headlines = Array.isArray(row.headlines) ? row.headlines : [];
+          return {
+            meeting_id: row.meeting_id,
+            title: row.eos_meetings?.title ?? null,
+            scheduled_date: row.eos_meetings?.scheduled_date ?? null,
+            rating: row.rating,
+            headline_count: headlines.length,
+            issues_solved: issues.filter((i: any) => i.status === "Solved").length,
+            issues_open: issues.filter((i: any) => i.status !== "Solved").length,
+            rocks_on_track: rocks.filter((r: any) => r.status === "on_track").length,
+            rocks_off_track: rocks.filter((r: any) => r.status && r.status !== "on_track").length,
+          };
+        })
+        .sort((a, b) => new Date(b.scheduled_date ?? 0).getTime() - new Date(a.scheduled_date ?? 0).getTime())
+        .slice(0, limit);
+
+      return {
+        result: { meeting_type: meetingType, meetings },
+        summary:
+          meetings.length === 0
+            ? `list_eos_meetings(${meetingType}) — no held meetings found`
+            : `list_eos_meetings(${meetingType}) — ${meetings.length} meeting(s), most recent ${meetings[0]?.scheduled_date}`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "list_eos_meetings failed" };
+    }
+  }
+
+  if (name === "get_eos_meeting_details") {
+    const meetingType = typeof input.meeting_type === "string" && input.meeting_type.trim() ? input.meeting_type.trim() : "L10";
+    const meetingId = typeof input.meeting_id === "string" && input.meeting_id.trim() ? input.meeting_id.trim() : null;
+    try {
+      let query = supabase
+        .from("eos_meeting_summaries")
+        .select(
+          "id, meeting_id, rating, headlines, issues, todos, rocks, cascades, attendance, segue_shares, vto_changes, chart_changes, eos_meetings!inner(scheduled_date, title, status, meeting_type)"
+        );
+      if (meetingId) {
+        query = query.eq("meeting_id", meetingId);
+      } else {
+        // Same order-on-embedded-resource caveat as list_eos_meetings — sort
+        // in JS below rather than relying on a silently-no-op'd .order().
+        query = query.eq("eos_meetings.meeting_type", meetingType).limit(500);
+      }
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      const rows = (data || []) as any[];
+      const row = meetingId
+        ? rows[0]
+        : rows.sort(
+            (a, b) => new Date(b.eos_meetings?.scheduled_date ?? 0).getTime() - new Date(a.eos_meetings?.scheduled_date ?? 0).getTime()
+          )[0];
+      if (!row) {
+        return {
+          result: { error: "No matching EOS meeting found" },
+          summary: meetingId ? `get_eos_meeting_details(${meetingId}) — not found` : `get_eos_meeting_details(latest ${meetingType}) — none held yet`,
+        };
+      }
+
+      const todos = Array.isArray(row.todos) ? row.todos : [];
+      const rocks = Array.isArray(row.rocks) ? row.rocks : [];
+      const attendance = Array.isArray(row.attendance) ? row.attendance : [];
+      const segueShares = Array.isArray(row.segue_shares) ? row.segue_shares : [];
+      const headlines = Array.isArray(row.headlines) ? row.headlines : [];
+      const issues = Array.isArray(row.issues) ? row.issues : [];
+      const cascades = Array.isArray(row.cascades) ? row.cascades : [];
+
+      // Resolve every owner_id/user_id reference across todos/rocks/attendance/
+      // segue_shares/headlines to a real name in one batch lookup, same pattern
+      // as get_consultant_workload_comparison.
+      const userIds = new Set<string>();
+      for (const t of todos) if (t.owner_id) userIds.add(t.owner_id);
+      for (const r of rocks) if (r.owner_id) userIds.add(r.owner_id);
+      for (const a of attendance) if (a.user_id) userIds.add(a.user_id);
+      for (const s of segueShares) if (s.user_id) userIds.add(s.user_id);
+      for (const h of headlines) if (h.user_id) userIds.add(h.user_id);
+
+      const { data: users } = userIds.size > 0
+        ? await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", [...userIds])
+        : { data: [] as any[] };
+      const nameById = new Map<string, string>((users || []).map((u: any) => [u.user_uuid, `${u.first_name} ${u.last_name}`]));
+      const nameOf = (id: string | null | undefined) => (id ? nameById.get(id) ?? "Unknown staff" : null);
+
+      const details = {
+        title: row.eos_meetings?.title ?? null,
+        scheduled_date: row.eos_meetings?.scheduled_date ?? null,
+        status: row.eos_meetings?.status ?? null,
+        rating: row.rating,
+        attendance: attendance.map((a: any) => ({ name: nameOf(a.user_id), attended: a.attended })),
+        headlines: headlines.map((h: any) => ({ by: nameOf(h.user_id), headline: h.headline, is_good_news: h.is_good_news })),
+        issues: issues.map((i: any) => ({ title: i.title, status: i.status, solution: i.solution, solved_at: i.solved_at })),
+        todos: todos.map((t: any) => ({ title: t.title, status: t.status, owner: nameOf(t.owner_id), due_date: t.due_date, completed_at: t.completed_at })),
+        rocks: rocks.map((r: any) => ({ title: r.title, status: r.status, owner: nameOf(r.owner_id), rock_level: r.rock_level })),
+        personal_professional_wins: segueShares.map((s: any) => ({
+          name: nameOf(s.user_id),
+          rating: s.rating,
+          personal_win: s.personal_win,
+          professional_win: s.professional_win,
+        })),
+        cascading_messages: cascades,
+        vto_changes: row.vto_changes ?? [],
+        chart_changes: row.chart_changes ?? [],
+      };
+
+      return {
+        result: details,
+        summary: `get_eos_meeting_details(${details.title ?? meetingId ?? "latest " + meetingType}) — ${details.issues.length} issue(s), ${details.todos.length} to-do(s), ${details.rocks.length} rock(s), ${details.personal_professional_wins.length} share(s)`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "get_eos_meeting_details failed" };
     }
   }
 
