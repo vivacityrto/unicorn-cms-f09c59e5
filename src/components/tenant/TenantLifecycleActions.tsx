@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 import { usePermission } from '@/hooks/usePermission';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -7,16 +8,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CloseClientModal } from './CloseClientModal';
-import { MoreHorizontal, Pause, XCircle, Archive, RotateCcw } from 'lucide-react';
+import { Pause, XCircle, Archive, RotateCcw, ChevronDown, ShieldAlert } from 'lucide-react';
 
 interface TenantLifecycleActionsProps {
   tenantId: number;
   tenantName: string;
   lifecycleStatus: string;
   onSuccess: () => void;
+  compact?: boolean;
 }
 
-export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, onSuccess }: TenantLifecycleActionsProps) {
+export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, onSuccess, compact = false }: TenantLifecycleActionsProps) {
   const { toast } = useToast();
   const canDeactivate = usePermission('clients.deactivate');
   const canActivate = usePermission('clients.activate');
@@ -98,15 +100,23 @@ export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, 
 
   const currentConfig = confirmAction ? confirmConfig[confirmAction] : null;
 
+  const isNonActive = lifecycleStatus !== 'active';
+
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-            <MoreHorizontal className="h-4 w-4" />
+          <Button
+            variant="outline"
+            size={compact ? 'sm' : 'default'}
+            className={cn('gap-2', isNonActive && 'border-amber-500/50 text-amber-600 hover:text-amber-700')}
+          >
+            <ShieldAlert className="h-4 w-4" />
+            {!compact && 'Client Actions'}
+            <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48 bg-popover z-50">
+        <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
           {canSuspend && (
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setConfirmAction('suspend'); }}>
               <Pause className="mr-2 h-4 w-4 text-amber-500" />
