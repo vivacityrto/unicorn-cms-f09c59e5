@@ -1,0 +1,22 @@
+-- Drop the legacy partial unique index enforcing "one is_primary=true row
+-- per tenant, ever" (including historical/ended stints). It never accounted
+-- for ended_at, so any tenant with a closed CSC stint still flagged
+-- is_primary=true (e.g. via churn/reactivation) permanently blocks
+-- reassigning a primary CSC, failing with "duplicate key value violates
+-- unique constraint idx_tenant_primary_csc" (hit live on Silverline College
+-- Pty Ltd, tenant 7493, after its CSC stint was closed by a lifecycle-status
+-- churn trigger).
+--
+-- Fully superseded by uq_tenant_csc_assignments_one_active_per_tenant
+-- (added 2026-07-06, M4), which correctly scopes the "one primary per
+-- tenant" invariant to WHERE superseded_at IS NULL AND ended_at IS NULL —
+-- i.e. currently-active stints only. Verified no ON CONFLICT clause or
+-- other code references idx_tenant_primary_csc by name.
+--
+-- 27 tenants currently carry a historical is_primary=true row with
+-- ended_at set; dropping this index is sufficient to unblock all of them —
+-- no data backfill or function changes required, since those historical
+-- rows don't violate the newer, correct index. Verified via a rolled-back
+-- test insert reproducing admin_set_tenant_csc_assignment's fallback
+-- INSERT for tenant 7493 before shipping this migration.
+DROP INDEX IF EXISTS public.idx_tenant_primary_csc;
