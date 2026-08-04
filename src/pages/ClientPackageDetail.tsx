@@ -251,28 +251,28 @@ export default function ClientPackageDetail() {
           <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4">
             <TabsTrigger
               value="stages"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none bg-transparent px-1 pb-3"
             >
               <ListTodo className="h-4 w-4 mr-2" />
               Phases ({stages.length})
             </TabsTrigger>
             <TabsTrigger
               value="team-tasks"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none bg-transparent px-1 pb-3"
             >
               <Users className="h-4 w-4 mr-2" />
               Team Tasks ({totalTeamTasks})
             </TabsTrigger>
             <TabsTrigger
               value="client-tasks"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none bg-transparent px-1 pb-3"
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Client Tasks ({totalClientTasks})
             </TabsTrigger>
             <TabsTrigger
               value="emails"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none bg-transparent px-1 pb-3"
             >
               <Mail className="h-4 w-4 mr-2" />
               Emails ({pendingEmails} pending)

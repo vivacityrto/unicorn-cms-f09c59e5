@@ -409,7 +409,7 @@ export default function ClientDetail() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b bg-card">
+      <div className="mx-6 mt-6 rounded-xl border bg-card shadow-sm overflow-hidden">
         <div className="p-6">
           {/* Back Button */}
           <Button
@@ -584,7 +584,7 @@ export default function ClientDetail() {
                   <TabsTrigger
                     key={t.value}
                     value={t.value}
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none bg-transparent px-1 pb-3"
                   >
                     <t.icon className="h-4 w-4 mr-2" />
                     {t.label}

@@ -405,6 +405,52 @@
     --sidebar-accent: 0 0% 100% / 0.14;
     --sidebar-border: 0 0% 100% / 0.16;
   }
+
+  /* Client portal is out of scope for dark mode (staff-only feature for now)
+     and is mounted under the same html.dark ancestor as the rest of the app
+     (ThemeProvider wraps the whole router) — .light re-declares every token
+     .dark overrides so ClientLayout's root div (class="light") stays on the
+     light palette regardless of the staff user's theme preference. */
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 270 47% 26%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 270 47% 26%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 270 47% 26%;
+
+    --primary: 190 74% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 270 47% 26%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 270 30% 91%;
+    --muted-foreground: 270 47% 36%;
+
+    --accent: 190 74% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 333 86% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 270 20% 87%;
+    --input: 270 20% 91%;
+    --ring: 190 74% 50%;
+
+    --state-compliant: var(--brand-purple-600);
+    --state-review: var(--brand-macaron-600);
+    --state-risk: var(--brand-fuchsia-600);
+    --state-info: var(--brand-aqua-500);
+    --state-draft: var(--brand-light-purple-400);
+
+    --gradient-sidebar: linear-gradient(180deg, hsl(275 55% 41%), hsl(333 86% 51%));
+    --sidebar-background: 275 55% 41%;
+    --sidebar-accent: 0 0% 100% / 0.1;
+    --sidebar-border: 0 0% 100% / 0.2;
+  }
 }
 
 @layer base {
@@ -449,6 +495,22 @@
     font-size: 1.5rem; /* 24px – Section title */
     font-weight: 600;
     line-height: 1.25;
+    color: hsl(var(--secondary));
+  }
+
+  /* Acai reads as low-contrast muted purple against a dark canvas (--secondary
+     is tuned for buttons/structural UI in dark mode, not a heading tint) —
+     major headings go near-white in dark mode instead. */
+  .dark h1,
+  .dark h2 {
+    color: hsl(var(--foreground));
+  }
+
+  /* Client portal (.light-scoped, see above) keeps the Acai heading treatment
+     even when nested under html.dark — same specificity as .dark h1/h2, so
+     source order (this rule coming after) is what makes it win here. */
+  .light h1,
+  .light h2 {
     color: hsl(var(--secondary));
   }
 
