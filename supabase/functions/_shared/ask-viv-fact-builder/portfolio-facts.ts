@@ -77,7 +77,7 @@ export async function buildPortfolioFacts(
       facts: [],
       gaps: ["Failed to load portfolio attention data"],
       tenant_ids_touched: [],
-      tables_queried,
+      tables_queried: tablesQueried,
     };
   }
 
@@ -137,6 +137,6 @@ export async function buildPortfolioFacts(
     facts,
     gaps,
     tenant_ids_touched: [...myClients, ...topOther].map(r => r.tenant_id),
-    tables_queried,
+    tables_queried: tablesQueried,
   };
 }

@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronRight, Link as LinkIcon } from "lucide-react";
@@ -28,6 +29,7 @@ export function AssistantMessageBubble({ message }: { message: AssistantMessage 
             <p className="whitespace-pre-wrap">{message.content}</p>
           ) : (
             <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
               components={{
                 h2: ({ node, ...props }) => <h2 className="text-sm font-semibold mt-3 mb-1 first:mt-0" {...props} />,
                 h3: ({ node, ...props }) => (
@@ -37,6 +39,14 @@ export function AssistantMessageBubble({ message }: { message: AssistantMessage 
                 ol: ({ node, ...props }) => <ol className="space-y-1 pl-4 list-decimal" {...props} />,
                 li: ({ node, ...props }) => <li className="text-sm" {...props} />,
                 p: ({ node, ...props }) => <p className="text-sm mb-2 last:mb-0" {...props} />,
+                table: ({ node, ...props }) => (
+                  <div className="mb-2 overflow-x-auto">
+                    <table className="w-full text-xs border-collapse" {...props} />
+                  </div>
+                ),
+                thead: ({ node, ...props }) => <thead className="border-b border-border" {...props} />,
+                th: ({ node, ...props }) => <th className="text-left font-semibold px-2 py-1 whitespace-nowrap" {...props} />,
+                td: ({ node, ...props }) => <td className="px-2 py-1 align-top border-t border-border/50" {...props} />,
               }}
             >
               {message.content}

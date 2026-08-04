@@ -31,6 +31,19 @@
  * FROM a client, none resolve FROM a staff member. list_clients_for_staff
  * uses tenant_csc_assignments (the authoritative CSC-assignment table) to
  * close that gap.
+ *
+ * Phase I (added after live user testing surfaced a second gap): platform-
+ * wide/cross-client analytics. Every tool up to this point resolves TO a
+ * single client — nothing could answer "who needs attention across my
+ * clients" or "which clients have gone quiet". Adds get_portfolio_attention
+ * (wraps the existing buildPortfolioFacts, already used by compliance-
+ * assistant), rank_clients_by_activity, list_deadlines_and_overdue_work,
+ * find_findings_without_remediation, compare_clients,
+ * get_stage_health_hotspots, get_consultant_workload_comparison,
+ * get_activity_trend, search_notes_across_clients, get_academy_adoption,
+ * and list_document_templates (the master template catalogue behind the
+ * Manage Documents admin page — distinct from any client's own document
+ * records or content).
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -43,6 +56,7 @@ import {
   formatFactsForLLM,
   type AskVivFactBuilderInput,
 } from "../_shared/ask-viv-fact-builder/index.ts";
+import { buildPortfolioFacts } from "../_shared/ask-viv-fact-builder/portfolio-facts.ts";
 import { generateEmbedding } from "../_shared/openai-embeddings.ts";
 import {
   callAnthropic,
@@ -175,6 +189,137 @@ const TOOLS: AnthropicToolDefinition[] = [
       required: ["query"],
     },
   },
+  {
+    name: "get_portfolio_attention",
+    description:
+      "Get a platform-wide view of which active clients most need attention right now, ranked by an attention score — your own assigned clients first, then the top of the rest of the portfolio. Use this for questions like 'who needs attention across my clients' or 'what should I focus on today'. Important: the attention score itself is coarse right now — several of its inputs (evidence gaps, risk events, overdue compliance tasks) are barely populated platform-wide, so most clients cluster at similar scores. Always lead your answer with the concrete drivers and raw counts (overdue tasks, days since activity, stage health) rather than the bare score number, since the score alone is not very discriminating today.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "rank_clients_by_activity",
+    description:
+      "Rank active clients by how much of a given activity type happened in a recent time window — either the most active ('who has the most traction/engagement') or the least active ('who's gone quiet / needs a check-in'). Covers notes, timeline events, or logged consulting time. Clients with zero activity in the window are included (with a count of 0) when direction is 'least', so true silence is visible, not just low activity.",
+    input_schema: {
+      type: "object",
+      properties: {
+        metric: { type: "string", enum: ["notes", "timeline_events", "time_logged"], description: "What kind of activity to count: 'notes' (structured notes created), 'timeline_events' (cross-source activity feed), or 'time_logged' (consulting hours logged)" },
+        window_days: { type: "number", description: "How many days back to look. Defaults to 30 if omitted." },
+        direction: { type: "string", enum: ["most", "least"], description: "'most' for highest activity/traction, 'least' for lowest/stalled clients" },
+        limit: { type: "number", description: "Max clients to return, default 10, capped at 25" },
+      },
+      required: ["metric", "direction"],
+    },
+  },
+  {
+    name: "list_deadlines_and_overdue_work",
+    description:
+      "List what's overdue or coming due across the caseload: overdue internal/client action items, overdue compliance audits, and upcoming audit or RTO/CRICOS registration expiries within a window. Optionally scope to one staff member's CSC caseload. This is the tool for 'what's overdue', 'what's due soon', or 'what needs to happen before X' questions.",
+    input_schema: {
+      type: "object",
+      properties: {
+        csc_name: { type: "string", description: "Optional: scope to one staff member's assigned clients (as CSC). Omit for platform-wide." },
+        window_days: { type: "number", description: "How many days ahead counts as 'upcoming' for due dates/expiries. Defaults to 90." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "find_findings_without_remediation",
+    description:
+      "List critical/high-priority compliance audit findings that have no remediation action recorded against them yet — a real compliance-integrity gap, not a hypothetical one. Optionally scope to one client.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tenant_id: { type: "number", description: "Optional: scope to one client's tenant_id. Omit for platform-wide." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "compare_clients",
+    description:
+      "Side-by-side comparison of 2 or more specific clients: attention score and drivers, overdue task counts, days since activity, burn/renewal risk status, and audit schedule status. Use this when the user names multiple clients and asks how they compare, rather than calling get_client_context once per client.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tenant_ids: { type: "array", items: { type: "number" }, description: "The tenant_ids to compare, resolved via search_clients if needed" },
+      },
+      required: ["tenant_ids"],
+    },
+  },
+  {
+    name: "get_stage_health_hotspots",
+    description:
+      "Find which clients currently have the most at-risk (critical or monitoring) package/phase stages, based on the latest stage health snapshot per stage — not historical snapshots. Optionally scope to one staff member's CSC caseload. Use this for 'which clients have the most at-risk stages' or 'where are the compliance hotspots' questions.",
+    input_schema: {
+      type: "object",
+      properties: {
+        csc_name: { type: "string", description: "Optional: scope to one staff member's assigned clients (as CSC). Omit for platform-wide." },
+        limit: { type: "number", description: "Max clients to return, default 10, capped at 25" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_consultant_workload_comparison",
+    description:
+      "Compare CSC/consultant caseloads: weekly assignable hours, current load, remaining capacity, and active client count per staff member. Use this for 'is anyone's caseload unbalanced' or 'who has spare capacity' questions. Not client-specific.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "get_activity_trend",
+    description:
+      "Check whether an activity metric (notes, timeline events, or logged time) is trending up or down over consecutive time periods, either for one client or platform-wide. Use this for 'is engagement with this client increasing or decreasing' or similar trend questions — a single get_client_context snapshot can't answer that, only a period-over-period comparison can.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tenant_id: { type: "number", description: "Optional: scope to one client. Omit for platform-wide totals." },
+        metric: { type: "string", enum: ["notes", "timeline_events", "time_logged"], description: "Which activity to trend" },
+        periods: { type: "number", description: "How many consecutive periods to compare, e.g. 3" },
+        period_days: { type: "number", description: "Length of each period in days, e.g. 30 for month-over-month" },
+      },
+      required: ["metric", "periods", "period_days"],
+    },
+  },
+  {
+    name: "search_notes_across_clients",
+    description:
+      "Semantic search over notes and emails across the whole client base (or one staff member's caseload), not one named client — use this for pattern-spotting questions like 'what themes are coming up across my portfolio' or 'which clients have mentioned X recently', where the user hasn't named a specific client. Every result is labelled with which client it came from. For a question about one already-named client, use search_notes_and_emails instead — it's cheaper and more precise.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "What to search for, in natural language" },
+        csc_name: { type: "string", description: "Optional: scope to one staff member's assigned clients (as CSC). Omit for platform-wide." },
+        limit: { type: "number", description: "Max results, default 10, capped at 20" },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "get_academy_adoption",
+    description:
+      "Platform-wide Academy (LMS) adoption snapshot: which clients have Academy access enabled, how many enrolled users/courses/certificates each has. Adoption is low overall (a small minority of clients have any enrolled users), so frame this as an adoption/upsell signal, not a client health signal. Not client-specific by default, but can filter to one tenant.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tenant_id: { type: "number", description: "Optional: scope to one client's tenant_id. Omit for a platform-wide summary." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "list_document_templates",
+    description:
+      "Browse the master document/template catalogue (the same one behind the Manage Documents admin page) — every template Unicorn has defined platform-wide, independent of any client. This is distinct from get_client_context (a specific client's document records) and search_documents (semantic search within a specific client's generated file content). Use this when the user asks what templates exist in Unicorn generally, e.g. 'do we have a Student Handbook template' or 'what governance templates are available', without naming a client. Note: most templates in the catalogue are still in 'draft' status internally, not 'released' — mention status when it's relevant so the user doesn't assume everything listed is a live, client-facing template.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Optional: text to search for in template title/description (fuzzy match). Omit to browse by category alone." },
+        category: { type: "string", description: "Optional: filter to one category, e.g. 'q4-governance', 'cricos-documents', 'rto_policies_procedures'" },
+      },
+      required: [],
+    },
+  },
 ];
 
 const SYSTEM_PROMPT = `You are Ask Viv Assistant, an internal conversational assistant for Vivacity staff working with Unicorn, the RTO compliance management platform.
@@ -271,6 +416,76 @@ async function recordUsage(supabase: any, userId: string, inputTokens: number, o
   } catch (err) {
     console.error("Failed to record Ask Viv Assistant usage:", err);
   }
+}
+
+// Activity-count source tables shared by rank_clients_by_activity,
+// get_activity_trend, and search_notes_across_clients' csc scoping — kept
+// in one place so the three tools can't quietly disagree about which
+// column each metric counts against.
+const ACTIVITY_METRIC_CONFIG: Record<string, { table: string; dateColumn: string; valueColumn: string | null }> = {
+  notes: { table: "notes", dateColumn: "created_at", valueColumn: null },
+  timeline_events: { table: "client_timeline_events", dateColumn: "occurred_at", valueColumn: null },
+  time_logged: { table: "time_entries", dateColumn: "start_at", valueColumn: "duration_minutes" },
+};
+
+interface StaffResolution {
+  ambiguous: boolean;
+  staffName?: string;
+  tenantIds: number[];
+  candidates?: Array<{ user_id: string; name: string; email: string }>;
+}
+
+/**
+ * Resolve a staff name to their actively-assigned client tenant_ids via
+ * tenant_csc_assignments — the authoritative CSC-assignment table (not
+ * tenants.assigned_consultant_user_id, a second, usually-but-not-always
+ * agreeing source). Shared by every tool that accepts an optional
+ * csc_name scope, so they all resolve staff names identically to
+ * list_clients_for_staff.
+ */
+async function resolveStaffNameToTenantIds(supabase: any, staffName: string): Promise<StaffResolution> {
+  const words = staffName.split(/\s+/).filter(Boolean);
+  const orConditions = words.flatMap((w) => [`first_name.ilike.%${w}%`, `last_name.ilike.%${w}%`, `email.ilike.%${w}%`]).join(",");
+
+  const { data: candidates, error } = await supabase
+    .from("users")
+    .select("user_uuid, first_name, last_name, email")
+    .eq("is_vivacity_internal", true)
+    .eq("disabled", false)
+    .eq("archived", false)
+    .or(orConditions)
+    .limit(25);
+  if (error) throw new Error(error.message);
+
+  const allCandidates = candidates || [];
+  const fullMatches = allCandidates.filter((u: any) => {
+    const haystack = `${u.first_name ?? ""} ${u.last_name ?? ""} ${u.email ?? ""}`.toLowerCase();
+    return words.every((w) => haystack.includes(w.toLowerCase()));
+  });
+  const matched = (fullMatches.length > 0 ? fullMatches : allCandidates).slice(0, 10);
+
+  if (matched.length !== 1) {
+    return {
+      ambiguous: true,
+      tenantIds: [],
+      candidates: matched.map((u: any) => ({ user_id: u.user_uuid, name: `${u.first_name} ${u.last_name}`, email: u.email })),
+    };
+  }
+
+  const staffMember = matched[0];
+  const { data: assignments, error: assignErr } = await supabase
+    .from("tenant_csc_assignments")
+    .select("tenant_id")
+    .eq("csc_user_id", staffMember.user_uuid)
+    .eq("is_primary", true)
+    .is("ended_at", null);
+  if (assignErr) throw new Error(assignErr.message);
+
+  return {
+    ambiguous: false,
+    staffName: `${staffMember.first_name} ${staffMember.last_name}`,
+    tenantIds: (assignments || []).map((a: any) => a.tenant_id),
+  };
 }
 
 /** Execute a tool call by name. Phase B: search_clients + get_client_context. */
@@ -575,6 +790,536 @@ async function executeTool(
         result: { error: err instanceof Error ? err.message : String(err) },
         summary: `search_standards("${query}") failed`,
       };
+    }
+  }
+
+  if (name === "get_portfolio_attention") {
+    try {
+      const portfolio = await buildPortfolioFacts(supabase, profile.user_uuid);
+      return {
+        result: { facts_summary: formatFactsForLLM(portfolio.facts), gaps: portfolio.gaps },
+        summary: `get_portfolio_attention() — ${portfolio.tenant_ids_touched.length} client(s) covered`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "get_portfolio_attention failed" };
+    }
+  }
+
+  if (name === "rank_clients_by_activity") {
+    const metric = String(input.metric ?? "");
+    const config = ACTIVITY_METRIC_CONFIG[metric];
+    if (!config) {
+      return { result: { error: "metric must be one of: notes, timeline_events, time_logged" }, summary: "rank_clients_by_activity called with invalid metric" };
+    }
+    const windowDays = Number(input.window_days) > 0 ? Number(input.window_days) : 30;
+    const direction = input.direction === "least" ? "least" : "most";
+    const limit = Math.min(Math.max(Number(input.limit) || 10, 1), 25);
+    const cutoff = new Date(Date.now() - windowDays * 86400000).toISOString();
+
+    try {
+      const { data: activeTenants, error: tenantsErr } = await supabase
+        .from("tenants")
+        .select("id, name")
+        .eq("status", "active")
+        .eq("is_system_tenant", false);
+      if (tenantsErr) throw new Error(tenantsErr.message);
+      const tenantNameById = new Map<number, string>((activeTenants || []).map((t: any) => [t.id, t.name]));
+
+      const selectCols = config.valueColumn ? `tenant_id, ${config.valueColumn}` : "tenant_id";
+      const { data: rows, error: rowsErr } = await supabase
+        .from(config.table)
+        .select(selectCols)
+        .gte(config.dateColumn, cutoff)
+        .not("tenant_id", "is", null)
+        .limit(10000);
+      if (rowsErr) throw new Error(rowsErr.message);
+
+      const totals = new Map<number, number>();
+      for (const row of (rows || []) as any[]) {
+        if (!tenantNameById.has(row.tenant_id)) continue; // inactive/system tenant — excluded from the ranked set entirely
+        const inc = config.valueColumn ? (row[config.valueColumn] ?? 0) / 60 : 1;
+        totals.set(row.tenant_id, (totals.get(row.tenant_id) ?? 0) + inc);
+      }
+
+      const ranked = [...tenantNameById.entries()].map(([tenantId, tenantName]) => ({
+        tenant_id: tenantId,
+        name: tenantName,
+        count: metric === "time_logged" ? Math.round((totals.get(tenantId) ?? 0) * 10) / 10 : totals.get(tenantId) ?? 0,
+      }));
+      ranked.sort((a, b) => (direction === "most" ? b.count - a.count : a.count - b.count));
+      const top = ranked.slice(0, limit);
+      const unit = metric === "time_logged" ? "hours logged" : metric === "timeline_events" ? "timeline events" : "notes";
+
+      return {
+        result: { metric, window_days: windowDays, direction, unit, ranked: top },
+        summary: `rank_clients_by_activity(${metric}, ${windowDays}d, ${direction}) — top ${top.length} of ${ranked.length} active client(s)`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "rank_clients_by_activity failed" };
+    }
+  }
+
+  if (name === "list_deadlines_and_overdue_work") {
+    const cscName = typeof input.csc_name === "string" ? input.csc_name.trim() : "";
+    const windowDays = Number(input.window_days) > 0 ? Number(input.window_days) : 90;
+
+    try {
+      let scopeTenantIds: number[] | null = null;
+      if (cscName) {
+        const resolved = await resolveStaffNameToTenantIds(supabase, cscName);
+        if (resolved.ambiguous) {
+          return { result: { staff_matches: resolved.candidates }, summary: `list_deadlines_and_overdue_work("${cscName}") — ambiguous staff name` };
+        }
+        scopeTenantIds = resolved.tenantIds;
+        if (scopeTenantIds.length === 0) {
+          return { result: { overdue_action_items: [], overdue_audits: [], upcoming_audit_deadlines: [], registrations_expiring_soon: [] }, summary: `list_deadlines_and_overdue_work("${cscName}") — no clients assigned` };
+        }
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      const windowEnd = new Date(Date.now() + windowDays * 86400000).toISOString().slice(0, 10);
+
+      let actionItemsQuery = supabase
+        .from("client_action_items")
+        .select("id, tenant_id, title, due_date, priority, item_type")
+        .is("completed_at", null)
+        .not("due_date", "is", null)
+        .lt("due_date", today)
+        .order("due_date", { ascending: true })
+        .limit(100);
+      if (scopeTenantIds) actionItemsQuery = actionItemsQuery.in("tenant_id", scopeTenantIds);
+      const { data: overdueItems, error: itemsErr } = await actionItemsQuery;
+      if (itemsErr) throw new Error(itemsErr.message);
+
+      // Queried separately from registration expiry below — next_due_date is
+      // null for the ~96% of clients never yet audited, so a single query
+      // filtered on next_due_date would silently drop their registration
+      // expiry from view entirely.
+      let auditDueQuery = supabase
+        .from("v_audit_schedule")
+        .select("tenant_id, client_name, next_due_date, days_until_due")
+        .not("next_due_date", "is", null)
+        .lte("next_due_date", windowEnd)
+        .order("next_due_date", { ascending: true })
+        .limit(100);
+      if (scopeTenantIds) auditDueQuery = auditDueQuery.in("tenant_id", scopeTenantIds);
+      const { data: auditDueRows, error: auditDueErr } = await auditDueQuery;
+      if (auditDueErr) throw new Error(auditDueErr.message);
+
+      let registrationQuery = supabase
+        .from("v_audit_schedule")
+        .select("tenant_id, client_name, registration_end_date")
+        .not("registration_end_date", "is", null)
+        .gte("registration_end_date", today)
+        .lte("registration_end_date", windowEnd)
+        .order("registration_end_date", { ascending: true })
+        .limit(100);
+      if (scopeTenantIds) registrationQuery = registrationQuery.in("tenant_id", scopeTenantIds);
+      const { data: registrationRows, error: regErr } = await registrationQuery;
+      if (regErr) throw new Error(regErr.message);
+
+      const tenantIds = [...new Set((overdueItems || []).map((i: any) => i.tenant_id))];
+      const tenantNameById = new Map<number, string>();
+      if (tenantIds.length > 0) {
+        const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
+        for (const t of tenantRows || []) tenantNameById.set(t.id, t.name);
+      }
+
+      const overdueActionItems = (overdueItems || []).map((i: any) => ({
+        tenant_id: i.tenant_id,
+        client_name: tenantNameById.get(i.tenant_id) ?? null,
+        title: i.title,
+        due_date: i.due_date,
+        priority: i.priority,
+        item_type: i.item_type,
+      }));
+      const overdueAudits = (auditDueRows || []).filter((r: any) => r.next_due_date < today);
+      const upcomingAuditDeadlines = (auditDueRows || []).filter((r: any) => r.next_due_date >= today);
+
+      return {
+        result: {
+          window_days: windowDays,
+          overdue_action_items: overdueActionItems,
+          overdue_audits: overdueAudits.map((r: any) => ({ tenant_id: r.tenant_id, client_name: r.client_name, next_due_date: r.next_due_date, days_overdue: -r.days_until_due })),
+          upcoming_audit_deadlines: upcomingAuditDeadlines.map((r: any) => ({ tenant_id: r.tenant_id, client_name: r.client_name, next_due_date: r.next_due_date, days_until_due: r.days_until_due })),
+          registrations_expiring_soon: (registrationRows || []).map((r: any) => ({ tenant_id: r.tenant_id, client_name: r.client_name, registration_end_date: r.registration_end_date })),
+        },
+        summary:
+          `list_deadlines_and_overdue_work(${cscName || "platform-wide"}) — ${overdueActionItems.length} overdue action item(s), ` +
+          `${overdueAudits.length} overdue audit(s), ${upcomingAuditDeadlines.length} upcoming audit deadline(s), ` +
+          `${(registrationRows || []).length} registration(s) expiring soon`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "list_deadlines_and_overdue_work failed" };
+    }
+  }
+
+  if (name === "find_findings_without_remediation") {
+    const tenantId = input.tenant_id !== undefined && input.tenant_id !== null ? Number(input.tenant_id) : null;
+    try {
+      const { data: findings, error } = await supabase
+        .from("v_client_audit_findings_without_actions")
+        .select("finding_id, audit_id, finding_code, summary, priority, section_title")
+        .limit(100);
+      if (error) throw new Error(error.message);
+
+      const auditIds = [...new Set((findings || []).map((f: any) => f.audit_id))];
+      const auditTenantById = new Map<string, number>();
+      if (auditIds.length > 0) {
+        const { data: audits } = await supabase.from("client_audits").select("id, subject_tenant_id").in("id", auditIds);
+        for (const a of audits || []) auditTenantById.set(a.id, a.subject_tenant_id);
+      }
+      const relevantTenantIds = [...new Set([...auditTenantById.values()])];
+      const tenantNameById = new Map<number, string>();
+      if (relevantTenantIds.length > 0) {
+        const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", relevantTenantIds);
+        for (const t of tenantRows || []) tenantNameById.set(t.id, t.name);
+      }
+
+      let enriched = (findings || []).map((f: any) => {
+        const ftid = auditTenantById.get(f.audit_id) ?? null;
+        return {
+          tenant_id: ftid,
+          client_name: ftid !== null ? tenantNameById.get(ftid) ?? null : null,
+          finding_code: f.finding_code,
+          summary: f.summary,
+          priority: f.priority,
+          section: f.section_title,
+        };
+      });
+      if (tenantId !== null) enriched = enriched.filter((f: any) => f.tenant_id === tenantId);
+
+      return {
+        result: { findings: enriched, note: "Only critical/high-priority findings with no remediation action recorded are included — not every finding." },
+        summary: `find_findings_without_remediation(${tenantId ?? "platform-wide"}) — ${enriched.length} finding(s)`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "find_findings_without_remediation failed" };
+    }
+  }
+
+  if (name === "compare_clients") {
+    const tenantIds = Array.isArray(input.tenant_ids)
+      ? (input.tenant_ids as any[]).map((t) => Number(t)).filter((t) => !Number.isNaN(t))
+      : [];
+    if (tenantIds.length < 2) {
+      return { result: { error: "tenant_ids must include at least 2 tenant ids" }, summary: "compare_clients called with fewer than 2 tenant_ids" };
+    }
+    try {
+      const { data: attentionRows, error: attErr } = await supabase
+        .from("v_dashboard_attention_ranked")
+        .select("tenant_id, tenant_name, attention_score, attention_drivers_json, overdue_tasks_count, days_since_activity, burn_risk_status, days_to_renewal, risk_status")
+        .in("tenant_id", tenantIds);
+      if (attErr) throw new Error(attErr.message);
+
+      const { data: auditRows, error: auditErr } = await supabase
+        .from("v_audit_schedule")
+        .select("tenant_id, schedule_status, next_due_date, days_until_due")
+        .in("tenant_id", tenantIds);
+      if (auditErr) throw new Error(auditErr.message);
+      const auditByTenant = new Map<number, any>((auditRows || []).map((r: any) => [r.tenant_id, r]));
+
+      const comparison = (attentionRows || []).map((r: any) => ({
+        tenant_id: r.tenant_id,
+        name: r.tenant_name,
+        attention_score: r.attention_score,
+        top_driver: r.attention_drivers_json?.[0]?.driver ?? null,
+        overdue_tasks_count: r.overdue_tasks_count,
+        days_since_activity: r.days_since_activity,
+        burn_risk_status: r.burn_risk_status,
+        days_to_renewal: r.days_to_renewal,
+        risk_status: r.risk_status,
+        audit_schedule_status: auditByTenant.get(r.tenant_id)?.schedule_status ?? null,
+        next_audit_due: auditByTenant.get(r.tenant_id)?.next_due_date ?? null,
+      }));
+
+      return {
+        result: { comparison },
+        summary: `compare_clients(${tenantIds.join(", ")}) — compared ${comparison.length} of ${tenantIds.length} requested client(s)`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "compare_clients failed" };
+    }
+  }
+
+  if (name === "get_stage_health_hotspots") {
+    const cscName = typeof input.csc_name === "string" ? input.csc_name.trim() : "";
+    const limit = Math.min(Math.max(Number(input.limit) || 10, 1), 25);
+    try {
+      let scopeTenantIds: number[] | null = null;
+      if (cscName) {
+        const resolved = await resolveStaffNameToTenantIds(supabase, cscName);
+        if (resolved.ambiguous) {
+          return { result: { staff_matches: resolved.candidates }, summary: `get_stage_health_hotspots("${cscName}") — ambiguous staff name` };
+        }
+        scopeTenantIds = resolved.tenantIds;
+        if (scopeTenantIds.length === 0) {
+          return { result: { hotspots: [] }, summary: `get_stage_health_hotspots("${cscName}") — no clients assigned` };
+        }
+      }
+
+      let query = supabase
+        .from("v_stage_health_latest")
+        .select("tenant_id, health_status")
+        .in("health_status", ["critical", "monitoring"])
+        .limit(10000);
+      if (scopeTenantIds) query = query.in("tenant_id", scopeTenantIds);
+      const { data: rows, error } = await query;
+      if (error) throw new Error(error.message);
+
+      const counts = new Map<number, { critical: number; monitoring: number }>();
+      for (const row of (rows || []) as any[]) {
+        const entry = counts.get(row.tenant_id) ?? { critical: 0, monitoring: 0 };
+        if (row.health_status === "critical") entry.critical++;
+        else entry.monitoring++;
+        counts.set(row.tenant_id, entry);
+      }
+
+      const tenantIds = [...counts.keys()];
+      const tenantNameById = new Map<number, string>();
+      if (tenantIds.length > 0) {
+        const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
+        for (const t of tenantRows || []) tenantNameById.set(t.id, t.name);
+      }
+
+      const hotspots = tenantIds
+        .map((tid) => ({
+          tenant_id: tid,
+          name: tenantNameById.get(tid) ?? null,
+          critical_stages: counts.get(tid)!.critical,
+          monitoring_stages: counts.get(tid)!.monitoring,
+        }))
+        .sort((a, b) => b.critical_stages - a.critical_stages || b.monitoring_stages - a.monitoring_stages)
+        .slice(0, limit);
+
+      return {
+        result: { hotspots },
+        summary: `get_stage_health_hotspots(${cscName || "platform-wide"}) — top ${hotspots.length} of ${tenantIds.length} client(s) with at-risk stages`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "get_stage_health_hotspots failed" };
+    }
+  }
+
+  if (name === "get_consultant_workload_comparison") {
+    try {
+      const { data: loadRows, error } = await supabase
+        .from("vw_consultant_load")
+        .select("user_uuid, weekly_assignable_hours, current_load, remaining_capacity, active_clients_count");
+      if (error) throw new Error(error.message);
+
+      // vw_consultant_load can have more than one row per user_uuid (one per
+      // internal tenant-membership row) — dedupe to the first, since the
+      // computed load/capacity figures are identical across duplicates.
+      const byUser = new Map<string, any>();
+      for (const row of (loadRows || []) as any[]) {
+        if (!byUser.has(row.user_uuid)) byUser.set(row.user_uuid, row);
+      }
+      const userIds = [...byUser.keys()];
+      const { data: users } = userIds.length > 0
+        ? await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", userIds)
+        : { data: [] as any[] };
+      const nameById = new Map<string, string>((users || []).map((u: any) => [u.user_uuid, `${u.first_name} ${u.last_name}`]));
+
+      const workload = [...byUser.values()]
+        .map((r: any) => ({
+          name: nameById.get(r.user_uuid) ?? null,
+          weekly_assignable_hours: r.weekly_assignable_hours,
+          current_load_hours: r.current_load,
+          remaining_capacity_hours: r.remaining_capacity,
+          active_clients_count: r.active_clients_count,
+        }))
+        .sort((a, b) => (a.remaining_capacity_hours ?? 0) - (b.remaining_capacity_hours ?? 0));
+
+      return {
+        result: { workload },
+        summary: `get_consultant_workload_comparison() — ${workload.length} consultant(s)`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "get_consultant_workload_comparison failed" };
+    }
+  }
+
+  if (name === "get_activity_trend") {
+    const metric = String(input.metric ?? "");
+    const config = ACTIVITY_METRIC_CONFIG[metric];
+    if (!config) {
+      return { result: { error: "metric must be one of: notes, timeline_events, time_logged" }, summary: "get_activity_trend called with invalid metric" };
+    }
+    const periods = Math.min(Math.max(Number(input.periods) || 3, 2), 12);
+    const periodDays = Number(input.period_days) > 0 ? Number(input.period_days) : 30;
+    const tenantId = input.tenant_id !== undefined && input.tenant_id !== null ? Number(input.tenant_id) : null;
+
+    try {
+      const now = Date.now();
+      const earliestCutoff = new Date(now - periods * periodDays * 86400000).toISOString();
+      const selectCols = config.valueColumn ? `tenant_id, ${config.dateColumn}, ${config.valueColumn}` : `tenant_id, ${config.dateColumn}`;
+
+      let query = supabase.from(config.table).select(selectCols).gte(config.dateColumn, earliestCutoff).limit(20000);
+      if (tenantId !== null) query = query.eq("tenant_id", tenantId);
+      const { data: rows, error } = await query;
+      if (error) throw new Error(error.message);
+
+      const periodTotals: number[] = new Array(periods).fill(0);
+      for (const row of (rows || []) as any[]) {
+        const ts = new Date(row[config.dateColumn]).getTime();
+        const ageDays = (now - ts) / 86400000;
+        const periodIndex = Math.floor(ageDays / periodDays);
+        if (periodIndex < 0 || periodIndex >= periods) continue;
+        const inc = config.valueColumn ? (row[config.valueColumn] ?? 0) / 60 : 1;
+        periodTotals[periodIndex] += inc;
+      }
+
+      // periodTotals[0] is the most recent period — reverse so the returned
+      // array reads chronologically (oldest first), matching how a person
+      // would describe a trend.
+      const chronological = periodTotals
+        .map((count, i) => ({
+          period_label: i === 0 ? "most recent" : `${i} period(s) before that`,
+          count: metric === "time_logged" ? Math.round(count * 10) / 10 : count,
+        }))
+        .reverse();
+
+      const unit = metric === "time_logged" ? "hours logged" : metric === "timeline_events" ? "timeline events" : "notes";
+      return {
+        result: { metric, unit, period_days: periodDays, periods_oldest_first: chronological },
+        summary: `get_activity_trend(${metric}, ${tenantId ?? "platform-wide"}, ${periods}x${periodDays}d) — trend computed`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "get_activity_trend failed" };
+    }
+  }
+
+  if (name === "search_notes_across_clients") {
+    const query = String(input.query ?? "").trim();
+    const cscName = typeof input.csc_name === "string" ? input.csc_name.trim() : "";
+    const limit = Math.min(Math.max(Number(input.limit) || 10, 1), 20);
+    if (!query) {
+      return { result: { error: "query is required" }, summary: "search_notes_across_clients called with no query" };
+    }
+    try {
+      let scopeTenantIds: number[] | null = null;
+      if (cscName) {
+        const resolved = await resolveStaffNameToTenantIds(supabase, cscName);
+        if (resolved.ambiguous) {
+          return { result: { staff_matches: resolved.candidates }, summary: `search_notes_across_clients("${cscName}") — ambiguous staff name` };
+        }
+        scopeTenantIds = resolved.tenantIds;
+        if (scopeTenantIds.length === 0) {
+          return { result: { matches: [] }, summary: `search_notes_across_clients("${cscName}") — no clients assigned` };
+        }
+      }
+
+      const embedding = await generateEmbedding(query);
+      const { data, error } = await supabase.rpc("match_ask_viv_corpus", {
+        query_embedding: embedding,
+        match_threshold: 0.3,
+        match_count: 40,
+        filter_tenant_id: null,
+        filter_source_type: null,
+      });
+      if (error) throw new Error(error.message);
+
+      let matches = (data || []).filter((r: any) => r.source_type === "note" || r.source_type === "email");
+      if (scopeTenantIds) matches = matches.filter((r: any) => r.tenant_id != null && scopeTenantIds!.includes(r.tenant_id));
+      matches = matches.slice(0, limit);
+
+      const tenantIds = [...new Set(matches.map((m: any) => m.tenant_id).filter((t: any) => t != null))];
+      const tenantNameById = new Map<number, string>();
+      if (tenantIds.length > 0) {
+        const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
+        for (const t of tenantRows || []) tenantNameById.set(t.id, t.name);
+      }
+
+      return {
+        result: {
+          matches: matches.map((m: any) => ({
+            tenant_id: m.tenant_id,
+            client_name: m.tenant_id != null ? tenantNameById.get(m.tenant_id) ?? null : null,
+            source_type: m.source_type,
+            heading: m.heading,
+            content: m.content,
+            similarity: m.similarity,
+          })),
+        },
+        summary:
+          matches.length === 0
+            ? `search_notes_across_clients("${query}") — no matches`
+            : `search_notes_across_clients("${query}") — ${matches.length} match(es)`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: `search_notes_across_clients("${query}") failed` };
+    }
+  }
+
+  if (name === "get_academy_adoption") {
+    const tenantId = input.tenant_id !== undefined && input.tenant_id !== null ? Number(input.tenant_id) : null;
+    try {
+      let query = supabase
+        .from("v_tenant_academy_summary")
+        .select("tenant_id, tenant_name, academy_access_enabled, enrolled_users, courses_enrolled, certificates_issued")
+        .order("enrolled_users", { ascending: false })
+        .limit(100);
+      if (tenantId !== null) query = query.eq("tenant_id", tenantId);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+
+      const rows = data || [];
+      const adopted = rows.filter((r: any) => (r.enrolled_users ?? 0) > 0);
+      const shown = tenantId !== null ? rows : adopted;
+
+      return {
+        result: {
+          portfolio_summary: { total_clients_checked: rows.length, clients_with_enrolled_users: adopted.length },
+          clients: shown.map((r: any) => ({
+            tenant_id: r.tenant_id,
+            name: r.tenant_name,
+            academy_access_enabled: r.academy_access_enabled,
+            enrolled_users: r.enrolled_users,
+            courses_enrolled: r.courses_enrolled,
+            certificates_issued: r.certificates_issued,
+          })),
+        },
+        summary: `get_academy_adoption(${tenantId ?? "platform-wide"}) — ${adopted.length} of ${rows.length} client(s) have enrolled users`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "get_academy_adoption failed" };
+    }
+  }
+
+  if (name === "list_document_templates") {
+    const query = typeof input.query === "string" ? input.query.trim() : "";
+    const category = typeof input.category === "string" ? input.category.trim() : "";
+    try {
+      let dbQuery = supabase
+        .from("documents")
+        .select("id, title, description, category, document_status, framework_type, format, is_core, standard_set")
+        .order("title", { ascending: true })
+        .limit(50);
+      if (query) dbQuery = dbQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
+      if (category) dbQuery = dbQuery.eq("category", category);
+      const { data, error } = await dbQuery;
+      if (error) throw new Error(error.message);
+
+      const templates = (data || []).map((d: any) => ({
+        id: d.id,
+        title: d.title,
+        description: d.description,
+        category: d.category,
+        status: d.document_status,
+        framework: d.framework_type,
+        format: d.format,
+        is_core: d.is_core,
+        standard_set: d.standard_set,
+      }));
+
+      const label = query || category || "all";
+      return {
+        result: { templates },
+        summary: templates.length === 0 ? `list_document_templates(${label}) — no matches` : `list_document_templates(${label}) — ${templates.length} template(s)`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "list_document_templates failed" };
     }
   }
 
