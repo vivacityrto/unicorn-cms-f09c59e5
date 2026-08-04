@@ -145,6 +145,24 @@ function renderJsonList(label: string, items: unknown): string {
   return `${label}:\n${lines.join('\n')}`;
 }
 
+/** Render an EOS meeting's personal/professional win shares — a different shape
+ * than renderJsonList's text/title/headline fields, so it needs its own renderer. */
+function renderSegueShares(items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) return '';
+  const lines = items
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const o = item as Record<string, unknown>;
+      const parts: string[] = [];
+      if (o.personal_win) parts.push(`Personal: ${o.personal_win}`);
+      if (o.professional_win) parts.push(`Professional: ${o.professional_win}`);
+      if (typeof o.rating === 'number') parts.push(`rating: ${o.rating}/10`);
+      return parts.length > 0 ? `- ${parts.join(' | ')}` : null;
+    })
+    .filter((l): l is string => l !== null);
+  return lines.length > 0 ? `Personal/professional wins shared:\n${lines.join('\n')}` : '';
+}
+
 interface SourceConfig {
   table: string;
   sourceType: string;
@@ -210,24 +228,36 @@ const SOURCES: SourceConfig[] = [
     table: 'eos_meeting_summaries',
     sourceType: 'eos',
     cursorColumn: 'created_at',
-    select: 'id, tenant_id, meeting_type, period_range, headlines, issues, todos, rocks, cascades, created_at',
+    // Joins to eos_meetings for scheduled_date/title — the meeting's REAL date,
+    // not the free-text period_range field. Without this, retrieved chunks had
+    // no reliable chronological anchor at all, so "what happened at the last
+    // L10" style questions couldn't be answered from search_eos results alone
+    // (fixed properly via the deterministic list_eos_meetings/
+    // get_eos_meeting_details tools — this join just gives the semantic-search
+    // corpus a real date to cite, for topic-based questions).
+    select:
+      'id, tenant_id, meeting_type, period_range, headlines, issues, todos, rocks, cascades, segue_shares, rating, created_at, meeting_id, eos_meetings!inner(title, scheduled_date, status)',
     toDoc: (row) => {
-      const parts = [`EOS ${row.meeting_type ?? 'meeting'} summary${row.period_range ? ` (${row.period_range})` : ''}`];
+      const meeting = (row as any).eos_meetings;
+      const scheduledDate: string | null = meeting?.scheduled_date ?? null;
+      const dateLabel = scheduledDate ? scheduledDate.slice(0, 10) : row.period_range ?? null;
+      const parts = [`EOS ${row.meeting_type ?? 'meeting'} summary${dateLabel ? ` — ${dateLabel}` : ''}`];
       const headlines = renderJsonList('Headlines', row.headlines);
       const issues = renderJsonList('Issues', row.issues);
       const todos = renderJsonList('To-dos', row.todos);
       const rocks = renderJsonList('Rocks', row.rocks);
       const cascades = renderJsonList('Cascading messages', row.cascades);
-      for (const p of [headlines, issues, todos, rocks, cascades]) {
+      const wins = renderSegueShares(row.segue_shares);
+      for (const p of [headlines, issues, todos, rocks, cascades, wins]) {
         if (p) parts.push(p);
       }
       if (parts.length <= 1) return null;
       return {
         id: row.id,
         tenantId: row.tenant_id ?? null,
-        heading: `EOS ${row.meeting_type ?? 'meeting'}${row.period_range ? ` — ${row.period_range}` : ''}`,
+        heading: `EOS ${row.meeting_type ?? 'meeting'}${meeting?.title ? ` — ${meeting.title}` : dateLabel ? ` — ${dateLabel}` : ''}`,
         content: parts.join('\n\n'),
-        metadata: { meeting_type: row.meeting_type, period_range: row.period_range },
+        metadata: { meeting_type: row.meeting_type, scheduled_date: scheduledDate, title: meeting?.title ?? null },
       };
     },
   },
