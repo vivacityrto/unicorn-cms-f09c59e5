@@ -66,6 +66,7 @@ import { TenantUsersPreviewCard } from '@/components/client/TenantUsersPreviewCa
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
 import { ClientQuickNav } from '@/components/client/ClientQuickNav';
 import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
+import { TenantLifecycleActions } from '@/components/tenant/TenantLifecycleActions';
 import { TenantLogoUpload } from '@/components/tenant/TenantLogoUpload';
 import { OrgTypeBadge } from '@/components/tenant/OrgTypeBadge';
 import { RenameTenantDialog, canRenameTenant } from '@/components/tenant/RenameTenantDialog';
@@ -76,6 +77,7 @@ interface TenantBasic {
   name: string;
   slug: string;
   status: string;
+  lifecycle_status: string;
   complyhub_membership_tier?: string | null;
 }
 
@@ -291,7 +293,7 @@ export default function ClientDetail() {
       const [{ data, error }, { data: tp }] = await Promise.all([
         supabase
           .from('tenants')
-          .select('id, name, slug, status, complyhub_membership_tier, logo_path')
+          .select('id, name, slug, status, lifecycle_status, complyhub_membership_tier, logo_path')
           .eq('id', tenantIdNum)
           .single(),
         supabase
@@ -466,6 +468,12 @@ export default function ClientDetail() {
                       });
                     }}
                     clientId={tenant.id.toString()}
+                  />
+                  <TenantLifecycleActions
+                    tenantId={tenant.id}
+                    tenantName={tenant.name}
+                    lifecycleStatus={tenant.lifecycle_status}
+                    onSuccess={fetchTenantBasic}
                   />
                   <RiskLevelBadge
                     riskLevel={profile?.risk_level}
