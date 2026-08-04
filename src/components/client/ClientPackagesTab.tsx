@@ -231,10 +231,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
       });
       if (error) throw error;
       toast.success(`${cancelTarget.package_name} has been cancelled`);
-      const title = `** PACKAGE STATUS "CANCELLED" — ${cancelTarget.package_name} — ALL ACTIVITY HALTED **`;
       setCancelTarget(null);
       setCancelReason('');
-      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+      onRefresh?.();
     } catch (err: any) {
       toast.error(err.message || 'Failed to cancel package');
     } finally {
@@ -279,10 +278,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
       }
 
       toast.success(`${holdTarget.package_name} has been put on hold`);
-      const title = `** PACKAGE STATUS "ON HOLD" — ${holdTarget.package_name} — ALL CLIENT ACTIVITY PAUSED **`;
       setHoldTarget(null);
       setHoldReason('');
-      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+      onRefresh?.();
     } catch (err: any) {
       toast.error(err.message || 'Failed to put package on hold');
     } finally {

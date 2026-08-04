@@ -188,25 +188,35 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
     if (e.end_date !== undefined) updateData.end_date = e.end_date;
     if (e.is_active !== undefined) updateData.is_active = e.is_active;
     if (e.included_minutes !== undefined) updateData.included_minutes = e.included_minutes;
-    if (e.is_complete !== undefined) {
-      updateData.is_complete = e.is_complete;
-      if (e.is_complete) {
-        updateData.membership_state = 'complete';
-        // Auto-set end_date to today if blank
-        if (!eff.end_date) {
-          updateData.end_date = new Date().toISOString().split('T')[0];
-        }
-      }
-    }
     // If deactivating and completing, auto-set end_date
     if (e.is_active === false && eff.is_complete && !eff.end_date) {
       updateData.end_date = new Date().toISOString().split('T')[0];
     }
 
-    const { error } = await supabase
-      .from('package_instances')
-      .update(updateData as never)
-      .eq('id', row.id);
+    // Route the complete transition through transition_membership_state so it's
+    // logged (package_instance_state_log + the internal Timeline trigger) instead
+    // of silently flipping membership_state via a raw update.
+    if (e.is_complete === true) {
+      const { error: transitionError } = await supabase.rpc('transition_membership_state', {
+        p_instance_id: row.id,
+        p_new_state: 'complete',
+        p_reason: 'Marked complete via package admin panel',
+      });
+      if (transitionError) {
+        toast({ title: 'Save failed', description: transitionError.message, variant: 'destructive' });
+        setSavingId(null);
+        return;
+      }
+    } else if (e.is_complete === false) {
+      updateData.is_complete = false;
+    }
+
+    const { error } = Object.keys(updateData).length > 0
+      ? await supabase
+          .from('package_instances')
+          .update(updateData as never)
+          .eq('id', row.id)
+      : { error: null };
 
     if (error) {
       toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
