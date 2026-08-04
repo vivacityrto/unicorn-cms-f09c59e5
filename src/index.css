@@ -352,33 +352,40 @@
   }
 
   .dark {
-    --background: 270 47% 8%;
+    /* Desaturated relative to the sidebar's saturated purple/fuchsia gradient
+       (see below) — a same-hue-family background at high saturation reads as
+       a muddy echo of the sidebar rather than a neutral canvas. */
+    --background: 270 20% 8%;
     --foreground: 0 0% 95%;
 
-    --card: 270 40% 12%;
+    --card: 270 18% 14%;
     --card-foreground: 0 0% 95%;
 
-    --popover: 270 40% 12%;
+    --popover: 270 20% 18%;
     --popover-foreground: 0 0% 95%;
 
     /* Aqua – adjusted for dark contrast */
     --primary: 190 74% 58%;
-    --primary-foreground: 0 0% 100%;
+    /* Aqua is a light colour; white text on it was 1.96:1 (WCAG AA fail). */
+    --primary-foreground: 270 20% 8%;
 
-    --secondary: 270 35% 50%;
+    --secondary: 270 30% 42%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 270 30% 18%;
-    --muted-foreground: 270 15% 65%;
+    --muted: 270 20% 16%;
+    --muted-foreground: 270 12% 68%;
 
-    --accent: 190 74% 40%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 190 40% 20%;
+    --accent-foreground: 190 74% 80%;
 
-    --destructive: 333 86% 55%;
+    /* Was 333 86% 55% (4.15:1 on --card, fails AA where destructive text
+       actually appears — inside cards/dialogs). */
+    --destructive: 333 80% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 25% 22%;
-    --input: 270 25% 20%;
+    --border: 270 16% 24%;
+    /* Lighter than --border: WCAG 1.4.11 wants 3:1 for input boundaries. */
+    --input: 270 14% 38%;
     --ring: 190 74% 58%;
 
     /* Dark mode compliance states */
@@ -387,6 +394,16 @@
     --state-risk: var(--brand-fuchsia-500);
     --state-info: var(--brand-aqua-400);
     --state-draft: var(--brand-light-purple-600);
+
+    /* Sidebar — deepen the Purple→Fuchsia gradient (luminance down, hue kept)
+       rather than leaving it identical to light mode: white sidebar text on
+       the light-mode fuchsia end is 4.18:1 (fails AA), and the same saturated
+       fill against a near-black canvas reads as a glare hot spot rather than
+       a brand anchor. Values are brand-purple-800 / brand-fuchsia-700. */
+    --gradient-sidebar: linear-gradient(180deg, hsl(275 50% 27%), hsl(333 80% 42%));
+    --sidebar-background: 275 50% 27%;
+    --sidebar-accent: 0 0% 100% / 0.14;
+    --sidebar-border: 0 0% 100% / 0.16;
   }
 }
 

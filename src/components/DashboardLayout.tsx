@@ -445,12 +445,9 @@ export const DashboardLayout = ({
           !sidebarOpen && "max-md:-translate-x-full",
           // White-first for client, gradient for Vivacity team
           showVivacityMenu
-            ? "border-r border-border/20"
+            ? "bg-gradient-sidebar border-r border-border/20"
             : "bg-card border-r border-border"
         )}
-        style={showVivacityMenu ? {
-          backgroundImage: "linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%)",
-        } : undefined}
       >
         {/* Sidebar Header */}
         {sidebarOpen ? (
