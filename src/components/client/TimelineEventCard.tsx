@@ -17,7 +17,7 @@ import {
   Plug, PlugZap, FolderCog, FolderX,
   Clock, ExternalLink, RotateCcw, MoreHorizontal, Copy, Shield,
   ChevronDown, ChevronUp, Pin, PinOff, Package,
-  UserPlus, UserCheck, UserX, UserCog, UserMinus,
+  UserPlus, UserCheck, UserX, UserCog, UserMinus, LogIn,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { LucideIcon } from 'lucide-react';
@@ -67,6 +67,7 @@ const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   account_deactivated: UserX,
   account_role_changed: UserCog,
   account_removed: UserMinus,
+  client_login: LogIn,
 };
 
 /**
@@ -110,6 +111,7 @@ const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   account_deactivated: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   account_role_changed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
   account_removed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  client_login: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
 };
 
 // =============================================
@@ -123,6 +125,7 @@ function getModuleChip(eventType: string): string | null {
   if (eventType.startsWith('task')) return 'Tasks';
   if (eventType.startsWith('note') || eventType.startsWith('structured_note')) return 'Notes';
   if (eventType.startsWith('account')) return 'Accounts';
+  if (eventType === 'client_login') return 'Logins';
   return null;
 }
 
