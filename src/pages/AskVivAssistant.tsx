@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAskVivAssistantChat } from "@/hooks/useAskVivAssistantChat";
 import { useAskVivAssistantAccess } from "@/hooks/useAskVivAssistantAccess";
 import { useAskVivAssistantUsage } from "@/hooks/useAskVivAssistantUsage";
+import { useAskVivSuggestedFaqs } from "@/hooks/useAskVivSuggestedFaqs";
 import { AssistantMessageBubble } from "@/components/ask-viv-assistant/AssistantMessageBubble";
 import { AssistantUsageGauge } from "@/components/ask-viv-assistant/AssistantUsageGauge";
 import { Sparkles, Plus, Trash2, Send, Loader2, MessageSquare } from "lucide-react";
@@ -40,8 +41,10 @@ export default function AskVivAssistant() {
   } = useAskVivAssistantChat();
 
   const { refetchUsage } = useAskVivAssistantUsage();
+  const { faqs: suggestedFaqs } = useAskVivSuggestedFaqs();
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -112,6 +115,11 @@ export default function AskVivAssistant() {
     } catch (err) {
       toast({ title: "Error", description: "Failed to delete conversation", variant: "destructive" });
     }
+  };
+
+  const handleSuggestionClick = (prompt: string) => {
+    setInputMessage(prompt);
+    inputRef.current?.focus();
   };
 
   return (
@@ -190,9 +198,22 @@ export default function AskVivAssistant() {
                     <Sparkles className="h-8 w-8 text-primary" />
                   </div>
                   <h4 className="font-medium text-foreground mb-2">Ask Viv Assistant</h4>
-                  <p className="text-sm text-muted-foreground max-w-sm">
+                  <p className="text-sm text-muted-foreground max-w-sm mb-4">
                     Ask about a client, a note, an audit, or anything else — I'll look things up as needed.
                   </p>
+                  {suggestedFaqs.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                      {suggestedFaqs.map((faq) => (
+                        <button
+                          key={faq.id}
+                          onClick={() => handleSuggestionClick(faq.prompt)}
+                          className="text-xs px-3 py-1.5 rounded-full border border-border bg-muted/50 hover:bg-muted text-foreground transition-colors text-left"
+                        >
+                          {faq.prompt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -217,6 +238,7 @@ export default function AskVivAssistant() {
 
             <div className="flex gap-2 pt-3 mt-2 border-t border-border">
               <Input
+                ref={inputRef}
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
