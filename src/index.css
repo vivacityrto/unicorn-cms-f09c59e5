@@ -171,6 +171,13 @@
 
 @layer base {
   :root {
+    /* Pins native form-control theming (select/textarea scrollbars, date
+       pickers, etc.) to the app's own theme state. Without this, Chromium
+       falls back to the OS's prefers-color-scheme for native controls only —
+       independently of whichever .dark/.light class is actually active —
+       producing e.g. a black native scrollbar on an otherwise light panel. */
+    color-scheme: light;
+
     /* ============================================================
        UNICORN 2.0 DESIGN SYSTEM – BRAND TOKEN FOUNDATION
        ============================================================
@@ -352,6 +359,8 @@
   }
 
   .dark {
+    color-scheme: dark;
+
     /* Desaturated relative to the sidebar's saturated purple/fuchsia gradient
        (see below) — a same-hue-family background at high saturation reads as
        a muddy echo of the sidebar rather than a neutral canvas. */
@@ -412,6 +421,8 @@
      .dark overrides so ClientLayout's root div (class="light") stays on the
      light palette regardless of the staff user's theme preference. */
   .light {
+    color-scheme: light;
+
     --background: 0 0% 100%;
     --foreground: 270 47% 26%;
 
