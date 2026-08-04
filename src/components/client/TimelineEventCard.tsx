@@ -18,7 +18,7 @@ import {
   Clock, ExternalLink, RotateCcw, MoreHorizontal, Copy, Shield,
   ChevronDown, ChevronUp, Pin, PinOff, Package,
   UserPlus, UserCheck, UserX, UserCog, UserMinus, LogIn, MessageSquare,
-  GraduationCap, BookOpenCheck, Award,
+  GraduationCap, BookOpenCheck, Award, ListChecks,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { LucideIcon } from 'lucide-react';
@@ -73,6 +73,7 @@ const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   academy_enrolled: GraduationCap,
   academy_lesson_completed: BookOpenCheck,
   academy_certificate_issued: Award,
+  stage_status_changed: ListChecks,
 };
 
 /**
@@ -121,6 +122,7 @@ const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   academy_enrolled: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   academy_lesson_completed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
   academy_certificate_issued: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  stage_status_changed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
 };
 
 // =============================================
@@ -137,6 +139,7 @@ function getModuleChip(eventType: string): string | null {
   if (eventType === 'client_login') return 'Logins';
   if (eventType === 'message_sent') return 'Messages';
   if (eventType.startsWith('academy_')) return 'Academy';
+  if (eventType === 'stage_status_changed') return 'Stages';
   return null;
 }
 
@@ -180,6 +183,8 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
       return { label: 'Fix connection', path: '/settings?tab=calendar' };
     case 'message_sent':
       return { label: 'View conversation', path: `/clients/${event.tenant_id}?tab=messages` };
+    case 'stage_status_changed':
+      return { label: 'View package', path: `/clients/${event.tenant_id}?tab=packages` };
     case 'account_invited':
     case 'account_activated':
     case 'account_deactivated':

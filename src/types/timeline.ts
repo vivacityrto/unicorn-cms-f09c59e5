@@ -58,6 +58,8 @@ export const TIMELINE_EVENT_TYPES = [
   'academy_enrolled',
   'academy_lesson_completed',
   'academy_certificate_issued',
+  // Stage progression (internal-only)
+  'stage_status_changed',
 ] as const;
 
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
