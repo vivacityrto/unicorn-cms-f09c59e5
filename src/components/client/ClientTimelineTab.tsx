@@ -14,7 +14,7 @@ import { TimelineEventCard, TimelineEventCardSkeleton } from './TimelineEventCar
 import {
   Activity, FileText, Mail, CheckSquare, StickyNote,
   Clock, Loader2, RefreshCw, Calendar, Timer, Search,
-  Plus, X, ChevronDown, ChevronUp, Pin, PinOff, Link2, UserCog,
+  Plus, X, ChevronDown, ChevronUp, Pin, PinOff, Link2, UserCog, LogIn,
 } from 'lucide-react';
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns';
 
@@ -30,6 +30,7 @@ const FILTER_OPTIONS = [
   { value: 'tasks', label: 'Tasks', icon: CheckSquare },
   { value: 'notes', label: 'Notes', icon: StickyNote },
   { value: 'accounts', label: 'Accounts', icon: UserCog },
+  { value: 'logins', label: 'Logins', icon: LogIn, staffOnly: true },
   { value: 'microsoft', label: 'Microsoft', icon: Link2 },
 ];
 
@@ -280,7 +281,7 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
           <div className="mt-4 space-y-3">
             <div className="flex flex-wrap gap-2">
               {FILTER_OPTIONS
-                .filter(opt => opt.value !== 'microsoft' || isVivacityTeam)
+                .filter(opt => (opt.value !== 'microsoft' && !opt.staffOnly) || isVivacityTeam)
                 .map(opt => {
                   const FilterIcon = opt.icon;
                   return (
