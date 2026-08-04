@@ -988,7 +988,24 @@ export default function ManageTenants() {
                       )}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      {getStatusBadge(tenant.status)}
+                      <div className={cn("flex flex-col items-center gap-1", tenant.archived_at && "opacity-50 grayscale")}>
+                        {getStatusBadge(tenant.status)}
+                        {tenant.archived_at && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="text-[0.7rem] py-0 px-[0.5rem] rounded-[11px] border-muted-foreground/40 text-muted-foreground bg-muted/40">
+                                  <Archive className="mr-1 h-2.5 w-2.5" />
+                                  Archived
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Archived {new Date(tenant.archived_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — status above reflects the raw client status, independent of archive state.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell
                       className="py-6 border-r border-border/50 whitespace-nowrap"
