@@ -907,7 +907,7 @@ export default function ManageTenants() {
                       "group transition-all duration-200 cursor-pointer border-b border-border/50",
                       index % 2 === 0 ? "bg-background" : "bg-muted/20",
                       "hover:bg-primary/5 animate-fade-in",
-                      (tenant.status !== "active") && "opacity-60"
+                      (tenant.status !== "active" || !!tenant.archived_at) && "opacity-60"
                     )}
                     onClick={() => navigate(`/tenant/${tenant.id}`)}
                   >
@@ -988,7 +988,24 @@ export default function ManageTenants() {
                       )}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      {getStatusBadge(tenant.status)}
+                      <div className="flex flex-col items-center gap-1">
+                        {getStatusBadge(tenant.status)}
+                        {tenant.archived_at && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="text-[0.7rem] py-0 px-[0.5rem] rounded-[11px] border-muted-foreground/40 text-muted-foreground bg-muted/40">
+                                  <Archive className="mr-1 h-2.5 w-2.5" />
+                                  Archived
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Archived {new Date(tenant.archived_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — status above reflects the raw client status, independent of archive state.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell
                       className="py-6 border-r border-border/50 whitespace-nowrap"
