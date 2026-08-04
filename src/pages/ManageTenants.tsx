@@ -907,7 +907,7 @@ export default function ManageTenants() {
                       "group transition-all duration-200 cursor-pointer border-b border-border/50",
                       index % 2 === 0 ? "bg-background" : "bg-muted/20",
                       "hover:bg-primary/5 animate-fade-in",
-                      (tenant.status !== "active") && "opacity-60"
+                      (tenant.status !== "active" || !!tenant.archived_at) && "opacity-60"
                     )}
                     onClick={() => navigate(`/tenant/${tenant.id}`)}
                   >
@@ -988,7 +988,7 @@ export default function ManageTenants() {
                       )}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      <div className={cn("flex flex-col items-center gap-1", tenant.archived_at && "opacity-50 grayscale")}>
+                      <div className="flex flex-col items-center gap-1">
                         {getStatusBadge(tenant.status)}
                         {tenant.archived_at && (
                           <TooltipProvider>
