@@ -361,73 +361,77 @@ export default function ManageTenants() {
   const applyFiltersAndSort = () => {
     let filtered = [...tenants];
 
-    // Archived tenants are hidden by default regardless of status filter —
-    // archived_at is an independent flag (a tenant can be archived while its
-    // status is still e.g. 'active'), not a status value itself. SuperAdmin
-    // can reveal them via the "Show Archived" toggle.
-    if (!showArchived) {
-      filtered = filtered.filter(tenant => !tenant.archived_at);
-    }
-
-    // Search
     if (searchQuery) {
-      filtered = filtered.filter(tenant => tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) || tenant.slug.toLowerCase().includes(searchQuery.toLowerCase()));
-    }
+      // Search overrides every other filter/toggle below — a client should
+      // always be findable by name/slug regardless of status, package, CSC,
+      // renewal, registration, or archived-state filtering. Those filters
+      // only apply when the user isn't actively searching.
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(tenant => tenant.name.toLowerCase().includes(q) || tenant.slug.toLowerCase().includes(q));
+    } else {
+      // Archived tenants are hidden by default regardless of status filter —
+      // archived_at is an independent flag (a tenant can be archived while its
+      // status is still e.g. 'active'), not a status value itself. SuperAdmin
+      // can reveal them via the "Show Archived" toggle.
+      if (!showArchived) {
+        filtered = filtered.filter(tenant => !tenant.archived_at);
+      }
 
-    // Status filter — options come from dd_status (raw status column), so
-    // always compare against tenant.status, not the derived lifecycle_status.
-    // "suspended"/"closed" (set by the summary stat cards) are aggregate
-    // groupings, not real dd_status values — see SUSPENDED_STATUSES/CLOSED_STATUSES.
-    if (statusFilter === "suspended") {
-      filtered = filtered.filter(tenant => SUSPENDED_STATUSES.includes(tenant.status));
-    } else if (statusFilter === "closed") {
-      filtered = filtered.filter(tenant => CLOSED_STATUSES.includes(tenant.status));
-    } else if (statusFilter !== "all") {
-      filtered = filtered.filter(tenant => tenant.status === statusFilter);
-    }
+      // Status filter — options come from dd_status (raw status column), so
+      // always compare against tenant.status, not the derived lifecycle_status.
+      // "suspended"/"closed" (set by the summary stat cards) are aggregate
+      // groupings, not real dd_status values — see SUSPENDED_STATUSES/CLOSED_STATUSES.
+      if (statusFilter === "suspended") {
+        filtered = filtered.filter(tenant => SUSPENDED_STATUSES.includes(tenant.status));
+      } else if (statusFilter === "closed") {
+        filtered = filtered.filter(tenant => CLOSED_STATUSES.includes(tenant.status));
+      } else if (statusFilter !== "all") {
+        filtered = filtered.filter(tenant => tenant.status === statusFilter);
+      }
 
-    // Package filter
-    if (packageFilter === "complyhub") {
-      filtered = filtered.filter(tenant => !!tenant.complyhub_membership_tier);
-    } else if (packageFilter !== "all") {
-      filtered = filtered.filter(tenant => tenant.all_packages.some(p => p.id.toString() === packageFilter));
-    }
+      // Package filter
+      if (packageFilter === "complyhub") {
+        filtered = filtered.filter(tenant => !!tenant.complyhub_membership_tier);
+      } else if (packageFilter !== "all") {
+        filtered = filtered.filter(tenant => tenant.all_packages.some(p => p.id.toString() === packageFilter));
+      }
 
-    // CSC filter
-    if (cscFilter === "unassigned") {
-      filtered = filtered.filter(tenant => !tenant.csc_user_id);
-    } else if (cscFilter !== "all") {
-      filtered = filtered.filter(tenant => tenant.csc_user_id === cscFilter);
-    }
+      // CSC filter
+      if (cscFilter === "unassigned") {
+        filtered = filtered.filter(tenant => !tenant.csc_user_id);
+      } else if (cscFilter !== "all") {
+        filtered = filtered.filter(tenant => tenant.csc_user_id === cscFilter);
+      }
 
-    // Renewal due filter
-    if (renewalFilter === "overdue") {
-      const now = new Date();
-      filtered = filtered.filter(tenant => {
-        if (!tenant.next_renewal_date) return false;
-        return new Date(tenant.next_renewal_date) < now;
-      });
-    } else if (renewalFilter !== "all") {
-      const months = parseInt(renewalFilter);
-      const now = new Date();
-      const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
-      filtered = filtered.filter(tenant => {
-        if (!tenant.next_renewal_date) return false;
-        const renewal = new Date(tenant.next_renewal_date);
-        return renewal <= cutoff;
-      });
-    }
+      // Renewal due filter
+      if (renewalFilter === "overdue") {
+        const now = new Date();
+        filtered = filtered.filter(tenant => {
+          if (!tenant.next_renewal_date) return false;
+          return new Date(tenant.next_renewal_date) < now;
+        });
+      } else if (renewalFilter !== "all") {
+        const months = parseInt(renewalFilter);
+        const now = new Date();
+        const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
+        filtered = filtered.filter(tenant => {
+          if (!tenant.next_renewal_date) return false;
+          const renewal = new Date(tenant.next_renewal_date);
+          return renewal <= cutoff;
+        });
+      }
 
-    // Registration end date filter
-    if (regEndFilter !== "all") {
-      const months = parseInt(regEndFilter);
-      const now = new Date();
-      const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
-      filtered = filtered.filter(tenant => {
-        if (!tenant.registration_end_date) return false;
-        const regEnd = new Date(tenant.registration_end_date);
-        return regEnd <= cutoff;
-      });
+      // Registration end date filter
+      if (regEndFilter !== "all") {
+        const months = parseInt(regEndFilter);
+        const now = new Date();
+        const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
+        filtered = filtered.filter(tenant => {
+          if (!tenant.registration_end_date) return false;
+          const regEnd = new Date(tenant.registration_end_date);
+          return regEnd <= cutoff;
+        });
+      }
     }
 
     // Sort
