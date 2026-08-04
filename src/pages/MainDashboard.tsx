@@ -110,7 +110,7 @@ function Panel({
   const navigate = useNavigate();
   return (
     <div
-      className={`bg-white rounded-xl flex flex-col border border-border shadow-elevated ${className ?? ""}`}
+      className={`bg-card rounded-xl flex flex-col border border-border shadow-elevated ${className ?? ""}`}
     >
       <div className="px-3.5 pt-2.5 pb-1.5 border-b border-border bg-brand-light-purple/20 rounded-t-xl flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -160,7 +160,7 @@ function SummaryCard({ title, value, sub, onClick, accentColor, topAccent, icon:
     <Comp
       type={clickable ? "button" : undefined}
       onClick={onClick}
-      className={`relative overflow-hidden bg-white rounded-xl px-4 py-3 flex flex-col justify-between min-h-[92px] border border-border shadow-elevated text-left transition-all ${
+      className={`relative overflow-hidden bg-card rounded-xl px-4 py-3 flex flex-col justify-between min-h-[92px] border border-border shadow-elevated text-left transition-all ${
         clickable ? "hover:border-[#7130A0]/40 hover:shadow-elevated-hover cursor-pointer" : ""
       }`}
       style={{ backgroundImage: `linear-gradient(135deg, ${glow}0D 0%, transparent 55%)` }}
@@ -690,7 +690,7 @@ export default function MainDashboard() {
     <DashboardLayout>
       <div className="p-4 md:p-6 space-y-3">
         {/* Header band */}
-        <div className="relative overflow-hidden bg-white rounded-xl border border-border shadow-elevated">
+        <div className="relative overflow-hidden bg-card rounded-xl border border-border shadow-elevated">
           <span
             aria-hidden
             className="absolute inset-y-0 left-0 w-1"
@@ -723,7 +723,7 @@ export default function MainDashboard() {
               </div>
             </div>
             {/* Unified Action Dock */}
-            <div className="flex items-center gap-0.5 p-0.5 rounded-full bg-white border border-border shadow-elevated">
+            <div className="flex items-center gap-0.5 p-0.5 rounded-full bg-card border border-border shadow-elevated">
               <Button
                 variant="ghost"
                 onClick={() => navigate('/manage-tenants')}
@@ -1086,7 +1086,7 @@ export default function MainDashboard() {
                   <button
                     key={ev.id}
                     onClick={() => navigate("/calendar")}
-                    className="relative overflow-hidden shrink-0 w-[260px] text-left rounded-lg border border-border bg-white hover:bg-[#23C0DD]/5 hover:border-[#23C0DD]/40 transition-colors p-3 pl-4 flex gap-3"
+                    className="relative overflow-hidden shrink-0 w-[260px] text-left rounded-lg border border-border bg-card hover:bg-[#23C0DD]/5 hover:border-[#23C0DD]/40 transition-colors p-3 pl-4 flex gap-3"
                   >
                     <span
                       aria-hidden
