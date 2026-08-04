@@ -101,6 +101,7 @@ const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   accounts: ['account_invited', 'account_activated', 'account_deactivated', 'account_role_changed', 'account_removed'],
   logins: ['client_login'],
   messages: ['message_sent'],
+  academy: ['academy_enrolled', 'academy_lesson_completed', 'academy_certificate_issued'],
   microsoft: [
     'microsoft_connected', 'microsoft_disconnected', 'microsoft_sync_failed',
     'sharepoint_doc_linked', 'sharepoint_root_configured', 'sharepoint_root_invalid',

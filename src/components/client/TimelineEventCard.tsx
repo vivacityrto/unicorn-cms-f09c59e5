@@ -18,6 +18,7 @@ import {
   Clock, ExternalLink, RotateCcw, MoreHorizontal, Copy, Shield,
   ChevronDown, ChevronUp, Pin, PinOff, Package,
   UserPlus, UserCheck, UserX, UserCog, UserMinus, LogIn, MessageSquare,
+  GraduationCap, BookOpenCheck, Award,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { LucideIcon } from 'lucide-react';
@@ -69,6 +70,9 @@ const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   account_removed: UserMinus,
   client_login: LogIn,
   message_sent: MessageSquare,
+  academy_enrolled: GraduationCap,
+  academy_lesson_completed: BookOpenCheck,
+  academy_certificate_issued: Award,
 };
 
 /**
@@ -114,6 +118,9 @@ const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   account_removed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   client_login: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
   message_sent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+  academy_enrolled: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  academy_lesson_completed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  academy_certificate_issued: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
 };
 
 // =============================================
@@ -129,6 +136,7 @@ function getModuleChip(eventType: string): string | null {
   if (eventType.startsWith('account')) return 'Accounts';
   if (eventType === 'client_login') return 'Logins';
   if (eventType === 'message_sent') return 'Messages';
+  if (eventType.startsWith('academy_')) return 'Academy';
   return null;
 }
 
