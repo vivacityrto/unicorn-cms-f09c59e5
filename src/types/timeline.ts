@@ -52,6 +52,8 @@ export const TIMELINE_EVENT_TYPES = [
   'account_removed',
   // Client portal activity (internal-only)
   'client_login',
+  // Messaging (client-visible)
+  'message_sent',
 ] as const;
 
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];

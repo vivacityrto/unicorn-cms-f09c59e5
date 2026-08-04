@@ -13,7 +13,7 @@ export interface TimelineEvent {
   created_at: string;
   occurred_at: string;
   created_by: string | null;
-  source: 'system' | 'user' | 'microsoft';
+  source: 'system' | 'user' | 'microsoft' | 'unicorn';
   event_type: string;
   title: string;
   body: string | null;
@@ -100,6 +100,7 @@ const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   notes: ['note_added', 'note_created', 'note_pinned', 'note_unpinned', 'structured_note_added'],
   accounts: ['account_invited', 'account_activated', 'account_deactivated', 'account_role_changed', 'account_removed'],
   logins: ['client_login'],
+  messages: ['message_sent'],
   microsoft: [
     'microsoft_connected', 'microsoft_disconnected', 'microsoft_sync_failed',
     'sharepoint_doc_linked', 'sharepoint_root_configured', 'sharepoint_root_invalid',
