@@ -58,9 +58,9 @@ export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
   if (!isTemplate) {
     return (
       <div className="space-y-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm flex items-start gap-2">
-          <Info className="h-4 w-4 text-blue-600 mt-0.5" />
-          <p className="text-blue-800">
+        <div className="bg-accent/10 border border-accent/30 rounded-md p-3 text-sm flex items-start gap-2">
+          <Info className="h-4 w-4 text-primary mt-0.5" />
+          <p className="text-foreground">
             This audit uses the SRTO 2025 standards reference. Questions are freeform — add findings directly against each standard area.
           </p>
         </div>

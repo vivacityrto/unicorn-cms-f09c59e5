@@ -6,10 +6,10 @@ import type { AuditSection, AuditResponse } from '@/types/auditWorkspace';
 import { AUDIT_RISK_LABELS } from '@/types/clientAudits';
 
 const RISK_PILL: Record<AuditRisk, string> = {
-  low: 'bg-green-100 text-green-900 border-green-300',
-  medium: 'bg-yellow-100 text-yellow-900 border-yellow-300',
-  high: 'bg-orange-100 text-orange-900 border-orange-300',
-  critical: 'bg-red-100 text-red-900 border-red-300',
+  low: 'bg-green-100 text-green-900 border-green-300 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800',
+  medium: 'bg-yellow-100 text-yellow-900 border-yellow-300 dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-800',
+  high: 'bg-orange-100 text-orange-900 border-orange-300 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800',
+  critical: 'bg-red-100 text-red-900 border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800',
   extreme: 'bg-red-900 text-red-50 border-red-950',
 };
 
@@ -32,7 +32,7 @@ export function AuditSummaryPills({ audit, sections, responses }: Props) {
   return (
     <div className="px-4 py-3 border-b bg-muted/20 flex flex-wrap gap-3">
       {/* Completion pill */}
-      <div className="inline-flex flex-col rounded-md border bg-slate-100 text-slate-900 px-3 py-1.5">
+      <div className="inline-flex flex-col rounded-md border bg-card text-foreground px-3 py-1.5">
         <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">Completion</span>
         <span className="text-sm font-medium">{answered} of {total} answered ({pct}%)</span>
       </div>
@@ -44,7 +44,7 @@ export function AuditSummaryPills({ audit, sections, responses }: Props) {
             <div
               className={cn(
                 'inline-flex flex-col rounded-md border px-3 py-1.5 cursor-help',
-                risk ? RISK_PILL[risk] : 'bg-slate-100 text-slate-700 border-slate-300'
+                risk ? RISK_PILL[risk] : 'bg-muted text-muted-foreground border-border'
               )}
             >
               <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">Risk Rating</span>

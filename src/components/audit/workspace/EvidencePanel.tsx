@@ -178,9 +178,9 @@ export function EvidencePanel(props: EvidencePanelProps) {
   const confidencePct = aiSuggestion.confidence != null ? Math.round(aiSuggestion.confidence * 100) : null;
 
   return (
-    <div className="space-y-2 rounded-md border border-cyan-100 bg-cyan-50/30 p-3">
+    <div className="space-y-2 rounded-md border border-accent/30 bg-accent/10 p-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-xs font-medium text-cyan-900">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
           <Paperclip className="h-3.5 w-3.5" />
           Evidence ({linked.length})
         </div>
@@ -229,9 +229,9 @@ export function EvidencePanel(props: EvidencePanelProps) {
       ) : (
         <ul className="space-y-1">
           {linked.map((l) => (
-            <li key={l.id} className="flex items-center justify-between gap-2 rounded bg-white border border-cyan-100 px-2 py-1 text-xs">
+            <li key={l.id} className="flex items-center justify-between gap-2 rounded bg-card border border-accent/30 px-2 py-1 text-xs">
               <div className="flex items-center gap-1.5 min-w-0">
-                <FileText className="h-3 w-3 text-cyan-700 flex-shrink-0" />
+                <FileText className="h-3 w-3 text-primary flex-shrink-0" />
                 <span className="truncate" title={l.document_title || ''}>{l.document_title || `Document #${l.document_id}`}</span>
               </div>
               <button
@@ -249,9 +249,9 @@ export function EvidencePanel(props: EvidencePanelProps) {
 
       {/* Loading state — explicit copy per approved amendment */}
       {analysing && (
-        <div className="rounded-md border border-cyan-200 bg-white p-3 text-xs text-cyan-900">
+        <div className="rounded-md border border-accent/30 bg-accent/10 p-3 text-xs text-foreground">
           <div className="flex items-center gap-2">
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-600" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
             <span className="font-medium">Analysing evidence…</span>
           </div>
           <p className="mt-1 text-muted-foreground">
@@ -262,9 +262,9 @@ export function EvidencePanel(props: EvidencePanelProps) {
 
       {/* AI suggestion display */}
       {hasSuggestion && !analysing && (
-        <div className="rounded-md border border-cyan-200 bg-white p-3 text-xs space-y-2">
+        <div className="rounded-md border border-accent/30 bg-accent/10 p-3 text-xs space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-cyan-800 font-medium">
+            <div className="flex items-center gap-1.5 text-foreground font-medium">
               <Bot className="h-3.5 w-3.5" />
               AI suggestion
               {confidencePct != null && (
@@ -295,7 +295,7 @@ export function EvidencePanel(props: EvidencePanelProps) {
                 <span className="font-medium">{aiSuggestion.rating}</span>
               </div>
               {aiSuggestion.notes && (
-                <p className="text-cyan-900 whitespace-pre-wrap">{aiSuggestion.notes}</p>
+                <p className="text-foreground whitespace-pre-wrap">{aiSuggestion.notes}</p>
               )}
               {aiSuggestion.excerpts && aiSuggestion.excerpts.length > 0 && (
                 <div className="space-y-1">
@@ -304,7 +304,7 @@ export function EvidencePanel(props: EvidencePanelProps) {
                   </div>
                   <ul className="space-y-1">
                     {aiSuggestion.excerpts.map((ex, i) => (
-                      <li key={i} className="rounded bg-cyan-50 border-l-2 border-cyan-300 px-2 py-1">
+                      <li key={i} className="rounded bg-accent/10 border-l-2 border-primary/40 px-2 py-1">
                         <div className="italic">"{ex.quote}"</div>
                         <div className="text-[10px] text-muted-foreground mt-0.5">— {ex.source}</div>
                       </li>
@@ -314,10 +314,10 @@ export function EvidencePanel(props: EvidencePanelProps) {
               )}
               {aiSuggestion.gaps && aiSuggestion.gaps.length > 0 && (
                 <div className="space-y-1">
-                  <div className="text-[10px] font-medium text-amber-800 uppercase tracking-wide">
+                  <div className="text-[10px] font-medium text-amber-800 dark:text-amber-400 uppercase tracking-wide">
                     Gaps identified
                   </div>
-                  <ul className="list-disc pl-4 text-amber-900">
+                  <ul className="list-disc pl-4 text-amber-900 dark:text-amber-300">
                     {aiSuggestion.gaps.map((g, i) => <li key={i}>{g}</li>)}
                   </ul>
                 </div>
@@ -466,7 +466,7 @@ function DocumentLinkerDialog(props: DocumentLinkerDialogProps) {
         </DialogHeader>
 
         {subjectTenantId == null && (
-          <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
+          <div className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded p-2">
             This audit has no subject tenant — cannot list documents.
           </div>
         )}
@@ -506,7 +506,7 @@ function DocumentLinkerDialog(props: DocumentLinkerDialogProps) {
                       <div className="font-medium truncate">{d.title || `Document #${d.id}`}</div>
                       <div className="text-[10px] text-muted-foreground">
                         {d.document_category || 'Uncategorised'}
-                        {already && <span className="ml-2 text-cyan-700">· already linked</span>}
+                        {already && <span className="ml-2 text-primary">· already linked</span>}
                       </div>
                     </div>
                   </li>

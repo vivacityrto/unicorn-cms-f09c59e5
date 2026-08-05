@@ -195,22 +195,22 @@ export interface TemplateQuestion {
 }
 
 export const RATING_OPTIONS_FULL = [
-  { value: 'compliant', label: 'Compliant', color: 'bg-green-100 text-green-800 border-green-300' },
-  { value: 'at_risk', label: 'At Risk', color: 'bg-amber-100 text-amber-800 border-amber-300' },
-  { value: 'non_compliant', label: 'Non-Compliant', color: 'bg-red-100 text-red-800 border-red-300' },
-  { value: 'not_applicable', label: 'N/A', color: 'bg-gray-100 text-gray-600 border-gray-300' },
-  { value: 'not_sighted', label: 'Not Sighted', color: 'bg-gray-100 text-gray-600 border-gray-300' },
+  { value: 'compliant', label: 'Compliant', color: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800' },
+  { value: 'at_risk', label: 'At Risk', color: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800' },
+  { value: 'non_compliant', label: 'Non-Compliant', color: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800' },
+  { value: 'not_applicable', label: 'N/A', color: 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/40 dark:text-gray-300 dark:border-gray-700' },
+  { value: 'not_sighted', label: 'Not Sighted', color: 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/40 dark:text-gray-300 dark:border-gray-700' },
 ] as const;
 
 export const RATING_OPTIONS_SAFE = [
-  { value: 'compliant', label: 'Compliant', color: 'bg-green-100 text-green-800 border-green-300' },
-  { value: 'at_risk', label: 'At Risk', color: 'bg-amber-100 text-amber-800 border-amber-300' },
+  { value: 'compliant', label: 'Compliant', color: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800' },
+  { value: 'at_risk', label: 'At Risk', color: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800' },
 ] as const;
 
 export const RATING_OPTIONS_CLOSING = [
-  { value: 'compliant', label: 'Acknowledged', color: 'bg-green-100 text-green-800 border-green-300' },
-  { value: 'at_risk', label: 'Partially Acknowledged', color: 'bg-amber-100 text-amber-800 border-amber-300' },
-  { value: 'non_compliant', label: 'Disputed', color: 'bg-red-100 text-red-800 border-red-300' },
+  { value: 'compliant', label: 'Acknowledged', color: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800' },
+  { value: 'at_risk', label: 'Partially Acknowledged', color: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800' },
+  { value: 'non_compliant', label: 'Disputed', color: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800' },
 ] as const;
 
 export const DOCUMENT_TYPES = [
@@ -237,10 +237,10 @@ export const ACTION_STATUS_OPTIONS = [
 ] as const;
 
 export const ACTION_TYPE_OPTIONS = [
-  { value: 'corrective_action', label: 'Corrective Action', icon: 'Wrench', color: 'bg-blue-100 text-blue-800 border-blue-300', description: 'Non-compliance that must be addressed' },
-  { value: 'mandatory_rectification', label: 'Mandatory Rectification', icon: 'AlertTriangle', color: 'bg-red-100 text-red-800 border-red-300', description: 'Critical — must be fixed before next audit or registration' },
-  { value: 'improvement_opportunity', label: 'Improvement Opportunity', icon: 'Lightbulb', color: 'bg-amber-100 text-amber-800 border-amber-300', description: 'Not currently non-compliant but improvement is recommended' },
-  { value: 'observation', label: 'Observation', icon: 'Eye', color: 'bg-gray-100 text-gray-600 border-gray-300', description: 'Noted for awareness — no action required' },
+  { value: 'corrective_action', label: 'Corrective Action', icon: 'Wrench', color: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800', description: 'Non-compliance that must be addressed' },
+  { value: 'mandatory_rectification', label: 'Mandatory Rectification', icon: 'AlertTriangle', color: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800', description: 'Critical — must be fixed before next audit or registration' },
+  { value: 'improvement_opportunity', label: 'Improvement Opportunity', icon: 'Lightbulb', color: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800', description: 'Not currently non-compliant but improvement is recommended' },
+  { value: 'observation', label: 'Observation', icon: 'Eye', color: 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/40 dark:text-gray-300 dark:border-gray-700', description: 'Noted for awareness — no action required' },
 ] as const;
 
 export const DELIVERY_MODEL_OPTIONS = [
@@ -250,9 +250,9 @@ export const DELIVERY_MODEL_OPTIONS = [
 ] as const;
 
 export const VERIFICATION_STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending', color: 'bg-gray-100 text-gray-600' },
-  { value: 'response_received', label: 'Response Received', color: 'bg-blue-100 text-blue-700' },
-  { value: 'verified', label: 'Verified', color: 'bg-green-100 text-green-700' },
-  { value: 'rejected', label: 'Rejected', color: 'bg-red-100 text-red-700' },
-  { value: 'waived', label: 'Waived', color: 'bg-gray-100 text-gray-500' },
+  { value: 'pending', label: 'Pending', color: 'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-300' },
+  { value: 'response_received', label: 'Response Received', color: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' },
+  { value: 'verified', label: 'Verified', color: 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300' },
+  { value: 'rejected', label: 'Rejected', color: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' },
+  { value: 'waived', label: 'Waived', color: 'bg-gray-100 text-gray-500 dark:bg-gray-800/40 dark:text-gray-400' },
 ] as const;

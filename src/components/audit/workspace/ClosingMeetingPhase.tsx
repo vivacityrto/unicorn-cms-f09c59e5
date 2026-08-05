@@ -38,7 +38,7 @@ export function ClosingMeetingPhase({
 
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4">
+      <div className="bg-accent/10 border border-accent/30 rounded-lg p-4">
         <h3 className="text-lg font-semibold text-foreground">Closing Meeting</h3>
         <p className="text-sm text-muted-foreground mt-1">
           Reconvene with the RTO representative. Present findings, capture their response.
@@ -53,25 +53,25 @@ export function ClosingMeetingPhase({
             <div className="space-y-1.5 text-xs">
               {critical.length > 0 && (
                 <div className="flex items-start gap-2">
-                  <Badge variant="outline" className="bg-red-200 text-red-900 text-[10px] flex-shrink-0">Critical ({critical.length})</Badge>
+                  <Badge variant="outline" className="bg-red-200 text-red-900 dark:bg-red-950/50 dark:text-red-300 text-[10px] flex-shrink-0">Critical ({critical.length})</Badge>
                   <span className="text-muted-foreground">{critical.map(f => f.summary).join('; ')}</span>
                 </div>
               )}
               {high.length > 0 && (
                 <div className="flex items-start gap-2">
-                  <Badge variant="outline" className="bg-red-100 text-red-800 text-[10px] flex-shrink-0">High ({high.length})</Badge>
+                  <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300 text-[10px] flex-shrink-0">High ({high.length})</Badge>
                   <span className="text-muted-foreground">{high.map(f => f.summary).join('; ')}</span>
                 </div>
               )}
               {medium.length > 0 && (
                 <div className="flex items-start gap-2">
-                  <Badge variant="outline" className="bg-amber-100 text-amber-800 text-[10px] flex-shrink-0">Medium ({medium.length})</Badge>
+                  <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-[10px] flex-shrink-0">Medium ({medium.length})</Badge>
                   <span className="text-muted-foreground">{medium.map(f => f.summary).join('; ')}</span>
                 </div>
               )}
               {low.length > 0 && (
                 <div className="flex items-start gap-2">
-                  <Badge variant="outline" className="bg-green-100 text-green-800 text-[10px] flex-shrink-0">Low ({low.length})</Badge>
+                  <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300 text-[10px] flex-shrink-0">Low ({low.length})</Badge>
                   <span className="text-muted-foreground">{low.map(f => f.summary).join('; ')}</span>
                 </div>
               )}
@@ -81,8 +81,8 @@ export function ClosingMeetingPhase({
       )}
 
       {findings && findings.length === 0 && (
-        <Card className="border-green-200 bg-green-50/30">
-          <CardContent className="p-4 text-sm text-green-800">
+        <Card className="border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/40">
+          <CardContent className="p-4 text-sm text-green-800 dark:text-green-300">
             No findings to present. All standard areas assessed as compliant.
           </CardContent>
         </Card>
@@ -129,7 +129,7 @@ export function ClosingMeetingPhase({
               />
             ))}
 
-            <Card className="bg-blue-50/30 border-blue-100">
+            <Card className="bg-accent/10 border-accent/30">
               <CardContent className="p-4 space-y-2">
                 <label className="text-sm font-medium text-foreground">
                   Overall closing meeting notes

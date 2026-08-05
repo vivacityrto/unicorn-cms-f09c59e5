@@ -58,7 +58,7 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               {note.title ? (
-                <h3 className="text-[15px] font-semibold text-brand-acai-700 truncate">
+                <h3 className="text-[15px] font-semibold text-primary truncate">
                   {note.title}
                 </h3>
               ) : (

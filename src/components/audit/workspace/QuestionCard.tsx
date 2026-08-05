@@ -234,7 +234,7 @@ export function QuestionCard({
   // Warm tint for conversation phases
   const cardBg =
     ctx === 'client_discussion' || ctx === 'closing_discussion'
-      ? 'bg-blue-50/20 border-blue-100'
+      ? 'bg-accent/10 border-accent/30'
       : '';
 
   // Action-row Raise Finding button — state machine
@@ -461,9 +461,9 @@ export function QuestionCard({
 
         {/* In-card amber banner — only when a finding is required */}
         {ratingNeedsFinding && !showFindingForm && (
-          <div className="flex flex-col gap-2 rounded-md border-l-4 border-amber-500 bg-amber-50 p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-2 text-amber-900">
-              <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-600" />
+          <div className="flex flex-col gap-2 rounded-md border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2 text-amber-900 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
               <span>This response requires a finding before the audit is complete.</span>
             </div>
             <Button

@@ -14,10 +14,10 @@ interface FindingsTabProps {
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  critical: 'bg-red-100 text-red-800 border-red-300',
-  high: 'bg-orange-100 text-orange-800 border-orange-300',
-  medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  low: 'bg-gray-100 text-gray-700 border-gray-300',
+  critical: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800',
+  high: 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800',
+  medium: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-800',
+  low: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800/40 dark:text-gray-300 dark:border-gray-700',
 };
 
 const PRIORITY_ORDER = ['critical', 'high', 'medium', 'low'];
@@ -160,7 +160,7 @@ export function FindingsTab({ auditId }: FindingsTabProps) {
                         <p className="text-[10px] text-muted-foreground">
                           {new Date(f.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                           {f.is_auto_generated && (
-                            <span className="ml-2 inline-flex items-center gap-1 text-blue-600">
+                            <span className="ml-2 inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
                               <Bot className="h-3 w-3" /> AI-generated
                             </span>
                           )}

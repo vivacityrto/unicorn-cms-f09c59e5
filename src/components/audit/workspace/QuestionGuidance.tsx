@@ -152,13 +152,7 @@ export function QuestionGuidance({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span
-                  className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium"
-                  style={{
-                    backgroundColor: 'rgba(113, 48, 160, 0.10)',
-                    color: '#44235F',
-                  }}
-                >
+                <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary">
                   Standard {question.clause}
                 </span>
               </TooltipTrigger>
@@ -199,12 +193,12 @@ export function QuestionGuidance({
       {/* Finding guide */}
       {findingGuideText && (
         <GuidanceBlock
-          icon={<Info className="h-3 w-3 text-amber-700" />}
+          icon={<Info className="h-3 w-3 text-amber-700 dark:text-amber-400" />}
           label="Finding guide"
           open={isPrint ? true : findingOpen}
           onToggle={() => setFindingOpen((v) => !v)}
           isPrint={isPrint}
-          bodyClassName="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-900"
+          bodyClassName="rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-900 dark:text-amber-300"
         >
           {findingGuideText}
         </GuidanceBlock>

@@ -92,14 +92,14 @@ export function FocusMode({
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-bold text-brand-acai-700">{pct}%</span>
+            <span className="text-lg font-bold text-primary">{pct}%</span>
           </div>
         </div>
         <div className="min-w-0">
           <div className="text-[13px] text-muted-foreground">
             {done} of {total} done
           </div>
-          <div className="text-[15px] font-semibold text-brand-acai-700">
+          <div className="text-[15px] font-semibold text-primary">
             {format(selectedDate, 'EEEE, dd MMM')}
           </div>
         </div>
@@ -159,8 +159,8 @@ export function FocusMode({
                       isSelected
                         ? 'bg-brand-aqua-500 text-white'
                         : isToday
-                          ? 'border border-brand-acai-700 text-brand-acai-700'
-                          : 'hover:bg-brand-light-purple-100 text-brand-acai-700',
+                          ? 'border border-primary text-primary'
+                          : 'hover:bg-brand-light-purple-100 text-primary',
                     )}
                   >
                     <span className="uppercase tracking-wider opacity-80">{format(d, 'EEE')}</span>
@@ -190,7 +190,7 @@ export function FocusMode({
 
           {/* Add + list */}
           <div className="flex items-center justify-between px-4 py-3 border-b bg-background">
-            <div className="text-sm font-medium text-brand-acai-700">Tasks &amp; notes</div>
+            <div className="text-sm font-medium text-primary">Tasks &amp; notes</div>
             <Button
               type="button"
               size="sm"

@@ -149,7 +149,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
           {/* Header */}
           <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b shrink-0">
             <div>
-              <h2 className="text-xl font-bold text-brand-acai-700">
+              <h2 className="text-xl font-bold text-primary">
                 {mode === 'edit' ? 'Edit Note' : 'Create Note'}
               </h2>
               <p className="text-xs text-brand-fuchsia-600 mt-0.5 font-medium">{dateLabel}</p>
@@ -204,7 +204,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
 
             {/* Label / color */}
             <div className="flex items-center gap-3">
-              <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">Label</span>
+              <span className="text-[11px] font-bold tracking-wider text-primary uppercase">Label</span>
               <div className="flex items-center gap-2">
                 {COLOR_ORDER.map((c) => (
                   <button
@@ -231,7 +231,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
                 <button
                   type="button"
                   onClick={() => setShowDetails((s) => !s)}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase hover:text-brand-aqua-600"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider text-primary uppercase hover:text-brand-aqua-600"
                 >
                   {showDetails ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                   Details
@@ -265,7 +265,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
 
             {/* Checklist */}
             <div>
-              <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">Checklist</span>
+              <span className="text-[11px] font-bold tracking-wider text-primary uppercase">Checklist</span>
               <ul className="mt-2 space-y-0.5">
                 {items.map((it) => (
                   <li
@@ -301,7 +301,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
                       }}
                       placeholder="List item"
                       className={cn(
-                        'flex-1 h-7 text-sm bg-transparent text-brand-acai-700',
+                        'flex-1 h-7 text-sm bg-transparent text-foreground',
                         'border-0 outline-none focus:outline-none focus:ring-0 shadow-none p-0',
                         it.done && 'line-through text-muted-foreground',
                       )}

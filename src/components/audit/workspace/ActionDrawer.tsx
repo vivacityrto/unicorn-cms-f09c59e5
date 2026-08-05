@@ -127,11 +127,11 @@ export function ActionDrawer({ open, onOpenChange, action, finding, users, audit
         <div className="space-y-6 mt-6">
           {/* Finding link */}
           {(finding || action?.finding_id) && (
-            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 flex items-start gap-2">
-              <Link2 className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+            <div className="rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 p-3 flex items-start gap-2">
+              <Link2 className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
               <div className="text-sm">
-                <span className="text-blue-600 font-medium">Linked to finding: </span>
-                <span className="text-blue-800">{finding?.summary || 'Finding linked'}</span>
+                <span className="text-blue-600 dark:text-blue-400 font-medium">Linked to finding: </span>
+                <span className="text-blue-800 dark:text-blue-300">{finding?.summary || 'Finding linked'}</span>
               </div>
             </div>
           )}
