@@ -15,7 +15,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // integration - hence the Vivacity system tenant id, not a client tenant_id.
 const VIVACITY_SYSTEM_TENANT_ID = 6372;
 
-const XERO_SCOPES = "offline_access accounting.transactions.read accounting.contacts.read";
+// Xero's OAuth server rejects offline_access (as invalid_scope) unless
+// openid/profile/email are also requested - offline_access only makes
+// sense alongside an OIDC identity token in strict OIDC semantics.
+const XERO_SCOPES = "openid profile email offline_access accounting.transactions.read accounting.contacts.read";
 
 function json(status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
