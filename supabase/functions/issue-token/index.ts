@@ -109,7 +109,7 @@ async function assertRateLimit(supabase: ReturnType<typeof createClient>, email:
 }
 
 function buildActionLink(type: TokenType, email: string, token: string): string {
-  const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au").replace(/\/+$/, "");
+  const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
   const path = type === "magic" || type === "verify" ? "/auth/callback" : "/reset-password";
   const url = new URL(path, `${APP_BASE_URL}/`);
   url.searchParams.set("token", token);
@@ -124,7 +124,7 @@ function buildEmailHtml(opts: {
   actionLink: string;
   expiresAtUnix: number;
 }): string {
-  const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au").replace(/\/+$/, "");
+  const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
   const recipientName = opts.firstName || "there";
   const cta = EMAIL_CTA[opts.type];
   const expiryLabel = new Date(opts.expiresAtUnix * 1000).toUTCString();
