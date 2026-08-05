@@ -51,7 +51,21 @@ export default function XeroCallback() {
         });
 
         if (exchangeError) {
-          throw new Error(exchangeError.message || 'Token exchange failed');
+          // supabase-js discards the actual response body on a non-2xx
+          // Edge Function response, surfacing only a generic
+          // "Edge Function returned a non-2xx status code" message.
+          // Recover the real error detail from the raw response.
+          let detail = exchangeError.message || 'Token exchange failed';
+          const context = (exchangeError as { context?: Response }).context;
+          if (context) {
+            try {
+              const body = await context.clone().json();
+              if (body?.error) detail = body.error;
+            } catch {
+              // ignore - fall back to the generic message
+            }
+          }
+          throw new Error(detail);
         }
         if (!data?.success) {
           throw new Error(data?.error || 'Token exchange failed');
