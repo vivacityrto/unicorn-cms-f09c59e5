@@ -122,6 +122,7 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const ExecutiveDecisionQueue = lazy(() => import("./pages/ExecutiveDecisionQueue"));
  const ClientDetailWrapper = lazy(() => import("./pages/ClientDetailWrapper"));
  const AdminTgaIntegrationWrapper = lazy(() => import("./pages/AdminTgaIntegrationWrapper"));
+ const AdminXeroIntegrationWrapper = lazy(() => import("./pages/AdminXeroIntegrationWrapper"));
  const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
   const TeamUsers = lazy(() => import("./pages/TeamUsers"));
 const NewStarterWizard = lazy(() => import("./pages/admin/NewStarterWizard"));
@@ -150,6 +151,7 @@ const KpiPage = lazy(() => import("./pages/KpiPage"));
  const MyWork = lazy(() => import("./pages/MyWork"));
  const CalendarTimeCapture = lazy(() => import("./pages/CalendarTimeCapture"));
  const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
+ const XeroCallback = lazy(() => import("./pages/XeroCallback"));
 const TimeInbox = lazy(() => import("./pages/TimeInbox"));
 const WorkCalendarWrapper = lazy(() => import("./pages/WorkCalendarWrapper"));
 const WorkMeetings = lazy(() => import("./pages/WorkMeetingsWrapper"));
@@ -380,11 +382,15 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/calendar/outlook-callback" 
-              element={<OutlookCallback />} 
+            <Route
+              path="/calendar/outlook-callback"
+              element={<OutlookCallback />}
             />
-            <Route 
+            <Route
+              path="/admin/integrations/xero-callback"
+              element={<XeroCallback />}
+            />
+            <Route
               path="/messages" 
               element={
                 <ProtectedRoute>
@@ -1097,6 +1103,7 @@ const App = () => (
             {/* Client Detail route removed — consolidated into /tenant/:tenantId above */}
             {/* Admin Integrations */}
             <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />
+            <Route path="/admin/integrations/xero" element={<ProtectedRoute requireSuperAdmin><AdminXeroIntegrationWrapper /></ProtectedRoute>} />
             {/* Admin User Audit */}
             <Route path="/admin/user-audit" element={<ProtectedRoute><AdminUserAudit /></ProtectedRoute>} />
             <Route path="/clients/bulk-membership-certificates" element={<ProtectedRoute><BulkMembershipCertificatesPage /></ProtectedRoute>} />

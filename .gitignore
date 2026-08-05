@@ -25,3 +25,8 @@ dist-ssr
 
 # Supabase CLI local link state
 supabase/.temp/
+
+# Local secrets — never commit
+.env
+.env.local
+.env.*.local
