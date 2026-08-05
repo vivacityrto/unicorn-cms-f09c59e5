@@ -140,33 +140,55 @@ Deno.serve(async (req) => {
     for (let i = 0; i < contactIds.length; i += BATCH_SIZE) {
       const batch = contactIds.slice(i, i + BATCH_SIZE);
 
-      const resp = await fetch(
-        `https://api.xero.com/api.xro/2.0/Invoices?ContactIDs=${batch.join(",")}&order=Date DESC`,
-        {
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-            "Xero-tenant-id": tenantAccountId,
-            "Accept": "application/json",
-          },
+      // Xero caps each page at 100 items combined across every contact in
+      // the request, not per contact - 25 contacts' invoices can easily
+      // exceed that, silently dropping some contacts' data off page 1 if
+      // pagination isn't followed (confirmed against real data: two
+      // tenants with genuine PAID invoices came back null because their
+      // invoices landed on page 2+).
+      let invoices: any[] = [];
+      let batchFailed = false;
+      let page = 1;
+      while (true) {
+        const resp = await fetch(
+          `https://api.xero.com/api.xro/2.0/Invoices?ContactIDs=${batch.join(",")}&order=Date%20DESC&page=${page}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "Xero-tenant-id": tenantAccountId,
+              "Accept": "application/json",
+            },
+          }
+        );
+
+        if (!resp.ok) {
+          console.error("[xero-invoice-sync-all] Batch fetch failed:", resp.status, await resp.text());
+          failed += batch.reduce((sum, cid) => sum + (contactToTenants.get(cid)?.length ?? 0), 0);
+          batchFailed = true;
+          break;
         }
-      );
 
-      if (!resp.ok) {
-        console.error("[xero-invoice-sync-all] Batch fetch failed:", resp.status, await resp.text());
-        failed += batch.reduce((sum, cid) => sum + (contactToTenants.get(cid)?.length ?? 0), 0);
-        continue;
+        const data = await resp.json();
+        invoices = invoices.concat(data.Invoices ?? []);
+        const pageCount = data.pagination?.pageCount ?? 1;
+        if (page >= pageCount) break;
+        page++;
       }
-
-      const data = await resp.json();
-      const invoices = data.Invoices ?? [];
+      if (batchFailed) continue;
 
       // Multiple contacts' invoices come back interleaved - find each
       // contact's most recent by date explicitly rather than relying on
-      // the batch-level Date DESC order.
+      // the batch-level Date DESC order. DRAFT/VOIDED/DELETED carry no
+      // real financial obligation (a voided invoice has AmountDue=0) -
+      // excluded so one doesn't outrank a genuinely PAID/AUTHORISED
+      // invoice just for having a later date (confirmed against real
+      // data: Adelaide Aviation's most recent invoice was VOIDED,
+      // masking a PAID one underneath it).
+      const NON_ACTIONABLE_STATUSES = new Set(["DRAFT", "VOIDED", "DELETED"]);
       const mostRecentByContact = new Map<string, any>();
       for (const inv of invoices) {
         const cid = inv.Contact?.ContactID;
-        if (!cid) continue;
+        if (!cid || NON_ACTIONABLE_STATUSES.has(inv.Status)) continue;
         const existing = mostRecentByContact.get(cid);
         const invDate = new Date(inv.DateString ?? inv.Date ?? 0).getTime();
         const existingDate = existing ? new Date(existing.DateString ?? existing.Date ?? 0).getTime() : -Infinity;

@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
     }
 
     const invoicesResp = await fetch(
-      `https://api.xero.com/api.xro/2.0/Invoices?ContactIDs=${contactId}&order=Date DESC`,
+      `https://api.xero.com/api.xro/2.0/Invoices?ContactIDs=${contactId}&order=Date%20DESC`,
       {
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -164,10 +164,15 @@ Deno.serve(async (req) => {
       return json(200, { connected: true, linked: true, error: "Failed to fetch invoices from Xero." });
     }
 
-    // Already requested with order=Date DESC, so [0] is the most recent.
+    // Already requested with order=Date DESC. DRAFT/VOIDED/DELETED carry
+    // no real financial obligation - a voided invoice has AmountDue=0,
+    // it isn't "unpaid". Skip past those to find the most recent invoice
+    // that's actually PAID/AUTHORISED/SUBMITTED (confirmed against real
+    // Xero data: a VOIDED invoice was outranking a genuinely PAID one).
     const invoicesData = await invoicesResp.json();
     const allInvoices = invoicesData.Invoices || [];
-    const mostRecent = allInvoices[0] ?? null;
+    const NON_ACTIONABLE_STATUSES = new Set(["DRAFT", "VOIDED", "DELETED"]);
+    const mostRecent = allInvoices.find((inv: any) => !NON_ACTIONABLE_STATUSES.has(inv.Status)) ?? null;
 
     // Staff only need "is the most recent invoice paid, and if not, when
     // was it due" - not itemised detail (amounts, invoice numbers,
@@ -195,7 +200,7 @@ Deno.serve(async (req) => {
     return json(200, {
       connected: true,
       linked: true,
-      has_invoices: allInvoices.length > 0,
+      has_invoices: !!mostRecent,
       most_recent_paid: mostRecentPaid,
       most_recent_due_date: mostRecentDueDate,
     });
