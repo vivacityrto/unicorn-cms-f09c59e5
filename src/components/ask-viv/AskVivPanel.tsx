@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import vivIcon from "@/assets/viv-icon.png";
+import { resolveTenantIdFromPath } from "@/lib/resolveTenantFromRoute";
 
 // Local storage key for explain sources toggle
 const EXPLAIN_SOURCES_STORAGE_KEY = "ask_viv_explain_sources_enabled";
@@ -57,30 +58,6 @@ const EXPLAIN_SOURCES_STORAGE_KEY = "ask_viv_explain_sources_enabled";
 // context when the current page itself doesn't embed a tenant ID (e.g. the
 // dashboard). Never used in place of a route match, only in its absence.
 const LAST_TENANT_STORAGE_KEY = "askviv:lastTenantId";
-
-/**
- * Resolve a tenant ID from the current route, if the route embeds one.
- * Every `/tenant/:id...` variant, `/tenant-detail/:id`, `/client-portal/:id/documents`,
- * `/admin/package/:id/tenant/:id...`, and `/compliance-audits/:id...` share a
- * `/<prefix>/<tenantId>` shape once the fixed prefix is stripped, so a small
- * ordered list of prefix regexes covers every current route.
- */
-function resolveTenantIdFromPath(pathname: string): number | null {
-  const patterns = [
-    /^\/tenant\/(\d+)/,
-    /^\/tenant-detail\/(\d+)/,
-    /^\/client-portal\/(\d+)\/documents/,
-    /^\/admin\/package\/\d+\/tenant\/(\d+)/,
-    /^\/compliance-audits\/(\d+)/,
-  ];
-  for (const pattern of patterns) {
-    const match = pathname.match(pattern);
-    if (match) {
-      return parseInt(match[1], 10);
-    }
-  }
-  return null;
-}
 
 /**
  * Extract just the "## Answer" section's body from a tiered markdown response.
