@@ -18,7 +18,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, Receipt } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, Receipt, AlertTriangle } from "lucide-react";
+import { isXeroInvoiceOverdue } from "@/lib/xeroInvoiceStatus";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddTenantDialog } from "@/components/AddTenantDialog";
@@ -958,21 +959,52 @@ export default function ManageTenants() {
                       </TableCell>
                     )}
                     <TableCell className="py-6 border-r border-border/50 min-w-[280px] pr-8">
-                      <div>
-                        <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
-                          {tenant.rto_id && <span className="text-primary font-bold mr-1.5">{tenant.rto_id}</span>}
-                          {!tenant.rto_id && hasKickStart && (
-                            <span className="text-primary font-bold mr-1.5">KS</span>
-                          )}
-                          {tenant.name}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
+                            {tenant.rto_id && <span className="text-primary font-bold mr-1.5">{tenant.rto_id}</span>}
+                            {!tenant.rto_id && hasKickStart && (
+                              <span className="text-primary font-bold mr-1.5">KS</span>
+                            )}
+                            {tenant.name}
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
+                            <span className="flex items-center gap-1">
+                              <User className="w-3 h-3" />
+                              {tenant.primary_contact_name || "No primary contact"}
+                            </span>
+                            <span>{tenant.state || ""}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
-                          <span className="flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            {tenant.primary_contact_name || "No primary contact"}
-                          </span>
-                          <span>{tenant.state || ""}</span>
-                        </div>
+                        {tenant.xero_invoice_paid !== null && tenant.xero_invoice_paid !== undefined && (() => {
+                          const overdue = !tenant.xero_invoice_paid && isXeroInvoiceOverdue(tenant.xero_invoice_due_date);
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "shrink-0 text-[0.7rem] py-0 px-[0.5rem] rounded-[11px] border font-normal whitespace-nowrap",
+                                tenant.xero_invoice_paid
+                                  ? "bg-green-500/10 text-green-600 border-green-600"
+                                  : overdue
+                                    ? "bg-red-500/10 text-red-600 border-red-600"
+                                    : "bg-amber-500/10 text-amber-600 border-amber-600"
+                              )}
+                            >
+                              {tenant.xero_invoice_paid ? (
+                                <CheckCircle2 className="mr-1 h-2.5 w-2.5" />
+                              ) : overdue ? (
+                                <AlertTriangle className="mr-1 h-2.5 w-2.5" />
+                              ) : (
+                                <Clock className="mr-1 h-2.5 w-2.5" />
+                              )}
+                              {tenant.xero_invoice_paid
+                                ? "Paid"
+                                : tenant.xero_invoice_due_date
+                                  ? `${overdue ? "Overdue" : "Due"} ${new Date(tenant.xero_invoice_due_date).toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}`
+                                  : "Unpaid"}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[200px] pr-8">
@@ -1024,28 +1056,6 @@ export default function ManageTenants() {
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       <div className="flex flex-col items-center gap-1">
                         {getStatusBadge(tenant.status)}
-                        {tenant.xero_invoice_paid !== null && tenant.xero_invoice_paid !== undefined && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-[0.7rem] py-0 px-[0.5rem] rounded-[11px] border",
-                              tenant.xero_invoice_paid
-                                ? "bg-green-500/10 text-green-600 border-green-500"
-                                : "bg-amber-500/10 text-amber-600 border-amber-500"
-                            )}
-                          >
-                            {tenant.xero_invoice_paid ? (
-                              <CheckCircle2 className="mr-1 h-2.5 w-2.5" />
-                            ) : (
-                              <Clock className="mr-1 h-2.5 w-2.5" />
-                            )}
-                            {tenant.xero_invoice_paid
-                              ? "Paid"
-                              : tenant.xero_invoice_due_date
-                                ? `Due ${new Date(tenant.xero_invoice_due_date).toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}`
-                                : "Unpaid"}
-                          </Badge>
-                        )}
                         {tenant.archived_at && (
                           <TooltipProvider>
                             <Tooltip>

@@ -1,5 +1,6 @@
-import { CheckCircle2, Clock } from 'lucide-react';
+import { CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
+import { isXeroInvoiceOverdue } from '@/lib/xeroInvoiceStatus';
 
 interface XeroInvoiceStatusBadgeProps {
   paid: boolean | null;
@@ -21,17 +22,26 @@ interface XeroInvoiceStatusBadgeProps {
 export function XeroInvoiceStatusBadge({ paid, dueDate }: XeroInvoiceStatusBadgeProps) {
   if (paid === null) return null;
 
+  const overdue = !paid && isXeroInvoiceOverdue(dueDate);
+  const colorClass = paid
+    ? 'bg-green-500/10 text-green-600 border-green-500'
+    : overdue
+      ? 'bg-red-500/10 text-red-600 border-red-500'
+      : 'bg-amber-500/10 text-amber-600 border-amber-500';
+
+  const label = paid
+    ? 'Paid'
+    : dueDate
+      ? `${overdue ? 'Overdue since' : 'Due'} ${format(new Date(dueDate), 'dd MMM yyyy')}`
+      : 'Unpaid';
+
   return (
     <span
-      title={paid ? 'Most recent Xero invoice is paid' : 'Most recent Xero invoice is unpaid'}
-      className={`inline-flex items-center shrink-0 whitespace-nowrap gap-1 rounded-full px-2 py-0.5 text-xs font-medium border ${
-        paid
-          ? 'bg-green-500/10 text-green-600 border-green-500'
-          : 'bg-amber-500/10 text-amber-600 border-amber-500'
-      }`}
+      title={paid ? 'Most recent Xero invoice is paid' : overdue ? 'Most recent Xero invoice is overdue' : 'Most recent Xero invoice is unpaid'}
+      className={`inline-flex items-center shrink-0 whitespace-nowrap gap-1 rounded-full px-2 py-0.5 text-xs font-medium border ${colorClass}`}
     >
-      {paid ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-      {paid ? 'Paid' : dueDate ? `Due ${format(new Date(dueDate), 'dd MMM yyyy')}` : 'Unpaid'}
+      {paid ? <CheckCircle2 className="h-3 w-3" /> : overdue ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+      {label}
     </span>
   );
 }

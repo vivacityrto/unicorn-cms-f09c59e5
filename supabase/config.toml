@@ -57,6 +57,11 @@ verify_jwt = false
 [functions.xero-invoice-sync-all]
 verify_jwt = false
 
+[functions.xero-webhook]
+# Xero calls this directly with no Supabase auth header at all - auth is
+# entirely via HMAC signature verification against XERO_WEBHOOK_KEY.
+verify_jwt = false
+
 [functions.sync-outlook-calendar]
 verify_jwt = false
 
