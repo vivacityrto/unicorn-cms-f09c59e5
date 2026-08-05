@@ -39,7 +39,7 @@ export function ScheduleTab({ audit }: ScheduleTabProps) {
           </span>
         </div>
         <AppointmentPanel
-          icon={<ClipboardList className="h-4 w-4 text-blue-600" />}
+          icon={<ClipboardList className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
           title="Document Submission Deadline"
           description="Set the date by which the client must upload all evidence before the audit."
           appointment={documentDeadline}
@@ -64,7 +64,7 @@ export function ScheduleTab({ audit }: ScheduleTabProps) {
           </span>
         </div>
         <AppointmentPanel
-          icon={<MessageSquare className="h-4 w-4 text-indigo-600" />}
+          icon={<MessageSquare className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />}
           title="Opening Meeting"
           description="Schedule the opening meeting with the RTO representative."
           appointment={openingMeeting}
@@ -101,7 +101,7 @@ export function ScheduleTab({ audit }: ScheduleTabProps) {
           </span>
         </div>
         <AppointmentPanel
-          icon={<Target className="h-4 w-4 text-emerald-600" />}
+          icon={<Target className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
           title="Closing Meeting"
           description="Schedule the closing meeting to present findings to the client."
           appointment={closingMeeting}

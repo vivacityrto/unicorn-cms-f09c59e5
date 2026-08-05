@@ -105,7 +105,7 @@ export function AppointmentPanel({
     const isCompleted = appointment.status === 'completed';
 
     return (
-      <Card className={cn(isCompleted && 'border-green-200 bg-green-50/30')}>
+      <Card className={cn(isCompleted && 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/40')}>
         <CardContent className="p-4 space-y-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
@@ -124,7 +124,7 @@ export function AppointmentPanel({
               </div>
             </div>
             {isCompleted ? (
-              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800">
                 <Check className="h-3 w-3 mr-1" /> Completed
               </Badge>
             ) : (
@@ -159,7 +159,7 @@ export function AppointmentPanel({
 
           {/* Sync status */}
           {syncStatus === 'synced' && (
-            <div className="text-xs text-green-600 flex items-center gap-1">
+            <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
               <Check className="h-3 w-3" /> Synced to Outlook
             </div>
           )}
@@ -169,7 +169,7 @@ export function AppointmentPanel({
             </div>
           )}
           {syncStatus === 'failed' && (
-            <div className="text-xs text-amber-600 flex items-center gap-1">
+            <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
               ⚠️ Sync failed
               {onRetrySync && (
                 <button onClick={onRetrySync} className="underline hover:no-underline ml-1">Retry</button>
