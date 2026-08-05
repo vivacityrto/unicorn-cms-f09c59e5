@@ -142,7 +142,7 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Get the app base URL for redirect
-    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au";
+    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au";
 
     // Generate password reset link using Supabase Admin API
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
