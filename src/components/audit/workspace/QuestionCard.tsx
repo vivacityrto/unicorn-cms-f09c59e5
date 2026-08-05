@@ -234,7 +234,7 @@ export function QuestionCard({
   // Warm tint for conversation phases
   const cardBg =
     ctx === 'client_discussion' || ctx === 'closing_discussion'
-      ? 'bg-blue-50/20 border-blue-100'
+      ? 'bg-accent/10 border-accent/30'
       : '';
 
   // Action-row Raise Finding button — state machine

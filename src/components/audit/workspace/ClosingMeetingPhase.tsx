@@ -38,7 +38,7 @@ export function ClosingMeetingPhase({
 
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4">
+      <div className="bg-accent/10 border border-accent/30 rounded-lg p-4">
         <h3 className="text-lg font-semibold text-foreground">Closing Meeting</h3>
         <p className="text-sm text-muted-foreground mt-1">
           Reconvene with the RTO representative. Present findings, capture their response.
@@ -129,7 +129,7 @@ export function ClosingMeetingPhase({
               />
             ))}
 
-            <Card className="bg-blue-50/30 border-blue-100">
+            <Card className="bg-accent/10 border-accent/30">
               <CardContent className="p-4 space-y-2">
                 <label className="text-sm font-medium text-foreground">
                   Overall closing meeting notes
