@@ -4004,6 +4004,7 @@ export type Database = {
           ask_viv_assistant_beta_user_ids: string[]
           ask_viv_assistant_daily_token_cap: number
           ask_viv_assistant_enabled: boolean
+          ask_viv_assistant_unlimited_user_ids: string[]
           ask_viv_floating_launcher_enabled: boolean
           ask_viv_llm_generation_all_staff: boolean
           ask_viv_llm_generation_beta_user_ids: string[]
@@ -4045,6 +4046,7 @@ export type Database = {
           ask_viv_assistant_beta_user_ids?: string[]
           ask_viv_assistant_daily_token_cap?: number
           ask_viv_assistant_enabled?: boolean
+          ask_viv_assistant_unlimited_user_ids?: string[]
           ask_viv_floating_launcher_enabled?: boolean
           ask_viv_llm_generation_all_staff?: boolean
           ask_viv_llm_generation_beta_user_ids?: string[]
@@ -4086,6 +4088,7 @@ export type Database = {
           ask_viv_assistant_beta_user_ids?: string[]
           ask_viv_assistant_daily_token_cap?: number
           ask_viv_assistant_enabled?: boolean
+          ask_viv_assistant_unlimited_user_ids?: string[]
           ask_viv_floating_launcher_enabled?: boolean
           ask_viv_llm_generation_all_staff?: boolean
           ask_viv_llm_generation_beta_user_ids?: string[]
@@ -4236,19 +4239,49 @@ export type Database = {
       }
       ask_viv_corpus_ingestion_state: {
         Row: {
+          last_id: string | null
           last_run_at: string
           source_table: string
           updated_at: string
         }
         Insert: {
+          last_id?: string | null
           last_run_at?: string
           source_table: string
           updated_at?: string
         }
         Update: {
+          last_id?: string | null
           last_run_at?: string
           source_table?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      ask_viv_suggested_faqs: {
+        Row: {
+          category: string | null
+          generated_at: string
+          id: string
+          occurrence_count: number
+          prompt_text: string
+          rank: number
+        }
+        Insert: {
+          category?: string | null
+          generated_at?: string
+          id?: string
+          occurrence_count?: number
+          prompt_text: string
+          rank: number
+        }
+        Update: {
+          category?: string | null
+          generated_at?: string
+          id?: string
+          occurrence_count?: number
+          prompt_text?: string
+          rank?: number
         }
         Relationships: []
       }
@@ -14134,6 +14167,225 @@ export type Database = {
           tenant_id?: number
         }
         Relationships: []
+      }
+      client_portal_page_views: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          entered_at: string
+          id: string
+          page_label: string | null
+          path: string
+          session_id: string
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          entered_at?: string
+          id?: string
+          page_label?: string | null
+          path: string
+          session_id: string
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          entered_at?: string
+          id?: string
+          page_label?: string | null
+          path?: string
+          session_id?: string
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_portal_page_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       client_portal_sessions: {
         Row: {
@@ -36770,6 +37022,7 @@ export type Database = {
           last_error: string | null
           last_synced_at: string | null
           provider: string
+          provider_account_id: string | null
           refresh_token: string
           scope: string | null
           tenant_id: number | null
@@ -36785,6 +37038,7 @@ export type Database = {
           last_error?: string | null
           last_synced_at?: string | null
           provider?: string
+          provider_account_id?: string | null
           refresh_token: string
           scope?: string | null
           tenant_id?: number | null
@@ -36800,6 +37054,7 @@ export type Database = {
           last_error?: string | null
           last_synced_at?: string | null
           provider?: string
+          provider_account_id?: string | null
           refresh_token?: string
           scope?: string | null
           tenant_id?: number | null
@@ -54846,6 +55101,9 @@ export type Database = {
           updated_at: string
           website: string | null
           xero_contact_url: string | null
+          xero_invoice_checked_at: string | null
+          xero_invoice_due_date: string | null
+          xero_invoice_paid: boolean | null
           xero_repeating_invoice_url: string | null
         }
         Insert: {
@@ -54908,6 +55166,9 @@ export type Database = {
           updated_at?: string
           website?: string | null
           xero_contact_url?: string | null
+          xero_invoice_checked_at?: string | null
+          xero_invoice_due_date?: string | null
+          xero_invoice_paid?: boolean | null
           xero_repeating_invoice_url?: string | null
         }
         Update: {
@@ -54970,6 +55231,9 @@ export type Database = {
           updated_at?: string
           website?: string | null
           xero_contact_url?: string | null
+          xero_invoice_checked_at?: string | null
+          xero_invoice_due_date?: string | null
+          xero_invoice_paid?: boolean | null
           xero_repeating_invoice_url?: string | null
         }
         Relationships: [
@@ -68744,6 +69008,21 @@ export type Database = {
         }
         Relationships: []
       }
+      v_stage_health_latest: {
+        Row: {
+          days_since_last_activity: number | null
+          evidence_gap_mandatory_count: number | null
+          generated_at: string | null
+          health_status: string | null
+          high_risk_count: number | null
+          progress_percentage: number | null
+          stage_instance_id: number | null
+          tasks_open_count: number | null
+          tasks_overdue_count: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_stage_health_trends: {
         Row: {
           avg_days_stalled: number | null
@@ -70255,6 +70534,7 @@ export type Database = {
         Returns: undefined
       }
       fn_email_tickets_flag_sla_breaches: { Args: never; Returns: undefined }
+      fn_generate_portal_activity_digest: { Args: never; Returns: undefined }
       fn_instantiate_phases_for_package_instance: {
         Args: { p_package_instance_id: number }
         Returns: undefined
@@ -71720,6 +72000,15 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_log_page_view: {
+        Args: {
+          p_page_label?: string
+          p_path: string
+          p_prev_duration_seconds?: number
+          p_session_id?: string
+        }
+        Returns: Json
+      }
       rpc_match_clickup_to_rto_membership: { Args: never; Returns: Json }
       rpc_post_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_publish_stage_tasks: {
@@ -71994,6 +72283,7 @@ export type Database = {
         Args: { file_path: string }
         Returns: boolean
       }
+      strip_html_to_text: { Args: { p_html: string }; Returns: string }
       sync_audit_actions_to_client_items: {
         Args: { p_audit_id: string }
         Returns: number
