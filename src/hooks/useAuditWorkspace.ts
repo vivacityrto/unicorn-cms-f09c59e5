@@ -30,6 +30,19 @@ export function useInitializeSections(auditId: string | undefined) {
     mutationFn: async ({ templateId }: { templateId: string | null }) => {
       if (!auditId) throw new Error('No audit ID');
 
+      // Server-side idempotency guard: the caller's own "already initialized"
+      // check is local component state, which resets on every fresh mount and
+      // can't protect against a stale/empty read of the sections query firing
+      // this mutation again - that previously duplicated a whole audit's
+      // sections (and any responses already entered against them) each time
+      // it re-fired. Re-check for existing rows here, where it's authoritative.
+      const { count: existingCount, error: existingErr } = await supabase
+        .from('client_audit_sections' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('audit_id', auditId);
+      if (existingErr) throw existingErr;
+      if (existingCount && existingCount > 0) return;
+
       if (templateId) {
         // Template-driven: load template sections
         const { data: tplSections, error: tplErr } = await supabase
