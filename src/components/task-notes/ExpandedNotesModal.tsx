@@ -284,17 +284,17 @@ export function ExpandedNotesModal({
 
                   {/* Summary card */}
                   {summary.hasResult && summary.data && (
-                    <div className="mb-5 rounded-lg border border-brand-purple-200 bg-gradient-to-br from-brand-light-purple-50 to-white p-4">
+                    <div className="mb-5 rounded-lg border border-brand-purple-500/30 bg-card bg-gradient-to-br from-brand-purple-500/10 to-transparent p-4">
                       <div className="flex items-start justify-between gap-3 mb-2">
-                        <h3 className="text-base font-semibold text-brand-acai-700 flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-brand-purple-600" />
+                        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-primary" />
                           {summary.data.headline}
                         </h3>
                         <button
                           type="button"
                           onClick={summary.regenerate}
                           disabled={summary.isFetching}
-                          className="text-xs text-brand-purple-600 hover:text-brand-purple-700 inline-flex items-center gap-1 disabled:opacity-50"
+                          className="text-xs text-primary hover:text-[#ED1878] inline-flex items-center gap-1 disabled:opacity-50"
                         >
                           {summary.isFetching ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
