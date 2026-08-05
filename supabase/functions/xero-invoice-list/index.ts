@@ -74,11 +74,11 @@ Deno.serve(async (req) => {
   });
 
   try {
-    // Auth: Integrator role only, by explicit instruction - narrower
-    // than the "any Vivacity staff" gate the paid/unpaid pill uses, and
-    // narrower even than the Super Admin + Integrator gate on connecting
-    // the Xero credential itself. Invoice metadata (even with amounts
-    // stripped) is more sensitive than a one-word paid/unpaid signal.
+    // Auth: any Vivacity staff, same gate as xero-invoice-status - the
+    // Integrator-only restriction was dropped once the response was
+    // confirmed to have every money field stripped (see redactInvoice),
+    // leaving no more sensitive than the paid/unpaid pill everyone can
+    // already see.
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return json(401, { error: "Missing bearer token" });
@@ -90,11 +90,11 @@ Deno.serve(async (req) => {
     }
     const { data: callerProfile } = await supabaseAdmin
       .from("users")
-      .select("unicorn_role, is_vivacity_internal")
+      .select("is_vivacity_internal")
       .eq("user_uuid", user.id)
       .maybeSingle();
-    if (callerProfile?.unicorn_role !== "Integrator" || !callerProfile?.is_vivacity_internal) {
-      return json(403, { error: "This view is restricted to the Integrator role." });
+    if (!callerProfile?.is_vivacity_internal) {
+      return json(403, { error: "Vivacity staff only" });
     }
 
     const body = await req.json().catch(() => ({}));
