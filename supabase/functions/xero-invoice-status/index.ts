@@ -5,8 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const XERO_CLIENT_ID = Deno.env.get("XERO_CLIENT_ID")!;
-const XERO_CLIENT_SECRET = Deno.env.get("XERO_CLIENT_SECRET")!;
+// Trimmed defensively - see xero-auth for why (trailing whitespace from
+// pasting into Supabase's secrets UI breaks Basic Auth with no visible
+// symptom except Xero's invalid_client rejection).
+const XERO_CLIENT_ID = (Deno.env.get("XERO_CLIENT_ID") ?? "").trim();
+const XERO_CLIENT_SECRET = (Deno.env.get("XERO_CLIENT_SECRET") ?? "").trim();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
