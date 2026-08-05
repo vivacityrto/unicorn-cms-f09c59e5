@@ -161,25 +161,41 @@ Deno.serve(async (req) => {
       return json(200, { connected: true, linked: true, error: "Failed to fetch invoices from Xero." });
     }
 
+    // Already requested with order=Date DESC, so [0] is the most recent.
     const invoicesData = await invoicesResp.json();
-    const invoices = (invoicesData.Invoices || []).map((inv: any) => ({
-      invoiceId: inv.InvoiceID,
-      invoiceNumber: inv.InvoiceNumber,
-      type: inv.Type,
-      status: inv.Status,
-      total: inv.Total,
-      amountDue: inv.AmountDue,
-      amountPaid: inv.AmountPaid,
-      date: inv.DateString ?? inv.Date,
-      dueDate: inv.DueDateString ?? inv.DueDate,
-      reference: inv.Reference,
-    }));
+    const allInvoices = invoicesData.Invoices || [];
+    const mostRecent = allInvoices[0] ?? null;
+
+    // Staff only need "is the most recent invoice paid, and if not, when
+    // was it due" - not itemised detail (amounts, invoice numbers,
+    // references). Deliberately not returning that to the frontend at
+    // all, not just hiding it in the UI.
+    const mostRecentPaid = mostRecent ? mostRecent.Status === "PAID" : null;
+    const mostRecentDueDate = mostRecent && !mostRecentPaid
+      ? (mostRecent.DueDateString ?? mostRecent.DueDate ?? null)
+      : null;
 
     await supabaseAdmin.from("oauth_tokens")
       .update({ last_synced_at: new Date().toISOString(), last_error: null, updated_at: new Date().toISOString() })
       .eq("provider", "xero");
 
-    return json(200, { connected: true, linked: true, contact_id: contactId, invoices });
+    // Write through to the cache columns Manage Tenants reads (that list
+    // page loads every tenant at once and cannot do a live Xero call per
+    // row) - a manual "Check Xero" click refreshes the cache immediately,
+    // same as the scheduled sync-all job does for everyone else.
+    await supabaseAdmin.from("tenants").update({
+      xero_invoice_paid: mostRecentPaid,
+      xero_invoice_due_date: mostRecentDueDate,
+      xero_invoice_checked_at: new Date().toISOString(),
+    }).eq("id", tenantId);
+
+    return json(200, {
+      connected: true,
+      linked: true,
+      has_invoices: allInvoices.length > 0,
+      most_recent_paid: mostRecentPaid,
+      most_recent_due_date: mostRecentDueDate,
+    });
   } catch (error) {
     console.error("[xero-invoice-status] Unhandled error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

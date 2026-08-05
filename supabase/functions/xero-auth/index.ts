@@ -5,8 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const XERO_CLIENT_ID = Deno.env.get("XERO_CLIENT_ID")!;
-const XERO_CLIENT_SECRET = Deno.env.get("XERO_CLIENT_SECRET")!;
+// Trimmed defensively - a trailing newline/space from copy-pasting into
+// Supabase's secrets UI silently breaks Basic Auth encoding with no
+// visible symptom anywhere except Xero's invalid_client rejection.
+const XERO_CLIENT_ID = (Deno.env.get("XERO_CLIENT_ID") ?? "").trim();
+const XERO_CLIENT_SECRET = (Deno.env.get("XERO_CLIENT_SECRET") ?? "").trim();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -169,11 +172,23 @@ Deno.serve(async (req) => {
 
       if (!tokenResponse.ok) {
         console.error("[xero-auth] Token exchange failed:", tokenResponse.status, tokenText);
-        let errorMessage = "Token exchange failed";
+        // Surface Xero's actual response verbatim rather than a fallback
+        // string - a silently-swallowed JSON.parse failure or a response
+        // shaped differently than expected was hiding the real reason.
+        let errorMessage = `Token exchange failed (HTTP ${tokenResponse.status}): ${tokenText.slice(0, 500)}`;
         try {
-          errorMessage = JSON.parse(tokenText).error_description || errorMessage;
+          const parsed = JSON.parse(tokenText);
+          if (parsed.error_description || parsed.error) {
+            errorMessage = `Token exchange failed: ${parsed.error_description || parsed.error}`;
+            if (parsed.error === "invalid_client") {
+              // Lengths only, never the values - just enough to tell a
+              // whitespace/truncation/wrong-secret problem apart from a
+              // config mismatch on Xero's side.
+              errorMessage += ` (configured client_id length: ${XERO_CLIENT_ID.length}, client_secret length: ${XERO_CLIENT_SECRET.length})`;
+            }
+          }
         } catch {
-          // use default message
+          // tokenText wasn't JSON - the raw-text fallback above already covers it
         }
         return json(400, { error: errorMessage });
       }

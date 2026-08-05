@@ -69,6 +69,7 @@ import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
 import { TenantLifecycleActions } from '@/components/tenant/TenantLifecycleActions';
 import { TenantLogoUpload } from '@/components/tenant/TenantLogoUpload';
 import { OrgTypeBadge } from '@/components/tenant/OrgTypeBadge';
+import { XeroInvoiceStatusBadge } from '@/components/client/XeroInvoiceStatusBadge';
 import { RenameTenantDialog, canRenameTenant } from '@/components/tenant/RenameTenantDialog';
 import { Pencil, Lock } from 'lucide-react';
 
@@ -79,6 +80,8 @@ interface TenantBasic {
   status: string;
   lifecycle_status: string;
   complyhub_membership_tier?: string | null;
+  xero_invoice_paid?: boolean | null;
+  xero_invoice_due_date?: string | null;
 }
 
 export default function ClientDetail() {
@@ -293,7 +296,7 @@ export default function ClientDetail() {
       const [{ data, error }, { data: tp }] = await Promise.all([
         supabase
           .from('tenants')
-          .select('id, name, slug, status, lifecycle_status, complyhub_membership_tier, logo_path')
+          .select('id, name, slug, status, lifecycle_status, complyhub_membership_tier, logo_path, xero_invoice_paid, xero_invoice_due_date')
           .eq('id', tenantIdNum)
           .single(),
         supabase
@@ -486,6 +489,10 @@ export default function ClientDetail() {
                     }}
                   />
                   <OrgTypeBadge orgType={profile?.org_type} rtoNumber={profile?.rto_number} cricosNumber={profile?.cricos_number} />
+                  <XeroInvoiceStatusBadge
+                    paid={tenant.xero_invoice_paid ?? null}
+                    dueDate={tenant.xero_invoice_due_date ?? null}
+                  />
                   {tgaLinked && profile?.rto_number && (
                     <a
                       href={`https://training.gov.au/Organisation/Details/${profile.rto_number}`}
