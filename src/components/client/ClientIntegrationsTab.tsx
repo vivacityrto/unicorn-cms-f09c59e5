@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { SharePointFolderConfig } from '@/components/client/SharePointFolderConfig';
 import { ComplyHubCard } from '@/components/client/ComplyHubCard';
 import { XeroCard } from '@/components/client/XeroCard';
+import { Unicorn1Card } from '@/components/client/Unicorn1Card';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1889,6 +1890,11 @@ export function ClientIntegrationsTab({
       {/* Xero Integration */}
       {profile?.tenant_id && (
         <XeroCard tenantId={profile.tenant_id} />
+      )}
+
+      {/* Unicorn 1 */}
+      {profile?.tenant_id && (
+        <Unicorn1Card tenantId={profile.tenant_id} />
       )}
 
       {/* Future Integrations */}

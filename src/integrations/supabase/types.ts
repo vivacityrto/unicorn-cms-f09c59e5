@@ -55098,6 +55098,7 @@ export type Database = {
           tga_status: string | null
           tga_sync_status: string | null
           tier: string | null
+          unicorn1_id: number | null
           updated_at: string
           website: string | null
           xero_contact_url: string | null
@@ -55163,6 +55164,7 @@ export type Database = {
           tga_status?: string | null
           tga_sync_status?: string | null
           tier?: string | null
+          unicorn1_id?: number | null
           updated_at?: string
           website?: string | null
           xero_contact_url?: string | null
@@ -55228,6 +55230,7 @@ export type Database = {
           tga_status?: string | null
           tga_sync_status?: string | null
           tier?: string | null
+          unicorn1_id?: number | null
           updated_at?: string
           website?: string | null
           xero_contact_url?: string | null

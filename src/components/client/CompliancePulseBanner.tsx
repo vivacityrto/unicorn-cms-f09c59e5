@@ -6,7 +6,7 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { differenceInDays } from "date-fns";
 
 export function CompliancePulseBanner() {
-  const { activeTenantId } = useClientTenant();
+  const { activeTenantId, unicorn1Id } = useClientTenant();
   const { data: progressList } = useClientProgress(activeTenantId);
   const { data: timeline = [] } = useClientActivityTimeline();
 
@@ -89,7 +89,7 @@ export function CompliancePulseBanner() {
       {/* Unicorn 1 link */}
       {activeTenantId && (
         <a
-          href={`https://unicorn-cms.com.au/clients/${activeTenantId}`}
+          href={`https://unicorn-cms.com.au/clients/${unicorn1Id ?? activeTenantId}`}
           target="_blank"
           rel="noopener noreferrer"
           className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-background/50 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"

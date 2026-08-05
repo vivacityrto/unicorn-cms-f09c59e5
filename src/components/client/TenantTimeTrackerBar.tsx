@@ -55,9 +55,10 @@ import { ReRegistrationBadge } from '@/components/shared/ReRegistrationBadge';
 interface TenantTimeTrackerBarProps {
   tenantId: number;
   tenantName: string;
+  unicorn1Id?: number | null;
 }
 
-export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTrackerBarProps) {
+export function TenantTimeTrackerBar({ tenantId, tenantName, unicorn1Id }: TenantTimeTrackerBarProps) {
   const {
     packages,
     selectedPackageId,
@@ -213,7 +214,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
 
           {/* Unicorn 1.0 link */}
           <a
-            href={`https://unicorn-cms.com.au/clients/${tenantId}`}
+            href={`https://unicorn-cms.com.au/clients/${unicorn1Id ?? tenantId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-1 rounded-full h-7 px-2.5 text-xs font-medium text-white transition-colors hover:opacity-90"

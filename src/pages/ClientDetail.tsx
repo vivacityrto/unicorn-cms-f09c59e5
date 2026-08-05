@@ -82,6 +82,7 @@ interface TenantBasic {
   complyhub_membership_tier?: string | null;
   xero_invoice_paid?: boolean | null;
   xero_invoice_due_date?: string | null;
+  unicorn1_id?: number | null;
 }
 
 export default function ClientDetail() {
@@ -296,7 +297,7 @@ export default function ClientDetail() {
       const [{ data, error }, { data: tp }] = await Promise.all([
         supabase
           .from('tenants')
-          .select('id, name, slug, status, lifecycle_status, complyhub_membership_tier, logo_path, xero_invoice_paid, xero_invoice_due_date')
+          .select('id, name, slug, status, lifecycle_status, complyhub_membership_tier, logo_path, xero_invoice_paid, xero_invoice_due_date, unicorn1_id')
           .eq('id', tenantIdNum)
           .single(),
         supabase
@@ -687,7 +688,7 @@ export default function ClientDetail() {
       </div>
 
       {/* Sticky Time Tracker Bar */}
-      <TenantTimeTrackerBar tenantId={tenantIdNum!} tenantName={tenant.name} />
+      <TenantTimeTrackerBar tenantId={tenantIdNum!} tenantName={tenant.name} unicorn1Id={tenant.unicorn1_id} />
 
       {/* Tab Content */}
       <div className="p-6">
