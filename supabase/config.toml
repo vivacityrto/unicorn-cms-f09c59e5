@@ -57,6 +57,10 @@ verify_jwt = false
 [functions.xero-invoice-sync-all]
 verify_jwt = false
 
+[functions.xero-invoice-list]
+# Auth is in-function: Integrator role + is_vivacity_internal only.
+verify_jwt = false
+
 [functions.xero-webhook]
 # Xero calls this directly with no Supabase auth header at all - auth is
 # entirely via HMAC signature verification against XERO_WEBHOOK_KEY.
