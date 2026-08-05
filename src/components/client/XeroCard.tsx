@@ -25,7 +25,11 @@ interface XeroPaidStatus {
 
 export function XeroCard({ tenantId }: XeroCardProps) {
   const { user, profile } = useAuth();
-  const isIntegrator = profile?.unicorn_role === 'Integrator' && !!profile?.is_vivacity_internal;
+  // Money is fully stripped from the invoice list response (see
+  // xero-invoice-list's redactInvoice) - no more sensitive than the
+  // paid/unpaid pill every Vivacity staff member can already see, so
+  // this isn't restricted to Integrator the way connect/disconnect is.
+  const canViewInvoiceList = !!profile?.is_vivacity_internal;
   const invoiceList = useXeroInvoiceList(tenantId);
   const [contactUrl, setContactUrl] = useState('');
   const [invoiceUrl, setInvoiceUrl] = useState('');
@@ -259,7 +263,7 @@ export function XeroCard({ tenantId }: XeroCardProps) {
                 })()}
               </div>
               <div className="flex gap-2">
-                {isIntegrator && (
+                {canViewInvoiceList && (
                   <XeroInvoiceListToggle open={invoiceList.open} onClick={invoiceList.toggle} />
                 )}
                 <Button onClick={handleCheckInvoices} isLoading={checkingInvoices} variant="outline" size="sm">
@@ -282,7 +286,7 @@ export function XeroCard({ tenantId }: XeroCardProps) {
               <p className="text-sm text-muted-foreground">No invoices found for this client's Xero contact.</p>
             )}
 
-            {isIntegrator && invoiceList.open && (
+            {canViewInvoiceList && invoiceList.open && (
               <XeroInvoiceListContent
                 loading={invoiceList.loading}
                 error={invoiceList.error}
