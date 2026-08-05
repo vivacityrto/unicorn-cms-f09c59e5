@@ -25,11 +25,11 @@ interface ActionsTabProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-amber-100 text-amber-800',
-  complete: 'bg-green-100 text-green-800',
-  deferred: 'bg-gray-100 text-gray-600',
-  cancelled: 'bg-gray-100 text-gray-400',
+  open: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
+  in_progress: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
+  complete: 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300',
+  deferred: 'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-300',
+  cancelled: 'bg-gray-100 text-gray-400 dark:bg-gray-800/40 dark:text-gray-500',
 };
 
 const ACTION_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -112,10 +112,10 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
     <div className="space-y-4">
       {/* Completion sync banner */}
       {isComplete && (
-        <Alert className="bg-green-50 border-green-200">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
+        <Alert className="bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800">
+          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
           <AlertDescription className="flex items-center justify-between">
-            <span className="text-green-800">
+            <span className="text-green-800 dark:text-green-300">
               This audit is complete. {syncedCount} action{syncedCount !== 1 ? 's' : ''} synced to the client action plan.
             </span>
             {subjectTenantId && (
@@ -131,9 +131,9 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
 
       {/* Critical/High findings without actions */}
       {findingsWithoutActions && findingsWithoutActions.length > 0 && (
-        <Alert className="bg-amber-50 border-amber-200">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-900">
+        <Alert className="bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertDescription className="text-amber-900 dark:text-amber-300">
             <p className="font-medium mb-1">
               {findingsWithoutActions.length} finding{findingsWithoutActions.length !== 1 ? 's' : ''} at Critical or High priority {findingsWithoutActions.length === 1 ? 'has' : 'have'} no action items assigned.
             </p>
@@ -156,11 +156,11 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
         <span>Open: <strong>{statCounts.open}</strong></span>
         <span>In Progress: <strong>{statCounts.in_progress}</strong></span>
         <span>Complete: <strong>{statCounts.complete}</strong></span>
-        <span className={statCounts.overdue > 0 ? 'text-red-600' : ''}>
+        <span className={statCounts.overdue > 0 ? 'text-red-600 dark:text-red-400' : ''}>
           Overdue: <strong>{statCounts.overdue}</strong>
         </span>
         {statCounts.awaiting_verification > 0 && (
-          <span className="text-blue-600">
+          <span className="text-blue-600 dark:text-blue-400">
             <ShieldCheck className="h-3.5 w-3.5 inline mr-0.5" />
             Awaiting verification: <strong>{statCounts.awaiting_verification}</strong>
           </span>
@@ -226,7 +226,7 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
             const isOverdue = action.status !== 'complete' && action.status !== 'cancelled' && action.due_date && new Date(action.due_date) < new Date();
 
             return (
-              <Card key={action.id} className={cn(isOverdue && 'border-red-200')}>
+              <Card key={action.id} className={cn(isOverdue && 'border-red-200 dark:border-red-800')}>
                 <CardContent className="p-4 space-y-3">
                   {/* Badges row */}
                   <div className="flex flex-wrap items-center gap-2">
@@ -280,7 +280,7 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
                       <span>Assigned: {users?.find(u => u.user_uuid === action.assigned_to)?.first_name || 'Unknown'}</span>
                     )}
                     {action.due_date && (
-                      <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+                      <span className={isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : ''}>
                         Due: {new Date(action.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     )}
@@ -289,7 +289,7 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
                     )}
                     {isComplete && (
                       action.client_action_item_id ? (
-                        <span className="text-green-600 flex items-center gap-1">
+                        <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3" /> Synced
                         </span>
                       ) : (
@@ -306,7 +306,7 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
                       <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                         <ChevronDown className="h-3 w-3" /> Internal notes
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-1 rounded-md bg-amber-50 border border-amber-200 p-2 text-xs">
+                      <CollapsibleContent className="mt-1 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-2 text-xs">
                         {action.internal_notes}
                       </CollapsibleContent>
                     </Collapsible>

@@ -95,7 +95,7 @@ export function VerificationDrawer({ open, onOpenChange, action, onVerify }: Ver
             <Button onClick={() => handleDecision('verified')} className="w-full bg-green-600 hover:bg-green-700">
               <CheckCircle2 className="h-4 w-4 mr-2" /> Verified — Mark Complete
             </Button>
-            <Button onClick={() => handleDecision('rejected')} variant="outline" className="w-full border-amber-300 text-amber-700 hover:bg-amber-50">
+            <Button onClick={() => handleDecision('rejected')} variant="outline" className="w-full border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40">
               <RotateCcw className="h-4 w-4 mr-2" /> Request Resubmission
             </Button>
             <Button onClick={() => handleDecision('waived')} variant="ghost" className="w-full text-muted-foreground">
