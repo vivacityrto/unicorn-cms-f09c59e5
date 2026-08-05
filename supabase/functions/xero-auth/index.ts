@@ -18,7 +18,11 @@ const VIVACITY_SYSTEM_TENANT_ID = 6372;
 // Xero's OAuth server rejects offline_access (as invalid_scope) unless
 // openid/profile/email are also requested - offline_access only makes
 // sense alongside an OIDC identity token in strict OIDC semantics.
-const XERO_SCOPES = "openid profile email offline_access accounting.transactions.read accounting.contacts.read";
+// Note: accounting.transactions[.read] is NOT a current Xero scope -
+// invoices live under accounting.invoices[.read] specifically (confirmed
+// against this app's actual enabled scope list in the Xero Developer
+// Portal, which has no accounting.transactions entry at all).
+const XERO_SCOPES = "openid profile email offline_access accounting.invoices.read accounting.contacts.read";
 
 function json(status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
