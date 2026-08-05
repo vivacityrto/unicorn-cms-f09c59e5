@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, Receipt } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddTenantDialog } from "@/components/AddTenantDialog";
@@ -68,6 +68,8 @@ interface Tenant {
   hours_included_minutes?: number;
   registration_end_date?: string | null;
   archived_at?: string | null;
+  xero_invoice_paid?: boolean | null;
+  xero_invoice_due_date?: string | null;
 }
 
 // Aggregate status buckets the summary stat cards use — there is no literal
@@ -98,6 +100,7 @@ export default function ManageTenants() {
   const [sortField, setSortField] = useState<"status" | "member_count" | "created_at" | "renewal">("status");
   const [renewalFilter, setRenewalFilter] = useState<string>("all");
   const [regEndFilter, setRegEndFilter] = useState<string>("all");
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
@@ -169,6 +172,8 @@ export default function ManageTenants() {
         hours_used_minutes: pkg?.hours_used_minutes || 0,
         hours_included_minutes: pkg?.hours_included_minutes || 0,
         registration_end_date: notes?.registration_end_date || null,
+        xero_invoice_paid: t.xero_invoice_paid ?? null,
+        xero_invoice_due_date: t.xero_invoice_due_date ?? null,
       } as Tenant;
     });
     setTenants(merged);
@@ -244,7 +249,7 @@ export default function ManageTenants() {
 
   useEffect(() => {
     applyFiltersAndSort();
-  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter]);
+  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter]);
 
   const fetchPackages = async () => {
     try {
@@ -323,7 +328,7 @@ export default function ManageTenants() {
   // Clear selection whenever the underlying filtered set or filter changes
   useEffect(() => {
     setSelectedTenantIds(new Set());
-  }, [searchQuery, statusFilter, packageFilter, cscFilter, showArchived, renewalFilter, regEndFilter]);
+  }, [searchQuery, statusFilter, packageFilter, cscFilter, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter]);
 
   const toggleRowSelected = (id: number, checked: boolean) => {
     setSelectedTenantIds(prev => {
@@ -419,6 +424,18 @@ export default function ManageTenants() {
           const renewal = new Date(tenant.next_renewal_date);
           return renewal <= cutoff;
         });
+      }
+
+      // Xero invoice status filter — xero_invoice_paid is null both when
+      // there's no linked Xero Contact and when linked but never checked;
+      // "not_linked" covers both since the distinction isn't useful for
+      // filtering purposes here.
+      if (invoiceStatusFilter === "paid") {
+        filtered = filtered.filter(tenant => tenant.xero_invoice_paid === true);
+      } else if (invoiceStatusFilter === "unpaid") {
+        filtered = filtered.filter(tenant => tenant.xero_invoice_paid === false);
+      } else if (invoiceStatusFilter === "not_linked") {
+        filtered = filtered.filter(tenant => tenant.xero_invoice_paid === null || tenant.xero_invoice_paid === undefined);
       }
 
       // Registration end date filter
@@ -808,6 +825,23 @@ export default function ManageTenants() {
           showSeparators
         />
 
+        <Combobox
+          options={[
+            { value: "all", label: "All Invoice Status", icon: Receipt, iconColor: "text-muted-foreground" },
+            { value: "paid", label: "Paid", icon: CheckCircle2, iconColor: "text-green-600" },
+            { value: "unpaid", label: "Unpaid", icon: Clock, iconColor: "text-amber-600" },
+            { value: "not_linked", label: "No Xero link / not checked", icon: AlertCircle, iconColor: "text-muted-foreground" },
+          ]}
+          value={invoiceStatusFilter}
+          onValueChange={setInvoiceStatusFilter}
+          placeholder="Filter by invoice status..."
+          searchPlaceholder="Search..."
+          emptyText="No options."
+          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
+          showIcons
+          showSeparators
+        />
+
         {/* Show Archived toggle - SuperAdmin only */}
         {isSuperAdmin && statusFilter === "all" && (
           <div className="flex items-center gap-2 h-[48px]">
@@ -990,6 +1024,28 @@ export default function ManageTenants() {
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       <div className="flex flex-col items-center gap-1">
                         {getStatusBadge(tenant.status)}
+                        {tenant.xero_invoice_paid !== null && tenant.xero_invoice_paid !== undefined && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[0.7rem] py-0 px-[0.5rem] rounded-[11px] border",
+                              tenant.xero_invoice_paid
+                                ? "bg-green-500/10 text-green-600 border-green-500"
+                                : "bg-amber-500/10 text-amber-600 border-amber-500"
+                            )}
+                          >
+                            {tenant.xero_invoice_paid ? (
+                              <CheckCircle2 className="mr-1 h-2.5 w-2.5" />
+                            ) : (
+                              <Clock className="mr-1 h-2.5 w-2.5" />
+                            )}
+                            {tenant.xero_invoice_paid
+                              ? "Paid"
+                              : tenant.xero_invoice_due_date
+                                ? `Due ${new Date(tenant.xero_invoice_due_date).toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}`
+                                : "Unpaid"}
+                          </Badge>
+                        )}
                         {tenant.archived_at && (
                           <TooltipProvider>
                             <Tooltip>
