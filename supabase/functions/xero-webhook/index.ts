@@ -180,7 +180,7 @@ async function processInvoiceEvents(
   // the notified invoice is automatically the current one.
   for (const contactId of touchedContactIds) {
     const invoicesResp = await fetch(
-      `https://api.xero.com/api.xro/2.0/Invoices?ContactIDs=${contactId}&order=Date DESC`,
+      `https://api.xero.com/api.xro/2.0/Invoices?ContactIDs=${contactId}&order=Date%20DESC`,
       {
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -195,8 +195,13 @@ async function processInvoiceEvents(
       continue;
     }
 
+    // DRAFT/VOIDED/DELETED carry no real financial obligation - skip
+    // past those rather than letting one outrank a genuinely
+    // PAID/AUTHORISED invoice just for having a later date.
     const invoicesData = await invoicesResp.json();
-    const mostRecent = (invoicesData.Invoices ?? [])[0] ?? null;
+    const mostRecent = (invoicesData.Invoices ?? []).find(
+      (inv: any) => !["DRAFT", "VOIDED", "DELETED"].includes(inv.Status)
+    ) ?? null;
     const paid = mostRecent ? mostRecent.Status === "PAID" : null;
     const dueDate = mostRecent && !paid ? (mostRecent.DueDateString ?? mostRecent.DueDate ?? null) : null;
 
