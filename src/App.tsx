@@ -1103,7 +1103,7 @@ const App = () => (
             {/* Client Detail route removed — consolidated into /tenant/:tenantId above */}
             {/* Admin Integrations */}
             <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />
-            <Route path="/admin/integrations/xero" element={<ProtectedRoute requireSuperAdmin><AdminXeroIntegrationWrapper /></ProtectedRoute>} />
+            <Route path="/admin/integrations/xero" element={<ProtectedRoute><AdminXeroIntegrationWrapper /></ProtectedRoute>} />
             {/* Admin User Audit */}
             <Route path="/admin/user-audit" element={<ProtectedRoute><AdminUserAudit /></ProtectedRoute>} />
             <Route path="/clients/bulk-membership-certificates" element={<ProtectedRoute><BulkMembershipCertificatesPage /></ProtectedRoute>} />

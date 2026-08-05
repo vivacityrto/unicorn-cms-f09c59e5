@@ -46,9 +46,12 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
 
   // Connecting/disconnecting Xero touches one shared org-level credential,
-  // so only Vivacity Super Admins may do it - not the "any authenticated
-  // user manages their own connection" rule that outlook-auth uses.
-  const getSuperAdminCaller = async () => {
+  // so it's restricted to the same roles that already carry
+  // administration:access in useRBAC.tsx (Super Admin, Integrator) -
+  // not the "any authenticated user manages their own connection" rule
+  // that outlook-auth uses.
+  const ADMIN_ACCESS_ROLES = ["Super Admin", "Integrator"];
+  const getAdminCaller = async () => {
     if (!authHeader) return null;
     const token = authHeader.replace(/^Bearer\s+/i, "");
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
@@ -58,7 +61,7 @@ Deno.serve(async (req) => {
       .select("unicorn_role, is_vivacity_internal")
       .eq("user_uuid", user.id)
       .maybeSingle();
-    if (profile?.unicorn_role !== "Super Admin" || !profile?.is_vivacity_internal) {
+    if (!ADMIN_ACCESS_ROLES.includes(profile?.unicorn_role ?? "") || !profile?.is_vivacity_internal) {
       return null;
     }
     return user;
@@ -81,9 +84,9 @@ Deno.serve(async (req) => {
   try {
     // Action: Get auth URL to redirect the caller to Xero's consent screen
     if (action === "get-auth-url") {
-      const caller = await getSuperAdminCaller();
+      const caller = await getAdminCaller();
       if (!caller) {
-        return json(403, { error: "Only Vivacity Super Admins can connect Xero." });
+        return json(403, { error: "Only Vivacity Super Admins or Integrators can connect Xero." });
       }
 
       const redirectUri = body.redirect_uri as string;
@@ -248,9 +251,9 @@ Deno.serve(async (req) => {
 
     // Action: Disconnect
     if (action === "disconnect") {
-      const caller = await getSuperAdminCaller();
+      const caller = await getAdminCaller();
       if (!caller) {
-        return json(403, { error: "Only Vivacity Super Admins can disconnect Xero." });
+        return json(403, { error: "Only Vivacity Super Admins or Integrators can disconnect Xero." });
       }
 
       await supabaseAdmin.from("oauth_tokens").delete().eq("provider", "xero");

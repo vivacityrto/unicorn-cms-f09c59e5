@@ -34,7 +34,7 @@ export default function AdminXeroIntegration() {
                 Xero Connection
               </CardTitle>
               <CardDescription className="mt-1">
-                One connection shared across all Vivacity staff - only Super Admins can connect or disconnect it.
+                One connection shared across all Vivacity staff - only Super Admins and Integrators can connect or disconnect it.
               </CardDescription>
             </div>
             {!isLoading && (
