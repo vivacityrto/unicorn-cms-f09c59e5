@@ -51,6 +51,9 @@ verify_jwt = false
 [functions.xero-auth]
 verify_jwt = false
 
+[functions.xero-invoice-status]
+verify_jwt = false
+
 [functions.sync-outlook-calendar]
 verify_jwt = false
 
