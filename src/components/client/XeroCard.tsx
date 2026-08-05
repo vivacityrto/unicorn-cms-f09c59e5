@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Save, Receipt, RefreshCw, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { ExternalLink, Save, Receipt, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -14,26 +14,11 @@ interface XeroCardProps {
   tenantId: number;
 }
 
-interface XeroInvoice {
-  invoiceId: string;
-  invoiceNumber: string | null;
-  type: string;
-  status: string;
-  total: number;
-  amountDue: number;
-  amountPaid: number;
-  date: string | null;
+interface XeroPaidStatus {
+  hasInvoices: boolean;
+  paid: boolean | null;
   dueDate: string | null;
-  reference: string | null;
 }
-
-const INVOICE_STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
-  PAID: { color: 'bg-green-500/10 text-green-600 border-green-500', icon: <CheckCircle2 className="h-3 w-3" />, label: 'Paid' },
-  AUTHORISED: { color: 'bg-amber-500/10 text-amber-600 border-amber-500', icon: <Clock className="h-3 w-3" />, label: 'Awaiting Payment' },
-  SUBMITTED: { color: 'bg-amber-500/10 text-amber-600 border-amber-500', icon: <Clock className="h-3 w-3" />, label: 'Submitted' },
-  DRAFT: { color: 'bg-gray-500/10 text-gray-600 border-gray-500', icon: <Clock className="h-3 w-3" />, label: 'Draft' },
-  VOIDED: { color: 'bg-gray-500/10 text-gray-600 border-gray-500', icon: <AlertCircle className="h-3 w-3" />, label: 'Voided' },
-};
 
 export function XeroCard({ tenantId }: XeroCardProps) {
   const { user } = useAuth();
@@ -41,7 +26,7 @@ export function XeroCard({ tenantId }: XeroCardProps) {
   const [invoiceUrl, setInvoiceUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [invoices, setInvoices] = useState<XeroInvoice[] | null>(null);
+  const [paidStatus, setPaidStatus] = useState<XeroPaidStatus | null>(null);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [checkingInvoices, setCheckingInvoices] = useState(false);
 
@@ -55,14 +40,18 @@ export function XeroCard({ tenantId }: XeroCardProps) {
       if (error) throw error;
       if (data?.error) {
         setInvoiceError(data.error);
-        setInvoices(null);
+        setPaidStatus(null);
         return;
       }
-      setInvoices(data?.invoices ?? []);
+      setPaidStatus({
+        hasInvoices: !!data?.has_invoices,
+        paid: data?.most_recent_paid ?? null,
+        dueDate: data?.most_recent_due_date ?? null,
+      });
     } catch (err) {
       console.error('Failed to check Xero invoice status:', err);
       setInvoiceError(err instanceof Error ? err.message : 'Failed to check invoice status');
-      setInvoices(null);
+      setPaidStatus(null);
     } finally {
       setCheckingInvoices(false);
     }
@@ -244,37 +233,28 @@ export function XeroCard({ tenantId }: XeroCardProps) {
               </div>
             )}
 
-            {invoices && invoices.length === 0 && !invoiceError && (
+            {paidStatus && !paidStatus.hasInvoices && !invoiceError && (
               <p className="text-sm text-muted-foreground">No invoices found for this client's Xero contact.</p>
             )}
 
-            {invoices && invoices.length > 0 && (
-              <div className="space-y-2">
-                {invoices.map((inv) => {
-                  const statusConfig = INVOICE_STATUS_CONFIG[inv.status] ?? {
-                    color: 'bg-gray-500/10 text-gray-600 border-gray-500',
-                    icon: <Clock className="h-3 w-3" />,
-                    label: inv.status,
-                  };
-                  return (
-                    <div key={inv.invoiceId} className="flex items-center justify-between p-2 rounded-lg border text-sm">
-                      <div>
-                        <div className="font-medium">{inv.invoiceNumber || inv.reference || 'Invoice'}</div>
-                        <div className="text-muted-foreground text-xs">
-                          {inv.date && format(new Date(inv.date), 'dd MMM yyyy')}
-                          {inv.dueDate && ` · Due ${format(new Date(inv.dueDate), 'dd MMM yyyy')}`}
-                          {' · '}${inv.total?.toFixed(2)}
-                          {inv.amountDue > 0 && ` (${inv.amountDue.toFixed(2)} due)`}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={`${statusConfig.color} px-2 py-0.5`}>
-                        {statusConfig.icon}
-                        <span className="ml-1">{statusConfig.label}</span>
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
+            {paidStatus && paidStatus.hasInvoices && (
+              <Badge
+                variant="outline"
+                className={`px-2 py-0.5 ${
+                  paidStatus.paid
+                    ? 'bg-green-500/10 text-green-600 border-green-500'
+                    : 'bg-amber-500/10 text-amber-600 border-amber-500'
+                }`}
+              >
+                {paidStatus.paid ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                <span className="ml-1">
+                  {paidStatus.paid
+                    ? 'Paid'
+                    : paidStatus.dueDate
+                      ? `Due ${format(new Date(paidStatus.dueDate), 'dd MMM yyyy')}`
+                      : 'Unpaid'}
+                </span>
+              </Badge>
             )}
           </div>
         )}
