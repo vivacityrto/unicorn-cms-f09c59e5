@@ -16,7 +16,10 @@ export default function AdminXeroIntegration() {
     isDisconnecting,
   } = useXeroConnectionStatus();
 
-  const isConnected = !!connectionStatus?.connected && !connectionStatus.is_expired;
+  // Deliberately ignores is_expired - that reflects the short-lived (~30 min)
+  // access token, which xero-invoice-status refreshes silently on every use.
+  // A real broken connection surfaces via last_error, not raw token expiry.
+  const isConnected = !!connectionStatus?.connected && !connectionStatus.last_error;
 
   return (
     <div className="p-6 space-y-6 max-w-3xl">
@@ -40,7 +43,7 @@ export default function AdminXeroIntegration() {
             {!isLoading && (
               <Badge variant={isConnected ? 'default' : 'secondary'} className="flex items-center gap-1">
                 {isConnected ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                {isConnected ? 'Connected' : connectionStatus?.is_expired ? 'Expired' : 'Not connected'}
+                {isConnected ? 'Connected' : connectionStatus?.connected ? 'Connection error' : 'Not connected'}
               </Badge>
             )}
           </div>
@@ -61,7 +64,9 @@ export default function AdminXeroIntegration() {
               )}
               {connectionStatus?.expires_at && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Token expires</span>
+                  <span className="text-muted-foreground">
+                    Access token refreshes automatically until
+                  </span>
                   <span className="font-medium">
                     {format(new Date(connectionStatus.expires_at), 'dd MMM yyyy, h:mm a')}
                   </span>
