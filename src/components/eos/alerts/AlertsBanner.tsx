@@ -68,7 +68,7 @@ export function AlertIndicator() {
       <Button variant="ghost" size="icon" className="relative">
         <Bell className="h-5 w-5" />
         <span className={cn(
-          'absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[10px] font-bold flex items-center justify-center',
+          'absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-0.5 rounded-full text-[10px] font-bold flex items-center justify-center',
           hasIntervention ? 'bg-destructive text-destructive-foreground' :
           hasAttention ? 'bg-amber-500 dark:bg-amber-600 text-white' : 'bg-primary text-primary-foreground'
         )}>

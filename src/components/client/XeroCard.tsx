@@ -10,6 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { isXeroInvoiceOverdue } from '@/lib/xeroInvoiceStatus';
+import { XeroInvoiceListToggle, XeroInvoiceListContent } from './XeroInvoiceList';
+import { useXeroInvoiceList } from '@/hooks/useXeroInvoiceList';
 
 interface XeroCardProps {
   tenantId: number;
@@ -22,7 +24,9 @@ interface XeroPaidStatus {
 }
 
 export function XeroCard({ tenantId }: XeroCardProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isIntegrator = profile?.unicorn_role === 'Integrator' && !!profile?.is_vivacity_internal;
+  const invoiceList = useXeroInvoiceList(tenantId);
   const [contactUrl, setContactUrl] = useState('');
   const [invoiceUrl, setInvoiceUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -221,14 +225,51 @@ export function XeroCard({ tenantId }: XeroCardProps) {
         {hasContactUrl && (
           <div className="border-t pt-4 space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Invoice Status</Label>
-              <Button onClick={handleCheckInvoices} isLoading={checkingInvoices} variant="outline" size="sm">
-                {/* Button's isLoading branch already renders its own Loader2
-                    spinner alongside these children - showing our own icon
-                    too would stack two icons while loading. */}
-                {!checkingInvoices && <RefreshCw className="h-4 w-4 mr-1" />}
-                Check Xero
-              </Button>
+              <div className="flex items-center gap-2">
+                <Label>Invoice Status</Label>
+                {paidStatus && paidStatus.hasInvoices && (() => {
+                  const overdue = !paidStatus.paid && isXeroInvoiceOverdue(paidStatus.dueDate);
+                  return (
+                    <Badge
+                      variant="outline"
+                      className={`px-2 py-0.5 ${
+                        paidStatus.paid
+                          ? 'bg-green-500/10 text-green-600 border-green-500'
+                          : overdue
+                            ? 'bg-red-500/10 text-red-600 border-red-500'
+                            : 'bg-amber-500/10 text-amber-600 border-amber-500'
+                      }`}
+                    >
+                      {paidStatus.paid ? (
+                        <CheckCircle2 className="h-3 w-3" />
+                      ) : overdue ? (
+                        <AlertTriangle className="h-3 w-3" />
+                      ) : (
+                        <Clock className="h-3 w-3" />
+                      )}
+                      <span className="ml-1">
+                        {paidStatus.paid
+                          ? 'Paid'
+                          : paidStatus.dueDate
+                            ? `${overdue ? 'Overdue since' : 'Due'} ${format(new Date(paidStatus.dueDate), 'dd MMM yyyy')}`
+                            : 'Unpaid'}
+                      </span>
+                    </Badge>
+                  );
+                })()}
+              </div>
+              <div className="flex gap-2">
+                {isIntegrator && (
+                  <XeroInvoiceListToggle open={invoiceList.open} onClick={invoiceList.toggle} />
+                )}
+                <Button onClick={handleCheckInvoices} isLoading={checkingInvoices} variant="outline" size="sm">
+                  {/* Button's isLoading branch already renders its own Loader2
+                      spinner alongside these children - showing our own icon
+                      too would stack two icons while loading. */}
+                  {!checkingInvoices && <RefreshCw className="h-4 w-4 mr-1" />}
+                  Check Xero
+                </Button>
+              </div>
             </div>
 
             {invoiceError && (
@@ -241,36 +282,13 @@ export function XeroCard({ tenantId }: XeroCardProps) {
               <p className="text-sm text-muted-foreground">No invoices found for this client's Xero contact.</p>
             )}
 
-            {paidStatus && paidStatus.hasInvoices && (() => {
-              const overdue = !paidStatus.paid && isXeroInvoiceOverdue(paidStatus.dueDate);
-              return (
-                <Badge
-                  variant="outline"
-                  className={`px-2 py-0.5 ${
-                    paidStatus.paid
-                      ? 'bg-green-500/10 text-green-600 border-green-500'
-                      : overdue
-                        ? 'bg-red-500/10 text-red-600 border-red-500'
-                        : 'bg-amber-500/10 text-amber-600 border-amber-500'
-                  }`}
-                >
-                  {paidStatus.paid ? (
-                    <CheckCircle2 className="h-3 w-3" />
-                  ) : overdue ? (
-                    <AlertTriangle className="h-3 w-3" />
-                  ) : (
-                    <Clock className="h-3 w-3" />
-                  )}
-                  <span className="ml-1">
-                    {paidStatus.paid
-                      ? 'Paid'
-                      : paidStatus.dueDate
-                        ? `${overdue ? 'Overdue since' : 'Due'} ${format(new Date(paidStatus.dueDate), 'dd MMM yyyy')}`
-                        : 'Unpaid'}
-                  </span>
-                </Badge>
-              );
-            })()}
+            {isIntegrator && invoiceList.open && (
+              <XeroInvoiceListContent
+                loading={invoiceList.loading}
+                error={invoiceList.error}
+                invoices={invoiceList.invoices}
+              />
+            )}
           </div>
         )}
       </CardContent>
