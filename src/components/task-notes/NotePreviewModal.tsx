@@ -26,7 +26,7 @@ export function NotePreviewModal({ open, onOpenChange, note, onEdit }: Props) {
         <DialogHeader className="px-6 pt-5 pb-4 border-b space-y-1">
           <div className="flex items-center gap-2">
             <span className={cn('h-3 w-3 rounded-full shrink-0', swatch.dot)} aria-hidden />
-            <DialogTitle className="text-xl font-bold text-brand-acai-700 truncate">
+            <DialogTitle className="text-xl font-bold text-primary truncate">
               {note.title || 'Untitled'}
             </DialogTitle>
           </div>
@@ -51,7 +51,7 @@ export function NotePreviewModal({ open, onOpenChange, note, onEdit }: Props) {
           {total > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold tracking-wider text-brand-acai-700 uppercase">
+                <span className="text-[11px] font-bold tracking-wider text-primary uppercase">
                   Checklist
                 </span>
                 <span className="text-xs text-muted-foreground">

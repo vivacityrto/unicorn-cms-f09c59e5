@@ -139,7 +139,7 @@ export function ExpandedNotesModal({
               <div>
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-muted-foreground">Progress</span>
-                  <span className="font-semibold text-brand-acai-700">{stats.done}/{stats.total} · {pct}%</span>
+                  <span className="font-semibold text-primary">{stats.done}/{stats.total} · {pct}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-brand-light-purple-100 overflow-hidden">
                   <div
@@ -181,7 +181,7 @@ export function ExpandedNotesModal({
           {/* Right pane */}
           <section className="flex flex-col min-h-0">
             <header className="px-6 py-4 border-b bg-background flex items-center justify-between gap-3 flex-wrap">
-              <h2 className="text-lg font-semibold text-brand-acai-700">
+              <h2 className="text-lg font-semibold text-primary">
                 {searching ? `Search: "${query}"` : range.label}
               </h2>
               <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ export function ExpandedNotesModal({
                             className={
                               'h-8 min-w-[64px] px-3 rounded-md text-xs font-medium capitalize transition-colors ' +
                               (active
-                                ? 'bg-background text-brand-acai-700 shadow-sm'
+                                ? 'bg-background text-primary shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground')
                             }
                           >
@@ -339,7 +339,7 @@ export function ExpandedNotesModal({
                         return (
                           <div key={dateStr}>
                             <div className="flex items-center justify-between mb-2 pb-1 border-b">
-                              <h4 className="text-sm font-semibold text-brand-acai-700">
+                              <h4 className="text-sm font-semibold text-primary">
                                 {format(new Date(dateStr + 'T00:00:00'), 'EEEE, dd MMM yyyy')}
                               </h4>
                               {dayStats.total > 0 && (
@@ -372,7 +372,7 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: s
   return (
     <div className="rounded-lg border bg-background p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-lg font-semibold text-brand-acai-700">{value}</div>
+      <div className="text-lg font-semibold text-primary">{value}</div>
       {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );

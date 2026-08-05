@@ -49,7 +49,7 @@ export function PanelMode({
       <div className="px-4 pt-3 pb-2 border-b bg-background">
         <div className="flex items-center justify-between text-[12px] mb-1">
           <span className="text-muted-foreground">Today’s progress</span>
-          <span className="font-semibold text-brand-acai-700">{done}/{total}</span>
+          <span className="font-semibold text-primary">{done}/{total}</span>
         </div>
         <div className="h-2 rounded-full bg-brand-light-purple-100 overflow-hidden">
           <div
@@ -96,7 +96,7 @@ export function PanelMode({
 
             {/* Day header */}
             <div className="flex items-center justify-between px-4 py-3 border-b bg-background">
-              <div className="text-sm font-medium text-brand-acai-700">
+              <div className="text-sm font-medium text-primary">
                 Notes for {format(selectedDate, 'EEE, dd MMM')}
               </div>
               <Button
