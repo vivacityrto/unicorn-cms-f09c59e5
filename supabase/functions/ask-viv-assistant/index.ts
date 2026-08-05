@@ -101,6 +101,11 @@ const KEEP_RECENT_TURNS = 10;
 interface RequestPayload {
   message: string;
   conversation_id?: string | null;
+  // Which client the user is currently looking at in the app (e.g. the
+  // Client Detail page), resolved client-side from the current route. A hint
+  // only — the assistant still uses its own tools for real data, and the
+  // user can ask about a different client at any time.
+  page_context?: { tenant_id: number } | null;
 }
 
 interface ToolCallRecord {
@@ -1602,6 +1607,24 @@ Deno.serve(async (req) => {
       return jsonError(400, "BAD_REQUEST", "message is required");
     }
 
+    // Best-effort hint of which client the user is currently viewing in the
+    // app, resolved client-side from the route. Not a scope/pin — just a name
+    // + id the LLM can use to avoid asking "which client?" when the user
+    // says "them"/"this client"; it still calls its own tools for real data,
+    // and can follow a different client if the user names one.
+    let pageContextName: string | null = null;
+    const pageTenantId = payload.page_context?.tenant_id;
+    if (typeof pageTenantId === "number" && pageTenantId > 0) {
+      const { data: pageTenant } = await supabase
+        .from("tenants")
+        .select("id, name")
+        .eq("id", pageTenantId)
+        .maybeSingle();
+      if (pageTenant) {
+        pageContextName = pageTenant.name;
+      }
+    }
+
     // Conversations for this assistant are never tenant-pinned at the
     // conversation level — a single conversation can range across multiple
     // clients over time. Scoping happens per tool call instead.
@@ -1626,9 +1649,12 @@ Deno.serve(async (req) => {
     contextSummary = summarized.contextSummary;
     summaryCoversTurns = summarized.summaryCoversTurns;
 
-    const systemText = contextSummary
+    let systemText = contextSummary
       ? `${SYSTEM_PROMPT}\n\nEarlier conversation summary:\n${contextSummary}`
       : SYSTEM_PROMPT;
+    if (pageContextName) {
+      systemText += `\n\nThe user is currently viewing the Client Detail page for ${pageContextName} (tenant_id=${pageTenantId}) in Unicorn. If their message doesn't name a different client, assume they mean this one — but still use your tools (e.g. get_client_context) to pull any real data rather than assuming details. If they ask about a different client, follow that instead.`;
+    }
 
     // recentTurns already includes the just-logged user turn (last item) —
     // exclude it since it's added explicitly below, and cap to the most

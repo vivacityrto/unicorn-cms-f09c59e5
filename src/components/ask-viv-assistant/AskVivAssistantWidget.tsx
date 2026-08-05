@@ -41,6 +41,7 @@ export function AskVivAssistantWidget() {
     isSending,
     conversationList,
     loadingHistory,
+    pageTenantName,
     startNewConversation,
     loadConversationHistory,
     openConversation,
@@ -132,9 +133,11 @@ export function AskVivAssistantWidget() {
       <div className="relative flex items-center justify-between px-4 py-3 border-b border-border rounded-t-2xl bg-gradient-to-r from-primary/10 to-purple-500/10">
         <div className="flex items-center gap-3">
           <img src={vivIcon} alt="Ask Viv" className="h-10 w-10 rounded-full object-contain" />
-          <div>
+          <div className="min-w-0">
             <h3 className="font-semibold text-foreground">Ask Viv</h3>
-            <p className="text-xs text-muted-foreground">Assistant</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {pageTenantName ? `Viewing ${pageTenantName}` : "Assistant"}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">

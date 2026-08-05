@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRouteTenantContext } from "@/hooks/useRouteTenantContext";
 
 export interface AssistantSourceUsed {
   tool: string;
@@ -33,6 +34,10 @@ export function useAskVivAssistantChat() {
   const [isSending, setIsSending] = useState(false);
   const [conversationList, setConversationList] = useState<AssistantConversationSummary[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  // What client (if any) the user is currently viewing, resolved from the
+  // route — sent as a hint on every message so the assistant doesn't need to
+  // be told explicitly which client "they"/"this client" refers to.
+  const { tenantId: pageTenantId, tenantName: pageTenantName } = useRouteTenantContext();
 
   const startNewConversation = useCallback(() => {
     setConversationId(null);
@@ -124,7 +129,11 @@ export function useAskVivAssistantChat() {
 
       try {
         const { data, error } = await supabase.functions.invoke("ask-viv-assistant", {
-          body: { message: trimmed, conversation_id: conversationId },
+          body: {
+            message: trimmed,
+            conversation_id: conversationId,
+            page_context: pageTenantId ? { tenant_id: pageTenantId } : null,
+          },
         });
         if (error) throw new Error(error.message || "Failed to get a response");
 
@@ -147,7 +156,7 @@ export function useAskVivAssistantChat() {
         setIsSending(false);
       }
     },
-    [conversationId, isSending]
+    [conversationId, isSending, pageTenantId]
   );
 
   return {
@@ -156,6 +165,8 @@ export function useAskVivAssistantChat() {
     isSending,
     conversationList,
     loadingHistory,
+    pageTenantId,
+    pageTenantName,
     startNewConversation,
     loadConversationHistory,
     openConversation,
