@@ -32,7 +32,7 @@ export const CLIENT_PORTAL_PAGES: PortalPageEntry[] = [
   { label: "Calendar", path: "/client/calendar", description: "Upcoming meetings and scheduled sessions" },
   { label: "Reports", path: "/client/reports", description: "Compliance and progress reports for your organisation" },
   { label: "Support Tickets", path: "/client/support-tickets", description: "Raise or track a support request" },
-  { label: "Users", path: "/client/users", description: "Manage who has access to your organisation's portal", adminOnly: true },
+  { label: "Users", path: "/client/users", description: "Manage who has access to your organisation's portal — invite a secondary contact, team member, or Academy-only learner, or resend/check an invite", adminOnly: true },
   { label: "Staff PDPs", path: "/client/staff-pdps", description: "Staff professional development plans", adminOnly: true },
   { label: "TGA Details", path: "/client/tga", description: "Your Training.gov.au registration and scope details" },
   { label: "Membership Certificate", path: "/client/certificate", description: "Your Vivacity membership certificate" },
@@ -40,6 +40,12 @@ export const CLIENT_PORTAL_PAGES: PortalPageEntry[] = [
   { label: "Profile", path: "/profile", description: "Your personal profile details" },
 ];
 
+// Note: /academy/team ("Team Members") exists as a route but was verified
+// live (Playwright, 6 Aug) to render placeholder/mock data unconnected to
+// the real tenant — deliberately excluded here so find_portal_page never
+// recommends it. Academy-only learner invites go through /client/users
+// (access scope = "Academy only" there), confirmed live against a real
+// account with that access scope already set.
 export const ACADEMY_PAGES: PortalPageEntry[] = [
   { label: "Academy Dashboard", path: "/academy", description: "Vivacity Academy home — your learning overview" },
   { label: "My Courses", path: "/academy/courses", description: "Courses you're enrolled in and their progress" },
@@ -47,7 +53,6 @@ export const ACADEMY_PAGES: PortalPageEntry[] = [
   { label: "Certificates", path: "/academy/certificates", description: "Certificates you've earned from completed courses" },
   { label: "Events", path: "/academy/events", description: "Upcoming Vivacity Academy training events" },
   { label: "Community", path: "/academy/community", description: "Vivacity Academy community/discussion area" },
-  { label: "Team Members", path: "/academy/team", description: "Your organisation's Academy learners (Team/Elite tiers)" },
 ];
 
 export const ALL_PORTAL_PAGES: PortalPageEntry[] = [...CLIENT_PORTAL_PAGES, ...ACADEMY_PAGES];

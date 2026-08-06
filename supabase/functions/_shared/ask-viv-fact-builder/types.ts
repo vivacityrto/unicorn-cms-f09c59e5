@@ -13,6 +13,16 @@ export interface AskVivFactBuilderInput {
   user_id: string;          // auth.uid()
   tenant_id: number;        // active tenant context
   role: string;             // resolved app role
+  /**
+   * Set to "client" when called from the client-portal Ask Viv surface,
+   * whose caller-role gate (validateClientAskVivAccess) already ran before
+   * this is invoked. Skips the Vivacity-internal-role check in validation.ts,
+   * which otherwise rejects every client-tenant role (Admin/User)
+   * unconditionally — that check only makes sense for the staff assistant's
+   * direct-role gate. Omit (or "staff") to keep the original staff-only
+   * behaviour.
+   */
+  caller_role_class?: "staff" | "client";
   scope?: {
     client_id?: string | null;
     package_id?: string | null;

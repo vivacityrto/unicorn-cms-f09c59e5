@@ -138,6 +138,18 @@ const TOOLS: AnthropicToolDefinition[] = [
       required: [],
     },
   },
+  {
+    name: "get_invite_status",
+    description:
+      "Check the status of your organisation's portal users and pending invites — including secondary contacts and Academy-only learners (all managed from the same Users page). Diagnoses why an invite might not be working (expired link, bounced/failed delivery, never signed in) and what to do about it. Use this for 'why isn't my invite working', 'has X accepted their invite yet', or before inviting someone new — it also explains where to go to send a new invite. You are read-only: you can diagnose and point them to the right page, but you cannot resend an invite yourself.",
+    input_schema: {
+      type: "object",
+      properties: {
+        person: { type: "string", description: "Optional: a name or email to check one specific person. Omit to see everyone's invite/membership status." },
+      },
+      required: [],
+    },
+  },
 ];
 
 const SYSTEM_PROMPT = `You are Ask Viv, a conversational assistant for client-portal users of Unicorn by ComplyHub — the compliance management platform Vivacity uses to run RTO governance consulting engagements.
@@ -149,6 +161,8 @@ You have tools to look up real data about the caller's own account and to find t
 You do not have access to regulatory/Standards interpretation (Standards for RTOs 2025, National Code, CRICOS, or similar) — if asked a regulatory question, say so and suggest they speak with their Vivacity consultant, rather than answering from general knowledge.
 
 When find_portal_page returns a page, present it as a markdown link using its path, e.g. [My Courses](/academy/courses), so the person can click straight there.
+
+For invite questions, use get_invite_status to diagnose the real cause (expired link, bounced email, never signed in) rather than guessing — then tell them exactly where to go to fix it or invite someone new: Users in the client portal, for anyone (secondary contacts, team members, and Academy-only learners are all invited from there — Academy-only is a role option on that page, not a separate flow). You cannot resend an invite yourself — point them to the right page to do it.
 
 Write naturally in Australian English — you don't need to follow any fixed section structure. Keep answers concise and easy to read. If something in your answer might not match what the person expected, mention that their Vivacity consultant can help — don't try to resolve genuine account discrepancies yourself.`;
 
@@ -167,11 +181,81 @@ async function isClientAssistantEnabledForTenant(
 
     if (!data?.ask_viv_client_assistant_enabled) return false;
     if (data.ask_viv_client_assistant_all_tenants) return true;
-    const betaTenantIds: number[] = data.ask_viv_client_assistant_beta_tenant_ids || [];
-    return betaTenantIds.includes(tenantId);
+    // bigint[] columns can come back as strings (precision-safe serialisation) —
+    // compare numerically rather than with .includes(), which is strict-equality
+    // and silently fails on a "7547" vs 7547 mismatch.
+    const betaTenantIds: (number | string)[] = data.ask_viv_client_assistant_beta_tenant_ids || [];
+    return betaTenantIds.some((id) => Number(id) === tenantId);
   } catch (err) {
     console.error("Failed to check Ask Viv client assistant rollout flag:", err);
     return false;
+  }
+}
+
+/** Token-based daily cap — checked in addition to the request-count cap (ai_client_query_usage), since an agentic tool-use loop's cost per request varies far more than the deterministic function that cap was ported from. */
+async function checkClientTokenUsageCap(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  userId: string
+): Promise<{ withinCap: boolean; used: number; cap: number }> {
+  const { data: settings } = await supabase
+    .from("app_settings")
+    .select("ask_viv_client_assistant_daily_token_cap")
+    .limit(1)
+    .maybeSingle();
+  const cap = settings?.ask_viv_client_assistant_daily_token_cap ?? 50_000;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: usage } = await supabase
+    .from("ask_viv_client_assistant_usage")
+    .select("input_tokens, output_tokens")
+    .eq("user_id", userId)
+    .eq("usage_date", today)
+    .maybeSingle();
+  const used = (usage?.input_tokens ?? 0) + (usage?.output_tokens ?? 0);
+
+  return { withinCap: used < cap, used, cap };
+}
+
+/** Record actual token usage from this request, upserting today's row — service-role, matching the staff table's precedent. */
+async function recordClientTokenUsage(
+  // deno-lint-ignore no-explicit-any
+  serviceClient: any,
+  userId: string,
+  inputTokens: number,
+  outputTokens: number
+): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const { data: existing } = await serviceClient
+      .from("ask_viv_client_assistant_usage")
+      .select("input_tokens, output_tokens, request_count")
+      .eq("user_id", userId)
+      .eq("usage_date", today)
+      .maybeSingle();
+
+    if (existing) {
+      await serviceClient
+        .from("ask_viv_client_assistant_usage")
+        .update({
+          input_tokens: existing.input_tokens + inputTokens,
+          output_tokens: existing.output_tokens + outputTokens,
+          request_count: existing.request_count + 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId)
+        .eq("usage_date", today);
+    } else {
+      await serviceClient.from("ask_viv_client_assistant_usage").insert({
+        user_id: userId,
+        usage_date: today,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        request_count: 1,
+      });
+    }
+  } catch (err) {
+    console.error("Failed to record Ask Viv client assistant token usage:", err);
   }
 }
 
@@ -268,6 +352,7 @@ async function executeClientTool(
         user_id: userId,
         tenant_id: tenantId,
         role: profile.unicorn_role ?? "User",
+        caller_role_class: "client",
         scope: { client_id: null, package_id: null, phase_id: null },
         now_iso: new Date().toISOString(),
         timezone: "Australia/Sydney",
@@ -394,6 +479,74 @@ async function executeClientTool(
     }
   }
 
+  if (name === "get_invite_status") {
+    const person = String(input.person ?? "").trim().toLowerCase();
+    try {
+      const { data: rows, error } = await supabase
+        .from("v_client_tenant_users")
+        .select("row_type, display_name, email, primary_contact, secondary_contact, access_scope, last_sign_in_at, invited_at, invite_expires_at, delivery_status")
+        .eq("tenant_id", tenantId)
+        .limit(100);
+      if (error) throw new Error(error.message);
+
+      const now = new Date();
+      const filtered = (rows || []).filter(
+        (u: any) =>
+          !person ||
+          (u.display_name ?? "").toLowerCase().includes(person) ||
+          (u.email ?? "").toLowerCase().includes(person)
+      );
+
+      const people = filtered.map((u: any) => {
+        let diagnosis: string;
+        let recommended_action: string;
+        if (u.row_type === "invited") {
+          if (u.invite_expires_at && new Date(u.invite_expires_at) < now) {
+            diagnosis = "Invite link has expired";
+            recommended_action = "Resend the invite — an expired link can't be used to sign in.";
+          } else if (u.delivery_status && ["bounced", "failed", "undelivered"].includes(String(u.delivery_status).toLowerCase())) {
+            diagnosis = `Invite email failed to deliver (${u.delivery_status})`;
+            recommended_action = "Double-check the email address is correct, then resend the invite.";
+          } else {
+            diagnosis = "Invite sent, not yet accepted";
+            recommended_action = "No action needed yet — if it's been a while, you can resend it.";
+          }
+        } else if (u.row_type === "active" && !u.last_sign_in_at) {
+          diagnosis = "Account created but never signed in";
+          recommended_action = "Check they received the welcome email, or resend an invite.";
+        } else {
+          diagnosis = "Active, signed in";
+          recommended_action = "No action needed.";
+        }
+        return {
+          name: u.display_name,
+          email: u.email,
+          role: u.primary_contact
+            ? "primary contact"
+            : u.secondary_contact
+            ? "secondary contact"
+            : u.access_scope === "academy_only"
+            ? "Academy learner"
+            : "portal user",
+          status: u.row_type,
+          diagnosis,
+          recommended_action,
+        };
+      });
+
+      return {
+        result: {
+          people,
+          how_to_invite_new_person:
+            "To invite a new secondary contact, team member, or Academy-only learner, go to Users in the client portal (admin access required) and use Invite user — Academy-only access is one of the role options there, not a separate flow.",
+        },
+        summary: `get_invite_status(${person || "all"}) — ${people.length} person/people`,
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "get_invite_status failed" };
+    }
+  }
+
   return { result: { error: `Unknown tool: ${name}` }, summary: `Unknown tool: ${name}` };
 }
 
@@ -416,6 +569,14 @@ Deno.serve(async (req) => {
     if (authError || !user || !profile) {
       return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
     }
+
+    // app_settings' own RLS restricts SELECT to staff (is_super_admin_safe()
+    // OR is_vivacity_team_safe()) — a client-tenant user gets zero rows back
+    // via the RLS-scoped client regardless of what the row actually
+    // contains. Rollout-flag/cap lookups aren't tenant data, so reading them
+    // via service-role here doesn't weaken the tenant-isolation boundary the
+    // rest of this function relies on the user-auth client for.
+    const serviceClient = createServiceClient();
 
     let payload: RequestPayload;
     try {
@@ -452,7 +613,7 @@ Deno.serve(async (req) => {
     }
     const tenantId = access.tenant_id;
 
-    const enabled = await isClientAssistantEnabledForTenant(supabase, tenantId);
+    const enabled = await isClientAssistantEnabledForTenant(serviceClient, tenantId);
     if (!enabled) {
       return jsonError(403, "NOT_ENABLED", "Ask Viv isn't available for your account yet.");
     }
@@ -485,6 +646,11 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(retryAfter), "Cache-Control": "no-store" },
         }
       );
+    }
+
+    const tokenCap = await checkClientTokenUsageCap(serviceClient, user.id);
+    if (!tokenCap.withinCap) {
+      return jsonError(429, "DAILY_LIMIT_REACHED", "You've reached today's usage limit for Ask Viv. It resets tomorrow.");
     }
 
     const conversationId = await resolveOrCreateClientConversation(supabase, user.id, tenantId, payload.conversation_id, message);
@@ -547,7 +713,6 @@ Deno.serve(async (req) => {
     // Usage-cap increment — service-role, matching the existing precedent
     // (tenant members have no INSERT/UPDATE policy on this table today).
     try {
-      const serviceClient = createServiceClient();
       await serviceClient.from("ai_client_query_usage").upsert(
         { user_id: user.id, tenant_id: tenantId, query_date: queryDate, query_count: priorCount + 1 },
         { onConflict: "user_id,query_date" }
@@ -555,6 +720,8 @@ Deno.serve(async (req) => {
     } catch (err) {
       console.error("ai_client_query_usage upsert failed:", err);
     }
+    const tokenUsage = sumUsage(allResponses);
+    await recordClientTokenUsage(serviceClient, user.id, tokenUsage.input_tokens, tokenUsage.output_tokens);
 
     const sourcesUsed = toolCalls.map((tc) => ({ tool: tc.name, summary: tc.summary }));
     await logClientTurn(supabase, conversationId, "assistant", finalText, toolCalls);

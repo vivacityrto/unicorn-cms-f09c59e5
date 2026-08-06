@@ -34,10 +34,10 @@ export function validateInput(input: AskVivFactBuilderInput): ValidationResult {
     return { valid: false, error: "role is required" };
   }
 
-  if (!isVivacityInternalRole(input.role)) {
-    return { 
-      valid: false, 
-      error: `Access denied. Role "${input.role}" is not a Vivacity internal role.` 
+  if (input.caller_role_class !== "client" && !isVivacityInternalRole(input.role)) {
+    return {
+      valid: false,
+      error: `Access denied. Role "${input.role}" is not a Vivacity internal role.`
     };
   }
 
