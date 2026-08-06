@@ -5,73 +5,46 @@
  * NOT a flag-toggled variant of AskVivPanel — see V4 restoration story
  * in handoffs/ask-viv-fix-procedure.md for why we keep these isolated.
  *
+ * Calls the new agentic ask-viv-assistant-client edge function (replacing
+ * compliance-assistant-client — see
+ * docs/audit-log/entries/2026-08-06-ask-viv-client-assistant.md). The
+ * response is genuinely conversational free text, not the old fixed
+ * Answer/Confidence/Gaps/Freshness template, so this panel is simpler than
+ * its predecessor: no confidence chip, no freshness chip, no handoff
+ * banner — the assistant's own words carry that now.
+ *
  * Hard rules (enforced here):
- *  - Calls compliance-assistant-client (NOT compliance-assistant).
- *  - Request body is exactly { question }. No tenant_id / client_id /
- *    package_id / phase_id — scope is resolved server-side by the gate.
+ *  - Calls ask-viv-assistant-client (NOT compliance-assistant-client).
+ *  - Request body is exactly { message, conversation_id, preview_tenant_id? }.
+ *    No tenant_id / client_id / package_id / phase_id — scope is resolved
+ *    server-side by the gate.
  *  - No useAskViv() context (it only exists in DashboardLayout).
- *  - No localStorage / Zustand / context. Local useState only.
- *  - Only labels are rendered for records_accessed (no IDs, no tables).
- *  - Reuses AskVivFreshnessChip but no other ask-viv child components.
+ *  - No localStorage / Zustand / context beyond conversation_id in state.
  */
 
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import {
-  X,
-  Send,
-  MessageSquare,
-  Loader2,
-  ChevronRight,
-  Sparkles,
-  AlertCircle,
-  CheckCircle,
-  HelpCircle,
-  Link as LinkIcon,
-  RefreshCw,
-} from "lucide-react";
+import { X, Send, MessageSquare, Loader2, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
-import { AskVivFreshnessChip } from "./AskVivFreshnessChip";
 
 // ============= Types =============
 
-type Confidence = "high" | "medium" | "low";
-
-interface FreshnessData {
-  last_activity_at: string | null;
-  days_since_activity: number | null;
-  status: "fresh" | "aging" | "stale";
-  derived_at: string;
-}
-
-export interface ClientAskVivResponse {
-  answer_markdown: string;
-  records_accessed: { label: string }[];
-  confidence: Confidence;
-  gaps: string[];
-  freshness: FreshnessData | null;
-  consultant_handoff_suggested: boolean;
+interface AssistantSourceUsed {
+  tool: string;
+  summary: string;
 }
 
 interface AssistantMessage {
   id: string;
   role: "assistant";
   content: string;
-  records_accessed: { label: string }[];
-  confidence: Confidence;
-  gaps: string[];
-  freshness: FreshnessData | null;
-  consultant_handoff_suggested: boolean;
+  sources_used: AssistantSourceUsed[];
 }
 
 interface UserMessage {
@@ -81,6 +54,12 @@ interface UserMessage {
 }
 
 type Message = AssistantMessage | UserMessage;
+
+interface ClientAskVivResponse {
+  content: string;
+  conversation_id: string;
+  sources_used: AssistantSourceUsed[];
+}
 
 interface PanelError {
   kind: "rate_limit" | "forbidden" | "server" | "network";
@@ -97,10 +76,12 @@ interface ClientAskVivPanelProps {
 
 export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAskVivPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<PanelError | null>(null);
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -130,11 +111,7 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
     setError(null);
     setLastQuestion(question);
 
-    const userMsg: UserMessage = {
-      id: `u-${Date.now()}`,
-      role: "user",
-      content: question,
-    };
+    const userMsg: UserMessage = { id: `u-${Date.now()}`, role: "user", content: question };
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage("");
     setIsLoading(true);
@@ -143,24 +120,19 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) {
-        setError({
-          kind: "forbidden",
-          message: "Please sign in again to use Ask Viv.",
-        });
+        setError({ kind: "forbidden", message: "Please sign in again to use Ask Viv." });
         return;
       }
 
       const baseUrl = (supabase as unknown as { supabaseUrl: string }).supabaseUrl;
-      const url = `${baseUrl}/functions/v1/compliance-assistant-client`;
+      const url = `${baseUrl}/functions/v1/ask-viv-assistant-client`;
 
       const resp = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          question,
+          message: question,
+          conversation_id: conversationId,
           ...(previewTenantId != null ? { preview_tenant_id: previewTenantId } : {}),
         }),
       });
@@ -168,56 +140,37 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
       if (resp.status === 429) {
         const body = await resp.json().catch(() => ({}));
         const detail =
-          (body?.detail as string | undefined) ??
-          "You've reached your daily Ask Viv limit. Please try again tomorrow.";
+          (body?.detail as string | undefined) ?? "You've reached your daily Ask Viv limit. Please try again tomorrow.";
         setError({ kind: "rate_limit", message: detail });
         return;
       }
       if (resp.status === 403) {
-        setError({
-          kind: "forbidden",
-          message: "This feature isn't available on your account.",
-        });
+        setError({ kind: "forbidden", message: "This feature isn't available on your account." });
         return;
       }
       if (resp.status >= 500) {
-        setError({
-          kind: "server",
-          message: "Something went wrong. Please try again.",
-        });
+        setError({ kind: "server", message: "Something went wrong. Please try again." });
         return;
       }
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}));
-        setError({
-          kind: "server",
-          message:
-            (body?.detail as string | undefined) ??
-            "Something went wrong. Please try again.",
-        });
+        setError({ kind: "server", message: (body?.detail as string | undefined) ?? "Something went wrong. Please try again." });
         return;
       }
 
       const result = (await resp.json()) as ClientAskVivResponse;
+      if (result.conversation_id) setConversationId(result.conversation_id);
+
       const assistantMsg: AssistantMessage = {
         id: `a-${Date.now()}`,
         role: "assistant",
-        content: result.answer_markdown ?? "",
-        records_accessed: Array.isArray(result.records_accessed)
-          ? result.records_accessed
-          : [],
-        confidence: result.confidence ?? "low",
-        gaps: Array.isArray(result.gaps) ? result.gaps : [],
-        freshness: result.freshness ?? null,
-        consultant_handoff_suggested: !!result.consultant_handoff_suggested,
+        content: result.content ?? "",
+        sources_used: Array.isArray(result.sources_used) ? result.sources_used : [],
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
       console.error("ClientAskVivPanel: request failed", err);
-      setError({
-        kind: "network",
-        message: "Couldn't reach Ask Viv. Check your connection and try again.",
-      });
+      setError({ kind: "network", message: "Couldn't reach Ask Viv. Check your connection and try again." });
     } finally {
       setIsLoading(false);
     }
@@ -225,7 +178,6 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
 
   const handleRetry = () => {
     if (!lastQuestion) return;
-    // Drop the trailing user message so handleSend can re-add it cleanly.
     setMessages((prev) => {
       const reverseIdx = [...prev].reverse().findIndex((m) => m.role === "user");
       if (reverseIdx === -1) return prev;
@@ -244,18 +196,14 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
 
   const startNewChat = () => {
     setMessages([]);
+    setConversationId(null);
     setError(null);
     setLastQuestion(null);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   return (
-    <div
-      className={cn(
-        "fixed z-50 bg-card border border-border rounded-2xl shadow-2xl flex flex-col",
-        "bottom-6 right-6 w-[420px] h-[600px]",
-      )}
-    >
+    <div className={cn("fixed z-50 bg-card border border-border rounded-2xl shadow-2xl flex flex-col", "bottom-6 right-6 w-[420px] h-[600px]")}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border rounded-t-2xl bg-gradient-to-r from-primary/10 to-primary/5">
         <div className="flex items-center gap-3">
@@ -267,13 +215,7 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
             <p className="text-xs text-muted-foreground">Your account assistant</p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={onClose}
-          aria-label="Close Ask Viv"
-        >
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose} aria-label="Close Ask Viv">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -288,8 +230,8 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
               message.role === "user" ? (
                 <UserBubble key={message.id} content={message.content} />
               ) : (
-                <AssistantBubble key={message.id} message={message} />
-              ),
+                <AssistantBubble key={message.id} message={message} navigate={navigate} />
+              )
             )}
             {isLoading && <LoadingBubble />}
             <div ref={messagesEndRef} />
@@ -299,25 +241,11 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
 
       {/* Input area */}
       <div className="p-3 border-t border-border bg-muted/30 rounded-b-2xl">
-        {error && (
-          <ErrorNotice
-            error={error}
-            onRetry={
-              error.kind === "server" || error.kind === "network"
-                ? handleRetry
-                : undefined
-            }
-          />
-        )}
+        {error && <ErrorNotice error={error} onRetry={error.kind === "server" || error.kind === "network" ? handleRetry : undefined} />}
 
         {messages.length > 0 && !error && (
           <div className="flex justify-center mb-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs h-7"
-              onClick={startNewChat}
-            >
+            <Button variant="ghost" size="sm" className="text-xs h-7" onClick={startNewChat}>
               <MessageSquare className="h-3 w-3 mr-1" />
               New conversation
             </Button>
@@ -330,28 +258,12 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={
-              isRateLimited
-                ? "Daily limit reached"
-                : isForbidden
-                ? "Unavailable"
-                : "Ask a question about your account..."
-            }
+            placeholder={isRateLimited ? "Daily limit reached" : isForbidden ? "Unavailable" : "Ask a question or find a page..."}
             disabled={isLoading || isRateLimited || isForbidden}
             className="flex-1 bg-background border-border/50"
           />
-          <Button
-            onClick={() => handleSend()}
-            disabled={sendDisabled}
-            size="icon"
-            className="bg-primary hover:bg-primary/90"
-            aria-label="Send"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+          <Button onClick={() => handleSend()} disabled={sendDisabled} size="icon" className="bg-primary hover:bg-primary/90" aria-label="Send">
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       </div>
@@ -367,9 +279,9 @@ function EmptyState() {
       <div className="h-16 w-16 rounded-full flex items-center justify-center mb-4 bg-gradient-to-br from-primary/20 to-primary/10">
         <MessageSquare className="h-8 w-8 text-primary" />
       </div>
-      <h4 className="font-medium text-foreground mb-2">Ask about your account</h4>
+      <h4 className="font-medium text-foreground mb-2">Ask about your account, or find your way around</h4>
       <p className="text-sm text-muted-foreground mb-4">
-        Get answers about your packages, tasks, evidence, and progress.
+        Get answers about your packages, tasks, evidence, and Academy progress — or ask where to find something in the portal.
       </p>
       <div className="flex flex-wrap gap-2 justify-center">
         <Badge variant="outline" className="text-xs">Your data only</Badge>
@@ -391,134 +303,46 @@ function UserBubble({ content }: { content: string }) {
   );
 }
 
-function AssistantBubble({ message }: { message: AssistantMessage }) {
-  const showFreshness =
-    message.freshness !== null &&
-    (message.freshness.status === "aging" || message.freshness.status === "stale");
-
-  const hasRecords = message.records_accessed.length > 0;
-  const cleanedContent = hasRecords
-    ? message.content
-        .replace(
-          /^##\s*What we looked at[^\n]*\n(?:[ \t]*[-*][^\n]*\n?)*/gim,
-          "",
-        )
-        .trimEnd()
-    : message.content;
-
+function AssistantBubble({ message, navigate }: { message: AssistantMessage; navigate: ReturnType<typeof useNavigate> }) {
   return (
     <div className="flex gap-2 items-start">
       <div className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-primary to-primary/70">
         <Sparkles className="h-4 w-4 text-primary-foreground" />
       </div>
       <div className="max-w-[85%] flex flex-col">
-        {/* Handoff banner — sits ABOVE the message bubble */}
-        {message.consultant_handoff_suggested && (
-          <div className="flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2">
-            <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-            <span>
-              If this doesn&apos;t match what you expected, your Vivacity consultant
-              can help — reach out via your usual channel.
-            </span>
-          </div>
-        )}
-
-        {/* Freshness chip — only when aging or stale */}
-        {showFreshness && message.freshness && (
-          <div className="mb-2">
-            <AskVivFreshnessChip freshness={message.freshness} />
-          </div>
-        )}
-
-        {/* Message bubble — markdown-rendered */}
         <div className="rounded-2xl rounded-bl-md px-4 py-2.5 bg-muted text-foreground">
           <ReactMarkdown
             components={{
-              h2: ({ node, ...props }) => (
-                <h2
-                  className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-3 mb-1 first:mt-0"
-                  {...props}
-                />
-              ),
-              ul: ({ node, ...props }) => (
-                <ul className="space-y-1 pl-4" {...props} />
-              ),
-              ol: ({ node, ...props }) => (
-                <ol className="space-y-1 pl-4" {...props} />
-              ),
-              li: ({ node, ...props }) => (
-                <li className="text-sm list-disc" {...props} />
-              ),
+              h2: ({ node, ...props }) => <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-3 mb-1 first:mt-0" {...props} />,
+              ul: ({ node, ...props }) => <ul className="space-y-1 pl-4" {...props} />,
+              ol: ({ node, ...props }) => <ol className="space-y-1 pl-4" {...props} />,
+              li: ({ node, ...props }) => <li className="text-sm list-disc" {...props} />,
               p: ({ node, ...props }) => <p className="text-sm" {...props} />,
+              // Internal portal/Academy links (e.g. from find_portal_page results)
+              // navigate in-app instead of a full page reload.
+              a: ({ node, href, ...props }) => {
+                if (href && href.startsWith("/")) {
+                  return (
+                    <a
+                      href={href}
+                      className="text-primary underline underline-offset-2"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate(href);
+                      }}
+                      {...props}
+                    />
+                  );
+                }
+                return <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2" {...props} />;
+              },
             }}
           >
-            {cleanedContent}
+            {message.content}
           </ReactMarkdown>
-        </div>
-
-        {/* Metadata stack */}
-        <div className="mt-2 space-y-1.5">
-          {/* Confidence chip */}
-          <ConfidenceChip confidence={message.confidence} />
-
-          {/* What we looked at — labels only */}
-          {message.records_accessed.length > 0 && (
-            <Collapsible className="mt-1.5">
-              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                <LinkIcon className="h-3 w-3" />
-                What we looked at ({message.records_accessed.length})
-                <ChevronRight className="h-3 w-3" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-1">
-                <div className="space-y-1">
-                  {message.records_accessed.slice(0, 12).map((record, idx) => (
-                    <div
-                      key={idx}
-                      className="text-xs bg-muted/50 rounded-lg p-2 text-foreground"
-                    >
-                      {record.label}
-                    </div>
-                  ))}
-                  {message.records_accessed.length > 12 && (
-                    <p className="text-xs text-muted-foreground">
-                      + {message.records_accessed.length - 12} more
-                    </p>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
         </div>
       </div>
     </div>
-  );
-}
-
-function ConfidenceChip({ confidence }: { confidence: Confidence }) {
-  // Per spec: low → amber, medium → yellow, high → green.
-  const meta = {
-    high: {
-      icon: <CheckCircle className="h-3 w-3" />,
-      label: "High confidence",
-      cls: "border-green-500/40 bg-green-50 text-green-700",
-    },
-    medium: {
-      icon: <AlertCircle className="h-3 w-3" />,
-      label: "Medium confidence",
-      cls: "border-yellow-500/40 bg-yellow-50 text-yellow-700",
-    },
-    low: {
-      icon: <HelpCircle className="h-3 w-3" />,
-      label: "Low confidence",
-      cls: "border-amber-500/40 bg-amber-50 text-amber-700",
-    },
-  }[confidence];
-
-  return (
-    <Badge variant="outline" className={cn("text-[10px] gap-1 py-0.5", meta.cls)}>
-      {meta.icon}
-      <span>{meta.label}</span>
-    </Badge>
   );
 }
 
@@ -530,52 +354,24 @@ function LoadingBubble() {
       </div>
       <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
         <div className="flex gap-1">
-          <span
-            className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce"
-            style={{ animationDelay: "0ms" }}
-          />
-          <span
-            className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce"
-            style={{ animationDelay: "150ms" }}
-          />
-          <span
-            className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce"
-            style={{ animationDelay: "300ms" }}
-          />
+          <span className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+          <span className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+          <span className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
         </div>
       </div>
     </div>
   );
 }
 
-function ErrorNotice({
-  error,
-  onRetry,
-}: {
-  error: PanelError;
-  onRetry?: () => void;
-}) {
-  const tone =
-    error.kind === "rate_limit"
-      ? "border-amber-500/40 bg-amber-50 text-amber-700"
-      : "border-destructive/40 bg-destructive/10 text-destructive";
+function ErrorNotice({ error, onRetry }: { error: PanelError; onRetry?: () => void }) {
+  const tone = error.kind === "rate_limit" ? "border-amber-500/40 bg-amber-50 text-amber-700" : "border-destructive/40 bg-destructive/10 text-destructive";
 
   return (
-    <div
-      className={cn(
-        "mb-2 flex items-start gap-2 text-xs rounded-lg border px-2.5 py-2",
-        tone,
-      )}
-    >
+    <div className={cn("mb-2 flex items-start gap-2 text-xs rounded-lg border px-2.5 py-2", tone)}>
       <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
       <span className="flex-1">{error.message}</span>
       {onRetry && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-xs"
-          onClick={onRetry}
-        >
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onRetry}>
           <RefreshCw className="h-3 w-3 mr-1" />
           Retry
         </Button>

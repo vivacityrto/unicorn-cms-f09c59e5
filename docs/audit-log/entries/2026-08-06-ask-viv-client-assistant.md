@@ -1,0 +1,34 @@
+# Audit: 2026-08-06 — ask-viv-client-assistant
+
+**Trigger:** ad-hoc
+**Scope:** New sibling edge function (`ask-viv-assistant-client`), schema migration (two new tables + `app_settings` rollout flags), and a frontend panel rewrite in unicorn-cms-f09c59e5, replacing the client-portal Ask Viv assistant. Did not review any other schema areas.
+
+## Findings
+- Carl asked to bring the new agentic Ask Viv assistant (`ask-viv-assistant`, shipped for Vivacity staff only) to the client portal, plus a portal/Vivacity Academy navigation capability. Investigation found a client-facing Ask Viv already exists and is live today (`compliance-assistant-client` + `ClientAskVivPanel.tsx`, mounted on every `/client/*` route) — deterministic/template-based, phrased via Gemini through the Lovable AI Gateway, distinct architecture from the new staff assistant (direct-Anthropic Claude Sonnet, agentic tool-use).
+- The frontend's `useRBAC.tsx` has a permission comment stating "Ask Viv is Vivacity-only — no client access under any circumstances." Confirmed this governs the *staff* assistant's `ask_viv:access` permission specifically, not the separate client-portal surface — left untouched.
+- Carl confirmed the intent: **replace** the existing client assistant with a new tenant-locked sibling of the staff agentic assistant, rather than run both or bolt navigation help onto the old one. Standards/regulatory interpretation for clients — explicitly excluded in the original 30 Apr client-mode build spec (`docs/kb/handoffs/ask-viv-client-mode.md`) — stays excluded; reaffirmed rather than silently carried over.
+- During design, found `client_timeline_events` already has a `visibility` column (`'internal'` default, `'client'` opt-in) with client-read RLS restricted to `visibility = 'client'` rows only (migrations `20260210071340`, `20260513025021`) — notes/documents wired into the timeline in early-August migrations do not set `visibility`, so they insert with the safe `'internal'` default and are invisible to client RLS by construction. This resolved an open design question about whether the new assistant's account-context tool could leak notes via the aggregated timeline feed: using the RLS-scoped (user-auth) Supabase client for this tool, rather than service-role, makes that leak structurally impossible regardless of application-layer filtering.
+- Found the zero-arg `is_vivacity()` helper referenced in team conventions docs is not the current live staff-check function — it's `is_vivacity_team_safe(uuid)` (checks `users.is_vivacity_internal`, correctly excludes archived/disabled staff; see `20260731040112_revert_is_vivacity_staff_regression.sql`). Used the real function in the new RLS policies.
+- Found `ask-viv-assistant` (staff) and its sibling ingestion functions are not registered in `supabase/config.toml` at all, unlike older functions — the newer convention in this repo appears to skip explicit config.toml entries. Followed that precedent; did not add an entry for `ask-viv-assistant-client`.
+
+## KB changes shipped
+- no changes
+
+## Code changes (this entry accompanies)
+- unicorn-cms-f09c59e5, branch `feat/ask-viv-client-assistant`:
+  - Migration `20260806060000_ask_viv_client_assistant_foundation.sql` — new `ask_viv_client_conversations`/`ask_viv_client_turns` tables (user-owned RLS variant: private per-user thread, `is_vivacity_team_safe()` staff-all for QA/audit, RLS enabled on both), and three new `app_settings` columns (`ask_viv_client_assistant_enabled`, `ask_viv_client_assistant_all_tenants`, `ask_viv_client_assistant_beta_tenant_ids`) for a staged tenant rollout. **Not yet applied to production** — this session had no direct Supabase access; the migration ships in the PR and needs to go through the normal deploy path (Lovable sync or `supabase db push`) before the feature can go live, and the rollout flag defaults to `false` regardless.
+  - `supabase/functions/_shared/ask-viv-client-redaction.ts` (new) — deny-list/friendly-label logic extracted from `compliance-assistant-client/index.ts` so both the old and new client surfaces share one redaction definition during the transition.
+  - `supabase/functions/_shared/ask-viv-client-navigation.ts` (new) — static client-portal/Academy page manifest for the `find_portal_page` tool. Mirrors (does not import — Deno edge functions and the Vite frontend are separate runtimes in this repo) `src/components/client/ClientSidebar.tsx` and `src/config/navigationConfig.ts`'s Academy sections; needs manual upkeep if those change.
+  - `supabase/functions/ask-viv-assistant-client/index.ts` (new) — sibling of the staff `ask-viv-assistant`, same agentic Claude Sonnet tool-use loop, gated by the existing `validateClientAskVivAccess` (unchanged). Uses the user-auth (RLS-scoped) Supabase client throughout, service-role only for the `ai_client_query_usage` daily-cap upsert. Five tools: `get_my_account_context`, `search_my_documents`, `get_my_academy_progress`, `find_portal_page`, `list_my_deadlines` — none accept a tenant/client id from the model; all close over the gate-resolved tenant.
+  - `src/components/ask-viv/ClientAskVivPanel.tsx` — rewritten in place for the new free-text conversational contract (drops the old confidence/freshness/gaps/handoff-banner UI, which no longer exists); same mount point and props in `ClientLayout.tsx`, unchanged.
+  - `compliance-assistant-client` (edge function) and its old response contract are left deployed but unmounted — decommissioning is a follow-up once the new assistant has run in production for a period, not a same-PR deletion.
+
+## Decisions
+- Confirmed with Carl: replace the client-portal Ask Viv outright (not dual-run), keep Standards/regulatory search excluded for clients, filter the account-context tool's timeline feed per-entry (resolved via RLS rather than app-layer logic, per the finding above).
+
+## Open questions parked
+- Whether `client_action_items` and `v_audit_schedule` (used by `list_my_deadlines`) already grant client-portal SELECT under RLS wasn't independently verified against a real client login this session — the existing client Tasks/Reports pages appear to depend on equivalent access, but this needs confirming during the manual QA pass (see plan's verification section) before rollout.
+- Whether to eventually dual-write client Ask Viv interactions into `ai_interaction_logs` (for the shared AI Insights dashboard) was considered and deliberately deferred — the new `ask_viv_client_turns` table already serves as this surface's audit trail; folding it into the cross-surface dashboard is a separate scoping decision, not bundled into this change.
+
+## Tag
+audit-2026-08-06-ask-viv-client-assistant
