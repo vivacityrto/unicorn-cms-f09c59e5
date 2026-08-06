@@ -235,43 +235,72 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
 
       const { fullTextMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
-      // 3. Fetch per-month breakdown from time_entries
+      // 3. Fetch per-month breakdown from time_entries + allocations.
+      // Burndown gauge (v_package_burndown) is allocation-aware; attribute
+      // monthly minutes the same way so the table matches after reallocation.
       const { data: monthlyRows } = await (supabase as any)
         .from('time_entries')
-        .select('package_id, package_instance_id, start_at, duration_minutes, is_billable')
+        .select('id, package_id, package_instance_id, start_at, duration_minutes, is_billable')
         .eq('tenant_id', tenantId);
 
-      // Group by instance + month
+      const entryIds = (monthlyRows || []).map((r: any) => r.id).filter(Boolean);
+      const allocByEntry = new Map<string, { package_instance_id: number; allocated_minutes: number }[]>();
+      if (entryIds.length > 0) {
+        // PostgREST .in() chunking for large tenants
+        const chunkSize = 200;
+        for (let i = 0; i < entryIds.length; i += chunkSize) {
+          const chunk = entryIds.slice(i, i + chunkSize);
+          const { data: allocRows } = await (supabase as any)
+            .from('time_entry_allocations')
+            .select('time_entry_id, package_instance_id, allocated_minutes')
+            .in('time_entry_id', chunk);
+          (allocRows || []).forEach((a: any) => {
+            const list = allocByEntry.get(a.time_entry_id) || [];
+            list.push({
+              package_instance_id: a.package_instance_id,
+              allocated_minutes: a.allocated_minutes || 0,
+            });
+            allocByEntry.set(a.time_entry_id, list);
+          });
+        }
+      }
+
       const monthlyMap: Record<number, { month: string; minutes: number; billable: number; nonBillable: number }[]> = {};
       const instanceTotals: Record<number, { billable: number; nonBillable: number; total: number; lastEntry: string | null }> = {};
-      (monthlyRows || []).forEach((row: any) => {
-        if (!row.start_at) return;
-        const instId = row.package_instance_id ?? row.package_id;
-        if (!instId || !instanceIds.includes(instId)) return;
-        const monthKey = format(new Date(row.start_at), 'yyyy-MM');
-        const mins = row.duration_minutes || 0;
+
+      const creditMinutes = (instId: number, startAt: string, mins: number, isBillable: boolean) => {
+        if (!instId || !instanceIds.includes(instId) || !mins) return;
+        const monthKey = format(new Date(startAt), 'yyyy-MM');
         if (!monthlyMap[instId]) monthlyMap[instId] = [];
         if (!instanceTotals[instId]) instanceTotals[instId] = { billable: 0, nonBillable: 0, total: 0, lastEntry: null };
         instanceTotals[instId].total += mins;
-        if (row.is_billable) {
-          instanceTotals[instId].billable += mins;
-        } else {
-          instanceTotals[instId].nonBillable += mins;
-        }
-        if (!instanceTotals[instId].lastEntry || row.start_at > instanceTotals[instId].lastEntry!) {
-          instanceTotals[instId].lastEntry = row.start_at;
+        if (isBillable) instanceTotals[instId].billable += mins;
+        else instanceTotals[instId].nonBillable += mins;
+        if (!instanceTotals[instId].lastEntry || startAt > instanceTotals[instId].lastEntry!) {
+          instanceTotals[instId].lastEntry = startAt;
         }
         const existing = monthlyMap[instId].find(m => m.month === monthKey);
         if (existing) {
           existing.minutes += mins;
-          if (row.is_billable) existing.billable += mins; else existing.nonBillable += mins;
+          if (isBillable) existing.billable += mins; else existing.nonBillable += mins;
         } else {
           monthlyMap[instId].push({
             month: monthKey,
             minutes: mins,
-            billable: row.is_billable ? mins : 0,
-            nonBillable: row.is_billable ? 0 : mins,
+            billable: isBillable ? mins : 0,
+            nonBillable: isBillable ? 0 : mins,
           });
+        }
+      };
+
+      (monthlyRows || []).forEach((row: any) => {
+        if (!row.start_at) return;
+        const allocs = allocByEntry.get(row.id);
+        if (allocs && allocs.length > 0) {
+          allocs.forEach(a => creditMinutes(a.package_instance_id, row.start_at, a.allocated_minutes, !!row.is_billable));
+        } else {
+          const instId = row.package_instance_id ?? row.package_id;
+          creditMinutes(instId, row.start_at, row.duration_minutes || 0, !!row.is_billable);
         }
       });
       Object.values(monthlyMap).forEach(arr => arr.sort((a, b) => a.month.localeCompare(b.month)));
@@ -342,20 +371,47 @@ function ClosedPackageSummaries({ tenantId }: { tenantId: number }) {
       const instanceIds = closedInstances.map((r: any) => r.id);
       const { fullTextMap } = await resolvePackageNames(instanceIds);
 
+      // Allocation-aware: same rule as active burndown monthly table.
       const { data: timeRows } = await (supabase as any)
         .from('time_entries')
-        .select('package_instance_id, duration_minutes, is_billable')
-        .eq('tenant_id', tenantId)
-        .in('package_instance_id', instanceIds);
+        .select('id, package_instance_id, duration_minutes, is_billable')
+        .eq('tenant_id', tenantId);
+
+      const entryIds = (timeRows || []).map((r: any) => r.id).filter(Boolean);
+      const allocByEntry = new Map<string, { package_instance_id: number; allocated_minutes: number }[]>();
+      const chunkSize = 200;
+      for (let i = 0; i < entryIds.length; i += chunkSize) {
+        const chunk = entryIds.slice(i, i + chunkSize);
+        if (chunk.length === 0) break;
+        const { data: allocRows } = await (supabase as any)
+          .from('time_entry_allocations')
+          .select('time_entry_id, package_instance_id, allocated_minutes')
+          .in('time_entry_id', chunk);
+        (allocRows || []).forEach((a: any) => {
+          const list = allocByEntry.get(a.time_entry_id) || [];
+          list.push({
+            package_instance_id: a.package_instance_id,
+            allocated_minutes: a.allocated_minutes || 0,
+          });
+          allocByEntry.set(a.time_entry_id, list);
+        });
+      }
 
       const totalsMap: Record<number, { billable: number; nonBillable: number; total: number }> = {};
-      (timeRows || []).forEach((r: any) => {
-        const id = r.package_instance_id;
+      const credit = (id: number, mins: number, isBillable: boolean) => {
+        if (!id || !instanceIds.includes(id) || !mins) return;
         if (!totalsMap[id]) totalsMap[id] = { billable: 0, nonBillable: 0, total: 0 };
-        const mins = r.duration_minutes || 0;
         totalsMap[id].total += mins;
-        if (r.is_billable) totalsMap[id].billable += mins;
+        if (isBillable) totalsMap[id].billable += mins;
         else totalsMap[id].nonBillable += mins;
+      };
+      (timeRows || []).forEach((r: any) => {
+        const allocs = allocByEntry.get(r.id);
+        if (allocs && allocs.length > 0) {
+          allocs.forEach(a => credit(a.package_instance_id, a.allocated_minutes, !!r.is_billable));
+        } else {
+          credit(r.package_instance_id, r.duration_minutes || 0, !!r.is_billable);
+        }
       });
 
       return closedInstances.map((inst: any) => ({
