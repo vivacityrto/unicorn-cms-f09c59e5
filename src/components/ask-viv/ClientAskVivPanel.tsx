@@ -19,7 +19,10 @@
  *    No tenant_id / client_id / package_id / phase_id — scope is resolved
  *    server-side by the gate.
  *  - No useAskViv() context (it only exists in DashboardLayout).
- *  - No localStorage / Zustand / context beyond conversation_id in state.
+ *  - No localStorage / Zustand — conversation continuity across a page
+ *    reload comes from resuming the most recent conversation out of
+ *    ask_viv_client_conversations/ask_viv_client_turns on mount (both
+ *    already RLS-scoped to the caller's own rows), not client-side storage.
  */
 
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
@@ -32,6 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Send, MessageSquare, Loader2, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // ============= Types =============
 
@@ -91,6 +95,60 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
+
+  // Resume the most recent conversation on load, so a page reload (or a
+  // fresh tab) doesn't lose history that's already sitting in
+  // ask_viv_client_conversations/ask_viv_client_turns — both RLS-scoped to
+  // the caller's own rows, so no new endpoint is needed to read them back.
+  // Scoped to previewTenantId when a staff member is previewing a specific
+  // tenant, so switching preview tenants doesn't resume an unrelated one.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let query = supabase
+        .from("ask_viv_client_conversations")
+        .select("id")
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (previewTenantId != null) {
+        query = query.eq("tenant_id", previewTenantId);
+      }
+      const { data: convo } = await query.maybeSingle();
+      if (!convo || cancelled) return;
+
+      const { data: turns } = await supabase
+        .from("ask_viv_client_turns")
+        .select("id, role, content, tool_calls_summary, created_at")
+        .eq("conversation_id", convo.id)
+        .order("created_at", { ascending: true });
+      if (cancelled || !turns || turns.length === 0) return;
+
+      const hydrated: Message[] = turns.map((t) => {
+        if (t.role === "user") {
+          return { id: t.id, role: "user", content: t.content } as UserMessage;
+        }
+        const toolCalls = Array.isArray(t.tool_calls_summary) ? t.tool_calls_summary : [];
+        return {
+          id: t.id,
+          role: "assistant",
+          content: t.content,
+          sources_used: toolCalls.map((tc: { name?: string; summary?: string }) => ({
+            tool: tc.name ?? "unknown",
+            summary: tc.summary ?? "",
+          })),
+        } as AssistantMessage;
+      });
+
+      setConversationId(convo.id);
+      // Guard against clobbering anything the user already sent while this
+      // fetch was in flight.
+      setMessages((prev) => (prev.length > 0 ? prev : hydrated));
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -312,12 +370,22 @@ function AssistantBubble({ message, navigate }: { message: AssistantMessage; nav
       <div className="max-w-[85%] flex flex-col">
         <div className="rounded-2xl rounded-bl-md px-4 py-2.5 bg-muted text-foreground">
           <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
             components={{
               h2: ({ node, ...props }) => <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-3 mb-1 first:mt-0" {...props} />,
               ul: ({ node, ...props }) => <ul className="space-y-1 pl-4" {...props} />,
               ol: ({ node, ...props }) => <ol className="space-y-1 pl-4" {...props} />,
               li: ({ node, ...props }) => <li className="text-sm list-disc" {...props} />,
               p: ({ node, ...props }) => <p className="text-sm" {...props} />,
+              table: ({ node, ...props }) => (
+                <div className="overflow-x-auto my-2 rounded-md border border-border/50">
+                  <table className="w-full text-xs" {...props} />
+                </div>
+              ),
+              thead: ({ node, ...props }) => <thead className="bg-background/60" {...props} />,
+              tr: ({ node, ...props }) => <tr className="border-b border-border/50 last:border-0" {...props} />,
+              th: ({ node, ...props }) => <th className="px-2 py-1.5 text-left font-semibold" {...props} />,
+              td: ({ node, ...props }) => <td className="px-2 py-1.5 align-top" {...props} />,
               // Internal portal/Academy links (e.g. from find_portal_page results)
               // navigate in-app instead of a full page reload.
               a: ({ node, href, ...props }) => {

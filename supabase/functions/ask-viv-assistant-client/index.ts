@@ -482,11 +482,19 @@ async function executeClientTool(
   if (name === "get_invite_status") {
     const person = String(input.person ?? "").trim().toLowerCase();
     try {
-      const { data: rows, error } = await supabase
-        .from("v_client_tenant_users")
-        .select("row_type, display_name, email, primary_contact, secondary_contact, access_scope, last_sign_in_at, invited_at, invite_expires_at, delivery_status")
-        .eq("tenant_id", tenantId)
-        .limit(100);
+      // v_client_tenant_users' SELECT grant was revoked from `authenticated`
+      // in migration 20260806015610 (a same-day security fix, unrelated to
+      // this feature) — a client-tenant caller now gets a hard "permission
+      // denied for view" error querying it directly, not just empty rows.
+      // get_client_tenant_users(p_tenant_id) is the sanctioned replacement:
+      // SECURITY DEFINER, gated on staff-or-actual-membership, same shape.
+      // Its own WHERE clause only surfaces invites with expires_at > now(),
+      // so an already-expired invite won't appear in the result at all —
+      // handled below by treating "no match for a named person" as its own
+      // diagnosis rather than silently returning an empty list.
+      const { data: rows, error } = await supabase.rpc("get_client_tenant_users", {
+        p_tenant_id: tenantId,
+      });
       if (error) throw new Error(error.message);
 
       const now = new Date();
@@ -496,6 +504,18 @@ async function executeClientTool(
           (u.display_name ?? "").toLowerCase().includes(person) ||
           (u.email ?? "").toLowerCase().includes(person)
       );
+
+      if (person && filtered.length === 0) {
+        return {
+          result: {
+            people: [],
+            diagnosis_for_search: `No active member or currently-pending invite matches "${person}" — if an invite was sent a while ago, it may have already expired (expired invites drop out of this list entirely). Try resending a fresh invite from Users.`,
+            how_to_invite_new_person:
+              "To invite a new secondary contact, team member, or Academy-only learner, go to Users in the client portal (admin access required) and use Invite user — Academy-only access is one of the role options there, not a separate flow.",
+          },
+          summary: `get_invite_status(${person}) — no match`,
+        };
+      }
 
       const people = filtered.map((u: any) => {
         let diagnosis: string;
