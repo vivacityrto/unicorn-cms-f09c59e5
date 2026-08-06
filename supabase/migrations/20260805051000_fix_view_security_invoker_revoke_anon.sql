@@ -13,9 +13,16 @@
 -- (use-client-tenant-users.ts / TenantUsersTab) outright, not just narrow
 -- visibility. Needs the auth.sessions lookup wrapped in a SECURITY DEFINER
 -- helper (matching the wrap_executive_strategic_views_in_rpc pattern)
--- before security_invoker can be applied to this view. Tracked as a
--- follow-up; the underlying security_definer_view advisor finding for
--- v_client_tenant_users remains open until that fix lands.
+-- before security_invoker can be applied to this view.
+--
+-- UPDATE (2026-08-06): fixed in 20260806020000_get_client_tenant_users_tenant_scoped_rpc.sql.
+-- The real gap here was broader than the auth.sessions grant issue — this
+-- view is a "team directory" (any tenant member can see the whole roster,
+-- not just admins), and lacked any check that the caller belongs to the
+-- tenant being queried, so security_invoker's admin-centric RLS would have
+-- been the wrong fix regardless. Closed via a tenant-scoped SECURITY
+-- DEFINER RPC instead; direct SELECT on this view is now revoked from
+-- anon/authenticated.
 --
 -- v_package_burndown and v_academy_lesson_outline were both verified safe
 -- the same way (no permission or grant errors as `authenticated`).
