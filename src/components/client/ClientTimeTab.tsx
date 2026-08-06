@@ -33,6 +33,7 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   RotateCcw,
   Pencil,
   Mail,
@@ -42,6 +43,7 @@ import {
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { EditTimeDialog } from './EditTimeDialog';
 import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
@@ -161,43 +163,100 @@ function entryInstanceId(entry: { package_instance_id?: number | null; package_i
   return id != null ? Number(id) : null;
 }
 
-type ActivePackageOption = {
+type PackageFilterOption = {
   instanceId: number;
   packageId: number;
   name: string;
+  label: string;
+  isComplete: boolean;
 };
 
-function PackageFilterSelect({
-  value,
+/** Multi-select package filter. Empty selection = all packages. */
+function PackageMultiFilter({
+  selectedIds,
   onChange,
   packages,
-  className,
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  packages: ActivePackageOption[];
-  className?: string;
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+  packages: PackageFilterOption[];
 }) {
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allSelected = selectedIds.length === 0;
+  const label = allSelected
+    ? 'All packages'
+    : selectedIds.length === 1
+      ? (packages.find(p => p.instanceId === selectedIds[0])?.name ?? '1 package')
+      : `${selectedIds.length} packages`;
+
+  const toggle = (id: number) => {
+    if (selectedSet.has(id)) {
+      onChange(selectedIds.filter(x => x !== id));
+    } else {
+      onChange([...selectedIds, id]);
+    }
+  };
+
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className={className ?? 'w-[180px]'}>
-        <SelectValue placeholder="All packages" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">All packages</SelectItem>
-        <SelectItem value="current">Current packages</SelectItem>
-        {packages.map(p => (
-          <SelectItem key={p.instanceId} value={p.instanceId.toString()}>
-            {p.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant={allSelected ? 'outline' : 'secondary'}
+          size="sm"
+          className="h-8 gap-1 text-xs min-w-[160px] justify-between font-normal"
+        >
+          <span className="truncate">{label}</span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-2" align="start">
+        <div className="flex items-center justify-between px-2 py-1.5 mb-1">
+          <span className="text-xs font-medium text-muted-foreground">Packages</span>
+          {!allSelected && (
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => onChange([])}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div className="max-h-64 overflow-y-auto space-y-0.5">
+          {packages.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-2 py-3">No packages</p>
+          ) : (
+            packages.map(p => {
+              const checked = selectedSet.has(p.instanceId);
+              return (
+                <label
+                  key={p.instanceId}
+                  className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60 cursor-pointer"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggle(p.instanceId)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs leading-snug">
+                    <span className="font-medium">{p.name}</span>
+                    {p.isComplete && (
+                      <span className="text-muted-foreground"> (completed)</span>
+                    )}
+                    <span className="block text-muted-foreground">{p.label}</span>
+                  </span>
+                </label>
+              );
+            })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
 // ── Combined Burndown + Monthly Summary per package ─────────────────
-function PackageBurndownCards({ tenantId, packageFilter }: { tenantId: number; packageFilter: string }) {
+function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   const { data: combined, isLoading } = useQuery({
     queryKey: ['package-burndown-combined', tenantId],
     queryFn: async () => {
@@ -384,24 +443,9 @@ function PackageBurndownCards({ tenantId, packageFilter }: { tenantId: number; p
     );
   }
 
-  const visible = packageFilter === 'all' || packageFilter === 'current'
-    ? combined
-    : combined.filter(row => String(row.package_instance_id) === packageFilter);
-
-  if (visible.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center text-muted-foreground">
-          <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          No package matches this filter
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-3">
-      {visible.map(row => (
+      {combined.map(row => (
         <BurndownCard key={row.package_instance_id} row={row} />
       ))}
     </div>
@@ -409,7 +453,7 @@ function PackageBurndownCards({ tenantId, packageFilter }: { tenantId: number; p
 }
 
 // ── Closed Package Summaries (billable/non-billable for completed packages) ──
-function ClosedPackageSummaries({ tenantId, packageFilter }: { tenantId: number; packageFilter: string }) {
+function ClosedPackageSummaries({ tenantId }: { tenantId: number }) {
   const [expanded, setExpanded] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ['closed-package-summaries', tenantId],
@@ -479,11 +523,7 @@ function ClosedPackageSummaries({ tenantId, packageFilter }: { tenantId: number;
       }));
     },
     staleTime: 60_000,
-    enabled: packageFilter === 'all',
   });
-
-  // Current / specific active package filters hide closed history.
-  if (packageFilter !== 'all') return null;
 
   if (isLoading || !data || data.length === 0) return null;
 
@@ -1109,7 +1149,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const membership = useTenantMemberships(tenantId);
   const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
   const { workTypes: ddWorkTypes } = useSuggestDropdowns();
-  const [packageFilter, setPackageFilter] = useState('all');
+  const [packageFilterIds, setPackageFilterIds] = useState<number[]>([]);
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
@@ -1185,17 +1225,45 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     isVivacityStaffRole(profile?.unicorn_role) ||
     profile?.unicorn_role === 'Admin';
 
-  // Active parent instances for the All / Current / per-package filter.
-  // Separate key from Move/Split dialogs' `active-packages` (those use packages.id).
+  // All parent package instances on this client (active + completed) for the multiselect filter.
+  const { data: allPackageOptions = [] } = useQuery({
+    queryKey: ['all-package-filter-options', tenantId],
+    queryFn: async (): Promise<PackageFilterOption[]> => {
+      const { data: instances } = await (supabase as any)
+        .from('package_instances')
+        .select('id, package_id, start_date, end_date, is_complete')
+        .eq('tenant_id', tenantId)
+        .is('parent_instance_id', null)
+        .order('start_date', { ascending: false });
+
+      const packageIds = [...new Set((instances || []).map((p: any) => p.package_id))];
+      const { data: pkgs } = packageIds.length > 0
+        ? await supabase.from('packages').select('id, name').in('id', packageIds)
+        : { data: [] };
+      const nameMap = new Map((pkgs || []).map((p: any) => [p.id, p.name]));
+
+      return (instances || []).map((p: any) => {
+        const name = nameMap.get(p.package_id) || `Package #${p.package_id}`;
+        return {
+          instanceId: Number(p.id),
+          packageId: Number(p.package_id),
+          name,
+          label: formatLifecycle(p.start_date, p.end_date),
+          isComplete: !!p.is_complete,
+        };
+      });
+    },
+  });
+
+  // Active packages count for Move/Split affordances (same shape the dialogs already query).
   const { data: activePackages = [] } = useQuery({
-    queryKey: ['active-package-filter-options', tenantId],
-    queryFn: async (): Promise<ActivePackageOption[]> => {
+    queryKey: ['active-packages', tenantId],
+    queryFn: async () => {
       const { data: instances } = await (supabase as any)
         .from('package_instances')
         .select('id, package_id')
         .eq('tenant_id', tenantId)
-        .eq('is_complete', false)
-        .is('parent_instance_id', null);
+        .eq('is_complete', false);
 
       const packageIds = [...new Set((instances || []).map((p: any) => p.package_id))];
       const { data: pkgs } = packageIds.length > 0
@@ -1204,21 +1272,21 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       const nameMap = new Map((pkgs || []).map((p: any) => [p.id, p.name]));
 
       return (instances || []).map((p: any) => ({
-        instanceId: Number(p.id),
-        packageId: Number(p.package_id),
+        id: p.package_id,
         name: nameMap.get(p.package_id) || `Package #${p.package_id}`,
       }));
     },
   });
 
-  const activeInstanceIds = useMemo(
-    () => new Set(activePackages.map(p => p.instanceId)),
-    [activePackages],
-  );
-  const activeBasePackageIds = useMemo(
-    () => new Set(activePackages.map(p => p.packageId)),
-    [activePackages],
-  );
+  const selectedPackageIdSet = useMemo(() => new Set(packageFilterIds), [packageFilterIds]);
+  const selectedPackageBaseIds = useMemo(() => {
+    if (packageFilterIds.length === 0) return null;
+    const bases = new Set<number>();
+    allPackageOptions.forEach(p => {
+      if (selectedPackageIdSet.has(p.instanceId)) bases.add(p.packageId);
+    });
+    return bases;
+  }, [packageFilterIds, allPackageOptions, selectedPackageIdSet]);
 
   // Fetch ALL package instances (including inactive/complete) for display in time entries
   // Uses two-step fetch since there's no FK between package_instances and packages
@@ -1290,19 +1358,19 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     enabled: timeEntryIds.length > 0,
   });
 
-  const hasMultiplePackages = activePackages.length > 1;
+  const hasMultiplePackages = (activePackages?.length ?? 0) > 1;
 
   const filteredEntries = useMemo(() => {
     let result = [...entries];
-    if (packageFilter !== 'all') {
+    if (packageFilterIds.length > 0) {
       result = result.filter(e => {
         const instId = entryInstanceId(e);
-        if (packageFilter === 'current') {
-          return (instId != null && activeInstanceIds.has(instId))
-            || (e.package_id != null && activeBasePackageIds.has(Number(e.package_id)));
+        if (instId != null && selectedPackageIdSet.has(instId)) return true;
+        // Legacy rows with no package_instance_id that stored packages.id in package_id
+        if (e.package_instance_id == null && e.package_id != null && selectedPackageBaseIds?.has(Number(e.package_id))) {
+          return true;
         }
-        const targetId = parseInt(packageFilter, 10);
-        return instId === targetId || e.package_id === targetId;
+        return false;
       });
     }
     if (workTypeFilter !== 'all') {
@@ -1327,7 +1395,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       const db = b.start_at ? new Date(b.start_at).getTime() : 0;
       return db - da;
     });
-  }, [entries, packageFilter, workTypeFilter, dateFrom, dateTo, showAllEntries, renewalWindow, activeInstanceIds, activeBasePackageIds]);
+  }, [entries, packageFilterIds, workTypeFilter, dateFrom, dateTo, showAllEntries, renewalWindow, selectedPackageIdSet, selectedPackageBaseIds]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
@@ -1337,7 +1405,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   }, [filteredEntries, page]);
 
   // Reset page when filters change
-  const handlePackageFilter = (v: string) => { setPackageFilter(v); setPage(1); };
+  const handlePackageFilter = (ids: number[]) => { setPackageFilterIds(ids); setPage(1); };
   const handleWorkTypeFilter = (v: string) => { setWorkTypeFilter(v); setPage(1); };
   const handleDateFrom = (d: Date | undefined) => { setDateFrom(d); setPage(1); };
   const handleDateTo = (d: Date | undefined) => { setDateTo(d); setPage(1); };
@@ -1401,19 +1469,11 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       {/* Burndown + Weights side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
         <div>
-          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Package Burndown
-            </h3>
-            <PackageFilterSelect
-              value={packageFilter}
-              onChange={handlePackageFilter}
-              packages={activePackages}
-              className="w-[180px] h-8"
-            />
-          </div>
-          <PackageBurndownCards tenantId={tenantId} packageFilter={packageFilter} />
-          <ClosedPackageSummaries tenantId={tenantId} packageFilter={packageFilter} />
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Package Burndown
+          </h3>
+          <PackageBurndownCards tenantId={tenantId} />
+          <ClosedPackageSummaries tenantId={tenantId} />
         </div>
         <MembershipWeightsPanel tenantId={tenantId} />
       </div>
@@ -1422,8 +1482,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <CardTitle className="text-base">Time Entries</CardTitle>
             <div className="flex items-center gap-2">
+              <CardTitle className="text-base">Time Entries</CardTitle>
               <Button
                 variant="outline"
                 size="sm"
@@ -1462,10 +1522,12 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
               >
                 <Mail className="h-3.5 w-3.5" /> Email
               </Button>
-              <PackageFilterSelect
-                value={packageFilter}
+            </div>
+            <div className="flex items-center gap-2">
+              <PackageMultiFilter
+                selectedIds={packageFilterIds}
                 onChange={handlePackageFilter}
-                packages={activePackages}
+                packages={allPackageOptions}
               />
               <Select value={workTypeFilter} onValueChange={handleWorkTypeFilter}>
                 <SelectTrigger className="w-[150px]">
