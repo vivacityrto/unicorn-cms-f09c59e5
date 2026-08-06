@@ -124,6 +124,48 @@ Rules, uniformly:
 - Never amend commits that have been pushed.
 - Never `git reset --hard` except on a fresh branch just created.
 
+## Concurrent agents in a shared working directory
+
+Carl runs more than one AI coding tool against this repo — Claude Code, Cursor,
+and/or Codex may all point at the same local clone, sometimes in the same
+session. They share one working directory and one `.git`, so a `git checkout`
+run by one tool changes what every other tool sees on disk, silently.
+
+**What actually happened (2026-08-06, see
+`docs/audit-log/entries/2026-08-06-ask-viv-client-assistant.md`):** mid-session,
+Cursor checked out an unrelated branch (`hotfix/swap-primary-contact-timeline`,
+based on a commit from before the in-progress feature branch existed) to work
+on a different task. Claude Code had several files edited-but-uncommitted on
+`feat/ask-viv-client-assistant` at that moment. The checkout silently reverted
+every one of those files on disk back to the unrelated branch's version —
+tracked files were overwritten to match the new HEAD, and even one
+newly-created-but-never-`git add`ed migration file vanished. Nothing errored;
+the only sign was files behaving as if edits had never happened.
+
+**What limited the damage:** the prod Supabase deploys already made that
+session (via `deploy_edge_function`/`apply_migration`) were unaffected —
+those tools send their full payload inline per call, independent of local
+disk state. Only the *local working tree* was clobbered.
+
+**Rules going forward, for any tool reading this file:**
+- Before trusting that a file you edited earlier in the session still has
+  your edits, check `git status`/`git branch --show-current` if there's any
+  chance another tool has touched this repo since — don't assume disk state
+  is frozen just because you didn't change it.
+- If you need to do substantive multi-file work on a branch, and there's any
+  chance another agent/tool session might be active in this same directory,
+  work in a **git worktree** (`git worktree add`, or the `EnterWorktree` tool
+  in Claude Code) checked out to your actual branch, rather than switching
+  the shared working directory's HEAD. Committing from a worktree and pushing
+  works exactly like normal — only the checkout step is isolated.
+- Never switch the shared working directory to a different branch on the
+  assumption that "it's just background work" — the working directory is
+  effectively shared, mutable state between tools, and a checkout is a
+  destructive operation to anyone else's uncommitted work in it.
+- If you discover files matching neither your last edit nor a `git diff`
+  against HEAD, don't assume a bug in your own tooling before checking
+  `git reflog` for a branch switch that isn't yours.
+
 ## Schema / RLS / trigger changes
 
 Any migration, FK constraint, RLS policy, trigger, enum, or data backfill —
