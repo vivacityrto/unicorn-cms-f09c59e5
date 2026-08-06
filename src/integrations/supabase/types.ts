@@ -70700,6 +70700,38 @@ export type Database = {
           tenant_id: number
         }[]
       }
+      get_client_tenant_users: {
+        Args: { p_tenant_id: number }
+        Returns: {
+          access_scope: string
+          avatar_url: string
+          click_count: number
+          delivery_event_at: string
+          delivery_status: string
+          display_name: string
+          email: string
+          first_clicked_at: string
+          first_name: string
+          first_opened_at: string
+          invite_expires_at: string
+          invited_at: string
+          last_active_at: string
+          last_name: string
+          last_sent_at: string
+          last_sign_in_at: string
+          mailgun_message_id: string
+          member_since: string
+          open_count: number
+          primary_contact: boolean
+          relationship_role: string
+          row_key: string
+          row_type: string
+          secondary_contact: boolean
+          status: string
+          tenant_id: number
+          user_id: string
+        }[]
+      }
       get_complete_schema: {
         Args: never
         Returns: {

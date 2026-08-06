@@ -49,9 +49,7 @@ export function useClientTenantUsers() {
     staleTime: 30_000,
     queryFn: async (): Promise<ClientTenantUserRow[]> => {
       const { data, error } = await supabase
-        .from("v_client_tenant_users")
-        .select("*")
-        .eq("tenant_id", activeTenantId!)
+        .rpc("get_client_tenant_users", { p_tenant_id: activeTenantId! })
         .order("row_type", { ascending: true })
         .order("primary_contact", { ascending: false, nullsFirst: false })
         .order("display_name", { ascending: true });
