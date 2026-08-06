@@ -21,12 +21,17 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: "border border-primary bg-primary/10 text-primary hover:bg-primary/20",
-        secondary: "border border-secondary/30 bg-secondary/10 text-secondary hover:bg-secondary/20 dark:bg-secondary/20 dark:text-brand-light-purple-200 dark:border-secondary/50",
+        // Themed via CSS vars (--badge-*), not dark: utilities - see the
+        // comment on --badge-warning-bg in index.css for why: a dark:
+        // utility matches ANY .dark ancestor regardless of a nearer
+        // .light scope (e.g. the client portal preview), so it would
+        // leak staff dark-mode colours into a client-facing view.
+        secondary: "border border-[var(--badge-secondary-border)] bg-[var(--badge-secondary-bg)] text-[var(--badge-secondary-fg)] hover:bg-secondary/20",
         destructive: "border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20",
         outline: "border border-border bg-muted/50 text-foreground hover:bg-muted",
-        warning: "border border-brand-macaron-600/40 bg-brand-macaron-50 text-brand-macaron-800 hover:bg-brand-macaron-100 dark:bg-brand-macaron-900/40 dark:text-brand-macaron-300 dark:border-brand-macaron-700/40",
-        info: "border border-brand-aqua-500/40 bg-brand-aqua-50 text-brand-aqua-800 hover:bg-brand-aqua-100 dark:bg-brand-aqua-900/40 dark:text-brand-aqua-300 dark:border-brand-aqua-700/40",
-        draft: "border border-brand-light-purple-400/40 bg-brand-light-purple-100 text-brand-acai-600 hover:bg-brand-light-purple-200 dark:bg-brand-light-purple-900/40 dark:text-brand-light-purple-200 dark:border-brand-light-purple-700/40",
+        warning: "border border-[var(--badge-warning-border)] bg-[var(--badge-warning-bg)] text-[var(--badge-warning-fg)] hover:bg-brand-macaron-100",
+        info: "border border-[var(--badge-info-border)] bg-[var(--badge-info-bg)] text-[var(--badge-info-fg)] hover:bg-brand-aqua-100",
+        draft: "border border-[var(--badge-draft-border)] bg-[var(--badge-draft-bg)] text-[var(--badge-draft-fg)] hover:bg-brand-light-purple-200",
       },
     },
     defaultVariants: {

@@ -327,6 +327,32 @@
     --state-draft: var(--brand-light-purple-400);
     --state-draft-fg: 270 47% 26%;
 
+    /* Badge tint tokens (warning/info/draft variants in ui/badge.tsx).
+       CSS-var-driven rather than dark: utility variants deliberately -
+       ClientLayout scopes itself back to light via a nested .light class
+       (see below), which only ever wins for var()-consumers. A literal
+       dark: utility class matches ANY .dark ancestor regardless of a
+       nearer .light class, so it would leak staff dark-mode colours into
+       the client portal during a "View as Client" preview - confirmed via
+       Table's row-hover doing exactly that. Keep every themed badge tint
+       on this var mechanism, not dark: utilities, for that reason. */
+    --badge-warning-bg: hsl(var(--brand-macaron-50));
+    --badge-warning-fg: hsl(var(--brand-macaron-800));
+    --badge-warning-border: hsl(var(--brand-macaron-600) / 0.4);
+    --badge-info-bg: hsl(var(--brand-aqua-50));
+    --badge-info-fg: hsl(var(--brand-aqua-800));
+    --badge-info-border: hsl(var(--brand-aqua-500) / 0.4);
+    --badge-draft-bg: hsl(var(--brand-light-purple-100));
+    --badge-draft-fg: hsl(var(--brand-acai-600));
+    --badge-draft-border: hsl(var(--brand-light-purple-400) / 0.4);
+    --badge-secondary-bg: hsl(var(--secondary) / 0.1);
+    --badge-secondary-fg: hsl(var(--secondary));
+    --badge-secondary-border: hsl(var(--secondary) / 0.3);
+
+    /* Row hover tint (ui/table.tsx) - same var-not-dark: reasoning as above. */
+    --row-hover: hsl(var(--brand-light-purple-100));
+    --table-header-bg: hsl(var(--brand-acai-50));
+
     /* Status colors */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
@@ -404,6 +430,22 @@
     --state-info: var(--brand-aqua-400);
     --state-draft: var(--brand-light-purple-600);
 
+    --badge-warning-bg: hsl(var(--brand-macaron-900) / 0.4);
+    --badge-warning-fg: hsl(var(--brand-macaron-300));
+    --badge-warning-border: hsl(var(--brand-macaron-700) / 0.4);
+    --badge-info-bg: hsl(var(--brand-aqua-900) / 0.4);
+    --badge-info-fg: hsl(var(--brand-aqua-300));
+    --badge-info-border: hsl(var(--brand-aqua-700) / 0.4);
+    --badge-draft-bg: hsl(var(--brand-light-purple-900) / 0.4);
+    --badge-draft-fg: hsl(var(--brand-light-purple-200));
+    --badge-draft-border: hsl(var(--brand-light-purple-700) / 0.4);
+    --badge-secondary-bg: hsl(var(--secondary) / 0.2);
+    --badge-secondary-fg: hsl(var(--brand-light-purple-200));
+    --badge-secondary-border: hsl(var(--secondary) / 0.5);
+
+    --row-hover: hsl(var(--brand-acai-800));
+    --table-header-bg: hsl(var(--brand-acai-900));
+
     /* Sidebar — deepen the Purple→Fuchsia gradient (luminance down, hue kept)
        rather than leaving it identical to light mode: white sidebar text on
        the light-mode fuchsia end is 4.18:1 (fails AA), and the same saturated
@@ -456,6 +498,22 @@
     --state-risk: var(--brand-fuchsia-600);
     --state-info: var(--brand-aqua-500);
     --state-draft: var(--brand-light-purple-400);
+
+    --badge-warning-bg: hsl(var(--brand-macaron-50));
+    --badge-warning-fg: hsl(var(--brand-macaron-800));
+    --badge-warning-border: hsl(var(--brand-macaron-600) / 0.4);
+    --badge-info-bg: hsl(var(--brand-aqua-50));
+    --badge-info-fg: hsl(var(--brand-aqua-800));
+    --badge-info-border: hsl(var(--brand-aqua-500) / 0.4);
+    --badge-draft-bg: hsl(var(--brand-light-purple-100));
+    --badge-draft-fg: hsl(var(--brand-acai-600));
+    --badge-draft-border: hsl(var(--brand-light-purple-400) / 0.4);
+    --badge-secondary-bg: hsl(var(--secondary) / 0.1);
+    --badge-secondary-fg: hsl(var(--secondary));
+    --badge-secondary-border: hsl(var(--secondary) / 0.3);
+
+    --row-hover: hsl(var(--brand-light-purple-100));
+    --table-header-bg: hsl(var(--brand-acai-50));
 
     --gradient-sidebar: linear-gradient(180deg, hsl(275 55% 41%), hsl(333 86% 51%));
     --sidebar-background: 275 55% 41%;
