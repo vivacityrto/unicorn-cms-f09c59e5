@@ -1,0 +1,22 @@
+---
+description: Never edit on main — create hotfix/chore branch, then PR
+alwaysApply: true
+---
+
+# Branch first, then PR — never ship from main
+
+Before any code or docs change in this repo:
+
+1. Check `git branch --show-current`. If you are on `main` (or about to edit while on `main`), **stop** and create a branch first.
+2. Use the prefixes from `AGENTS.md`:
+   - `hotfix/<slug>` — bug fixes / hand-applied code changes
+   - `chore/<slug>` — docs-only or repo-maintenance
+3. Make the change on that branch. Do **not** leave uncommitted work sitting on `main`.
+4. When the user wants it shipped: commit → `git push -u origin HEAD` → `gh pr create`. Do **not** push to `main` or merge unless the user explicitly asks in this session.
+
+```text
+❌ BAD: edit files while on main, then ask "want a PR?"
+✅ GOOD: git checkout -b hotfix/select-dark-hover → edit → commit → PR
+```
+
+If you already edited on `main` by mistake: create the branch immediately (`git checkout -b hotfix/<slug>`) so the uncommitted work moves with you — then commit and open the PR. Never commit those changes onto `main`.
