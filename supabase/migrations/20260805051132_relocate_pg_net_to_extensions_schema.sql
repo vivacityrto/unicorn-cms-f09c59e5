@@ -1,3 +1,15 @@
+-- STATUS (2026-08-06): attempted against prod via the `postgres` role
+-- (Supabase MCP apply_migration). pg_net is confirmed non-relocatable on
+-- this project, and the fallback below (flipping pg_extension.extrelocatable)
+-- itself fails with "permission denied for table pg_extension" — `postgres`
+-- is not a superuser and not a member of `supabase_admin` (the extension's
+-- owner) here, so it cannot modify that catalog directly. Not applied.
+-- Needs either a Supabase Support ticket or the Dashboard's Database →
+-- Extensions UI (which runs with Supabase's own internal privileged
+-- connection) to actually move pg_net. Superseded duplicate
+-- (20260805051457, same intent, no exception handling) removed in favour
+-- of keeping this more complete version for whoever picks this up next.
+--
 -- Security Fix: relocate pg_net out of public into the dedicated extensions
 -- schema (Supabase database linter 0014_extension_in_public / splinter).
 --

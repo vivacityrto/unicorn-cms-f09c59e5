@@ -1,3 +1,16 @@
+-- STATUS (2026-08-06): attempted against prod via the `postgres` role
+-- (Supabase MCP apply_migration). The direct REVOKEs run without error but
+-- are no-ops: the live PUBLIC SELECT grant on cron.job was made by
+-- `supabase_admin` (the table owner, a real superuser), and `postgres` is
+-- neither its owner nor a member of it, so REVOKE silently can't touch it.
+-- This migration's own self-check DO block correctly caught that and
+-- raised, rolling back the whole transaction cleanly — no partial state.
+-- Not applied. Needs Supabase Support or Dashboard-level access to actually
+-- strip the PUBLIC grant. Lower urgency than it looks: this project's
+-- PostgREST exposed-schema config does not include `cron`, so this grant
+-- isn't reachable via the REST API for anon/authenticated today — it's a
+-- defense-in-depth gap, not an active hole.
+--
 -- Harden pg_cron: remove the default SELECT grant on cron.job that Supabase
 -- installs for API-facing roles on project creation, and assert no other
 -- non-superuser role holds an explicit SELECT grant on it.
