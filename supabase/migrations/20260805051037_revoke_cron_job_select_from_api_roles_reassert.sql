@@ -5,11 +5,23 @@
 -- neither its owner nor a member of it, so REVOKE silently can't touch it.
 -- This migration's own self-check DO block correctly caught that and
 -- raised, rolling back the whole transaction cleanly — no partial state.
--- Not applied. Needs Supabase Support or Dashboard-level access to actually
--- strip the PUBLIC grant. Lower urgency than it looks: this project's
--- PostgREST exposed-schema config does not include `cron`, so this grant
--- isn't reachable via the REST API for anon/authenticated today — it's a
--- defense-in-depth gap, not an active hole.
+--
+-- Confirmed there is no self-service path: Supabase's own docs show the
+-- official pg_cron install grants only to `postgres`, never PUBLIC (this
+-- grant is legacy drift from an older provisioning path), and their own
+-- pg_cron troubleshooting guide says cron.* access issues beyond normal
+-- privilege require a Support ticket — supabase_admin credentials are
+-- never exposed to customers.
+--
+-- DECISION (Carl, 2026-08-06): accepted as a deferred risk, not pursuing a
+-- Support ticket at this time. This project's PostgREST exposed-schema
+-- config does not include `cron`, so the grant isn't reachable via the
+-- REST API for anon/authenticated — defense-in-depth only, no active
+-- exposure. Revisit if a future schema-exposure change ever adds `cron`,
+-- or if a Support ticket for the pg_net relocation (see
+-- 20260805051132_relocate_pg_net_to_extensions_schema.sql, same privilege
+-- wall) ends up getting filed anyway — worth bundling this revoke into
+-- the same ticket rather than raising it separately.
 --
 -- Harden pg_cron: remove the default SELECT grant on cron.job that Supabase
 -- installs for API-facing roles on project creation, and assert no other

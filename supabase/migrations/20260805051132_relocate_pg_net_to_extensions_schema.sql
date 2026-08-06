@@ -10,6 +10,12 @@
 -- (20260805051457, same intent, no exception handling) removed in favour
 -- of keeping this more complete version for whoever picks this up next.
 --
+-- Same privilege wall as 20260805051037_revoke_cron_job_select_from_api_roles_reassert.sql
+-- (that one was accepted as a deferred risk on 2026-08-06, not ticketed).
+-- Unlike that one, this still shows as an open advisor finding
+-- (extension_in_public) — worth its own call on whether to ticket it, and
+-- if so, bundling the cron.job revoke into the same ticket.
+--
 -- Security Fix: relocate pg_net out of public into the dedicated extensions
 -- schema (Supabase database linter 0014_extension_in_public / splinter).
 --
