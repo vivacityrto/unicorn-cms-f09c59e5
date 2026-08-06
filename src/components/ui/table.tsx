@@ -37,9 +37,9 @@ const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttribut
       ref={ref} 
       className={cn(
         "[&_tr]:border-b",
-        "bg-brand-acai-50 dark:bg-brand-acai-900",
+        "bg-[var(--table-header-bg)]",
         className
-      )} 
+      )}
       {...props} 
     />
   ),
@@ -66,7 +66,11 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
       ref={ref}
       className={cn(
         "border-b transition-colors data-[state=selected]:bg-muted",
-        "hover:bg-brand-light-purple-100 dark:hover:bg-brand-acai-800",
+        // CSS var, not dark: - see the comment on --badge-warning-bg in
+        // index.css for why (a dark: utility would leak staff dark-mode
+        // colours into the client portal preview, which locks itself to
+        // light via a nested .light scope that only var() consumers respect).
+        "hover:bg-[var(--row-hover)]",
         className
       )}
       {...props}
