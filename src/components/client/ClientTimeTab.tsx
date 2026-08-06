@@ -181,15 +181,64 @@ function PackageMultiFilter({
   onChange: (ids: number[]) => void;
   packages: PackageFilterOption[];
 }) {
+  return (
+    <CheckboxMultiFilter
+      selectedIds={selectedIds.map(String)}
+      onChange={(ids) => onChange(ids.map(Number))}
+      options={packages.map(p => ({
+        id: String(p.instanceId),
+        title: p.name,
+        subtitle: p.label,
+        badge: p.isComplete ? 'completed' : undefined,
+      }))}
+      allLabel="All packages"
+      headerLabel="Packages"
+      countNoun="packages"
+      emptyLabel="No packages"
+      minWidthClass="min-w-[160px]"
+      contentWidthClass="w-80"
+    />
+  );
+}
+
+type CheckboxMultiOption = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  badge?: string;
+};
+
+/** Shared popover multi-select. Empty selection = all. */
+function CheckboxMultiFilter({
+  selectedIds,
+  onChange,
+  options,
+  allLabel,
+  headerLabel,
+  countNoun,
+  emptyLabel,
+  minWidthClass = 'min-w-[150px]',
+  contentWidthClass = 'w-64',
+}: {
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  options: CheckboxMultiOption[];
+  allLabel: string;
+  headerLabel: string;
+  countNoun: string;
+  emptyLabel: string;
+  minWidthClass?: string;
+  contentWidthClass?: string;
+}) {
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const allSelected = selectedIds.length === 0;
   const label = allSelected
-    ? 'All packages'
+    ? allLabel
     : selectedIds.length === 1
-      ? (packages.find(p => p.instanceId === selectedIds[0])?.name ?? '1 package')
-      : `${selectedIds.length} packages`;
+      ? (options.find(o => o.id === selectedIds[0])?.title ?? `1 ${countNoun.slice(0, -1)}`)
+      : `${selectedIds.length} ${countNoun}`;
 
-  const toggle = (id: number) => {
+  const toggle = (id: string) => {
     if (selectedSet.has(id)) {
       onChange(selectedIds.filter(x => x !== id));
     } else {
@@ -203,15 +252,15 @@ function PackageMultiFilter({
         <Button
           variant={allSelected ? 'outline' : 'secondary'}
           size="sm"
-          className="h-8 gap-1 text-xs min-w-[160px] justify-between font-normal"
+          className={cn('h-8 gap-1 text-xs justify-between font-normal', minWidthClass)}
         >
           <span className="truncate">{label}</span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-2" align="start">
+      <PopoverContent className={cn('p-2', contentWidthClass)} align="start">
         <div className="flex items-center justify-between px-2 py-1.5 mb-1">
-          <span className="text-xs font-medium text-muted-foreground">Packages</span>
+          <span className="text-xs font-medium text-muted-foreground">{headerLabel}</span>
           {!allSelected && (
             <button
               type="button"
@@ -223,27 +272,29 @@ function PackageMultiFilter({
           )}
         </div>
         <div className="max-h-64 overflow-y-auto space-y-0.5">
-          {packages.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-2 py-3">No packages</p>
+          {options.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-2 py-3">{emptyLabel}</p>
           ) : (
-            packages.map(p => {
-              const checked = selectedSet.has(p.instanceId);
+            options.map(o => {
+              const checked = selectedSet.has(o.id);
               return (
                 <label
-                  key={p.instanceId}
+                  key={o.id}
                   className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60 cursor-pointer"
                 >
                   <Checkbox
                     checked={checked}
-                    onCheckedChange={() => toggle(p.instanceId)}
+                    onCheckedChange={() => toggle(o.id)}
                     className="mt-0.5"
                   />
                   <span className="text-xs leading-snug">
-                    <span className="font-medium">{p.name}</span>
-                    {p.isComplete && (
-                      <span className="text-muted-foreground"> (completed)</span>
+                    <span className="font-medium">{o.title}</span>
+                    {o.badge && (
+                      <span className="text-muted-foreground"> ({o.badge})</span>
                     )}
-                    <span className="block text-muted-foreground">{p.label}</span>
+                    {o.subtitle && (
+                      <span className="block text-muted-foreground">{o.subtitle}</span>
+                    )}
                   </span>
                 </label>
               );
@@ -1150,7 +1201,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
   const { workTypes: ddWorkTypes } = useSuggestDropdowns();
   const [packageFilterIds, setPackageFilterIds] = useState<number[]>([]);
-  const [workTypeFilter, setWorkTypeFilter] = useState('all');
+  const [workTypeFilterIds, setWorkTypeFilterIds] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [showAllEntries, setShowAllEntries] = useState(false);
@@ -1373,8 +1424,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
         return false;
       });
     }
-    if (workTypeFilter !== 'all') {
-      result = result.filter(e => e.work_type === workTypeFilter);
+    if (workTypeFilterIds.length > 0) {
+      const workTypeSet = new Set(workTypeFilterIds);
+      result = result.filter(e => workTypeSet.has(e.work_type));
     }
     // Apply explicit date filters
     if (dateFrom) {
@@ -1395,7 +1447,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       const db = b.start_at ? new Date(b.start_at).getTime() : 0;
       return db - da;
     });
-  }, [entries, packageFilterIds, workTypeFilter, dateFrom, dateTo, showAllEntries, renewalWindow, selectedPackageIdSet, selectedPackageBaseIds]);
+  }, [entries, packageFilterIds, workTypeFilterIds, dateFrom, dateTo, showAllEntries, renewalWindow, selectedPackageIdSet, selectedPackageBaseIds]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
@@ -1406,7 +1458,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
 
   // Reset page when filters change
   const handlePackageFilter = (ids: number[]) => { setPackageFilterIds(ids); setPage(1); };
-  const handleWorkTypeFilter = (v: string) => { setWorkTypeFilter(v); setPage(1); };
+  const handleWorkTypeFilter = (ids: string[]) => { setWorkTypeFilterIds(ids); setPage(1); };
   const handleDateFrom = (d: Date | undefined) => { setDateFrom(d); setPage(1); };
   const handleDateTo = (d: Date | undefined) => { setDateTo(d); setPage(1); };
   const hasDateFilter = !!dateFrom || !!dateTo;
@@ -1529,17 +1581,17 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                 onChange={handlePackageFilter}
                 packages={allPackageOptions}
               />
-              <Select value={workTypeFilter} onValueChange={handleWorkTypeFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Work type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {ddWorkTypes.map(wt => (
-                    <SelectItem key={wt.code} value={wt.code}>{wt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CheckboxMultiFilter
+                selectedIds={workTypeFilterIds}
+                onChange={handleWorkTypeFilter}
+                options={ddWorkTypes.map(wt => ({ id: wt.code, title: wt.label }))}
+                allLabel="All types"
+                headerLabel="Work types"
+                countNoun="types"
+                emptyLabel="No work types"
+                minWidthClass="min-w-[140px]"
+                contentWidthClass="w-56"
+              />
 
               {/* Period toggle */}
               {renewalWindow && (
