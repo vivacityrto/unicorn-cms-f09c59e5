@@ -618,11 +618,11 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     }
     setUpdatingRole(target.user_id);
     try {
-      // Demote existing → secondary, then promote target → primary. Run sequentially
-      // so the unique index can never see two primaries mid-flight.
-      await applyRelationshipRole(existingPrimary, 'secondary_contact');
-      await applyRelationshipRole(target, 'primary_contact');
+      // One RPC: set_relationship_role frees unique primary/secondary slots
+      // atomically (needed when the promotee already holds secondary — the old
+      // demote-then-promote sequence hit uniq_tenant_one_secondary_contact).
       const oldRR = getMemberRelationshipRole(target);
+      await applyRelationshipRole(target, 'primary_contact');
       toast.success(`Role changed: ${relationshipRoleLabel(oldRR)} → ${relationshipRoleLabel('primary_contact')}`);
       await fetchMembers();
     } catch (error) {
@@ -1446,7 +1446,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       {/* Primary-contact swap confirmation */}
       <AlertDialog
         open={!!primarySwapTarget}
-        onOpenChange={(open) => !open && setPrimarySwapTarget(null)}
+        onOpenChange={(open) => !open && !updatingRole && setPrimarySwapTarget(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1459,6 +1459,13 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                     m.user_id !== primarySwapTarget.user_id &&
                     getMemberRelationshipRole(m) === 'primary_contact',
                 );
+                const otherSecondary = members.find(
+                  (m) =>
+                    primarySwapTarget &&
+                    m.user_id !== primarySwapTarget.user_id &&
+                    getMemberRelationshipRole(m) === 'secondary_contact',
+                );
+                const demoteTo = otherSecondary ? 'User' : 'Secondary Contact';
                 const targetName = `${primarySwapTarget?.users?.first_name ?? ''} ${primarySwapTarget?.users?.last_name ?? ''}`.trim() || primarySwapTarget?.users?.email;
                 const existingName = existing
                   ? `${existing.users?.first_name ?? ''} ${existing.users?.last_name ?? ''}`.trim() || existing.users?.email
@@ -1468,16 +1475,24 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                     This organisation already has a primary contact:{' '}
                     <strong>{existingName}</strong>. Promoting{' '}
                     <strong>{targetName}</strong> will demote them to{' '}
-                    <strong>Secondary Contact</strong>.
+                    <strong>{demoteTo}</strong>.
                   </>
                 );
               })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmPrimarySwap}>
-              Swap Primary
+            <AlertDialogCancel disabled={!!updatingRole}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!!updatingRole}
+              onClick={(e) => {
+                // Prevent Radix from closing before the async swap finishes;
+                // we clear primarySwapTarget ourselves in finally.
+                e.preventDefault();
+                void confirmPrimarySwap();
+              }}
+            >
+              {updatingRole ? 'Swapping…' : 'Swap Primary'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
