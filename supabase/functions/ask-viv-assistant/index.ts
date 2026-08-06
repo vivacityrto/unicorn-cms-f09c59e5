@@ -54,6 +54,16 @@
  * "facts vs RAG" split already used for client data — get_eos_meeting_details
  * defaults to the most recently HELD meeting of a given type when no
  * meeting_id is given, resolving owner_id/user_id references to real names.
+ *
+ * Phase M (added after live user testing surfaced a gap identical in shape
+ * to Phase J's): "are there new clients" had no date-grounded answer either
+ * — only rank_clients_by_activity existed, which ranks by how busy a client
+ * has been, not how new it is. list_new_clients resolves "new" from each
+ * tenant's actual onboarding date (client_onboarded_at, falling back to
+ * created_at — the same fallback useConsultantAssignment.tsx already uses),
+ * and auto-excludes any day an unusually large number of tenants share,
+ * since two historical bulk imports (375 tenants on one day, 21 on another)
+ * would otherwise be indistinguishable from real same-day signings.
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -226,6 +236,19 @@ const TOOLS: AnthropicToolDefinition[] = [
     },
   },
   {
+    name: "list_new_clients",
+    description:
+      "List clients genuinely newly added/onboarded to Unicorn within a recent window, most recent first. This is the tool for 'are there new clients', 'who's onboarded recently', or 'what clients did we sign this month' — rank_clients_by_activity answers a different question (who's busy right now, not who's new) and will misleadingly surface long-standing clients going through an active period, so don't use it for 'new client' questions. Newness is judged by each client's onboarding date (client_onboarded_at when set, otherwise created_at) — a day where an unusually large number of clients share the exact same date is treated as a historical bulk data-import batch and excluded automatically, so old CSV imports don't get mistaken for new signings; excluded_bulk_import_days in the result tells you if that happened. Returns each match's tenant_id, name, status, package, and assigned CSC — call get_client_context with a tenant_id afterward for that client's full comprehensive snapshot (phase, tasks, documents, recent notes, portal users, etc.) when the user wants details on a specific one.",
+    input_schema: {
+      type: "object",
+      properties: {
+        window_days: { type: "number", description: "How many days back counts as 'new'. Defaults to 30." },
+        limit: { type: "number", description: "Max clients to return, default 15, capped at 50." },
+      },
+      required: [],
+    },
+  },
+  {
     name: "list_deadlines_and_overdue_work",
     description:
       "List what's overdue or coming due across the caseload: overdue internal/client action items, overdue compliance audits, and upcoming audit or RTO/CRICOS registration expiries within a window. Optionally scope to one staff member's CSC caseload. This is the tool for 'what's overdue', 'what's due soon', or 'what needs to happen before X' questions.",
@@ -374,6 +397,8 @@ When you reference something a tool returned, make it clear what it's based on (
 When search_standards returns regulatory text (Standards for RTOs, National Code, ESOS Act, practice guides), paraphrase it in your own words rather than reproducing it at length — short quotes (a clause title, a key phrase) are fine, but don't dump long verbatim passages. The retrieved text is a draft aid for you, not the final word — note that the approved policy suite and a Vivacity consultant's advice are the authoritative source for regulatory interpretation.
 
 For questions about a specific EOS meeting's recency ("what happened at the last L10", "what came up in this week's meeting"), use get_eos_meeting_details (omit meeting_id for the most recent held meeting) or list_eos_meetings — these are exact, date-grounded lookups. Only use search_eos (semantic search) for topic-based questions across meeting history ("has X ever come up in a meeting") — it cannot reliably tell you which meeting was most recent.
+
+For "are there new clients" / "who's onboarded recently" style questions, use list_new_clients — it is date-grounded on the client's actual onboarding date, not an activity proxy. Do not use rank_clients_by_activity for this: it ranks by how busy a client has been, which surfaces long-standing clients going through a busy period just as readily as a genuinely new one. Once list_new_clients identifies a client, offer (or go ahead and pull, if the user's phrasing suggests they want it) that client's comprehensive details via get_client_context — package/phase status, tasks, documents, portal users, and recent notes/activity — rather than stopping at the bare list.
 
 Write naturally — you don't need to follow any fixed section structure. Keep answers focused and easy to read.`;
 
@@ -899,6 +924,101 @@ async function executeTool(
       };
     } catch (err) {
       return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "rank_clients_by_activity failed" };
+    }
+  }
+
+  if (name === "list_new_clients") {
+    const windowDays = Number(input.window_days) > 0 ? Number(input.window_days) : 30;
+    const limit = Math.min(Math.max(Number(input.limit) || 15, 1), 50);
+    // Any effective-date day shared by more than this many tenants is treated
+    // as a historical bulk import batch, not real same-day signings — the
+    // legacy migration alone landed 375 tenants on one day, and a second
+    // CSV import added 21 more on another; both would otherwise swamp a
+    // "new clients" answer.
+    const BULK_IMPORT_DAY_THRESHOLD = 5;
+    const cutoff = new Date(Date.now() - windowDays * 86400000).toISOString();
+
+    try {
+      const { data: rows, error } = await supabase
+        .from("tenants")
+        .select("id, name, status, lifecycle_status, risk_level, package_id, client_onboarded_at, created_at")
+        .eq("is_system_tenant", false)
+        .is("archived_at", null)
+        .or(`created_at.gte.${cutoff},client_onboarded_at.gte.${cutoff}`)
+        .limit(500);
+      if (error) throw new Error(error.message);
+
+      const withEffectiveDate = (rows || [])
+        .map((t: any) => ({ ...t, effective_date: t.client_onboarded_at || t.created_at, source: t.client_onboarded_at ? "client_onboarded_at" : "created_at" }))
+        .filter((t: any) => t.effective_date >= cutoff);
+
+      const dayCounts = new Map<string, number>();
+      for (const t of withEffectiveDate) {
+        const day = t.effective_date.slice(0, 10);
+        dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
+      }
+      const bulkImportDays = [...dayCounts.entries()].filter(([, count]) => count > BULK_IMPORT_DAY_THRESHOLD);
+      const bulkDaySet = new Set(bulkImportDays.map(([day]) => day));
+
+      const genuinelyNew = withEffectiveDate
+        .filter((t: any) => !bulkDaySet.has(t.effective_date.slice(0, 10)))
+        .sort((a: any, b: any) => (a.effective_date < b.effective_date ? 1 : -1))
+        .slice(0, limit);
+
+      const tenantIds = genuinelyNew.map((t: any) => t.id);
+      const packageIds = [...new Set(genuinelyNew.map((t: any) => t.package_id).filter((p: any) => p != null))];
+
+      const packageNameById = new Map<number, string>();
+      if (packageIds.length > 0) {
+        const { data: packageRows } = await supabase.from("packages").select("id, name").in("id", packageIds);
+        for (const p of packageRows || []) packageNameById.set(p.id, p.name);
+      }
+
+      const cscNameByTenant = new Map<number, string>();
+      if (tenantIds.length > 0) {
+        const { data: assignments } = await supabase
+          .from("tenant_csc_assignments")
+          .select("tenant_id, csc_user_id")
+          .in("tenant_id", tenantIds)
+          .eq("is_primary", true)
+          .is("ended_at", null);
+        const cscUserIds = [...new Set((assignments || []).map((a: any) => a.csc_user_id))];
+        const cscNameByUserId = new Map<string, string>();
+        if (cscUserIds.length > 0) {
+          const { data: cscUsers } = await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", cscUserIds);
+          for (const u of cscUsers || []) cscNameByUserId.set(u.user_uuid, `${u.first_name} ${u.last_name}`);
+        }
+        for (const a of assignments || []) {
+          const name = cscNameByUserId.get(a.csc_user_id);
+          if (name) cscNameByTenant.set(a.tenant_id, name);
+        }
+      }
+
+      const newClients = genuinelyNew.map((t: any) => ({
+        tenant_id: t.id,
+        name: t.name,
+        status: t.status,
+        lifecycle_status: t.lifecycle_status,
+        risk_level: t.risk_level,
+        onboarded_at: t.effective_date,
+        onboarded_at_source: t.source,
+        package: t.package_id != null ? packageNameById.get(t.package_id) ?? null : null,
+        csc_name: cscNameByTenant.get(t.id) ?? null,
+      }));
+
+      return {
+        result: {
+          window_days: windowDays,
+          new_clients: newClients,
+          excluded_bulk_import_days: bulkImportDays.map(([day, count]) => ({ day, tenants_excluded: count })),
+          note: "Call get_client_context with a tenant_id for a specific new client's full comprehensive snapshot.",
+        },
+        summary:
+          `list_new_clients(${windowDays}d) — ${newClients.length} new client(s)` +
+          (bulkImportDays.length > 0 ? `, excluded ${bulkImportDays.length} bulk-import day(s)` : ""),
+      };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "list_new_clients failed" };
     }
   }
 
