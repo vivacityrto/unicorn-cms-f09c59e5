@@ -26,6 +26,7 @@ import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns'
 const FILTER_OPTIONS = [
   { value: 'all', label: 'All', icon: Activity },
   { value: 'meetings', label: 'Meetings', icon: Calendar },
+  { value: 'time', label: 'Time', icon: Clock, staffOnly: true },
   { value: 'emails', label: 'Emails', icon: Mail },
   { value: 'docs', label: 'Documents', icon: FileText },
   { value: 'tasks', label: 'Tasks', icon: CheckSquare },

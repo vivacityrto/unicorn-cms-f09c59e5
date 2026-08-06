@@ -44,6 +44,7 @@ export const TIMELINE_EVENT_TYPES = [
   // Time
   'time_posted',
   'time_ignored',
+  'time_reallocated',
   // Accounts
   'account_invited',
   'account_activated',
