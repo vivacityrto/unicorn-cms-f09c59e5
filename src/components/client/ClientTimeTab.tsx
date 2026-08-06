@@ -33,6 +33,7 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   RotateCcw,
   Pencil,
   Mail,
@@ -42,6 +43,7 @@ import {
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { EditTimeDialog } from './EditTimeDialog';
 import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
@@ -152,6 +154,155 @@ function TenantTimeSummaryStrip({ tenantId }: { tenantId: number }) {
         <span>Total: {formatDuration(data.total)}</span>
       </div>
     </div>
+  );
+}
+
+/** Resolve which package instance a time entry is attributed to. */
+function entryInstanceId(entry: { package_instance_id?: number | null; package_id?: number | null }): number | null {
+  const id = entry.package_instance_id ?? entry.package_id;
+  return id != null ? Number(id) : null;
+}
+
+type PackageFilterOption = {
+  instanceId: number;
+  packageId: number;
+  name: string;
+  label: string;
+  isComplete: boolean;
+};
+
+/** Multi-select package filter. Empty selection = all packages. */
+function PackageMultiFilter({
+  selectedIds,
+  onChange,
+  packages,
+}: {
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+  packages: PackageFilterOption[];
+}) {
+  return (
+    <CheckboxMultiFilter
+      selectedIds={selectedIds.map(String)}
+      onChange={(ids) => onChange(ids.map(Number))}
+      options={packages.map(p => ({
+        id: String(p.instanceId),
+        title: p.name,
+        subtitle: p.label,
+        badge: p.isComplete ? 'completed' : undefined,
+      }))}
+      allLabel="All packages"
+      headerLabel="Packages"
+      countNoun="packages"
+      emptyLabel="No packages"
+      minWidthClass="min-w-[160px]"
+      contentWidthClass="w-80"
+    />
+  );
+}
+
+type CheckboxMultiOption = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  badge?: string;
+};
+
+/** Shared popover multi-select. Empty selection = all. */
+function CheckboxMultiFilter({
+  selectedIds,
+  onChange,
+  options,
+  allLabel,
+  headerLabel,
+  countNoun,
+  emptyLabel,
+  minWidthClass = 'min-w-[150px]',
+  contentWidthClass = 'w-64',
+}: {
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  options: CheckboxMultiOption[];
+  allLabel: string;
+  headerLabel: string;
+  countNoun: string;
+  emptyLabel: string;
+  minWidthClass?: string;
+  contentWidthClass?: string;
+}) {
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allSelected = selectedIds.length === 0;
+  const label = allSelected
+    ? allLabel
+    : selectedIds.length === 1
+      ? (options.find(o => o.id === selectedIds[0])?.title ?? `1 ${countNoun.slice(0, -1)}`)
+      : `${selectedIds.length} ${countNoun}`;
+
+  const toggle = (id: string) => {
+    if (selectedSet.has(id)) {
+      onChange(selectedIds.filter(x => x !== id));
+    } else {
+      onChange([...selectedIds, id]);
+    }
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant={allSelected ? 'outline' : 'secondary'}
+          size="sm"
+          className={cn('h-8 gap-1 text-xs justify-between font-normal', minWidthClass)}
+        >
+          <span className="truncate">{label}</span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className={cn('p-2', contentWidthClass)} align="start">
+        <div className="flex items-center justify-between px-2 py-1.5 mb-1">
+          <span className="text-xs font-medium text-muted-foreground">{headerLabel}</span>
+          {!allSelected && (
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => onChange([])}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div className="max-h-64 overflow-y-auto space-y-0.5">
+          {options.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-2 py-3">{emptyLabel}</p>
+          ) : (
+            options.map(o => {
+              const checked = selectedSet.has(o.id);
+              return (
+                <label
+                  key={o.id}
+                  className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60 cursor-pointer"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggle(o.id)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs leading-snug">
+                    <span className="font-medium">{o.title}</span>
+                    {o.badge && (
+                      <span className="text-muted-foreground"> ({o.badge})</span>
+                    )}
+                    {o.subtitle && (
+                      <span className="block text-muted-foreground">{o.subtitle}</span>
+                    )}
+                  </span>
+                </label>
+              );
+            })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -1049,8 +1200,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const membership = useTenantMemberships(tenantId);
   const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
   const { workTypes: ddWorkTypes } = useSuggestDropdowns();
-  const [packageFilter, setPackageFilter] = useState('all');
-  const [workTypeFilter, setWorkTypeFilter] = useState('all');
+  const [packageFilterIds, setPackageFilterIds] = useState<number[]>([]);
+  const [workTypeFilterIds, setWorkTypeFilterIds] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [showAllEntries, setShowAllEntries] = useState(false);
@@ -1125,10 +1276,38 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     isVivacityStaffRole(profile?.unicorn_role) ||
     profile?.unicorn_role === 'Admin';
 
-  // Fetch active packages for filter dropdown.
-  // Two-step fetch since there's no FK between package_instances and packages
-  // (the embedded `packages:package_id(name)` select 400s otherwise).
-  const { data: activePackages } = useQuery({
+  // All parent package instances on this client (active + completed) for the multiselect filter.
+  const { data: allPackageOptions = [] } = useQuery({
+    queryKey: ['all-package-filter-options', tenantId],
+    queryFn: async (): Promise<PackageFilterOption[]> => {
+      const { data: instances } = await (supabase as any)
+        .from('package_instances')
+        .select('id, package_id, start_date, end_date, is_complete')
+        .eq('tenant_id', tenantId)
+        .is('parent_instance_id', null)
+        .order('start_date', { ascending: false });
+
+      const packageIds = [...new Set((instances || []).map((p: any) => p.package_id))];
+      const { data: pkgs } = packageIds.length > 0
+        ? await supabase.from('packages').select('id, name').in('id', packageIds)
+        : { data: [] };
+      const nameMap = new Map((pkgs || []).map((p: any) => [p.id, p.name]));
+
+      return (instances || []).map((p: any) => {
+        const name = nameMap.get(p.package_id) || `Package #${p.package_id}`;
+        return {
+          instanceId: Number(p.id),
+          packageId: Number(p.package_id),
+          name,
+          label: formatLifecycle(p.start_date, p.end_date),
+          isComplete: !!p.is_complete,
+        };
+      });
+    },
+  });
+
+  // Active packages count for Move/Split affordances (same shape the dialogs already query).
+  const { data: activePackages = [] } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
       const { data: instances } = await (supabase as any)
@@ -1149,6 +1328,16 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       }));
     },
   });
+
+  const selectedPackageIdSet = useMemo(() => new Set(packageFilterIds), [packageFilterIds]);
+  const selectedPackageBaseIds = useMemo(() => {
+    if (packageFilterIds.length === 0) return null;
+    const bases = new Set<number>();
+    allPackageOptions.forEach(p => {
+      if (selectedPackageIdSet.has(p.instanceId)) bases.add(p.packageId);
+    });
+    return bases;
+  }, [packageFilterIds, allPackageOptions, selectedPackageIdSet]);
 
   // Fetch ALL package instances (including inactive/complete) for display in time entries
   // Uses two-step fetch since there's no FK between package_instances and packages
@@ -1224,11 +1413,20 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
 
   const filteredEntries = useMemo(() => {
     let result = [...entries];
-    if (packageFilter !== 'all') {
-      result = result.filter(e => e.package_id === parseInt(packageFilter));
+    if (packageFilterIds.length > 0) {
+      result = result.filter(e => {
+        const instId = entryInstanceId(e);
+        if (instId != null && selectedPackageIdSet.has(instId)) return true;
+        // Legacy rows with no package_instance_id that stored packages.id in package_id
+        if (e.package_instance_id == null && e.package_id != null && selectedPackageBaseIds?.has(Number(e.package_id))) {
+          return true;
+        }
+        return false;
+      });
     }
-    if (workTypeFilter !== 'all') {
-      result = result.filter(e => e.work_type === workTypeFilter);
+    if (workTypeFilterIds.length > 0) {
+      const workTypeSet = new Set(workTypeFilterIds);
+      result = result.filter(e => workTypeSet.has(e.work_type));
     }
     // Apply explicit date filters
     if (dateFrom) {
@@ -1249,7 +1447,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       const db = b.start_at ? new Date(b.start_at).getTime() : 0;
       return db - da;
     });
-  }, [entries, packageFilter, workTypeFilter, dateFrom, dateTo, showAllEntries, renewalWindow]);
+  }, [entries, packageFilterIds, workTypeFilterIds, dateFrom, dateTo, showAllEntries, renewalWindow, selectedPackageIdSet, selectedPackageBaseIds]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
@@ -1259,8 +1457,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   }, [filteredEntries, page]);
 
   // Reset page when filters change
-  const handlePackageFilter = (v: string) => { setPackageFilter(v); setPage(1); };
-  const handleWorkTypeFilter = (v: string) => { setWorkTypeFilter(v); setPage(1); };
+  const handlePackageFilter = (ids: number[]) => { setPackageFilterIds(ids); setPage(1); };
+  const handleWorkTypeFilter = (ids: string[]) => { setWorkTypeFilterIds(ids); setPage(1); };
   const handleDateFrom = (d: Date | undefined) => { setDateFrom(d); setPage(1); };
   const handleDateTo = (d: Date | undefined) => { setDateTo(d); setPage(1); };
   const hasDateFilter = !!dateFrom || !!dateTo;
@@ -1336,8 +1534,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <CardTitle className="text-base">Time Entries</CardTitle>
             <div className="flex items-center gap-2">
+              <CardTitle className="text-base">Time Entries</CardTitle>
               <Button
                 variant="outline"
                 size="sm"
@@ -1376,32 +1574,24 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
               >
                 <Mail className="h-3.5 w-3.5" /> Email
               </Button>
-              {hasMultiplePackages && (
-                <Select value={packageFilter} onValueChange={handlePackageFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="All Packages" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Packages</SelectItem>
-                    {(activePackages || []).map(p => (
-                      <SelectItem key={p.id} value={p.id.toString()}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Select value={workTypeFilter} onValueChange={handleWorkTypeFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Work type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {ddWorkTypes.map(wt => (
-                    <SelectItem key={wt.code} value={wt.code}>{wt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <PackageMultiFilter
+                selectedIds={packageFilterIds}
+                onChange={handlePackageFilter}
+                packages={allPackageOptions}
+              />
+              <CheckboxMultiFilter
+                selectedIds={workTypeFilterIds}
+                onChange={handleWorkTypeFilter}
+                options={ddWorkTypes.map(wt => ({ id: wt.code, title: wt.label }))}
+                allLabel="All types"
+                headerLabel="Work types"
+                countNoun="types"
+                emptyLabel="No work types"
+                minWidthClass="min-w-[140px]"
+                contentWidthClass="w-56"
+              />
 
               {/* Period toggle */}
               {renewalWindow && (
