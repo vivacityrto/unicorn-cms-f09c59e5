@@ -382,7 +382,11 @@ export default function MainDashboard() {
   // Client messages
   const [clientMsgs, setClientMsgs] = useState<any[]>([]);
   // Client health
-  const [health, setHealth] = useState<{ healthy: number; monitoring: number; at_risk: number; critical: number } | null>(null);
+  type HealthCounts = { healthy: number; monitoring: number; at_risk: number; critical: number };
+  const [healthMine, setHealthMine] = useState<HealthCounts | null>(null);
+  const [healthPortfolio, setHealthPortfolio] = useState<HealthCounts | null>(null);
+  const [hasMineAssignments, setHasMineAssignments] = useState(false);
+  const [healthScope, setHealthScope] = useState<"mine" | "portfolio">("mine");
   // Upcoming calendar
   const [upcoming, setUpcoming] = useState<any[]>([]);
 
@@ -398,7 +402,19 @@ export default function MainDashboard() {
     const today = todayIsoLocal();
     const sb = supabase as any;
 
-    // Clients + health donut (single view)
+    // Clients + health donut. Fetches both "my assigned clients" and
+    // portfolio-wide counts up front so the Mine/Portfolio toggle switches
+    // instantly with no refetch. Defaults to "mine" when the signed-in user
+    // has assignments (CSCs), otherwise "portfolio" (devs, admins, etc. who
+    // would otherwise see an empty "No client data" state).
+    const tallyHealth = (rows: any[]): HealthCounts => {
+      const counts: HealthCounts = { healthy: 0, monitoring: 0, at_risk: 0, critical: 0 };
+      rows.forEach((r: any) => {
+        const k = (r.worst_stage_health_status ?? "").toLowerCase();
+        if (k in counts) (counts as any)[k]++;
+      });
+      return counts;
+    };
     (async () => {
       const { data } = await sb
         .from("v_dashboard_attention_ranked")
@@ -407,12 +423,15 @@ export default function MainDashboard() {
         .eq("tenant_status", "active");
       const rows = data ?? [];
       setClientCount(rows.length);
-      const counts = { healthy: 0, monitoring: 0, at_risk: 0, critical: 0 };
-      rows.forEach((r: any) => {
-        const k = (r.worst_stage_health_status ?? "").toLowerCase();
-        if (k in counts) (counts as any)[k]++;
-      });
-      setHealth(counts);
+      setHealthMine(tallyHealth(rows));
+      setHasMineAssignments(rows.length > 0);
+      setHealthScope(rows.length > 0 ? "mine" : "portfolio");
+
+      const { data: portfolioData } = await sb
+        .from("v_dashboard_attention_ranked")
+        .select("worst_stage_health_status")
+        .eq("tenant_status", "active");
+      setHealthPortfolio(tallyHealth(portfolioData ?? []));
     })();
 
     // Tasks union
@@ -735,6 +754,7 @@ export default function MainDashboard() {
 
   const today = todayIsoLocal();
 
+  const health = healthScope === "mine" ? healthMine : healthPortfolio;
   const healthDonutData = health
     ? [
         { label: "Excellent", value: health.healthy, color: "#4CAF50" },
@@ -1025,7 +1045,43 @@ export default function MainDashboard() {
 
           {/* — Right column: Client Health, Quick Actions, KPI, Tasks, Upcoming Calendar — */}
           <div className="flex flex-col gap-3 min-w-0">
-            <Panel title="Client Health" icon={HeartPulse} footerHref="/manage-tenants">
+            <Panel
+              title="Client Health"
+              icon={HeartPulse}
+              footerHref="/manage-tenants"
+              actions={
+                hasMineAssignments ? (
+                  <div className="flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
+                    <button
+                      type="button"
+                      onClick={() => setHealthScope("mine")}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                        healthScope === "mine"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Mine
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHealthScope("portfolio")}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                        healthScope === "portfolio"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Portfolio
+                    </button>
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
+                    Portfolio
+                  </Badge>
+                )
+              }
+            >
               <ClientHealthDonut data={healthDonutData} />
             </Panel>
 
