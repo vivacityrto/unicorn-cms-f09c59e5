@@ -229,19 +229,27 @@ Deno.serve(async (req) => {
     if (!parsedBody.success) {
       return json({ error: "A valid Vimeo URL is required" }, 400);
     }
-    const location = parseVimeoUrl(parsedBody.data.vimeo_url);
+    const location = await resolveVimeoUrl(parsedBody.data.vimeo_url);
     if (!location) {
-      return json({ error: "This is not a supported Vimeo video URL" }, 400);
+      return json({
+        error:
+          "Couldn't find a Vimeo video ID in that link. Open the video's own page in Vimeo and copy the link from your browser's address bar (e.g. https://vimeo.com/1194261152/ab12cd34ef).",
+      }, 400);
     }
 
     const apiResult = await fetchApiMetadata(location, vimeoToken);
     const oEmbed = apiResult.metadata ? null : await fetchOEmbedMetadata(location);
     if (!apiResult.metadata && !oEmbed) {
       const hint = apiResult.status === 404
-        ? "The video is private, deleted, or its unlisted privacy hash is missing from the URL."
-        : "Vimeo could not resolve this video.";
-      return json({ error: hint }, 422);
+        ? location.privacyHash
+          ? `Vimeo returned 404 for video ${location.id} even with its privacy hash. That usually means the video sits in a different Vimeo account than the configured API app, or it has been deleted.`
+          : `Vimeo returned 404 for video ${location.id}. If the video is Unlisted or Embed-only, Vimeo needs the link's privacy hash (the random string after the ID, e.g. vimeo.com/${location.id}/ab12cd34ef). Copy the full link from the video's own page in Vimeo and try again.`
+        : `Vimeo could not resolve this video (status ${apiResult.status}).`;
+      // External access state, not a function failure — return 200 so the caller
+      // can show guidance without Supabase logging a runtime error.
+      return json({ accessible: false, error: hint, video_id: location.id });
     }
+
     if (
       !apiResult.metadata
       && oEmbed
