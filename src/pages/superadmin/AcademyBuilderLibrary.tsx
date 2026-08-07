@@ -153,6 +153,11 @@ export default function AcademyBuilderLibrary() {
             </Button>
           )}
           {canCreateCourse && (
+            <Button variant="outline" onClick={() => navigate("/superadmin/academy/quick-add")}>
+              <Sparkles className="h-4 w-4 mr-2" /> Quick Add Recording
+            </Button>
+          )}
+          {canCreateCourse && (
             <Button onClick={() => setNewCourseOpen(true)} className="text-white hover:opacity-90" style={{ backgroundColor: "#23c0dd" }}>
               <Plus className="h-4 w-4 mr-2" /> New Course
             </Button>
