@@ -27,7 +27,8 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 const MODEL = 'google/gemini-2.5-pro';
-const DAILY_CAP = 40;
+const DAILY_CAP = 80;
+const WARNING_THRESHOLD = 40;
 const MAX_AUDITOR_NOTE_INPUT_CHARS = 20_000;
 const MAX_AUDITOR_NOTE_PROMPT_CHARS = 8_000;
 
@@ -462,6 +463,16 @@ Deno.serve(async (req) => {
     );
   }
 
+  // This draft, once logged in step 9, will be the Nth in the rolling 24h
+  // window — warn (but don't block) once that count crosses the halfway
+  // threshold, so auditors doing a heavy AI-drafting session get a heads-up
+  // before they hit the hard DAILY_CAP.
+  const draftOrdinal = (draftsToday ?? 0) + 1;
+  const capWarning =
+    !capErr && draftOrdinal >= WARNING_THRESHOLD
+      ? `This is AI draft ${draftOrdinal} of ${DAILY_CAP} in the last 24 hours. Drafting pauses once you reach ${DAILY_CAP} until earlier drafts age out.`
+      : null;
+
   // 6. Pull response + question + section in one round trip.
   const { data: responseRow, error: respErr } = await userClient
     .from('client_audit_responses' as any)
@@ -698,6 +709,7 @@ Deno.serve(async (req) => {
         duration_ms,
       },
       log_id: (logRow as any).id,
+      warning: capWarning,
     },
     200,
   );
