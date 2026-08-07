@@ -37,6 +37,10 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
   const [contentMarkdown, setContentMarkdown] = useState(lesson?.content_markdown ?? "");
   const [videoSearch, setVideoSearch] = useState("");
   const [resourceSearch, setResourceSearch] = useState("");
+  const [videoSource, setVideoSource] = useState<"link" | "library">(lesson?.video_id ? "library" : "link");
+  const [vimeoUrl, setVimeoUrl] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
+
 
   const { data: videos = [], isLoading: videosLoading } = useVideoLibraryPicker(videoSearch || undefined);
   const { data: resources = [], isLoading: resourcesLoading } = useResourceLibraryPicker(resourceSearch || undefined);
