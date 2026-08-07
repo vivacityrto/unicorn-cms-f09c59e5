@@ -293,12 +293,18 @@ function QuickActionTile({
 
 /* ------------------------------ Client activity (portfolio timeline) ------------------------------ */
 
-function ClientActivityPanel() {
+function ClientActivityPanel({ className, limit = 8 }: { className?: string; limit?: number }) {
   const navigate = useNavigate();
-  const { events, isLoading } = usePortfolioTimeline({ limit: 8 });
+  const { events, isLoading } = usePortfolioTimeline({ limit });
 
   return (
-    <Panel title="Client Activity" icon={Activity} footerHref="/client-activity">
+    <Panel
+      title="Client Activity"
+      icon={Activity}
+      footerHref="/client-activity"
+      className={className}
+      bodyClassName="overflow-y-auto"
+    >
       {isLoading && events.length === 0 ? (
         <div className="flex items-center justify-center py-6">
           <Loader2 className="h-4 w-4 animate-spin text-primary/40" />
@@ -574,18 +580,18 @@ export default function MainDashboard() {
         .select("id, title, body, target_mode, total_recipients, sent_at")
         .eq("status", "sent")
         .order("sent_at", { ascending: false })
-        .limit(4);
+        .limit(8);
       setBroadcasts(data ?? []);
     })();
 
-    // Client messages — 3 most recent threads from Team Communications
+    // Client messages — most recent threads from Team Communications
     (async () => {
       const { data: convos } = await sb
         .from("tenant_conversations" as any)
         .select("id, tenant_id, subject, topic, last_message_at, last_message_preview")
         .not("last_message_at", "is", null)
         .order("last_message_at", { ascending: false, nullsFirst: false })
-        .limit(3);
+        .limit(8);
       const rows = (convos ?? []) as any[];
       if (rows.length === 0) {
         setClientMsgs([]);
@@ -865,10 +871,69 @@ export default function MainDashboard() {
         </div>
 
         {/* 3-column panel grid */}
-        <div className="grid gap-3 grid-cols-1 lg:[grid-template-columns:minmax(0,36fr)_minmax(0,40fr)_minmax(0,24fr)]">
-          {/* — Left column — */}
+        <div className="grid gap-3 grid-cols-1 lg:[grid-template-columns:minmax(0,34fr)_minmax(0,30fr)_minmax(0,36fr)] items-stretch">
+          {/* — Left column: Client Activity, the sole long panel — */}
           <div className="flex flex-col gap-3 min-w-0">
-            <Panel title="Recent Client Broadcasts" icon={Megaphone} footerHref="/communications">
+            <ClientActivityPanel className="flex-1" limit={18} />
+          </div>
+
+          {/* — Centre column: Client Messages atop Recent Client Broadcasts — */}
+          <div className="flex flex-col gap-3 min-w-0">
+            <Panel
+              title="Client Messages"
+              icon={MessageSquare}
+              footerHref="/communications"
+              className="flex-1"
+              bodyClassName="overflow-y-auto"
+            >
+              {clientMsgs.length === 0 ? (
+                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+                  <MessageSquare className="h-6 w-6 text-primary/25" />
+                  <div className="text-sm text-muted-foreground">No client messages.</div>
+                </div>
+              ) : (
+                <ul className="divide-y divide-border -my-1">
+                  {clientMsgs.map((m) => {
+                    const av = clientAvatarColor(m.tenant_id);
+                    return (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/communications?thread=${m.id}`)}
+                          className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
+                        >
+                          <div
+                            className={`h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${av.solid}`}
+                          >
+                            {clientInitials(m.tenant_name)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
+                              <span className="text-[11px] text-muted-foreground shrink-0">
+                                {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                            {m.subject && (
+                              <div className="text-[11px] text-muted-foreground/80 truncate mt-0.5">{m.subject}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Panel>
+
+            <Panel
+              title="Recent Client Broadcasts"
+              icon={Megaphone}
+              footerHref="/communications"
+              className="flex-1"
+              bodyClassName="overflow-y-auto"
+            >
               {broadcasts.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
                   <Megaphone className="h-6 w-6 text-primary/25" />
@@ -892,6 +957,64 @@ export default function MainDashboard() {
                     </li>
                   ))}
                 </ul>
+              )}
+            </Panel>
+          </div>
+
+          {/* — Right column: Client Health, Quick Actions, KPI, Tasks, Rocks — */}
+          <div className="flex flex-col gap-3 min-w-0">
+            <Panel title="Client Health" icon={HeartPulse} footerHref="/manage-tenants">
+              <ClientHealthDonut data={healthDonutData} />
+            </Panel>
+
+            <Panel title="Quick Actions" icon={Zap}>
+              <div className="grid grid-cols-3 gap-1.5">
+                <QuickActionTile
+                  icon={UserPlus}
+                  label="Add Client"
+                  onClick={() => navigate("/manage-tenants")}
+                />
+                <QuickActionTile
+                  icon={ClipboardList}
+                  label="New Task"
+                  onClick={() => navigate('/tasks?new=1')}
+                />
+                <QuickActionTile
+                  icon={CalendarPlus}
+                  label="Calendar"
+                  onClick={() => navigate('/calendar')}
+                />
+                <QuickActionTile
+                  icon={Upload}
+                  label="Upload"
+                  onClick={() => {
+                    toast({
+                      title: "Open a client to upload",
+                      description: "Documents are scoped to a client. Pick one from Manage Clients.",
+                    });
+                    navigate("/manage-tenants");
+                  }}
+                />
+                <QuickActionTile
+                  icon={Ticket}
+                  label="Ticket"
+                  onClick={() => setTicketOpen(true)}
+                />
+                <QuickActionTile
+                  icon={MessageSquare}
+                  label="Message"
+                  onClick={() => navigate("/communications")}
+                />
+              </div>
+            </Panel>
+
+            <Panel title="KPI Dashboard" icon={Gauge} footerHref="/kpi" bodyClassName="!py-2">
+              {userUuid && (kpiRole === "csc_consultant" || kpiRole === "cst_assistant" || kpiRole === "developer") ? (
+                <MiniKpiSummary subjectUuid={userUuid} period={period} role={kpiRole as any} />
+              ) : (
+                <div className="text-sm text-muted-foreground py-4 text-center">
+                  No KPI configured.
+                </div>
               )}
             </Panel>
 
@@ -957,94 +1080,6 @@ export default function MainDashboard() {
               })()}
             </Panel>
 
-            <Panel title="Quick Actions" icon={Zap}>
-              <div className="grid grid-cols-3 gap-1.5">
-                <QuickActionTile
-                  icon={UserPlus}
-                  label="Add Client"
-                  onClick={() => navigate("/manage-tenants")}
-                />
-                <QuickActionTile
-                  icon={ClipboardList}
-                  label="New Task"
-                  onClick={() => navigate('/tasks?new=1')}
-                />
-                <QuickActionTile
-                  icon={CalendarPlus}
-                  label="Calendar"
-                  onClick={() => navigate('/calendar')}
-                />
-                <QuickActionTile
-                  icon={Upload}
-                  label="Upload"
-                  onClick={() => {
-                    toast({
-                      title: "Open a client to upload",
-                      description: "Documents are scoped to a client. Pick one from Manage Clients.",
-                    });
-                    navigate("/manage-tenants");
-                  }}
-                />
-                <QuickActionTile
-                  icon={Ticket}
-                  label="Ticket"
-                  onClick={() => setTicketOpen(true)}
-                />
-                <QuickActionTile
-                  icon={MessageSquare}
-                  label="Message"
-                  onClick={() => navigate("/communications")}
-                />
-              </div>
-            </Panel>
-          </div>
-
-          {/* — Centre column — */}
-          <div className="flex flex-col gap-3 min-w-0">
-            <Panel title="Client Messages" icon={MessageSquare} footerHref="/communications">
-              {clientMsgs.length === 0 ? (
-                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-                  <MessageSquare className="h-6 w-6 text-primary/25" />
-                  <div className="text-sm text-muted-foreground">No client messages.</div>
-                </div>
-              ) : (
-                <ul className="divide-y divide-border -my-1">
-                  {clientMsgs.map((m) => {
-                    const av = clientAvatarColor(m.tenant_id);
-                    return (
-                      <li key={m.id}>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/communications?thread=${m.id}`)}
-                          className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
-                        >
-                          <div
-                            className={`h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${av.solid}`}
-                          >
-                            {clientInitials(m.tenant_name)}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
-                              <span className="text-[11px] text-muted-foreground shrink-0">
-                                {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                              </span>
-                            </div>
-                            {m.subject && (
-                              <div className="text-[11px] text-muted-foreground/80 truncate mt-0.5">{m.subject}</div>
-                            )}
-                            <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
-                          </div>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </Panel>
-
-            <ClientActivityPanel />
-
             <Panel title="Rocks (Quarterly Priorities)" icon={Target} footerHref="/eos/rocks">
               {!rocks || rocks.list.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
@@ -1107,24 +1142,6 @@ export default function MainDashboard() {
                 </ul>
               )}
             </Panel>
-          </div>
-
-          {/* — Right column — */}
-          <div className="flex flex-col gap-3 min-w-0">
-            <Panel title="Client Health" icon={HeartPulse} footerHref="/manage-tenants">
-              <ClientHealthDonut data={healthDonutData} />
-            </Panel>
-
-            <Panel title="KPI Dashboard" icon={Gauge} footerHref="/kpi" bodyClassName="!py-2">
-              {userUuid && (kpiRole === "csc_consultant" || kpiRole === "cst_assistant" || kpiRole === "developer") ? (
-                <MiniKpiSummary subjectUuid={userUuid} period={period} role={kpiRole as any} />
-              ) : (
-                <div className="text-sm text-muted-foreground py-4 text-center">
-                  No KPI configured.
-                </div>
-              )}
-            </Panel>
-
           </div>
         </div>
 
