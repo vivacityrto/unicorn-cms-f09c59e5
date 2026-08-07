@@ -19,6 +19,7 @@ import {
   ChevronDown, ChevronUp, Pin, PinOff, Package,
   UserPlus, UserCheck, UserX, UserCog, UserMinus, LogIn, MessageSquare,
   GraduationCap, BookOpenCheck, Award, ListChecks, MousePointerClick, ArrowRightLeft,
+  Eye,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { LucideIcon } from 'lucide-react';
@@ -77,6 +78,11 @@ export const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   stage_status_changed: ListChecks,
   portal_activity_summary: MousePointerClick,
   tenant_status_changed: ArrowRightLeft,
+  invitation_sent: UserPlus,
+  invitation_opened: Eye,
+  invitation_clicked: MousePointerClick,
+  invitation_bounced: AlertTriangle,
+  invitation_accepted: UserCheck,
 };
 
 /**
@@ -129,6 +135,11 @@ export const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   stage_status_changed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   portal_activity_summary: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
   tenant_status_changed: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  invitation_sent: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  invitation_opened: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  invitation_clicked: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+  invitation_bounced: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  invitation_accepted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
 };
 
 // =============================================
@@ -142,7 +153,7 @@ function getModuleChip(eventType: string): string | null {
   if (eventType.startsWith('task')) return 'Tasks';
   if (eventType.startsWith('time')) return 'Time';
   if (eventType.startsWith('note') || eventType.startsWith('structured_note')) return 'Notes';
-  if (eventType.startsWith('account')) return 'Accounts';
+  if (eventType.startsWith('account') || eventType.startsWith('invitation')) return 'Accounts';
   if (eventType === 'client_login') return 'Logins';
   if (eventType === 'message_sent') return 'Messages';
   if (eventType.startsWith('academy_')) return 'Academy';
@@ -199,6 +210,11 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
     case 'account_deactivated':
     case 'account_role_changed':
     case 'account_removed':
+    case 'invitation_sent':
+    case 'invitation_opened':
+    case 'invitation_clicked':
+    case 'invitation_bounced':
+    case 'invitation_accepted':
       return { label: 'View account', path: `/tenant/${event.tenant_id}?tab=users` };
     default:
       return null;
