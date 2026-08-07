@@ -90,6 +90,7 @@ async function fetchOEmbedMetadata(location: VimeoLocation) {
     title?: string;
     duration?: number;
     thumbnail_url?: string;
+    domain_status_code?: number;
   };
 }
 
@@ -182,6 +183,18 @@ Deno.serve(async (req) => {
         ? "The video is private, deleted, or its unlisted privacy hash is missing from the URL."
         : "Vimeo could not resolve this video.";
       return json({ error: hint }, 422);
+    }
+    if (
+      !apiResult.metadata
+      && oEmbed
+      && !oEmbed.title
+      && !oEmbed.duration
+      && !oEmbed.thumbnail_url
+    ) {
+      const reason = oEmbed.domain_status_code === 403
+        ? "Vimeo recognises the video, but its privacy/domain settings block Academy from reading it. In Vimeo, allow embedding on unicorn-cms.au and ensure the configured API app can access the video, then paste the full video link again."
+        : "Vimeo recognises the video, but does not expose its metadata. Ensure the configured Vimeo API app can access it and include the full privacy hash for an unlisted video.";
+      return json({ error: reason }, 422);
     }
 
     const transcript = apiResult.metadata
