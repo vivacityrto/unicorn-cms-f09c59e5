@@ -28,7 +28,6 @@ import {
   CalendarClock,
   TrendingUp,
   Trophy,
-  ChevronRight,
   Activity,
   type LucideIcon,
 } from "lucide-react";
@@ -955,9 +954,72 @@ export default function MainDashboard() {
                 </ul>
               )}
             </Panel>
+
+            <Panel title="Rocks (Quarterly Priorities)" icon={Target} footerHref="/eos/rocks">
+              {!rocks || rocks.list.length === 0 ? (
+                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+                  <Target className="h-6 w-6 text-primary/25" />
+                  <div className="text-sm text-muted-foreground">No active rocks.</div>
+                </div>
+              ) : (
+                <ul className="space-y-1.5 max-h-[380px] overflow-auto pr-1">
+                  {rocks.list.slice(0, 8).map((r: any) => {
+                    const s = (r.status ?? "").toLowerCase().replace(/\s+/g, "_");
+                    // Brand compliance-state tokens (index.css --state-*) instead of
+                    // generic Material Design colors — on_track=compliant(purple),
+                    // at_risk=review(macaron), off_track=risk(fuchsia),
+                    // done/complete=info(aqua), unknown=draft(light purple).
+                    const stateVar =
+                      s === "on_track"
+                        ? "--state-compliant"
+                        : s === "at_risk"
+                        ? "--state-review"
+                        : s === "off_track"
+                        ? "--state-risk"
+                        : s === "done" || s === "complete"
+                        ? "--state-info"
+                        : "--state-draft";
+                    const badgeColor = `hsl(var(${stateVar}))`;
+                    const badgeTint = `hsl(var(${stateVar}) / 0.14)`;
+                    const label = (r.status ?? "unknown").replace(/_/g, " ");
+                    const pct =
+                      typeof r.completion_percentage === "number"
+                        ? Math.max(0, Math.min(100, r.completion_percentage))
+                        : s === "done" || s === "complete"
+                        ? 100
+                        : s === "on_track"
+                        ? 60
+                        : s === "at_risk"
+                        ? 40
+                        : s === "off_track"
+                        ? 20
+                        : 0;
+                    return (
+                      <li key={r.id} className="py-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-foreground flex-1 truncate">{r.title}</span>
+                          <span
+                            className="text-[10px] font-medium px-1.5 py-0.5 rounded capitalize shrink-0"
+                            style={{ backgroundColor: badgeTint, color: badgeColor }}
+                          >
+                            {label}
+                          </span>
+                        </div>
+                        <div className="mt-1 h-1 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pct}%`, backgroundColor: badgeColor }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Panel>
           </div>
 
-          {/* — Right column: Client Health, Quick Actions, KPI, Tasks, Rocks — */}
+          {/* — Right column: Client Health, Quick Actions, KPI, Tasks, Upcoming Calendar — */}
           <div className="flex flex-col gap-3 min-w-0">
             <Panel title="Client Health" icon={HeartPulse} footerHref="/manage-tenants">
               <ClientHealthDonut data={healthDonutData} />
@@ -1076,62 +1138,42 @@ export default function MainDashboard() {
               })()}
             </Panel>
 
-            <Panel title="Rocks (Quarterly Priorities)" icon={Target} footerHref="/eos/rocks">
-              {!rocks || rocks.list.length === 0 ? (
+            <Panel title="Upcoming Calendar" icon={CalendarClock} footerHref="/calendar">
+              {upcoming.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-                  <Target className="h-6 w-6 text-primary/25" />
-                  <div className="text-sm text-muted-foreground">No active rocks.</div>
+                  <CalendarClock className="h-6 w-6 text-primary/25" />
+                  <div className="text-sm text-muted-foreground">No upcoming events.</div>
                 </div>
               ) : (
-                <ul className="space-y-1.5 max-h-[380px] overflow-auto pr-1">
-                  {rocks.list.slice(0, 8).map((r: any) => {
-                    const s = (r.status ?? "").toLowerCase().replace(/\s+/g, "_");
-                    // Brand compliance-state tokens (index.css --state-*) instead of
-                    // generic Material Design colors — on_track=compliant(purple),
-                    // at_risk=review(macaron), off_track=risk(fuchsia),
-                    // done/complete=info(aqua), unknown=draft(light purple).
-                    const stateVar =
-                      s === "on_track"
-                        ? "--state-compliant"
-                        : s === "at_risk"
-                        ? "--state-review"
-                        : s === "off_track"
-                        ? "--state-risk"
-                        : s === "done" || s === "complete"
-                        ? "--state-info"
-                        : "--state-draft";
-                    const badgeColor = `hsl(var(${stateVar}))`;
-                    const badgeTint = `hsl(var(${stateVar}) / 0.14)`;
-                    const label = (r.status ?? "unknown").replace(/_/g, " ");
-                    const pct =
-                      typeof r.completion_percentage === "number"
-                        ? Math.max(0, Math.min(100, r.completion_percentage))
-                        : s === "done" || s === "complete"
-                        ? 100
-                        : s === "on_track"
-                        ? 60
-                        : s === "at_risk"
-                        ? 40
-                        : s === "off_track"
-                        ? 20
-                        : 0;
+                <ul className="divide-y divide-border -my-1">
+                  {upcoming.slice(0, 5).map((ev) => {
+                    const start = new Date(ev.start_at);
+                    const end = ev.end_at ? new Date(ev.end_at) : null;
                     return (
-                      <li key={r.id} className="py-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-foreground flex-1 truncate">{r.title}</span>
-                          <span
-                            className="text-[10px] font-medium px-1.5 py-0.5 rounded capitalize shrink-0"
-                            style={{ backgroundColor: badgeTint, color: badgeColor }}
-                          >
-                            {label}
-                          </span>
-                        </div>
-                        <div className="mt-1 h-1 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all"
-                            style={{ width: `${pct}%`, backgroundColor: badgeColor }}
-                          />
-                        </div>
+                      <li key={ev.id}>
+                        <button
+                          type="button"
+                          onClick={() => navigate("/calendar")}
+                          className="w-full py-2 flex items-center gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
+                        >
+                          <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 min-w-[40px] shrink-0">
+                            <div className="text-[9px] uppercase tracking-wide text-muted-foreground">
+                              {format(start, "MMM")}
+                            </div>
+                            <div className="text-sm font-semibold leading-none text-foreground">
+                              {format(start, "d")}
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-foreground truncate">
+                              {ev.title || "(no title)"}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5">
+                              {format(start, "EEE, h:mm a")}
+                              {end ? ` – ${format(end, "h:mm a")}` : ""}
+                            </div>
+                          </div>
+                        </button>
                       </li>
                     );
                   })}
@@ -1140,63 +1182,6 @@ export default function MainDashboard() {
             </Panel>
           </div>
         </div>
-
-        {/* Upcoming Calendar (full-width) */}
-        <Panel title="Upcoming Calendar" icon={CalendarClock} footerHref="/calendar">
-          {upcoming.length === 0 ? (
-            <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-              <CalendarClock className="h-6 w-6 text-primary/25" />
-              <div className="text-sm text-muted-foreground">No upcoming events.</div>
-            </div>
-          ) : (
-            <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1">
-              {upcoming.map((ev) => {
-                const start = new Date(ev.start_at);
-                const end = ev.end_at ? new Date(ev.end_at) : null;
-                return (
-                  <button
-                    key={ev.id}
-                    onClick={() => navigate("/calendar")}
-                    className="relative overflow-hidden shrink-0 w-[260px] text-left rounded-lg border border-border bg-card hover:bg-[#23C0DD]/5 hover:border-[#23C0DD]/40 transition-colors p-3 pl-4 flex gap-3"
-                  >
-                    <span
-                      aria-hidden
-                      className="absolute inset-y-0 left-0 w-1"
-                      style={{ backgroundColor: "#23C0DD" }}
-                    />
-                    <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 min-w-[44px]">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {format(start, "MMM")}
-                      </div>
-                      <div className="text-lg font-semibold leading-none text-foreground">
-                        {format(start, "d")}
-                      </div>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-foreground truncate">
-                        {ev.title || "(no title)"}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {format(start, "h:mm a")}
-                        {end ? ` – ${format(end, "h:mm a")}` : ""}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">
-                        {format(start, "EEE")}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => navigate("/calendar")}
-                className="shrink-0 w-[160px] rounded-lg border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors p-3 flex flex-col items-center justify-center gap-1"
-              >
-                <ChevronRight className="h-4 w-4" />
-                <span className="text-xs font-medium">See full week</span>
-              </button>
-            </div>
-          )}
-        </Panel>
       </div>
 
 
