@@ -157,6 +157,21 @@ async function extractEdgeError(err: any, fallback: string): Promise<string> {
   return err?.message || fallback;
 }
 
+/**
+ * Vimeo replies 404 for any video the Vivacity API token can't see — wrong
+ * account, deleted video, or an unlisted video whose privacy hash wasn't part
+ * of the pasted link. Turn that into something actionable.
+ */
+function humaniseVimeoError(msg: string): string {
+  if (/404/.test(msg) && /vimeo/i.test(msg)) {
+    return "Vimeo returned 404 for that video. It's either not on the Vivacity Vimeo account, has been deleted, or it's unlisted — for unlisted videos copy the full link including the privacy hash (e.g. https://vimeo.com/1215370924/ab12cd34ef) from Vimeo's address bar.";
+  }
+  if (/401|403/.test(msg) && /vimeo/i.test(msg)) {
+    return "Vimeo rejected our credentials for that video. Check the video lives on the Vivacity Vimeo account.";
+  }
+  return msg;
+}
+
 
 export default function AcademyQuickAddPage() {
   const navigate = useNavigate();
@@ -259,7 +274,10 @@ export default function AcademyQuickAddPage() {
         "academy-fetch-vimeo-transcript",
         { body: { vimeo_url: vimeoUrl.trim() } },
       );
-      if (vErr) throw new Error(await extractEdgeError(vErr, "Couldn't read that Vimeo video"));
+      if (vErr)
+        throw new Error(
+          humaniseVimeoError(await extractEdgeError(vErr, "Couldn't read that Vimeo video")),
+        );
 
 
       const resolvedTitle = (episodeTitle.trim() || vimeo?.title || "").trim();
