@@ -15,8 +15,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface FunctionErrorBody {
   error?: string;
-  cap?: number;
-  next_available_at?: string;
 }
 
 async function readFunctionError(error: unknown): Promise<{ status: number | null; body: FunctionErrorBody | null }> {
@@ -34,18 +32,6 @@ async function readFunctionError(error: unknown): Promise<{ status: number | nul
   } catch {
     return { status: response.status, body: null };
   }
-}
-
-function formatNextAvailable(iso: string | undefined): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat(undefined, {
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
 }
 
 interface FindingFormValues {
@@ -158,13 +144,11 @@ export function AddFindingForm({
   const [priority, setPriority] = useState(initialValues?.priority ?? defaultPriority);
 
   // ── AI draft state ───────────────────────────────────────────────
-  const [aiStatus, setAiStatus] = useState<'idle' | 'drafting' | 'drafted' | 'error' | 'capped'>('idle');
+  const [aiStatus, setAiStatus] = useState<'idle' | 'drafting' | 'drafted' | 'error'>('idle');
   const [aiDraft, setAiDraft] = useState<AIDraft | null>(null);
   const [aiLogId, setAiLogId] = useState<string | null>(null);
   const [aiCorpusChunks, setAiCorpusChunks] = useState<CorpusChunkSummary[]>([]);
-  const [capMessage, setCapMessage] = useState<string | null>(null);
   const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null);
-  const [aiWarning, setAiWarning] = useState<string | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
 
   const isEdit = mode === 'edit';
@@ -194,9 +178,7 @@ export function AddFindingForm({
       return;
     }
     setAiStatus('drafting');
-    setCapMessage(null);
     setAiErrorMessage(null);
-    setAiWarning(null);
     try {
       const { data, error } = await supabase.functions.invoke('draft-finding', {
         body: {
@@ -212,16 +194,7 @@ export function AddFindingForm({
         let message = 'AI draft failed. Please try again, or write the finding manually.';
         if (status === 401) message = 'Sign in expired. Please refresh.';
         else if (status === 403) message = "You don't have access to draft for this audit.";
-        else if (status === 429 && body?.cap) {
-          const nextAvailable = formatNextAvailable(body.next_available_at);
-          setCapMessage(
-            nextAvailable
-              ? `Daily AI draft limit reached. Another draft becomes available after ${nextAvailable}.`
-              : body.error ?? 'Daily AI draft limit reached.',
-          );
-          setAiStatus('capped');
-          return;
-        } else if (status === 402) {
+        else if (status === 402) {
           message = 'AI credits exhausted. Top up at Settings > Workspace > Usage.';
         } else if (body?.error) {
           message = body.error;
@@ -252,7 +225,6 @@ export function AddFindingForm({
       if (['critical', 'high', 'medium'].includes(draft.priority)) {
         setPriority(draft.priority);
       }
-      setAiWarning((data?.warning as string | null | undefined) ?? null);
       setAiStatus('drafted');
     } catch (e) {
       console.error('draft-finding invoke threw:', e);
@@ -364,14 +336,6 @@ export function AddFindingForm({
                 </div>
               </div>
             )}
-            {aiStatus === 'capped' && (
-              <Alert variant="default" className="border-amber-200 bg-amber-50">
-                <AlertCircle className="h-4 w-4 text-amber-700" />
-                <AlertDescription className="text-amber-800">
-                  {capMessage ?? 'Daily AI draft limit reached.'} You can still write the finding manually.
-                </AlertDescription>
-              </Alert>
-            )}
             {aiStatus === 'error' && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -382,12 +346,6 @@ export function AddFindingForm({
                     <Sparkles className="mr-2 h-3.5 w-3.5" /> Retry AI draft
                   </Button>
                 </AlertDescription>
-              </Alert>
-            )}
-            {aiStatus === 'drafted' && aiWarning && (
-              <Alert variant="default" className="border-amber-200 bg-amber-50">
-                <AlertCircle className="h-4 w-4 text-amber-700" />
-                <AlertDescription className="text-amber-800">{aiWarning}</AlertDescription>
               </Alert>
             )}
           </div>

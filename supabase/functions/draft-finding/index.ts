@@ -6,7 +6,7 @@
  * persisted automatically — the auditor reviews and edits it inside
  * AddFindingForm, then the existing finding-creation flow saves it.
  *
- * Pipeline: caller-JWT auth → audit-access gate → daily cap check →
+ * Pipeline: caller-JWT auth → audit-access gate →
  * pull response/question/section/audit row → semantic retrieval over
  * srto_corpus → Gemini 2.5 Pro draft → validate + retry once → log to
  * client_audit_log via service role → return draft + provenance.
@@ -27,8 +27,6 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 const MODEL = 'google/gemini-2.5-pro';
-const DAILY_CAP = 80;
-const WARNING_THRESHOLD = 40;
 const MAX_AUDITOR_NOTE_INPUT_CHARS = 20_000;
 const MAX_AUDITOR_NOTE_PROMPT_CHARS = 8_000;
 
@@ -431,49 +429,12 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 4. Service-role admin client for log writes + daily cap query.
+  // 4. Service-role admin client for the append-only audit log write.
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });
 
-  // 5. Daily cap check.
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data: oldestRecentDraft, count: draftsToday, error: capErr } = await admin
-    .from('client_audit_log' as any)
-    .select('created_at', { count: 'exact' })
-    .eq('actor_user_id', callerUserId)
-    .eq('action', 'ai.finding_drafted')
-    .gte('created_at', since)
-    .order('created_at', { ascending: true })
-    .limit(1);
-  if (capErr) {
-    console.error('Cap check failed', capErr.message);
-  } else if ((draftsToday ?? 0) >= DAILY_CAP) {
-    const oldestCreatedAt = (oldestRecentDraft?.[0] as { created_at?: string } | undefined)?.created_at;
-    const nextAvailableAt = oldestCreatedAt
-      ? new Date(new Date(oldestCreatedAt).getTime() + 24 * 60 * 60 * 1000).toISOString()
-      : null;
-    return json(
-      {
-        error: 'Daily AI draft limit reached. Drafts become available as earlier drafts pass 24 hours.',
-        cap: DAILY_CAP,
-        next_available_at: nextAvailableAt,
-      },
-      429,
-    );
-  }
-
-  // This draft, once logged in step 9, will be the Nth in the rolling 24h
-  // window — warn (but don't block) once that count crosses the halfway
-  // threshold, so auditors doing a heavy AI-drafting session get a heads-up
-  // before they hit the hard DAILY_CAP.
-  const draftOrdinal = (draftsToday ?? 0) + 1;
-  const capWarning =
-    !capErr && draftOrdinal >= WARNING_THRESHOLD
-      ? `This is AI draft ${draftOrdinal} of ${DAILY_CAP} in the last 24 hours. Drafting pauses once you reach ${DAILY_CAP} until earlier drafts age out.`
-      : null;
-
-  // 6. Pull response + question + section in one round trip.
+  // 5. Pull response + question + section in one round trip.
   const { data: responseRow, error: respErr } = await userClient
     .from('client_audit_responses' as any)
     .select(
@@ -523,7 +484,7 @@ Deno.serve(async (req) => {
     subject_tenant_id: Number(auditRowTyped.subject_tenant_id),
   };
 
-  // 7. Retrieve corpus chunks via the existing retrieve-srto-context function.
+  // 6. Retrieve corpus chunks via the existing retrieve-srto-context function.
   const retrievalQuery = [ctx.audit_statement, auditorNoteForPrompt ?? '', ctx.existing_notes ?? '']
     .map((s) => s.trim())
     .filter(Boolean)
@@ -572,7 +533,7 @@ Deno.serve(async (req) => {
     corpusEmpty = true;
   }
 
-  // 8. Call the gateway. Up to two attempts: one normal, one corrective if
+  // 7. Call the gateway. Up to two attempts: one normal, one corrective if
   // the first response failed validation (parse / schema / banned terms).
   async function callModel(extraSystem?: string): Promise<{ raw: any; usage: any }> {
     const messages = [
@@ -668,7 +629,7 @@ Deno.serve(async (req) => {
     similarity: Number(c.similarity.toFixed(3)),
   }));
 
-  // 9. Write append-only audit log entry via service role.
+  // 8. Write append-only audit log entry via service role.
   const { data: logRow, error: logErr } = await admin
     .from('client_audit_log' as any)
     .insert({
@@ -709,7 +670,6 @@ Deno.serve(async (req) => {
         duration_ms,
       },
       log_id: (logRow as any).id,
-      warning: capWarning,
     },
     200,
   );
