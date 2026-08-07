@@ -93,7 +93,7 @@ interface StageRowProps {
   packageInstanceId?: number;
   onUpdate: () => void;
   profile: any;
-  counts: { staffTasks: number; clientTasks: number; documents: number; emails: number };
+  counts: { staffTasks: number; clientTasks: number; documents: number; emails: number; publishedCount?: number };
   countsLoading: boolean;
 }
 
