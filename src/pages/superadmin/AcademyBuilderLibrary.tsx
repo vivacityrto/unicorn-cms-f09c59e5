@@ -153,6 +153,11 @@ export default function AcademyBuilderLibrary() {
             </Button>
           )}
           {canCreateCourse && (
+            <Button variant="outline" onClick={() => navigate("/superadmin/academy/bulk-import")}>
+              <ListPlus className="h-4 w-4 mr-2" /> Bulk Import
+            </Button>
+          )}
+          {canCreateCourse && (
             <Button variant="outline" onClick={() => navigate("/superadmin/academy/quick-add")}>
               <Sparkles className="h-4 w-4 mr-2" /> Quick Add Recording
             </Button>
