@@ -28,6 +28,8 @@ import { corsHeaders } from '../_shared/cors.ts';
 const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 const MODEL = 'google/gemini-2.5-pro';
 const DAILY_CAP = 40;
+const MAX_AUDITOR_NOTE_INPUT_CHARS = 20_000;
+const MAX_AUDITOR_NOTE_PROMPT_CHARS = 8_000;
 
 // ─── Helpers ────────────────────────────────────────────────────────
 function json(body: unknown, status: number) {
@@ -35,6 +37,11 @@ function json(body: unknown, status: number) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+function truncateForPrompt(value: string | null, maxChars: number): string | null {
+  if (!value || value.length <= maxChars) return value;
+  return `${value.slice(0, maxChars)}\n\n[Note truncated for AI context]`;
 }
 
 /**
@@ -367,11 +374,18 @@ Deno.serve(async (req) => {
   }
   let auditorNote: string | null = null;
   if (body.auditor_note !== undefined && body.auditor_note !== null) {
-    if (typeof body.auditor_note !== 'string' || body.auditor_note.length > 2000) {
-      return json({ error: 'auditor_note must be a string of 0..2000 characters' }, 400);
+    if (
+      typeof body.auditor_note !== 'string' ||
+      body.auditor_note.length > MAX_AUDITOR_NOTE_INPUT_CHARS
+    ) {
+      return json(
+        { error: `Auditor note must be no more than ${MAX_AUDITOR_NOTE_INPUT_CHARS.toLocaleString()} characters.` },
+        400,
+      );
     }
     auditorNote = body.auditor_note;
   }
+  const auditorNoteForPrompt = truncateForPrompt(auditorNote, MAX_AUDITOR_NOTE_PROMPT_CHARS);
 
   // 3. Audit access gate — try selecting the audit under the caller JWT.
   // RLS (client_audits_staff_all + client_audits_tenant_read) ensures zero
@@ -423,18 +437,27 @@ Deno.serve(async (req) => {
 
   // 5. Daily cap check.
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count: draftsToday, error: capErr } = await admin
+  const { data: oldestRecentDraft, count: draftsToday, error: capErr } = await admin
     .from('client_audit_log' as any)
-    .select('id', { count: 'exact', head: true })
+    .select('created_at', { count: 'exact' })
     .eq('actor_user_id', callerUserId)
     .eq('action', 'ai.finding_drafted')
-    .gte('created_at', since);
+    .gte('created_at', since)
+    .order('created_at', { ascending: true })
+    .limit(1);
   if (capErr) {
     console.error('Cap check failed', capErr.message);
   } else if ((draftsToday ?? 0) >= DAILY_CAP) {
-    const hours = 24;
+    const oldestCreatedAt = (oldestRecentDraft?.[0] as { created_at?: string } | undefined)?.created_at;
+    const nextAvailableAt = oldestCreatedAt
+      ? new Date(new Date(oldestCreatedAt).getTime() + 24 * 60 * 60 * 1000).toISOString()
+      : null;
     return json(
-      { error: `Daily AI draft limit reached. Resets in ${hours} hours.`, cap: DAILY_CAP },
+      {
+        error: 'Daily AI draft limit reached. Drafts become available as earlier drafts pass 24 hours.',
+        cap: DAILY_CAP,
+        next_available_at: nextAvailableAt,
+      },
       429,
     );
   }
@@ -490,7 +513,7 @@ Deno.serve(async (req) => {
   };
 
   // 7. Retrieve corpus chunks via the existing retrieve-srto-context function.
-  const retrievalQuery = [ctx.audit_statement, auditorNote ?? '', ctx.existing_notes ?? '']
+  const retrievalQuery = [ctx.audit_statement, auditorNoteForPrompt ?? '', ctx.existing_notes ?? '']
     .map((s) => s.trim())
     .filter(Boolean)
     .join(' ')
@@ -543,7 +566,7 @@ Deno.serve(async (req) => {
   async function callModel(extraSystem?: string): Promise<{ raw: any; usage: any }> {
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT + (extraSystem ? `\n\n${extraSystem}` : '') },
-      { role: 'user', content: buildUserPrompt(ctx, auditorNote, chunks) },
+      { role: 'user', content: buildUserPrompt(ctx, auditorNoteForPrompt, chunks) },
     ];
     const res = await fetch(GATEWAY_URL, {
       method: 'POST',
