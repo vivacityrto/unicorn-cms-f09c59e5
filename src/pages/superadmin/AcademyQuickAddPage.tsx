@@ -274,7 +274,10 @@ export default function AcademyQuickAddPage() {
         "academy-fetch-vimeo-transcript",
         { body: { vimeo_url: vimeoUrl.trim() } },
       );
-      if (vErr) throw new Error(await extractEdgeError(vErr, "Couldn't read that Vimeo video"));
+      if (vErr)
+        throw new Error(
+          humaniseVimeoError(await extractEdgeError(vErr, "Couldn't read that Vimeo video")),
+        );
 
 
       const resolvedTitle = (episodeTitle.trim() || vimeo?.title || "").trim();
