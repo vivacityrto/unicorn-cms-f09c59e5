@@ -693,6 +693,9 @@ export type Database = {
       }
       academy_courses: {
         Row: {
+          ai_generated: boolean
+          ai_reviewed_at: string | null
+          ai_reviewed_by: string | null
           archived_at: string | null
           available_to_all_clients: boolean
           certificate_enabled: boolean | null
@@ -706,9 +709,13 @@ export type Database = {
           pass_score: number | null
           published_at: string | null
           published_by: string | null
+          segment_end_seconds: number | null
+          segment_start_seconds: number | null
+          session_type: string
           short_description: string | null
           slug: string
           sort_order: number | null
+          source_video_id: string | null
           status: string | null
           tags: string[] | null
           target_audience: string[] | null
@@ -716,8 +723,12 @@ export type Database = {
           title: string
           trailer_video_id: string | null
           updated_at: string | null
+          webinar_series: string | null
         }
         Insert: {
+          ai_generated?: boolean
+          ai_reviewed_at?: string | null
+          ai_reviewed_by?: string | null
           archived_at?: string | null
           available_to_all_clients?: boolean
           certificate_enabled?: boolean | null
@@ -731,9 +742,13 @@ export type Database = {
           pass_score?: number | null
           published_at?: string | null
           published_by?: string | null
+          segment_end_seconds?: number | null
+          segment_start_seconds?: number | null
+          session_type?: string
           short_description?: string | null
           slug: string
           sort_order?: number | null
+          source_video_id?: string | null
           status?: string | null
           tags?: string[] | null
           target_audience?: string[] | null
@@ -741,8 +756,12 @@ export type Database = {
           title: string
           trailer_video_id?: string | null
           updated_at?: string | null
+          webinar_series?: string | null
         }
         Update: {
+          ai_generated?: boolean
+          ai_reviewed_at?: string | null
+          ai_reviewed_by?: string | null
           archived_at?: string | null
           available_to_all_clients?: boolean
           certificate_enabled?: boolean | null
@@ -756,9 +775,13 @@ export type Database = {
           pass_score?: number | null
           published_at?: string | null
           published_by?: string | null
+          segment_end_seconds?: number | null
+          segment_start_seconds?: number | null
+          session_type?: string
           short_description?: string | null
           slug?: string
           sort_order?: number | null
+          source_video_id?: string | null
           status?: string | null
           tags?: string[] | null
           target_audience?: string[] | null
@@ -766,8 +789,16 @@ export type Database = {
           title?: string
           trailer_video_id?: string | null
           updated_at?: string | null
+          webinar_series?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "academy_courses_source_video_id_fkey"
+            columns: ["source_video_id"]
+            isOneToOne: false
+            referencedRelation: "training_videos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "academy_courses_trailer_video_id_fkey"
             columns: ["trailer_video_id"]

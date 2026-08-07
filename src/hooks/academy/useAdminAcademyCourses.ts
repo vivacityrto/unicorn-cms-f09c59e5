@@ -145,12 +145,21 @@ export function usePublishCourse() {
   return useMutation({
     mutationFn: async (id: number) => {
       const { data: { user } } = await supabase.auth.getUser();
+      const { data: course } = await supabase
+        .from("academy_courses")
+        .select("ai_generated")
+        .eq("id", id)
+        .maybeSingle();
       const { error } = await supabase
         .from("academy_courses")
         .update({
           status: "published",
           published_at: new Date().toISOString(),
           published_by: user?.id ?? null,
+          // AI-drafted courses are human-reviewed at the moment a staff member publishes
+          ...((course as any)?.ai_generated
+            ? { ai_reviewed_by: user?.id ?? null, ai_reviewed_at: new Date().toISOString() }
+            : {}),
         } as any)
         .eq("id", id);
       if (error) throw error;

@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2,
+  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
@@ -150,6 +150,11 @@ export default function AcademyBuilderLibrary() {
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
               Backfill Video Durations
+            </Button>
+          )}
+          {canCreateCourse && (
+            <Button variant="outline" onClick={() => navigate("/superadmin/academy/quick-add")}>
+              <Sparkles className="h-4 w-4 mr-2" /> Quick Add Recording
             </Button>
           )}
           {canCreateCourse && (
