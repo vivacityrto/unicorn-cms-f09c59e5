@@ -80,6 +80,45 @@ function normaliseOptions(raw: any): QuizOption[] {
   }));
 }
 
+/** Returns an error message when the pasted Vimeo URL cannot be resolved, else null. */
+function validateVimeoUrl(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return "That doesn't look like a valid URL. Paste the full Vimeo link, e.g. https://vimeo.com/1215370924";
+  }
+  if (!/(^|\.)vimeo\.com$/.test(url.hostname)) {
+    return "Only Vimeo links are supported.";
+  }
+  if (/^\/share\//.test(url.pathname)) {
+    return "That's a private Vimeo “share” link, which we can't read. Open the video in Vimeo and copy the link from the address bar (e.g. https://vimeo.com/1215370924).";
+  }
+  if (!/\d{6,}/.test(url.pathname)) {
+    return "Couldn't find a video ID in that link. Use the video's Vimeo page URL, e.g. https://vimeo.com/1215370924";
+  }
+  return null;
+}
+
+/** Pull the real message out of a Supabase Functions error instead of "non-2xx status code". */
+async function extractEdgeError(err: any, fallback: string): Promise<string> {
+  const res = err?.context;
+  if (res && typeof res.clone === "function") {
+    try {
+      const body = await res.clone().json();
+      const msg = body?.error || body?.message || body?.reason;
+      if (msg) return String(msg);
+    } catch {
+      try {
+        const text = await res.clone().text();
+        if (text?.trim()) return text.trim().slice(0, 500);
+      } catch { /* ignore */ }
+    }
+  }
+  return err?.message || fallback;
+}
+
+
 export default function AcademyQuickAddPage() {
   const navigate = useNavigate();
 
