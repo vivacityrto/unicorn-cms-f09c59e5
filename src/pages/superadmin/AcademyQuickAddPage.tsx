@@ -130,12 +130,15 @@ function validateVimeoUrl(raw: string): string | null {
   if (!/(^|\.)vimeo\.com$/.test(url.hostname)) {
     return "Only Vimeo links are supported.";
   }
+  // Share links (vimeo.com/share/xxxx) and Manage links (vimeo.com/manage/videos/123)
+  // are resolved server-side, so only reject links with neither shape.
   if (/^\/share\//.test(url.pathname)) {
-    return "That's a private Vimeo “share” link, which we can't read. Open the video in Vimeo and copy the link from the address bar (e.g. https://vimeo.com/1215370924).";
+    return null;
   }
   if (!/\d{6,}/.test(url.pathname)) {
     return "Couldn't find a video ID in that link. Use the video's Vimeo page URL, e.g. https://vimeo.com/1215370924";
   }
+
   return null;
 }
 
