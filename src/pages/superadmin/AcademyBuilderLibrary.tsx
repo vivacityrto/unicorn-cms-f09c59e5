@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAdminAcademyCourses, useCreateCourse } from "@/hooks/academy/useAdminAcademyCourses";
+import { useAdminAcademyCourses, useCreateCourse, useDeleteCourse, usePermanentDeleteCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
