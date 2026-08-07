@@ -1287,7 +1287,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
         .is('parent_instance_id', null)
         .order('start_date', { ascending: false });
 
-      const packageIds = [...new Set((instances || []).map((p: any) => p.package_id))];
+      const packageIds = [...new Set((instances || []).map((p: any) => Number(p.package_id)))] as number[];
       const { data: pkgs } = packageIds.length > 0
         ? await supabase.from('packages').select('id, name').in('id', packageIds)
         : { data: [] };
