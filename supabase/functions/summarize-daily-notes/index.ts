@@ -1,14 +1,18 @@
 // Summarise a user's daily notes across a Day / Week / Month period.
 // - Verifies caller JWT in-code (verify_jwt=false in config).
 // - Best-effort in-process daily cap per user.
-// - Calls Lovable AI Gateway; returns { headline, summary, open_count }.
+// - Calls Anthropic Sonnet through the shared server-side client; returns
+//   { headline, summary, open_count }.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import {
+  callAnthropic,
+  CLAUDE_SONNET_MODEL,
+  extractText,
+} from '../_shared/anthropic-client.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-
 const DAILY_CAP = 20;
 const MAX_DIGEST_BYTES = 60 * 1024;
 
@@ -53,10 +57,6 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  if (!LOVABLE_API_KEY) {
-    return json({ error: 'LOVABLE_API_KEY is not configured.' }, 500);
-  }
-
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return json({ error: 'Unauthorized' }, 401);
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
   }
   const callerId = claimsData.claims.sub as string;
 
-  let body: any;
+  let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
 
   const userId = String(body?.user_id ?? '');
@@ -114,42 +114,26 @@ Deno.serve(async (req) => {
     digest,
   ].join('\n');
 
-  let upstream: Response;
+  let content: string;
   try {
-    upstream = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        response_format: { type: 'json_object' },
-      }),
+    const response = await callAnthropic({
+      model: CLAUDE_SONNET_MODEL,
+      system,
+      messages: [{ role: 'user', content: user }],
+      max_tokens: 1400,
+      temperature: 0.2,
     });
+
+    content = extractText(response);
   } catch (e) {
-    console.error('AI gateway fetch failed', (e as Error).message);
-    return json({ error: 'AI gateway unavailable' }, 502);
+    const message = e instanceof Error ? e.message : String(e);
+    console.error('Anthropic summary request failed', message.slice(0, 500));
+    if (/\b(429|529)\b/.test(message)) {
+      return json({ error: 'Anthropic rate limit reached. Please try again shortly.' }, 429);
+    }
+    return json({ error: 'Anthropic summary service unavailable.' }, 502);
   }
 
-  if (upstream.status === 429) {
-    return json({ error: 'AI gateway rate limit exceeded. Please try again shortly.' }, 429);
-  }
-  if (upstream.status === 402) {
-    return json({ error: 'AI credits exhausted. Please contact your workspace admin.' }, 402);
-  }
-  if (!upstream.ok) {
-    const text = await upstream.text().catch(() => '');
-    console.error('AI gateway error', upstream.status, text.slice(0, 500));
-    return json({ error: `AI gateway error (${upstream.status})` }, 502);
-  }
-
-  const payload = await upstream.json();
-  const content: string = payload?.choices?.[0]?.message?.content ?? '';
   const parsed = extractJson(content);
   if (!parsed || typeof parsed !== 'object') {
     return json({ error: 'AI returned an invalid response' }, 502);

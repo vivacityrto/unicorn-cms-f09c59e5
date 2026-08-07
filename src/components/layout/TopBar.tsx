@@ -244,6 +244,7 @@ function DailyNotesButton() {
             size="icon"
             className={UTILITY_BUTTON_CLASS}
             onClick={() => setOpen(prev => !prev)}
+            aria-label="Open Daily Notes"
           >
             <NotebookPen className="h-4 w-4" />
           </Button>
