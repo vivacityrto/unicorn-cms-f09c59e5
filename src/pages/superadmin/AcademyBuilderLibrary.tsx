@@ -51,6 +51,7 @@ export default function AcademyBuilderLibrary() {
   const [newTitle, setNewTitle] = useState("");
   const [backfillConfirmOpen, setBackfillConfirmOpen] = useState(false);
   const [backfillRunning, setBackfillRunning] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminCourse | null>(null);
   const qc = useQueryClient();
 
   // ── RBAC gates ──
@@ -63,6 +64,8 @@ export default function AcademyBuilderLibrary() {
   });
 
   const createCourse = useCreateCourse();
+  const archiveCourse = useDeleteCourse();
+  const deleteCourse = usePermanentDeleteCourse();
 
   const runBackfill = async () => {
     setBackfillRunning(true);
