@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Loader2, Search, Play, FileText, Paperclip } from "lucide-react";
+import { Loader2, Search, Play, FileText, Paperclip, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
