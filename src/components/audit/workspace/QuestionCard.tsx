@@ -9,6 +9,8 @@ import {
   HelpCircle,
   Flag,
   ChevronDown,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -37,6 +39,16 @@ import { useAuditFindings } from '@/hooks/useAuditWorkspace';
 import { EvidencePanel } from './EvidencePanel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface QuestionCardProps {
   question: TemplateQuestion;
@@ -70,6 +82,8 @@ export function QuestionCard({
   const ctx = questionContext || question.question_context || 'auditor_assessment';
   const [showFindingForm, setShowFindingForm] = useState(false);
   const [showLinkedFindings, setShowLinkedFindings] = useState(false);
+  const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
+  const [findingToDelete, setFindingToDelete] = useState<AuditFinding | null>(null);
   const [pulse, setPulse] = useState(false);
   const previousRatingRef = useRef<string | null | undefined>(response?.rating);
   const { value: notes, setValue: setNotes, bind: notesBind } = useDebouncedAutosave({
@@ -80,7 +94,7 @@ export function QuestionCard({
   });
 
   // Fetch findings for this audit if not supplied (cached by react-query, so no extra fetch).
-  const { data: fetchedFindings } = useAuditFindings(findingsProp ? undefined : auditId);
+  const { data: fetchedFindings, updateFinding, deleteFinding } = useAuditFindings(auditId);
   const findings = findingsProp ?? fetchedFindings;
 
   // Lookup the audit's subject_tenant_id once for the EvidencePanel linker.
@@ -517,34 +531,120 @@ export function QuestionCard({
               Findings linked to this response
             </p>
             {responseFindings.map((finding) => (
-              <div key={finding.id} className="space-y-1.5 rounded-md border bg-background p-3 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  {finding.finding_code && (
-                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono font-bold">
-                      {finding.finding_code}
-                    </span>
+              editingFindingId === finding.id ? (
+                <AddFindingForm
+                  key={finding.id}
+                  auditId={auditId}
+                  mode="edit"
+                  initialValues={{
+                    summary: finding.summary,
+                    detail: finding.detail,
+                    standard_reference: finding.standard_reference,
+                    regulatory_reference: finding.regulatory_reference,
+                    finding_code: finding.finding_code,
+                    impact: finding.impact,
+                    priority: finding.priority,
+                  }}
+                  onSave={(updates) => {
+                    updateFinding.mutate(
+                      { id: finding.id, ...updates },
+                      {
+                        onSuccess: () => setEditingFindingId(null),
+                        onError: (error) => toast.error(`Could not update finding: ${error.message}`),
+                      },
+                    );
+                  }}
+                  onCancel={() => setEditingFindingId(null)}
+                />
+              ) : (
+                <div key={finding.id} className="space-y-1.5 rounded-md border bg-background p-3 text-xs">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-1 flex-wrap items-center gap-2">
+                      {finding.finding_code && (
+                        <span className="rounded bg-muted px-1.5 py-0.5 font-mono font-bold">
+                          {finding.finding_code}
+                        </span>
+                      )}
+                      <span className="rounded-full border px-2 py-0.5 capitalize text-muted-foreground">
+                        {finding.priority}
+                      </span>
+                      <span className="font-medium">{finding.summary}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setEditingFindingId(finding.id)}
+                        title={`Edit ${finding.finding_code ?? 'finding'}`}
+                        aria-label={`Edit ${finding.finding_code ?? 'finding'}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => setFindingToDelete(finding)}
+                        title={`Delete ${finding.finding_code ?? 'finding'}`}
+                        aria-label={`Delete ${finding.finding_code ?? 'finding'}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  {finding.regulatory_reference && (
+                    <p className="text-muted-foreground">
+                      <span className="font-medium text-foreground">Regulatory reference:</span>{' '}
+                      {finding.regulatory_reference}
+                    </p>
                   )}
-                  <span className="rounded-full border px-2 py-0.5 capitalize text-muted-foreground">
-                    {finding.priority}
-                  </span>
-                  <span className="font-medium">{finding.summary}</span>
+                  {finding.detail && <p className="whitespace-pre-wrap text-muted-foreground">{finding.detail}</p>}
+                  {finding.impact && (
+                    <p className="whitespace-pre-wrap text-muted-foreground">
+                      <span className="font-medium text-foreground">Impact:</span> {finding.impact}
+                    </p>
+                  )}
                 </div>
-                {finding.regulatory_reference && (
-                  <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Regulatory reference:</span>{' '}
-                    {finding.regulatory_reference}
-                  </p>
-                )}
-                {finding.detail && <p className="whitespace-pre-wrap text-muted-foreground">{finding.detail}</p>}
-                {finding.impact && (
-                  <p className="whitespace-pre-wrap text-muted-foreground">
-                    <span className="font-medium text-foreground">Impact:</span> {finding.impact}
-                  </p>
-                )}
-              </div>
+              )
             ))}
           </div>
         )}
+
+        <AlertDialog open={!!findingToDelete} onOpenChange={(open) => !open && setFindingToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete finding?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {findingToDelete?.finding_code ? `${findingToDelete.finding_code}: ` : ''}
+                {findingToDelete?.summary}
+                <span className="mt-2 block">This action cannot be undone.</span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteFinding.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteFinding.isPending || !findingToDelete}
+                onClick={(event) => {
+                  event.preventDefault();
+                  if (!findingToDelete) return;
+                  deleteFinding.mutate(findingToDelete.id, {
+                    onSuccess: () => {
+                      if (editingFindingId === findingToDelete.id) setEditingFindingId(null);
+                      setFindingToDelete(null);
+                    },
+                    onError: (error) => toast.error(`Could not delete finding: ${error.message}`),
+                  });
+                }}
+              >
+                {deleteFinding.isPending ? 'Deleting…' : 'Delete finding'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Inline finding form */}
         {showFindingForm && (
