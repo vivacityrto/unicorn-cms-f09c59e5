@@ -1,0 +1,1 @@
+ALTER FUNCTION public.relationship_role_label(p_role text) SET search_path = public, pg_temp;
