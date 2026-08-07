@@ -161,16 +161,16 @@ async function extractEdgeError(err: any, fallback: string): Promise<string> {
 }
 
 /**
- * Vimeo replies 404 for any video the Vivacity API token can't see — wrong
- * account, deleted video, or an unlisted video whose privacy hash wasn't part
- * of the pasted link. Turn that into something actionable.
+ * Vimeo replies 404 for any video the connected API token can't see — wrong
+ * account, deleted video, or a video whose privacy settings weren't passed in
+ * the link. Turn that into something actionable.
  */
 function humaniseVimeoError(msg: string): string {
   if (/404/.test(msg) && /vimeo/i.test(msg)) {
-    return "Vimeo returned 404 for that video. It's either not on the Vivacity Vimeo account, has been deleted, or it's unlisted — for unlisted videos copy the full link including the privacy hash (e.g. https://vimeo.com/1215370924/ab12cd34ef) from Vimeo's address bar.";
+    return "Vimeo returned 404 for that video. Check the video is on the connected Vimeo account, hasn't been deleted, or paste the full privacy-hash link if it's restricted.";
   }
   if (/401|403/.test(msg) && /vimeo/i.test(msg)) {
-    return "Vimeo rejected our credentials for that video. Check the video lives on the Vivacity Vimeo account.";
+    return "Vimeo rejected our credentials for that video. Check the video lives on the connected Vimeo account.";
   }
   return msg;
 }
@@ -781,20 +781,17 @@ export default function AcademyQuickAddPage() {
                 aria-describedby="vimeo-url-help"
               />
               <p id="vimeo-url-help" className="text-xs text-muted-foreground">
-                Copy this from the video's own page in Vimeo (open the video itself, not the Share
-                panel and not the Manage dashboard link). If the video's privacy is set to Unlisted
-                or Embed only, the correct link includes a privacy hash after the ID, e.g.{" "}
-                <code className="rounded bg-muted px-1 py-0.5">vimeo.com/1194261152/ab12cd34ef</code>{" "}
-                — a link without that hash will fail even though the video exists.
+                With the Vimeo API connection active, the plain video URL from the video's own page
+                works directly — e.g.{" "}
+                <code className="rounded bg-muted px-1 py-0.5">vimeo.com/1200358426</code>. Copy it
+                from the Vimeo address bar while viewing the video (not the Share panel or Manage
+                dashboard link).
               </p>
               <p className="text-xs text-muted-foreground">
-                <strong>Embed only videos:</strong> Vimeo's "Copy link" gives no hash for these. Open
-                Share → Embed → Copy embed code and paste the player URL inside it, e.g.{" "}
-                <code className="rounded bg-muted px-1 py-0.5">
-                  player.vimeo.com/video/1194261152?h=ab12cd34ef
-                </code>
-                . Domain allow-listing alone isn't enough — Academy reads the video server-side, so it
-                needs the hash.
+                If the video is on a different Vimeo account or has strict privacy settings, you may
+                still need the full link including the privacy hash, e.g.{" "}
+                <code className="rounded bg-muted px-1 py-0.5">vimeo.com/1194261152/ab12cd34ef</code>{" "}
+                or the player URL from the embed code.
               </p>
               {generateError && (
                 <Alert variant="destructive">
