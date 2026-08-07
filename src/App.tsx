@@ -1184,6 +1184,7 @@ const App = () => (
             <Route path="/superadmin/academy/tenant-access" element={<ProtectedRoute requireSuperAdmin><AcademyTenantAccessPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/certificates" element={<ProtectedRoute requireSuperAdmin><AcademyCertificatesAdminPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/builder" element={<ProtectedRoute requireSuperAdmin><AcademyBuilderLibrary /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/quick-add" element={<ProtectedRoute requireSuperAdmin><AcademyQuickAddPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/builder/:courseId" element={<ProtectedRoute requireSuperAdmin><AcademyBuilderCourse /></ProtectedRoute>} />
             <Route path="/superadmin/academy/package-course-rules" element={<ProtectedRoute requireSuperAdmin><AcademyPackageCourseRulesPage /></ProtectedRoute>} />
             {/* Academy Routes */}
