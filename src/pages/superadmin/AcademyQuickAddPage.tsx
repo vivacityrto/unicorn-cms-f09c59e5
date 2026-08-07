@@ -765,6 +765,15 @@ export default function AcademyQuickAddPage() {
                 <code className="rounded bg-muted px-1 py-0.5">vimeo.com/1194261152/ab12cd34ef</code>{" "}
                 — a link without that hash will fail even though the video exists.
               </p>
+              <p className="text-xs text-muted-foreground">
+                <strong>Embed only videos:</strong> Vimeo's "Copy link" gives no hash for these. Open
+                Share → Embed → Copy embed code and paste the player URL inside it, e.g.{" "}
+                <code className="rounded bg-muted px-1 py-0.5">
+                  player.vimeo.com/video/1194261152?h=ab12cd34ef
+                </code>
+                . Domain allow-listing alone isn't enough — Academy reads the video server-side, so it
+                needs the hash.
+              </p>
               {generateError && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
