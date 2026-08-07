@@ -90,7 +90,7 @@ export interface ActionItem {
 // Timeline Hook
 // =============================================
 
-const EVENT_TYPE_FILTERS: Record<string, string[]> = {
+export const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   all: [],
   meetings: ['meeting_synced', 'meeting_attendance_imported', 'meeting_artifacts_captured', 'minutes_draft_created', 'minutes_draft_updated', 'minutes_published_pdf'],
   time: ['time_posted', 'time_ignored', 'time_reallocated'],

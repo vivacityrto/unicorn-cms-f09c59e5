@@ -1,0 +1,19 @@
+-- Enables Supabase Realtime for client_timeline_events, needed for a new
+-- portfolio-wide "Client Activity" dashboard widget/page to update live via
+-- postgres_changes rather than only on manual refresh.
+--
+-- Confirmed live that this table was NOT previously in the supabase_realtime
+-- publication (only public.user_notifications was). Several existing hooks
+-- (e.g. src/hooks/useRiskCommandCentre.ts, subscribing to
+-- real_time_risk_alerts) already call supabase.channel(...).on('postgres_changes', ...)
+-- against tables that were never added to this publication, so those
+-- subscriptions silently never fire — a pre-existing latent bug elsewhere in
+-- the codebase, not something introduced or fixed here. This migration only
+-- adds client_timeline_events so the *new* portfolio widget's subscription
+-- actually works; it does not touch any other table's publication membership.
+--
+-- No RLS change: Realtime respects the table's existing RLS policies for
+-- postgres_changes delivery, so this only makes already-SELECT-visible rows
+-- (per client_timeline_events_vivacity_select, staff-role-gated, portfolio-
+-- wide since 20260710000744) push live instead of requiring a refetch.
+ALTER PUBLICATION supabase_realtime ADD TABLE public.client_timeline_events;

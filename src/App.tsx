@@ -177,6 +177,7 @@ const KnowledgeExplorer = lazy(() => import("./pages/KnowledgeExplorer"));
  const StrategicCommandCentre = lazy(() => import("./pages/StrategicCommandCentre"));
  const WorkflowOptimisation = lazy(() => import("./pages/WorkflowOptimisation"));
  const RiskCommandCentre = lazy(() => import("./pages/RiskCommandCentre"));
+ const ClientActivityFeed = lazy(() => import("./pages/ClientActivityFeed"));
  const StrategicOrchestrationDashboard = lazy(() => import("./pages/StrategicOrchestrationDashboard"));
 const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
 const LifecycleChecklistsAdmin = lazy(() => import("./pages/admin/LifecycleChecklistsAdmin"));
@@ -1162,6 +1163,7 @@ const App = () => (
             <Route path="/admin/strategic-command" element={<ProtectedRoute requireSuperAdmin><StrategicCommandCentre /></ProtectedRoute>} />
             <Route path="/admin/workflow-optimisation" element={<ProtectedRoute requireSuperAdmin><WorkflowOptimisation /></ProtectedRoute>} />
             <Route path="/admin/risk-command" element={<ProtectedRoute requireSuperAdmin><RiskCommandCentre /></ProtectedRoute>} />
+            <Route path="/client-activity" element={<ProtectedRoute><ClientActivityFeed /></ProtectedRoute>} />
             <Route path="/admin/strategic-orchestration" element={<ProtectedRoute requireSuperAdmin><StrategicOrchestrationDashboard /></ProtectedRoute>} />
             <Route path="/admin/code-tables" element={<ProtectedRoute requireSuperAdmin><CodeTablesAdmin /></ProtectedRoute>} />
             <Route path="/admin/lifecycle-checklists" element={<ProtectedRoute requireSuperAdmin><LifecycleChecklistsAdmin /></ProtectedRoute>} />

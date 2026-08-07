@@ -28,7 +28,7 @@ import {
   CalendarClock,
   TrendingUp,
   Trophy,
-  ChevronRight,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,6 +41,9 @@ import { defaultPeriod } from "@/components/kpi-v2/types";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow, format } from "date-fns";
 import { clientAvatarColor, clientInitials } from "@/lib/clientAvatarColor";
+import { usePortfolioTimeline } from "@/hooks/usePortfolioTimeline";
+import { EVENT_ICON_MAP, EVENT_COLOR_MAP } from "@/components/client/TimelineEventCard";
+import type { TimelineEventType } from "@/types/timeline";
 
 /* ------------------------------ helpers ------------------------------ */
 
@@ -287,6 +290,64 @@ function QuickActionTile({
   );
 }
 
+/* ------------------------------ Client activity (portfolio timeline) ------------------------------ */
+
+function ClientActivityPanel({ className, limit = 8 }: { className?: string; limit?: number }) {
+  const navigate = useNavigate();
+  const { events, isLoading } = usePortfolioTimeline({ limit });
+
+  return (
+    <Panel
+      title="Client Activity"
+      icon={Activity}
+      footerHref="/client-activity"
+      className={className}
+      bodyClassName="overflow-y-auto"
+    >
+      {isLoading && events.length === 0 ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="h-4 w-4 animate-spin text-primary/40" />
+        </div>
+      ) : events.length === 0 ? (
+        <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+          <Activity className="h-6 w-6 text-primary/25" />
+          <div className="text-sm text-muted-foreground">No client activity yet.</div>
+        </div>
+      ) : (
+        <ul className="divide-y divide-border -my-1">
+          {events.map((e) => {
+            const eventKey = e.event_type as TimelineEventType;
+            const Icon = EVENT_ICON_MAP[eventKey] ?? Activity;
+            const colorClass = EVENT_COLOR_MAP[eventKey] ?? "bg-muted text-muted-foreground";
+            return (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/tenant/${e.tenant_id}?tab=timeline`)}
+                  className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
+                >
+                  <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${colorClass}`}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm font-medium text-foreground truncate">{e.tenant_name}</div>
+                      <span className="text-[11px] text-muted-foreground shrink-0">
+                        {formatDistanceToNow(new Date(e.occurred_at || e.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">{e.title}</div>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
 /* ============================= Main ============================= */
 
 export default function MainDashboard() {
@@ -321,7 +382,11 @@ export default function MainDashboard() {
   // Client messages
   const [clientMsgs, setClientMsgs] = useState<any[]>([]);
   // Client health
-  const [health, setHealth] = useState<{ healthy: number; monitoring: number; at_risk: number; critical: number } | null>(null);
+  type HealthCounts = { healthy: number; monitoring: number; at_risk: number; critical: number };
+  const [healthMine, setHealthMine] = useState<HealthCounts | null>(null);
+  const [healthPortfolio, setHealthPortfolio] = useState<HealthCounts | null>(null);
+  const [hasMineAssignments, setHasMineAssignments] = useState(false);
+  const [healthScope, setHealthScope] = useState<"mine" | "portfolio">("mine");
   // Upcoming calendar
   const [upcoming, setUpcoming] = useState<any[]>([]);
 
@@ -337,7 +402,19 @@ export default function MainDashboard() {
     const today = todayIsoLocal();
     const sb = supabase as any;
 
-    // Clients + health donut (single view)
+    // Clients + health donut. Fetches both "my assigned clients" and
+    // portfolio-wide counts up front so the Mine/Portfolio toggle switches
+    // instantly with no refetch. Defaults to "mine" when the signed-in user
+    // has assignments (CSCs), otherwise "portfolio" (devs, admins, etc. who
+    // would otherwise see an empty "No client data" state).
+    const tallyHealth = (rows: any[]): HealthCounts => {
+      const counts: HealthCounts = { healthy: 0, monitoring: 0, at_risk: 0, critical: 0 };
+      rows.forEach((r: any) => {
+        const k = (r.worst_stage_health_status ?? "").toLowerCase();
+        if (k in counts) (counts as any)[k]++;
+      });
+      return counts;
+    };
     (async () => {
       const { data } = await sb
         .from("v_dashboard_attention_ranked")
@@ -346,12 +423,26 @@ export default function MainDashboard() {
         .eq("tenant_status", "active");
       const rows = data ?? [];
       setClientCount(rows.length);
-      const counts = { healthy: 0, monitoring: 0, at_risk: 0, critical: 0 };
-      rows.forEach((r: any) => {
-        const k = (r.worst_stage_health_status ?? "").toLowerCase();
-        if (k in counts) (counts as any)[k]++;
-      });
-      setHealth(counts);
+      setHealthMine(tallyHealth(rows));
+      setHasMineAssignments(rows.length > 0);
+      setHealthScope(rows.length > 0 ? "mine" : "portfolio");
+
+      // Portfolio-wide counts go through a SECURITY DEFINER RPC rather than a
+      // plain select: under RLS, a tenant-unfiltered query re-evaluates the
+      // tenants access policy (plus several expensive joins) once per row,
+      // which times out for non-trivial portfolios. The RPC computes the
+      // aggregate server-side, bypassing that per-row cost entirely.
+      const { data: portfolioResult, error: portfolioError } = await sb.rpc("rpc_portfolio_client_health");
+      if (portfolioError) {
+        console.error("rpc_portfolio_client_health failed:", portfolioError);
+      } else if (portfolioResult) {
+        setHealthPortfolio({
+          healthy: portfolioResult.healthy ?? 0,
+          monitoring: portfolioResult.monitoring ?? 0,
+          at_risk: portfolioResult.at_risk ?? 0,
+          critical: portfolioResult.critical ?? 0,
+        });
+      }
     })();
 
     // Tasks union
@@ -518,7 +609,7 @@ export default function MainDashboard() {
         .select("id, title, body, target_mode, total_recipients, sent_at")
         .eq("status", "sent")
         .order("sent_at", { ascending: false })
-        .limit(4);
+        .limit(3);
       setBroadcasts(data ?? []);
     })();
 
@@ -596,7 +687,7 @@ export default function MainDashboard() {
       (byUser.data ?? []).forEach(consider);
       const sorted = Array.from(merged.values())
         .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
-        .slice(0, 4);
+        .slice(0, 8);
       setUpcoming(sorted);
     })();
   }, [isStaff, userUuid, kpiRole, refreshTick, period, profile?.email]);
@@ -674,6 +765,7 @@ export default function MainDashboard() {
 
   const today = todayIsoLocal();
 
+  const health = healthScope === "mine" ? healthMine : healthPortfolio;
   const healthDonutData = health
     ? [
         { label: "Excellent", value: health.healthy, color: "#4CAF50" },
@@ -809,10 +901,65 @@ export default function MainDashboard() {
         </div>
 
         {/* 3-column panel grid */}
-        <div className="grid gap-3 grid-cols-1 lg:[grid-template-columns:minmax(0,36fr)_minmax(0,40fr)_minmax(0,24fr)]">
-          {/* — Left column — */}
+        <div className="grid gap-3 grid-cols-1 lg:[grid-template-columns:minmax(0,34fr)_minmax(0,30fr)_minmax(0,36fr)] items-stretch">
+          {/* — Left column: Client Activity, the sole long panel — */}
           <div className="flex flex-col gap-3 min-w-0">
-            <Panel title="Recent Client Broadcasts" icon={Megaphone} footerHref="/communications">
+            <ClientActivityPanel className="flex-1" limit={18} />
+          </div>
+
+          {/* — Centre column: Client Messages atop Recent Client Broadcasts — */}
+          <div className="flex flex-col gap-3 min-w-0">
+            <Panel
+              title="Client Messages"
+              icon={MessageSquare}
+              footerHref="/communications"
+            >
+              {clientMsgs.length === 0 ? (
+                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+                  <MessageSquare className="h-6 w-6 text-primary/25" />
+                  <div className="text-sm text-muted-foreground">No client messages.</div>
+                </div>
+              ) : (
+                <ul className="divide-y divide-border -my-1">
+                  {clientMsgs.map((m) => {
+                    const av = clientAvatarColor(m.tenant_id);
+                    return (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/communications?thread=${m.id}`)}
+                          className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
+                        >
+                          <div
+                            className={`h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${av.solid}`}
+                          >
+                            {clientInitials(m.tenant_name)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
+                              <span className="text-[11px] text-muted-foreground shrink-0">
+                                {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                            {m.subject && (
+                              <div className="text-[11px] text-muted-foreground/80 truncate mt-0.5">{m.subject}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Panel>
+
+            <Panel
+              title="Recent Client Broadcasts"
+              icon={Megaphone}
+              footerHref="/communications"
+            >
               {broadcasts.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
                   <Megaphone className="h-6 w-6 text-primary/25" />
@@ -836,6 +983,167 @@ export default function MainDashboard() {
                     </li>
                   ))}
                 </ul>
+              )}
+            </Panel>
+
+            <Panel
+              title="Rocks (Quarterly Priorities)"
+              icon={Target}
+              footerHref="/eos/rocks"
+            >
+              {!rocks || rocks.list.length === 0 ? (
+                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+                  <Target className="h-6 w-6 text-primary/25" />
+                  <div className="text-sm text-muted-foreground">No active rocks.</div>
+                </div>
+              ) : (
+                <ul className="space-y-1.5 pr-1">
+                  {rocks.list.slice(0, 5).map((r: any) => {
+                    const s = (r.status ?? "").toLowerCase().replace(/\s+/g, "_");
+                    // Brand compliance-state tokens (index.css --state-*) instead of
+                    // generic Material Design colors — on_track=compliant(purple),
+                    // at_risk=review(macaron), off_track=risk(fuchsia),
+                    // done/complete=info(aqua), unknown=draft(light purple).
+                    const stateVar =
+                      s === "on_track"
+                        ? "--state-compliant"
+                        : s === "at_risk"
+                        ? "--state-review"
+                        : s === "off_track"
+                        ? "--state-risk"
+                        : s === "done" || s === "complete"
+                        ? "--state-info"
+                        : "--state-draft";
+                    const badgeColor = `hsl(var(${stateVar}))`;
+                    const badgeTint = `hsl(var(${stateVar}) / 0.14)`;
+                    const label = (r.status ?? "unknown").replace(/_/g, " ");
+                    const pct =
+                      typeof r.completion_percentage === "number"
+                        ? Math.max(0, Math.min(100, r.completion_percentage))
+                        : s === "done" || s === "complete"
+                        ? 100
+                        : s === "on_track"
+                        ? 60
+                        : s === "at_risk"
+                        ? 40
+                        : s === "off_track"
+                        ? 20
+                        : 0;
+                    return (
+                      <li key={r.id} className="py-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-foreground flex-1 truncate">{r.title}</span>
+                          <span
+                            className="text-[10px] font-medium px-1.5 py-0.5 rounded capitalize shrink-0"
+                            style={{ backgroundColor: badgeTint, color: badgeColor }}
+                          >
+                            {label}
+                          </span>
+                        </div>
+                        <div className="mt-1 h-1 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pct}%`, backgroundColor: badgeColor }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Panel>
+          </div>
+
+          {/* — Right column: Client Health, Quick Actions, KPI, Tasks, Upcoming Calendar — */}
+          <div className="flex flex-col gap-3 min-w-0">
+            <Panel
+              title="Client Health"
+              icon={HeartPulse}
+              footerHref="/manage-tenants"
+              actions={
+                hasMineAssignments ? (
+                  <div className="flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
+                    <button
+                      type="button"
+                      onClick={() => setHealthScope("mine")}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                        healthScope === "mine"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Mine
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHealthScope("portfolio")}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                        healthScope === "portfolio"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Portfolio
+                    </button>
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
+                    Portfolio
+                  </Badge>
+                )
+              }
+            >
+              <ClientHealthDonut data={healthDonutData} />
+            </Panel>
+
+            <Panel title="Quick Actions" icon={Zap}>
+              <div className="grid grid-cols-3 gap-1.5">
+                <QuickActionTile
+                  icon={UserPlus}
+                  label="Add Client"
+                  onClick={() => navigate("/manage-tenants")}
+                />
+                <QuickActionTile
+                  icon={ClipboardList}
+                  label="New Task"
+                  onClick={() => navigate('/tasks?new=1')}
+                />
+                <QuickActionTile
+                  icon={CalendarPlus}
+                  label="Calendar"
+                  onClick={() => navigate('/calendar')}
+                />
+                <QuickActionTile
+                  icon={Upload}
+                  label="Upload"
+                  onClick={() => {
+                    toast({
+                      title: "Open a client to upload",
+                      description: "Documents are scoped to a client. Pick one from Manage Clients.",
+                    });
+                    navigate("/manage-tenants");
+                  }}
+                />
+                <QuickActionTile
+                  icon={Ticket}
+                  label="Ticket"
+                  onClick={() => setTicketOpen(true)}
+                />
+                <QuickActionTile
+                  icon={MessageSquare}
+                  label="Message"
+                  onClick={() => navigate("/communications")}
+                />
+              </div>
+            </Panel>
+
+            <Panel title="KPI Dashboard" icon={Gauge} footerHref="/kpi" bodyClassName="!py-2">
+              {userUuid && (kpiRole === "csc_consultant" || kpiRole === "cst_assistant" || kpiRole === "developer") ? (
+                <MiniKpiSummary subjectUuid={userUuid} period={period} role={kpiRole as any} />
+              ) : (
+                <div className="text-sm text-muted-foreground py-4 text-center">
+                  No KPI configured.
+                </div>
               )}
             </Panel>
 
@@ -901,83 +1209,44 @@ export default function MainDashboard() {
               })()}
             </Panel>
 
-            <Panel title="Quick Actions" icon={Zap}>
-              <div className="grid grid-cols-3 gap-1.5">
-                <QuickActionTile
-                  icon={UserPlus}
-                  label="Add Client"
-                  onClick={() => navigate("/manage-tenants")}
-                />
-                <QuickActionTile
-                  icon={ClipboardList}
-                  label="New Task"
-                  onClick={() => navigate('/tasks?new=1')}
-                />
-                <QuickActionTile
-                  icon={CalendarPlus}
-                  label="Calendar"
-                  onClick={() => navigate('/calendar')}
-                />
-                <QuickActionTile
-                  icon={Upload}
-                  label="Upload"
-                  onClick={() => {
-                    toast({
-                      title: "Open a client to upload",
-                      description: "Documents are scoped to a client. Pick one from Manage Clients.",
-                    });
-                    navigate("/manage-tenants");
-                  }}
-                />
-                <QuickActionTile
-                  icon={Ticket}
-                  label="Ticket"
-                  onClick={() => setTicketOpen(true)}
-                />
-                <QuickActionTile
-                  icon={MessageSquare}
-                  label="Message"
-                  onClick={() => navigate("/communications")}
-                />
-              </div>
-            </Panel>
-          </div>
-
-          {/* — Centre column — */}
-          <div className="flex flex-col gap-3 min-w-0">
-            <Panel title="Client Messages" icon={MessageSquare} footerHref="/communications">
-              {clientMsgs.length === 0 ? (
+            <Panel
+              title="Upcoming Calendar"
+              icon={CalendarClock}
+              footerHref="/calendar"
+            >
+              {upcoming.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-                  <MessageSquare className="h-6 w-6 text-primary/25" />
-                  <div className="text-sm text-muted-foreground">No client messages.</div>
+                  <CalendarClock className="h-6 w-6 text-primary/25" />
+                  <div className="text-sm text-muted-foreground">No upcoming events.</div>
                 </div>
               ) : (
                 <ul className="divide-y divide-border -my-1">
-                  {clientMsgs.map((m) => {
-                    const av = clientAvatarColor(m.tenant_id);
+                  {upcoming.slice(0, 5).map((ev) => {
+                    const start = new Date(ev.start_at);
+                    const end = ev.end_at ? new Date(ev.end_at) : null;
                     return (
-                      <li key={m.id}>
+                      <li key={ev.id}>
                         <button
                           type="button"
-                          onClick={() => navigate(`/communications?thread=${m.id}`)}
-                          className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
+                          onClick={() => navigate("/calendar")}
+                          className="w-full py-2 flex items-center gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
                         >
-                          <div
-                            className={`h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${av.solid}`}
-                          >
-                            {clientInitials(m.tenant_name)}
+                          <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 min-w-[40px] shrink-0">
+                            <div className="text-[9px] uppercase tracking-wide text-muted-foreground">
+                              {format(start, "MMM")}
+                            </div>
+                            <div className="text-sm font-semibold leading-none text-foreground">
+                              {format(start, "d")}
+                            </div>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
-                              <span className="text-[11px] text-muted-foreground shrink-0">
-                                {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                              </span>
+                            <div className="text-sm font-medium text-foreground truncate">
+                              {ev.title || "(no title)"}
                             </div>
-                            {m.subject && (
-                              <div className="text-[11px] text-muted-foreground/80 truncate mt-0.5">{m.subject}</div>
-                            )}
-                            <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5">
+                              {format(start, "EEE, h:mm a")}
+                              {end ? ` – ${format(end, "h:mm a")}` : ""}
+                            </div>
                           </div>
                         </button>
                       </li>
@@ -986,146 +1255,8 @@ export default function MainDashboard() {
                 </ul>
               )}
             </Panel>
-
-            <Panel title="Rocks (Quarterly Priorities)" icon={Target} footerHref="/eos/rocks">
-              {!rocks || rocks.list.length === 0 ? (
-                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-                  <Target className="h-6 w-6 text-primary/25" />
-                  <div className="text-sm text-muted-foreground">No active rocks.</div>
-                </div>
-              ) : (
-                <ul className="space-y-1.5 max-h-[380px] overflow-auto pr-1">
-                  {rocks.list.slice(0, 8).map((r: any) => {
-                    const s = (r.status ?? "").toLowerCase().replace(/\s+/g, "_");
-                    // Brand compliance-state tokens (index.css --state-*) instead of
-                    // generic Material Design colors — on_track=compliant(purple),
-                    // at_risk=review(macaron), off_track=risk(fuchsia),
-                    // done/complete=info(aqua), unknown=draft(light purple).
-                    const stateVar =
-                      s === "on_track"
-                        ? "--state-compliant"
-                        : s === "at_risk"
-                        ? "--state-review"
-                        : s === "off_track"
-                        ? "--state-risk"
-                        : s === "done" || s === "complete"
-                        ? "--state-info"
-                        : "--state-draft";
-                    const badgeColor = `hsl(var(${stateVar}))`;
-                    const badgeTint = `hsl(var(${stateVar}) / 0.14)`;
-                    const label = (r.status ?? "unknown").replace(/_/g, " ");
-                    const pct =
-                      typeof r.completion_percentage === "number"
-                        ? Math.max(0, Math.min(100, r.completion_percentage))
-                        : s === "done" || s === "complete"
-                        ? 100
-                        : s === "on_track"
-                        ? 60
-                        : s === "at_risk"
-                        ? 40
-                        : s === "off_track"
-                        ? 20
-                        : 0;
-                    return (
-                      <li key={r.id} className="py-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-foreground flex-1 truncate">{r.title}</span>
-                          <span
-                            className="text-[10px] font-medium px-1.5 py-0.5 rounded capitalize shrink-0"
-                            style={{ backgroundColor: badgeTint, color: badgeColor }}
-                          >
-                            {label}
-                          </span>
-                        </div>
-                        <div className="mt-1 h-1 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all"
-                            style={{ width: `${pct}%`, backgroundColor: badgeColor }}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </Panel>
-          </div>
-
-          {/* — Right column — */}
-          <div className="flex flex-col gap-3 min-w-0">
-            <Panel title="Client Health" icon={HeartPulse} footerHref="/manage-tenants">
-              <ClientHealthDonut data={healthDonutData} />
-            </Panel>
-
-            <Panel title="KPI Dashboard" icon={Gauge} footerHref="/kpi" bodyClassName="!py-2">
-              {userUuid && (kpiRole === "csc_consultant" || kpiRole === "cst_assistant" || kpiRole === "developer") ? (
-                <MiniKpiSummary subjectUuid={userUuid} period={period} role={kpiRole as any} />
-              ) : (
-                <div className="text-sm text-muted-foreground py-4 text-center">
-                  No KPI configured.
-                </div>
-              )}
-            </Panel>
-
           </div>
         </div>
-
-        {/* Upcoming Calendar (full-width) */}
-        <Panel title="Upcoming Calendar" icon={CalendarClock} footerHref="/calendar">
-          {upcoming.length === 0 ? (
-            <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-              <CalendarClock className="h-6 w-6 text-primary/25" />
-              <div className="text-sm text-muted-foreground">No upcoming events.</div>
-            </div>
-          ) : (
-            <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1">
-              {upcoming.map((ev) => {
-                const start = new Date(ev.start_at);
-                const end = ev.end_at ? new Date(ev.end_at) : null;
-                return (
-                  <button
-                    key={ev.id}
-                    onClick={() => navigate("/calendar")}
-                    className="relative overflow-hidden shrink-0 w-[260px] text-left rounded-lg border border-border bg-card hover:bg-[#23C0DD]/5 hover:border-[#23C0DD]/40 transition-colors p-3 pl-4 flex gap-3"
-                  >
-                    <span
-                      aria-hidden
-                      className="absolute inset-y-0 left-0 w-1"
-                      style={{ backgroundColor: "#23C0DD" }}
-                    />
-                    <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 min-w-[44px]">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {format(start, "MMM")}
-                      </div>
-                      <div className="text-lg font-semibold leading-none text-foreground">
-                        {format(start, "d")}
-                      </div>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-foreground truncate">
-                        {ev.title || "(no title)"}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {format(start, "h:mm a")}
-                        {end ? ` – ${format(end, "h:mm a")}` : ""}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">
-                        {format(start, "EEE")}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => navigate("/calendar")}
-                className="shrink-0 w-[160px] rounded-lg border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors p-3 flex flex-col items-center justify-center gap-1"
-              >
-                <ChevronRight className="h-4 w-4" />
-                <span className="text-xs font-medium">See full week</span>
-              </button>
-            </div>
-          )}
-        </Panel>
       </div>
 
 
