@@ -1,6 +1,6 @@
 import { useState, KeyboardEvent } from 'react';
 import { format } from 'date-fns';
-import { Pencil, Trash2, Check, Plus } from 'lucide-react';
+import { Pencil, Trash2, Check, Plus, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,9 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
   };
 
   const bodyHtml = note.body ? sanitizeNoteHtml(note.body) : '';
+  const completedItems = note.items.filter((item) => item.done).length;
+  const visibleItems = note.items.slice(0, 4);
+  const hiddenItemCount = Math.max(0, note.items.length - visibleItems.length);
 
   const handleCardClick = (e: React.MouseEvent<HTMLElement>) => {
     const target = e.target as HTMLElement;
@@ -48,11 +51,13 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
     <article
       onClick={handleCardClick}
       className={cn(
-        'group bg-card border border-border rounded-[var(--radius)] p-4 cursor-pointer',
-        'shadow-elevated hover:shadow-elevated-hover transition-shadow duration-200 ease-smooth motion-reduce:transition-none',
+        'group bg-card border border-border/80 rounded-xl cursor-pointer overflow-hidden',
+        'shadow-sm hover:shadow-elevated hover:border-brand-purple-500/30',
+        'transition-[box-shadow,border-color,transform] duration-200 ease-smooth motion-reduce:transition-none',
+        'hover:-translate-y-0.5 motion-reduce:hover:translate-y-0',
       )}
     >
-      <header className="flex items-start justify-between gap-2 mb-2">
+      <header className="flex items-start justify-between gap-2 px-4 pt-4 pb-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', swatch.dot)} aria-hidden />
           <div className="min-w-0">
@@ -75,7 +80,7 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-0.5 opacity-70 group-hover:opacity-100 transition-opacity motion-reduce:transition-none">
+        <div className="flex items-center gap-0.5 opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition-opacity motion-reduce:transition-none">
           <Button
             type="button"
             variant="ghost"
@@ -102,15 +107,32 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
       </header>
 
       {bodyHtml && (
-        <div
-          className="prose prose-sm max-w-none mb-2 text-[14px] text-foreground [&_a]:text-brand-aqua-600 [&_a]:underline"
-          dangerouslySetInnerHTML={{ __html: bodyHtml }}
-        />
+        <div className="relative px-4 pb-3">
+          <div
+            className={cn(
+              'prose prose-sm max-w-none text-[13px] leading-5 text-foreground/85',
+              '[&_a]:text-brand-aqua-600 [&_a]:underline [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5',
+              'max-h-36 overflow-hidden',
+            )}
+            dangerouslySetInnerHTML={{ __html: bodyHtml }}
+          />
+          <div className="pointer-events-none absolute inset-x-4 bottom-3 h-10 bg-gradient-to-t from-card to-transparent" />
+        </div>
       )}
 
       {note.items.length > 0 && (
-        <ul className="space-y-1.5 mb-2">
-          {note.items.map((item) => (
+        <div className="border-t border-border/60 bg-muted/20 px-4 py-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <ListChecks className="h-3.5 w-3.5" />
+              Checklist
+            </span>
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {completedItems}/{note.items.length} done
+            </span>
+          </div>
+          <ul className="space-y-1.5">
+          {visibleItems.map((item) => (
             <li key={item.id} className="flex items-start gap-2">
               <button
                 type="button"
@@ -138,10 +160,20 @@ export function NoteCard({ note, userId, onEdit, showDateChip }: Props) {
               </span>
             </li>
           ))}
-        </ul>
+          </ul>
+          {hiddenItemCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              className="mt-2 text-xs font-medium text-brand-aqua-700 hover:text-brand-aqua-800"
+            >
+              +{hiddenItemCount} more item{hiddenItemCount === 1 ? '' : 's'}
+            </button>
+          )}
+        </div>
       )}
 
-      <div className="flex items-center gap-2 pt-1">
+      <div className="flex items-center gap-2 border-t border-border/60 px-4 py-3">
         <Input
           value={newItem}
           onChange={(e) => setNewItem(e.target.value)}

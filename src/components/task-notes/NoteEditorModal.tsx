@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { cn } from '@/lib/utils';
-import { Trash2, Plus, X, Maximize2, Minimize2, Sparkles, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, X, Maximize2, Minimize2, Sparkles, Loader2, ChevronDown, ChevronRight, NotebookPen } from 'lucide-react';
 import { COLOR_SWATCH, ChecklistItem, DailyNote, NoteColor, newItemId } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -138,21 +138,29 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
         <DialogOverlay />
         <DialogPrimitive.Content
           className={cn(
-            'fixed z-50 bg-background shadow-lg duration-200',
+            'fixed z-50 overflow-hidden border border-border/70 bg-background shadow-2xl duration-200',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             expanded
-              ? 'inset-4 rounded-lg flex flex-col'
-              : 'left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[92vw] max-w-[720px] max-h-[90vh] rounded-lg flex flex-col',
+              ? 'inset-4 rounded-2xl flex flex-col'
+              : 'left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[92vw] max-w-[760px] max-h-[92vh] rounded-2xl flex flex-col',
           )}
         >
           {/* Header */}
-          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b shrink-0">
-            <div>
-              <h2 className="text-xl font-bold text-primary">
-                {mode === 'edit' ? 'Edit Note' : 'Create Note'}
-              </h2>
-              <p className="text-xs text-brand-fuchsia-600 mt-0.5 font-medium">{dateLabel}</p>
+          <div className="flex shrink-0 items-start justify-between border-b bg-gradient-to-r from-brand-purple-500/[0.08] via-background to-brand-aqua-500/[0.08] px-6 pb-4 pt-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-purple-600 to-brand-fuchsia-600 text-white shadow-sm">
+                <NotebookPen className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-fuchsia-600">
+                  {mode === 'edit' ? 'Update your note' : 'Capture something new'}
+                </div>
+                <h2 className="text-xl font-bold text-foreground">
+                  {mode === 'edit' ? 'Edit note' : 'Create note'}
+                </h2>
+                <p className="mt-0.5 text-xs font-medium text-muted-foreground">{dateLabel}</p>
+              </div>
             </div>
             <div className="flex items-center gap-1">
               <Button
@@ -175,9 +183,9 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
           </div>
 
           {/* Body */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="flex-1 min-h-0 space-y-5 overflow-y-auto bg-muted/10 px-6 py-5">
             {/* Title */}
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-2 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
               <Input
                 value={title}
                 onChange={(e) => { setTitle(e.target.value); setTitleEdited(true); }}
@@ -203,7 +211,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
             </div>
 
             {/* Label / color */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-sm">
               <span className="text-[11px] font-bold tracking-wider text-primary uppercase">Label</span>
               <div className="flex items-center gap-2">
                 {COLOR_ORDER.map((c) => (
@@ -226,7 +234,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
             </div>
 
             {/* Rich body */}
-            <div>
+            <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
               <div className="flex items-center justify-between mb-1.5">
                 <button
                   type="button"
@@ -264,7 +272,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
             </div>
 
             {/* Checklist */}
-            <div>
+            <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
               <span className="text-[11px] font-bold tracking-wider text-primary uppercase">Checklist</span>
               <ul className="mt-2 space-y-0.5">
                 {items.map((it) => (
@@ -333,7 +341,9 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t bg-muted/30 shrink-0">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t bg-background px-6 py-4">
+            <p className="hidden text-xs text-muted-foreground sm:block">Changes are private to your account.</p>
+            <div className="flex items-center gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -345,6 +355,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
             >
               Save Note
             </Button>
+            </div>
           </div>
         </DialogPrimitive.Content>
       </DialogPortal>
