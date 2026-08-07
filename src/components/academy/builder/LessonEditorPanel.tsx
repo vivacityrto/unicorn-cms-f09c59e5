@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Loader2, Search, Play, FileText, Paperclip } from "lucide-react";
+import { Loader2, Search, Play, FileText, Paperclip, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -37,6 +37,10 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
   const [contentMarkdown, setContentMarkdown] = useState(lesson?.content_markdown ?? "");
   const [videoSearch, setVideoSearch] = useState("");
   const [resourceSearch, setResourceSearch] = useState("");
+  const [videoSource, setVideoSource] = useState<"link" | "library">(lesson?.video_id ? "library" : "link");
+  const [vimeoUrl, setVimeoUrl] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
+
 
   const { data: videos = [], isLoading: videosLoading } = useVideoLibraryPicker(videoSearch || undefined);
   const { data: resources = [], isLoading: resourcesLoading } = useResourceLibraryPicker(resourceSearch || undefined);
@@ -44,13 +48,95 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
   const createLesson = useCreateLesson();
   const updateLesson = useUpdateLesson();
 
+  /** Resolve (or create) a training_videos row for a pasted Vimeo link. */
+  const resolveVimeoVideoId = async (url: string, userId: string | null) => {
+    const cleanUrl = url.trim();
+    const { data: existing, error: lookupErr } = await supabase
+      .from("training_videos")
+      .select("id")
+      .eq("vimeo_url", cleanUrl)
+      .maybeSingle();
+    if (lookupErr) throw lookupErr;
+    if (existing?.id) return existing.id as string;
+
+    // Best-effort metadata from Vimeo oEmbed (public/embeddable videos)
+    let durationSeconds: number | null = null;
+    let thumbnail: string | null = null;
+    let oembedTitle: string | null = null;
+    try {
+      const res = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(cleanUrl)}`);
+      if (res.ok) {
+        const j = await res.json();
+        durationSeconds = typeof j.duration === "number" ? j.duration : null;
+        thumbnail = j.thumbnail_url ?? null;
+        oembedTitle = j.title ?? null;
+      }
+    } catch { /* metadata is optional */ }
+
+    const folderName = "Course Lesson Videos";
+    const { data: existingFolder, error: fLookupErr } = await supabase
+      .from("training_folders")
+      .select("id")
+      .eq("folder_name", folderName)
+      .maybeSingle();
+    if (fLookupErr) throw fLookupErr;
+
+    let folderId = existingFolder?.id as string | undefined;
+    if (!folderId) {
+      const { data: newFolder, error: fInsErr } = await supabase
+        .from("training_folders")
+        .insert({ folder_name: folderName } as any)
+        .select("id")
+        .single();
+      if (fInsErr) throw fInsErr;
+      folderId = newFolder.id as string;
+    }
+
+    const { data: newVideo, error: vInsErr } = await supabase
+      .from("training_videos")
+      .insert({
+        folder_id: folderId,
+        folder_name: folderName,
+        video_name: (oembedTitle || title).trim(),
+        vimeo_url: cleanUrl,
+        duration_seconds: durationSeconds,
+        thumbnail,
+        added_by: userId,
+      } as any)
+      .select("id")
+      .single();
+    if (vInsErr) throw vInsErr;
+    return newVideo.id as string;
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       toast.error("Title is required");
       return;
     }
 
+    setLinkError(null);
     const { data: { user } } = await supabase.auth.getUser();
+
+    let resolvedVideoId = videoId;
+    if (lessonType === "video" && videoSource === "link") {
+      const url = vimeoUrl.trim();
+      if (!url) {
+        setLinkError("Paste a Vimeo link for this lesson, or switch to the video library.");
+        return;
+      }
+      if (!/vimeo\.com\//i.test(url)) {
+        setLinkError("That doesn't look like a Vimeo link (expected vimeo.com/...).");
+        return;
+      }
+      try {
+        resolvedVideoId = await resolveVimeoVideoId(url, user?.id ?? null);
+      } catch (e: any) {
+        setLinkError(e?.message || "Could not save that Vimeo link.");
+        return;
+      }
+    }
+
     const payload: Record<string, any> = {
       title: title.trim(),
       description: description || null,
@@ -58,11 +144,12 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
       estimated_minutes: estimatedMinutes || null,
       is_preview: isPreview,
       is_published: isPublished,
-      video_id: lessonType === "video" ? videoId : null,
+      video_id: lessonType === "video" ? resolvedVideoId : null,
       resource_id: lessonType === "resource" ? resourceId : null,
       content_markdown: lessonType === "text" ? contentMarkdown : null,
       completion_threshold: lessonType === "video" ? completionThreshold : null,
     };
+
 
     if (isNew) {
       // Get next sort_order
@@ -175,39 +262,75 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
             <Switch checked={isPublished} onCheckedChange={setIsPublished} />
           </div>
 
-          {/* Video Picker */}
+          {/* Video */}
           {lessonType === "video" && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Video</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search videos..."
-                  value={videoSearch}
-                  onChange={(e) => setVideoSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <div className="max-h-48 overflow-y-auto border rounded-lg divide-y" style={{ borderColor: "hsl(var(--border))" }}>
-                {videosLoading ? (
-                  <div className="flex items-center justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
-                ) : videos.length === 0 ? (
-                  <p className="text-xs text-muted-foreground p-3">No videos found</p>
-                ) : videos.map((v: any) => (
+
+              <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: "hsl(var(--border))" }}>
+                {([
+                  { value: "link" as const, label: "Paste Vimeo link", icon: <LinkIcon className="h-3.5 w-3.5" /> },
+                  { value: "library" as const, label: "From library", icon: <Search className="h-3.5 w-3.5" /> },
+                ]).map((opt) => (
                   <button
-                    key={v.id}
-                    onClick={() => setVideoId(v.id)}
-                    className={`w-full text-left p-3 text-sm flex items-center gap-3 hover:bg-muted/50 transition-colors ${videoId === v.id ? "bg-primary/5 border-l-2 border-l-primary" : ""}`}
+                    key={opt.value}
+                    onClick={() => { setVideoSource(opt.value); setLinkError(null); }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium transition-colors ${
+                      videoSource === opt.value ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50"
+                    }`}
                   >
-                    {v.thumbnail && <img src={v.thumbnail} className="h-8 w-12 rounded object-cover" alt="" />}
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate font-medium text-foreground">{v.video_name}</p>
-                      {v.folder_name && <p className="text-xs text-muted-foreground">{v.folder_name}</p>}
-                    </div>
-                    {videoId === v.id && <span className="text-primary text-xs font-medium">Selected</span>}
+                    {opt.icon} {opt.label}
                   </button>
                 ))}
               </div>
+
+              {videoSource === "link" ? (
+                <div className="space-y-1">
+                  <Input
+                    placeholder="https://vimeo.com/1194261152"
+                    value={vimeoUrl}
+                    onChange={(e) => { setVimeoUrl(e.target.value); setLinkError(null); }}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Paste the Vimeo link for this lesson. If the video is private or unlisted, include its privacy hash
+                    (e.g. <code>vimeo.com/1194261152/abc123def</code>). We'll add it to the video library automatically.
+                  </p>
+                  {linkError && <p className="text-[11px] text-destructive">{linkError}</p>}
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search videos..."
+                      value={videoSearch}
+                      onChange={(e) => setVideoSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="max-h-48 overflow-y-auto border rounded-lg divide-y" style={{ borderColor: "hsl(var(--border))" }}>
+                    {videosLoading ? (
+                      <div className="flex items-center justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
+                    ) : videos.length === 0 ? (
+                      <p className="text-xs text-muted-foreground p-3">No videos found</p>
+                    ) : videos.map((v: any) => (
+                      <button
+                        key={v.id}
+                        onClick={() => setVideoId(v.id)}
+                        className={`w-full text-left p-3 text-sm flex items-center gap-3 hover:bg-muted/50 transition-colors ${videoId === v.id ? "bg-primary/5 border-l-2 border-l-primary" : ""}`}
+                      >
+                        {v.thumbnail && <img src={v.thumbnail} className="h-8 w-12 rounded object-cover" alt="" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium text-foreground">{v.video_name}</p>
+                          {v.folder_name && <p className="text-xs text-muted-foreground">{v.folder_name}</p>}
+                        </div>
+                        {videoId === v.id && <span className="text-primary text-xs font-medium">Selected</span>}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Completion Threshold: {completionThreshold}%</label>
