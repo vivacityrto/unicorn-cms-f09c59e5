@@ -4005,6 +4005,10 @@ export type Database = {
           ask_viv_assistant_daily_token_cap: number
           ask_viv_assistant_enabled: boolean
           ask_viv_assistant_unlimited_user_ids: string[]
+          ask_viv_client_assistant_all_tenants: boolean
+          ask_viv_client_assistant_beta_tenant_ids: number[]
+          ask_viv_client_assistant_daily_token_cap: number
+          ask_viv_client_assistant_enabled: boolean
           ask_viv_floating_launcher_enabled: boolean
           ask_viv_llm_generation_all_staff: boolean
           ask_viv_llm_generation_beta_user_ids: string[]
@@ -4047,6 +4051,10 @@ export type Database = {
           ask_viv_assistant_daily_token_cap?: number
           ask_viv_assistant_enabled?: boolean
           ask_viv_assistant_unlimited_user_ids?: string[]
+          ask_viv_client_assistant_all_tenants?: boolean
+          ask_viv_client_assistant_beta_tenant_ids?: number[]
+          ask_viv_client_assistant_daily_token_cap?: number
+          ask_viv_client_assistant_enabled?: boolean
           ask_viv_floating_launcher_enabled?: boolean
           ask_viv_llm_generation_all_staff?: boolean
           ask_viv_llm_generation_beta_user_ids?: string[]
@@ -4089,6 +4097,10 @@ export type Database = {
           ask_viv_assistant_daily_token_cap?: number
           ask_viv_assistant_enabled?: boolean
           ask_viv_assistant_unlimited_user_ids?: string[]
+          ask_viv_client_assistant_all_tenants?: boolean
+          ask_viv_client_assistant_beta_tenant_ids?: number[]
+          ask_viv_client_assistant_daily_token_cap?: number
+          ask_viv_client_assistant_enabled?: boolean
           ask_viv_floating_launcher_enabled?: boolean
           ask_viv_llm_generation_all_staff?: boolean
           ask_viv_llm_generation_beta_user_ids?: string[]
@@ -4149,6 +4161,232 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      ask_viv_client_assistant_usage: {
+        Row: {
+          id: string
+          input_tokens: number
+          output_tokens: number
+          request_count: number
+          updated_at: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          input_tokens?: number
+          output_tokens?: number
+          request_count?: number
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          input_tokens?: number
+          output_tokens?: number
+          request_count?: number
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ask_viv_client_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          tenant_id: number
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tenant_id: number
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tenant_id?: number
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ask_viv_client_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      ask_viv_client_turns: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+          tool_calls_summary: Json | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+          tool_calls_summary?: Json | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          tool_calls_summary?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ask_viv_client_turns_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ask_viv_client_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ask_viv_conversations: {
         Row: {
@@ -69668,6 +69906,18 @@ export type Database = {
       }
     }
     Functions: {
+      _apply_relationship_role_row: {
+        Args: {
+          p_changed_by?: string
+          p_emit_timeline?: boolean
+          p_override_old_role?: string
+          p_reason?: string
+          p_relationship_role: string
+          p_tenant_id: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       accept_ai_suggestion: {
         Args: { p_suggestion_id: string }
         Returns: string
@@ -71691,6 +71941,7 @@ export type Database = {
         Args: { p_document_id: number; p_reason?: string; p_user_id?: string }
         Returns: Json
       }
+      relationship_role_label: { Args: { p_role: string }; Returns: string }
       release_audit_report: {
         Args: {
           p_audit_id: string
@@ -72045,6 +72296,7 @@ export type Database = {
         Returns: Json
       }
       rpc_match_clickup_to_rto_membership: { Args: never; Returns: Json }
+      rpc_portfolio_client_health: { Args: never; Returns: Json }
       rpc_post_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_publish_stage_tasks: {
         Args: { p_stage_instance_id: number }

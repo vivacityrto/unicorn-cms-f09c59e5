@@ -83,14 +83,17 @@ const setDefaultStageMap = (map: Record<string, string>): void => {
 // guessing wrong is worse than leaving it for the user to pick.
 const deriveCategoryFromFilename = (
   fileName: string,
-  categoryOptions: { id: string; name: string }[],
+  categoryOptions: { id: string | number; name: string }[],
 ): string | null => {
   const match = fileName.match(/^([A-Za-z0-9]+)[.\-_]/);
   if (!match) return null;
   const code = match[1].toLowerCase();
-  const matches = categoryOptions.filter((c) => c.id.split(/[-_]/)[0].toLowerCase() === code);
-  return matches.length === 1 ? matches[0].id : null;
+  const matches = categoryOptions.filter(
+    (c) => String(c.id).split(/[-_]/)[0].toLowerCase() === code,
+  );
+  return matches.length === 1 ? String(matches[0].id) : null;
 };
+
 
 // Derives Framework Type from the top-level SharePoint folder the selected
 // file lives under (e.g. a file under Root/RTO/... implies framework "RTO").
@@ -893,7 +896,7 @@ export default function ManageDocuments() {
       ? null
       : deriveCategoryFromFilename(file.name, categories);
     const matchedCategory =
-      folderMatchedCategory || categories.find((c) => c.id === filenameMatchedCategoryId);
+      folderMatchedCategory || categories.find((c) => String(c.id) === filenameMatchedCategoryId);
 
     const matchedFrameworkValue = deriveFrameworkFromRootFolder(rootFolderName, frameworks || []);
     const matchedFramework = (frameworks || []).find((f: any) => f.value === matchedFrameworkValue);
