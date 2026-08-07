@@ -112,7 +112,7 @@ export default function AcademyDashboardPage() {
         className="rounded-xl px-6 py-5 text-white"
         style={{ background: "var(--viv-grad-hero)" }}
       >
-        <h2 className="text-3xl font-bold text-white leading-tight">
+        <h2 className="text-3xl font-bold text-white leading-tight" style={{ color: '#ffffff' }}>
           {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
         </h2>
         <p className="text-sm text-white/85 mt-1.5">
