@@ -695,14 +695,35 @@ export default function AcademyQuickAddPage() {
 
       let videoId = existingVideo?.id as string | undefined;
       if (!videoId) {
+        // folder_id is required — resolve (or create) the folder for this series
+        const folderName = (series || "").trim() || "Quick Add Recordings";
+        const { data: existingFolder, error: fLookupErr } = await supabase
+          .from("training_folders")
+          .select("id")
+          .eq("folder_name", folderName)
+          .maybeSingle();
+        if (fLookupErr) throw fLookupErr;
+
+        let folderId = existingFolder?.id as string | undefined;
+        if (!folderId) {
+          const { data: newFolder, error: fInsErr } = await supabase
+            .from("training_folders")
+            .insert({ folder_name: folderName } as any)
+            .select("id")
+            .single();
+          if (fInsErr) throw fInsErr;
+          folderId = newFolder.id as string;
+        }
+
         const { data: newVideo, error: vInsErr } = await supabase
           .from("training_videos")
           .insert({
+            folder_id: folderId,
             video_name: (episodeTitle.trim() || specs[0].title).trim(),
             vimeo_url: cleanUrl,
             duration_seconds: durationSeconds,
             thumbnail: thumbnailUrl,
-            folder_name: series || null,
+            folder_name: folderName,
             added_by: userId,
           } as any)
           .select("id")
@@ -710,6 +731,7 @@ export default function AcademyQuickAddPage() {
         if (vInsErr) throw vInsErr;
         videoId = newVideo.id as string;
       }
+
 
       const createdIds: number[] = [];
       for (const spec of specs) {
