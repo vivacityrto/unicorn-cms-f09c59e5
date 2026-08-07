@@ -896,7 +896,7 @@ export default function ManageDocuments() {
       ? null
       : deriveCategoryFromFilename(file.name, categories);
     const matchedCategory =
-      folderMatchedCategory || categories.find((c) => c.id === filenameMatchedCategoryId);
+      folderMatchedCategory || categories.find((c) => String(c.id) === filenameMatchedCategoryId);
 
     const matchedFrameworkValue = deriveFrameworkFromRootFolder(rootFolderName, frameworks || []);
     const matchedFramework = (frameworks || []).find((f: any) => f.value === matchedFrameworkValue);
