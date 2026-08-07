@@ -181,6 +181,7 @@ export default function AcademyQuickAddPage() {
 
   // Step 1
   const [vimeoUrl, setVimeoUrl] = useState("");
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [series, setSeries] = useState<string>("");
   const [episodeTitle, setEpisodeTitle] = useState("");
 
@@ -267,10 +268,11 @@ export default function AcademyQuickAddPage() {
 
   // ── Step 2: Generate with AI ──
   const handleGenerate = async () => {
-    if (!vimeoUrl.trim()) { toast.error("Vimeo URL is required"); return; }
-    if (!series) { toast.error("Select a series"); return; }
+    setGenerateError(null);
+    if (!vimeoUrl.trim()) { setGenerateError("Vimeo URL is required"); return; }
+    if (!series) { setGenerateError("Select a series before generating."); return; }
     const urlProblem = validateVimeoUrl(vimeoUrl.trim());
-    if (urlProblem) { toast.error(urlProblem); return; }
+    if (urlProblem) { setGenerateError(urlProblem); return; }
     setGenerating(true);
     try {
       const { data: vimeo, error: vErr } = await supabase.functions.invoke(
@@ -362,7 +364,7 @@ export default function AcademyQuickAddPage() {
       setGenerated(true);
       toast.success("Draft content generated");
     } catch (e: any) {
-      toast.error(e?.message || "Failed to generate content");
+      setGenerateError(String(e?.message || "Failed to generate content"));
     } finally {
       setGenerating(false);
     }
@@ -753,7 +755,38 @@ export default function AcademyQuickAddPage() {
                 value={vimeoUrl}
                 onChange={(e) => setVimeoUrl(e.target.value)}
                 placeholder="https://vimeo.com/1234567890"
+                aria-invalid={!!generateError}
+                aria-describedby="vimeo-url-help"
               />
+              <p id="vimeo-url-help" className="text-xs text-muted-foreground">
+                Copy this from the video's own page in Vimeo (open the video itself, not the Share
+                panel and not the Manage dashboard link). If the video's privacy is set to Unlisted
+                or Embed only, the correct link includes a privacy hash after the ID, e.g.{" "}
+                <code className="rounded bg-muted px-1 py-0.5">vimeo.com/1194261152/ab12cd34ef</code>{" "}
+                — a link without that hash will fail even though the video exists.
+              </p>
+              {generateError && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="space-y-2">
+                    <span className="block">{generateError}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleGenerate}
+                      disabled={generating}
+                    >
+                      {generating ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-2" />
+                      )}
+                      Try again
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
