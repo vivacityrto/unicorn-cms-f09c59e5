@@ -180,6 +180,14 @@ For changes routed through a Lovable prompt specifically, read
 the prompt — it covers the phased-prompt workflow (audit → design decisions →
 implementation plan → phased implementation → dry-run → verification).
 
+## Supabase deployment workflow
+
+Deploy hosted Supabase migrations and Edge Functions through the configured
+Supabase MCP tools. Do not rely on GitHub Actions or the Supabase CLI for
+production deployment; the repository intentionally has no automatic
+Supabase deployment workflow because production migration history may contain
+MCP-applied changes that are not present in every checkout.
+
 ## Session end (commit conventions)
 
 Conventional-commits style: `fix:`, `feat:`, `hotfix:`, `chore:`, `docs:`,
