@@ -4,7 +4,9 @@
  * AI content generation for Academy Builder.
  * Actions:
  *   - generate_descriptions: Generate short_description and description for a course
+ *   - generate_classification: Infer target audience, difficulty and tags from a recording
  *   - generate_questions: Generate assessment questions from course context
+ *   - generate_workshop_segments: Split a long workshop recording into topic segments
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -14,6 +16,46 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+async function callAi(
+  apiKey: string,
+  system: string,
+  user: string,
+): Promise<{ ok: true; content: string } | { ok: false; status: number; error: string }> {
+  const response = await fetch(AI_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) return { ok: false, status: 429, error: "Rate limit exceeded, please try again later." };
+    if (response.status === 402) return { ok: false, status: 402, error: "AI credits exhausted. Please add funds." };
+    const t = await response.text();
+    console.error("AI gateway error:", response.status, t);
+    return { ok: false, status: 500, error: "AI generation failed" };
+  }
+
+  const aiResult = await response.json();
+  return { ok: true, content: aiResult.choices?.[0]?.message?.content || "" };
+}
+
+function parseJson(content: string): unknown | null {
+  try {
+    const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    return JSON.parse(cleaned);
+  } catch {
+    return null;
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -51,6 +93,113 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action } = body;
+
+    if (action === "generate_classification") {
+      const { title, transcript, webinar_series } = body;
+
+      if (!title) {
+        return new Response(
+          JSON.stringify({ error: "Title is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const ai = await callAi(
+        LOVABLE_API_KEY,
+        "You classify professional training content for Vivacity Academy, which serves Australian RTOs. You answer strictly with JSON.",
+        `Classify this recording.\n\nTitle: ${title}\nSeries: ${webinar_series || "Not specified"}\nTranscript (may be truncated):\n${String(transcript || "").slice(0, 20000)}\n\nReturn ONLY JSON, no markdown:\n{"target_audience": ["ceo","compliance_manager","trainer","administrator"], "difficulty_level": "beginner|intermediate|advanced", "tags": ["3-6 short lowercase topical tags"]}\nChoose only audiences that genuinely apply.`,
+      );
+      if (!ai.ok) {
+        return new Response(JSON.stringify({ error: ai.error }), {
+          status: ai.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const parsedCls = parseJson(ai.content) as Record<string, unknown> | null;
+      if (!parsedCls) {
+        return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify(parsedCls), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "generate_workshop_segments") {
+      const { title, transcript_timestamped, duration_seconds } = body;
+      const total = Number(duration_seconds) > 0 ? Math.floor(Number(duration_seconds)) : null;
+      const timed = String(transcript_timestamped || "").trim();
+
+      // Fallback: no timestamped transcript to reason over — split into even blocks.
+      const evenSplit = () => {
+        if (!total) return null;
+        const target = 15 * 60;
+        const count = Math.max(1, Math.min(12, Math.round(total / target) || 1));
+        const span = Math.floor(total / count);
+        return Array.from({ length: count }, (_, i) => ({
+          suggested_title: `${title || "Workshop"} — Part ${i + 1}`,
+          start_seconds: i * span,
+          end_seconds: i === count - 1 ? total : (i + 1) * span,
+          summary: "Automatic even split — no timestamped transcript was available. Please review the boundaries.",
+        }));
+      };
+
+      if (!timed) {
+        const fb = evenSplit();
+        if (!fb) {
+          return new Response(
+            JSON.stringify({ error: "No timestamped transcript or duration available to split this recording" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        return new Response(JSON.stringify({ segments: fb, used_fallback: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const ai = await callAi(
+        LOVABLE_API_KEY,
+        "You segment long workshop recordings for Australian RTO compliance training into standalone teaching topics. Each segment must be self-contained enough to be its own short course. You answer strictly with JSON.",
+        `Split this workshop recording into distinct topic segments.\n\nTitle: ${title || "Workshop"}\nTotal duration (seconds): ${total ?? "unknown"}\n\nTimestamped transcript:\n${timed.slice(0, 60000)}\n\nRules:\n- Between 2 and 10 segments.\n- Segments must be in chronological order, must not overlap, and should cover the whole recording.\n- Each segment should be at least 3 minutes long.\n- Titles are specific and learner-facing (no "Part 1").\n\nReturn ONLY JSON, no markdown:\n{"segments": [{"suggested_title": "...", "start_seconds": 0, "end_seconds": 600, "summary": "1-2 sentences on what this segment covers"}]}`,
+      );
+      if (!ai.ok) {
+        return new Response(JSON.stringify({ error: ai.error }), {
+          status: ai.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const parsedSeg = parseJson(ai.content) as { segments?: unknown[] } | null;
+      const rawSegs = Array.isArray(parsedSeg?.segments) ? parsedSeg!.segments : [];
+      const segments = rawSegs
+        .map((r) => {
+          const o = r as Record<string, unknown>;
+          return {
+            suggested_title: String(o?.suggested_title ?? "").trim(),
+            start_seconds: Math.max(0, Math.floor(Number(o?.start_seconds ?? 0))),
+            end_seconds: Math.max(0, Math.floor(Number(o?.end_seconds ?? 0))),
+            summary: String(o?.summary ?? "").trim(),
+          };
+        })
+        .filter((sg) => sg.suggested_title && sg.end_seconds > sg.start_seconds)
+        .sort((a, b) => a.start_seconds - b.start_seconds);
+
+      if (segments.length === 0) {
+        const fb = evenSplit();
+        if (!fb) {
+          return new Response(JSON.stringify({ error: "AI could not segment this recording" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ segments: fb, used_fallback: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ segments, used_fallback: false }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (action === "generate_descriptions") {
       const { title, target_audience, difficulty_level, tags } = body;
