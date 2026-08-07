@@ -278,6 +278,11 @@ export default function AcademyQuickAddPage() {
         throw new Error(
           humaniseVimeoError(await extractEdgeError(vErr, "Couldn't read that Vimeo video")),
         );
+      if (vimeo?.accessible === false) {
+        throw new Error(
+          String(vimeo?.error || "Vimeo's privacy settings block Academy from reading this video."),
+        );
+      }
 
 
       const resolvedTitle = (episodeTitle.trim() || vimeo?.title || "").trim();

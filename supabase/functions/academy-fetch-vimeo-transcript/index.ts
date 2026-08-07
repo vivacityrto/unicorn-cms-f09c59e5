@@ -192,9 +192,17 @@ Deno.serve(async (req) => {
       && !oEmbed.thumbnail_url
     ) {
       const reason = oEmbed.domain_status_code === 403
-        ? "Vimeo recognises the video, but its privacy/domain settings block Academy from reading it. In Vimeo, allow embedding on unicorn-cms.au and ensure the configured API app can access the video, then paste the full video link again."
+        ? "Vimeo recognises this video, but its privacy settings block Academy from reading or playing it. In Vimeo, give the configured API app access to the video and allow embedding on unicorn-cms.au (including www.unicorn-cms.au), then paste the full video link again."
         : "Vimeo recognises the video, but does not expose its metadata. Ensure the configured Vimeo API app can access it and include the full privacy hash for an unlisted video.";
-      return json({ error: reason }, 422);
+      // This is an external video-access state, not an Edge Function failure.
+      // Return a successful transport response so Supabase does not report a
+      // runtime error; the caller still blocks generation using `accessible`.
+      return json({
+        accessible: false,
+        error: reason,
+        video_id: location.id,
+        domain_status_code: oEmbed.domain_status_code ?? null,
+      });
     }
 
     const transcript = apiResult.metadata
@@ -205,6 +213,7 @@ Deno.serve(async (req) => {
       .sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0];
 
     return json({
+      accessible: true,
       video_id: location.id,
       title: apiResult.metadata?.name ?? oEmbed?.title ?? "",
       duration_seconds: apiResult.metadata?.duration ?? oEmbed?.duration ?? null,
