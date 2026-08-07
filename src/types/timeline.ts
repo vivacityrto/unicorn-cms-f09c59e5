@@ -65,6 +65,11 @@ export const TIMELINE_EVENT_TYPES = [
   'portal_activity_summary',
   // Tenant lifecycle status (internal-only)
   'tenant_status_changed',
+  // Invitation lifecycle
+  'invitation_sent',
+  'invitation_clicked',
+  'invitation_bounced',
+  'invitation_accepted',
 ] as const;
 
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
