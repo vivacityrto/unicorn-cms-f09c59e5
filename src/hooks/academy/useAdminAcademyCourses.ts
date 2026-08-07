@@ -140,6 +140,39 @@ export function useDeleteCourse() {
   });
 }
 
+/**
+ * Permanently delete a course (and its modules/lessons). Blocked when learners
+ * are already enrolled — archive those instead.
+ */
+export function usePermanentDeleteCourse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { count, error: countErr } = await supabase
+        .from("academy_enrollments")
+        .select("id", { count: "exact", head: true })
+        .eq("course_id", id);
+      if (countErr) throw countErr;
+      if ((count ?? 0) > 0) {
+        throw new Error(
+          `This course has ${count} enrolment(s) and cannot be deleted. Archive it instead.`,
+        );
+      }
+
+      await supabase.from("academy_lessons").delete().eq("course_id", id);
+      await supabase.from("academy_modules").delete().eq("course_id", id);
+
+      const { error } = await supabase.from("academy_courses").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Course deleted");
+      qc.invalidateQueries({ queryKey: [QUERY_KEY] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Failed to delete course"),
+  });
+}
+
 export function usePublishCourse() {
   const qc = useQueryClient();
   return useMutation({
