@@ -80,6 +80,45 @@ function normaliseOptions(raw: any): QuizOption[] {
   }));
 }
 
+/** Returns an error message when the pasted Vimeo URL cannot be resolved, else null. */
+function validateVimeoUrl(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return "That doesn't look like a valid URL. Paste the full Vimeo link, e.g. https://vimeo.com/1215370924";
+  }
+  if (!/(^|\.)vimeo\.com$/.test(url.hostname)) {
+    return "Only Vimeo links are supported.";
+  }
+  if (/^\/share\//.test(url.pathname)) {
+    return "That's a private Vimeo “share” link, which we can't read. Open the video in Vimeo and copy the link from the address bar (e.g. https://vimeo.com/1215370924).";
+  }
+  if (!/\d{6,}/.test(url.pathname)) {
+    return "Couldn't find a video ID in that link. Use the video's Vimeo page URL, e.g. https://vimeo.com/1215370924";
+  }
+  return null;
+}
+
+/** Pull the real message out of a Supabase Functions error instead of "non-2xx status code". */
+async function extractEdgeError(err: any, fallback: string): Promise<string> {
+  const res = err?.context;
+  if (res && typeof res.clone === "function") {
+    try {
+      const body = await res.clone().json();
+      const msg = body?.error || body?.message || body?.reason;
+      if (msg) return String(msg);
+    } catch {
+      try {
+        const text = await res.clone().text();
+        if (text?.trim()) return text.trim().slice(0, 500);
+      } catch { /* ignore */ }
+    }
+  }
+  return err?.message || fallback;
+}
+
+
 export default function AcademyQuickAddPage() {
   const navigate = useNavigate();
 
@@ -133,13 +172,16 @@ export default function AcademyQuickAddPage() {
   const handleGenerate = async () => {
     if (!vimeoUrl.trim()) { toast.error("Vimeo URL is required"); return; }
     if (!series) { toast.error("Select a series"); return; }
+    const urlProblem = validateVimeoUrl(vimeoUrl.trim());
+    if (urlProblem) { toast.error(urlProblem); return; }
     setGenerating(true);
     try {
       const { data: vimeo, error: vErr } = await supabase.functions.invoke(
         "academy-fetch-vimeo-transcript",
         { body: { vimeo_url: vimeoUrl.trim() } },
       );
-      if (vErr) throw vErr;
+      if (vErr) throw new Error(await extractEdgeError(vErr, "Couldn't read that Vimeo video"));
+
 
       const resolvedTitle = (episodeTitle.trim() || vimeo?.title || "").trim();
       const tx: string = vimeo?.transcript || "";
@@ -158,7 +200,7 @@ export default function AcademyQuickAddPage() {
           webinar_series: series,
         },
       });
-      if (cErr) throw cErr;
+      if (cErr) throw new Error(await extractEdgeError(cErr, "AI classification failed"));
       const audience: string[] = Array.isArray(cls?.target_audience) ? cls.target_audience : [];
       const level: string = cls?.difficulty_level || "beginner";
       const aiTags: string[] = Array.isArray(cls?.tags) ? cls.tags : [];
@@ -176,7 +218,7 @@ export default function AcademyQuickAddPage() {
           transcript: tx,
         },
       });
-      if (dErr) throw dErr;
+      if (dErr) throw new Error(await extractEdgeError(dErr, "AI description generation failed"));
       setShortDescription(desc?.short_description || "");
       setDescription(desc?.description || "");
 
@@ -202,7 +244,7 @@ export default function AcademyQuickAddPage() {
           context_text: transcript,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await extractEdgeError(error, "Failed to generate questions"));
       const raw = Array.isArray(data?.questions) ? data.questions : Array.isArray(data) ? data : [];
       setQuestions(
         raw.map((q: any, i: number) => ({
