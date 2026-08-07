@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles,
+  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
