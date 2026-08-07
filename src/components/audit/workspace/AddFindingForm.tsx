@@ -164,6 +164,7 @@ export function AddFindingForm({
   const [aiCorpusChunks, setAiCorpusChunks] = useState<CorpusChunkSummary[]>([]);
   const [capMessage, setCapMessage] = useState<string | null>(null);
   const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null);
+  const [aiWarning, setAiWarning] = useState<string | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
 
   const isEdit = mode === 'edit';
@@ -195,6 +196,7 @@ export function AddFindingForm({
     setAiStatus('drafting');
     setCapMessage(null);
     setAiErrorMessage(null);
+    setAiWarning(null);
     try {
       const { data, error } = await supabase.functions.invoke('draft-finding', {
         body: {
@@ -250,6 +252,7 @@ export function AddFindingForm({
       if (['critical', 'high', 'medium'].includes(draft.priority)) {
         setPriority(draft.priority);
       }
+      setAiWarning((data?.warning as string | null | undefined) ?? null);
       setAiStatus('drafted');
     } catch (e) {
       console.error('draft-finding invoke threw:', e);
@@ -379,6 +382,12 @@ export function AddFindingForm({
                     <Sparkles className="mr-2 h-3.5 w-3.5" /> Retry AI draft
                   </Button>
                 </AlertDescription>
+              </Alert>
+            )}
+            {aiStatus === 'drafted' && aiWarning && (
+              <Alert variant="default" className="border-amber-200 bg-amber-50">
+                <AlertCircle className="h-4 w-4 text-amber-700" />
+                <AlertDescription className="text-amber-800">{aiWarning}</AlertDescription>
               </Alert>
             )}
           </div>
