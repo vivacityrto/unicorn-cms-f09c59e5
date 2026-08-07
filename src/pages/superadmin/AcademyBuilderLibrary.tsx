@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAdminAcademyCourses, useCreateCourse } from "@/hooks/academy/useAdminAcademyCourses";
+import { useAdminAcademyCourses, useCreateCourse, useDeleteCourse, usePermanentDeleteCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
@@ -48,6 +51,7 @@ export default function AcademyBuilderLibrary() {
   const [newTitle, setNewTitle] = useState("");
   const [backfillConfirmOpen, setBackfillConfirmOpen] = useState(false);
   const [backfillRunning, setBackfillRunning] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminCourse | null>(null);
   const qc = useQueryClient();
 
   // ── RBAC gates ──
@@ -60,6 +64,8 @@ export default function AcademyBuilderLibrary() {
   });
 
   const createCourse = useCreateCourse();
+  const archiveCourse = useDeleteCourse();
+  const deleteCourse = usePermanentDeleteCourse();
 
   const runBackfill = async () => {
     setBackfillRunning(true);
@@ -219,10 +225,36 @@ export default function AcademyBuilderLibrary() {
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between">
                   <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2 min-h-9">{course.title}</h3>
-                  <Badge className={`text-[10px] shrink-0 ml-2 ${statusColors[course.status ?? "draft"]}`}>
-                    {course.status ?? "draft"}
-                  </Badge>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <Badge className={`text-[10px] ${statusColors[course.status ?? "draft"]}`}>
+                      {course.status ?? "draft"}
+                    </Badge>
+                    {canCreateCourse && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <MoreVertical className="h-3.5 w-3.5" />
+                            <span className="sr-only">Course actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          {course.status !== "archived" && (
+                            <DropdownMenuItem onSelect={() => archiveCourse.mutate(course.id)}>
+                              <Archive className="h-3.5 w-3.5 mr-2" /> Archive
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setDeleteTarget(course)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete permanently
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
+
 
                 <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                   <span className="flex items-center gap-1">
@@ -296,6 +328,32 @@ export default function AcademyBuilderLibrary() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => { void runBackfill(); }}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{deleteTarget?.title}” permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the course along with its modules and lessons. Videos stay in the library.
+              This cannot be undone. Courses with existing enrolments can only be archived.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteCourse.isPending}
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteCourse.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
+              }}
+            >
+              {deleteCourse.isPending ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
