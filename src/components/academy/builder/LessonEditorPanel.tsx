@@ -48,13 +48,95 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
   const createLesson = useCreateLesson();
   const updateLesson = useUpdateLesson();
 
+  /** Resolve (or create) a training_videos row for a pasted Vimeo link. */
+  const resolveVimeoVideoId = async (url: string, userId: string | null) => {
+    const cleanUrl = url.trim();
+    const { data: existing, error: lookupErr } = await supabase
+      .from("training_videos")
+      .select("id")
+      .eq("vimeo_url", cleanUrl)
+      .maybeSingle();
+    if (lookupErr) throw lookupErr;
+    if (existing?.id) return existing.id as string;
+
+    // Best-effort metadata from Vimeo oEmbed (public/embeddable videos)
+    let durationSeconds: number | null = null;
+    let thumbnail: string | null = null;
+    let oembedTitle: string | null = null;
+    try {
+      const res = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(cleanUrl)}`);
+      if (res.ok) {
+        const j = await res.json();
+        durationSeconds = typeof j.duration === "number" ? j.duration : null;
+        thumbnail = j.thumbnail_url ?? null;
+        oembedTitle = j.title ?? null;
+      }
+    } catch { /* metadata is optional */ }
+
+    const folderName = "Course Lesson Videos";
+    const { data: existingFolder, error: fLookupErr } = await supabase
+      .from("training_folders")
+      .select("id")
+      .eq("folder_name", folderName)
+      .maybeSingle();
+    if (fLookupErr) throw fLookupErr;
+
+    let folderId = existingFolder?.id as string | undefined;
+    if (!folderId) {
+      const { data: newFolder, error: fInsErr } = await supabase
+        .from("training_folders")
+        .insert({ folder_name: folderName } as any)
+        .select("id")
+        .single();
+      if (fInsErr) throw fInsErr;
+      folderId = newFolder.id as string;
+    }
+
+    const { data: newVideo, error: vInsErr } = await supabase
+      .from("training_videos")
+      .insert({
+        folder_id: folderId,
+        folder_name: folderName,
+        video_name: (oembedTitle || title).trim(),
+        vimeo_url: cleanUrl,
+        duration_seconds: durationSeconds,
+        thumbnail,
+        added_by: userId,
+      } as any)
+      .select("id")
+      .single();
+    if (vInsErr) throw vInsErr;
+    return newVideo.id as string;
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       toast.error("Title is required");
       return;
     }
 
+    setLinkError(null);
     const { data: { user } } = await supabase.auth.getUser();
+
+    let resolvedVideoId = videoId;
+    if (lessonType === "video" && videoSource === "link") {
+      const url = vimeoUrl.trim();
+      if (!url) {
+        setLinkError("Paste a Vimeo link for this lesson, or switch to the video library.");
+        return;
+      }
+      if (!/vimeo\.com\//i.test(url)) {
+        setLinkError("That doesn't look like a Vimeo link (expected vimeo.com/...).");
+        return;
+      }
+      try {
+        resolvedVideoId = await resolveVimeoVideoId(url, user?.id ?? null);
+      } catch (e: any) {
+        setLinkError(e?.message || "Could not save that Vimeo link.");
+        return;
+      }
+    }
+
     const payload: Record<string, any> = {
       title: title.trim(),
       description: description || null,
@@ -62,11 +144,12 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
       estimated_minutes: estimatedMinutes || null,
       is_preview: isPreview,
       is_published: isPublished,
-      video_id: lessonType === "video" ? videoId : null,
+      video_id: lessonType === "video" ? resolvedVideoId : null,
       resource_id: lessonType === "resource" ? resourceId : null,
       content_markdown: lessonType === "text" ? contentMarkdown : null,
       completion_threshold: lessonType === "video" ? completionThreshold : null,
     };
+
 
     if (isNew) {
       // Get next sort_order
