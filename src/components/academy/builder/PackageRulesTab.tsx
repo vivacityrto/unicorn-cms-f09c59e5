@@ -1,16 +1,47 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePackagesForCourseRules, useCoursePackageRules } from "@/hooks/academy/useAcademyBuilderPickers";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Package } from "lucide-react";
+import { Globe, Package } from "lucide-react";
 
 export default function PackageRulesTab({ courseId }: { courseId: number }) {
   const { data: packages = [], isLoading: pkgLoading } = usePackagesForCourseRules();
   const { data: rules = [], isLoading: rulesLoading } = useCoursePackageRules(courseId);
   const qc = useQueryClient();
+
+  const { data: course, isLoading: courseLoading } = useQuery({
+    queryKey: ["academy-course-availability", courseId],
+    enabled: !!courseId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("academy_courses")
+        .select("id, available_to_all_clients")
+        .eq("id", courseId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const availableToAll = course?.available_to_all_clients ?? false;
+
+  const availabilityMutation = useMutation({
+    mutationFn: async (enable: boolean) => {
+      const { error } = await supabase
+        .from("academy_courses")
+        .update({ available_to_all_clients: enable } as any)
+        .eq("id", courseId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["academy-course-availability", courseId] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Failed to update availability"),
+  });
+
 
   const toggleMutation = useMutation({
     mutationFn: async ({ packageId, enable }: { packageId: number; enable: boolean }) => {
