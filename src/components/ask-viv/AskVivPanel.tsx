@@ -773,16 +773,36 @@ export function AskVivPanel() {
   function draftNoteFromMessage(message: Message) {
     if (!context.tenant_id) return;
     const answerBody = isComplianceMode ? extractAnswerSection(message.content) : message.content;
-    const content = `Drafted from an Ask Viv answer — review before saving.\n\n${answerBody}`;
+    const drafted = `Drafted from an Ask Viv answer — review before saving.\n\n${answerBody}`;
+    const draftKey = `note-draft-${context.tenant_id}-new`;
+    const DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     try {
+      // Never clobber an in-progress draft: if the CSC already has a fresh
+      // "new note" draft for this tenant, append the Ask Viv answer to it and
+      // keep every other field (title, package, assignees, priority, status).
+      let existing: Record<string, unknown> | null = null;
+      try {
+        const raw = localStorage.getItem(draftKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const savedAt = typeof parsed?.savedAt === "number" ? parsed.savedAt : 0;
+          if (Date.now() - savedAt < DRAFT_MAX_AGE_MS) existing = parsed;
+        }
+      } catch {
+        existing = null;
+      }
+
+      const existingContent =
+        typeof existing?.content === "string" ? (existing.content as string).trim() : "";
+      const merged = existingContent ? `${existingContent}\n\n---\n\n${drafted}` : drafted;
+
       localStorage.setItem(
-        `note-draft-${context.tenant_id}-new`,
+        draftKey,
         JSON.stringify({
           // Left blank deliberately — NoteFormDialog's existing AI title
           // extraction (extract-note-title) generates one from `content`
           // once restored, the same as if the CSC had typed it themselves.
           title: "",
-          content,
           noteType: "general",
           priority: "normal",
           status: "noted",
@@ -790,12 +810,16 @@ export function AskVivPanel() {
           isPinned: false,
           packageInstanceId: "none",
           assignees: [],
+          ...(existing ?? {}),
+          content: merged,
           savedAt: Date.now(),
         })
       );
       toast({
-        title: "Draft ready",
-        description: "Opening Notes — click \"Add Note\" to review and save the draft.",
+        title: existingContent ? "Added to your existing draft" : "Draft ready",
+        description: existingContent
+          ? "Opening Notes — the answer was appended to the note you were already drafting."
+          : "Opening Notes — click \"Add Note\" to review and save the draft.",
       });
       navigate(`/tenant/${context.tenant_id}/notes`);
     } catch (err) {
@@ -803,6 +827,7 @@ export function AskVivPanel() {
       toast({ title: "Error", description: "Failed to prepare a note draft.", variant: "destructive" });
     }
   }
+
 
   function handleScopeChange(newScope: SelectedScope) {
     if (context.tenant_id === null) return;
