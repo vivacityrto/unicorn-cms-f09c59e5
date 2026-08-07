@@ -9,6 +9,14 @@ export interface VimeoPlayerProps {
   title?: string;
   /** Resume position in seconds (only seeks when > 5). */
   startPositionSeconds?: number;
+  /**
+   * Start of the lesson's segment within a longer recording (workshop splits).
+   * When set, playback starts here (unless a later resume position exists) and
+   * progress/completion are measured across the segment, not the whole video.
+   */
+  segmentStartSeconds?: number | null;
+  /** End of the lesson's segment within a longer recording. */
+  segmentEndSeconds?: number | null;
   /** Auto-fire onCompletionThresholdReached when percent >= this (default 90). */
   completionThreshold?: number;
   /** Fired once on first play. */
@@ -66,6 +74,8 @@ export default function VimeoPlayer({
   vimeoUrl,
   title,
   startPositionSeconds = 0,
+  segmentStartSeconds = null,
+  segmentEndSeconds = null,
   completionThreshold = 90,
   onFirstPlay,
   onProgress,
@@ -90,8 +100,14 @@ export default function VimeoPlayer({
     const player = new Player(iframeRef.current);
     playerRef.current = player;
 
-    if (startPositionSeconds > 5) {
-      player.setCurrentTime(startPositionSeconds).catch(() => {});
+    const segStart = segmentStartSeconds != null && segmentStartSeconds > 0 ? segmentStartSeconds : 0;
+    const segEnd =
+      segmentEndSeconds != null && segmentEndSeconds > segStart ? segmentEndSeconds : null;
+
+    const resumeAt =
+      startPositionSeconds > 5 && startPositionSeconds > segStart ? startPositionSeconds : segStart;
+    if (resumeAt > 0) {
+      player.setCurrentTime(resumeAt).catch(() => {});
     }
 
     let started = false;
@@ -102,8 +118,22 @@ export default function VimeoPlayer({
     };
 
     const handleTimeUpdate = (e: { seconds: number; percent: number; duration: number }) => {
-      const percentInt = Math.floor(e.percent * 100);
       const seconds = Math.floor(e.seconds);
+      let percentInt = Math.floor(e.percent * 100);
+
+      if (segEnd) {
+        const span = segEnd - segStart;
+        percentInt = Math.min(100, Math.max(0, Math.floor(((e.seconds - segStart) / span) * 100)));
+        if (e.seconds >= segEnd) {
+          player.pause().catch(() => {});
+          if (!thresholdReachedRef.current) {
+            thresholdReachedRef.current = true;
+            onCompletionThresholdReached?.();
+          }
+          onEnded?.();
+          return;
+        }
+      }
 
       const now = Date.now();
       if (onProgress && now - lastEmitRef.current >= progressThrottleMs) {
@@ -136,7 +166,7 @@ export default function VimeoPlayer({
       playerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [embedUrl]);
+  }, [embedUrl, segmentStartSeconds, segmentEndSeconds]);
 
   if (!embedUrl) {
     return (
