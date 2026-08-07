@@ -13,6 +13,41 @@ import { cn } from '@/lib/utils';
 import { PRIORITY_OPTIONS } from '@/types/auditWorkspace';
 import { supabase } from '@/integrations/supabase/client';
 
+interface FunctionErrorBody {
+  error?: string;
+  cap?: number;
+  next_available_at?: string;
+}
+
+async function readFunctionError(error: unknown): Promise<{ status: number | null; body: FunctionErrorBody | null }> {
+  const context = (error as { context?: Response | { response?: Response } } | null)?.context;
+  // functions-js exposes the Response directly as error.context. Keep the
+  // nested fallback for older wrappers so error reporting survives upgrades.
+  const response = context instanceof Response ? context : context?.response;
+  if (!response) return { status: null, body: null };
+
+  try {
+    return {
+      status: response.status,
+      body: (await response.clone().json()) as FunctionErrorBody,
+    };
+  } catch {
+    return { status: response.status, body: null };
+  }
+}
+
+function formatNextAvailable(iso: string | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+}
+
 interface FindingFormValues {
   summary?: string;
   detail?: string | null;
@@ -128,6 +163,7 @@ export function AddFindingForm({
   const [aiLogId, setAiLogId] = useState<string | null>(null);
   const [aiCorpusChunks, setAiCorpusChunks] = useState<CorpusChunkSummary[]>([]);
   const [capMessage, setCapMessage] = useState<string | null>(null);
+  const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
 
   const isEdit = mode === 'edit';
@@ -158,6 +194,7 @@ export function AddFindingForm({
     }
     setAiStatus('drafting');
     setCapMessage(null);
+    setAiErrorMessage(null);
     try {
       const { data, error } = await supabase.functions.invoke('draft-finding', {
         body: {
@@ -168,26 +205,26 @@ export function AddFindingForm({
       });
 
       if (error) {
-        // FunctionsHttpError carries the response; try to parse a body for a friendly message.
-        const ctx = (error as any).context;
-        const status = ctx?.response?.status ?? null;
+        // FunctionsHttpError carries the Response directly in `context`.
+        const { status, body } = await readFunctionError(error);
         let message = 'AI draft failed. Please try again, or write the finding manually.';
-        try {
-          const body = await ctx?.response?.json?.();
-          if (status === 401) message = 'Sign in expired. Please refresh.';
-          else if (status === 403) message = "You don't have access to draft for this audit.";
-          else if (status === 429 && body?.error) {
-            setCapMessage(body.error);
-            setAiStatus('capped');
-            return;
-          } else if (status === 402) {
-            message = 'AI credits exhausted. Top up at Settings > Workspace > Usage.';
-          } else if (body?.error) {
-            message = body.error;
-          }
-        } catch {
-          /* keep default */
+        if (status === 401) message = 'Sign in expired. Please refresh.';
+        else if (status === 403) message = "You don't have access to draft for this audit.";
+        else if (status === 429 && body?.cap) {
+          const nextAvailable = formatNextAvailable(body.next_available_at);
+          setCapMessage(
+            nextAvailable
+              ? `Daily AI draft limit reached. Another draft becomes available after ${nextAvailable}.`
+              : body.error ?? 'Daily AI draft limit reached.',
+          );
+          setAiStatus('capped');
+          return;
+        } else if (status === 402) {
+          message = 'AI credits exhausted. Top up at Settings > Workspace > Usage.';
+        } else if (body?.error) {
+          message = body.error;
         }
+        setAiErrorMessage(message);
         toast.error(message);
         setAiStatus('error');
         return;
@@ -329,6 +366,18 @@ export function AddFindingForm({
                 <AlertCircle className="h-4 w-4 text-amber-700" />
                 <AlertDescription className="text-amber-800">
                   {capMessage ?? 'Daily AI draft limit reached.'} You can still write the finding manually.
+                </AlertDescription>
+              </Alert>
+            )}
+            {aiStatus === 'error' && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>AI draft could not be created</AlertTitle>
+                <AlertDescription className="flex flex-col items-start gap-2">
+                  <span>{aiErrorMessage ?? 'You can retry or continue writing the finding manually.'}</span>
+                  <Button type="button" variant="outline" size="sm" onClick={handleDraftWithAI}>
+                    <Sparkles className="mr-2 h-3.5 w-3.5" /> Retry AI draft
+                  </Button>
                 </AlertDescription>
               </Alert>
             )}

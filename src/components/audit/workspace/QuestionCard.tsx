@@ -8,6 +8,7 @@ import {
   Bot,
   HelpCircle,
   Flag,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,7 @@ export function QuestionCard({
 }: QuestionCardProps) {
   const ctx = questionContext || question.question_context || 'auditor_assessment';
   const [showFindingForm, setShowFindingForm] = useState(false);
+  const [showLinkedFindings, setShowLinkedFindings] = useState(false);
   const [pulse, setPulse] = useState(false);
   const previousRatingRef = useRef<string | null | undefined>(response?.rating);
   const { value: notes, setValue: setNotes, bind: notesBind } = useDebouncedAutosave({
@@ -197,7 +199,7 @@ export function QuestionCard({
         {
           action: {
             label: 'Review findings',
-            onClick: () => setShowFindingForm(true),
+            onClick: () => setShowLinkedFindings(true),
           },
         }
       );
@@ -237,6 +239,39 @@ export function QuestionCard({
       ? 'bg-accent/10 border-accent/30'
       : '';
 
+  const reviewFindingsButton = (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="text-xs h-7"
+      onClick={() => setShowLinkedFindings((v) => !v)}
+      aria-expanded={showLinkedFindings}
+    >
+      <Flag className="h-3 w-3 mr-1.5" />
+      Review {findingCount} finding{findingCount === 1 ? '' : 's'}
+      <ChevronDown
+        className={cn('h-3 w-3 ml-1.5 transition-transform', showLinkedFindings && 'rotate-180')}
+      />
+    </Button>
+  );
+
+  const reviewAndAddButtons = (
+    <>
+      {reviewFindingsButton}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-xs h-7"
+        onClick={() => setShowFindingForm((v) => !v)}
+      >
+        <Plus className="h-3 w-3 mr-1.5" />
+        Add another
+      </Button>
+    </>
+  );
+
   // Action-row Raise Finding button — state machine
   const renderFindingButton = (fullWidth = false) => {
     if (!currentRating) return null;
@@ -245,18 +280,7 @@ export function QuestionCard({
     if (!flagged && findingCount === 0) return null;
 
     if (!flagged && findingCount > 0) {
-      return (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="text-xs h-7"
-          onClick={() => setShowFindingForm((v) => !v)}
-        >
-          <Flag className="h-3 w-3 mr-1.5" />
-          {findingCount} finding{findingCount === 1 ? '' : 's'}
-        </Button>
-      );
+      return reviewAndAddButtons;
     }
 
     if (flagged && findingCount === 0) {
@@ -279,18 +303,7 @@ export function QuestionCard({
     }
 
     // flagged && findingCount > 0
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="text-xs h-7"
-        onClick={() => setShowFindingForm((v) => !v)}
-      >
-        <Flag className="h-3 w-3 mr-1.5" />
-        {findingCount} finding{findingCount === 1 ? '' : 's'} · Add another
-      </Button>
-    );
+    return reviewAndAddButtons;
   };
 
   return (
@@ -496,6 +509,42 @@ export function QuestionCard({
             </Button>
           )}
         </div>
+
+        {/* Existing findings linked to this question */}
+        {showLinkedFindings && findingCount > 0 && (
+          <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              Findings linked to this response
+            </p>
+            {responseFindings.map((finding) => (
+              <div key={finding.id} className="space-y-1.5 rounded-md border bg-background p-3 text-xs">
+                <div className="flex flex-wrap items-center gap-2">
+                  {finding.finding_code && (
+                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono font-bold">
+                      {finding.finding_code}
+                    </span>
+                  )}
+                  <span className="rounded-full border px-2 py-0.5 capitalize text-muted-foreground">
+                    {finding.priority}
+                  </span>
+                  <span className="font-medium">{finding.summary}</span>
+                </div>
+                {finding.regulatory_reference && (
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Regulatory reference:</span>{' '}
+                    {finding.regulatory_reference}
+                  </p>
+                )}
+                {finding.detail && <p className="whitespace-pre-wrap text-muted-foreground">{finding.detail}</p>}
+                {finding.impact && (
+                  <p className="whitespace-pre-wrap text-muted-foreground">
+                    <span className="font-medium text-foreground">Impact:</span> {finding.impact}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Inline finding form */}
         {showFindingForm && (
