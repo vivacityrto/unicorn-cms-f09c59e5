@@ -19,12 +19,14 @@ export const PORTFOLIO_TIMELINE_QUERY_KEY = ['portfolio-timeline'] as const;
 interface UsePortfolioTimelineOptions {
   limit?: number;
   eventTypes?: string[] | null;
+  tenantIds?: number[] | null;
   search?: string;
 }
 
 async function fetchPortfolioTimeline({
   limit,
   eventTypes,
+  tenantIds,
   search,
 }: Required<UsePortfolioTimelineOptions>): Promise<PortfolioTimelineEvent[]> {
   let query = supabase
@@ -35,6 +37,9 @@ async function fetchPortfolioTimeline({
 
   if (eventTypes && eventTypes.length > 0) {
     query = query.in('event_type', eventTypes);
+  }
+  if (tenantIds && tenantIds.length > 0) {
+    query = query.in('tenant_id', tenantIds);
   }
   if (search.trim()) {
     const term = search.trim().replace(/[%,]/g, '');
@@ -47,11 +52,11 @@ async function fetchPortfolioTimeline({
   const rows = (data || []) as unknown as TimelineEvent[];
   if (rows.length === 0) return [];
 
-  const tenantIds = [...new Set(rows.map((r) => r.tenant_id))];
+  const distinctTenantIds = [...new Set(rows.map((r) => r.tenant_id))];
   const { data: tenants } = await supabase
     .from('tenants')
     .select('id, name')
-    .in('id', tenantIds);
+    .in('id', distinctTenantIds);
   const nameMap = new Map<number, string>((tenants || []).map((t: any) => [t.id, t.name]));
 
   return rows.map((r) => ({ ...r, tenant_name: nameMap.get(r.tenant_id) ?? 'Unknown client' }));
@@ -69,13 +74,19 @@ async function fetchPortfolioTimeline({
  * outage, rather than going silently stale.
  */
 export function usePortfolioTimeline(options: UsePortfolioTimelineOptions = {}) {
-  const { limit = 8, eventTypes = null, search = '' } = options;
+  const { limit = 8, eventTypes = null, tenantIds = null, search = '' } = options;
   const queryClient = useQueryClient();
-  const queryKey = [...PORTFOLIO_TIMELINE_QUERY_KEY, limit, eventTypes?.join(',') ?? 'all', search];
+  const queryKey = [
+    ...PORTFOLIO_TIMELINE_QUERY_KEY,
+    limit,
+    eventTypes?.join(',') ?? 'all',
+    tenantIds?.join(',') ?? 'all',
+    search,
+  ];
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
-    queryFn: () => fetchPortfolioTimeline({ limit, eventTypes, search }),
+    queryFn: () => fetchPortfolioTimeline({ limit, eventTypes, tenantIds, search }),
     refetchInterval: 30_000,
   });
 

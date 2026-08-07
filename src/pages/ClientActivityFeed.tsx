@@ -1,20 +1,74 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { supabase } from '@/integrations/supabase/client';
 import { usePortfolioTimeline } from '@/hooks/usePortfolioTimeline';
 import { EVENT_TYPE_FILTERS } from '@/hooks/useClientManagementData';
 import { FILTER_OPTIONS } from '@/components/client/ClientTimelineTab';
 import { EVENT_ICON_MAP, EVENT_COLOR_MAP } from '@/components/client/TimelineEventCard';
+import { MultiSelect, type MultiSelectOption } from '@/components/documents/bulk-generate/MultiSelect';
+import {
+  TenantFilterDialog,
+  type TenantFilterOption,
+  type TenantStatusOption,
+  type CscOption,
+} from '@/components/tenant-users/TenantFilterDialog';
+import { useCscAssignments } from '@/hooks/useCscAssignments';
 import type { TimelineEventType } from '@/types/timeline';
 import { useAuth } from '@/hooks/useAuth';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { clientAvatarColor, clientInitials } from '@/lib/clientAvatarColor';
-import { Activity, Loader2, Search, Radio } from 'lucide-react';
+import { Activity, Building2, Loader2, Search, Radio } from 'lucide-react';
 import { formatDistanceToNow, format, isToday, isYesterday, isThisWeek } from 'date-fns';
+
+interface BasicTenant {
+  id: number;
+  name: string;
+  status: string | null;
+}
+
+async function fetchTenants(): Promise<BasicTenant[]> {
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('id, name, status')
+    .order('name');
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function fetchTenantStatusOptions(): Promise<TenantStatusOption[]> {
+  const { data, error } = await supabase
+    .from('dd_status')
+    .select('value, description')
+    .gte('code', 100)
+    .order('code');
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function fetchCscFilterOptions(): Promise<CscOption[]> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('user_uuid, first_name, last_name, staff_teams, staff_team, archived')
+    .eq('disabled', false)
+    .order('archived', { ascending: true })
+    .order('first_name', { ascending: true });
+  if (error) throw error;
+  return (data ?? [])
+    .filter((u: any) => u.staff_teams?.includes('client_success') || u.staff_team === 'client_success')
+    .map((u: any) => ({
+      user_uuid: u.user_uuid,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      archived: u.archived || false,
+    }));
+}
 
 interface DateGroup {
   label: string;
@@ -48,12 +102,67 @@ export default function ClientActivityFeed() {
   const { profile } = useAuth();
   const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
-  const [filter, setFilter] = useState('all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
+  const [tenantFilterDialogOpen, setTenantFilterDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [limit, setLimit] = useState(PAGE_SIZE);
 
-  const eventTypes = filter !== 'all' ? EVENT_TYPE_FILTERS[filter] ?? null : null;
-  const { events, isLoading } = usePortfolioTimeline({ limit, eventTypes, search });
+  const { data: tenants = [] } = useQuery({
+    queryKey: ['client-activity-feed-tenants'],
+    queryFn: fetchTenants,
+    staleTime: 5 * 60_000,
+  });
+  const { data: tenantStatusOptions = [] } = useQuery({
+    queryKey: ['client-activity-feed-tenant-status-options'],
+    queryFn: fetchTenantStatusOptions,
+    staleTime: 5 * 60_000,
+  });
+  const { data: cscFilterOptions = [] } = useQuery({
+    queryKey: ['client-activity-feed-csc-options'],
+    queryFn: fetchCscFilterOptions,
+    staleTime: 5 * 60_000,
+  });
+
+  const tenantIdsForCsc = useMemo(() => tenants.map((t) => t.id), [tenants]);
+  const cscQuery = useCscAssignments(tenantIdsForCsc);
+
+  // CSC/status are tenant-level attributes needed by the "Filter by Tenant"
+  // dialog to narrow its ~400-row list before selection — same enrichment
+  // TenantUsers.tsx does for the identical dialog.
+  const enrichedTenants: TenantFilterOption[] = useMemo(() => {
+    const cscMap = cscQuery.data || {};
+    return tenants.map((t) => ({
+      ...t,
+      csc_user_id: cscMap[t.id]?.csc_user_id ?? null,
+    }));
+  }, [tenants, cscQuery.data]);
+
+  const categoryOptions: MultiSelectOption[] = useMemo(
+    () =>
+      FILTER_OPTIONS
+        .filter((opt) => (opt.value !== 'microsoft' && !opt.staffOnly) || isVivacityTeam)
+        .map((opt) => ({ value: opt.value, label: opt.label })),
+    [isVivacityTeam]
+  );
+
+  const eventTypes = useMemo(() => {
+    if (selectedCategories.length === 0) return null;
+    const union = new Set<string>();
+    for (const cat of selectedCategories) {
+      for (const type of EVENT_TYPE_FILTERS[cat] ?? []) union.add(type);
+    }
+    return [...union];
+  }, [selectedCategories]);
+
+  const tenantIds = useMemo(
+    () => (selectedTenantIds.length > 0 ? selectedTenantIds.map(Number) : null),
+    [selectedTenantIds]
+  );
+
+  const { events, isLoading } = usePortfolioTimeline({ limit, eventTypes, tenantIds, search });
+
+  const resetPaging = () => setLimit(PAGE_SIZE);
 
   const dateGroups = useMemo(() => groupByDate(events), [events]);
   const hasMore = events.length === limit;
@@ -73,50 +182,52 @@ export default function ClientActivityFeed() {
         </div>
 
         <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-5">
+            <div className="flex items-center justify-between pb-4 mb-1 border-b border-border">
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5" />
                 Activity Feed
               </CardTitle>
             </div>
 
-            {/* Filter chips */}
-            <div className="mt-4 space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {FILTER_OPTIONS
-                  .filter((opt) => (opt.value !== 'microsoft' && !opt.staffOnly) || isVivacityTeam)
-                  .map((opt) => {
-                    const FilterIcon = opt.icon;
-                    return (
-                      <Button
-                        key={opt.value}
-                        variant={filter === opt.value ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => {
-                          setFilter(opt.value);
-                          setLimit(PAGE_SIZE);
-                        }}
-                        className="h-7 text-xs"
-                      >
-                        <FilterIcon className="h-3 w-3 mr-1" />
-                        {opt.label}
-                      </Button>
-                    );
-                  })}
-              </div>
-
-              {/* Search */}
-              <div className="relative">
+            {/* Filters */}
+            <div className="mt-4 flex flex-wrap items-start gap-3">
+              <MultiSelect
+                options={categoryOptions}
+                values={selectedCategories}
+                onChange={(v) => { setSelectedCategories(v); resetPaging(); }}
+                placeholder="All categories"
+                searchPlaceholder="Search categories..."
+                emptyText="No categories found."
+                className="w-[220px]"
+              />
+              <Button
+                variant="outline"
+                onClick={() => setTenantFilterDialogOpen(true)}
+                className={cn(
+                  'w-[220px] justify-between font-normal min-w-0',
+                  selectedTenantIds.length === 0 && 'text-muted-foreground',
+                )}
+              >
+                <span className="truncate">
+                  {selectedTenantIds.length === 0
+                    ? 'All Clients'
+                    : selectedTenantIds.length === 1
+                      ? tenants.find((t) => t.id.toString() === selectedTenantIds[0])?.name ?? '1 client'
+                      : `${selectedTenantIds.length} clients selected`}
+                </span>
+                <Building2 className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+              </Button>
+              <div className="relative flex-1 min-w-[220px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search activity..."
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
-                    setLimit(PAGE_SIZE);
+                    resetPaging();
                   }}
-                  className="pl-9 h-9"
+                  className="pl-9 h-10"
                 />
               </div>
             </div>
@@ -208,6 +319,16 @@ export default function ClientActivityFeed() {
           </CardContent>
         </Card>
       </div>
+
+      <TenantFilterDialog
+        open={tenantFilterDialogOpen}
+        onOpenChange={setTenantFilterDialogOpen}
+        tenants={enrichedTenants}
+        statusOptions={tenantStatusOptions}
+        cscOptions={cscFilterOptions}
+        selected={selectedTenantIds}
+        onApply={(ids) => { setSelectedTenantIds(ids); resetPaging(); }}
+      />
     </DashboardLayout>
   );
 }

@@ -37,8 +37,10 @@ interface TenantFilterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenants: TenantFilterOption[];
-  statusOptions: TenantStatusOption[];
-  cscOptions: CscOption[];
+  /** Omit (or pass []) on pages with no tenant-status concept — the status Select is hidden. */
+  statusOptions?: TenantStatusOption[];
+  /** Omit (or pass []) on pages with no CSC concept — the CSC Select is hidden. */
+  cscOptions?: CscOption[];
   selected: string[];
   onApply: (ids: string[]) => void;
 }
@@ -56,11 +58,12 @@ export function TenantFilterDialog({
   open,
   onOpenChange,
   tenants,
-  statusOptions,
-  cscOptions,
+  statusOptions = [],
+  cscOptions = [],
   selected,
   onApply,
 }: TenantFilterDialogProps) {
+  const hasSubFilters = statusOptions.length > 0 || cscOptions.length > 0;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [cscFilter, setCscFilter] = useState('all');
@@ -133,7 +136,9 @@ export function TenantFilterDialog({
             Filter by Tenant
           </DialogTitle>
           <DialogDescription>
-            Narrow the list by status or CSC, search by name, then select one or more tenants.
+            {hasSubFilters
+              ? 'Narrow the list by status or CSC, search by name, then select one or more tenants.'
+              : 'Search by name, then select one or more tenants.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -148,35 +153,41 @@ export function TenantFilterDialog({
           />
         </div>
 
-        <div className="flex gap-3">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="flex-1 min-w-0">
-              <SelectValue placeholder="Tenant Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tenant Status</SelectItem>
-              {statusOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.description}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={cscFilter} onValueChange={setCscFilter}>
-            <SelectTrigger className="flex-1 min-w-0">
-              <SelectValue placeholder="CSC" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All CSC</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
-              {cscOptions.map((csc) => (
-                <SelectItem key={csc.user_uuid} value={csc.user_uuid}>
-                  {csc.first_name} {csc.last_name}{csc.archived ? ' (archived)' : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {hasSubFilters && (
+          <div className="flex gap-3">
+            {statusOptions.length > 0 && (
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="flex-1 min-w-0">
+                  <SelectValue placeholder="Tenant Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tenant Status</SelectItem>
+                  {statusOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {cscOptions.length > 0 && (
+              <Select value={cscFilter} onValueChange={setCscFilter}>
+                <SelectTrigger className="flex-1 min-w-0">
+                  <SelectValue placeholder="CSC" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All CSC</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {cscOptions.map((csc) => (
+                    <SelectItem key={csc.user_uuid} value={csc.user_uuid}>
+                      {csc.first_name} {csc.last_name}{csc.archived ? ' (archived)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>{draft.size} selected</span>
