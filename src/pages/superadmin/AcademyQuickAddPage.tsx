@@ -172,13 +172,16 @@ export default function AcademyQuickAddPage() {
   const handleGenerate = async () => {
     if (!vimeoUrl.trim()) { toast.error("Vimeo URL is required"); return; }
     if (!series) { toast.error("Select a series"); return; }
+    const urlProblem = validateVimeoUrl(vimeoUrl.trim());
+    if (urlProblem) { toast.error(urlProblem); return; }
     setGenerating(true);
     try {
       const { data: vimeo, error: vErr } = await supabase.functions.invoke(
         "academy-fetch-vimeo-transcript",
         { body: { vimeo_url: vimeoUrl.trim() } },
       );
-      if (vErr) throw vErr;
+      if (vErr) throw new Error(await extractEdgeError(vErr, "Couldn't read that Vimeo video"));
+
 
       const resolvedTitle = (episodeTitle.trim() || vimeo?.title || "").trim();
       const tx: string = vimeo?.transcript || "";
