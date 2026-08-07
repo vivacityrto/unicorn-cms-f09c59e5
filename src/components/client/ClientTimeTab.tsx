@@ -1534,8 +1534,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-3">
+            <CardTitle className="text-base">Time Entries</CardTitle>
             <div className="flex items-center gap-2">
-              <CardTitle className="text-base">Time Entries</CardTitle>
               <Button
                 variant="outline"
                 size="sm"
@@ -1574,8 +1574,6 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
               >
                 <Mail className="h-3.5 w-3.5" /> Email
               </Button>
-            </div>
-            <div className="flex items-center gap-2">
               <PackageMultiFilter
                 selectedIds={packageFilterIds}
                 onChange={handlePackageFilter}
