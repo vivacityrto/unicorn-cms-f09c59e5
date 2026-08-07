@@ -657,7 +657,7 @@ export default function MainDashboard() {
       (byUser.data ?? []).forEach(consider);
       const sorted = Array.from(merged.values())
         .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
-        .slice(0, 4);
+        .slice(0, 8);
       setUpcoming(sorted);
     })();
   }, [isStaff, userUuid, kpiRole, refreshTick, period, profile?.email]);
@@ -955,15 +955,19 @@ export default function MainDashboard() {
               )}
             </Panel>
 
-            <Panel title="Rocks (Quarterly Priorities)" icon={Target} footerHref="/eos/rocks">
+            <Panel
+              title="Rocks (Quarterly Priorities)"
+              icon={Target}
+              footerHref="/eos/rocks"
+            >
               {!rocks || rocks.list.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
                   <Target className="h-6 w-6 text-primary/25" />
                   <div className="text-sm text-muted-foreground">No active rocks.</div>
                 </div>
               ) : (
-                <ul className="space-y-1.5 max-h-[380px] overflow-auto pr-1">
-                  {rocks.list.slice(0, 8).map((r: any) => {
+                <ul className="space-y-1.5 pr-1">
+                  {rocks.list.slice(0, 5).map((r: any) => {
                     const s = (r.status ?? "").toLowerCase().replace(/\s+/g, "_");
                     // Brand compliance-state tokens (index.css --state-*) instead of
                     // generic Material Design colors — on_track=compliant(purple),
@@ -1138,7 +1142,11 @@ export default function MainDashboard() {
               })()}
             </Panel>
 
-            <Panel title="Upcoming Calendar" icon={CalendarClock} footerHref="/calendar">
+            <Panel
+              title="Upcoming Calendar"
+              icon={CalendarClock}
+              footerHref="/calendar"
+            >
               {upcoming.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
                   <CalendarClock className="h-6 w-6 text-primary/25" />
