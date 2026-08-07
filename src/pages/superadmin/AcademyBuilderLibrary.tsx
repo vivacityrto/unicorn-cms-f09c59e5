@@ -225,10 +225,36 @@ export default function AcademyBuilderLibrary() {
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between">
                   <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2 min-h-9">{course.title}</h3>
-                  <Badge className={`text-[10px] shrink-0 ml-2 ${statusColors[course.status ?? "draft"]}`}>
-                    {course.status ?? "draft"}
-                  </Badge>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <Badge className={`text-[10px] ${statusColors[course.status ?? "draft"]}`}>
+                      {course.status ?? "draft"}
+                    </Badge>
+                    {canCreateCourse && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <MoreVertical className="h-3.5 w-3.5" />
+                            <span className="sr-only">Course actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          {course.status !== "archived" && (
+                            <DropdownMenuItem onSelect={() => archiveCourse.mutate(course.id)}>
+                              <Archive className="h-3.5 w-3.5 mr-2" /> Archive
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setDeleteTarget(course)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete permanently
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
+
 
                 <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                   <span className="flex items-center gap-1">
