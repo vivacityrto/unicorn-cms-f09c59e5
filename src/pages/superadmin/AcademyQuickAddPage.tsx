@@ -161,16 +161,16 @@ async function extractEdgeError(err: any, fallback: string): Promise<string> {
 }
 
 /**
- * Vimeo replies 404 for any video the Vivacity API token can't see — wrong
- * account, deleted video, or an unlisted video whose privacy hash wasn't part
- * of the pasted link. Turn that into something actionable.
+ * Vimeo replies 404 for any video the connected API token can't see — wrong
+ * account, deleted video, or a video whose privacy settings weren't passed in
+ * the link. Turn that into something actionable.
  */
 function humaniseVimeoError(msg: string): string {
   if (/404/.test(msg) && /vimeo/i.test(msg)) {
-    return "Vimeo returned 404 for that video. It's either not on the Vivacity Vimeo account, has been deleted, or it's unlisted — for unlisted videos copy the full link including the privacy hash (e.g. https://vimeo.com/1215370924/ab12cd34ef) from Vimeo's address bar.";
+    return "Vimeo returned 404 for that video. Check the video is on the connected Vimeo account, hasn't been deleted, or paste the full privacy-hash link if it's restricted.";
   }
   if (/401|403/.test(msg) && /vimeo/i.test(msg)) {
-    return "Vimeo rejected our credentials for that video. Check the video lives on the Vivacity Vimeo account.";
+    return "Vimeo rejected our credentials for that video. Check the video lives on the connected Vimeo account.";
   }
   return msg;
 }
