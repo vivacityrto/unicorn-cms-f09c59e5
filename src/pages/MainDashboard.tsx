@@ -427,11 +427,22 @@ export default function MainDashboard() {
       setHasMineAssignments(rows.length > 0);
       setHealthScope(rows.length > 0 ? "mine" : "portfolio");
 
-      const { data: portfolioData } = await sb
-        .from("v_dashboard_attention_ranked")
-        .select("worst_stage_health_status")
-        .eq("tenant_status", "active");
-      setHealthPortfolio(tallyHealth(portfolioData ?? []));
+      // Portfolio-wide counts go through a SECURITY DEFINER RPC rather than a
+      // plain select: under RLS, a tenant-unfiltered query re-evaluates the
+      // tenants access policy (plus several expensive joins) once per row,
+      // which times out for non-trivial portfolios. The RPC computes the
+      // aggregate server-side, bypassing that per-row cost entirely.
+      const { data: portfolioResult, error: portfolioError } = await sb.rpc("rpc_portfolio_client_health");
+      if (portfolioError) {
+        console.error("rpc_portfolio_client_health failed:", portfolioError);
+      } else if (portfolioResult) {
+        setHealthPortfolio({
+          healthy: portfolioResult.healthy ?? 0,
+          monitoring: portfolioResult.monitoring ?? 0,
+          at_risk: portfolioResult.at_risk ?? 0,
+          critical: portfolioResult.critical ?? 0,
+        });
+      }
     })();
 
     // Tasks union
