@@ -200,7 +200,7 @@ export default function AcademyQuickAddPage() {
           webinar_series: series,
         },
       });
-      if (cErr) throw cErr;
+      if (cErr) throw new Error(await extractEdgeError(cErr, "AI classification failed"));
       const audience: string[] = Array.isArray(cls?.target_audience) ? cls.target_audience : [];
       const level: string = cls?.difficulty_level || "beginner";
       const aiTags: string[] = Array.isArray(cls?.tags) ? cls.tags : [];
@@ -218,7 +218,7 @@ export default function AcademyQuickAddPage() {
           transcript: tx,
         },
       });
-      if (dErr) throw dErr;
+      if (dErr) throw new Error(await extractEdgeError(dErr, "AI description generation failed"));
       setShortDescription(desc?.short_description || "");
       setDescription(desc?.description || "");
 
@@ -244,7 +244,7 @@ export default function AcademyQuickAddPage() {
           context_text: transcript,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await extractEdgeError(error, "Failed to generate questions"));
       const raw = Array.isArray(data?.questions) ? data.questions : Array.isArray(data) ? data : [];
       setQuestions(
         raw.map((q: any, i: number) => ({
