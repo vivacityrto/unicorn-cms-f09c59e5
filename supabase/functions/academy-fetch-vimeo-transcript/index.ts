@@ -33,16 +33,20 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function locationFromPath(pathname: string): VimeoLocation | null {
+function locationFromPath(pathname: string, hashParam?: string | null): VimeoLocation | null {
   const parts = pathname.split("/").filter(Boolean);
   const idIndex = parts.findIndex((part) => /^\d{6,}$/.test(part));
   if (idIndex < 0) return null;
 
   const id = parts[idIndex];
   const nextPart = parts[idIndex + 1];
-  const privacyHash = nextPart && /^[a-zA-Z0-9]{6,}$/.test(nextPart) && !/^\d{6,}$/.test(nextPart)
+  const pathHash = nextPart && /^[a-zA-Z0-9]{6,}$/.test(nextPart) && !/^\d{6,}$/.test(nextPart)
     ? nextPart
     : null;
+  // Embed-only videos expose their hash as ?h=<hash> in the embed code instead
+  // of as a path segment.
+  const queryHash = hashParam && /^[a-zA-Z0-9]{6,}$/.test(hashParam) ? hashParam : null;
+  const privacyHash = pathHash ?? queryHash;
   const canonicalUrl = `https://vimeo.com/${id}${privacyHash ? `/${privacyHash}` : ""}`;
   return { id, privacyHash, canonicalUrl };
 }
@@ -51,7 +55,7 @@ function parseVimeoUrl(raw: string): VimeoLocation | null {
   const url = new URL(raw);
   const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
   if (hostname !== "vimeo.com" && hostname !== "player.vimeo.com") return null;
-  return locationFromPath(url.pathname);
+  return locationFromPath(url.pathname, url.searchParams.get("h"));
 }
 
 /**
