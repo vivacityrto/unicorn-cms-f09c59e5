@@ -23,7 +23,7 @@ import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns'
 // Filter chips
 // =============================================
 
-const FILTER_OPTIONS = [
+export const FILTER_OPTIONS = [
   { value: 'all', label: 'All', icon: Activity },
   { value: 'meetings', label: 'Meetings', icon: Calendar },
   { value: 'time', label: 'Time', icon: Clock, staffOnly: true },

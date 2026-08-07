@@ -30,7 +30,7 @@ import type { LucideIcon } from 'lucide-react';
 /**
  * Exhaustive icon map – a missing key causes a compile error.
  */
-const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
+export const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   microsoft_connected: Plug,
   microsoft_disconnected: PlugZap,
   microsoft_sync_failed: AlertTriangle,
@@ -82,7 +82,7 @@ const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
 /**
  * Exhaustive colour map – a missing key causes a compile error.
  */
-const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
+export const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   microsoft_connected: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   microsoft_disconnected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   microsoft_sync_failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
@@ -181,7 +181,7 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
     case 'sharepoint_doc_linked':
     case 'sharepoint_root_configured':
     case 'sharepoint_root_invalid':
-      if (meta?.tenant_id) return { label: 'View docs', path: `/clients/${meta.tenant_id}?tab=documents` };
+      if (meta?.tenant_id) return { label: 'View docs', path: `/tenant/${meta.tenant_id}?tab=documents` };
       return null;
     case 'document_uploaded':
     case 'document_downloaded':
@@ -191,15 +191,15 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
     case 'microsoft_sync_failed':
       return { label: 'Fix connection', path: '/settings?tab=calendar' };
     case 'message_sent':
-      return { label: 'View conversation', path: `/clients/${event.tenant_id}?tab=messages` };
+      return { label: 'View conversation', path: `/tenant/${event.tenant_id}?tab=messages` };
     case 'stage_status_changed':
-      return { label: 'View package', path: `/clients/${event.tenant_id}?tab=packages` };
+      return { label: 'View package', path: `/tenant/${event.tenant_id}?tab=packages` };
     case 'account_invited':
     case 'account_activated':
     case 'account_deactivated':
     case 'account_role_changed':
     case 'account_removed':
-      return { label: 'View account', path: `/clients/${event.tenant_id}?tab=users` };
+      return { label: 'View account', path: `/tenant/${event.tenant_id}?tab=users` };
     default:
       return null;
   }

@@ -29,6 +29,7 @@ import {
   TrendingUp,
   Trophy,
   ChevronRight,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,6 +42,9 @@ import { defaultPeriod } from "@/components/kpi-v2/types";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow, format } from "date-fns";
 import { clientAvatarColor, clientInitials } from "@/lib/clientAvatarColor";
+import { usePortfolioTimeline } from "@/hooks/usePortfolioTimeline";
+import { EVENT_ICON_MAP, EVENT_COLOR_MAP } from "@/components/client/TimelineEventCard";
+import type { TimelineEventType } from "@/types/timeline";
 
 /* ------------------------------ helpers ------------------------------ */
 
@@ -284,6 +288,58 @@ function QuickActionTile({
       <Icon className="h-4 w-4 text-primary" />
       <span className="text-[10.5px] font-medium text-foreground leading-tight">{label}</span>
     </button>
+  );
+}
+
+/* ------------------------------ Client activity (portfolio timeline) ------------------------------ */
+
+function ClientActivityPanel() {
+  const navigate = useNavigate();
+  const { events, isLoading } = usePortfolioTimeline({ limit: 8 });
+
+  return (
+    <Panel title="Client Activity" icon={Activity} footerHref="/client-activity">
+      {isLoading && events.length === 0 ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="h-4 w-4 animate-spin text-primary/40" />
+        </div>
+      ) : events.length === 0 ? (
+        <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+          <Activity className="h-6 w-6 text-primary/25" />
+          <div className="text-sm text-muted-foreground">No client activity yet.</div>
+        </div>
+      ) : (
+        <ul className="divide-y divide-border -my-1">
+          {events.map((e) => {
+            const eventKey = e.event_type as TimelineEventType;
+            const Icon = EVENT_ICON_MAP[eventKey] ?? Activity;
+            const colorClass = EVENT_COLOR_MAP[eventKey] ?? "bg-muted text-muted-foreground";
+            return (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/tenant/${e.tenant_id}?tab=timeline`)}
+                  className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
+                >
+                  <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${colorClass}`}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm font-medium text-foreground truncate">{e.tenant_name}</div>
+                      <span className="text-[11px] text-muted-foreground shrink-0">
+                        {formatDistanceToNow(new Date(e.occurred_at || e.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">{e.title}</div>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Panel>
   );
 }
 
@@ -986,6 +1042,8 @@ export default function MainDashboard() {
                 </ul>
               )}
             </Panel>
+
+            <ClientActivityPanel />
 
             <Panel title="Rocks (Quarterly Priorities)" icon={Target} footerHref="/eos/rocks">
               {!rocks || rocks.list.length === 0 ? (
