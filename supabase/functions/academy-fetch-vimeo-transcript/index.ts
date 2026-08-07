@@ -33,21 +33,79 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function parseVimeoUrl(raw: string): VimeoLocation | null {
-  const url = new URL(raw);
-  const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
-  if (hostname !== "vimeo.com" && hostname !== "player.vimeo.com") return null;
-
-  const parts = url.pathname.split("/").filter(Boolean);
+function locationFromPath(pathname: string): VimeoLocation | null {
+  const parts = pathname.split("/").filter(Boolean);
   const idIndex = parts.findIndex((part) => /^\d{6,}$/.test(part));
   if (idIndex < 0) return null;
 
   const id = parts[idIndex];
   const nextPart = parts[idIndex + 1];
-  const privacyHash = nextPart && /^[a-zA-Z0-9]+$/.test(nextPart) ? nextPart : null;
+  const privacyHash = nextPart && /^[a-zA-Z0-9]{6,}$/.test(nextPart) && !/^\d{6,}$/.test(nextPart)
+    ? nextPart
+    : null;
   const canonicalUrl = `https://vimeo.com/${id}${privacyHash ? `/${privacyHash}` : ""}`;
   return { id, privacyHash, canonicalUrl };
 }
+
+function parseVimeoUrl(raw: string): VimeoLocation | null {
+  const url = new URL(raw);
+  const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (hostname !== "vimeo.com" && hostname !== "player.vimeo.com") return null;
+  return locationFromPath(url.pathname);
+}
+
+/**
+ * Vimeo "Share" links (vimeo.com/share/<opaque>) carry no video ID. Follow the
+ * redirect and, if needed, scrape the landing page for the real video ID/hash.
+ */
+async function resolveVimeoUrl(raw: string): Promise<VimeoLocation | null> {
+  const direct = parseVimeoUrl(raw);
+  if (direct) return direct;
+
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (hostname !== "vimeo.com" && hostname !== "player.vimeo.com") return null;
+
+  try {
+    const response = await fetch(url.toString(), {
+      redirect: "follow",
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; UnicornAcademy/1.0)" },
+    });
+    const finalLocation = (() => {
+      try {
+        return locationFromPath(new URL(response.url).pathname);
+      } catch {
+        return null;
+      }
+    })();
+    const html = await readResponse(response);
+    if (finalLocation) return finalLocation;
+
+    const canonical = html.match(/vimeo\.com\/(\d{6,})(?:\/([a-zA-Z0-9]{6,}))?/);
+    if (canonical) {
+      const id = canonical[1];
+      const privacyHash = canonical[2] ?? null;
+      return {
+        id,
+        privacyHash,
+        canonicalUrl: `https://vimeo.com/${id}${privacyHash ? `/${privacyHash}` : ""}`,
+      };
+    }
+    const clipId = html.match(/"clip_id"\s*:\s*(\d{6,})/) ?? html.match(/"video"\s*:\s*\{\s*"id"\s*:\s*(\d{6,})/);
+    if (clipId) {
+      return { id: clipId[1], privacyHash: null, canonicalUrl: `https://vimeo.com/${clipId[1]}` };
+    }
+  } catch (error) {
+    console.warn("Unable to resolve Vimeo share link", error);
+  }
+  return null;
+}
+
 
 function vimeoResource(location: VimeoLocation) {
   return location.privacyHash
