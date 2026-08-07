@@ -67,6 +67,7 @@ export const TIMELINE_EVENT_TYPES = [
   'tenant_status_changed',
   // Invitation lifecycle
   'invitation_sent',
+  'invitation_opened',
   'invitation_clicked',
   'invitation_bounced',
   'invitation_accepted',
