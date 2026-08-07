@@ -580,18 +580,18 @@ export default function MainDashboard() {
         .select("id, title, body, target_mode, total_recipients, sent_at")
         .eq("status", "sent")
         .order("sent_at", { ascending: false })
-        .limit(8);
+        .limit(3);
       setBroadcasts(data ?? []);
     })();
 
-    // Client messages — most recent threads from Team Communications
+    // Client messages — 3 most recent threads from Team Communications
     (async () => {
       const { data: convos } = await sb
         .from("tenant_conversations" as any)
         .select("id, tenant_id, subject, topic, last_message_at, last_message_preview")
         .not("last_message_at", "is", null)
         .order("last_message_at", { ascending: false, nullsFirst: false })
-        .limit(8);
+        .limit(3);
       const rows = (convos ?? []) as any[];
       if (rows.length === 0) {
         setClientMsgs([]);
@@ -883,8 +883,6 @@ export default function MainDashboard() {
               title="Client Messages"
               icon={MessageSquare}
               footerHref="/communications"
-              className="flex-1"
-              bodyClassName="overflow-y-auto"
             >
               {clientMsgs.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
@@ -931,8 +929,6 @@ export default function MainDashboard() {
               title="Recent Client Broadcasts"
               icon={Megaphone}
               footerHref="/communications"
-              className="flex-1"
-              bodyClassName="overflow-y-auto"
             >
               {broadcasts.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
