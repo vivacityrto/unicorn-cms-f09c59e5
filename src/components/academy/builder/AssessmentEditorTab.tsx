@@ -24,9 +24,17 @@ interface AssessmentEditorTabProps {
   courseTitle?: string;
   courseDescription?: string | null;
   courseTargetAudience?: string[] | null;
+  /** Session transcript from Structure-tab AI Assist; enables Generate quiz with AI. */
+  aiTranscript?: string;
 }
 
-export default function AssessmentEditorTab({ courseId, courseTitle, courseDescription, courseTargetAudience }: AssessmentEditorTabProps) {
+export default function AssessmentEditorTab({
+  courseId,
+  courseTitle,
+  courseDescription,
+  courseTargetAudience,
+  aiTranscript = "",
+}: AssessmentEditorTabProps) {
   const { data: assessment, isLoading: assLoading } = useBuilderAssessment(courseId);
   const { data: dbQuestions = [], isLoading: qLoading } = useBuilderQuestions(assessment?.id ?? null);
   const createAssessment = useCreateAssessment();
@@ -43,6 +51,9 @@ export default function AssessmentEditorTab({ courseId, courseTitle, courseDescr
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiContext, setAiContext] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [quizAiGenerating, setQuizAiGenerating] = useState(false);
+
+  const hasAiTranscript = !!aiTranscript.trim();
 
   useEffect(() => {
     if (dbQuestions.length > 0) {
@@ -165,6 +176,30 @@ export default function AssessmentEditorTab({ courseId, courseTitle, courseDescr
     setAiModalOpen(true);
   };
 
+  const insertGeneratedQuestions = async (questions: any[]) => {
+    if (!assessment) return;
+    const maxSort = localQuestions.length > 0
+      ? Math.max(...localQuestions.map(q => q.sort_order ?? 0))
+      : 0;
+
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      const { error } = await supabase.from("academy_assessment_questions").insert({
+        assessment_id: assessment.id,
+        question_text: q.question_text,
+        question_type: "multiple_choice",
+        options: q.options,
+        points: 1,
+        sort_order: maxSort + i + 1,
+        explanation: q.explanation || null,
+      } as any);
+      if (error) throw error;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["academy-assessment-questions-builder", assessment.id] });
+    toast.success(`${questions.length} questions generated — review and edit before publishing`);
+  };
+
   const handleAiGenerate = async () => {
     if (!assessment || !aiContext.trim()) return;
     setAiGenerating(true);
@@ -186,35 +221,45 @@ export default function AssessmentEditorTab({ courseId, courseTitle, courseDescr
         throw new Error("No questions returned");
       }
 
-      // Get max sort_order from existing questions
-      const maxSort = localQuestions.length > 0
-        ? Math.max(...localQuestions.map(q => q.sort_order ?? 0))
-        : 0;
-
-      // Insert all questions into the database
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        const { error } = await supabase.from("academy_assessment_questions").insert({
-          assessment_id: assessment.id,
-          question_text: q.question_text,
-          question_type: "multiple_choice",
-          options: q.options,
-          points: 1,
-          sort_order: maxSort + i + 1,
-          explanation: q.explanation || null,
-        } as any);
-        if (error) throw error;
-      }
-
-      // Refresh question list
-      queryClient.invalidateQueries({ queryKey: ["academy-assessment-questions-builder", assessment.id] });
+      await insertGeneratedQuestions(questions);
       setAiModalOpen(false);
-      toast.success(`${questions.length} questions generated — review and edit before publishing`);
     } catch (e: any) {
       console.error("AI question generation error:", e);
       toast.error("Generation failed, please try again");
     } finally {
       setAiGenerating(false);
+    }
+  };
+
+  /** Quick Add–parity quiz generation from Structure-tab AI Assist transcript. */
+  const handleGenerateQuizWithAi = async () => {
+    if (!assessment || !hasAiTranscript) return;
+    setQuizAiGenerating(true);
+    try {
+      const audience = Array.isArray(courseTargetAudience) ? courseTargetAudience : [];
+      const { data, error: fnError } = await supabase.functions.invoke("academy-ai-generate", {
+        body: {
+          action: "generate_questions",
+          title: courseTitle || "Untitled Course",
+          target_audience: audience,
+          context_text: aiTranscript,
+        },
+      });
+
+      if (fnError) throw new Error(fnError.message);
+      if (data?.error) throw new Error(data.error);
+
+      const questions = data?.questions;
+      if (!Array.isArray(questions) || questions.length === 0) {
+        throw new Error("No questions returned");
+      }
+
+      await insertGeneratedQuestions(questions);
+    } catch (e: any) {
+      console.error("AI quiz generation error:", e);
+      toast.error("Generation failed, please try again");
+    } finally {
+      setQuizAiGenerating(false);
     }
   };
 
@@ -295,17 +340,43 @@ export default function AssessmentEditorTab({ courseId, courseTitle, courseDescr
           </Button>
         </div>
 
-        {/* AI Generate Button - only when unpublished */}
+        {/* AI generate actions — only when unpublished */}
         {!assessment.is_published && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full text-xs gap-1.5"
-            style={{ borderColor: "#ed1878", color: "#ed1878" }}
-            onClick={handleOpenAiModal}
-          >
-            <Sparkles className="h-3.5 w-3.5" /> Generate Starter Questions
-          </Button>
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs gap-1.5"
+              style={{ borderColor: "#7130A0", color: "#7130A0" }}
+              onClick={handleGenerateQuizWithAi}
+              disabled={!hasAiTranscript || quizAiGenerating}
+              title={
+                hasAiTranscript
+                  ? "Generate quiz questions from the AI Assist transcript"
+                  : "Use AI Assist on the Structure tab with a Vimeo video that has a transcript first"
+              }
+            >
+              {quizAiGenerating ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating quiz…</>
+              ) : (
+                <><Sparkles className="h-3.5 w-3.5" /> Generate quiz with AI</>
+              )}
+            </Button>
+            {!hasAiTranscript && (
+              <p className="text-[11px] text-muted-foreground">
+                Available after AI Assist fetches a transcript on the Structure tab.
+              </p>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs gap-1.5"
+              style={{ borderColor: "#ed1878", color: "#ed1878" }}
+              onClick={handleOpenAiModal}
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Generate Starter Questions
+            </Button>
+          </div>
         )}
 
         {qLoading ? (

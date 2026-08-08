@@ -21,9 +21,11 @@ import LessonEditorPanel from "@/components/academy/builder/LessonEditorPanel";
 import ImportVideosPanel from "@/components/academy/builder/ImportVideosPanel";
 import AssessmentEditorTab from "@/components/academy/builder/AssessmentEditorTab";
 import PackageRulesTab from "@/components/academy/builder/PackageRulesTab";
+import AiAssistPanel, { type AiAssistResult } from "@/components/academy/builder/AiAssistPanel";
 import PathwayMultiSelect from "@/components/academy/PathwayMultiSelect";
 import TagChipInput from "@/components/academy/TagChipInput";
 import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
+import { todayLocalISODate } from "@/lib/academy/aiAssist";
 import { usePermission } from "@/hooks/usePermission";
 
 const statusColors: Record<string, string> = {
@@ -61,6 +63,8 @@ export default function AcademyBuilderCourse() {
   const [editingLesson, setEditingLesson] = useState<{ lesson: AcademyLesson | null; moduleId: number; courseId: number } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "module" | "lesson"; id: number; name: string; hasChildren?: boolean } | null>(null);
   const [importVideosModuleId, setImportVideosModuleId] = useState<number | null>(null);
+  // Session-only transcript from AI Assist (powers Assessment quiz generation)
+  const [aiTranscript, setAiTranscript] = useState("");
 
   // Fetch course
   const { data: course, isLoading: courseLoading } = useQuery({
@@ -75,6 +79,20 @@ export default function AcademyBuilderCourse() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: facilitators = [] } = useQuery({
+    queryKey: ["academy-builder-facilitators"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, full_name, archived, disabled")
+        .eq("is_vivacity_internal", true)
+        .order("full_name");
+      if (error) throw error;
+      return (data ?? []).filter((u) => !u.archived && !u.disabled);
+    },
+    staleTime: 60_000,
   });
 
   // Auto-calculated lesson minutes total (from v_academy_course_total_minutes)
@@ -121,21 +139,34 @@ export default function AcademyBuilderCourse() {
     is_free: boolean;
     certificate_enabled: boolean;
     pass_score: number;
+    facilitator_id: string | null;
+    delivery_date: string | null;
+    thumbnail_url: string | null;
+    webinar_series: string | null;
   };
 
-  const buildForm = useCallback((c: any): SettingsForm => ({
-    title: c?.title ?? "",
-    slug: c?.slug ?? "",
-    short_description: c?.short_description ?? "",
-    description: c?.description ?? "",
-    target_audience: Array.isArray(c?.target_audience) ? c.target_audience : [],
-    difficulty_level: c?.difficulty_level ?? "beginner",
-    estimated_minutes: c?.estimated_minutes ?? null,
-    tags: Array.isArray(c?.tags) ? c.tags : [],
-    is_free: c?.is_free ?? false,
-    certificate_enabled: c?.certificate_enabled ?? false,
-    pass_score: c?.pass_score ?? 80,
-  }), []);
+  const buildForm = useCallback((c: any): SettingsForm => {
+    const neverPublished = !c?.published_at;
+    const existingDelivery = c?.delivery_date ? String(c.delivery_date).slice(0, 10) : null;
+    return {
+      title: c?.title ?? "",
+      slug: c?.slug ?? "",
+      short_description: c?.short_description ?? "",
+      description: c?.description ?? "",
+      target_audience: Array.isArray(c?.target_audience) ? c.target_audience : [],
+      difficulty_level: c?.difficulty_level ?? "beginner",
+      estimated_minutes: c?.estimated_minutes ?? null,
+      tags: Array.isArray(c?.tags) ? c.tags : [],
+      is_free: c?.is_free ?? false,
+      certificate_enabled: c?.certificate_enabled ?? false,
+      pass_score: c?.pass_score ?? 80,
+      facilitator_id: c?.facilitator_id ?? null,
+      // Default delivery date to today only for never-published courses still missing one
+      delivery_date: existingDelivery ?? (neverPublished ? todayLocalISODate() : null),
+      thumbnail_url: c?.thumbnail_url ?? null,
+      webinar_series: c?.webinar_series ?? null,
+    };
+  }, []);
 
   const [formState, setFormState] = useState<SettingsForm>(() => buildForm(course));
   const baselineRef = useRef<SettingsForm>(formState);
@@ -147,6 +178,11 @@ export default function AcademyBuilderCourse() {
       baselineRef.current = next;
     }
   }, [course, buildForm]);
+
+  // Clear session transcript when navigating to a different course
+  useEffect(() => {
+    setAiTranscript("");
+  }, [courseId]);
 
   const isDirty = useMemo(
     () => JSON.stringify(formState) !== JSON.stringify(baselineRef.current),
@@ -181,9 +217,38 @@ export default function AcademyBuilderCourse() {
     onError: (e: any) => toast.error(e?.message || "Failed to save course settings"),
   });
 
+  // Require facilitator + delivery only for never-published courses (genuinely new drafts).
+  // Previously published courses missing these fields can still Save without a forced backfill.
+  const requiresFacilitatorFields = !course?.published_at;
+
   const handleSaveSettings = () => {
     if (!isDirty || saveCourseSettings.isPending) return;
+    if (requiresFacilitatorFields) {
+      if (!formState.facilitator_id) {
+        toast.error("Select a facilitator before saving");
+        return;
+      }
+      if (!formState.delivery_date) {
+        toast.error("Set a date of delivery before saving");
+        return;
+      }
+    }
     saveCourseSettings.mutate(formState);
+  };
+
+  const handleAiAssistGenerated = (result: AiAssistResult) => {
+    setFormState((p) => ({
+      ...p,
+      title: result.title || p.title,
+      short_description: result.short_description,
+      description: result.description,
+      target_audience: result.target_audience,
+      difficulty_level: result.difficulty_level,
+      tags: result.tags,
+      thumbnail_url: result.thumbnail_url,
+      webinar_series: result.webinar_series,
+    }));
+    setAiTranscript(result.transcript || "");
   };
 
   // Note: in-app navigation guard via useBlocker requires a data router; this app uses BrowserRouter.
@@ -319,7 +384,16 @@ export default function AcademyBuilderCourse() {
           <TabsTrigger value="packages">Package Rules</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="structure">
+        <TabsContent value="structure" className="space-y-6">
+          {canEdit && (
+            <AiAssistPanel
+              currentTitle={formState.title}
+              webinarSeries={formState.webinar_series}
+              onSeriesChange={(series) => setFormState((p) => ({ ...p, webinar_series: series }))}
+              onGenerated={handleAiAssistGenerated}
+            />
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
             {/* Left Panel — Course Settings */}
             <div className="space-y-4 p-5 rounded-xl border" style={{ borderColor: "hsl(var(--border))" }}>
@@ -355,6 +429,45 @@ export default function AcademyBuilderCourse() {
               <Field label="Title">
                 <Input value={formState.title} onChange={(e) => setFormState((p) => ({ ...p, title: e.target.value }))} />
               </Field>
+
+              <div className="grid grid-cols-1 gap-3">
+                <Field label={requiresFacilitatorFields ? "Facilitator *" : "Facilitator"}>
+                  <Select
+                    value={formState.facilitator_id ?? undefined}
+                    onValueChange={(v) => setFormState((p) => ({ ...p, facilitator_id: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a facilitator" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facilitators.map((u) => (
+                        <SelectItem key={u.user_uuid} value={u.user_uuid}>
+                          {u.full_name?.trim() || u.user_uuid}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!requiresFacilitatorFields && !formState.facilitator_id && (
+                    <p className="text-[11px] text-muted-foreground mt-1">Not set</p>
+                  )}
+                </Field>
+
+                <Field label={requiresFacilitatorFields ? "Date of delivery *" : "Date of delivery"}>
+                  <Input
+                    type="date"
+                    value={formState.delivery_date ?? ""}
+                    onChange={(e) =>
+                      setFormState((p) => ({
+                        ...p,
+                        delivery_date: e.target.value || null,
+                      }))
+                    }
+                  />
+                  {!requiresFacilitatorFields && !formState.delivery_date && (
+                    <p className="text-[11px] text-muted-foreground mt-1">Not set</p>
+                  )}
+                </Field>
+              </div>
 
               <Field label="Slug">
                 <Input value={formState.slug} onChange={(e) => setFormState((p) => ({ ...p, slug: e.target.value }))} className="font-mono text-xs" />
@@ -640,7 +753,13 @@ export default function AcademyBuilderCourse() {
         </TabsContent>
 
         <TabsContent value="assessment">
-          <AssessmentEditorTab courseId={courseId!} courseTitle={course.title} courseDescription={course.description} courseTargetAudience={course.target_audience} />
+          <AssessmentEditorTab
+            courseId={courseId!}
+            courseTitle={formState.title || course.title}
+            courseDescription={formState.description || course.description}
+            courseTargetAudience={formState.target_audience.length ? formState.target_audience : course.target_audience}
+            aiTranscript={aiTranscript}
+          />
         </TabsContent>
 
         <TabsContent value="packages">
