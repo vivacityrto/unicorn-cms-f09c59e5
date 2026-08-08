@@ -351,6 +351,7 @@ export default function AudienceHubPage({
                 completedLessons={course.completed_lessons}
                 totalLessons={course.total_lessons}
                 accentColour={accentColour}
+                thumbnailUrl={course.thumbnail_url}
                 onClick={
                   status === "completed"
                     ? () => handleReview(course)
