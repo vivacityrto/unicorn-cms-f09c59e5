@@ -701,9 +701,11 @@ export type Database = {
           certificate_enabled: boolean | null
           created_at: string | null
           created_by: string | null
+          delivery_date: string | null
           description: string | null
           difficulty_level: string | null
           estimated_minutes: number | null
+          facilitator_id: string | null
           id: number
           is_free: boolean | null
           pass_score: number | null
@@ -734,9 +736,11 @@ export type Database = {
           certificate_enabled?: boolean | null
           created_at?: string | null
           created_by?: string | null
+          delivery_date?: string | null
           description?: string | null
           difficulty_level?: string | null
           estimated_minutes?: number | null
+          facilitator_id?: string | null
           id?: never
           is_free?: boolean | null
           pass_score?: number | null
@@ -767,9 +771,11 @@ export type Database = {
           certificate_enabled?: boolean | null
           created_at?: string | null
           created_by?: string | null
+          delivery_date?: string | null
           description?: string | null
           difficulty_level?: string | null
           estimated_minutes?: number | null
+          facilitator_id?: string | null
           id?: never
           is_free?: boolean | null
           pass_score?: number | null
@@ -792,6 +798,13 @@ export type Database = {
           webinar_series?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "academy_courses_facilitator_id_fkey"
+            columns: ["facilitator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
           {
             foreignKeyName: "academy_courses_source_video_id_fkey"
             columns: ["source_video_id"]
