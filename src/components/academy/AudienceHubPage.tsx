@@ -149,7 +149,7 @@ export default function AudienceHubPage({
 
   const filtered = useMemo(() => {
     return courses.filter((c) => {
-      if (activeSeries !== ALL_SERIES && c.webinar_series !== activeSeries) {
+      if (activeSeries !== ALL_SERIES && c.webinar_series?.trim() !== activeSeries) {
         return false;
       }
       if (!courseMatchesSearch(c, trimmedSearch)) return false;
