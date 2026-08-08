@@ -118,6 +118,7 @@ const academyBuilderMenuItems = [
   { icon: Users, label: "Enrolments", path: "/superadmin/academy/enrollments" },
   { icon: Award, label: "Certificates", path: "/superadmin/academy/certificates" },
   { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
+  { icon: Search, label: "Course Cleanup", path: "/superadmin/academy/course-cleanup" },
   { icon: GraduationCap, label: "Package → Course Rules", path: "/superadmin/academy/package-course-rules" },
   { icon: ClipboardList, label: "Workforce PDP", path: "/superadmin/workforce-pdp" },
 ];
