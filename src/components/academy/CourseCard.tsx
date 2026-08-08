@@ -19,6 +19,7 @@ export interface CourseCardProps {
   completedLessons?: number;
   totalLessons?: number;
   accentColour?: string;
+  thumbnailUrl?: string | null;
   onContinue?: () => void;
   onStart?: () => void;
   onClick?: () => void;
@@ -55,12 +56,14 @@ export default function CourseCard({
   completedLessons = 0,
   totalLessons,
   accentColour = "#23c0dd",
+  thumbnailUrl,
   onContinue,
   onStart,
   onClick,
 }: CourseCardProps) {
   const total = totalLessons ?? lessonCount;
   const badge = statusBadge[status];
+  const hasThumbnail = Boolean(thumbnailUrl);
 
   return (
     <div
@@ -86,18 +89,30 @@ export default function CourseCard({
         className="relative flex items-center justify-center"
         style={{
           height: 148,
-          background: `linear-gradient(135deg, ${accentColour} 0%, #7130A0 100%)`,
+          background: hasThumbnail
+            ? undefined
+            : `linear-gradient(135deg, ${accentColour} 0%, #7130A0 100%)`,
         }}
       >
+        {thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={title}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : null}
+
         {/* Category badge – top-left */}
         <span className="absolute top-3 left-3 rounded-full bg-black/40 backdrop-blur-sm px-2.5 py-0.5 text-[10px] font-medium text-white">
           {category}
         </span>
 
-        {/* Play button */}
-        <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-          <Play className="h-5 w-5 text-white fill-white ml-0.5" />
-        </div>
+        {/* Play button — gradient placeholder only */}
+        {!hasThumbnail && (
+          <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <Play className="h-5 w-5 text-white fill-white ml-0.5" />
+          </div>
+        )}
 
         {/* Progress bar pinned to bottom (only in_progress) */}
         {status === "in_progress" && progressPercent > 0 && (
