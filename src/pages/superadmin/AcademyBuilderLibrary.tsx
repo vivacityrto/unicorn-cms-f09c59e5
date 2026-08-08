@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminAcademyCourses, useCreateCourse, useDeleteCourse, usePermanentDeleteCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,18 +21,89 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter,
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
+} from "@/components/ui/accordion";
+import { MultiSelect } from "@/components/documents/bulk-generate/MultiSelect";
+import {
+  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter, Users,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePermission } from "@/hooks/usePermission";
+import { formatTargetAudienceLabel } from "@/lib/academy/pathways";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   published: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   archived: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
 };
+
+const FIXED_SERIES_ORDER = [
+  "AI in Your RTO",
+  "Inside VET",
+  "Trainers Edge",
+  "8 Critical Drivers to RTO Success",
+  "Superhero Tools Unleashed",
+  "The Compliance Lab",
+] as const;
+
+const STANDALONE_KEY = "__standalone__";
+const STANDALONE_LABEL = "Standalone Courses";
+const AUDIENCE_PREVIEW_COUNT = 3;
+
+type CourseSection = {
+  key: string;
+  label: string;
+  courses: AdminCourse[];
+};
+
+function seriesKeyForCourse(course: AdminCourse): string {
+  const series = course.webinar_series?.trim();
+  return series ? series : STANDALONE_KEY;
+}
+
+function formatAudiencePreview(audience: string[] | null | undefined): string | null {
+  if (!audience?.length) return null;
+  const labels = audience.map(formatTargetAudienceLabel);
+  if (labels.length <= AUDIENCE_PREVIEW_COUNT) return labels.join(", ");
+  const shown = labels.slice(0, AUDIENCE_PREVIEW_COUNT).join(", ");
+  return `${shown} +${labels.length - AUDIENCE_PREVIEW_COUNT} more`;
+}
+
+function groupCoursesBySeries(courses: AdminCourse[]): CourseSection[] {
+  const byKey = new Map<string, AdminCourse[]>();
+  for (const course of courses) {
+    const key = seriesKeyForCourse(course);
+    const list = byKey.get(key);
+    if (list) list.push(course);
+    else byKey.set(key, [course]);
+  }
+
+  const sections: CourseSection[] = [];
+  for (const label of FIXED_SERIES_ORDER) {
+    const list = byKey.get(label);
+    if (list?.length) {
+      sections.push({ key: label, label, courses: list });
+      byKey.delete(label);
+    }
+  }
+
+  const standalone = byKey.get(STANDALONE_KEY);
+  if (standalone?.length) {
+    sections.push({ key: STANDALONE_KEY, label: STANDALONE_LABEL, courses: standalone });
+    byKey.delete(STANDALONE_KEY);
+  }
+
+  const extras = [...byKey.entries()]
+    .filter(([, list]) => list.length > 0)
+    .sort(([a], [b]) => a.localeCompare(b));
+  for (const [label, list] of extras) {
+    sections.push({ key: label, label, courses: list });
+  }
+
+  return sections;
+}
 
 function generateSlug(title: string): string {
   return title
@@ -47,6 +118,9 @@ export default function AcademyBuilderLibrary() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [userTypeFilter, setUserTypeFilter] = useState<string[]>([]);
+  const [openSections, setOpenSections] = useState<string[]>([]);
+  const seenSectionKeysRef = useRef<Set<string>>(new Set());
   const [newCourseOpen, setNewCourseOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [backfillConfirmOpen, setBackfillConfirmOpen] = useState(false);
@@ -62,6 +136,47 @@ export default function AcademyBuilderLibrary() {
     status: statusFilter,
     search: search || undefined,
   });
+
+  const userTypeOptions = useMemo(() => {
+    const distinct = new Set<string>();
+    for (const course of courses) {
+      for (const role of course.target_audience ?? []) {
+        if (role) distinct.add(role);
+      }
+    }
+    return [...distinct]
+      .map((value) => ({ value, label: formatTargetAudienceLabel(value) }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [courses]);
+
+  const filteredCourses = useMemo(() => {
+    if (userTypeFilter.length === 0) return courses;
+    const selected = new Set(userTypeFilter);
+    return courses.filter((course) =>
+      (course.target_audience ?? []).some((role) => selected.has(role)),
+    );
+  }, [courses, userTypeFilter]);
+
+  const sections = useMemo(
+    () => groupCoursesBySeries(filteredCourses),
+    [filteredCourses],
+  );
+
+  // Auto-expand only the first time a section becomes visible; preserve manual toggles.
+  useEffect(() => {
+    const visibleKeys = sections.map((s) => s.key);
+    const newlyVisible = visibleKeys.filter((key) => !seenSectionKeysRef.current.has(key));
+    if (newlyVisible.length === 0) return;
+    for (const key of newlyVisible) seenSectionKeysRef.current.add(key);
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      for (const key of newlyVisible) next.add(key);
+      return [...next];
+    });
+  }, [sections]);
+
+  const allVisibleExpanded =
+    sections.length > 0 && sections.every((s) => openSections.includes(s.key));
 
   const createCourse = useCreateCourse();
   const archiveCourse = useDeleteCourse();
@@ -180,8 +295,8 @@ export default function AcademyBuilderLibrary() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search courses..."
@@ -201,9 +316,19 @@ export default function AcademyBuilderLibrary() {
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
+        <MultiSelect
+          options={userTypeOptions}
+          values={userTypeFilter}
+          onChange={setUserTypeFilter}
+          placeholder="User Type"
+          searchPlaceholder="Search user types..."
+          emptyText="No user types found."
+          className="w-[240px]"
+          maxSelectedDisplay={2}
+        />
       </div>
 
-      {/* Course Grid */}
+      {/* Course sections */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -216,74 +341,128 @@ export default function AcademyBuilderLibrary() {
           <p className="font-medium text-foreground">No courses found</p>
           <p className="text-sm text-muted-foreground mt-1">Create your first course to get started</p>
         </div>
+      ) : sections.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="font-medium text-foreground">No courses match</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {courses.map((course) => (
-            <Card
-              key={course.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              style={{ borderLeft: "4px solid #7130A0" }}
-              onClick={() => navigate(`/superadmin/academy/builder/${course.id}`)}
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => {
+                if (allVisibleExpanded) {
+                  setOpenSections([]);
+                } else {
+                  setOpenSections(sections.map((s) => s.key));
+                }
+              }}
             >
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2 min-h-9">{course.title}</h3>
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <Badge className={`text-[10px] ${statusColors[course.status ?? "draft"]}`}>
-                      {course.status ?? "draft"}
-                    </Badge>
-                    {canCreateCourse && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreVertical className="h-3.5 w-3.5" />
-                            <span className="sr-only">Course actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          {course.status !== "archived" && (
-                            <DropdownMenuItem onSelect={() => archiveCourse.mutate(course.id)}>
-                              <Archive className="h-3.5 w-3.5 mr-2" /> Archive
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onSelect={() => setDeleteTarget(course)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete permanently
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+              {allVisibleExpanded ? "Collapse all" : "Expand all"}
+            </Button>
+          </div>
+          <Accordion
+            type="multiple"
+            value={openSections}
+            onValueChange={setOpenSections}
+            className="space-y-3"
+          >
+            {sections.map((section) => (
+              <AccordionItem
+                key={section.key}
+                value={section.key}
+                className="border rounded-lg px-4"
+              >
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <span className="text-sm font-semibold text-foreground">
+                    {section.label} ({section.courses.length})
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {section.courses.map((course) => {
+                      const audiencePreview = formatAudiencePreview(course.target_audience);
+                      return (
+                        <Card
+                          key={course.id}
+                          className="cursor-pointer hover:shadow-md transition-shadow"
+                          style={{ borderLeft: "4px solid #7130A0" }}
+                          onClick={() => navigate(`/superadmin/academy/builder/${course.id}`)}
+                        >
+                          <CardContent className="p-5 space-y-3">
+                            <div className="flex items-start justify-between">
+                              <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2 min-h-9">{course.title}</h3>
+                              <div className="flex items-center gap-1 shrink-0 ml-2">
+                                <Badge className={`text-[10px] ${statusColors[course.status ?? "draft"]}`}>
+                                  {course.status ?? "draft"}
+                                </Badge>
+                                {canCreateCourse && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                                        <MoreVertical className="h-3.5 w-3.5" />
+                                        <span className="sr-only">Course actions</span>
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                      {course.status !== "archived" && (
+                                        <DropdownMenuItem onSelect={() => archiveCourse.mutate(course.id)}>
+                                          <Archive className="h-3.5 w-3.5 mr-2" /> Archive
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onSelect={() => setDeleteTarget(course)}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete permanently
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </div>
+                            </div>
+
+                            {audiencePreview && (
+                              <p className="text-xs text-muted-foreground flex items-start gap-1.5 line-clamp-2">
+                                <Users className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                <span>{audiencePreview}</span>
+                              </p>
+                            )}
+
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                              <span className="flex items-center gap-1">
+                                <BookOpen className="h-3.5 w-3.5" /> {course.module_count} modules
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Video className="h-3.5 w-3.5" /> {course.lesson_count} lessons
+                              </span>
+                              {course.certificate_enabled && (
+                                <span className="flex items-center gap-1 text-amber-600">
+                                  <Award className="h-3.5 w-3.5" /> Certificate
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span className="capitalize">{course.difficulty_level ?? "beginner"}</span>
+                              {course.estimated_minutes && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" /> {course.estimated_minutes}m
+                                </span>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
-                </div>
-
-
-                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <BookOpen className="h-3.5 w-3.5" /> {course.module_count} modules
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Video className="h-3.5 w-3.5" /> {course.lesson_count} lessons
-                  </span>
-                  {course.certificate_enabled && (
-                    <span className="flex items-center gap-1 text-amber-600">
-                      <Award className="h-3.5 w-3.5" /> Certificate
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="capitalize">{course.difficulty_level ?? "beginner"}</span>
-                  {course.estimated_minutes && (
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {course.estimated_minutes}m
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       )}
 
