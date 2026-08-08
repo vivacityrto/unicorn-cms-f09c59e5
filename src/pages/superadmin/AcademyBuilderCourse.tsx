@@ -1,6 +1,23 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { useModulesWithLessons, useCreateModule, useUpdateModule, useDeleteModule, useReorderModules, useCreateLesson, useUpdateLesson, useDeleteLesson, useReorderLessons, type AcademyModule, type AcademyLesson } from "@/hooks/academy/useAcademyModulesLessons";
 import { useUpdateCourse, usePublishCourse, useDeleteCourse } from "@/hooks/academy/useAdminAcademyCourses";
@@ -27,6 +44,7 @@ import TagChipInput from "@/components/academy/TagChipInput";
 import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
 import { todayLocalISODate } from "@/lib/academy/aiAssist";
 import { usePermission } from "@/hooks/usePermission";
+import { cn } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -45,6 +63,244 @@ const lessonTypeEmoji = (type: string | null) => {
   if (type === "resource") return "📎";
   return "📄";
 };
+
+function SortableLessonRow({
+  lesson,
+  canEdit,
+  canPublishOrDelete,
+  onEdit,
+  onDelete,
+  onTogglePublished,
+}: {
+  lesson: AcademyLesson;
+  canEdit: boolean;
+  canPublishOrDelete: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onTogglePublished: (published: boolean) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: lesson.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-2 py-2 px-3 rounded hover:bg-muted/50 transition-colors text-sm group"
+    >
+      <button
+        type="button"
+        className="p-0.5 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+        aria-label={`Reorder ${lesson.title}`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+
+      <span className="text-sm">{lessonTypeEmoji(lesson.lesson_type)}</span>
+      <span className="text-foreground flex-1 truncate">{lesson.title}</span>
+
+      {lesson.is_preview && (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0">Preview</Badge>
+      )}
+
+      {canPublishOrDelete && (
+        <Switch
+          checked={lesson.is_published !== false}
+          onCheckedChange={onTogglePublished}
+        />
+      )}
+
+      {canEdit && (
+        <>
+          <button onClick={onEdit} className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity">
+            <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1 hover:bg-destructive/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function SortableModuleCard({
+  mod,
+  expanded,
+  isEditing,
+  editModuleTitle,
+  canEdit,
+  canPublishOrDelete,
+  lessonSensors,
+  onToggleExpand,
+  onEditTitleChange,
+  onEditTitleSave,
+  onStartEditTitle,
+  onTogglePublished,
+  onDelete,
+  onLessonDragEnd,
+  onOpenLessonEditor,
+  onDeleteLesson,
+  onToggleLessonPublished,
+  onImportVideos,
+}: {
+  mod: AcademyModule;
+  expanded: boolean;
+  isEditing: boolean;
+  editModuleTitle: string;
+  canEdit: boolean;
+  canPublishOrDelete: boolean;
+  lessonSensors: ReturnType<typeof useSensors>;
+  onToggleExpand: () => void;
+  onEditTitleChange: (value: string) => void;
+  onEditTitleSave: () => void;
+  onStartEditTitle: () => void;
+  onTogglePublished: (published: boolean) => void;
+  onDelete: () => void;
+  onLessonDragEnd: (event: DragEndEvent) => void;
+  onOpenLessonEditor: (lesson?: AcademyLesson | null) => void;
+  onDeleteLesson: (lesson: AcademyLesson) => void;
+  onToggleLessonPublished: (lesson: AcademyLesson, published: boolean) => void;
+  onImportVideos: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: mod.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ ...style, borderColor: "hsl(var(--border))" }}
+      className={cn("rounded-lg border", isDragging && "z-10")}
+    >
+      {/* Module header */}
+      <div className="flex items-center gap-2 p-3 hover:bg-muted/30 transition-colors">
+        <button
+          type="button"
+          className="p-0.5 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+          aria-label={`Reorder module ${mod.title}`}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+
+        <button onClick={onToggleExpand} className="p-1">
+          {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        </button>
+
+        {isEditing ? (
+          <Input
+            value={editModuleTitle}
+            onChange={(e) => onEditTitleChange(e.target.value)}
+            onBlur={onEditTitleSave}
+            onKeyDown={(e) => e.key === "Enter" && onEditTitleSave()}
+            className="h-8 text-sm flex-1"
+            autoFocus
+          />
+        ) : (
+          <span
+            className="text-sm font-semibold text-foreground flex-1 cursor-pointer"
+            onDoubleClick={onStartEditTitle}
+          >
+            {mod.title}
+          </span>
+        )}
+
+        <span className="text-xs text-muted-foreground">{mod.lessons.length} lessons</span>
+
+        <div className="flex items-center gap-1">
+          {canPublishOrDelete && (
+            <Switch
+              checked={mod.is_published !== false}
+              onCheckedChange={onTogglePublished}
+            />
+          )}
+          {canEdit && (
+            <>
+              <button onClick={onStartEditTitle} className="p-1 hover:bg-muted rounded">
+                <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+              <button
+                onClick={onDelete}
+                className="p-1 hover:bg-destructive/10 rounded"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Lessons — separate DndContext so lesson IDs cannot collide with module IDs */}
+      {expanded && (
+        <div className="border-t px-3 pb-3 space-y-1" style={{ borderColor: "hsl(var(--border))" }}>
+          <DndContext
+            sensors={lessonSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={onLessonDragEnd}
+          >
+            <SortableContext
+              items={mod.lessons.map((l) => l.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {mod.lessons.map((lesson) => (
+                <SortableLessonRow
+                  key={lesson.id}
+                  lesson={lesson}
+                  canEdit={canEdit}
+                  canPublishOrDelete={canPublishOrDelete}
+                  onEdit={() => onOpenLessonEditor(lesson)}
+                  onDelete={() => onDeleteLesson(lesson)}
+                  onTogglePublished={(v) => onToggleLessonPublished(lesson, v)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+
+          {canEdit && (
+            <div className="flex gap-1 mt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onOpenLessonEditor(null)}
+                className="flex-1 text-muted-foreground hover:text-foreground"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onImportVideos}
+                className="flex-1 text-muted-foreground hover:text-foreground"
+              >
+                <Upload className="h-3.5 w-3.5 mr-1" /> Import Videos
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AcademyBuilderCourse() {
   const { courseId: courseIdParam } = useParams<{ courseId: string }>();
@@ -319,24 +575,38 @@ export default function AcademyBuilderCourse() {
     setDeleteTarget(null);
   };
 
-  // Drag-drop for modules (simplified with move up/down for now since @dnd-kit needs more wiring)
-  const moveModule = (idx: number, direction: -1 | 1) => {
-    if (!courseId) return;
-    const ids = modules.map(m => m.id);
-    const newIdx = idx + direction;
-    if (newIdx < 0 || newIdx >= ids.length) return;
-    [ids[idx], ids[newIdx]] = [ids[newIdx], ids[idx]];
-    reorderModules.mutate({ courseId, orderedIds: ids });
-  };
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-  const moveLesson = (mod: AcademyModule, lessonIdx: number, direction: -1 | 1) => {
-    if (!courseId) return;
-    const ids = mod.lessons.map(l => l.id);
-    const newIdx = lessonIdx + direction;
-    if (newIdx < 0 || newIdx >= ids.length) return;
-    [ids[lessonIdx], ids[newIdx]] = [ids[newIdx], ids[lessonIdx]];
-    reorderLessons.mutate({ moduleId: mod.id, courseId, orderedIds: ids });
-  };
+  const handleModuleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      if (!courseId) return;
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const oldIndex = modules.findIndex((m) => m.id === active.id);
+      const newIndex = modules.findIndex((m) => m.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      const orderedIds = arrayMove(modules, oldIndex, newIndex).map((m) => m.id);
+      reorderModules.mutate({ courseId, orderedIds });
+    },
+    [courseId, modules, reorderModules]
+  );
+
+  const handleLessonDragEnd = useCallback(
+    (mod: AcademyModule) => (event: DragEndEvent) => {
+      if (!courseId) return;
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const oldIndex = mod.lessons.findIndex((l) => l.id === active.id);
+      const newIndex = mod.lessons.findIndex((l) => l.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      const orderedIds = arrayMove(mod.lessons, oldIndex, newIndex).map((l) => l.id);
+      reorderLessons.mutate({ moduleId: mod.id, courseId, orderedIds });
+    },
+    [courseId, reorderLessons]
+  );
 
   if (courseLoading) {
     return (
@@ -613,133 +883,40 @@ export default function AcademyBuilderCourse() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {modules.map((mod, modIdx) => {
-                    const expanded = expandedModules.has(mod.id);
-                    const isEditing = editingModuleId === mod.id;
-                    return (
-                      <div key={mod.id} className="rounded-lg border" style={{ borderColor: "hsl(var(--border))" }}>
-                        {/* Module header */}
-                        <div className="flex items-center gap-2 p-3 hover:bg-muted/30 transition-colors">
-                          <div className="flex flex-col gap-0.5">
-                            <button onClick={() => moveModule(modIdx, -1)} disabled={modIdx === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-20 text-xs">▲</button>
-                            <button onClick={() => moveModule(modIdx, 1)} disabled={modIdx === modules.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-20 text-xs">▼</button>
-                          </div>
-
-                          <button onClick={() => toggleModuleExpand(mod.id)} className="p-1">
-                            {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                          </button>
-
-                          {isEditing ? (
-                            <Input
-                              value={editModuleTitle}
-                              onChange={(e) => setEditModuleTitle(e.target.value)}
-                              onBlur={() => handleModuleTitleSave(mod.id)}
-                              onKeyDown={(e) => e.key === "Enter" && handleModuleTitleSave(mod.id)}
-                              className="h-8 text-sm flex-1"
-                              autoFocus
-                            />
-                          ) : (
-                            <span
-                              className="text-sm font-semibold text-foreground flex-1 cursor-pointer"
-                              onDoubleClick={() => { setEditingModuleId(mod.id); setEditModuleTitle(mod.title); }}
-                            >
-                              {mod.title}
-                            </span>
-                          )}
-
-                          <span className="text-xs text-muted-foreground">{mod.lessons.length} lessons</span>
-
-                          <div className="flex items-center gap-1">
-                            {canPublishOrDelete && (
-                              <Switch
-                                checked={mod.is_published !== false}
-                                onCheckedChange={(v) => updateModule.mutate({ id: mod.id, courseId: courseId!, data: { is_published: v } })}
-                              />
-                            )}
-                            {canEdit && (
-                              <>
-                                <button onClick={() => { setEditingModuleId(mod.id); setEditModuleTitle(mod.title); }} className="p-1 hover:bg-muted rounded">
-                                  <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
-                                </button>
-                                <button
-                                  onClick={() => setDeleteTarget({ type: "module", id: mod.id, name: mod.title, hasChildren: mod.lessons.length > 0 })}
-                                  className="p-1 hover:bg-destructive/10 rounded"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Lessons */}
-                        {expanded && (
-                          <div className="border-t px-3 pb-3 space-y-1" style={{ borderColor: "hsl(var(--border))" }}>
-                            {mod.lessons.map((lesson, lessonIdx) => (
-                              <div
-                                key={lesson.id}
-                                className="flex items-center gap-2 py-2 px-3 rounded hover:bg-muted/50 transition-colors text-sm group"
-                              >
-                                <div className="flex flex-col gap-0.5">
-                                  <button onClick={() => moveLesson(mod, lessonIdx, -1)} disabled={lessonIdx === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-20 text-[10px]">▲</button>
-                                  <button onClick={() => moveLesson(mod, lessonIdx, 1)} disabled={lessonIdx === mod.lessons.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-20 text-[10px]">▼</button>
-                                </div>
-
-                                <span className="text-sm">{lessonTypeEmoji(lesson.lesson_type)}</span>
-                                <span className="text-foreground flex-1 truncate">{lesson.title}</span>
-
-                                {lesson.is_preview && (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">Preview</Badge>
-                                )}
-
-                                {canPublishOrDelete && (
-                                  <Switch
-                                    checked={lesson.is_published !== false}
-                                    onCheckedChange={(v) => updateLessonMut.mutate({ id: lesson.id, courseId: courseId!, data: { is_published: v } })}
-                                  />
-                                )}
-
-                                {canEdit && (
-                                  <>
-                                    <button onClick={() => openLessonEditor(mod.id, lesson)} className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
-                                    </button>
-                                    <button
-                                      onClick={() => setDeleteTarget({ type: "lesson", id: lesson.id, name: lesson.title })}
-                                      className="p-1 hover:bg-destructive/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            ))}
-
-                            {canEdit && (
-                              <div className="flex gap-1 mt-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openLessonEditor(mod.id)}
-                                  className="flex-1 text-muted-foreground hover:text-foreground"
-                                >
-                                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setImportVideosModuleId(mod.id)}
-                                  className="flex-1 text-muted-foreground hover:text-foreground"
-                                >
-                                  <Upload className="h-3.5 w-3.5 mr-1" /> Import Videos
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleModuleDragEnd}
+                  >
+                    <SortableContext
+                      items={modules.map((m) => m.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {modules.map((mod) => (
+                        <SortableModuleCard
+                          key={mod.id}
+                          mod={mod}
+                          expanded={expandedModules.has(mod.id)}
+                          isEditing={editingModuleId === mod.id}
+                          editModuleTitle={editModuleTitle}
+                          canEdit={canEdit}
+                          canPublishOrDelete={canPublishOrDelete}
+                          lessonSensors={sensors}
+                          onToggleExpand={() => toggleModuleExpand(mod.id)}
+                          onEditTitleChange={setEditModuleTitle}
+                          onEditTitleSave={() => handleModuleTitleSave(mod.id)}
+                          onStartEditTitle={() => { setEditingModuleId(mod.id); setEditModuleTitle(mod.title); }}
+                          onTogglePublished={(v) => updateModule.mutate({ id: mod.id, courseId: courseId!, data: { is_published: v } })}
+                          onDelete={() => setDeleteTarget({ type: "module", id: mod.id, name: mod.title, hasChildren: mod.lessons.length > 0 })}
+                          onLessonDragEnd={handleLessonDragEnd(mod)}
+                          onOpenLessonEditor={(lesson) => openLessonEditor(mod.id, lesson ?? null)}
+                          onDeleteLesson={(lesson) => setDeleteTarget({ type: "lesson", id: lesson.id, name: lesson.title })}
+                          onToggleLessonPublished={(lesson, v) => updateLessonMut.mutate({ id: lesson.id, courseId: courseId!, data: { is_published: v } })}
+                          onImportVideos={() => setImportVideosModuleId(mod.id)}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
 
                   {canEdit && (
                     <Button variant="outline" onClick={handleAddModule} className="w-full">
