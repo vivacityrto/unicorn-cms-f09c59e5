@@ -22,6 +22,7 @@ export interface AdminCourse {
   sort_order: number | null;
   created_at: string | null;
   published_at: string | null;
+  delivery_date: string | null;
   module_count: number;
   lesson_count: number;
   enrollment_count: number;
@@ -39,8 +40,8 @@ export function useAdminAcademyCourses(filters?: CourseFilters) {
     queryFn: async () => {
       let q = supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, thumbnail_url, target_audience, estimated_minutes, difficulty_level, status, tags, certificate_enabled, is_free, pass_score, sort_order, created_at, published_at")
-        .order("sort_order", { ascending: true });
+        .select("id, title, slug, description, short_description, thumbnail_url, target_audience, estimated_minutes, difficulty_level, status, tags, certificate_enabled, is_free, pass_score, sort_order, created_at, published_at, delivery_date")
+        .order("delivery_date", { ascending: false, nullsFirst: false });
 
       if (filters?.status && filters.status !== "all") {
         q = q.eq("status", filters.status);

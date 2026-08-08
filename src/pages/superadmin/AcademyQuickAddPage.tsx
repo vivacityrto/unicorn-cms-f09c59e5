@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,14 @@ import TagChipInput from "@/components/academy/TagChipInput";
 import WorkshopSegmentSplit, {
   formatTimecode, validateSegments, type WorkshopSegment,
 } from "@/components/academy/WorkshopSegmentSplit";
+
+function todayLocalISODate(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 // ── Series configuration ───────────────────────────────────────────────
 type AccessDefault = "all" | "superhero";
@@ -184,6 +193,23 @@ export default function AcademyQuickAddPage() {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [series, setSeries] = useState<string>("");
   const [episodeTitle, setEpisodeTitle] = useState("");
+  const [facilitatorId, setFacilitatorId] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState(todayLocalISODate);
+
+  const { data: facilitators = [] } = useQuery({
+    queryKey: ["academy-quick-add-facilitators"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, full_name, archived, disabled")
+        .eq("is_vivacity_internal", true)
+        .order("full_name");
+      if (error) throw error;
+      // Match SQL: coalesce(archived/disabled, false) = false
+      return (data ?? []).filter((u) => !u.archived && !u.disabled);
+    },
+    staleTime: 60_000,
+  });
 
   // Step 2 results
   const [generating, setGenerating] = useState(false);
@@ -563,6 +589,8 @@ export default function AcademyQuickAddPage() {
         available_to_all_clients: availableToAll,
         ai_generated: true,
         created_by: userId,
+        facilitator_id: facilitatorId,
+        delivery_date: deliveryDate,
       } as any)
       .select("id")
       .single();
@@ -645,6 +673,8 @@ export default function AcademyQuickAddPage() {
 
   const handleSave = async () => {
     if (!vimeoUrl.trim()) { toast.error("Vimeo URL is required"); return; }
+    if (!facilitatorId) { toast.error("Select a facilitator"); return; }
+    if (!deliveryDate) { toast.error("Date of delivery is required"); return; }
     if (!availableToAll && packageIds.length === 0) {
       toast.error("Select at least one package, or choose All clients");
       return;
@@ -839,6 +869,27 @@ export default function AcademyQuickAddPage() {
                   value={episodeTitle}
                   onChange={(e) => setEpisodeTitle(e.target.value)}
                   placeholder="Inclusive Practice & Reasonable Adjustment Plans"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Facilitator *</Label>
+                <Select value={facilitatorId} onValueChange={setFacilitatorId}>
+                  <SelectTrigger><SelectValue placeholder="Select a facilitator" /></SelectTrigger>
+                  <SelectContent>
+                    {facilitators.map((u) => (
+                      <SelectItem key={u.user_uuid} value={u.user_uuid}>
+                        {u.full_name?.trim() || u.user_uuid}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Date of delivery *</Label>
+                <Input
+                  type="date"
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
                 />
               </div>
             </div>
@@ -1129,6 +1180,8 @@ export default function AcademyQuickAddPage() {
             disabled={
               saving ||
               !vimeoUrl.trim() ||
+              !facilitatorId ||
+              !deliveryDate ||
               (isWorkshop ? !workshopActive : !title.trim())
             }
             className="text-white hover:opacity-90"
