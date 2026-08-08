@@ -759,6 +759,10 @@ export default function AcademyBuilderCourse() {
             courseDescription={formState.description || course.description}
             courseTargetAudience={formState.target_audience.length ? formState.target_audience : course.target_audience}
             aiTranscript={aiTranscript}
+            lessonCount={
+              courseTotals?.lesson_count
+              ?? modules.reduce((sum, m) => sum + (m.lessons?.length ?? 0), 0)
+            }
           />
         </TabsContent>
 
