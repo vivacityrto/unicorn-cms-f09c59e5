@@ -18,6 +18,21 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 const VALUE_LETTERS = ["A", "B", "C", "D", "E", "F"];
+const QUESTION_COUNT_MIN = 3;
+const QUESTION_COUNT_MAX = 20;
+const QUESTION_COUNT_SUGGEST_MIN = 8;
+
+/** Helpful default: 8 for a single-lesson (or unknown) course, scaling toward 20 for longer courses. */
+function suggestQuestionCount(lessonCount: number): number {
+  const n = Math.max(1, Math.floor(lessonCount) || 1);
+  const suggested = Math.round(QUESTION_COUNT_SUGGEST_MIN + (n - 1) * 1.5);
+  return Math.min(QUESTION_COUNT_MAX, Math.max(QUESTION_COUNT_SUGGEST_MIN, suggested));
+}
+
+function clampQuestionCount(value: number): number {
+  if (!Number.isFinite(value)) return QUESTION_COUNT_SUGGEST_MIN;
+  return Math.min(QUESTION_COUNT_MAX, Math.max(QUESTION_COUNT_MIN, Math.round(value)));
+}
 
 interface AssessmentEditorTabProps {
   courseId: number;
@@ -26,6 +41,8 @@ interface AssessmentEditorTabProps {
   courseTargetAudience?: string[] | null;
   /** Session transcript from Structure-tab AI Assist; enables Generate quiz with AI. */
   aiTranscript?: string;
+  /** Lesson count used to suggest a starting question_count (staff can override). */
+  lessonCount?: number;
 }
 
 export default function AssessmentEditorTab({
@@ -34,6 +51,7 @@ export default function AssessmentEditorTab({
   courseDescription,
   courseTargetAudience,
   aiTranscript = "",
+  lessonCount = 0,
 }: AssessmentEditorTabProps) {
   const { data: assessment, isLoading: assLoading } = useBuilderAssessment(courseId);
   const { data: dbQuestions = [], isLoading: qLoading } = useBuilderQuestions(assessment?.id ?? null);
@@ -52,6 +70,7 @@ export default function AssessmentEditorTab({
   const [aiContext, setAiContext] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [quizAiGenerating, setQuizAiGenerating] = useState(false);
+  const [questionCount, setQuestionCount] = useState(() => suggestQuestionCount(lessonCount));
 
   const hasAiTranscript = !!aiTranscript.trim();
 
@@ -60,6 +79,10 @@ export default function AssessmentEditorTab({
       setLocalQuestions(dbQuestions);
     }
   }, [dbQuestions]);
+
+  useEffect(() => {
+    setQuestionCount(suggestQuestionCount(lessonCount));
+  }, [lessonCount]);
 
   const handleCreateAssessment = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -200,8 +223,24 @@ export default function AssessmentEditorTab({
     toast.success(`${questions.length} questions generated — review and edit before publishing`);
   };
 
+  const handleQuestionCountChange = (raw: string) => {
+    const parsed = parseInt(raw, 10);
+    if (Number.isNaN(parsed)) {
+      setQuestionCount(QUESTION_COUNT_MIN);
+      return;
+    }
+    // Allow intermediate typing; clamp on blur / submit.
+    setQuestionCount(parsed);
+  };
+
+  const handleQuestionCountBlur = () => {
+    setQuestionCount((prev) => clampQuestionCount(prev));
+  };
+
   const handleAiGenerate = async () => {
     if (!assessment || !aiContext.trim()) return;
+    const count = clampQuestionCount(questionCount);
+    setQuestionCount(count);
     setAiGenerating(true);
     try {
       const { data, error: fnError } = await supabase.functions.invoke("academy-ai-generate", {
@@ -210,6 +249,7 @@ export default function AssessmentEditorTab({
           title: courseTitle || "Untitled Course",
           target_audience: (courseTargetAudience && courseTargetAudience.length > 0) ? courseTargetAudience.join(", ") : "training professionals",
           context_text: aiContext,
+          question_count: count,
         },
       });
 
@@ -234,6 +274,8 @@ export default function AssessmentEditorTab({
   /** Quick Add–parity quiz generation from Structure-tab AI Assist transcript. */
   const handleGenerateQuizWithAi = async () => {
     if (!assessment || !hasAiTranscript) return;
+    const count = clampQuestionCount(questionCount);
+    setQuestionCount(count);
     setQuizAiGenerating(true);
     try {
       const audience = Array.isArray(courseTargetAudience) ? courseTargetAudience : [];
@@ -243,6 +285,7 @@ export default function AssessmentEditorTab({
           title: courseTitle || "Untitled Course",
           target_audience: audience,
           context_text: aiTranscript,
+          question_count: count,
         },
       });
 
@@ -343,6 +386,21 @@ export default function AssessmentEditorTab({
         {/* AI generate actions — only when unpublished */}
         {!assessment.is_published && (
           <div className="space-y-2">
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground" htmlFor="assessment-question-count">
+                Number of questions
+              </label>
+              <Input
+                id="assessment-question-count"
+                type="number"
+                min={QUESTION_COUNT_MIN}
+                max={QUESTION_COUNT_MAX}
+                value={questionCount}
+                onChange={(e) => handleQuestionCountChange(e.target.value)}
+                onBlur={handleQuestionCountBlur}
+                className="h-8 w-28 text-sm"
+              />
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -502,8 +560,23 @@ export default function AssessmentEditorTab({
           </AppModalHeader>
           <AppModalBody className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Describe what this course covers — paste your key learning outcomes, topics, or lesson titles. The AI will generate 8 multiple-choice questions for review.
+              Describe what this course covers — paste your key learning outcomes, topics, or lesson titles. The AI will generate multiple-choice questions for review.
             </p>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground" htmlFor="starter-question-count">
+                Number of questions
+              </label>
+              <Input
+                id="starter-question-count"
+                type="number"
+                min={QUESTION_COUNT_MIN}
+                max={QUESTION_COUNT_MAX}
+                value={questionCount}
+                onChange={(e) => handleQuestionCountChange(e.target.value)}
+                onBlur={handleQuestionCountBlur}
+                className="h-8 w-28 text-sm"
+              />
+            </div>
             <Textarea
               value={aiContext}
               onChange={(e) => setAiContext(e.target.value)}
