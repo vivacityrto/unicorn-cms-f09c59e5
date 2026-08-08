@@ -21,7 +21,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive,
+  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
@@ -158,6 +158,9 @@ export default function AcademyBuilderLibrary() {
               Backfill Video Durations
             </Button>
           )}
+          <Button variant="outline" onClick={() => navigate("/superadmin/academy/course-cleanup")}>
+            <Filter className="h-4 w-4 mr-2" /> Course Cleanup
+          </Button>
           {canCreateCourse && (
             <Button variant="outline" onClick={() => navigate("/superadmin/academy/bulk-import")}>
               <ListPlus className="h-4 w-4 mr-2" /> Bulk Import
