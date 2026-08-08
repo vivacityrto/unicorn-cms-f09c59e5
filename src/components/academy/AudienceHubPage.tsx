@@ -1,12 +1,20 @@
 import { ReactNode, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, GraduationCap } from "lucide-react";
+import { ChevronDown, GraduationCap, Search } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import CourseCard from "@/components/academy/CourseCard";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Command,
   CommandInput,
@@ -46,6 +54,7 @@ export interface AudienceHubPageProps {
 }
 
 const ALL_TAB = "__all__";
+const ALL_SERIES = "__all__";
 const VISIBLE_TAB_LIMIT = 6; // includes the "All" pill
 
 const collator = new Intl.Collator("en-AU", { sensitivity: "base" });
@@ -72,6 +81,26 @@ function buildTagBuckets(courses: AcademyCourse[]): TagBucket[] {
     });
 }
 
+function buildSeriesOptions(courses: AcademyCourse[]): string[] {
+  const series = new Set<string>();
+  for (const c of courses) {
+    const value = c.webinar_series?.trim();
+    if (value) series.add(value);
+  }
+  return Array.from(series).sort((a, b) => collator.compare(a, b));
+}
+
+function courseMatchesSearch(course: AcademyCourse, query: string): boolean {
+  if (!query) return true;
+  const haystacks: string[] = [
+    course.title ?? "",
+    course.short_description ?? "",
+    course.webinar_series ?? "",
+    ...(course.tags ?? []),
+  ];
+  return haystacks.some((value) => value.toLowerCase().includes(query));
+}
+
 function prettyTag(tag: string): string {
   return tag
     .split(/[-_\s]+/)
@@ -91,6 +120,8 @@ export default function AudienceHubPage({
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [activeTag, setActiveTag] = useState<string>(ALL_TAB);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeSeries, setActiveSeries] = useState<string>(ALL_SERIES);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const { data: courses = [], isLoading, isError, error } = useAcademyCourses({
@@ -107,14 +138,27 @@ export default function AudienceHubPage({
   }, [enrolled]);
 
   const tagBuckets = useMemo(() => buildTagBuckets(courses), [courses]);
+  const seriesOptions = useMemo(() => buildSeriesOptions(courses), [courses]);
 
   const visibleTags = tagBuckets.slice(0, VISIBLE_TAB_LIMIT - 1);
   const overflowTags = tagBuckets.slice(VISIBLE_TAB_LIMIT - 1);
 
+  const trimmedSearch = searchQuery.trim().toLowerCase();
+  const hasSearchOrSeriesFilter =
+    trimmedSearch.length > 0 || activeSeries !== ALL_SERIES;
+
   const filtered = useMemo(() => {
-    if (activeTag === ALL_TAB) return courses;
-    return courses.filter((c) => (c.tags ?? []).includes(activeTag));
-  }, [courses, activeTag]);
+    return courses.filter((c) => {
+      if (activeSeries !== ALL_SERIES && c.webinar_series?.trim() !== activeSeries) {
+        return false;
+      }
+      if (!courseMatchesSearch(c, trimmedSearch)) return false;
+      if (activeTag !== ALL_TAB && !(c.tags ?? []).includes(activeTag)) {
+        return false;
+      }
+      return true;
+    });
+  }, [courses, activeTag, activeSeries, trimmedSearch]);
 
   const handleStart = async (course: AcademyCourse) => {
     try {
@@ -174,6 +218,36 @@ export default function AudienceHubPage({
       icon={icon}
       accentColour={accentColour}
     >
+      {/* Search + Series filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search courses or series..."
+            className="pl-9"
+            aria-label="Search courses or series"
+          />
+        </div>
+        {seriesOptions.length > 0 && (
+          <Select value={activeSeries} onValueChange={setActiveSeries}>
+            <SelectTrigger className="sm:w-[280px]" aria-label="Filter by series">
+              <SelectValue placeholder="All series" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_SERIES}>All series</SelectItem>
+              {seriesOptions.map((series) => (
+                <SelectItem key={series} value={series}>
+                  {series}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
       {/* Sub-tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b">
         {renderTabButton(`All`, courses.length, ALL_TAB)}
@@ -293,13 +367,21 @@ export default function AudienceHubPage({
       {/* Empty */}
       {!isLoading && !isError && filtered.length === 0 && (
         <div className="text-center py-16">
-          <GraduationCap className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <p className="font-medium text-foreground">
-            No courses available for this audience yet
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            More courses coming soon — check back shortly
-          </p>
+          {hasSearchOrSeriesFilter ? (
+            <p className="font-medium text-foreground">
+              No courses match — try a different search or series
+            </p>
+          ) : (
+            <>
+              <GraduationCap className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="font-medium text-foreground">
+                No courses available for this audience yet
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                More courses coming soon — check back shortly
+              </p>
+            </>
+          )}
         </div>
       )}
 

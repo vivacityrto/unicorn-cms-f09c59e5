@@ -14,6 +14,7 @@ export interface AcademyCourse {
   difficulty_level: string | null;
   status: string | null;
   tags: string[] | null;
+  webinar_series: string | null;
   sort_order: number | null;
   certificate_enabled: boolean | null;
   // Joined from progress view / enrollment
@@ -37,7 +38,7 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
       // Fetch published courses for this audience
       const { data: courses, error: coursesErr } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, thumbnail_url, target_audience, estimated_minutes, difficulty_level, status, tags, sort_order, certificate_enabled")
+        .select("id, title, slug, description, short_description, thumbnail_url, target_audience, estimated_minutes, difficulty_level, status, tags, webinar_series, sort_order, certificate_enabled")
         .eq("status", "published")
         .contains("target_audience", [audienceKey])
         .order("sort_order", { ascending: true, nullsFirst: false })
