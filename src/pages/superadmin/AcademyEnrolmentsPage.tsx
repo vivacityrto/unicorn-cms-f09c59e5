@@ -541,10 +541,11 @@ export default function AcademyEnrolmentsPage() {
                         <TableCell className="text-sm max-w-[220px]">
                           <div className="flex items-center gap-2">
                             {e.course?.thumbnail_url ? (
-                              <img src={e.course.thumbnail_url} alt="" className="h-8 w-12 rounded object-cover flex-shrink-0" />
+                              <img src={e.course.thumbnail_url} alt="" className="h-8 w-8 rounded object-cover flex-shrink-0 aspect-square" />
                             ) : (
-                              <div className="h-8 w-12 rounded bg-muted flex-shrink-0" />
+                              <div className="h-8 w-8 rounded bg-muted flex-shrink-0 aspect-square" />
                             )}
+
                             <span className="truncate">{e.course?.title || "—"}</span>
                           </div>
                         </TableCell>
