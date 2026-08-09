@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "generate_questions") {
-      const { title, target_audience, context_text } = body;
+      const { title, target_audience, context_text, question_count } = body;
 
       if (!title || !context_text) {
         return new Response(
@@ -279,7 +279,12 @@ Deno.serve(async (req) => {
         );
       }
 
-      const userPrompt = `Generate 8 multiple-choice questions for a course called '${title}' aimed at '${target_audience || "training professionals"}'.\n\nCourse content context:\n${context_text}\n\nReturn ONLY a JSON array, no markdown, no preamble, in this exact format:\n[{"question_text": "...", "explanation": "Brief explanation of why the correct answer is right, shown to learners who got it wrong", "options": [{"value": "A", "label": "...", "is_correct": true}, {"value": "B", "label": "...", "is_correct": false}, {"value": "C", "label": "...", "is_correct": false}, {"value": "D", "label": "...", "is_correct": false}]}]`;
+      const parsedCount = Number(question_count);
+      const questionCount = Number.isFinite(parsedCount)
+        ? Math.min(20, Math.max(3, Math.round(parsedCount)))
+        : 8;
+
+      const userPrompt = `Generate exactly ${questionCount} multiple-choice questions for a course called '${title}' aimed at '${target_audience || "training professionals"}'.\n\nCourse content context:\n${context_text}\n\nReturn ONLY a JSON array of exactly ${questionCount} objects, no markdown, no preamble, in this exact format:\n[{"question_text": "...", "explanation": "Brief explanation of why the correct answer is right, shown to learners who got it wrong", "options": [{"value": "A", "label": "...", "is_correct": true}, {"value": "B", "label": "...", "is_correct": false}, {"value": "C", "label": "...", "is_correct": false}, {"value": "D", "label": "...", "is_correct": false}]}]`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
