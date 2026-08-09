@@ -98,8 +98,10 @@ export default function CourseCard({
             src={thumbnailUrl}
             alt={title}
             className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: "center" }}
           />
         ) : null}
+
 
         {/* Category badge – top-left */}
         <span className="absolute top-3 left-3 rounded-full bg-black/40 backdrop-blur-sm px-2.5 py-0.5 text-[10px] font-medium text-white">
