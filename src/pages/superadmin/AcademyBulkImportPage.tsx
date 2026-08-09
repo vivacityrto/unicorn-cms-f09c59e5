@@ -256,7 +256,7 @@ export default function AcademyBulkImportPage() {
       const { error: prErr } = await supabase
         .from("academy_package_course_rules")
         .insert(
-          packageIds.map((pid) => ({ course_id: courseId, package_id: pid, is_included: true })) as any,
+          packageIds.map((pid) => ({ course_id: courseId, package_id: pid, is_active: true })) as any,
         );
       if (prErr) throw prErr;
     }
