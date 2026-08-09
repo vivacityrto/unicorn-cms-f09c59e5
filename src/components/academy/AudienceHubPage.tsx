@@ -299,10 +299,10 @@ export default function AudienceHubPage({
 
       {/* Loading */}
       {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="rounded-[14px] border border-border overflow-hidden">
-              <Skeleton className="h-[148px] w-full rounded-none" />
+              <Skeleton className="aspect-square w-full rounded-none" />
               <div className="p-4 space-y-3">
                 <Skeleton className="h-3 w-20" />
                 <Skeleton className="h-5 w-full" />
@@ -328,7 +328,7 @@ export default function AudienceHubPage({
 
       {/* Course grid */}
       {!isLoading && !isError && filtered.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((course) => {
             const status = mapEnrollmentStatus(
               course.enrollment_status,
