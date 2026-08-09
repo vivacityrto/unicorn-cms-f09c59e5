@@ -242,11 +242,12 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
                 <img
                   src={enrolment.course.thumbnail_url}
                   alt=""
-                  className="h-16 w-24 object-cover rounded-md flex-shrink-0"
+                  className="h-16 w-16 object-cover rounded-md flex-shrink-0 aspect-square"
                 />
               ) : (
-                <div className="h-16 w-24 rounded-md bg-muted flex-shrink-0" />
+                <div className="h-16 w-16 rounded-md bg-muted flex-shrink-0 aspect-square" />
               )}
+
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="font-medium truncate">{enrolment.course?.title}</p>
                 <p className="text-xs text-muted-foreground">
