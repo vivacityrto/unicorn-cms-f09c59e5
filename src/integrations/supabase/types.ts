@@ -799,13 +799,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "academy_courses_facilitator_id_fkey"
-            columns: ["facilitator_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_uuid"]
-          },
-          {
             foreignKeyName: "academy_courses_source_video_id_fkey"
             columns: ["source_video_id"]
             isOneToOne: false

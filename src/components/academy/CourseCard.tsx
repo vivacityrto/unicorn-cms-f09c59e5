@@ -86,9 +86,8 @@ export default function CourseCard({
     >
       {/* ── Thumbnail ── */}
       <div
-        className="relative flex items-center justify-center"
+        className="relative flex items-center justify-center aspect-square w-full overflow-hidden"
         style={{
-          height: 148,
           background: hasThumbnail
             ? undefined
             : `linear-gradient(135deg, ${accentColour} 0%, #7130A0 100%)`,
