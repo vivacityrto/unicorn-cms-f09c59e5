@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, Receipt, AlertTriangle } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, AlertTriangle } from "lucide-react";
 import { isXeroInvoiceOverdue } from "@/lib/xeroInvoiceStatus";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollableTableWrapper } from "@/components/ui/scrollable-table-wrapper";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MultiSelect, type MultiSelectOption } from "@/components/documents/bulk-generate/MultiSelect";
 
 import { cn } from "@/lib/utils";
 import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
@@ -71,6 +72,7 @@ interface Tenant {
   archived_at?: string | null;
   xero_invoice_paid?: boolean | null;
   xero_invoice_due_date?: string | null;
+  xero_repeating_invoice_url?: string | null;
 }
 
 // Aggregate status buckets the summary stat cards use — there is no literal
@@ -101,7 +103,7 @@ export default function ManageTenants() {
   const [sortField, setSortField] = useState<"status" | "member_count" | "created_at" | "renewal">("status");
   const [renewalFilter, setRenewalFilter] = useState<string>("all");
   const [regEndFilter, setRegEndFilter] = useState<string>("all");
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("all");
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
@@ -123,6 +125,14 @@ export default function ManageTenants() {
   const [lifecycleStatuses, setLifecycleStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
   const [accessStatuses, setAccessStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
   const [statusOptions, setStatusOptions] = useState<{ code: number; value: string; description: string }[]>([]);
+  const invoiceStatusOptions: MultiSelectOption[] = [
+    { value: "paid", label: "Paid" },
+    { value: "unpaid", label: "Unpaid" },
+    { value: "recurring", label: "Recurring", description: "Has a repeating Xero invoice URL" },
+    { value: "not_linked", label: "No Xero link / not checked" },
+  ];
+  const tablePillClass = "inline-flex h-5 items-center rounded-[11px] border px-2 text-[11px] font-medium leading-none whitespace-nowrap gap-1";
+  const invoicePillClass = tablePillClass;
 
   const basicQuery = useTenantsBasic();
   const accumulated = useMemo(() => basicQuery.data ?? [], [basicQuery.data]);
@@ -175,6 +185,7 @@ export default function ManageTenants() {
         registration_end_date: notes?.registration_end_date || null,
         xero_invoice_paid: t.xero_invoice_paid ?? null,
         xero_invoice_due_date: t.xero_invoice_due_date ?? null,
+        xero_repeating_invoice_url: t.xero_repeating_invoice_url ?? null,
       } as Tenant;
     });
     setTenants(merged);
@@ -427,16 +438,25 @@ export default function ManageTenants() {
         });
       }
 
-      // Xero invoice status filter — xero_invoice_paid is null both when
-      // there's no linked Xero Contact and when linked but never checked;
-      // "not_linked" covers both since the distinction isn't useful for
-      // filtering purposes here.
-      if (invoiceStatusFilter === "paid") {
-        filtered = filtered.filter(tenant => tenant.xero_invoice_paid === true);
-      } else if (invoiceStatusFilter === "unpaid") {
-        filtered = filtered.filter(tenant => tenant.xero_invoice_paid === false);
-      } else if (invoiceStatusFilter === "not_linked") {
-        filtered = filtered.filter(tenant => tenant.xero_invoice_paid === null || tenant.xero_invoice_paid === undefined);
+      // Xero invoice status filter. Payment-state choices are mutually
+      // exclusive and combine as OR; Recurring is an independent flag and
+      // combines as AND so "Paid + Recurring" means paid recurring clients.
+      if (invoiceStatusFilter.length > 0) {
+        const paymentFilters = invoiceStatusFilter.filter(value => value !== "recurring");
+        const recurringSelected = invoiceStatusFilter.includes("recurring");
+
+        if (paymentFilters.length > 0) {
+          filtered = filtered.filter(tenant => paymentFilters.some(value => {
+            if (value === "paid") return tenant.xero_invoice_paid === true;
+            if (value === "unpaid") return tenant.xero_invoice_paid === false;
+            if (value === "not_linked") return tenant.xero_invoice_paid === null || tenant.xero_invoice_paid === undefined;
+            return false;
+          }));
+        }
+
+        if (recurringSelected) {
+          filtered = filtered.filter(tenant => !!tenant.xero_repeating_invoice_url?.trim());
+        }
       }
 
       // Registration end date filter
@@ -551,10 +571,60 @@ export default function ManageTenants() {
     const style = styleConfig[status] || { icon: AlertCircle, className: "bg-muted text-muted-foreground hover:bg-muted/80 border-border" };
     const Icon = style.icon;
     return (
-      <Badge variant="outline" className={cn("text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] border", style.className)}>
-        <Icon className="mr-1 h-3 w-3" />
+      <Badge variant="outline" className={cn(tablePillClass, style.className)}>
+        <Icon className="h-3 w-3 shrink-0" />
         {ddLabel || status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
+    );
+  };
+
+  const renderInvoiceStatusBadges = (tenant: Tenant) => {
+    const hasInvoiceStatus = tenant.xero_invoice_paid !== null && tenant.xero_invoice_paid !== undefined;
+    const hasRecurringInvoice = !!tenant.xero_repeating_invoice_url?.trim();
+    if (!hasInvoiceStatus && !hasRecurringInvoice) {
+      return <span className="text-xs text-muted-foreground">—</span>;
+    }
+
+    const overdue = !tenant.xero_invoice_paid && isXeroInvoiceOverdue(tenant.xero_invoice_due_date);
+    return (
+      <div className="flex min-h-11 flex-col items-start justify-center gap-1">
+        {hasInvoiceStatus && (
+          <Badge
+            variant="outline"
+            className={cn(
+              invoicePillClass,
+              tenant.xero_invoice_paid
+                ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600"
+                : overdue
+                  ? "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600"
+                  : "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-600"
+            )}
+          >
+            {tenant.xero_invoice_paid ? (
+              <CheckCircle2 className="h-3 w-3 shrink-0" />
+            ) : overdue ? (
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+            ) : (
+              <Clock className="h-3 w-3 shrink-0" />
+            )}
+            {tenant.xero_invoice_paid
+              ? "Paid"
+              : tenant.xero_invoice_due_date
+                ? `${overdue ? "Overdue" : "Due"} ${new Date(tenant.xero_invoice_due_date).toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}`
+                : "Unpaid"}
+          </Badge>
+        )}
+        {hasRecurringInvoice && (
+          <Badge
+            variant="outline"
+            title="Repeating Xero invoice URL is configured"
+            className={cn(invoicePillClass, "bg-primary/10 text-primary hover:bg-primary/20 border-primary/50")}
+          >
+            <LinkIcon className="h-3 w-3 shrink-0" />
+            Recurring
+          </Badge>
+        )}
+      </div>
     );
   };
 
@@ -826,21 +896,15 @@ export default function ManageTenants() {
           showSeparators
         />
 
-        <Combobox
-          options={[
-            { value: "all", label: "All Invoice Status", icon: Receipt, iconColor: "text-muted-foreground" },
-            { value: "paid", label: "Paid", icon: CheckCircle2, iconColor: "text-green-600" },
-            { value: "unpaid", label: "Unpaid", icon: Clock, iconColor: "text-amber-600" },
-            { value: "not_linked", label: "No Xero link / not checked", icon: AlertCircle, iconColor: "text-muted-foreground" },
-          ]}
-          value={invoiceStatusFilter}
-          onValueChange={setInvoiceStatusFilter}
-          placeholder="Filter by invoice status..."
+        <MultiSelect
+          options={invoiceStatusOptions}
+          values={invoiceStatusFilter}
+          onChange={setInvoiceStatusFilter}
+          placeholder="All Invoice Status"
           searchPlaceholder="Search..."
           emptyText="No options."
-          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
-          showIcons
-          showSeparators
+          maxSelectedDisplay={2}
+          className="w-full md:flex-1 md:min-w-[220px] min-h-[48px] bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm"
         />
 
         {/* Show Archived toggle - SuperAdmin only */}
@@ -912,12 +976,13 @@ export default function ManageTenants() {
                   )}
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Tenant Name</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
+                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-left w-[132px] min-w-[132px] px-3">Invoice</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Hours</TableHead>
-                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">ComplyHub</TableHead>
-                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Status</TableHead>
+                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-left w-[132px] min-w-[132px] px-3">ComplyHub</TableHead>
+                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-left w-[132px] min-w-[132px] px-3">Status</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">CSC</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Members</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Risk Level</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-left w-[120px] min-w-[120px] px-3">Risk Level</TableHead>
                   <TableHead
                     className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 cursor-pointer hover:bg-muted/50 select-none"
                     onClick={() => setSortField(sortField === "renewal" ? "status" : "renewal")}
@@ -958,8 +1023,8 @@ export default function ManageTenants() {
                         />
                       </TableCell>
                     )}
-                    <TableCell className="py-6 border-r border-border/50 min-w-[280px] pr-8">
-                      <div className="flex items-start justify-between gap-2">
+                    <TableCell className="py-4 border-r border-border/50 min-w-[280px] pr-8">
+                      <div>
                         <div>
                           <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
                             {tenant.rto_id && <span className="text-primary font-bold mr-1.5">{tenant.rto_id}</span>}
@@ -976,38 +1041,9 @@ export default function ManageTenants() {
                             <span>{tenant.state || ""}</span>
                           </div>
                         </div>
-                        {tenant.xero_invoice_paid !== null && tenant.xero_invoice_paid !== undefined && (() => {
-                          const overdue = !tenant.xero_invoice_paid && isXeroInvoiceOverdue(tenant.xero_invoice_due_date);
-                          return (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "shrink-0 text-[0.7rem] py-0 px-[0.5rem] rounded-[11px] border font-normal whitespace-nowrap",
-                                tenant.xero_invoice_paid
-                                  ? "bg-green-500/10 text-green-600 border-green-600"
-                                  : overdue
-                                    ? "bg-red-500/10 text-red-600 border-red-600"
-                                    : "bg-amber-500/10 text-amber-600 border-amber-600"
-                              )}
-                            >
-                              {tenant.xero_invoice_paid ? (
-                                <CheckCircle2 className="mr-1 h-2.5 w-2.5" />
-                              ) : overdue ? (
-                                <AlertTriangle className="mr-1 h-2.5 w-2.5" />
-                              ) : (
-                                <Clock className="mr-1 h-2.5 w-2.5" />
-                              )}
-                              {tenant.xero_invoice_paid
-                                ? "Paid"
-                                : tenant.xero_invoice_due_date
-                                  ? `${overdue ? "Overdue" : "Due"} ${new Date(tenant.xero_invoice_due_date).toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}`
-                                  : "Unpaid"}
-                            </Badge>
-                          );
-                        })()}
                       </div>
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 min-w-[200px] pr-8">
+                    <TableCell className="py-4 border-r border-border/50 min-w-[200px] pr-8">
                       <div>
                         <div className="flex items-center gap-2 font-semibold text-foreground pb-[10px] whitespace-nowrap">
                           <span>{primaryPkg?.name || (tenant.all_packages.length > 0 ? tenant.all_packages[0].name : "NA")}</span>
@@ -1023,7 +1059,10 @@ export default function ManageTenants() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                    <TableCell className="py-4 border-r border-border/50 whitespace-nowrap w-[132px] min-w-[132px] px-3 align-middle">
+                      {renderInvoiceStatusBadges(tenant)}
+                    </TableCell>
+                    <TableCell className="py-4 border-r border-border/50 text-center whitespace-nowrap">
                       {(() => {
                         const used = tenant.hours_used_minutes || 0;
                         const included = tenant.hours_included_minutes || 0;
@@ -1044,24 +1083,24 @@ export default function ManageTenants() {
                         );
                       })()}
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                    <TableCell className="py-4 border-r border-border/50 whitespace-nowrap w-[132px] min-w-[132px] px-3 align-middle">
                       {tenant.complyhub_membership_tier ? (
-                        <Badge variant="outline" className="gap-1 border-primary/30 text-primary">
+                        <Badge variant="outline" className={cn(tablePillClass, "border-primary/30 text-primary")}>
                           {tenant.complyhub_membership_tier}
                         </Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      <div className="flex flex-col items-center gap-1">
+                    <TableCell className="py-4 border-r border-border/50 whitespace-nowrap w-[132px] min-w-[132px] px-3 align-middle">
+                      <div className="flex flex-col items-start gap-1">
                         {getStatusBadge(tenant.status)}
                         {tenant.archived_at && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Badge variant="outline" className="text-[0.7rem] py-0 px-[0.5rem] rounded-[11px] border-muted-foreground/40 text-muted-foreground bg-muted/40">
-                                  <Archive className="mr-1 h-2.5 w-2.5" />
+                                <Badge variant="outline" className={cn(tablePillClass, "border-muted-foreground/40 text-muted-foreground bg-muted/40")}>
+                                  <Archive className="h-3 w-3 shrink-0" />
                                   Archived
                                 </Badge>
                               </TooltipTrigger>
@@ -1074,7 +1113,7 @@ export default function ManageTenants() {
                       </div>
                     </TableCell>
                     <TableCell
-                      className="py-6 border-r border-border/50 whitespace-nowrap"
+                      className="py-4 border-r border-border/50 whitespace-nowrap"
                       onClick={(e) => {
                         if (isSuperAdmin || isTeamLeader) {
                           e.stopPropagation();
@@ -1097,8 +1136,8 @@ export default function ManageTenants() {
                                   </AvatarFallback>
                                 </Avatar>
                                 {tenant.csc_archived && (
-                                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5">
-                                    <Archive className="h-2 w-2 mr-0.5" />
+                                  <Badge variant="outline" className={cn(tablePillClass, "border-muted-foreground/40 text-muted-foreground bg-muted/40")}>
+                                    <Archive className="h-3 w-3 shrink-0" />
                                     Archived
                                   </Badge>
                                 )}
@@ -1129,10 +1168,10 @@ export default function ManageTenants() {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                    <TableCell className="py-4 border-r border-border/50 text-center whitespace-nowrap">
                       <span className="font-semibold">{tenant.member_count}</span>
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                    <TableCell className="py-4 border-r border-border/50 whitespace-nowrap w-[120px] min-w-[120px] px-3 align-middle">
                       {(() => {
                         const riskColors: Record<string, string> = {
                           low: "bg-emerald-500/10 text-emerald-600 border-emerald-600",
@@ -1142,13 +1181,13 @@ export default function ManageTenants() {
                         };
                         const riskClass = riskColors[tenant.risk_level] || "bg-muted text-muted-foreground border-border";
                         return (
-                          <Badge variant="outline" className={cn("capitalize py-[3px] rounded-[9px] border", riskClass)}>
+                          <Badge variant="outline" className={cn(tablePillClass, "capitalize", riskClass)}>
                             {tenant.risk_level}
                           </Badge>
                         );
                       })()}
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
+                    <TableCell className="py-4 border-r border-border/50 whitespace-nowrap">
                       {tenant.next_renewal_date ? (() => {
                         const renewal = new Date(tenant.next_renewal_date);
                         const now = new Date();
@@ -1170,7 +1209,7 @@ export default function ManageTenants() {
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
+                    <TableCell className="py-4 border-r border-border/50 whitespace-nowrap">
                       {tenant.registration_end_date ? (() => {
                         const regEnd = new Date(tenant.registration_end_date);
                         const now = new Date();
@@ -1192,7 +1231,7 @@ export default function ManageTenants() {
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-6 px-4 text-center whitespace-nowrap">
+                    <TableCell className="py-4 px-4 text-center whitespace-nowrap">
                       {tenant.last_note_date ? (
                         <TooltipProvider>
                           <Tooltip>
