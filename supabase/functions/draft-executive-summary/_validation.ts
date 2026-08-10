@@ -31,6 +31,32 @@ function findBannedTerm(text: string): string | null {
 }
 
 /**
+ * Raw UUIDs (finding IDs) must never appear in client-facing prose — only
+ * in the structured linked_finding_ids array, which this check does not
+ * scan. Catches the model citing "(851dfa9d-...)" inline in the narrative
+ * instead of describing the finding in words.
+ */
+const UUID_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i;
+
+function findUuidInProse(text: string): string | null {
+  const m = text.match(UUID_RE);
+  return m ? m[0] : null;
+}
+
+function collectRollupProse(rollup: any): string[] {
+  const out: string[] = [];
+  if (typeof rollup?.introduction === 'string') out.push(rollup.introduction);
+  if (typeof rollup?.closing === 'string') out.push(rollup.closing);
+  for (const g of rollup?.priority_groups ?? []) {
+    if (typeof g?.narrative === 'string') out.push(g.narrative);
+    for (const a of g?.actions ?? []) {
+      if (typeof a?.summary === 'string') out.push(a.summary);
+    }
+  }
+  return out;
+}
+
+/**
  * Detect a verbatim Standards excerpt longer than 30 words.
  *
  * Discriminates Standards excerpts (quoted span sitting next to a clause
@@ -146,6 +172,24 @@ export function validateDraft(
       ok: false,
       reason: `fabricated finding IDs not in this audit: ${fabricated.slice(0, 3).join(', ')}${fabricated.length > 3 ? ` (+${fabricated.length - 3} more)` : ''}`,
     };
+  }
+
+  const proseFields: Array<[string, string]> = [
+    ['executive_summary', r.executive_summary as string],
+    ['overall_finding', r.overall_finding as string],
+    ['risk_rationale', r.risk_rationale as string],
+    ...collectRollupProse(rollup).map(
+      (t, i) => [`action_plan_rollup.prose[${i}]`, t] as [string, string],
+    ),
+  ];
+  for (const [field, text] of proseFields) {
+    const uuid = findUuidInProse(text);
+    if (uuid) {
+      return {
+        ok: false,
+        reason: `Field '${field}' contains a raw finding ID (${uuid}) in prose — clients must never see internal database identifiers. Describe the finding by its content instead (e.g. "the missing trainer credential evidence"), not its ID. UUIDs belong only in the linked_finding_ids array.`,
+      };
+    }
   }
 
   const combined = [
