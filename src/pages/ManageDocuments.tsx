@@ -691,9 +691,13 @@ export default function ManageDocuments() {
   const applyFiltersAndSort = () => {
     let filtered = [...documents];
 
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(doc => doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) || doc.description?.toLowerCase().includes(searchQuery.toLowerCase()) || doc.id.toString().includes(searchQuery));
+    // Search filter — words separated by spaces or dashes match across either
+    // separator (file names are dash-cased, titles are space-cased), with a
+    // wildcard between each word so extra text in between still matches.
+    if (searchQuery.trim()) {
+      const words = searchQuery.trim().split(/[\s-]+/).filter(Boolean).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const searchPattern = words.length > 0 ? new RegExp(words.join('.*'), 'i') : null;
+      filtered = filtered.filter(doc => searchPattern && (searchPattern.test(doc.title || '') || searchPattern.test(doc.description || '')) || doc.id.toString().includes(searchQuery));
     }
 
     // Format filter
