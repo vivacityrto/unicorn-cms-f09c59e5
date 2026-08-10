@@ -76,6 +76,7 @@ export function ScheduleTab({ audit }: ScheduleTabProps) {
             ...params,
             auditTitle: audit.title || undefined,
             tenantId: audit.subject_tenant_id,
+            auditStatus: audit.status,
           })}
           onCancel={(appt) => cancelAppointment.mutate(appt)}
           onComplete={(appt) => completeAppointment.mutate({ appointment: appt, auditStatus: audit.status })}

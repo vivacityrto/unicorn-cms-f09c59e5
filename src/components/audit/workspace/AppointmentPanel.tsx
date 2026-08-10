@@ -76,6 +76,13 @@ export function AppointmentPanel({
   const [showInternalNotes, setShowInternalNotes] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
+  // A date before today means this meeting has already taken place — the
+  // auditor is backfilling the record, not booking something ahead. That
+  // changes what the submit action actually does (see useScheduleAuditPhase):
+  // no calendar invite goes out, and the appointment lands as "completed"
+  // immediately rather than "scheduled".
+  const isPastDate = date ? new Date(date.toDateString()) < new Date(new Date().toDateString()) : false;
+
   const calcEndTime = (start: string, dur: number) => {
     const [h, m] = start.split(':').map(Number);
     const totalMin = h * 60 + m + dur;
@@ -239,9 +246,17 @@ export function AppointmentPanel({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus disabled={(d) => { const today = new Date(); today.setHours(0, 0, 0, 0); return d < today; }} className={cn('p-3 pointer-events-auto')} />
+                  {/* No lower-bound restriction: this date can be backfilled for a
+                      meeting that's already taken place, not just scheduled ahead
+                      of time. */}
+                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className={cn('p-3 pointer-events-auto')} />
                 </PopoverContent>
               </Popover>
+              {isPastDate && (
+                <p className="text-xs text-muted-foreground">
+                  This date is in the past — logging it will mark the meeting as already completed.
+                </p>
+              )}
             </div>
 
             {/* Time fields */}
@@ -323,7 +338,7 @@ export function AppointmentPanel({
             <div className="flex gap-2">
               <Button onClick={handleSchedule} disabled={!date || isScheduling} className="flex-1">
                 {isScheduling ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                {isEditing ? 'Update' : 'Schedule'}
+                {isEditing ? 'Update' : isPastDate ? 'Log' : 'Schedule'}
               </Button>
               {isEditing && (
                 <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
