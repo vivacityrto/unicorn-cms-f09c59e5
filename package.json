@@ -116,13 +116,16 @@
     "nanoid": "^3.3.16",
     "postcss": "^8.5.26",
     "hono": "^4.13.1",
-    "@hono/node-server": "^1.19.14",
+    "@hono/node-server": "^2.1.0",
     "ip-address": "^10.4.0",
     "fast-uri": "^4.1.2",
     "ajv-formats": {
       "ajv": "^8.20.0"
     },
     "eslint": {
+      "ajv": "^6.15.0"
+    },
+    "@eslint/eslintrc": {
       "ajv": "^6.15.0"
     },
     "@modelcontextprotocol/sdk": {
@@ -134,7 +137,7 @@
     "nanoid": "^3.3.16",
     "postcss": "^8.5.26",
     "hono": "^4.13.1",
-    "@hono/node-server": "^1.19.14",
+    "@hono/node-server": "^2.1.0",
     "ip-address": "^10.4.0",
     "fast-uri": "^4.1.2"
   }
