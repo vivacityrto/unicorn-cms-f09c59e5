@@ -288,6 +288,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter useTransitions={false}>
+        <RouteMeta />
         <AuthProvider>
           <ErrorBoundary>
             <TenantTypeProvider>
