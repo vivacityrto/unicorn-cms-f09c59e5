@@ -389,11 +389,28 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-    
+
+    // SECURITY: require a valid authenticated session
+    const token = extractToken(req);
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { user, profile, error: authError } = await verifyAuth(supabase, token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get document info
     const { data: document, error: docError } = await supabase
       .from("documents")
-      .select("id, title, name, file_path, format, uploaded_files")
+      .select("id, title, name, file_path, format, uploaded_files, tenant_id")
       .eq("id", document_id)
       .single();
     
@@ -403,6 +420,20 @@ serve(async (req) => {
         JSON.stringify({ error: "Document not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // SECURITY: only Vivacity staff, or members of the owning tenant, may scan a document
+    if (!checkVivacityTeam(profile)) {
+      const docTenantId = document.tenant_id as number | null;
+      const allowed = docTenantId !== null && docTenantId !== undefined
+        ? await checkTenantAccess(supabase, user.id, Number(docTenantId))
+        : false;
+      if (!allowed) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: no access to this document" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
     
     // Get file path from either file_path or uploaded_files
