@@ -151,9 +151,12 @@ export const useEosIssues = () => {
 
   const createIssue = useMutation({
     mutationFn: async (issue: Partial<EosIssue>) => {
+      // EOS is Vivacity-internal only; fall back to Vivacity's tenant so this
+      // never lands NULL (see docs/audit-log/entries/2026-08-10-eos-todos-null-tenant-id.md)
+      const insertData = { ...issue, tenant_id: issue.tenant_id ?? 6372 };
       const { data, error } = await supabase
         .from('eos_issues')
-        .insert(issue as any)
+        .insert(insertData as any)
         .select()
         .single();
       
