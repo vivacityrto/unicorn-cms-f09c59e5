@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractToken, verifyAuth, checkVivacityTeam, checkTenantAccess } from "../_shared/auth-helpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -708,7 +709,7 @@ serve(async (req) => {
       );
     }
 
-    const { user, profile, error: authError } = await supabaseVerify(supabase, token);
+    const { user, profile, error: authError } = await verifyAuth(supabase, token);
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
