@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractToken, verifyAuth, checkVivacityTeam, checkTenantAccess } from "../_shared/auth-helpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -699,15 +700,42 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // SECURITY: require a valid authenticated session
+    const token = extractToken(req);
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { user, profile, error: authError } = await verifyAuth(supabase, token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const isStaff = checkVivacityTeam(profile);
+
     let filePath = storage_path;
     let fileName = filename || '';
     let docId = document_id;
+
+    // Raw storage paths bypass document-level ownership checks, so restrict to staff
+    if (storage_path && !isStaff) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: staff access required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Fetch document info if ID provided
     if (document_id && !storage_path) {
       const { data: doc, error: docError } = await supabase
         .from("documents")
-        .select("id, title, uploaded_files, user_edited_category, user_edited_description")
+        .select("id, title, uploaded_files, user_edited_category, user_edited_description, tenant_id")
         .eq("id", document_id)
         .single();
 
@@ -716,6 +744,20 @@ serve(async (req) => {
           JSON.stringify({ error: "Document not found" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // SECURITY: only staff, or members of the owning tenant, may analyse a document
+      if (!isStaff) {
+        const docTenantId = doc.tenant_id as number | null;
+        const allowed = docTenantId !== null && docTenantId !== undefined
+          ? await checkTenantAccess(supabase, user.id, Number(docTenantId))
+          : false;
+        if (!allowed) {
+          return new Response(
+            JSON.stringify({ error: "Forbidden: no access to this document" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       const uploadedFiles = doc.uploaded_files as string[] || [];

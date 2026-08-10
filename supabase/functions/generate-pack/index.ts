@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractToken, verifyAuth, checkVivacityTeam, checkTenantAccess } from "../_shared/auth-helpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,15 +29,36 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Get the auth user from the request
-    const authHeader = req.headers.get("Authorization");
-    let userId: string | null = null;
-    
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user } } = await supabase.auth.getUser(token);
-      userId = user?.id || null;
+    // SECURITY: require a valid authenticated session
+    const token = extractToken(req);
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const { user, profile, error: authError } = await verifyAuth(supabase, token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // SECURITY: only Vivacity staff or members of the target tenant may create packs
+    const isStaff = checkVivacityTeam(profile);
+    if (!isStaff) {
+      const hasAccess = await checkTenantAccess(supabase, user.id, Number(tenant_id));
+      if (!hasAccess) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: no access to this tenant" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    const userId: string = user.id;
     
     // Get document details and their file paths
     const { data: documents, error: docsError } = await supabase
