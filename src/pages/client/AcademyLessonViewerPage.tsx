@@ -4,11 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   GraduationCap, ChevronRight, ChevronLeft,
   Play, BookOpen, FileText, CheckCircle2, Clock, ArrowLeft, ArrowRight, Eye, Lock, AlertTriangle,
+  ClipboardCheck, User,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { format, parseISO, isValid } from "date-fns";
 import VimeoPlayer from "@/components/academy/VimeoPlayer";
 import { sanitizeHtml } from "@/lib/sanitize";
 import {
@@ -29,6 +31,18 @@ import { QuickReflectionDrawer } from "@/components/academy/pdp/QuickReflectionD
 
 const ACCENT = "#23c0dd";
 const PROGRESS_THROTTLE_MS = 10_000;
+
+function formatDeliveryDate(dateString: string | null | undefined): string | null {
+  if (!dateString) return null;
+  try {
+    const raw = dateString.includes("T") ? dateString : `${dateString}T00:00:00`;
+    const date = parseISO(raw);
+    if (!isValid(date)) return null;
+    return format(date, "d MMMM yyyy");
+  } catch {
+    return null;
+  }
+}
 
 export default function AcademyLessonViewerPage() {
   const { slug, lessonId } = useParams<{ slug: string; lessonId: string }>();
@@ -56,18 +70,34 @@ export default function AcademyLessonViewerPage() {
 
   const numericLessonId = lessonId ? parseInt(lessonId, 10) : null;
 
-  // Fetch course by slug
+  // Fetch course by slug (dedicated key so course-detail cache can't omit meta fields)
   const { data: course, isLoading: courseLoading } = useQuery({
-    queryKey: ["academy-course-detail", slug],
+    queryKey: ["academy-lesson-viewer-course", slug],
     enabled: !!slug,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, estimated_minutes, status, segment_start_seconds, segment_end_seconds")
+        .select("id, title, slug, description, short_description, estimated_minutes, status, segment_start_seconds, segment_end_seconds, facilitator_id, delivery_date")
         .eq("slug", slug!)
         .single();
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Facilitator display name (omit UI row when unset / unresolved)
+  const { data: facilitatorName } = useQuery({
+    queryKey: ["academy-course-facilitator", course?.facilitator_id],
+    enabled: !!course?.facilitator_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("full_name")
+        .eq("user_uuid", course!.facilitator_id!)
+        .maybeSingle();
+      if (error) throw error;
+      const name = data?.full_name?.trim();
+      return name || null;
     },
   });
 
@@ -206,6 +236,22 @@ export default function AcademyLessonViewerPage() {
   const isRevoked = !!enrollmentRaw?.revoked_at;
   const canTrackProgress = isEnrolled && !isPreview && !isExpired && !isRevoked && !isReadOnly;
   const completionThreshold = lesson?.completion_threshold ?? 90;
+
+  // Published assessment for quiz indicator + sidebar entry (shared cache with AssessmentEntrySection)
+  const { data: publishedAssessment } = useQuery({
+    queryKey: ["academy-assessment", course?.id],
+    enabled: !!course?.id && isEnrolled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("academy_assessments")
+        .select("id, title, instructions, pass_score, max_attempts, time_limit_minutes")
+        .eq("course_id", course!.id)
+        .eq("is_published", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Upsert progress helper
   const upsertProgress = useCallback(
@@ -407,6 +453,15 @@ export default function AcademyLessonViewerPage() {
   const isCompleted = numericLessonId != null && completedLessonIds.includes(numericLessonId);
   const effectivePercent = Math.max(livePercent, currentProgress?.completion_percentage ?? 0);
 
+  const deliveryDateLabel = useMemo(
+    () => formatDeliveryDate(course?.delivery_date),
+    [course?.delivery_date],
+  );
+
+  const allLessonsComplete =
+    allLessons.length > 0 && allLessons.every((l: any) => completedLessonIds.includes(l.id));
+  const quizLocked = !isEnrolled || !allLessonsComplete;
+
   const lessonIcon = (type: string | null) => {
     if (type === "video") return <Play className="h-3.5 w-3.5" />;
     if (type === "resource") return <FileText className="h-3.5 w-3.5" />;
@@ -586,6 +641,42 @@ export default function AcademyLessonViewerPage() {
                 </ul>
               </div>
             ))}
+
+            {publishedAssessment && (
+              <div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                  Assessment
+                </p>
+                <ul className="space-y-0.5">
+                  <li>
+                    <button
+                      onClick={() => {
+                        if (quizLocked) return;
+                        flushAndNavigate(`/academy/course/${slug}/assessment/${publishedAssessment.id}`);
+                      }}
+                      disabled={quizLocked}
+                      title={
+                        quizLocked
+                          ? !isEnrolled
+                            ? "Enrol to unlock"
+                            : "Complete the video to unlock the quiz"
+                          : "Start quiz"
+                      }
+                      className={`w-full text-left flex items-center gap-2 py-1.5 px-2 rounded text-xs transition-colors ${
+                        quizLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/50"
+                      }`}
+                    >
+                      {quizLocked ? (
+                        <Lock className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ClipboardCheck className="h-3.5 w-3.5 flex-shrink-0" style={{ color: ACCENT }} />
+                      )}
+                      <span className="truncate">Quiz</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -699,7 +790,7 @@ export default function AcademyLessonViewerPage() {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
             {lesson.estimated_minutes && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" /> {lesson.estimated_minutes} min
@@ -709,9 +800,50 @@ export default function AcademyLessonViewerPage() {
               {lessonIcon(lesson.lesson_type)} {lesson.lesson_type || "Content"}
             </span>
           </div>
+
+          {(facilitatorName || deliveryDateLabel || publishedAssessment) && (
+            <div className="space-y-1.5 pt-1">
+              {facilitatorName && (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <User className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>
+                    <span className="font-medium text-foreground/80">Facilitator:</span> {facilitatorName}
+                  </span>
+                </p>
+              )}
+              {deliveryDateLabel && (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>
+                    <span className="font-medium text-foreground/80">Date of delivery:</span> {deliveryDateLabel}
+                  </span>
+                </p>
+              )}
+              {publishedAssessment && (
+                <p className="flex items-center gap-1.5 text-xs" style={{ color: ACCENT }}>
+                  <ClipboardCheck className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>
+                    This training includes a short quiz — complete the video to unlock it
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Description / Content */}
+        {/* Course description */}
+        {(course.short_description || course.description) && (
+          <div className="space-y-2">
+            {course.short_description && (
+              <p className="text-sm text-muted-foreground leading-relaxed">{course.short_description}</p>
+            )}
+            {course.description && (
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{course.description}</p>
+            )}
+          </div>
+        )}
+
+        {/* Lesson description / Content */}
         {lesson.description && (
           <p className="text-sm text-muted-foreground leading-relaxed">{lesson.description}</p>
         )}
