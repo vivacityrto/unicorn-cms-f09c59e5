@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAdminAcademyCourses, useCreateCourse, useDeleteCourse, usePermanentDeleteCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,11 +26,11 @@ import {
 } from "@/components/ui/accordion";
 import { MultiSelect } from "@/components/documents/bulk-generate/MultiSelect";
 import {
-  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter, Users,
+  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter, Users, User, Calendar,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { format, parseISO, isValid } from "date-fns";
 import { usePermission } from "@/hooks/usePermission";
 import { formatTargetAudienceLabel } from "@/lib/academy/pathways";
 
@@ -69,6 +70,18 @@ function formatAudiencePreview(audience: string[] | null | undefined): string | 
   if (labels.length <= AUDIENCE_PREVIEW_COUNT) return labels.join(", ");
   const shown = labels.slice(0, AUDIENCE_PREVIEW_COUNT).join(", ");
   return `${shown} +${labels.length - AUDIENCE_PREVIEW_COUNT} more`;
+}
+
+function formatDeliveryDateLabel(dateString: string | null | undefined): string {
+  if (!dateString) return "Not set";
+  try {
+    const raw = dateString.includes("T") ? dateString : `${dateString}T00:00:00`;
+    const date = parseISO(raw);
+    if (!isValid(date)) return "Not set";
+    return format(date, "d MMMM yyyy");
+  } catch {
+    return "Not set";
+  }
 }
 
 function groupCoursesBySeries(courses: AdminCourse[]): CourseSection[] {
@@ -135,6 +148,32 @@ export default function AcademyBuilderLibrary() {
   const { data: courses = [], isLoading } = useAdminAcademyCourses({
     status: statusFilter,
     search: search || undefined,
+  });
+
+  const facilitatorIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const course of courses) {
+      if (course.facilitator_id) ids.add(course.facilitator_id);
+    }
+    return [...ids];
+  }, [courses]);
+
+  const { data: facilitatorNameById = {} } = useQuery({
+    queryKey: ["academy-builder-library-facilitators", facilitatorIds],
+    enabled: facilitatorIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, full_name")
+        .in("user_uuid", facilitatorIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const u of data ?? []) {
+        const name = u.full_name?.trim();
+        if (u.user_uuid && name) map[u.user_uuid] = name;
+      }
+      return map;
+    },
   });
 
   const userTypeOptions = useMemo(() => {
@@ -431,6 +470,24 @@ export default function AcademyBuilderLibrary() {
                                 <span>{audiencePreview}</span>
                               </p>
                             )}
+
+                            <div className="space-y-1">
+                              <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
+                                <User className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                <span>
+                                  Facilitator:{" "}
+                                  {course.facilitator_id
+                                    ? (facilitatorNameById[course.facilitator_id] ?? "Not set")
+                                    : "Not set"}
+                                </span>
+                              </p>
+                              <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
+                                <Calendar className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                <span>
+                                  Date of delivery: {formatDeliveryDateLabel(course.delivery_date)}
+                                </span>
+                              </p>
+                            </div>
 
                             <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                               <span className="flex items-center gap-1">
