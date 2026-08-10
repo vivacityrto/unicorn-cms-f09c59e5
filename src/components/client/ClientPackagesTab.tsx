@@ -707,45 +707,43 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                         const renewalDue = pkg.next_renewal_date ? parseISO(pkg.next_renewal_date) <= new Date() : false;
                         return (
                         <div className="flex flex-col items-start">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm" className="gap-1" disabled={!renewalDue}>
-                                <RefreshCw className="h-4 w-4" />
-                                Renew
-                                <ChevronDown className="h-3 w-3 ml-0.5" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenuItem
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  const { data: incomplete } = await (supabase as any)
-                                    .from('stage_instances')
-                                    .select('id')
-                                    .eq('packageinstance_id', parseInt(pkg.id, 10))
-                                    .is('status_id', null);
-                                  if (incomplete && incomplete.length > 0) {
-                                    const count = incomplete.length;
-                                    toast.error(`There ${count === 1 ? 'is' : 'are'} ${count} Stage${count === 1 ? '' : 's'} with no status selected. All stages must have a status selected.`);
-                                    return;
-                                  }
-                                  setRenewTarget(pkg);
-                                }}
-                              >
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Renew
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFinaliseTarget(pkg);
-                                }}
-                              >
-                                <Flag className="h-4 w-4 mr-2" />
-                                Finalise
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              disabled={!renewalDue}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const { data: incomplete } = await (supabase as any)
+                                  .from('stage_instances')
+                                  .select('id')
+                                  .eq('packageinstance_id', parseInt(pkg.id, 10))
+                                  .is('status_id', null);
+                                if (incomplete && incomplete.length > 0) {
+                                  const count = incomplete.length;
+                                  toast.error(`There ${count === 1 ? 'is' : 'are'} ${count} Stage${count === 1 ? '' : 's'} with no status selected. All stages must have a status selected.`);
+                                  return;
+                                }
+                                setRenewTarget(pkg);
+                              }}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              Renew
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFinaliseTarget(pkg);
+                              }}
+                            >
+                              <Flag className="h-4 w-4" />
+                              Finalise
+                            </Button>
+                          </div>
                           {pkg.next_renewal_date && (
                             <div className="text-xs text-muted-foreground mt-1">
                               Anniversary {format(parseISO(pkg.next_renewal_date), 'dd/MM/yyyy')}
