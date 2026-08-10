@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,12 +33,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { ChevronDown, Download } from "lucide-react";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ChevronDown, Download, Loader2, MoreHorizontal, Sparkles } from "lucide-react";
 import { CurrencyStatusPill } from "@/components/academy/pdp/CurrencyStatusPill";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useWorkforcePdp } from "@/features/pdp/useWorkforcePdp";
@@ -47,6 +49,7 @@ import {
 } from "@/features/pdp/useTenantAcademyStaffStats";
 import { useCycleSummary } from "@/features/pdp/hooks";
 import { getCurrentCycle } from "@/features/pdp/api";
+import { exportPdpAuditPack, resolveTenantName } from "@/features/pdp/exportAuditPack";
 import type { WorkforcePdpRow } from "@/features/pdp/workforce";
 import type { CurrencyStatus } from "@/features/pdp/types";
 
@@ -258,9 +261,10 @@ export default function StaffPdpsPage() {
     canManagePortalUsers,
     tenantUserLoading,
   } = useClientTenant();
-  const { data, isLoading, error } = useWorkforcePdp();
+  const { data, isLoading, error } = useWorkforcePdp(activeTenantId);
   const [params, setParams] = useSearchParams();
   const [drawer, setDrawer] = useState<DrawerState>({ row: null });
+  const [exportingKey, setExportingKey] = useState<string | null>(null);
 
   const audienceFilter = params.get("audience") ?? "";
   const yearFilter = params.get("year") ?? "";
@@ -276,7 +280,7 @@ export default function StaffPdpsPage() {
     setParams(next, { replace: true });
   }
 
-  // Defence-in-depth: scope to active tenant even though RLS already does so.
+  // Defence-in-depth: scope to active tenant even though the query already filters.
   const tenantRows = useMemo<WorkforcePdpRow[]>(() => {
     if (!data || activeTenantId == null) return [];
     return data.filter((r) => r.tenant_id === activeTenantId);
@@ -323,7 +327,8 @@ export default function StaffPdpsPage() {
     let atRisk = 0;
     let overdue = 0;
     for (const r of filtered) {
-      if (r.currency_status === "current") current++;
+      // Current tile = good standing (literal current OR mid-cycle on_track).
+      if (r.currency_status === "current" || r.currency_status === "on_track") current++;
       else if (r.currency_status === "at_risk") atRisk++;
       else if (r.currency_status === "overdue") overdue++;
     }
@@ -342,6 +347,35 @@ export default function StaffPdpsPage() {
   }
 
   const hasFilters = !!(audienceFilter || yearFilter || statusFilter.length);
+  const noPdpCycleYet = !isLoading && !error && tenantRows.length === 0;
+
+  async function handleExport(opts?: { userId: string; staffName: string }) {
+    if (activeTenantId == null) return;
+    const key = opts?.userId ?? "tenant";
+    setExportingKey(key);
+    try {
+      const tenantName = await resolveTenantName(
+        activeTenantId,
+        tenantRows[0]?.tenant_name,
+      );
+      const result = await exportPdpAuditPack({
+        tenantId: activeTenantId,
+        tenantName,
+        userId: opts?.userId,
+        staffName: opts?.staffName,
+      });
+      toast.success(
+        result.staff_count === 1
+          ? "Audit pack ready — 1 staff exported."
+          : `Audit pack ready — ${result.staff_count} staff exported.`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Export failed";
+      toast.error(msg);
+    } finally {
+      setExportingKey(null);
+    }
+  }
 
   // Resolution / access gates
   if (tenantUserLoading || activeTenantId == null) {
@@ -394,6 +428,7 @@ export default function StaffPdpsPage() {
                   <Select
                     value={audienceFilter || NONE}
                     onValueChange={(v) => setParam("audience", v === NONE ? null : v)}
+                    disabled={noPdpCycleYet}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Audience" />
@@ -411,7 +446,11 @@ export default function StaffPdpsPage() {
 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="min-w-[180px] justify-between">
+                    <Button
+                      variant="outline"
+                      className="min-w-[180px] justify-between"
+                      disabled={noPdpCycleYet}
+                    >
                       {statusFilter.length === 0
                         ? "Currency status"
                         : `${statusFilter.length} selected`}
@@ -437,6 +476,7 @@ export default function StaffPdpsPage() {
                   <Select
                     value={yearFilter || NONE}
                     onValueChange={(v) => setParam("year", v === NONE ? null : v)}
+                    disabled={noPdpCycleYet}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Cycle year" />
@@ -460,113 +500,187 @@ export default function StaffPdpsPage() {
               </CardContent>
             </Card>
 
-            {/* KPI tiles */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-xs text-muted-foreground">Total staff</div>
-                  <div className="text-2xl font-bold mt-1">{total}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-xs text-muted-foreground">% Current</div>
-                  <div className="text-2xl font-bold mt-1">{pct(counts.current)}%</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-xs text-muted-foreground">% At risk</div>
-                  <div className="text-2xl font-bold mt-1">{pct(counts.atRisk)}%</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-xs text-muted-foreground">% Overdue</div>
-                  <div className="text-2xl font-bold mt-1">{pct(counts.overdue)}%</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Table */}
-            <Card>
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="p-6 space-y-2">
+            {isLoading ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-4">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-8 w-16 mt-2" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <Card>
+                  <CardContent className="p-6 space-y-2">
                     {Array.from({ length: 8 }).map((_, i) => (
                       <Skeleton key={i} className="h-10 w-full" />
                     ))}
-                  </div>
-                ) : error ? (
-                  <div className="p-6 text-sm text-destructive">
-                    Failed to load staff PDP data.
-                  </div>
-                ) : filtered.length === 0 ? (
-                  <div className="p-6 text-sm text-muted-foreground">No matching staff.</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Staff name</TableHead>
-                        <TableHead>Audience</TableHead>
-                        <TableHead className="text-right">Cycle year</TableHead>
-                        <TableHead className="text-right">Target hrs</TableHead>
-                        <TableHead className="text-right">Actual hrs</TableHead>
-                        <TableHead className="w-[140px]">% complete</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Cycle end</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filtered.map((r) => {
-                        const pctC = Math.min(100, Math.round(r.percent_complete));
-                        return (
-                          <TableRow
-                            key={`${r.user_id}-${r.tenant_id ?? "null"}`}
-                            className="cursor-pointer"
-                            onClick={() => setDrawer({ row: r })}
-                          >
-                            <TableCell className="font-medium">{r.staff_name}</TableCell>
-                            <TableCell>{r.audience_code ?? "—"}</TableCell>
-                            <TableCell className="text-right">{r.cycle_year ?? "—"}</TableCell>
-                            <TableCell className="text-right">
-                              {numberAU.format(r.target_pd_hours)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {numberAU.format(r.actual_pd_hours)}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Progress value={pctC} className="h-2" />
-                                <span className="text-xs w-10 text-right">{pctC}%</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <CurrencyStatusPill status={r.currency_status} />
-                            </TableCell>
-                            <TableCell>{fmtDate(r.cycle_end_date)}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </>
+            ) : error ? (
+              <Card>
+                <CardContent className="p-6 text-sm text-destructive">
+                  Failed to load staff PDP data.
+                </CardContent>
+              </Card>
+            ) : noPdpCycleYet ? (
+              <Card className="border-dashed">
+                <CardContent className="py-10 text-center space-y-3">
+                  <Sparkles className="h-8 w-8 mx-auto text-[var(--viv-purple)]" />
+                  <h3 className="text-lg font-semibold text-foreground">No PDP cycle yet</h3>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    Staff in this organisation haven&apos;t started a PDP cycle yet. Currency
+                    tiles and the staff table will appear once the first cycle is created.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* KPI tiles */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-xs text-muted-foreground">Total staff</div>
+                      <div className="text-2xl font-bold mt-1">{total}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-xs text-muted-foreground">% Current</div>
+                      <div className="text-2xl font-bold mt-1">{pct(counts.current)}%</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-xs text-muted-foreground">% At risk</div>
+                      <div className="text-2xl font-bold mt-1">{pct(counts.atRisk)}%</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-xs text-muted-foreground">% Overdue</div>
+                      <div className="text-2xl font-bold mt-1">{pct(counts.overdue)}%</div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-            {/* Footer action — export stub */}
+                {/* Table */}
+                <Card>
+                  <CardContent className="p-0">
+                    {filtered.length === 0 ? (
+                      <div className="p-6 text-sm text-muted-foreground">No matching staff.</div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Staff name</TableHead>
+                            <TableHead>Audience</TableHead>
+                            <TableHead className="text-right">Cycle year</TableHead>
+                            <TableHead className="text-right">Target hrs</TableHead>
+                            <TableHead className="text-right">Actual hrs</TableHead>
+                            <TableHead className="w-[140px]">% complete</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Cycle end</TableHead>
+                            <TableHead className="w-[56px]">
+                              <span className="sr-only">Actions</span>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filtered.map((r) => {
+                            const pctC = Math.min(100, Math.round(r.percent_complete));
+                            const rowExporting = exportingKey === r.user_id;
+                            return (
+                              <TableRow
+                                key={`${r.user_id}-${r.tenant_id ?? "null"}`}
+                                className="cursor-pointer"
+                                onClick={() => setDrawer({ row: r })}
+                              >
+                                <TableCell className="font-medium">{r.staff_name}</TableCell>
+                                <TableCell>{r.audience_code ?? "—"}</TableCell>
+                                <TableCell className="text-right">
+                                  {r.cycle_year ?? "—"}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {numberAU.format(r.target_pd_hours)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {numberAU.format(r.actual_pd_hours)}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Progress value={pctC} className="h-2" />
+                                    <span className="text-xs w-10 text-right">{pctC}%</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <CurrencyStatusPill status={r.currency_status} />
+                                </TableCell>
+                                <TableCell>{fmtDate(r.cycle_end_date)}</TableCell>
+                                <TableCell>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        disabled={exportingKey !== null}
+                                        onClick={(e) => e.stopPropagation()}
+                                        aria-label={`Actions for ${r.staff_name}`}
+                                      >
+                                        {rowExporting ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="end"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          void handleExport({
+                                            userId: r.user_id,
+                                            staffName: r.staff_name,
+                                          })
+                                        }
+                                      >
+                                        <Download className="h-4 w-4 mr-2" />
+                                        Export audit pack
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {/* Footer action */}
             <div className="flex justify-end">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span tabIndex={0}>
-                    <Button variant="outline" disabled>
-                      <Download className="h-4 w-4 mr-2" />
-                      Export audit pack
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Coming soon</TooltipContent>
-              </Tooltip>
+              <Button
+                variant="outline"
+                disabled={noPdpCycleYet || isLoading || !!error || exportingKey !== null}
+                onClick={() => void handleExport()}
+              >
+                {exportingKey === "tenant" ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Export audit pack
+              </Button>
             </div>
           </TabsContent>
 

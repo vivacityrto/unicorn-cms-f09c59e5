@@ -35,13 +35,19 @@ function normaliseCurrency(value: string | null): CurrencyStatus {
   return "on_track";
 }
 
-export async function fetchWorkforcePdp(): Promise<WorkforcePdpRow[]> {
-  const { data: viewRows, error: viewErr } = await supabase
+export async function fetchWorkforcePdp(tenantId?: number | null): Promise<WorkforcePdpRow[]> {
+  let query = supabase
     .from("v_pdp_user_currency")
     .select(
       "user_id, tenant_id, audience_code, cycle_year, cycle_end_date, status, percent_complete, actual_pd_hours, target_pd_hours, days_until_cycle_end, currency_status",
     )
     .limit(2000);
+
+  if (tenantId != null) {
+    query = query.eq("tenant_id", tenantId);
+  }
+
+  const { data: viewRows, error: viewErr } = await query;
 
   if (viewErr) throw viewErr;
 
