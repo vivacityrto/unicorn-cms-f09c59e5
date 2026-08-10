@@ -86,7 +86,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "vitest": "^4.1.9",
+    "vitest": "^4.1.10",
     "zod": "^3.23.8",
     "zustand": "^5.0.11"
   },
@@ -105,7 +105,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "lovable-tagger": "^1.1.10",
-    "postcss": "^8.5.15",
+    "postcss": "^8.5.26",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
@@ -113,7 +113,8 @@
   },
   "overrides": {
     "picomatch": "^4.0.4",
-    "postcss": "^8.5.15",
+    "nanoid": "^3.3.16",
+    "postcss": "^8.5.26",
     "hono": "^4.13.1",
     "@hono/node-server": "^1.19.14",
     "ip-address": "^10.4.0",
@@ -130,7 +131,8 @@
   },
   "resolutions": {
     "picomatch": "^4.0.4",
-    "postcss": "^8.5.15",
+    "nanoid": "^3.3.16",
+    "postcss": "^8.5.26",
     "hono": "^4.13.1",
     "@hono/node-server": "^1.19.14",
     "ip-address": "^10.4.0",
