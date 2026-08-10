@@ -52,8 +52,16 @@ export function useScheduleAuditPhase(auditId: string | undefined) {
       internalNotes?: string;
       auditTitle?: string;
       tenantId?: number;
+      auditStatus?: string;
     }) => {
       if (!auditId || !user?.id) throw new Error('Missing audit ID or user');
+
+      // A date before today means this meeting already happened and the
+      // auditor is backfilling the record rather than booking it ahead —
+      // that changes several downstream side effects below.
+      const scheduledStartOfDay = new Date(`${params.scheduledDate}T00:00:00`);
+      const todayStartOfDay = new Date(new Date().toDateString());
+      const isBackdated = scheduledStartOfDay < todayStartOfDay;
 
       // Call the RPC
       const { data: appointmentId, error: rpcErr } = await supabase.rpc(
@@ -76,12 +84,38 @@ export function useScheduleAuditPhase(auditId: string | undefined) {
       );
       if (rpcErr) throw rpcErr;
 
-      // Auto-complete stage tasks when opening meeting is scheduled
+      // Auto-complete stage tasks — 'conducted' rather than 'scheduled' when
+      // backfilling a meeting that's already taken place, since that's what it
+      // actually is (the stage-task system already models both milestones).
       if (params.appointmentType === 'opening_meeting' && auditId) {
-        await autoCompleteStageTasks(auditId, 'scheduled');
+        await autoCompleteStageTasks(auditId, isBackdated ? 'conducted' : 'scheduled');
       }
 
-      // For meetings, create calendar event and sync
+      if (isBackdated) {
+        // An already-concluded meeting shouldn't sit in "scheduled" waiting on a
+        // separate manual "Complete" click, and it shouldn't get a calendar
+        // invite for a date that's already passed. Land it as completed
+        // immediately, stamped with the meeting's own date/time rather than now.
+        await supabase
+          .from('audit_appointments' as any)
+          .update({
+            status: 'completed',
+            completed_at: `${params.scheduledDate}T${params.startTime || '00:00'}:00`,
+          } as any)
+          .eq('id', appointmentId);
+
+        if (params.appointmentType === 'opening_meeting' && params.auditStatus === 'draft') {
+          await supabase
+            .from('client_audits' as any)
+            .update({ status: 'in_progress' } as any)
+            .eq('id', auditId);
+        }
+
+        return appointmentId;
+      }
+
+      // For meetings booked ahead of time, create a calendar event and sync it
+      // (including sending an invite) — not applicable once isBackdated is true.
       if (params.appointmentType === 'opening_meeting' || params.appointmentType === 'closing_meeting') {
         const meetingLabel = params.appointmentType === 'opening_meeting' ? 'Opening Meeting' : 'Closing Meeting';
         const title = `${meetingLabel} — ${params.auditTitle || 'Audit'}`;
@@ -146,7 +180,8 @@ export function useScheduleAuditPhase(auditId: string | undefined) {
         opening_meeting: 'Opening meeting',
         closing_meeting: 'Closing meeting',
       };
-      toast.success(`${labels[params.appointmentType] || 'Appointment'} scheduled`);
+      const isBackdated = new Date(`${params.scheduledDate}T00:00:00`) < new Date(new Date().toDateString());
+      toast.success(`${labels[params.appointmentType] || 'Appointment'} ${isBackdated ? 'logged' : 'scheduled'}`);
     },
     onError: (err: any) => {
       toast.error('Failed to schedule: ' + (err.message || 'Unknown error'));
