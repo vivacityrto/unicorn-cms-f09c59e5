@@ -66,6 +66,74 @@ function editDistancePct(original: string, edited: string): number {
   return Math.min(100, Math.round((dp[n] / Math.max(m, n)) * 100));
 }
 
+/**
+ * Report Preview field that's normally read-only, with an inline "Edit"
+ * toggle so the auditor can fix a saved value directly (without going
+ * through the AI-draft accept/edit/discard flow, which requires
+ * regenerating an entirely new draft first).
+ */
+function EditableReportField({
+  label,
+  value,
+  rows,
+  placeholder,
+  saving,
+  onSave,
+}: {
+  label: string;
+  value: string;
+  rows: number;
+  placeholder?: string;
+  saving: boolean;
+  onSave: (text: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draftText, setDraftText] = useState('');
+
+  const startEdit = () => {
+    setDraftText(value);
+    setEditing(true);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        {!editing && (
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={startEdit}>
+            Edit
+          </Button>
+        )}
+      </div>
+      {editing ? (
+        <div className="space-y-2">
+          <Textarea
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
+            rows={rows}
+            className="text-sm"
+            placeholder={placeholder}
+          />
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={saving}
+              onClick={() => { onSave(draftText); setEditing(false); }}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm whitespace-pre-wrap">{value || '—'}</p>
+      )}
+    </div>
+  );
+}
+
 interface ReportTabProps {
   audit: ClientAudit;
   findings: AuditFinding[];
@@ -103,6 +171,24 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
     overall_finding?: 'accepted' | 'edited' | 'rejected';
     risk_rationale?: 'accepted' | 'edited' | 'rejected';
   }>({});
+
+  // ─── Direct report-field edit ────────────────────────────────────────
+  // Separate from the AI-draft accept/edit/discard flow above: lets the
+  // auditor fix a sentence in an already-saved report field (executive
+  // summary, overall finding, risk rationale — e.g. to remove jargon or
+  // an internal finding ID before sending to a client) without
+  // regenerating an entirely new AI draft first. Report Preview below
+  // renders each of these via <EditableReportField>.
+  const saveReportField = (
+    field: 'executive_summary' | 'overall_finding' | 'risk_rationale',
+    text: string,
+    successMessage: string,
+  ) => {
+    updateAudit.mutate({ [field]: text } as any, {
+      onSuccess: () => toast.success(successMessage),
+      onError: (err: any) => toast.error('Save failed: ' + (err?.message || 'unknown')),
+    });
+  };
 
   const handleDraftClick = async () => {
     try {
@@ -574,19 +660,30 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
             </div>
           )}
 
-          {audit.executive_summary && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Executive Summary</p>
-              <p className="text-sm whitespace-pre-wrap">{audit.executive_summary}</p>
-            </div>
-          )}
+          <EditableReportField
+            label="Executive Summary"
+            value={audit.executive_summary || ''}
+            rows={6}
+            saving={updateAudit.isPending}
+            onSave={(text) => saveReportField('executive_summary', text, 'Executive summary updated.')}
+          />
 
-          {audit.overall_finding && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Overall Finding</p>
-              <p className="text-sm whitespace-pre-wrap">{audit.overall_finding}</p>
-            </div>
-          )}
+          <EditableReportField
+            label="Overall Finding"
+            value={audit.overall_finding || ''}
+            rows={3}
+            saving={updateAudit.isPending}
+            onSave={(text) => saveReportField('overall_finding', text, 'Overall finding updated.')}
+          />
+
+          <EditableReportField
+            label="Risk Rating Rationale"
+            value={audit.risk_rationale || ''}
+            rows={5}
+            placeholder="Explain the risk rating in language suitable for the client — avoid internal finding IDs and jargon."
+            saving={updateAudit.isPending}
+            onSave={(text) => saveReportField('risk_rationale', text, 'Risk rationale updated.')}
+          />
 
           <div>
             <p className="text-xs text-muted-foreground mb-2">Findings by Priority</p>

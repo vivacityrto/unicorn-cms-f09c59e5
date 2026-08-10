@@ -59,6 +59,25 @@ function fmtDate(v: string | null | undefined): string {
   });
 }
 
+/**
+ * Highest-priority finding raised against a section, or null if none.
+ * client_audit_sections.score_total/score_max/risk_level are never
+ * populated anywhere in the app (only an audit-wide score exists), so
+ * the Section Rollup derives Risk from findings instead of those columns.
+ */
+const SECTION_RISK_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+function sectionRiskFromFindings(sectionId: string, findings: any[]): string | null {
+  let best: string | null = null;
+  let bestRank = 0;
+  for (const f of findings) {
+    if (f.section_id !== sectionId) continue;
+    const p = (f.priority || '').toLowerCase();
+    const rank = SECTION_RISK_RANK[p] ?? 0;
+    if (rank > bestRank) { bestRank = rank; best = p; }
+  }
+  return best;
+}
+
 function fmtDateTime(v: string | null | undefined): string {
   if (!v) return '—';
   const d = new Date(v);
@@ -255,7 +274,7 @@ Deno.serve(async (req) => {
         .eq('audit_id', auditId),
       admin
         .from('client_audit_sections')
-        .select('id, template_section_id, title, standard_code, risk_level, score_total, score_max, sort_order, section_summary')
+        .select('id, template_section_id, title, standard_code, audit_phase, risk_level, score_total, score_max, sort_order, section_summary')
         .eq('audit_id', auditId)
         .order('sort_order', { ascending: true }),
       admin
@@ -462,9 +481,13 @@ Deno.serve(async (req) => {
       };
       const headerBorder = { style: BorderStyle.SINGLE, size: 6, color: '7130A0' };
       const rowBorder = { style: BorderStyle.SINGLE, size: 4, color: 'E2E2E2' };
-      const headerCells = ['Section', 'Score', 'Risk', 'Findings'].map((t, i) =>
+      // v2 fix: dropped the Score column (score_total/score_max are never
+      // populated on client_audit_sections anywhere in the app, so it
+      // always read "Not scored"). Risk is now derived from findings
+      // instead of the always-null risk_level column.
+      const headerCells = ['Section', 'Risk', 'Findings'].map((t, i) =>
         new TableCell({
-          width: { size: i === 0 ? 4800 : 1520, type: WidthType.DXA },
+          width: { size: i === 0 ? 5560 : 1900, type: WidthType.DXA },
           borders: { top: headerBorder, bottom: headerBorder, left: headerBorder, right: headerBorder },
           shading: { fill: '44235F', type: ShadingType.CLEAR, color: 'auto' },
           margins: { top: 80, bottom: 80, left: 120, right: 120 },
@@ -474,31 +497,24 @@ Deno.serve(async (req) => {
       const rollupRows = [new TableRow({ tableHeader: true, children: headerCells })];
       for (const s of sections) {
         const findingCount = findings.filter((f) => f.section_id === s.id).length;
-        const scoreLabel = s.score_total != null && s.score_max != null
-          ? `${s.score_total} / ${s.score_max}`
-          : 'Not scored';
-        const risk = (s.risk_level || 'low').toString();
+        const risk = sectionRiskFromFindings(s.id, findings);
         const rowCells = [
           new TableCell({
-            width: { size: 4800, type: WidthType.DXA },
+            width: { size: 5560, type: WidthType.DXA },
             borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
             margins: { top: 60, bottom: 60, left: 120, right: 120 },
             children: [new Paragraph({ children: [new TextRun({ text: s.title || s.standard_code || '—', size: 20 })] })],
           }),
           new TableCell({
-            width: { size: 1520, type: WidthType.DXA },
+            width: { size: 1900, type: WidthType.DXA },
             borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
             margins: { top: 60, bottom: 60, left: 120, right: 120 },
-            children: [new Paragraph({ children: [new TextRun({ text: scoreLabel, size: 20 })] })],
+            children: [new Paragraph({ children: [risk
+              ? new TextRun({ text: risk.toUpperCase(), bold: true, size: 20, color: riskColor[risk] || '333333' })
+              : new TextRun({ text: '—', size: 20, color: '999999' })] })],
           }),
           new TableCell({
-            width: { size: 1520, type: WidthType.DXA },
-            borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
-            margins: { top: 60, bottom: 60, left: 120, right: 120 },
-            children: [new Paragraph({ children: [new TextRun({ text: risk.toUpperCase(), bold: true, size: 20, color: riskColor[risk] || '333333' })] })],
-          }),
-          new TableCell({
-            width: { size: 1520, type: WidthType.DXA },
+            width: { size: 1900, type: WidthType.DXA },
             borders: { top: rowBorder, bottom: rowBorder, left: rowBorder, right: rowBorder },
             margins: { top: 60, bottom: 60, left: 120, right: 120 },
             children: [new Paragraph({ children: [new TextRun({ text: String(findingCount), size: 20 })] })],
@@ -508,7 +524,7 @@ Deno.serve(async (req) => {
       }
       children.push(new Table({
         width: { size: 9360, type: WidthType.DXA },
-        columnWidths: [4800, 1520, 1520, 1520],
+        columnWidths: [5560, 1900, 1900],
         rows: rollupRows,
       }));
     }
@@ -674,7 +690,11 @@ Deno.serve(async (req) => {
             fallbackText: string | null,
             clause: string | null,
           ) => {
-            const label = clause ? `[${clause}] ` : '';
+            // v2 fix: [clause] is a real Standards clause elsewhere, but for
+            // Opening Meeting questions it holds an internal categorisation
+            // hint ("Context", "Changes", ...), not meant for the
+            // client-facing report.
+            const label = (clause && s.audit_phase !== 'opening_meeting') ? `[${clause}] ` : '';
             const heading = `${label}${fallbackText || r?.question_text || 'Question'}`;
             children.push(
               new Paragraph({
