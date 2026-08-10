@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { format, parseISO } from "date-fns";
+import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -40,6 +41,10 @@ import { ChevronDown, Download } from "lucide-react";
 import { CurrencyStatusPill } from "@/components/academy/pdp/CurrencyStatusPill";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useWorkforcePdp } from "@/features/pdp/useWorkforcePdp";
+import {
+  useTenantAcademyStaffStats,
+  type TenantAcademyStaffStatsRow,
+} from "@/features/pdp/useTenantAcademyStaffStats";
 import { useCycleSummary } from "@/features/pdp/hooks";
 import { getCurrentCycle } from "@/features/pdp/api";
 import type { WorkforcePdpRow } from "@/features/pdp/workforce";
@@ -75,8 +80,91 @@ function fmtDate(iso: string | null): string {
   }
 }
 
+function fmtRelative(iso: string | null, whenNull: string): string {
+  if (!iso) return whenNull;
+  try {
+    return formatDistanceToNow(parseISO(iso), { addSuffix: true });
+  } catch {
+    return whenNull;
+  }
+}
+
+function formatCourseBreakdown(row: TenantAcademyStaffStatsRow): string {
+  const completed = Number(row.enrollments_completed ?? 0);
+  const active = Number(row.enrollments_active ?? 0);
+  const total = Number(row.enrollments_total ?? 0);
+  const notStarted = Math.max(0, total - completed - active);
+  return `${completed} completed / ${active} in progress / ${notStarted} not started`;
+}
+
 interface DrawerState {
   row: WorkforcePdpRow | null;
+}
+
+function AcademyStaffActivityTable({ tenantId }: { tenantId: number }) {
+  const { data, isLoading, error } = useTenantAcademyStaffStats(tenantId);
+
+  return (
+    <Card>
+      <CardContent className="p-0">
+        {isLoading ? (
+          <div className="p-6 space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="p-6 text-sm text-destructive">
+            Failed to load Academy activity.
+          </div>
+        ) : !data || data.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground">
+            No staff Academy activity yet.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name / email</TableHead>
+                <TableHead>Last login</TableHead>
+                <TableHead className="text-right">Logins (90d)</TableHead>
+                <TableHead>Courses</TableHead>
+                <TableHead className="text-right">PD hours completed</TableHead>
+                <TableHead className="text-right">Certificates earned</TableHead>
+                <TableHead>Last activity</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((r) => (
+                <TableRow key={r.user_id}>
+                  <TableCell>
+                    <div className="font-medium">{r.full_name || "—"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {r.email || "—"}
+                    </div>
+                  </TableCell>
+                  <TableCell>{fmtRelative(r.last_login_at, "Never")}</TableCell>
+                  <TableCell className="text-right">
+                    {Number(r.login_count_90d ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-sm">{formatCourseBreakdown(r)}</TableCell>
+                  <TableCell className="text-right">
+                    {numberAU.format(Number(r.pd_hours_completed ?? 0))}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {Number(r.certificates_earned ?? 0)}
+                  </TableCell>
+                  <TableCell>
+                    {fmtRelative(r.last_activity_at, "No activity yet")}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function StaffDrawer({
@@ -288,191 +376,204 @@ export default function StaffPdpsPage() {
         <div>
           <h1 className="text-2xl font-bold">Staff PDPs</h1>
           <p className="text-sm text-muted-foreground">
-            Latest PDP cycle for your team.
+            PDP cycles and Vivacity Academy activity for your team.
           </p>
         </div>
 
-        {/* Filter bar */}
-        <Card>
-          <CardContent className="p-4 flex flex-wrap items-center gap-3">
-            <div className="min-w-[180px]">
-              <Select
-                value={audienceFilter || NONE}
-                onValueChange={(v) => setParam("audience", v === NONE ? null : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Audience" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>All audiences</SelectItem>
-                  {audienceOptions.map((a) => (
-                    <SelectItem key={a} value={a}>
-                      {a}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <Tabs defaultValue="pdp-cycles">
+          <TabsList>
+            <TabsTrigger value="pdp-cycles">PDP cycles</TabsTrigger>
+            <TabsTrigger value="academy-activity">Academy activity</TabsTrigger>
+          </TabsList>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="min-w-[180px] justify-between">
-                  {statusFilter.length === 0
-                    ? "Currency status"
-                    : `${statusFilter.length} selected`}
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56" align="start">
-                <div className="space-y-2">
-                  {ALL_STATUSES.map((s) => (
-                    <label key={s} className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={statusFilter.includes(s)}
-                        onCheckedChange={() => toggleStatus(s)}
-                      />
-                      <span className="text-sm">{STATUS_LABEL[s]}</span>
-                    </label>
-                  ))}
+          <TabsContent value="pdp-cycles" className="space-y-6 mt-6">
+            {/* Filter bar */}
+            <Card>
+              <CardContent className="p-4 flex flex-wrap items-center gap-3">
+                <div className="min-w-[180px]">
+                  <Select
+                    value={audienceFilter || NONE}
+                    onValueChange={(v) => setParam("audience", v === NONE ? null : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Audience" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>All audiences</SelectItem>
+                      {audienceOptions.map((a) => (
+                        <SelectItem key={a} value={a}>
+                          {a}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </PopoverContent>
-            </Popover>
 
-            <div className="min-w-[140px]">
-              <Select
-                value={yearFilter || NONE}
-                onValueChange={(v) => setParam("year", v === NONE ? null : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Cycle year" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>All years</SelectItem>
-                  {yearOptions.map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="min-w-[180px] justify-between">
+                      {statusFilter.length === 0
+                        ? "Currency status"
+                        : `${statusFilter.length} selected`}
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56" align="start">
+                    <div className="space-y-2">
+                      {ALL_STATUSES.map((s) => (
+                        <label key={s} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={statusFilter.includes(s)}
+                            onCheckedChange={() => toggleStatus(s)}
+                          />
+                          <span className="text-sm">{STATUS_LABEL[s]}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <div className="min-w-[140px]">
+                  <Select
+                    value={yearFilter || NONE}
+                    onValueChange={(v) => setParam("year", v === NONE ? null : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Cycle year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>All years</SelectItem>
+                      {yearOptions.map((y) => (
+                        <SelectItem key={y} value={String(y)}>
+                          {y}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {hasFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    Clear filters
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* KPI tiles */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-xs text-muted-foreground">Total staff</div>
+                  <div className="text-2xl font-bold mt-1">{total}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-xs text-muted-foreground">% Current</div>
+                  <div className="text-2xl font-bold mt-1">{pct(counts.current)}%</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-xs text-muted-foreground">% At risk</div>
+                  <div className="text-2xl font-bold mt-1">{pct(counts.atRisk)}%</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-xs text-muted-foreground">% Overdue</div>
+                  <div className="text-2xl font-bold mt-1">{pct(counts.overdue)}%</div>
+                </CardContent>
+              </Card>
             </div>
 
-            {hasFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                Clear filters
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* KPI tiles */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-xs text-muted-foreground">Total staff</div>
-              <div className="text-2xl font-bold mt-1">{total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-xs text-muted-foreground">% Current</div>
-              <div className="text-2xl font-bold mt-1">{pct(counts.current)}%</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-xs text-muted-foreground">% At risk</div>
-              <div className="text-2xl font-bold mt-1">{pct(counts.atRisk)}%</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-xs text-muted-foreground">% Overdue</div>
-              <div className="text-2xl font-bold mt-1">{pct(counts.overdue)}%</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-6 space-y-2">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
-            ) : error ? (
-              <div className="p-6 text-sm text-destructive">
-                Failed to load staff PDP data.
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="p-6 text-sm text-muted-foreground">No matching staff.</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Staff name</TableHead>
-                    <TableHead>Audience</TableHead>
-                    <TableHead className="text-right">Cycle year</TableHead>
-                    <TableHead className="text-right">Target hrs</TableHead>
-                    <TableHead className="text-right">Actual hrs</TableHead>
-                    <TableHead className="w-[140px]">% complete</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Cycle end</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((r) => {
-                    const pctC = Math.min(100, Math.round(r.percent_complete));
-                    return (
-                      <TableRow
-                        key={`${r.user_id}-${r.tenant_id ?? "null"}`}
-                        className="cursor-pointer"
-                        onClick={() => setDrawer({ row: r })}
-                      >
-                        <TableCell className="font-medium">{r.staff_name}</TableCell>
-                        <TableCell>{r.audience_code ?? "—"}</TableCell>
-                        <TableCell className="text-right">{r.cycle_year ?? "—"}</TableCell>
-                        <TableCell className="text-right">
-                          {numberAU.format(r.target_pd_hours)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {numberAU.format(r.actual_pd_hours)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={pctC} className="h-2" />
-                            <span className="text-xs w-10 text-right">{pctC}%</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <CurrencyStatusPill status={r.currency_status} />
-                        </TableCell>
-                        <TableCell>{fmtDate(r.cycle_end_date)}</TableCell>
+            {/* Table */}
+            <Card>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-6 space-y-2">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                  </div>
+                ) : error ? (
+                  <div className="p-6 text-sm text-destructive">
+                    Failed to load staff PDP data.
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="p-6 text-sm text-muted-foreground">No matching staff.</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff name</TableHead>
+                        <TableHead>Audience</TableHead>
+                        <TableHead className="text-right">Cycle year</TableHead>
+                        <TableHead className="text-right">Target hrs</TableHead>
+                        <TableHead className="text-right">Actual hrs</TableHead>
+                        <TableHead className="w-[140px]">% complete</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Cycle end</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((r) => {
+                        const pctC = Math.min(100, Math.round(r.percent_complete));
+                        return (
+                          <TableRow
+                            key={`${r.user_id}-${r.tenant_id ?? "null"}`}
+                            className="cursor-pointer"
+                            onClick={() => setDrawer({ row: r })}
+                          >
+                            <TableCell className="font-medium">{r.staff_name}</TableCell>
+                            <TableCell>{r.audience_code ?? "—"}</TableCell>
+                            <TableCell className="text-right">{r.cycle_year ?? "—"}</TableCell>
+                            <TableCell className="text-right">
+                              {numberAU.format(r.target_pd_hours)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {numberAU.format(r.actual_pd_hours)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Progress value={pctC} className="h-2" />
+                                <span className="text-xs w-10 text-right">{pctC}%</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <CurrencyStatusPill status={r.currency_status} />
+                            </TableCell>
+                            <TableCell>{fmtDate(r.cycle_end_date)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Footer action — export stub */}
-        <div className="flex justify-end">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0}>
-                <Button variant="outline" disabled>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export audit pack
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Coming soon</TooltipContent>
-          </Tooltip>
-        </div>
+            {/* Footer action — export stub */}
+            <div className="flex justify-end">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button variant="outline" disabled>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export audit pack
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Coming soon</TooltipContent>
+              </Tooltip>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="academy-activity" className="mt-6">
+            <AcademyStaffActivityTable tenantId={activeTenantId} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <StaffDrawer
