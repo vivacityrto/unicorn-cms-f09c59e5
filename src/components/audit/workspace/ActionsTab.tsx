@@ -110,13 +110,20 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
 
   return (
     <div className="space-y-4">
-      {/* Completion sync banner */}
+      {/* Completion sync banner. Worded to acknowledge outstanding
+          Critical/High findings when there are any, rather than reading as
+          an unqualified "all done" directly above a banner saying the
+          opposite - the audit's completed status and the findings gap are
+          both real and worth showing, they just shouldn't contradict. */}
       {isComplete && (
         <Alert className="bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800">
           <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
           <AlertDescription className="flex items-center justify-between">
             <span className="text-green-800 dark:text-green-300">
               This audit is complete. {syncedCount} action{syncedCount !== 1 ? 's' : ''} synced to the client action plan.
+              {findingsWithoutActions && findingsWithoutActions.length > 0 && (
+                <> {findingsWithoutActions.length} Critical/High finding{findingsWithoutActions.length !== 1 ? 's' : ''} still {findingsWithoutActions.length === 1 ? 'has' : 'have'} no action item assigned - see below.</>
+              )}
             </span>
             {subjectTenantId && (
               <Button size="sm" variant="outline" asChild>
