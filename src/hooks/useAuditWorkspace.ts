@@ -152,31 +152,14 @@ export function useAuditResponses(auditId: string | undefined) {
       is_flagged?: boolean;
       responded_by: string;
     }) => {
-      // Check if response exists
-      const { data: existing } = await supabase
+      // Atomic upsert on (audit_id, question_id) — a prior check-then-insert/update
+      // pattern here raced under near-simultaneous saves (e.g. a debounced note
+      // save landing next to a rating click) and could silently fork a question
+      // into duplicate rows. See docs/audit-log/entries/2026-08-11-audit-response-duplicate-race.md.
+      const { error } = await supabase
         .from('client_audit_responses' as any)
-        .select('id')
-        .eq('audit_id', response.audit_id)
-        .eq('question_id', response.question_id)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('client_audit_responses' as any)
-          .update({
-            rating: response.rating,
-            notes: response.notes,
-            score: response.score,
-            is_flagged: response.is_flagged ?? false,
-            responded_by: response.responded_by,
-            responded_at: new Date().toISOString(),
-          } as any)
-          .eq('id', (existing as any).id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('client_audit_responses' as any)
-          .insert({
+        .upsert(
+          {
             audit_id: response.audit_id,
             section_id: response.section_id,
             question_id: response.question_id,
@@ -186,9 +169,10 @@ export function useAuditResponses(auditId: string | undefined) {
             is_flagged: response.is_flagged ?? false,
             responded_by: response.responded_by,
             responded_at: new Date().toISOString(),
-          } as any);
-        if (error) throw error;
-      }
+          } as any,
+          { onConflict: 'audit_id,question_id' },
+        );
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['audit-responses', auditId] });
