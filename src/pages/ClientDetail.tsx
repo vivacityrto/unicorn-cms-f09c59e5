@@ -13,6 +13,7 @@ import { ClientEmailsTab } from '@/components/client/ClientEmailsTab';
 import { ClientMessagesTab } from '@/components/client/ClientMessagesTab';
 import { ClientFilesTab } from '@/components/client/ClientFilesTab';
 import { useClientProfile, useClientPackages } from '@/hooks/useClientManagement';
+import { usePageTitle } from '@/contexts/PageTitleContext';
 import { useClientMessagesUnread } from '@/hooks/useClientMessagesUnread';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -144,6 +145,8 @@ export default function ClientDetail() {
     loading: packagesLoading,
     refreshPackages
   } = useClientPackages(tenantIdNum);
+
+  usePageTitle(tenant?.name);
 
   // All client detail tabs, in priority order. As many as fit the available
   // width render directly; the rest collapse into a "More" menu - measured

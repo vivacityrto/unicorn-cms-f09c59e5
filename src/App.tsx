@@ -10,6 +10,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
 
 import { TenantTypeProvider } from "./contexts/TenantTypeContext";
+import { PageTitleProvider } from "./contexts/PageTitleContext";
 import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LazyLoadFallback } from "./components/LazyLoadFallback";
@@ -298,6 +299,7 @@ const App = () => (
              <CelebrationProvider>
              <ChunkErrorBoundary>
              <Suspense fallback={<LazyLoadFallback />}>
+           <PageTitleProvider>
            <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
@@ -1251,6 +1253,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
            </Routes>
+           </PageTitleProvider>
              </Suspense>
              </ChunkErrorBoundary>
             </CelebrationProvider>
