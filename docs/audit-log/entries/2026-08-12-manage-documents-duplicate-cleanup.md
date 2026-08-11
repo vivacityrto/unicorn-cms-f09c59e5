@@ -5,8 +5,10 @@ Manage Documents (see also #242, which fixed the badge/filter itself to be
 format-aware), with the heuristic that a document attached to a package
 stage is the "original."
 **Author:** Claude (session run by Carl)
-**Scope:** Data-only cleanup — deleted 11 accidental duplicate rows from
-`documents`. No RLS, trigger, or edge function changes. No new tables.
+**Scope:** Data-only cleanup, two passes — deleted 11 accidental
+same-package-stage duplicates, then 26 orphaned duplicate-by-title-and-format
+documents with no real usage. No RLS, trigger, or edge function changes. No
+new tables.
 **Supabase project:** hosted `unicorn-cms-f09c59e5` production project.
 
 ---
@@ -59,6 +61,49 @@ stage is the "original."
 
 ---
 
+## Second pass — orphaned duplicates (same day, follow-up)
+
+After pass one, the format-aware Duplicates count (#242) dropped from 92 to
+66 (32 groups). Broken down by stage-link status:
+
+- **11 groups / 24 docs — legitimate, no action.** Each doc individually
+  stage-linked to a *different* package; the system's normal shared-template
+  pattern (see pass one's findings). No genuine same-`package_stages.id`
+  clusters remained after pass one (verified: 0).
+- **16 groups / 32 docs — one linked "original" + one orphaned sibling
+  each.** Every orphan created Oct 2025–Jan 2026, before a 2026-01-13 bulk
+  import created the properly stage-linked version; zero stage link, zero
+  real content in either.
+- **5 groups / 10 docs — fully orphaned, no original anywhere**
+  (`Complaints and Appeals Form` ×4 across two format variants,
+  `December Template` ×2, `Distance Learning Plan` ×2,
+  `Excursion Application Form` ×2).
+
+All 26 candidates (16 + 10) verified with zero rows across
+`document_instances`, `document_versions` (beyond the initial version),
+`client_stage_documents`, `generated_documents`, `governance_document_deliveries`,
+`audit_inspection`, `document_files`, and `document_data_sources`.
+
+One exception surfaced during review: **id 80**
+(`Q1.D1-Industry Training Needs Survey Form`) has a `source_template_url` —
+per Carl, a SharePoint link is normally a signal a document is valid even
+without a stage link. Checked: it points at the *exact same* SharePoint
+`sourcedoc` GUID and filename as its kept twin (id 7204, created 6 days
+later in the proper bulk import) — a redundant earlier import, not a
+distinct document. Carl confirmed including it in the deletion.
+
+Carl's decision on the 10 fully-orphaned: delete all 10, including
+`December Template` (a scratch/test artifact) and the three plausible-but-
+unlinked real document types — accepted the small risk that a future
+package might need to re-add one of those document types from scratch,
+rather than keep zero-usage rows indefinitely on the chance they matter.
+
+Result: **66 → 24** flagged documents; the remaining 24 are all legitimate
+cross-package copies, not duplicates. Total `documents` row count:
+598 → 561 across both passes.
+
+---
+
 ## DB changes shipped
 
 Migration: `supabase/migrations/20260811233425_remove_duplicate_stage_document_templates.sql`
@@ -82,14 +127,30 @@ Verified post-apply:
   the 11 deleted IDs.
 - Zero of the 11 IDs remain in `documents`.
 
+Second migration: `supabase/migrations/20260811234930_remove_orphaned_duplicate_documents.sql`
+
+```sql
+DELETE FROM documents
+WHERE id IN (3,8,9,10,11,12,13,17,22,23,24,62,63,64,65,77,79,80,83,86,87,88,91,92,93,95);
+```
+
+Also applied directly to prod via Supabase MCP `apply_migration`, with
+Carl's explicit approval on both the 16-orphan-sibling list and the
+10-fully-orphaned list (including the id-80 SharePoint-link exception).
+Verified post-apply: 24 flagged documents remain (down from 66), all
+confirmed legitimate cross-package copies; total `documents` row count 561.
+
 ---
 
 ## Code changes (if this entry accompanies one)
 
 - `supabase/migrations/20260811233425_remove_duplicate_stage_document_templates.sql`
   — see above.
+- `supabase/migrations/20260811234930_remove_orphaned_duplicate_documents.sql`
+  — see above (second pass).
 
-Branch: `chore/manage-documents-duplicate-cleanup-audit`.
+Branch: `chore/manage-documents-duplicate-cleanup-audit` (pass one),
+`chore/manage-documents-orphan-duplicate-cleanup` (pass two).
 
 (Companion UI fix — making the Duplicates badge/filter format-aware — shipped
 separately in #242, `hotfix/manage-documents-duplicate-format-aware`.)
@@ -116,13 +177,12 @@ separately in #242, `hotfix/manage-documents-duplicate-format-aware`.)
   `harden_delete_document_cascade_c3`, absent from this repo) should get
   its own small hotfix PR that commits a migration matching the live
   function definition, so the app's normal "Delete" button in Manage
-  Documents isn't relying on undocumented prod state.
-- The 27 duplicate-by-title-and-format documents with **no** stage link at
-  all (orphaned drafts, 0 instances/versions/usage anywhere) were not
-  actioned this round — some of those titles have no stage-linked sibling
-  under any format, so "keep the original" doesn't apply and they'd need a
-  different judgement call (likely just "delete if genuinely abandoned").
-- The 17 groups where the same title+format appears across *different*
-  packages (each individually stage-linked) were confirmed as intentional
-  per-package template copies, not duplicates — no action needed, but worth
-  knowing this is the system's normal pattern if it comes up again.
+  Documents isn't relying on undocumented prod state. Still open after both
+  passes.
+- **Resolved in the second pass:** the fully-orphaned documents with no
+  stage link at all — deleted per Carl's explicit decision (see above).
+- The 24 remaining groups where the same title+format appears across
+  *different* packages (each individually stage-linked) were confirmed as
+  intentional per-package template copies, not duplicates — no action
+  needed, but worth knowing this is the system's normal pattern if it comes
+  up again.
