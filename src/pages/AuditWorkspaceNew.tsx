@@ -21,6 +21,7 @@ import { ActionsTab } from '@/components/audit/workspace/ActionsTab';
 import { ReportTab } from '@/components/audit/workspace/ReportTab';
 import { AuditSummaryPills } from '@/components/audit/workspace/AuditSummaryPills';
 import { UnsavedAuditWorkProvider, useUnsavedAuditWork } from '@/components/audit/workspace/UnsavedAuditWorkContext';
+import { usePageTitle } from '@/contexts/PageTitleContext';
 import { Loader2, Check, MoreVertical, Trash2 } from 'lucide-react';
 import type { AuditStatus } from '@/types/clientAudits';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,6 +68,8 @@ export default function AuditWorkspaceNew() {
   const [activeTab, setActiveTab] = useState('overview');
   const [purchaserName, setPurchaserName] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  usePageTitle(audit?.title);
 
   const findingCount = findings?.length || 0;
   const actionCount = actions?.length || 0;

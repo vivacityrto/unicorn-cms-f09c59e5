@@ -39,6 +39,7 @@ import { DailyNotesPanel } from "@/components/task-notes/DailyNotesPanel";
 
 import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
+import { usePageTitleValue } from "@/contexts/PageTitleContext";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
 import { HelpCircle } from "lucide-react";
@@ -272,9 +273,15 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   const userRole = profile?.unicorn_role || "User";
   const isClientRole = userRole === "Admin" || userRole === "User";
 
-  const pageTitle = routeTitles[location.pathname] || "Page";
+  const dynamicTitle = usePageTitleValue();
   const breadcrumbs = getBreadcrumbs(location.pathname);
   const showBreadcrumbs = breadcrumbs.length > 1;
+  // Dynamic-segment routes (e.g. /audits/:id, /tenant/:id) have no entry in
+  // routeTitles, since it's keyed by exact pathname — those pages report
+  // their real title via usePageTitle() instead. Falling back to the last
+  // breadcrumb segment (rather than a generic default) keeps any route we
+  // haven't wired up yet at least showing something route-derived.
+  const pageTitle = dynamicTitle || routeTitles[location.pathname] || breadcrumbs[breadcrumbs.length - 1]?.label || "Page";
 
 
   const getInitials = (email: string) => {
