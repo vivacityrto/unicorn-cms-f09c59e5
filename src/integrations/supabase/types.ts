@@ -71329,6 +71329,22 @@ export type Database = {
           user_uuid: string
         }[]
       }
+      get_tenant_academy_staff_stats: {
+        Args: { p_tenant_id: number }
+        Returns: {
+          certificates_earned: number
+          email: string
+          enrollments_active: number
+          enrollments_completed: number
+          enrollments_total: number
+          full_name: string
+          last_activity_at: string
+          last_login_at: string
+          login_count_90d: number
+          pd_hours_completed: number
+          user_id: string
+        }[]
+      }
       get_tenant_csc_profiles: {
         Args: { p_tenant_id?: number }
         Returns: {
