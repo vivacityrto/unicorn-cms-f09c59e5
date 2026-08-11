@@ -677,16 +677,19 @@ export default function ManageDocuments() {
       setLoading(false);
     }
   };
-  // Compute duplicate title counts
+  // Compute duplicate counts — keyed by title AND format, so a Word/PDF pair
+  // of the same title (a legitimate format variant) isn't flagged as a duplicate.
+  const duplicateKey = (doc: { title?: string | null; format?: string | null }) =>
+    `${(doc.title || '').toLowerCase().trim()}||${(doc.format || '').toLowerCase().trim()}`;
   const duplicateTitleCounts = (() => {
     const counts: Record<string, number> = {};
     documents.forEach(doc => {
-      const key = (doc.title || '').toLowerCase().trim();
+      const key = duplicateKey(doc);
       counts[key] = (counts[key] || 0) + 1;
     });
     return counts;
   })();
-  const duplicateDocCount = documents.filter(doc => duplicateTitleCounts[(doc.title || '').toLowerCase().trim()] > 1).length;
+  const duplicateDocCount = documents.filter(doc => duplicateTitleCounts[duplicateKey(doc)] > 1).length;
 
   const applyFiltersAndSort = () => {
     let filtered = [...documents];
@@ -709,7 +712,7 @@ export default function ManageDocuments() {
 
     // Duplicates filter
     if (showDuplicatesOnly) {
-      filtered = filtered.filter(doc => duplicateTitleCounts[(doc.title || '').toLowerCase().trim()] > 1);
+      filtered = filtered.filter(doc => duplicateTitleCounts[duplicateKey(doc)] > 1);
     }
 
     // Framework filter
