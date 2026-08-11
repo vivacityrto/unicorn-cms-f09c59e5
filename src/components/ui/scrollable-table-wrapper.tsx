@@ -30,10 +30,13 @@ export function ScrollableTableWrapper({ children, className }: ScrollableTableW
     const inner = innerRef.current;
     if (!inner) return;
 
-    const scrollEl =
-      inner.scrollWidth > inner.clientWidth
-        ? inner
-        : (inner.querySelector<HTMLElement>(".overflow-x-auto") ?? inner);
+    // Always prefer a nested `.overflow-x-auto` descendant when one exists -
+    // checking inner's own scrollWidth first breaks detection whenever inner
+    // itself is a non-scrolling positioning box (e.g. `overflow-hidden` for
+    // rounded corners), since scrollWidth reflects the full content width
+    // regardless of inner's own overflow CSS, so that check can be true even
+    // though inner can never actually be scrolled.
+    const scrollEl = inner.querySelector<HTMLElement>(".overflow-x-auto") ?? inner;
 
     const updateShadows = () => {
       setShowLeftShadow(scrollEl.scrollLeft > 0);
