@@ -231,10 +231,11 @@ export default function AcademyLessonViewerPage() {
 
   // Derived flags
   const isPreview = lesson?.is_preview === true;
-  const isEnrolled = !!enrollment && enrollment.enrollment_status === "active";
+  const isEnrollmentActive = enrollment?.enrollment_status === "active";
+  const isEnrolled = isEnrollmentActive || enrollment?.enrollment_status === "completed";
   const isExpired = !!enrollmentRaw?.expires_at && new Date(enrollmentRaw.expires_at) < new Date();
   const isRevoked = !!enrollmentRaw?.revoked_at;
-  const canTrackProgress = isEnrolled && !isPreview && !isExpired && !isRevoked && !isReadOnly;
+  const canTrackProgress = isEnrollmentActive && !isPreview && !isExpired && !isRevoked && !isReadOnly;
   const completionThreshold = lesson?.completion_threshold ?? 90;
 
   // Published assessment for quiz indicator + sidebar entry (shared cache with AssessmentEntrySection)
@@ -244,7 +245,7 @@ export default function AcademyLessonViewerPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_assessments")
-        .select("id, title, instructions, pass_score, max_attempts, time_limit_minutes")
+        .select("id, title, instructions, pass_score, max_attempts, time_limit_minutes, is_required_for_certificate")
         .eq("course_id", course!.id)
         .eq("is_published", true)
         .maybeSingle();
@@ -461,6 +462,7 @@ export default function AcademyLessonViewerPage() {
   const allLessonsComplete =
     allLessons.length > 0 && allLessons.every((l: any) => completedLessonIds.includes(l.id));
   const quizLocked = !isEnrolled || !allLessonsComplete;
+  const hasCertificateQuiz = publishedAssessment?.is_required_for_certificate === true;
 
   const lessonIcon = (type: string | null) => {
     if (type === "video") return <Play className="h-3.5 w-3.5" />;
@@ -869,7 +871,7 @@ export default function AcademyLessonViewerPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {isEnrolled && !isCompleted && !isExpired && effectivePercent >= 50 && (
+            {isEnrollmentActive && !isCompleted && !isExpired && effectivePercent >= 50 && (
               <Button
                 size="sm"
                 onClick={() => markComplete.mutate()}
@@ -881,7 +883,7 @@ export default function AcademyLessonViewerPage() {
                 {markComplete.isPending ? "Saving…" : "Mark Complete"}
               </Button>
             )}
-            {isEnrolled && !isCompleted && !isExpired && effectivePercent < 50 && (
+            {isEnrollmentActive && !isCompleted && !isExpired && effectivePercent < 50 && (
               <span className="text-[11px] text-muted-foreground">
                 Watch at least 50% to mark complete ({effectivePercent}%)
               </span>
@@ -917,7 +919,9 @@ export default function AcademyLessonViewerPage() {
           <AppModalHeader>
             <AppModalTitle>🎉 Course complete!</AppModalTitle>
             <AppModalDescription>
-              You've finished {course.title}. Your certificate is being generated and will appear in your certificates page shortly.
+              {hasCertificateQuiz
+                ? `You've finished the lessons for ${course.title}. Complete the quiz to earn your certificate.`
+                : `You've finished ${course.title}. Your certificate is being generated and will appear in your certificates page shortly.`}
             </AppModalDescription>
           </AppModalHeader>
           <AppModalFooter>
