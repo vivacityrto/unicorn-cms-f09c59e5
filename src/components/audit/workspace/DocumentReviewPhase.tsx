@@ -206,7 +206,7 @@ function DocumentReviewSection({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-sm">{section.title}</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5">
+            <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5">
               <span>{complete} of {total} complete</span>
               {findingsRequired > 0 && (
                 <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 text-[10px] gap-1">
@@ -214,7 +214,7 @@ function DocumentReviewSection({
                   {findingsRequired} finding{findingsRequired === 1 ? '' : 's'} required
                 </Badge>
               )}
-            </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {section.risk_level && <RiskBadge risk={section.risk_level} />}
