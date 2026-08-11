@@ -300,7 +300,7 @@ export function AddFindingForm({
   };
 
   return (
-    <Card className="border-amber-200 bg-amber-50/50">
+    <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30">
       <CardContent className="p-4 space-y-3">
         {/* AI draft affordance — only on create mode, only when caller enables it */}
         {!isEdit && enableAiDraft && responseId && (
@@ -429,11 +429,11 @@ export function AddFindingForm({
 
         {/* Confidence / uncertainty card */}
         {aiDraft && aiDraft.confidence !== 'high' && (
-          <Alert variant="default" className="border-amber-200 bg-amber-50">
-            <AlertCircle className="h-4 w-4 text-amber-700" />
-            <AlertTitle className="text-amber-900">AI confidence: {aiDraft.confidence}</AlertTitle>
+          <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40">
+            <AlertCircle className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+            <AlertTitle className="text-amber-900 dark:text-amber-300">AI confidence: {aiDraft.confidence}</AlertTitle>
             {aiDraft.uncertainty_notes && (
-              <AlertDescription className="text-amber-800">{aiDraft.uncertainty_notes}</AlertDescription>
+              <AlertDescription className="text-amber-800 dark:text-amber-300">{aiDraft.uncertainty_notes}</AlertDescription>
             )}
           </Alert>
         )}
