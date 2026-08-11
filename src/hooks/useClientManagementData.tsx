@@ -105,6 +105,7 @@ export const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   stages: ['stage_status_changed'],
   portal_activity: ['portal_activity_summary'],
   tenant_status: ['tenant_status_changed'],
+  invoices: ['xero_invoice_paid', 'xero_invoice_issued'],
   microsoft: [
     'microsoft_connected', 'microsoft_disconnected', 'microsoft_sync_failed',
     'sharepoint_doc_linked', 'sharepoint_root_configured', 'sharepoint_root_invalid',

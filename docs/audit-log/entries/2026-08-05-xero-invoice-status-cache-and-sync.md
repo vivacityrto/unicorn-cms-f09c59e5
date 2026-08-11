@@ -75,7 +75,35 @@ QA performed live against the production Supabase backend via local dev server (
 
 - **No cache invalidation if `xero_contact_url` changes.** If a tenant's Xero Contact link is edited or removed, the cached `xero_invoice_paid`/`due_date` columns are not cleared — they'll just go stale until the next sync-all run picks up the new (or absent) mapping. Low risk given how rarely that field changes, not actioned this session.
 - **Manage Tenants filter has no distinct "Overdue" bucket.** "Unpaid" includes overdue invoices; the pill visually distinguishes them but the filter dropdown does not. Not requested — flagging in case it's wanted later.
-- **Webhook still needs Nova to complete portal registration** (delivery URL + Invoices event subscription) before `XERO_WEBHOOK_KEY` can be set and the fast path activated.
+- **Webhook still needs Nova to complete portal registration** (delivery URL + Invoices event subscription) before `XERO_WEBHOOK_KEY` can be set and the fast path activated. **Resolved 2026-08-11** — see addendum below.
+
+---
+
+## Addendum — 2026-08-11: webhook confirmed live
+
+Carl asked for a status check on the webhook. Portal registration was completed
+and `XERO_WEBHOOK_KEY` was set sometime between 2026-08-05 and today — outside
+this repo, so there's no commit marking it — but production evidence confirms
+it's working end-to-end, not just accepting Xero's intent-to-receive ping:
+
+- `xero-webhook` edge function logs show a real **200** response today
+  (2026-08-11 03:01:40 UTC).
+- That timestamp matches, to the second, a `tenants` row update
+  (`xero_invoice_paid`/`xero_invoice_due_date`/`xero_invoice_checked_at`) for a
+  single tenant — a lone, single-row write, not part of the 6-hourly
+  `xero-invoice-sync-all` batch (which stamps 100+ tenants within the same
+  minute).
+- Two more of these same-signature singleton writes landed earlier the same
+  day (01:51 and 02:04 UTC), at times that don't align with the cron schedule
+  (00:00/06:00/12:00/18:00) — three independent real invoice-change events,
+  each correctly processed by the webhook's fetch-invoice → derive-contact →
+  re-fetch-most-recent-invoice path.
+- `oauth_tokens.last_error` for the Xero connection is `null` — no auth/refresh
+  failures.
+
+No code change accompanies this addendum. The 6-hourly cron sync remains the
+reconciliation fallback per the original design decision — the webhook is
+additive, not a replacement.
 
 ---
 
