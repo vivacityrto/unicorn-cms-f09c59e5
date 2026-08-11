@@ -589,31 +589,28 @@ export function useSeatHealth() {
       });
     }
     
-    // Insert recommendations (avoid duplicates)
+    // Insert recommendations (avoid duplicates) — a single atomic
+    // "insert unless an active one of this type already exists" RPC, backed
+    // by a partial unique index, instead of a separate check-then-insert that
+    // can race. See docs/audit-log/entries/2026-08-11-seat-health-recommendation-race.md.
     for (const rec of recommendations) {
-      // Check for existing active recommendation of same type
-      const { data: existing } = await supabase
-        .from('seat_rebalancing_recommendations')
-        .select('id')
-        .eq('seat_id', seatId)
-        .eq('recommendation_type', rec.type)
-        .in('status', ['new', 'acknowledged'])
-        .maybeSingle();
-      
-      if (!existing) {
-        await supabase.from('seat_rebalancing_recommendations').insert({
-          tenant_id: VIVACITY_TENANT_ID,
-          seat_id: seatId,
-          recommendation_type: rec.type,
-          title: rec.title,
-          description: rec.description,
-          status: 'new',
-          severity: rec.severity,
-          trigger_type: rec.trigger_type,
-          quarter_year,
-          quarter_number,
-        });
-        
+      const { data: insertedId, error } = await supabase.rpc(
+        'insert_seat_recommendation_if_absent' as any,
+        {
+          p_tenant_id: VIVACITY_TENANT_ID,
+          p_seat_id: seatId,
+          p_recommendation_type: rec.type,
+          p_title: rec.title,
+          p_description: rec.description,
+          p_severity: rec.severity,
+          p_trigger_type: rec.trigger_type,
+          p_quarter_year: quarter_year,
+          p_quarter_number: quarter_number,
+        },
+      );
+      if (error) throw error;
+
+      if (insertedId) {
         // Log audit
         await supabase.from('audit_seat_health').insert({
           tenant_id: VIVACITY_TENANT_ID,
