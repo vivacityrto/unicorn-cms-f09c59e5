@@ -34,7 +34,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSharePointBrowser, type SharePointItem } from '@/hooks/useSharePointBrowser';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, matchesWordWildcard } from '@/lib/utils';
 
 interface SharePointFileBrowserProps {
   tenantId: number;
@@ -198,7 +198,7 @@ function FileBrowserContent({
     .filter((item) => {
       if (!filterText.trim()) return true;
       if (item.is_folder) return true;
-      return item.name.toLowerCase().includes(filterText.toLowerCase());
+      return matchesWordWildcard(filterText, item.name);
     })
     .sort((a, b) => {
       if (a.is_folder && !b.is_folder) return -1;

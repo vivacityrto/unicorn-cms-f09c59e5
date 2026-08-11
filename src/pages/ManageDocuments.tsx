@@ -26,7 +26,7 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, matchesWordWildcard } from "@/lib/utils";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
@@ -692,12 +692,9 @@ export default function ManageDocuments() {
     let filtered = [...documents];
 
     // Search filter — words separated by spaces or dashes match across either
-    // separator (file names are dash-cased, titles are space-cased), with a
-    // wildcard between each word so extra text in between still matches.
+    // separator (file names are dash-cased, titles are space-cased).
     if (searchQuery.trim()) {
-      const words = searchQuery.trim().split(/[\s-]+/).filter(Boolean).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-      const searchPattern = words.length > 0 ? new RegExp(words.join('.*'), 'i') : null;
-      filtered = filtered.filter(doc => searchPattern && (searchPattern.test(doc.title || '') || searchPattern.test(doc.description || '')) || doc.id.toString().includes(searchQuery));
+      filtered = filtered.filter(doc => matchesWordWildcard(searchQuery, doc.title) || matchesWordWildcard(searchQuery, doc.description) || doc.id.toString().includes(searchQuery));
     }
 
     // Format filter
