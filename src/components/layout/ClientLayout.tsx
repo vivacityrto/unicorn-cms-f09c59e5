@@ -47,6 +47,26 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   // so QA click-throughs don't pollute the activity digest.
   usePageViewTracking(!isPreview);
 
+  // The .light class below (see index.css) re-declares every token .dark
+  // overrides, but it's a class on a div partway down the tree — it can't
+  // reach content Radix teleports straight onto <body> via a Portal (Sheet,
+  // Dialog, Popover, DropdownMenu...). If html carries .dark — e.g. a staff
+  // member toggled dark mode earlier in this same browser — those portalled
+  // panels render fully dark over an otherwise all-light client portal (seen
+  // first in the Help Center drawer). Since the client portal has no dark
+  // mode of its own, strip .dark off the real root for as long as any
+  // client-portal screen is mounted, without touching the stored theme
+  // preference — a staff member's own dark-mode choice must still be there
+  // when they navigate back to their own screens.
+  useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    if (hadDark) root.classList.remove("dark");
+    return () => {
+      if (hadDark) root.classList.add("dark");
+    };
+  }, []);
+
   useEffect(() => {
     if (!activeTenantId) return;
 
@@ -91,6 +111,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     // "light" pins the client portal to the light palette regardless of the
     // staff user's dark mode preference — see the .light block in index.css.
     // Dark mode for the client portal is a separate, not-yet-scoped feature.
+    // (Portal-rendered content, e.g. the Help Center drawer, is handled
+    // separately above — this class alone doesn't reach it.)
     <div className="light min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Impersonation Banner (in flow, not fixed) */}
       {isPreview && (
