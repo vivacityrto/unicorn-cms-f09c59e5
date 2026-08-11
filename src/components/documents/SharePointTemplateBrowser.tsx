@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Folder, FileText, Loader2, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { matchesWordWildcard } from '@/lib/utils';
 
 export interface SharePointItem {
   id: string;
@@ -143,7 +144,7 @@ export function SharePointTemplateBrowser({
     .filter((item) => {
       if (!filterText.trim()) return true;
       if (item.isFolder) return true;
-      return item.name.toLowerCase().includes(filterText.toLowerCase());
+      return matchesWordWildcard(filterText, item.name);
     })
     .filter((item) => {
       if (!hideImported || item.isFolder) return true;

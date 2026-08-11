@@ -7,6 +7,20 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Tests whether `text` contains every whitespace/dash-separated word from
+ * `query`, in order, with a wildcard between them — so a query of "policy
+ * name" (or "policy-name") matches text like "Policy-Name-V2" or
+ * "Policy Name Draft" regardless of which separator (or extra text) sits
+ * between the words. Used for document/file name search where titles are
+ * space-cased but file names are dash-cased, or vice versa.
+ */
+export function matchesWordWildcard(query: string, text: string | null | undefined): boolean {
+  const words = query.trim().split(/[\s-]+/).filter(Boolean).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (words.length === 0) return true;
+  return new RegExp(words.join('.*'), 'i').test(text || '');
+}
+
+/**
  * Format a date string to DD/MM/YYYY format (Australian standard)
  * @param dateString - ISO date string, Date object, or null/undefined
  * @param fallback - Value to return if date is invalid (default: "—")
