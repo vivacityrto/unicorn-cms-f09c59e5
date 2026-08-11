@@ -337,6 +337,13 @@ export default function ManageTenants() {
     : "";
   const bulkSelectionEnabled = !!activeCscFilterId;
 
+  // Sticky columns need a fully OPAQUE background, unlike the row's own
+  // bg-muted/20 zebra tint - once the table scrolls horizontally, other
+  // columns pass underneath the sticky one, and a 20%-alpha background lets
+  // their content show through. color-mix bakes that same "muted at 20% over
+  // background" look into a solid colour instead.
+  const STICKY_ODD_ROW_BG = "bg-[color-mix(in_srgb,hsl(var(--muted))_20%,hsl(var(--background)))]";
+
   // Clear selection whenever the underlying filtered set or filter changes
   useEffect(() => {
     setSelectedTenantIds(new Set());
@@ -796,7 +803,10 @@ export default function ManageTenants() {
         <Input placeholder="Search clients by name or slug..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px] w-full" />
       </div>
 
-      <div className="flex flex-wrap gap-4">
+      {/* Fixed 6-column grid (collapsing at narrower breakpoints) so all six
+          filters wrap evenly instead of flex-wrap stranding whichever one
+          doesn't fit the remaining space on its own row. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <Combobox
           options={[
             { value: "all", label: "All Packages", icon: Package2, iconColor: "text-muted-foreground" },
@@ -811,7 +821,7 @@ export default function ManageTenants() {
           placeholder="Filter by package..."
           searchPlaceholder="Search packages..."
           emptyText="No packages found."
-          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
+          className="w-full h-[48px]"
           showIcons
           showSeparators
         />
@@ -834,7 +844,7 @@ export default function ManageTenants() {
           placeholder="Filter by CSC..."
           searchPlaceholder="Search CSC..."
           emptyText="No CSC users found."
-          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
+          className="w-full h-[48px]"
           showIcons
           showSeparators
         />
@@ -854,7 +864,7 @@ export default function ManageTenants() {
           placeholder="Filter by anniversary..."
           searchPlaceholder="Search..."
           emptyText="No options."
-          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
+          className="w-full h-[48px]"
           showIcons
           showSeparators
         />
@@ -872,7 +882,7 @@ export default function ManageTenants() {
           placeholder="Filter by reg end..."
           searchPlaceholder="Search..."
           emptyText="No options."
-          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
+          className="w-full h-[48px]"
           showIcons
           showSeparators
         />
@@ -891,7 +901,7 @@ export default function ManageTenants() {
           placeholder="Filter by status..."
           searchPlaceholder="Search filters..."
           emptyText="No filters found."
-          className="w-full md:flex-1 md:min-w-[200px] h-[48px]"
+          className="w-full h-[48px]"
           showIcons
           showSeparators
         />
@@ -904,17 +914,19 @@ export default function ManageTenants() {
           searchPlaceholder="Search..."
           emptyText="No options."
           maxSelectedDisplay={2}
-          className="w-full md:flex-1 md:min-w-[220px] min-h-[48px] bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm"
+          className="w-full min-h-[48px] bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm"
         />
-
-        {/* Show Archived toggle - SuperAdmin only */}
-        {isSuperAdmin && statusFilter === "all" && (
-          <div className="flex items-center gap-2 h-[48px]">
-            <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-            <Label htmlFor="show-archived" className="text-sm whitespace-nowrap cursor-pointer">Show Archived</Label>
-          </div>
-        )}
       </div>
+
+      {/* Show Archived toggle - SuperAdmin only. Kept out of the filter grid
+          above since it's a compact checkbox+label, not another full-width
+          filter control. */}
+      {isSuperAdmin && statusFilter === "all" && (
+        <div className="flex items-center gap-2 h-[48px]">
+          <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+          <Label htmlFor="show-archived" className="text-sm whitespace-nowrap cursor-pointer">Show Archived</Label>
+        </div>
+      )}
       </div>
 
       {/* Bulk action bar */}
@@ -955,7 +967,7 @@ export default function ManageTenants() {
                       !important the checkbox rendered flush against the column's right
                       border (0 right padding vs 12px left) instead of centered. */}
                   {bulkSelectionEnabled && (
-                    <TableHead className="bg-muted/30 h-14 w-12 border-r border-border/50 px-3 !pr-3">
+                    <TableHead className="sticky left-0 z-20 bg-muted/30 h-14 w-12 border-r border-border/50 px-3 !pr-3">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -974,7 +986,10 @@ export default function ManageTenants() {
                       </TooltipProvider>
                     </TableHead>
                   )}
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Tenant Name</TableHead>
+                  <TableHead className={cn(
+                    "sticky z-20 bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50",
+                    bulkSelectionEnabled ? "left-12" : "left-0"
+                  )}>Tenant Name</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-left w-[132px] min-w-[132px] px-3">Invoice</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Hours</TableHead>
@@ -1013,7 +1028,10 @@ export default function ManageTenants() {
                   >
                     {bulkSelectionEnabled && (
                       <TableCell
-                        className="py-6 border-r border-border/50 w-12 px-3 !pr-3"
+                        className={cn(
+                          "sticky left-0 z-10 py-6 border-r border-border/50 w-12 px-3 !pr-3",
+                          index % 2 === 0 ? "bg-background" : STICKY_ODD_ROW_BG
+                        )}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
@@ -1023,7 +1041,17 @@ export default function ManageTenants() {
                         />
                       </TableCell>
                     )}
-                    <TableCell className="py-4 border-r border-border/50 min-w-[280px] pr-8">
+                    {/* Sticky so the client stays identifiable while scrolling
+                        right through the remaining columns (Risk Level,
+                        Anniversary, etc.) - needs its own opaque background
+                        (matching the row's zebra stripe) rather than
+                        inheriting TableRow's, since a sticky cell paints over
+                        whatever scrolls underneath it. */}
+                    <TableCell className={cn(
+                      "sticky z-10 py-4 border-r border-border/50 min-w-[280px] pr-8",
+                      bulkSelectionEnabled ? "left-12" : "left-0",
+                      index % 2 === 0 ? "bg-background" : STICKY_ODD_ROW_BG
+                    )}>
                       <div>
                         <div>
                           <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
