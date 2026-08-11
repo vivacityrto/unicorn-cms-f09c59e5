@@ -50,11 +50,29 @@ export function formatDateTime(dateString: string | Date | null | undefined, fal
  */
 export function formatDateLong(dateString: string | Date | null | undefined, fallback = "—"): string {
   if (!dateString) return fallback;
-  
+
   try {
     const date = typeof dateString === "string" ? parseISO(dateString) : dateString;
     if (!isValid(date)) return fallback;
     return format(date, "dd MMM yyyy");
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Format a date string to DD MMM YYYY HH:mm format (e.g., 12 May 2023 15:48)
+ * @param dateString - ISO date string, Date object, or null/undefined
+ * @param fallback - Value to return if date is invalid (default: "—")
+ * @returns Formatted datetime string or fallback
+ */
+export function formatDateTimeLong(dateString: string | Date | null | undefined, fallback = "—"): string {
+  if (!dateString) return fallback;
+
+  try {
+    const date = typeof dateString === "string" ? parseISO(dateString) : dateString;
+    if (!isValid(date)) return fallback;
+    return format(date, "dd MMM yyyy HH:mm");
   } catch {
     return fallback;
   }

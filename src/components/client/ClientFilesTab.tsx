@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTimeLong } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 interface ClientFilesTabProps {
@@ -515,7 +515,7 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
               </div>
               {settings?.last_validated_at && (
                 <div className="text-xs text-muted-foreground">
-                  Last validated: {formatDateTime(settings.last_validated_at)}
+                  Last validated: {formatDateTimeLong(settings.last_validated_at)}
                 </div>
               )}
               {settings?.validation_error && (
@@ -627,7 +627,7 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
             )}
             {seedRun.completed_at && (
               <p className="text-xs text-muted-foreground mt-2">
-                Completed: {formatDateTime(seedRun.completed_at)}
+                Completed: {formatDateTimeLong(seedRun.completed_at)}
               </p>
             )}
           </CardContent>
