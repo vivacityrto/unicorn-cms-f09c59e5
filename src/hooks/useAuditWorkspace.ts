@@ -405,6 +405,9 @@ export function useUpdateAudit(auditId: string | undefined) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-audit', auditId] });
     },
+    onError: (error: any) => {
+      toast.error(`Failed to save: ${error?.message || 'Unknown error'}`);
+    },
   });
 }
 
@@ -425,36 +428,56 @@ export function useAuditStatusTransition(auditId: string | undefined) {
       if (error) throw error;
 
       let syncCount = 0;
+      let actionSyncFailed = false;
       if (status === 'complete') {
-        // Sync audit actions to client action items
+        // Sync audit actions to client action items. A failure here must not
+        // be indistinguishable from "no actions to sync" — an auditor closing
+        // out an audit with real findings needs to know if the corrective
+        // actions didn't reach the client's action plan.
         try {
           const { data } = await supabase
             .rpc('sync_audit_actions_to_client_items', { p_audit_id: auditId } as any);
           syncCount = (data as number) || 0;
-        } catch {}
+        } catch (err) {
+          actionSyncFailed = true;
+          console.error('sync_audit_actions_to_client_items failed', err);
+        }
 
         try {
           await supabase.from('client_timeline_events' as any).insert({
             tenant_id: audit.subject_tenant_id,
+            client_id: String(audit.subject_tenant_id),
             event_type: 'audit_completed',
             title: `Audit completed: ${audit.title}`,
             entity_type: 'client_audit',
             entity_id: auditId,
-            source: 'internal',
-            metadata: JSON.stringify({
+            source: 'unicorn',
+            // metadata is jsonb — pass the object directly. JSON.stringify()
+            // here previously stored it as a jsonb *string* scalar instead of
+            // a queryable object (harmless today since this insert always
+            // failed before the client_id/CHECK-constraint fixes above, so no
+            // real row with this shape has ever existed).
+            metadata: {
               risk_rating: audit.risk_rating,
               score_pct: audit.score_pct,
-            }),
+            },
           } as any);
-        } catch {}
+        } catch (err) {
+          // Non-critical (a missing Timeline entry, not client-facing data) —
+          // logged so drift like a missing event_type in the CHECK constraint
+          // is at least visible in the console instead of fully invisible.
+          console.error('audit_completed timeline event failed', err);
+        }
       }
 
-      return syncCount;
+      return { syncCount, actionSyncFailed };
     },
-    onSuccess: (syncCount, { status }) => {
+    onSuccess: ({ syncCount, actionSyncFailed }, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['client-audit', auditId] });
       queryClient.invalidateQueries({ queryKey: ['client-audits-dashboard'] });
-      if (status === 'complete' && syncCount > 0) {
+      if (status === 'complete' && actionSyncFailed) {
+        toast.error('Audit marked complete, but corrective actions could not be synced to the client action plan. Contact support.');
+      } else if (status === 'complete' && syncCount > 0) {
         toast.success(`Audit marked complete. ${syncCount} corrective action${syncCount > 1 ? 's' : ''} added to client action plan.`);
       } else if (status === 'complete') {
         toast.success('Audit marked complete. No open actions to sync.');

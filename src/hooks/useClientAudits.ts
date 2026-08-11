@@ -166,14 +166,18 @@ export function useCreateAudit() {
       try {
         await supabase.from('client_timeline_events' as any).insert({
           tenant_id: input.subject_tenant_id,
+          client_id: String(input.subject_tenant_id),
           event_type: 'audit_created',
           title: `Audit started: ${title}`,
           entity_type: 'client_audit',
           entity_id: newAuditId,
-          source: 'internal',
+          source: 'unicorn',
         } as any);
-      } catch {
-        // Non-critical
+      } catch (err) {
+        // Non-critical (a missing Timeline entry, not audit data) — logged so
+        // this doesn't fail as invisibly as it did before (see
+        // docs/audit-log/entries/2026-08-11-audit-timeline-silent-failures.md).
+        console.error('audit_created timeline event failed', err);
       }
 
       return data as unknown as { id: string };
