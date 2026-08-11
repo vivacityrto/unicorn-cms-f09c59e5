@@ -570,18 +570,18 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                     <div className="flex items-center gap-6 text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <CalendarIcon className="h-4 w-4" />
-                        <span>Started {format(new Date(pkg.membership_started_at), 'dd/MM/yyyy')}</span>
+                        <span>Started {format(new Date(pkg.membership_started_at), 'd MMM yyyy')}</span>
                       </div>
                       {pkg.last_renewed_date && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <RefreshCw className="h-3.5 w-3.5" />
-                          <span>Renewed {format(new Date(pkg.last_renewed_date), 'dd/MM/yyyy')}</span>
+                          <span>Renewed {format(new Date(pkg.last_renewed_date), 'd MMM yyyy')}</span>
                         </div>
                       )}
                       {pkg.is_complete && pkg.completed_at && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <CheckCircle2 className="h-4 w-4" />
-                          <span>Completed {format(new Date(pkg.completed_at), 'dd/MM/yyyy')}</span>
+                          <span>Completed {format(new Date(pkg.completed_at), 'd MMM yyyy')}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-1 text-muted-foreground">
@@ -746,7 +746,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                           </div>
                           {pkg.next_renewal_date && (
                             <div className="text-xs text-muted-foreground mt-1">
-                              Anniversary {format(parseISO(pkg.next_renewal_date), 'dd/MM/yyyy')}
+                              Anniversary {format(parseISO(pkg.next_renewal_date), 'd MMM yyyy')}
                             </div>
                           )}
                         </div>

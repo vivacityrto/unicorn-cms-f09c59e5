@@ -13,6 +13,7 @@ import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { TgaRtoLookupRow } from '@/components/audit/TgaRtoLookupRow';
 import type { TargetRtoSnapshot } from '@/lib/tga/lookupTargetRto';
 import { toast } from 'sonner';
+import { formatDateLong } from '@/lib/utils';
 import type { ClientAudit, AuditRisk } from '@/types/clientAudits';
 
 interface OverviewTabProps {
@@ -37,6 +38,14 @@ export function OverviewTab({ audit }: OverviewTabProps) {
   const handleBlur = (field: string, value: any) => {
     updateAudit.mutate({ [field]: value || null } as any);
   };
+
+  // Native <input type="date"> renders its placeholder/value in the
+  // browser's own locale (mm/dd/yyyy on a US-configured environment) with no
+  // way to force it to the app's DD Month YYYY convention - these mirror the
+  // field's live value just to show it spelled out underneath, without
+  // changing how the date is actually picked or saved (still on blur).
+  const [conductedAtPreview, setConductedAtPreview] = useState(audit.conducted_at?.split('T')[0] || '');
+  const [nextAuditDuePreview, setNextAuditDuePreview] = useState(audit.next_audit_due || '');
 
   const saveSnapshot = () => {
     updateAudit.mutate(snapshot as any);
@@ -102,16 +111,24 @@ export function OverviewTab({ audit }: OverviewTabProps) {
               <Input
                 type="date"
                 defaultValue={audit.conducted_at?.split('T')[0] || ''}
+                onChange={(e) => setConductedAtPreview(e.target.value)}
                 onBlur={(e) => handleBlur('conducted_at', e.target.value || null)}
               />
+              {conductedAtPreview && (
+                <p className="text-xs text-muted-foreground mt-1">{formatDateLong(conductedAtPreview)}</p>
+              )}
             </div>
             <div>
               <Label className="text-xs">Next Audit Due</Label>
               <Input
                 type="date"
                 defaultValue={audit.next_audit_due || ''}
+                onChange={(e) => setNextAuditDuePreview(e.target.value)}
                 onBlur={(e) => handleBlur('next_audit_due', e.target.value || null)}
               />
+              {nextAuditDuePreview && (
+                <p className="text-xs text-muted-foreground mt-1">{formatDateLong(nextAuditDuePreview)}</p>
+              )}
             </div>
             <div>
               <Label className="text-xs">Lead Auditor</Label>
