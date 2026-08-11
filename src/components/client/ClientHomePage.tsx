@@ -354,7 +354,19 @@ function QuickActionsRow({ actions }: { actions: QuickAction[] }) {
           );
         }
         return (
-          <Card key={a.label} onClick={a.onClick} className={`${cardCls} h-full`}>
+          <Card
+            key={a.label}
+            role="button"
+            tabIndex={0}
+            onClick={a.onClick}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                a.onClick?.();
+              }
+            }}
+            className={`${cardCls} h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+          >
             {inner}
           </Card>
         );
