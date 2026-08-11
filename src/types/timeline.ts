@@ -71,6 +71,9 @@ export const TIMELINE_EVENT_TYPES = [
   'invitation_clicked',
   'invitation_bounced',
   'invitation_accepted',
+  // Xero invoice activity (internal-only, no amounts/numbers/references)
+  'xero_invoice_paid',
+  'xero_invoice_issued',
 ] as const;
 
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];

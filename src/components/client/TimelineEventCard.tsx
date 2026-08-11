@@ -19,7 +19,7 @@ import {
   ChevronDown, ChevronUp, Pin, PinOff, Package,
   UserPlus, UserCheck, UserX, UserCog, UserMinus, LogIn, MessageSquare,
   GraduationCap, BookOpenCheck, Award, ListChecks, MousePointerClick, ArrowRightLeft,
-  Eye,
+  Eye, Receipt, CircleDollarSign,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { LucideIcon } from 'lucide-react';
@@ -83,6 +83,8 @@ export const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   invitation_clicked: MousePointerClick,
   invitation_bounced: AlertTriangle,
   invitation_accepted: UserCheck,
+  xero_invoice_paid: CircleDollarSign,
+  xero_invoice_issued: Receipt,
 };
 
 /**
@@ -140,6 +142,8 @@ export const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   invitation_clicked: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   invitation_bounced: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   invitation_accepted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  xero_invoice_paid: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  xero_invoice_issued: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
 // =============================================
@@ -160,6 +164,7 @@ function getModuleChip(eventType: string): string | null {
   if (eventType === 'stage_status_changed') return 'Stages';
   if (eventType === 'portal_activity_summary') return 'Portal Activity';
   if (eventType === 'tenant_status_changed') return 'Tenant Status';
+  if (eventType.startsWith('xero_invoice')) return 'Invoices';
   return null;
 }
 
@@ -216,6 +221,9 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
     case 'invitation_bounced':
     case 'invitation_accepted':
       return { label: 'View account', path: `/tenant/${event.tenant_id}?tab=users` };
+    case 'xero_invoice_paid':
+    case 'xero_invoice_issued':
+      return { label: 'View Xero', path: `/tenant/${event.tenant_id}?tab=integrations` };
     default:
       return null;
   }
