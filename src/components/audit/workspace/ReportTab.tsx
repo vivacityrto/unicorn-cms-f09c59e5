@@ -418,8 +418,9 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
                 </>
               )}
             </Button>
+            {/* Same weight as the PDF button above - PDF and Word are equal,
+                parallel output formats, not a primary/secondary pair. */}
             <Button
-              variant="outline"
               onClick={() => generateReportDocx.mutate()}
               disabled={generateReportDocx.isPending || !canReport}
             >
