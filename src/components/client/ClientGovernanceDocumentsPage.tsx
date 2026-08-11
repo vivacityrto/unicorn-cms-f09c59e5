@@ -68,6 +68,16 @@ function useDebounced<T>(value: T, delay = 250): T {
   return debounced;
 }
 
+function extractFileName(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const name = new URL(url).searchParams.get("file");
+    return name ? name.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function ClientGovernanceDocumentsPage() {
   const { activeTenantId, canManagePortalUsers, isPreview } = useClientTenant();
   const { isSuperAdmin } = useAuth();
@@ -146,42 +156,6 @@ export function ClientGovernanceDocumentsPage() {
   const rows = data?.rows ?? [];
   const frameworkOptions = data?.frameworks ?? [];
 
-  const categoryOptions = useMemo(() => {
-    const set = new Set<string>();
-    rows.forEach((r) => r.category_label && set.add(r.category_label));
-    return Array.from(set).sort();
-  }, [rows]);
-
-  const filtered = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    return rows.filter((r) => {
-      if (categoryFilter !== "all" && r.category_label !== categoryFilter)
-        return false;
-      if (frameworkFilter !== "all" && r.framework_type !== frameworkFilter)
-        return false;
-      if (!q) return true;
-      const haystack = [
-        r.title,
-        r.description,
-        r.category_label,
-        r.framework_label,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [rows, debouncedSearch, categoryFilter, frameworkFilter]);
-
-  const filtersActive =
-    search !== "" || categoryFilter !== "all" || frameworkFilter !== "all";
-
-  const clearFilters = () => {
-    setSearch("");
-    setCategoryFilter("all");
-    setFrameworkFilter("all");
-  };
-
   // Build a lowercase {fileName: webUrl} map by browsing tenant SharePoint
   // -> shared folder -> "- Governance" subtree.
   const {
@@ -251,14 +225,51 @@ export function ClientGovernanceDocumentsPage() {
     }
   }, [sharePointError, toast]);
 
-  const extractFileName = (url: string | null): string | null => {
-    if (!url) return null;
-    try {
-      const name = new URL(url).searchParams.get("file");
-      return name ? name.toLowerCase() : null;
-    } catch {
-      return null;
-    }
+  // Only show documents that actually have a matching file in SharePoint —
+  // a generated-but-not-yet-synced record isn't useful to a client as a
+  // disabled "View" button, so it shouldn't appear in the list at all.
+  const availableRows = useMemo(() => {
+    if (sharePointLoading) return [];
+    return rows.filter((r) => {
+      const fileName = extractFileName(r.file_path);
+      return !!(fileName && sharePointMap && sharePointMap[fileName]);
+    });
+  }, [rows, sharePointMap, sharePointLoading]);
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    availableRows.forEach((r) => r.category_label && set.add(r.category_label));
+    return Array.from(set).sort();
+  }, [availableRows]);
+
+  const filtered = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    return availableRows.filter((r) => {
+      if (categoryFilter !== "all" && r.category_label !== categoryFilter)
+        return false;
+      if (frameworkFilter !== "all" && r.framework_type !== frameworkFilter)
+        return false;
+      if (!q) return true;
+      const haystack = [
+        r.title,
+        r.description,
+        r.category_label,
+        r.framework_label,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [availableRows, debouncedSearch, categoryFilter, frameworkFilter]);
+
+  const filtersActive =
+    search !== "" || categoryFilter !== "all" || frameworkFilter !== "all";
+
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter("all");
+    setFrameworkFilter("all");
   };
 
   const handleOpenSharePointFolder = async (rowId: string, spWebUrl: string) => {
@@ -361,7 +372,7 @@ export function ClientGovernanceDocumentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {isLoading || sharePointLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
                     {Array.from({ length: 7 }).map((__, j) => (
@@ -379,6 +390,8 @@ export function ClientGovernanceDocumentsPage() {
                   >
                     {rows.length === 0
                       ? "No governance documents have been generated for your organisation yet. These will appear here once your consultant has generated them as part of your package."
+                      : availableRows.length === 0
+                      ? "Your documents have been generated and are being synced — check back soon."
                       : "No governance documents found."}
                   </TableCell>
                 </TableRow>
@@ -414,59 +427,37 @@ export function ClientGovernanceDocumentsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       {(() => {
+                        // Every row here already passed the availableRows filter above,
+                        // so a match is expected — the null-check is just defensive.
                         const fileName = extractFileName(row.file_path);
                         const spWebUrl =
                           fileName && sharePointMap ? sharePointMap[fileName] ?? null : null;
-                        const mapPending = sharePointLoading && !sharePointError;
+                        if (!spWebUrl) return null;
                         return (
                           <div className="flex justify-end gap-2">
-                            {spWebUrl ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  window.open(spWebUrl, "_blank", "noopener,noreferrer")
-                                }
-                              >
-                                <Eye className="mr-1.5 h-3.5 w-3.5" />
-                                View
-                              </Button>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span tabIndex={0}>
-                                    <Button size="sm" variant="outline" disabled>
-                                      {mapPending ? (
-                                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                                      ) : (
-                                        <Eye className="mr-1.5 h-3.5 w-3.5" />
-                                      )}
-                                      View
-                                    </Button>
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {mapPending
-                                    ? "Loading SharePoint files…"
-                                    : "File not yet available in SharePoint"}
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            {spWebUrl && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenSharePointFolder(row.id, spWebUrl)}
-                                disabled={openingSharePointId === row.id}
-                              >
-                                {openingSharePointId === row.id ? (
-                                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                                )}
-                                SharePoint
-                              </Button>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                window.open(spWebUrl, "_blank", "noopener,noreferrer")
+                              }
+                            >
+                              <Eye className="mr-1.5 h-3.5 w-3.5" />
+                              View
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenSharePointFolder(row.id, spWebUrl)}
+                              disabled={openingSharePointId === row.id}
+                            >
+                              {openingSharePointId === row.id ? (
+                                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                              )}
+                              SharePoint
+                            </Button>
                           </div>
                         );
                       })()}
