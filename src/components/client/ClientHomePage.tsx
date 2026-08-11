@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   Bot,
   MessageCircle,
@@ -32,6 +33,8 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientHomeHero } from "@/hooks/use-client-home-hero";
 import { useClientProgress, type ClientProgress } from "@/hooks/useClientProgress";
 import { useClientHomeFeed } from "@/hooks/use-client-home-feed";
+import { useClientPackageDashboards, type ClientPackageDashboardRow } from "@/hooks/use-client-package-dashboard";
+import { PackageStatusPill } from "./package-dashboard/PackageStatusPill";
 import { AuditReadinessCard } from "./AuditReadinessCard";
 import { AuditPreparationSection } from "./AuditPreparationSection";
 import { ClientAuditReportsSection } from "./ClientAuditReportsSection";
@@ -236,7 +239,15 @@ function AuditReadinessEmpty() {
   );
 }
 
-function PackagesStrip({ rows, isLoading }: { rows: ClientProgress[]; isLoading: boolean }) {
+function PackagesStrip({
+  rows,
+  isLoading,
+  statusByPackage,
+}: {
+  rows: ClientProgress[];
+  isLoading: boolean;
+  statusByPackage: Map<number, ClientPackageDashboardRow["status_pill"]>;
+}) {
   return (
     <Card>
       <CardContent className="p-5 space-y-4">
@@ -262,7 +273,13 @@ function PackagesStrip({ rows, isLoading }: { rows: ClientProgress[]; isLoading:
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  {riskBadge(p.risk_state)}
+                  {/* Same status_pill the Packages page reads, so a package
+                      can't show "On Track" here and "Drifting" there. */}
+                  {statusByPackage.has(p.package_instance_id) ? (
+                    <PackageStatusPill status={statusByPackage.get(p.package_instance_id)!} />
+                  ) : (
+                    riskBadge(p.risk_state)
+                  )}
                   <Link
                     to="/client/packages"
                     className="text-sm text-primary hover:underline inline-flex items-center"
@@ -361,7 +378,14 @@ export function ClientHomePage() {
     ?? (isPreviewMode ? "" : profile?.first_name);
   const { data: hero } = useClientHomeHero();
   const { data: progressList, isLoading: progressLoading } = useClientProgress(activeTenantId);
+  const { data: packageDashboards } = useClientPackageDashboards();
   const feed = useClientHomeFeed();
+
+  const statusByPackage = useMemo(() => {
+    const map = new Map<number, ClientPackageDashboardRow["status_pill"]>();
+    (packageDashboards ?? []).forEach((d) => map.set(d.package_instance_id, d.status_pill));
+    return map;
+  }, [packageDashboards]);
 
   const greeting = timeAwareGreeting();
   const tenureText = formatTenure(hero?.member_since ?? null);
@@ -432,7 +456,7 @@ export function ClientHomePage() {
         {showAuditEmpty ? <AuditReadinessEmpty /> : <AuditReadinessCard />}
 
         {/* Your packages strip */}
-        <PackagesStrip rows={progressRows} isLoading={progressLoading} />
+        <PackagesStrip rows={progressRows} isLoading={progressLoading} statusByPackage={statusByPackage} />
 
         {/* Quick actions */}
         <QuickActionsRow actions={quickActions} />
