@@ -92,7 +92,9 @@ export default function AcademyAssessmentPlayerPage() {
         .select("id, user_id, course_id, status")
         .eq("user_id", user.id)
         .eq("course_id", course.id)
-        .eq("status", "active")
+        .in("status", ["active", "completed"])
+        .order("enrolled_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       return data;
     },

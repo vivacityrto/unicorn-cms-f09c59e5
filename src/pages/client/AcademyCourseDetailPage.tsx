@@ -287,6 +287,7 @@ export default function AcademyCourseDetailPage() {
           courseId={course.id}
           slug={course.slug}
           enrollmentStatus={enrollment?.enrollment_status ?? null}
+          hasCertificate={enrollment?.has_certificate ?? false}
         />
       )}
     </div>

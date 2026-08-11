@@ -8,14 +8,17 @@ interface Props {
   courseId: number;
   slug: string;
   enrollmentStatus: string | null;
+  hasCertificate?: boolean | null;
 }
 
-export default function AssessmentEntrySection({ courseId, slug, enrollmentStatus }: Props) {
+export default function AssessmentEntrySection({ courseId, slug, enrollmentStatus, hasCertificate }: Props) {
   const navigate = useNavigate();
+  const canShowAssessment =
+    enrollmentStatus === "active" || (enrollmentStatus === "completed" && !hasCertificate);
 
   const { data: assessment, isLoading: assessmentLoading } = useQuery({
     queryKey: ["academy-assessment", courseId],
-    enabled: !!courseId && enrollmentStatus === "active",
+    enabled: !!courseId && canShowAssessment,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_assessments")
@@ -44,7 +47,7 @@ export default function AssessmentEntrySection({ courseId, slug, enrollmentStatu
     },
   });
 
-  if (enrollmentStatus !== "active" || assessmentLoading || !assessment) return null;
+  if (!canShowAssessment || assessmentLoading || !assessment) return null;
 
   const attemptsRemaining = assessment.max_attempts ? assessment.max_attempts - attemptCount : null;
   const exhausted = attemptsRemaining !== null && attemptsRemaining <= 0;
