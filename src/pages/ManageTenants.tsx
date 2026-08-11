@@ -144,6 +144,20 @@ export default function ManageTenants() {
   const cscQuery = useCscAssignments(tenantIds);
   const notesQuery = useTenantNotes(tenantIds);
 
+  // These four lookups merge into the table client-side, and none of them
+  // surface loading/error state on their own - a failed fetch (e.g. an auth
+  // token refresh racing one of useTenantContacts' sequential requests)
+  // otherwise renders as every row silently showing "No primary contact" /
+  // blank package data forever, indistinguishable from that genuinely being
+  // the case. Surface it instead so it's obviously a fetch failure with a
+  // way to retry, not a data problem.
+  const failedLookupQueries = [
+    { label: "primary contacts", query: contactsQuery },
+    { label: "packages", query: packagesQuery },
+    { label: "CSC assignments", query: cscQuery },
+    { label: "notes", query: notesQuery },
+  ].filter(q => q.query.isError);
+
   // Merge base tenants with the four lookup maps to produce the Tenant[] shape.
   useEffect(() => {
     if (accumulated.length === 0) {
@@ -945,6 +959,22 @@ export default function ManageTenants() {
               Reassign CSC
             </Button>
           </div>
+        </div>
+      )}
+
+      {failedLookupQueries.length > 0 && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <span className="flex items-center gap-2 text-sm text-destructive">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            Couldn't load {failedLookupQueries.map(q => q.label).join(", ")} for some clients - the table below is showing incomplete data, not necessarily empty data.
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => failedLookupQueries.forEach(q => q.query.refetch())}
+          >
+            Retry
+          </Button>
         </div>
       )}
 
