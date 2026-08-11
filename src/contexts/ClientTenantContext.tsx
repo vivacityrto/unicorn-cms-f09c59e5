@@ -50,6 +50,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
   const { isPreviewMode, previewTenant, actingUserId, actingUserOptions } = useClientPreview();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [fetchedTenantName, setFetchedTenantName] = useState<string | null>(null);
   const [unicorn1Id, setUnicorn1Id] = useState<number | null>(null);
   const [academyAccessEnabled, setAcademyAccessEnabled] = useState(false);
   const [academyAccessLoading, setAcademyAccessLoading] = useState(true);
@@ -114,13 +115,14 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
   }, [isPreview, previewTenant, profile?.user_uuid, profile?.tenant_id]);
 
   const activeTenantId = resolvedTenantId;
-  const tenantName = isPreview ? previewTenant!.name : null;
+  const tenantName = isPreview ? previewTenant!.name : fetchedTenantName;
 
-  // Fetch tenant logo + academy access. The loading flag tracks ONLY this fetch
-  // lifecycle (decoupled from how activeTenantId was resolved).
+  // Fetch tenant name + logo + academy access. The loading flag tracks ONLY
+  // this fetch lifecycle (decoupled from how activeTenantId was resolved).
   useEffect(() => {
     if (activeTenantId == null) {
       setLogoUrl(null);
+      setFetchedTenantName(null);
       setUnicorn1Id(null);
       setAcademyAccessEnabled(false);
       // Only flip loading=false once tenant resolution has settled with no tenant.
@@ -135,7 +137,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
       try {
         const { data } = await supabase
           .from("tenants")
-          .select("logo_path, academy_access_enabled, unicorn1_id")
+          .select("name, logo_path, academy_access_enabled, unicorn1_id")
           .eq("id", activeTenantId)
           .single();
         if (cancelled) return;
@@ -147,11 +149,13 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
         } else {
           setLogoUrl(null);
         }
+        setFetchedTenantName(data?.name ?? null);
         setAcademyAccessEnabled(data?.academy_access_enabled ?? false);
         setUnicorn1Id(data?.unicorn1_id ?? null);
       } catch (err) {
         if (!cancelled) {
           console.warn("[ClientTenantContext] tenants fetch failed", err);
+          setFetchedTenantName(null);
           setAcademyAccessEnabled(false);
           setUnicorn1Id(null);
         }
