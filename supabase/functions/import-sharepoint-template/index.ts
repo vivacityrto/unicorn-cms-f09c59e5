@@ -65,8 +65,10 @@ Deno.serve(async (req: Request) => {
       return await handleImport(supabase, body, user.id);
     } else if (action === 'publish') {
       return await handlePublish(supabase, body, user.id);
+    } else if (action === 'check_drift') {
+      return await handleCheckDrift(supabase, body);
     } else {
-      return new Response(JSON.stringify({ error: `Unknown action: ${action}. Use "browse", "import" or "publish".` }), {
+      return new Response(JSON.stringify({ error: `Unknown action: ${action}. Use "browse", "import", "publish" or "check_drift".` }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -88,14 +90,35 @@ async function handleImport(
   body: Record<string, unknown>,
   userId: string,
 ): Promise<Response> {
-  const { document_id, source_drive_id, source_item_id } = body as {
+  const { document_id, source_drive_id, source_item_id, display_version } = body as {
     document_id: number;
     source_drive_id: string;
     source_item_id: string;
+    display_version: string;
   };
 
   if (!document_id || !source_drive_id || !source_item_id) {
     return new Response(JSON.stringify({ error: 'document_id, source_drive_id, and source_item_id are required' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const displayVersionFormat = /^\d{4}\.\d{2}\.\d{2}$/;
+  if (!display_version || !displayVersionFormat.test(display_version)) {
+    return new Response(JSON.stringify({ error: 'display_version is required and must match YYYY.MM.NN (e.g. 2026.03.00)' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { data: existingLabel } = await supabase
+    .from('document_versions')
+    .select('id')
+    .eq('document_id', document_id)
+    .eq('display_version', display_version)
+    .maybeSingle();
+
+  if (existingLabel) {
+    return new Response(JSON.stringify({ error: `Version ${display_version} already exists for this document. Choose a different label.` }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -153,6 +176,7 @@ async function handleImport(
     .insert({
       document_id,
       version_number: nextVersion,
+      display_version,
       status: 'draft',
       storage_path: storagePath,
       file_name: fileName,
@@ -265,6 +289,7 @@ async function handleImport(
     success: true,
     version_id: newVersion.id,
     version_number: nextVersion,
+    display_version,
     file_name: fileName,
     checksum_sha256: checksum,
     storage_path: storagePath,
@@ -430,6 +455,87 @@ async function classifyAndSyncMergeFields(
 }
 
 /**
+ * Re-download a version's source file from SharePoint and compare its
+ * checksum against what was recorded at import time. Shared by handlePublish
+ * (which proceeds if the check can't be completed — a transient Graph API
+ * failure shouldn't block publishing) and handleCheckDrift (the standalone
+ * "Check for Drift" action, which surfaces failures directly since checking
+ * is the entire point of that call).
+ */
+async function computeDrift(
+  supabase: ReturnType<typeof createClient>,
+  version: { source_drive_item_id: string | null; checksum_sha256: string | null },
+): Promise<{ checked: boolean; drifted: boolean; current_checksum?: string; error?: string }> {
+  if (!version.source_drive_item_id || !version.checksum_sha256) {
+    return { checked: false, drifted: false, error: 'This version has no recorded source reference to check against.' };
+  }
+
+  const { data: masterSite } = await supabase
+    .from('sharepoint_sites')
+    .select('drive_id')
+    .eq('purpose', 'master_documents')
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!masterSite?.drive_id) {
+    return { checked: false, drifted: false, error: 'Master Documents SharePoint site is not configured.' };
+  }
+
+  try {
+    const currentContent = await graphDownload(masterSite.drive_id, version.source_drive_item_id);
+    const currentChecksum = await sha256Hex(currentContent);
+    return {
+      checked: true,
+      drifted: currentChecksum !== version.checksum_sha256,
+      current_checksum: currentChecksum,
+    };
+  } catch (driftErr) {
+    return {
+      checked: false,
+      drifted: false,
+      error: driftErr instanceof Error ? driftErr.message : 'Could not reach SharePoint to check for drift.',
+    };
+  }
+}
+
+/**
+ * Read-only drift check for the "Check for Drift" button — does not publish
+ * or mutate anything, just reports whether the source file has changed
+ * since this version was imported.
+ */
+async function handleCheckDrift(
+  supabase: ReturnType<typeof createClient>,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const { version_id } = body as { version_id: string };
+
+  if (!version_id) {
+    return new Response(JSON.stringify({ error: 'version_id is required' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { data: version, error: vErr } = await supabase
+    .from('document_versions')
+    .select('source_drive_item_id, checksum_sha256')
+    .eq('id', version_id)
+    .single();
+
+  if (vErr || !version) {
+    return new Response(JSON.stringify({ error: 'Version not found' }), {
+      status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const result = await computeDrift(supabase, version);
+
+  return new Response(JSON.stringify(result), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+/**
  * Publish a draft template version with drift detection.
  */
 async function handlePublish(
@@ -476,36 +582,22 @@ async function handlePublish(
     });
   }
 
-  // Drift detection: re-download source and compare checksum
-  if (version.source_drive_item_id && version.checksum_sha256) {
-    // Need to find the source drive_id — get from the master documents site
-    const { data: masterSite } = await supabase
-      .from('sharepoint_sites')
-      .select('drive_id')
-      .eq('purpose', 'master_documents')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (masterSite?.drive_id) {
-      try {
-        const currentContent = await graphDownload(masterSite.drive_id, version.source_drive_item_id);
-        const currentChecksum = await sha256Hex(currentContent);
-
-        if (currentChecksum !== version.checksum_sha256) {
-          return new Response(JSON.stringify({
-            error: 'Source file has changed since import (checksum mismatch). Re-import the template before publishing.',
-            drift_detected: true,
-            imported_checksum: version.checksum_sha256,
-            current_checksum: currentChecksum,
-          }), {
-            status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      } catch (driftErr) {
-        console.warn('[import-sharepoint-template] Drift check failed, proceeding:', driftErr);
-      }
-    }
+  // Drift detection: re-download source and compare checksum. Proceed if the
+  // check itself couldn't be completed (transient Graph API failure) — only
+  // an actual confirmed mismatch blocks publishing.
+  const drift = await computeDrift(supabase, version);
+  if (drift.checked && drift.drifted) {
+    return new Response(JSON.stringify({
+      error: 'Source file has changed since import (checksum mismatch). Re-import the template before publishing.',
+      drift_detected: true,
+      imported_checksum: version.checksum_sha256,
+      current_checksum: drift.current_checksum,
+    }), {
+      status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (!drift.checked && drift.error) {
+    console.warn('[import-sharepoint-template] Drift check failed, proceeding:', drift.error);
   }
 
   // Archive previous published version for this document

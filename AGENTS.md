@@ -180,6 +180,26 @@ For changes routed through a Lovable prompt specifically, read
 the prompt — it covers the phased-prompt workflow (audit → design decisions →
 implementation plan → phased implementation → dry-run → verification).
 
+**Guardrail: sweep RPC bodies, not just frontend code, before tightening a
+constraint.** Adding `NOT NULL`, a new `CHECK`, or narrowing an existing
+column on a table already in use requires checking every write path into
+that table — and Postgres functions (`SELECT/RPC` calls from the frontend)
+are a write path a frontend-only grep will never find, because the
+`INSERT`/`UPDATE` lives inside the function body in the database, not in
+`src/`. A real incident (2026-08-12, see
+`docs/audit-log/entries/2026-08-12-document-versioning-labels.md`): adding
+`document_versions.display_version NOT NULL` broke two RPCs that inserted
+into that table without it — one of them genuinely live, so production was
+broken until a Vercel PR-review bot caught it, not the pre-migration
+testing. Before shipping this kind of change, run both checks:
+- Frontend: grep `src/` for `.from('<table>')`.
+- Database: `select proname from pg_proc where pronamespace =
+  'public'::regnamespace and pg_get_functiondef(oid) ilike
+  '%<table>%' and pg_get_functiondef(oid) ilike '%insert%'` (adjust to
+  `%update%` too if narrowing rather than adding a column) via a Supabase
+  MCP `execute_sql` call. Also check for triggers on the table
+  (`pg_trigger` / `pg_get_triggerdef`).
+
 ## Supabase deployment workflow
 
 Deploy hosted Supabase migrations and Edge Functions through the configured

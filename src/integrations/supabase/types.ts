@@ -23149,6 +23149,7 @@ export type Database = {
           checksum_sha256: string | null
           created_at: string
           created_by: string | null
+          display_version: string
           document_id: number
           file_name: string
           file_size: number | null
@@ -23169,6 +23170,7 @@ export type Database = {
           checksum_sha256?: string | null
           created_at?: string
           created_by?: string | null
+          display_version: string
           document_id: number
           file_name: string
           file_size?: number | null
@@ -23189,6 +23191,7 @@ export type Database = {
           checksum_sha256?: string | null
           created_at?: string
           created_by?: string | null
+          display_version?: string
           document_id?: number
           file_name?: string
           file_size?: number | null
@@ -71550,6 +71553,20 @@ export type Database = {
         Args: { p_action_type: string; p_tenant_id: number }
         Returns: undefined
       }
+      insert_seat_recommendation_if_absent: {
+        Args: {
+          p_description: string
+          p_quarter_number: number
+          p_quarter_year: number
+          p_recommendation_type: string
+          p_seat_id: string
+          p_severity: string
+          p_tenant_id: number
+          p_title: string
+          p_trigger_type: string
+        }
+        Returns: string
+      }
       invite_user: {
         Args: { p_email: string; p_role?: string; p_tenant_id: string }
         Returns: string
@@ -71986,6 +72003,24 @@ export type Database = {
           p_reason?: string
         }
         Returns: undefined
+      }
+      record_governance_delivery_and_mark_generated: {
+        Args: {
+          p_category_subfolder: string
+          p_delivered_by: string
+          p_delivered_file_name: string
+          p_document_id: number
+          p_document_version_id: string
+          p_invalid_merge_fields: Json
+          p_missing_merge_fields: Json
+          p_sharepoint_item_id: string
+          p_sharepoint_web_url: string
+          p_snapshot_id: string
+          p_tailoring_completeness_pct: number
+          p_tailoring_risk_level: string
+          p_tenant_id: number
+        }
+        Returns: Json
       }
       record_resource_usage: {
         Args: { p_downloaded?: boolean; p_resource_id: string }

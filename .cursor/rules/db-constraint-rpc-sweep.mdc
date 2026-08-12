@@ -1,0 +1,38 @@
+---
+description: Before tightening a DB constraint, sweep RPC/function bodies, not just frontend code
+alwaysApply: true
+---
+
+# Sweep RPC bodies before adding NOT NULL / CHECK / narrowing a column
+
+Before adding `NOT NULL`, a new `CHECK`, or otherwise narrowing an existing
+column on a table already in use, you must check every write path into that
+table — not just the frontend.
+
+A frontend-only grep (`.from('<table>')` in `src/`) will never find writes
+that happen inside a Postgres function body. Those functions are called via
+`supabase.rpc('<name>', ...)`, and the actual `INSERT`/`UPDATE` lives in the
+database, invisible to `src/` searches.
+
+**Real incident (2026-08-12):** adding `document_versions.display_version
+NOT NULL` broke two RPCs (`bulk_create_documents_with_versions`,
+`publish_document_version`) that inserted into that table without it. One
+was genuinely live — production was broken until an automated PR-review bot
+caught it, not the pre-migration testing. Full writeup:
+`docs/audit-log/entries/2026-08-12-document-versioning-labels.md`.
+
+Before shipping this kind of change, run both checks:
+
+1. **Frontend:** grep `src/` for `.from('<table>')`.
+2. **Database**, via a Supabase MCP `execute_sql` call:
+   ```sql
+   select proname from pg_proc
+   where pronamespace = 'public'::regnamespace
+     and pg_get_functiondef(oid) ilike '%<table>%'
+     and pg_get_functiondef(oid) ilike '%insert%';
+   -- also check '%update%' if narrowing rather than adding a column
+   ```
+3. **Triggers** on the table: `select tgname, pg_get_triggerdef(oid) from pg_trigger where tgrelid = 'public.<table>'::regclass and not tgisinternal;`
+
+Fix every write path found (or confirm it already supplies a valid value)
+*before* applying the constraint, not after.
