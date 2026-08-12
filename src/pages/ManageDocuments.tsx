@@ -30,8 +30,8 @@ import { cn, matchesWordWildcard } from "@/lib/utils";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
+import { GovernanceVersionImportDialog } from '@/components/governance/GovernanceVersionImportDialog';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
-import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
 import { SharePointTemplateBrowser, type SelectedTemplate } from '@/components/documents/SharePointTemplateBrowser';
 import { toast as sonnerToast } from 'sonner';
 import { BulkGenerateButton } from '@/components/documents/bulk-generate/BulkGenerateButton';
@@ -140,6 +140,7 @@ interface Document {
   document_versions?: Array<{
     id: string;
     version_number: number;
+    display_version: string;
     status: string;
     created_at: string;
     published_at: string | null;
@@ -365,7 +366,6 @@ export default function ManageDocuments() {
     format: "",
     watermark: false,
     versiondate: undefined as Date | undefined,
-    versionnumber: "",
     versionlastupdated: undefined as Date | undefined,
     isclientdoc: false,
     categories: [] as string[],
@@ -381,6 +381,9 @@ export default function ManageDocuments() {
   const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
   const [importingTemplate, setImportingTemplate] = useState(false);
   const [pendingImportDocId, setPendingImportDocId] = useState<number | null>(null);
+  // Version label for the document's first import -- no prior version to bump
+  // from, so this is just a baseline (current year), editable, still required.
+  const [newDocDisplayVersion, setNewDocDisplayVersion] = useState('');
   const [generatingDescription, setGeneratingDescription] = useState(false);
   useEffect(() => {
     fetchCurrentUser();
@@ -408,7 +411,6 @@ export default function ManageDocuments() {
           format: doc.format || "",
           watermark: doc.watermark || false,
           versiondate: doc.versiondate ? new Date(doc.versiondate) : undefined,
-          versionnumber: doc.versionnumber?.toString() || "",
           versionlastupdated: doc.versionlastupdated ? new Date(doc.versionlastupdated) : undefined,
           isclientdoc: doc.isclientdoc || false,
           categories: doc.category ? doc.category.split(",").map(c => c.trim()) : [],
@@ -573,8 +575,8 @@ export default function ManageDocuments() {
           data: documentsData,
           error: documentsError
         } = await supabase.from("documents").select(`
-          *, 
-          document_versions!document_versions_document_id_fkey(id, version_number, status, created_at, published_at)
+          *,
+          document_versions!document_versions_document_id_fkey(id, version_number, display_version, status, created_at, published_at)
         `).order("id", {
           ascending: true
         });
@@ -939,6 +941,7 @@ export default function ManageDocuments() {
       stage: frameworkStageDefault || prev.stage,
       versionlastupdated: new Date(),
     }));
+    setNewDocDisplayVersion(`${new Date().getFullYear()}.00.00`);
     setCreateStep('metadata');
 
     void maybeGenerateDescription(file.name, matchedCategory?.name ?? null, matchedFramework?.label ?? null);
@@ -975,7 +978,6 @@ export default function ManageDocuments() {
           format: formData.format || null,
           watermark: formData.watermark,
           versiondate: formData.versiondate ? format(formData.versiondate, "yyyy-MM-dd") : null,
-          versionnumber: formData.versionnumber ? parseInt(formData.versionnumber) : null,
           versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
           isclientdoc: formData.isclientdoc,
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
@@ -1013,7 +1015,6 @@ export default function ManageDocuments() {
           format: formData.format || null,
           watermark: formData.watermark,
           versiondate: formData.versiondate ? format(formData.versiondate, "yyyy-MM-dd") : null,
-          versionnumber: formData.versionnumber ? parseInt(formData.versionnumber) : null,
           versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
           isclientdoc: formData.isclientdoc,
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
@@ -1043,6 +1044,7 @@ export default function ManageDocuments() {
                 document_id: newDocId,
                 source_drive_id: selectedTemplate.driveId,
                 source_item_id: selectedTemplate.file.id,
+                display_version: newDocDisplayVersion,
               },
             },
           );
@@ -1052,7 +1054,7 @@ export default function ManageDocuments() {
           const linked = importData?.fields_linked ?? 0;
           const invalid = (importData?.invalid_tags || []).length;
           sonnerToast.success(
-            `Imported v${importData?.version_number ?? 1} — ${linked} field${linked !== 1 ? 's' : ''} linked${invalid ? `, ${invalid} unrecognised` : ''}`,
+            `Imported ${importData?.display_version ?? newDocDisplayVersion} — ${linked} field${linked !== 1 ? 's' : ''} linked${invalid ? `, ${invalid} unrecognised` : ''}`,
           );
           toast({
             title: "Success",
@@ -1081,7 +1083,6 @@ export default function ManageDocuments() {
         format: "",
         watermark: false,
         versiondate: undefined,
-        versionnumber: "",
         versionlastupdated: undefined,
         isclientdoc: false,
         categories: [],
@@ -1095,6 +1096,7 @@ export default function ManageDocuments() {
       setExistingFiles([]);
       setEditingDocumentId(null);
       setSelectedTemplate(null);
+      setNewDocDisplayVersion('');
       setCreateStep('browse');
       setIsCreateDialogOpen(false);
       fetchDocuments();
@@ -1149,7 +1151,6 @@ export default function ManageDocuments() {
         format: doc.format,
         watermark: doc.watermark,
         versiondate: doc.versiondate,
-        versionnumber: doc.versionnumber,
         versionlastupdated: new Date().toISOString(),
         isclientdoc: doc.isclientdoc,
         category: doc.category,
@@ -1433,22 +1434,6 @@ export default function ManageDocuments() {
     return sorted[0];
   };
 
-  // SharePoint link handler
-  const handleSharePointLinkSelected = async (url: string) => {
-    if (!sharepointBrowseDocId) return;
-    const { error } = await supabase
-      .from('documents')
-      .update({ source_template_url: url })
-      .eq('id', sharepointBrowseDocId);
-    if (error) {
-      sonnerToast.error('Failed to update SharePoint URL');
-    } else {
-      sonnerToast.success('SharePoint URL saved');
-      fetchDocuments();
-    }
-    setSharepointBrowseDocId(null);
-  };
-
   if (loading) {
     return <div className="space-y-4 p-6">
         <div className="flex items-center gap-2">
@@ -1507,7 +1492,6 @@ export default function ManageDocuments() {
               format: "",
               watermark: false,
               versiondate: undefined,
-              versionnumber: "",
               versionlastupdated: undefined,
               isclientdoc: false,
               categories: [],
@@ -1520,6 +1504,7 @@ export default function ManageDocuments() {
             setUploadedFiles([]);
             setExistingFiles([]);
             setSelectedTemplate(null);
+            setNewDocDisplayVersion('');
             setCreateStep('browse');
           }
         }}>
@@ -1608,13 +1593,19 @@ export default function ManageDocuments() {
                     </Popover>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="versionnumber">Version Number</Label>
-                    <Input id="versionnumber" type="number" value={formData.versionnumber} onChange={e => setFormData({
-                    ...formData,
-                    versionnumber: e.target.value
-                  })} />
-                  </div>
+                  {!editingDocumentId && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="new-doc-display-version">Version Label *</Label>
+                      <Input
+                        id="new-doc-display-version"
+                        value={newDocDisplayVersion}
+                        onChange={(e) => setNewDocDisplayVersion(e.target.value)}
+                        placeholder="2026.00.00"
+                        className="font-mono"
+                      />
+                      <p className="text-xs text-muted-foreground">Format: YYYY.MM.NN — this is the first version, so it's just a baseline.</p>
+                    </div>
+                  )}
 
                   <div className="grid gap-2">
                     <Label>Version Last Updated</Label>
@@ -1850,7 +1841,14 @@ export default function ManageDocuments() {
                           Back
                         </Button>
                       )}
-                      <Button onClick={handleCreateDocument} disabled={!formData.title || importingTemplate}>
+                      <Button
+                        onClick={handleCreateDocument}
+                        disabled={
+                          !formData.title ||
+                          importingTemplate ||
+                          (!editingDocumentId && !/^\d{4}\.\d{2}\.\d{2}$/.test(newDocDisplayVersion))
+                        }
+                      >
                         {editingDocumentId ? "Update Document" : importingTemplate ? "Creating…" : "Create Document"}
                       </Button>
                     </>
@@ -1862,7 +1860,7 @@ export default function ManageDocuments() {
       </div>
 
       {/* Statistics Cards - Only for Super Admins */}
-      {isSuperAdmin && <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {isSuperAdmin && <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div 
             onClick={() => setFormatFilter("all")}
             className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
@@ -2220,8 +2218,8 @@ export default function ManageDocuments() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
                         {currentVersion ? (
-                          <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
-                            v{currentVersion.version_number}
+                          <Badge variant="secondary" className="text-xs font-mono font-medium py-[3px] rounded-[9px]">
+                            {currentVersion.display_version || `v${currentVersion.version_number}`}
                           </Badge>
                         ) : doc.versionnumber ? (
                           <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
@@ -2252,7 +2250,7 @@ export default function ManageDocuments() {
                                 size="icon"
                                 className="h-8 w-8 hover:bg-muted text-primary"
                                 onClick={() => setSharepointBrowseDocId(doc.id)}
-                                title={`Change linked template file\n${doc.source_template_url}`}
+                                title={`Import new version\nCurrently linked: ${doc.source_template_url}`}
                               >
                                 <Link2 className="h-4 w-4" />
                               </Button>
@@ -2267,7 +2265,7 @@ export default function ManageDocuments() {
                               </a>
                             </>
                           ) : (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setSharepointBrowseDocId(doc.id)} title="Link template file">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setSharepointBrowseDocId(doc.id)} title="Import version from SharePoint">
                               <Link2Off className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                             </Button>
                           )}
@@ -2560,38 +2558,19 @@ export default function ManageDocuments() {
         Showing {filteredDocuments.length} of {totalDocuments} documents
       </div>
 
-      {/* Master Documents SharePoint Browser Dialog */}
+      {/* Import New Version dialog, triggered from the table row's link icon */}
       {sharepointBrowseDocId && (() => {
         const browseDoc = documents.find(d => d.id === sharepointBrowseDocId);
-        const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
-        const autoFolder = browseDoc?.framework_type
-          ? frameworkFolderMap[browseDoc.framework_type.toLowerCase()] || 'Other'
-          : 'Other';
         return (
-          <Dialog open={true} onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}>
-            <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 flex-wrap">
-                  <FolderOpen className="h-5 w-5" />
-                  <span>Master Documents — Select Template File</span>
-                  {browseDoc?.title && (
-                    <span className="text-sm font-normal text-muted-foreground">
-                      for <span className="font-medium text-foreground">{browseDoc.title}</span>
-                    </span>
-                  )}
-                </DialogTitle>
-              </DialogHeader>
-              <SharePointFileBrowser
-                tenantId={profile?.tenant_id ?? 0}
-                sitePurpose="master_documents"
-                onSelectLink={(url) => {
-                  handleSharePointLinkSelected(url);
-                }}
-                defaultFilter={browseDoc?.title || ''}
-                autoNavigateFolder={autoFolder}
-              />
-            </DialogContent>
-          </Dialog>
+          <GovernanceVersionImportDialog
+            documentId={sharepointBrowseDocId}
+            documentTitle={browseDoc?.title || ''}
+            frameworkType={browseDoc?.framework_type}
+            latestDisplayVersion={getCurrentVersion(browseDoc as Document)?.display_version ?? null}
+            open={true}
+            onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}
+            onSuccess={fetchDocuments}
+          />
         );
       })()}
     </div>;

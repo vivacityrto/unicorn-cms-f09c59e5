@@ -5,15 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag, Pencil, FolderOpen } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag, Pencil, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
-import { useAuth } from '@/hooks/useAuth';
 import { GovernanceVersionHistory } from './GovernanceVersionHistory';
 import { GovernancePublishDialog } from './GovernancePublishDialog';
-import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
+import { GovernanceVersionImportDialog } from './GovernanceVersionImportDialog';
 import { GovernanceMappingEditor } from './GovernanceMappingEditor';
 import { GovernanceDeliveryDialog } from './GovernanceDeliveryDialog';
 import { GovernanceDeliveryHistory } from './GovernanceDeliveryHistory';
@@ -28,13 +26,13 @@ interface GovernanceDocumentDetailProps {
 }
 
 export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocumentDetailProps) {
-  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [publishVersionId, setPublishVersionId] = useState<string | null>(null);
-  const [showSharePointBrowser, setShowSharePointBrowser] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [mappingVersionId, setMappingVersionId] = useState<string | null>(null);
   const [showDelivery, setShowDelivery] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [checkingDrift, setCheckingDrift] = useState(false);
 
   const { data: doc, isLoading } = useQuery({
     queryKey: ['governance-doc-detail', documentId],
@@ -122,6 +120,44 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
     queryClient.invalidateQueries({ queryKey: ['governance-tailoring-health', documentId] });
   };
 
+  // Picking a version in the "Current Version" selector only ever promotes a
+  // draft -- it reuses the exact same drift-check + mapping-check flow as
+  // the old per-row Publish button (GovernancePublishDialog), just triggered
+  // from here instead. Archived versions are shown for history but aren't
+  // actionable: the publish RPC only accepts a draft.
+  const handleVersionSelect = (versionId: string) => {
+    if (versionId === doc.current_published_version_id) return;
+    const target = versions?.find((v) => v.id === versionId);
+    if (!target) return;
+    if (target.status !== 'draft') {
+      toast.error('Only a draft version can be promoted. Import a new version to make changes.');
+      return;
+    }
+    setPublishVersionId(versionId);
+  };
+
+  const handleCheckDrift = async () => {
+    if (!publishedVersion) return;
+    setCheckingDrift(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('import-sharepoint-template', {
+        body: { action: 'check_drift', version_id: publishedVersion.id },
+      });
+      if (error) throw error;
+      if (!data.checked) {
+        toast.warning(data.error || 'Could not check for drift');
+      } else if (data.drifted) {
+        toast.error('Source file has changed since this version was published');
+      } else {
+        toast.success('Source file matches what was published — no drift detected');
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Drift check failed');
+    } finally {
+      setCheckingDrift(false);
+    }
+  };
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
@@ -148,8 +184,13 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
               <Send className="h-4 w-4 mr-2" /> Deliver to Clients
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => setShowSharePointBrowser(true)}>
-            <Upload className="h-4 w-4 mr-2" /> Link to SharePoint
+          {publishedVersion && (
+            <Button variant="outline" size="sm" onClick={handleCheckDrift} disabled={checkingDrift}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${checkingDrift ? 'animate-spin' : ''}`} /> Check for Drift
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
+            <Upload className="h-4 w-4 mr-2" /> Import New Version
           </Button>
           {doc.source_template_url && (
             <Button variant="outline" size="sm" asChild>
@@ -230,15 +271,33 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Shield className="h-4 w-4" /> Published Version
+              <Shield className="h-4 w-4" /> Current Version
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <span className="text-sm">
-              {doc.current_published_version_id
-                ? `v${versions?.find(v => v.id === doc.current_published_version_id)?.version_number || '?'}`
-                : 'None'}
-            </span>
+            <Select
+              value={doc.current_published_version_id || '__none__'}
+              onValueChange={handleVersionSelect}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="No version" />
+              </SelectTrigger>
+              <SelectContent>
+                {!doc.current_published_version_id && (
+                  <SelectItem value="__none__" disabled>None</SelectItem>
+                )}
+                {versions?.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.display_version || `v${v.version_number}`}
+                    {' — '}
+                    {v.status === 'published' ? 'Published' : v.status === 'draft' ? 'Draft' : 'Archived'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {doc.standard_set && (
+              <p className="text-xs text-muted-foreground mt-1">{doc.standard_set}</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -269,6 +328,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       <GovernanceVersionHistory
         versions={versions}
         onPublish={(id) => setPublishVersionId(id)}
+        onNotesSaved={invalidateAll}
       />
 
       {/* Delivery History */}
@@ -289,43 +349,15 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         />
       )}
 
-      {showSharePointBrowser && (() => {
-        const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
-        const autoFolder = doc.framework_type
-          ? frameworkFolderMap[doc.framework_type.toLowerCase()] || 'Other'
-          : 'Other';
-        return (
-          <Dialog open={true} onOpenChange={(open) => { if (!open) setShowSharePointBrowser(false); }}>
-            <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <FolderOpen className="h-5 w-5" />
-                  Master Documents — Select Template File
-                </DialogTitle>
-              </DialogHeader>
-              <SharePointFileBrowser
-                tenantId={profile?.tenant_id ?? 0}
-                sitePurpose="master_documents"
-                onSelectLink={async (url) => {
-                  const { error } = await supabase
-                    .from('documents')
-                    .update({ source_template_url: url })
-                    .eq('id', documentId);
-                  if (error) {
-                    toast.error('Failed to update SharePoint URL');
-                  } else {
-                    toast.success('SharePoint URL saved');
-                    invalidateAll();
-                  }
-                  setShowSharePointBrowser(false);
-                }}
-                defaultFilter={doc.title}
-                autoNavigateFolder={`Framework/${autoFolder}`}
-              />
-            </DialogContent>
-          </Dialog>
-        );
-      })()}
+      <GovernanceVersionImportDialog
+        documentId={documentId}
+        documentTitle={doc.title}
+        frameworkType={doc.framework_type}
+        latestDisplayVersion={versions?.[0]?.display_version ?? null}
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onSuccess={invalidateAll}
+      />
 
       {showDelivery && publishedVersion && (
         <GovernanceDeliveryDialog
