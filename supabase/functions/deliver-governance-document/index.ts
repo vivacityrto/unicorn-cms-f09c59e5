@@ -1086,64 +1086,37 @@ serve(async (req) => {
 
 
 
-    // ── Update document_instances with generation tracking ─────────────────
-    const { data: matchedInstances } = await supabase
-      .from("document_instances")
-      .select("id")
-      .eq("document_id", doc.id)
-      .eq("tenant_id", tenant_id);
+    // ── Atomically record the delivery and mark document_instances generated ──
+    // Both writes (plus resolving any open document_generation_errors) happen
+    // inside a single DB function call, which Postgres runs as one implicit
+    // transaction. Previously these were two separate, non-transactional
+    // client calls: if the delivery insert failed after the document_instances
+    // update had already succeeded, a document could end up showing as fully
+    // generated (real SharePoint file, isgenerated=true) with no matching
+    // governance_document_deliveries row at all — confirmed against live data
+    // for one document across 25 instances. Wrapping both in one function call
+    // means either both succeed or neither does.
+    const { data: delivery, error: rpcErr } = await supabase.rpc(
+      "record_governance_delivery_and_mark_generated",
+      {
+        p_tenant_id: tenant_id,
+        p_document_id: doc.id,
+        p_document_version_id: document_version_id,
+        p_snapshot_id: snapshotId,
+        p_sharepoint_item_id: driveItem.id,
+        p_sharepoint_web_url: driveItem.webUrl,
+        p_delivered_file_name: deliveredFileName,
+        p_category_subfolder: categorySubfolder,
+        p_delivered_by: userId,
+        p_tailoring_completeness_pct: completeness,
+        p_missing_merge_fields: missingTags,
+        p_invalid_merge_fields: invalidTags,
+        p_tailoring_risk_level: riskLevel,
+      },
+    );
 
-    if (matchedInstances && matchedInstances.length > 0) {
-      const instanceIds = matchedInstances.map((i: any) => i.id);
-      await supabase
-        .from("document_instances")
-        .update({
-          status: "generated",
-          generation_status: "generated",
-          generated_file_url: driveItem.webUrl,
-          generated_item_id: driveItem.id,
-          isgenerated: true,
-          generationdate: new Date().toISOString(),
-          last_error: null,
-          updated_by: userId,
-        })
-        .eq("document_id", doc.id)
-        .eq("tenant_id", tenant_id);
-
-      // Resolve any active errors for these instances
-      for (const instId of instanceIds) {
-        await supabase
-          .from("document_generation_errors")
-          .update({ resolved_at: new Date().toISOString(), resolved_by: userId })
-          .eq("documentinstance_id", instId)
-          .is("resolved_at", null);
-      }
-    }
-
-    // ── Insert delivery record with tailoring data ─────────────────────────
-    const { data: delivery, error: insErr } = await supabase
-      .from("governance_document_deliveries")
-      .insert({
-        tenant_id,
-        document_id: doc.id,
-        document_version_id,
-        snapshot_id: snapshotId,
-        status: "success",
-        sharepoint_item_id: driveItem.id,
-        sharepoint_web_url: driveItem.webUrl,
-        delivered_file_name: deliveredFileName,
-        category_subfolder: categorySubfolder,
-        delivered_by: userId,
-        tailoring_completeness_pct: completeness,
-        missing_merge_fields: missingTags,
-        invalid_merge_fields: invalidTags,
-        tailoring_risk_level: riskLevel,
-      })
-      .select()
-      .single();
-
-    if (insErr) {
-      throw new Error(`Failed to insert delivery record: ${insErr.message}`);
+    if (rpcErr) {
+      throw new Error(`Failed to record delivery: ${rpcErr.message}`);
     }
 
     // ── Audit log ──────────────────────────────────────────────────────────
