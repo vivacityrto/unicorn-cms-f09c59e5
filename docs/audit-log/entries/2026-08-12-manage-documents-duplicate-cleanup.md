@@ -5,9 +5,12 @@ Manage Documents (see also #242, which fixed the badge/filter itself to be
 format-aware), with the heuristic that a document attached to a package
 stage is the "original."
 **Author:** Claude (session run by Carl)
-**Scope:** Data-only cleanup, two passes — deleted 11 accidental
+**Scope:** Data-only cleanup, three passes — deleted 11 accidental
 same-package-stage duplicates, then 26 orphaned duplicate-by-title-and-format
-documents with no real usage. No RLS, trigger, or edge function changes. No
+documents with no real usage, then consolidated 8 clusters of legitimate
+cross-package/cross-stage duplicates onto a single canonical row each
+(repointing `stage_documents` links and migrating `document_instances`
+rather than dropping them). No RLS, trigger, or edge function changes. No
 new tables.
 **Supabase project:** hosted `unicorn-cms-f09c59e5` production project.
 
@@ -104,6 +107,84 @@ cross-package copies, not duplicates. Total `documents` row count:
 
 ---
 
+## Third pass — consolidating the remaining 24 legitimate copies (same day, follow-up)
+
+Carl asked to investigate whether the remaining 24 flagged documents (11
+groups, all confirmed in pass two as legitimate per-package/per-stage
+copies rather than accidental duplicates) could still be consolidated onto
+a single canonical row per title, using a SharePoint `source_template_url`
+as the signal for "intended original."
+
+**Investigation, before any change:**
+- Only **2 of 11** groups had a SharePoint link on either copy at all —
+  the heuristic didn't generalize.
+- **3 of 11 groups turned out not to be duplicates at all.** The
+  "GTO & Apprentice Induction Checklist", "GTO Host Employer Handbook", and
+  "GTO & Host Employer Induction Checklist" pairs share a generic title but
+  have different `category` values (`gto-vic` vs `gto-nsw`) — genuinely
+  different Victoria/NSW-specific regulatory content, not a data-quality
+  issue. Left untouched; flagged separately as a possible product question
+  (does a client see both state variants regardless of their actual state?)
+  worth raising with Angela outside this cleanup.
+- The other 8 groups had no design doc in this repo describing intended
+  per-stage document requirements (a referenced "Build brief §9m" from an
+  earlier PR lives outside this repo) — package/stage document assignment
+  only exists as live `stage_documents` data from the original bulk import.
+  With no reliable universal signal, each of the 8 remaining clusters was
+  reviewed individually with Carl rather than resolved by a blanket rule.
+
+**Mechanics — different from passes one and two.** Every prior deletion in
+this cleanup removed documents no real client had ever used. These 8
+clusters are the opposite: multiple packages/stages have real, currently
+active client `document_instances` against *each* copy. A plain `DELETE`
+would have silently dropped a real client's checklist item. Instead, each
+merge:
+  1. Repoints the redundant copy's `stage_documents` link to the canonical
+     document.
+  2. Migrates the redundant copy's `document_instances` to the canonical
+     document's id (verified zero `stageinstance_id` conflicts before each
+     migration, since packages have entirely disjoint client populations).
+  3. Removes the now-unreferenced document row (verified zero rows in
+     `document_versions` beyond the initial version, `document_files`,
+     `document_data_sources`, `document_source_mappings`,
+     `client_stage_documents`, `generated_documents`,
+     `governance_document_deliveries`, and `audit_inspection` before each
+     deletion).
+
+This is the first time this codebase has had one `documents` row
+deliberately shared across multiple packages via multiple `stage_documents`
+links — every other requirement in the system still gets its own row per
+package, even for identical shared content. Established here as a
+supported pattern for confirmed-duplicate cleanup, not applied retroactively
+elsewhere.
+
+**Canonical selection per cluster** (default: latest id; overridden twice
+where the latest id was actually the worse-maintained copy):
+
+| Title | Kept (canonical) | Merged in | Note |
+|---|---|---|---|
+| ASQA Audit Report | 5558 (KS-CRI) | 5539 (DD) | latest id |
+| Delivery and Assessment Plan | 6719 (KS-RTO/Mock Audit) | 1279 (KS-RTO/Strategic Business Planning) | latest id, also SharePoint-linked; 1279 had 0 instances |
+| General Consultation Report | 5536 (DD) | 5519 (KS-CRI) | latest id |
+| Industry Survey Form | **1286** (CHC) | 1288 (KS-RTO) | latest id (1288) was uncategorised + 0 instances; kept the categorized, actually-used copy instead |
+| Q1.D3-RPL VET Student and Assessor Kit | 7582 (M-GC) | 7567 (KS-RTO) | latest id, also SharePoint-linked |
+| Rectification Action Plan | 5537 (DD) | 5531, 5533 (KS-CRI ×2) | latest id, 3-way merge |
+| Rectification Table of Contents | 5538 (DD) | 5422 (CHC), 5535 (KS-CRI) | latest id, 3-way merge |
+| Training Needs Analysis | **1287** (CHC) | 1289 (KS-RTO) | same override as Industry Survey Form |
+
+Each merge verified post-apply: zero rows remaining for the merged id(s) in
+`documents`/`stage_documents`/`document_instances`, and the canonical row's
+instance count equal to the sum of both sides' pre-merge counts (e.g.
+Q1.D3-RPL VET Student and Assessor Kit: 230 + 379 = 609).
+
+**3 groups (6 docs) intentionally left untouched**: the GTO state-variant
+trio above.
+
+Result: **24 → 6** flagged documents (exactly the 3 GTO groups). Total
+`documents` row count: 561 → 551.
+
+---
+
 ## DB changes shipped
 
 Migration: `supabase/migrations/20260811233425_remove_duplicate_stage_document_templates.sql`
@@ -140,6 +221,22 @@ Carl's explicit approval on both the 16-orphan-sibling list and the
 Verified post-apply: 24 flagged documents remain (down from 66), all
 confirmed legitimate cross-package copies; total `documents` row count 561.
 
+Third-pass migrations (one per cluster, applied and verified individually
+with Carl reviewing each before execution):
+
+- `supabase/migrations/20260812001546_merge_asqa_audit_report_duplicate.sql`
+- `supabase/migrations/20260812002039_merge_delivery_assessment_plan_duplicate.sql`
+- `supabase/migrations/20260812003200_merge_general_consultation_report_duplicate.sql`
+- `supabase/migrations/20260812004123_merge_industry_survey_form_duplicate.sql`
+- `supabase/migrations/20260812005047_merge_q1d3_rpl_kit_duplicate.sql`
+- `supabase/migrations/20260812005158_merge_rectification_action_plan_duplicate.sql`
+- `supabase/migrations/20260812005317_merge_rectification_table_of_contents_duplicate.sql`
+- `supabase/migrations/20260812005419_merge_training_needs_analysis_duplicate.sql`
+
+Each is a repoint-and-migrate operation, not a plain delete — see the
+mechanics description above. Verified post-apply per migration (see the
+cluster table above for exact before/after instance counts).
+
 ---
 
 ## Code changes (if this entry accompanies one)
@@ -148,9 +245,12 @@ confirmed legitimate cross-package copies; total `documents` row count 561.
   — see above.
 - `supabase/migrations/20260811234930_remove_orphaned_duplicate_documents.sql`
   — see above (second pass).
+- Eight `merge_*_duplicate.sql` migrations listed above — see above (third
+  pass).
 
 Branch: `chore/manage-documents-duplicate-cleanup-audit` (pass one),
-`chore/manage-documents-orphan-duplicate-cleanup` (pass two).
+`chore/manage-documents-orphan-duplicate-cleanup` (pass two),
+`chore/manage-documents-cross-package-merge` (third pass).
 
 (Companion UI fix — making the Duplicates badge/filter format-aware — shipped
 separately in #242, `hotfix/manage-documents-duplicate-format-aware`.)
@@ -166,23 +266,38 @@ separately in #242, `hotfix/manage-documents-duplicate-format-aware`.)
   none of the deleted rows had ever been fulfilled by a client.
 - **Did not attempt to fix the `delete_document_cascade` drift as part of
   this change.** Out of scope for a duplicate-data cleanup; flagged as its
-  own follow-up below.
+  own follow-up below (since resolved in a separate PR, see
+  `docs/audit-log/entries/2026-08-12-delete-document-cascade-drift-reconcile.md`).
+- **Established cross-package document sharing (one row, multiple
+  `stage_documents` links) as a supported pattern for confirmed-duplicate
+  consolidation, not a general refactor.** Every other requirement in the
+  system still gets its own row per package by default; this was applied
+  only to the 8 clusters reviewed individually in the third pass.
+- **Overrode the default "latest id" canonical-selection rule twice**
+  (Industry Survey Form, Training Needs Analysis) where the latest id was
+  an uncategorised, never-used copy and the earlier id was properly
+  categorized with real client usage — picked data quality over recency in
+  those two cases.
+- **Left the 3 GTO-titled groups untouched entirely.** They are not
+  duplicates — different `category` values (`gto-vic`/`gto-nsw`) indicate
+  genuinely different state-specific content sharing a generic title.
 
 ---
 
 ## Open questions parked
 
-- `delete_document_cascade`'s live-vs-git drift (auth check +
-  `documents_tenants` fix, applied 2026-07-15 per `list_migrations` as
-  `harden_delete_document_cascade_c3`, absent from this repo) should get
-  its own small hotfix PR that commits a migration matching the live
-  function definition, so the app's normal "Delete" button in Manage
-  Documents isn't relying on undocumented prod state. Still open after both
-  passes.
+- **Resolved separately:** `delete_document_cascade`'s live-vs-git drift —
+  see `docs/audit-log/entries/2026-08-12-delete-document-cascade-drift-reconcile.md`.
 - **Resolved in the second pass:** the fully-orphaned documents with no
-  stage link at all — deleted per Carl's explicit decision (see above).
-- The 24 remaining groups where the same title+format appears across
-  *different* packages (each individually stage-linked) were confirmed as
-  intentional per-package template copies, not duplicates — no action
-  needed, but worth knowing this is the system's normal pattern if it comes
-  up again.
+  stage link at all — deleted per Carl's explicit decision.
+- **Resolved in the third pass:** the 24 legitimate cross-package/
+  cross-stage copies — 8 clusters (18 documents) consolidated onto a
+  canonical row each; 3 clusters (6 documents, the GTO state variants) left
+  untouched as genuinely different content.
+- **New, unresolved:** does a client on the KS-CRI (GTO) package actually
+  need to see *both* the `gto-vic` and `gto-nsw` variants of
+  "GTO & Apprentice Induction Checklist" / "GTO Host Employer Handbook" /
+  "GTO & Host Employer Induction Checklist" regardless of their actual
+  state, or should the correct variant be selected based on the client's
+  state? Not investigated further — flagged as a product question for
+  Carl/Angela, outside the scope of a duplicate-data cleanup.
