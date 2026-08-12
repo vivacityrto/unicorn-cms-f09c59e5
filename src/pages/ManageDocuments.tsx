@@ -109,7 +109,7 @@ const deriveFrameworkFromRootFolder = (
   return prefixed ? prefixed.value : null;
 };
 
-type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload';
+type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload' | 'no_package';
 interface Document {
   id: number;
   file_status?: FileStatus;
@@ -309,7 +309,7 @@ export default function ManageDocuments() {
   // Governance features state
   const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
   const [sharepointFilter, setSharepointFilter] = useState<string>("all");
-  const [fileStatusFilter, setFileStatusFilter] = useState<'all' | 'needs_upload' | 'ready'>('all');
+  const [fileStatusFilter, setFileStatusFilter] = useState<'all' | 'needs_upload' | 'ready' | 'no_package'>('all');
   const [uploadingDocId, setUploadingDocId] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDocId, setSelectedDocId] = useState<number | null>(() => {
@@ -613,10 +613,25 @@ export default function ManageDocuments() {
         const docIds = (documentsData || []).map(d => d.id);
         let readySet = new Set<number>();
         let versionsSet = new Set<number>();
+        // A document has "no package" if none of its stages (primary
+        // documents.stage, plus any additional stages via document_stage_links)
+        // are wired into any package -- either because it has no stage at
+        // all, or its stage exists but isn't part of any package. A stage
+        // counts as "has a package" if it's in package_stages (the master
+        // definition) OR has real stage_instances (actually provisioned for
+        // a client) -- package_stages can have gaps (confirmed: one stage,
+        // "GTO Documents - VIC", had real provisioned usage but was missing
+        // from package_stages entirely), so real usage is treated as
+        // equally valid evidence rather than trusting the master table alone.
+        let stagesWithPackages = new Set<number>();
+        let additionalStagesByDoc = new Map<number, number[]>();
         if (docIds.length > 0) {
-          const [{ data: filesData }, { data: versionsData }] = await Promise.all([
+          const [{ data: filesData }, { data: versionsData }, { data: packageStagesData }, { data: docStageLinksData }, { data: stageInstancesData }] = await Promise.all([
             supabase.from('document_files').select('document_id').in('document_id', docIds),
             supabase.from('document_versions').select('document_id, storage_path').in('document_id', docIds),
+            supabase.from('package_stages').select('stage_id'),
+            supabase.from('document_stage_links').select('document_id, stage_id').in('document_id', docIds),
+            supabase.from('stage_instances').select('stage_id'),
           ]);
           readySet = new Set((filesData || []).map(f => f.document_id as number));
           versionsSet = new Set(
@@ -624,22 +639,42 @@ export default function ManageDocuments() {
               .filter(v => v.storage_path && v.storage_path.trim() !== '')
               .map(v => v.document_id as number)
           );
+          stagesWithPackages = new Set([
+            ...(packageStagesData || []).map(ps => ps.stage_id as number),
+            ...(stageInstancesData || []).map(si => si.stage_id as number),
+          ]);
+          additionalStagesByDoc = new Map();
+          for (const link of docStageLinksData || []) {
+            const list = additionalStagesByDoc.get(link.document_id as number) || [];
+            list.push(link.stage_id as number);
+            additionalStagesByDoc.set(link.document_id as number, list);
+          }
         }
 
         // Enrich documents with creator info + file_status
         // A document counts as file_ready if it has a document_files row, a
         // document_versions row with a real file, or a non-null
-        // source_template_url (SharePoint-linked).
+        // source_template_url (SharePoint-linked). "no_package" takes
+        // priority over file readiness -- a document with a real file but no
+        // package assignment still needs attention, just a different kind.
         const enrichedDocs = (documentsData || []).map(doc => {
+          const docStageIds = [
+            ...(doc.stage ? [doc.stage] : []),
+            ...(additionalStagesByDoc.get(doc.id) || []),
+          ];
+          const hasPackage = docStageIds.some(sid => stagesWithPackages.has(sid));
+
           const isReady =
             readySet.has(doc.id) ||
             versionsSet.has(doc.id) ||
             !!doc.source_template_url;
-          const fileStatus: FileStatus = isReady
-            ? 'file_ready'
-            : (doc.uploaded_files && Array.isArray(doc.uploaded_files) && doc.uploaded_files.length > 0)
-              ? 'legacy_only'
-              : 'needs_upload';
+          const fileStatus: FileStatus = !hasPackage
+            ? 'no_package'
+            : isReady
+              ? 'file_ready'
+              : (doc.uploaded_files && Array.isArray(doc.uploaded_files) && doc.uploaded_files.length > 0)
+                ? 'legacy_only'
+                : 'needs_upload';
           return {
             ...doc,
             creator: doc.created_by ? creatorsMap[doc.created_by] || null : null,
@@ -759,6 +794,8 @@ export default function ManageDocuments() {
       filtered = filtered.filter(doc => doc.file_status === 'needs_upload');
     } else if (fileStatusFilter === 'ready') {
       filtered = filtered.filter(doc => doc.file_status === 'file_ready');
+    } else if (fileStatusFilter === 'no_package') {
+      filtered = filtered.filter(doc => doc.file_status === 'no_package');
     }
 
     // Sort - when showing duplicates, group by title first
@@ -815,6 +852,7 @@ export default function ManageDocuments() {
   const fileStatusEligible = applyNonFileStatusFilters(documents);
   const needsUploadCount = fileStatusEligible.filter(d => d.file_status === 'needs_upload').length;
   const readyCount = fileStatusEligible.filter(d => d.file_status === 'file_ready').length;
+  const noPackageCount = fileStatusEligible.filter(d => d.file_status === 'no_package').length;
 
   const handleInlineFileUpload = async (docId: number, file: File) => {
     try {
@@ -2018,8 +2056,9 @@ export default function ManageDocuments() {
           <div className="inline-flex rounded-lg border border-border/50 bg-card p-1 shadow-sm">
             {([
               { value: 'all', label: `All (${fileStatusEligible.length})` },
-              { value: 'needs_upload', label: `Needs Upload (${needsUploadCount})` },
               { value: 'ready', label: `Ready (${readyCount})` },
+              { value: 'needs_upload', label: `Needs Upload (${needsUploadCount})` },
+              { value: 'no_package', label: `No Package (${noPackageCount})` },
             ] as const).map(opt => (
               <button
                 key={opt.value}
@@ -2123,7 +2162,14 @@ export default function ManageDocuments() {
                       </TableCell>
                       {isSuperAdmin && (
                         <TableCell className="py-6 border-r border-border/50 w-16 text-center" onClick={e => e.stopPropagation()}>
-                          {doc.file_status === 'file_ready' ? (
+                          {doc.file_status === 'no_package' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-block w-3 h-3 rounded-full bg-amber-500" aria-label="No package" />
+                              </TooltipTrigger>
+                              <TooltipContent>Not assigned to any stage that's part of a package</TooltipContent>
+                            </Tooltip>
+                          ) : doc.file_status === 'file_ready' ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="inline-block w-3 h-3 rounded-full bg-emerald-500" aria-label="File ready" />
