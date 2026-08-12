@@ -328,7 +328,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       <GovernanceVersionHistory
         versions={versions}
         onPublish={(id) => setPublishVersionId(id)}
-        onNotesSaved={invalidateAll}
+        onSaved={invalidateAll}
       />
 
       {/* Delivery History */}

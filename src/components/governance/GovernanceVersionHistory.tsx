@@ -24,7 +24,7 @@ interface Version {
 interface GovernanceVersionHistoryProps {
   versions: Version[] | null | undefined;
   onPublish: (versionId: string) => void;
-  onNotesSaved?: () => void;
+  onSaved?: () => void;
 }
 
 function getStatusBadge(status: string) {
@@ -40,10 +40,16 @@ function getStatusBadge(status: string) {
   }
 }
 
-export function GovernanceVersionHistory({ versions, onPublish, onNotesSaved }: GovernanceVersionHistoryProps) {
+const DISPLAY_VERSION_FORMAT = /^\d{4}\.\d{2}\.\d{2}$/;
+
+export function GovernanceVersionHistory({ versions, onPublish, onSaved }: GovernanceVersionHistoryProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftNotes, setDraftNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [editingVersionId, setEditingVersionId] = useState<string | null>(null);
+  const [draftVersionLabel, setDraftVersionLabel] = useState('');
+  const [savingVersion, setSavingVersion] = useState(false);
 
   const startEdit = (v: Version) => {
     setEditingId(v.id);
@@ -65,11 +71,48 @@ export function GovernanceVersionHistory({ versions, onPublish, onNotesSaved }: 
       if (error) throw error;
       toast.success('Notes saved');
       setEditingId(null);
-      onNotesSaved?.();
+      onSaved?.();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to save notes');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const startEditVersion = (v: Version) => {
+    setEditingVersionId(v.id);
+    setDraftVersionLabel(v.display_version || '');
+  };
+
+  const cancelEditVersion = () => {
+    setEditingVersionId(null);
+    setDraftVersionLabel('');
+  };
+
+  const saveVersionLabel = async (versionId: string) => {
+    if (!DISPLAY_VERSION_FORMAT.test(draftVersionLabel)) {
+      toast.error('Version label must match YYYY.MM.NN, e.g. 2026.03.00');
+      return;
+    }
+    setSavingVersion(true);
+    try {
+      const { error } = await supabase
+        .from('document_versions')
+        .update({ display_version: draftVersionLabel })
+        .eq('id', versionId);
+      if (error) {
+        if ((error as { code?: string }).code === '23505') {
+          throw new Error('That version label already exists for this document.');
+        }
+        throw error;
+      }
+      toast.success('Version label updated');
+      setEditingVersionId(null);
+      onSaved?.();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update version label');
+    } finally {
+      setSavingVersion(false);
     }
   };
 
@@ -102,7 +145,34 @@ export function GovernanceVersionHistory({ versions, onPublish, onNotesSaved }: 
             ) : (
               versions.map((v) => (
                 <TableRow key={v.id}>
-                  <TableCell className="font-mono">{v.display_version || `v${v.version_number}`}</TableCell>
+                  <TableCell className="font-mono">
+                    {editingVersionId === v.id ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={draftVersionLabel}
+                          onChange={(e) => setDraftVersionLabel(e.target.value)}
+                          className="h-7 w-28 text-xs font-mono"
+                          placeholder="2026.03.00"
+                          autoFocus
+                        />
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveVersionLabel(v.id)} disabled={savingVersion}>
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={cancelEditVersion} disabled={savingVersion}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startEditVersion(v)}
+                        className="group flex items-center gap-1.5 text-left hover:text-foreground"
+                      >
+                        {v.display_version || `v${v.version_number}`}
+                        <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 flex-shrink-0" />
+                      </button>
+                    )}
+                  </TableCell>
                   <TableCell>{getStatusBadge(v.status)}</TableCell>
                   <TableCell className="text-sm">{v.file_name}</TableCell>
                   <TableCell className="max-w-[220px]">

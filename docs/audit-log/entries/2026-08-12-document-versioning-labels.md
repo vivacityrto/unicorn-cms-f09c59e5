@@ -81,6 +81,17 @@ Migration: `supabase/migrations/20260812060236_add_document_versions_display_ver
 
 Applied directly to prod via Supabase MCP `apply_migration`.
 
+**Follow-up migration:** `supabase/migrations/20260812070901_correct_display_version_from_filename_batch.sql`
+— Carl spotted live that 5 documents from the 20 Jul 2026 import batch had
+their real version embedded in the SharePoint filename itself (e.g.
+`Q1.D4-Facilities-Resources-and-Equipment-Policy-2026.03.00.docx`), which
+the backfill above ignored (it only used `documents.versiondate`'s year,
+correct for the other 533 documents but not these 5, which have no
+`versiondate` signal as good as their own filename). Queried for the exact
+population via `file_name ~ '\d{4}\.\d{2}\.\d{2}'`: exactly 5 documents
+(ids 7607, 7625, 7626, 7627, 7628), all mismatched the same way, all
+corrected to `2026.03.00` to match their filenames.
+
 ## Code changes
 
 - `supabase/functions/import-sharepoint-template/index.ts` — `import` action
@@ -106,7 +117,15 @@ Applied directly to prod via Supabase MCP `apply_migration`.
 - `src/components/governance/GovernanceVersionHistory.tsx` — displays
   `display_version` instead of plain `v{version_number}`; added inline-editable
   `notes` per version row (tag-message style), a direct client-side update
-  (verified safe given the RLS check above).
+  (verified safe given the RLS check above). `display_version` itself is
+  also inline-editable (same format validation as import, plus a friendly
+  message on the DB's `UNIQUE(document_id, display_version)` constraint —
+  Postgres error code `23505` — instead of a raw error). This is a
+  deliberate exception to "versions are immutable snapshots": editing the
+  *label* doesn't touch the checksum, stored file, or delivery/audit trail
+  of what was published, unlike the file-swap request declined above —
+  purely a correction tool for backfill/data-entry mistakes, not a way to
+  change what a version actually contains.
 - `src/pages/ManageDocuments.tsx` — the create-document dialog's first
   import call now requires a `display_version` (pre-filled baseline, no
   bump widget since there's no prior version); the table's row-level
@@ -144,6 +163,14 @@ alongside the new panels. No test data was left behind — confirmed via
 direct query that no stray `document_versions`/`documents` rows were
 created during dry-run testing (dialogs were cancelled before the final
 Import/Create click wherever a real mutation would have resulted).
+
+Version-label editing was verified with a real save-and-revert cycle
+against document 7628 rather than a dry run (nothing to mutate for a
+label-only edit): confirmed an invalid format is rejected client-side
+(edit stays open, no request sent), a valid change persists correctly
+(`2026.03.00` → `2026.03.01`, verified via direct query and the table
+re-rendering), then reverted the same way back to the correct
+`2026.03.00`, confirmed restored.
 
 ## Decisions
 
