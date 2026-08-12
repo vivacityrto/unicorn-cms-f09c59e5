@@ -81,6 +81,44 @@ Migration: `supabase/migrations/20260812060236_add_document_versions_display_ver
 
 Applied directly to prod via Supabase MCP `apply_migration`.
 
+**Critical bug, caught by Vercel's automated PR review bot, not by this
+session's own testing:** adding `display_version` as `NOT NULL` broke two
+Postgres RPCs that `INSERT INTO document_versions` without supplying it —
+`bulk_create_documents_with_versions` and `publish_document_version`.
+This session's original safety sweep only grepped frontend TypeScript for
+`.from('document_versions')` calls; it never checked server-side RPC
+function bodies, which write to the table through a completely different
+code path invisible to that grep. `bulk_create_documents_with_versions`
+is genuinely live — called by `useBulkDocumentUpload`, used by
+`BulkUploadWithMetadataDialog`, imported by `StageDocumentsPanel.tsx` —
+so any bulk document upload was actively broken in production (`23502`
+NOT NULL violation) from the moment the schema migration landed until
+this fix. `publish_document_version`'s only frontend caller
+(`DocumentVersionHistory.tsx`) is orphaned since the `/document/:id`
+route retirement, so it wasn't live-broken, but was fixed for the same
+reason and to the same standard.
+
+Fix (`supabase/migrations/20260812072400_fix_rpcs_missing_display_version.sql`):
+both RPCs now generate a `display_version` themselves, since neither
+exposes a parameter for one and both predate the new UI's bump-choice
+flow. `bulk_create_documents_with_versions` always creates
+`version_number = 1` for a brand-new `document_id`, so
+`{current_year}.00.00` can never collide with an existing row for that
+document. `publish_document_version` increments `version_number` on an
+existing document, so its label is derived from `version_number`
+(`{current_year}.00.{lpad(version_number,2,'0')}`) to guarantee it never
+collides with a prior call on the same document. Ran a full sweep
+afterward (`pg_get_functiondef(...) ilike '%document_versions%' and
+ilike '%insert%'`) confirming these were the only two — the third and
+final match, `create_targeted_bulk_document_job`, only reads from the
+table. Also checked for triggers on `document_versions`: none exist.
+
+Verified the fix directly rather than trusting the SQL by reading it:
+called `bulk_create_documents_with_versions` with a real throwaway test
+document, confirmed it succeeded and `display_version` was set correctly
+(`2026.00.00`), then deleted the test document and confirmed both it and
+its cascaded `document_versions` row were gone.
+
 **Follow-up migration:** `supabase/migrations/20260812070901_correct_display_version_from_filename_batch.sql`
 — Carl spotted live that 5 documents from the 20 Jul 2026 import batch had
 their real version embedded in the SharePoint filename itself (e.g.
@@ -172,6 +210,10 @@ label-only edit): confirmed an invalid format is rejected client-side
 re-rendering), then reverted the same way back to the correct
 `2026.03.00`, confirmed restored.
 
+Additionally verified the RPC fix (`bulk_create_documents_with_versions`)
+directly against prod with a real throwaway call — see "Critical bug"
+above — rather than trusting the SQL by review alone.
+
 ## Decisions
 
 - **Per-document versioning, not global/catalog versioning** — see Findings
@@ -189,6 +231,16 @@ re-rendering), then reverted the same way back to the correct
   removed its UI in `ManageDocuments.tsx`. `AdminManagePackages.tsx` has an
   identical, separate form still writing to the same column; dropping the
   column would break that untouched page. Flagged, not actioned.
+- **Process lesson, not just a one-off bug:** the pre-migration safety
+  sweep for this session and the `document_fields` RLS fix earlier both
+  grepped frontend TypeScript for table access. Neither checked
+  server-side RPC function bodies, which is exactly where this NOT NULL
+  break lived and where a frontend-only grep will always miss writes.
+  Any future `NOT NULL`/constraint addition to a table should also sweep
+  `pg_proc` definitions for that table name, not just app code — the
+  query used here (`pg_get_functiondef(oid) ilike '%<table>%' and ilike
+  '%insert%'`) is cheap and would have caught this before it ever
+  shipped.
 
 ## Open questions parked
 
