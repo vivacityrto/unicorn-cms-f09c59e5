@@ -20,6 +20,7 @@ import { GovernanceDeliveryHistory } from './GovernanceDeliveryHistory';
 import { GovernanceTailoringHealth } from './GovernanceTailoringHealth';
 import { GovernancePackageAssignments } from './GovernancePackageAssignments';
 import { GovernanceDocumentEditDialog } from './GovernanceDocumentEditDialog';
+import { MergeFieldsEditor } from '@/components/document/MergeFieldsEditor';
 
 interface GovernanceDocumentDetailProps {
   documentId: number;
@@ -253,6 +254,9 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
 
       {/* Tailoring Health */}
       <GovernanceTailoringHealth documentId={documentId} />
+
+      {/* Required Merge Fields: defines the tags Tailoring Health/delivery grade completeness against */}
+      <MergeFieldsEditor documentId={documentId} />
 
       {/* Mapping Editor: prefer latest draft, fall back to published version */}
       {mappingEditorVersion && (
