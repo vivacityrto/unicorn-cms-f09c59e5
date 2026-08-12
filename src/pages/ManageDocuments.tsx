@@ -604,22 +604,30 @@ export default function ManageDocuments() {
           }
         }
 
-        // Fetch document_files + document_versions presence to derive file_status
+        // Fetch document_files + document_versions presence to derive file_status.
+        // Bulk-imported documents got a placeholder document_versions row with
+        // storage_path set to '' rather than a real file — only versions with a
+        // non-empty storage_path represent an actual uploaded/generated file.
         const docIds = (documentsData || []).map(d => d.id);
         let readySet = new Set<number>();
         let versionsSet = new Set<number>();
         if (docIds.length > 0) {
           const [{ data: filesData }, { data: versionsData }] = await Promise.all([
             supabase.from('document_files').select('document_id').in('document_id', docIds),
-            supabase.from('document_versions').select('document_id').in('document_id', docIds),
+            supabase.from('document_versions').select('document_id, storage_path').in('document_id', docIds),
           ]);
           readySet = new Set((filesData || []).map(f => f.document_id as number));
-          versionsSet = new Set((versionsData || []).map(v => v.document_id as number));
+          versionsSet = new Set(
+            (versionsData || [])
+              .filter(v => v.storage_path && v.storage_path.trim() !== '')
+              .map(v => v.document_id as number)
+          );
         }
 
         // Enrich documents with creator info + file_status
-        // A document counts as file_ready if it has a document_files row, any
-        // document_versions row, or a non-null source_template_url (SharePoint-linked).
+        // A document counts as file_ready if it has a document_files row, a
+        // document_versions row with a real file, or a non-null
+        // source_template_url (SharePoint-linked).
         const enrichedDocs = (documentsData || []).map(doc => {
           const isReady =
             readySet.has(doc.id) ||
@@ -694,8 +702,12 @@ export default function ManageDocuments() {
   })();
   const duplicateDocCount = documents.filter(doc => duplicateTitleCounts[duplicateKey(doc)] > 1).length;
 
-  const applyFiltersAndSort = () => {
-    let filtered = [...documents];
+  // Every filter except file status — shared between the main filter chain
+  // and the file-status tab counts, so the tabs reflect whatever else is
+  // currently filtered (search/format/category/etc.) instead of always
+  // showing totals for the full unfiltered document list.
+  const applyNonFileStatusFilters = (docs: typeof documents) => {
+    let filtered = docs;
 
     // Search filter — words separated by spaces or dashes match across either
     // separator (file names are dash-cased, titles are space-cased).
@@ -733,6 +745,12 @@ export default function ManageDocuments() {
     } else if (sharepointFilter === "no_url") {
       filtered = filtered.filter(doc => !doc.source_template_url);
     }
+
+    return filtered;
+  };
+
+  const applyFiltersAndSort = () => {
+    let filtered = applyNonFileStatusFilters(documents);
 
     // File status filter
     if (fileStatusFilter === 'needs_upload') {
@@ -789,9 +807,12 @@ export default function ManageDocuments() {
     }
   };
 
-  // File status counts (derived from full documents list)
-  const needsUploadCount = documents.filter(d => d.file_status === 'needs_upload').length;
-  const readyCount = documents.filter(d => d.file_status === 'file_ready').length;
+  // File status counts — reflect every other active filter (search, format,
+  // category, etc.), not the full unfiltered document list, so the tab
+  // labels match what the other filters/tabs would actually show.
+  const fileStatusEligible = applyNonFileStatusFilters(documents);
+  const needsUploadCount = fileStatusEligible.filter(d => d.file_status === 'needs_upload').length;
+  const readyCount = fileStatusEligible.filter(d => d.file_status === 'file_ready').length;
 
   const handleInlineFileUpload = async (docId: number, file: File) => {
     try {
@@ -2001,7 +2022,7 @@ export default function ManageDocuments() {
           <span className="text-sm font-medium text-muted-foreground">File status:</span>
           <div className="inline-flex rounded-lg border border-border/50 bg-card p-1 shadow-sm">
             {([
-              { value: 'all', label: `All (${documents.length})` },
+              { value: 'all', label: `All (${fileStatusEligible.length})` },
               { value: 'needs_upload', label: `Needs Upload (${needsUploadCount})` },
               { value: 'ready', label: `Ready (${readyCount})` },
             ] as const).map(opt => (
