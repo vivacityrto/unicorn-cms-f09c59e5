@@ -55,7 +55,6 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const PackageBuilder = lazy(() => import("./pages/PackageBuilder"));
  const PackageBuilderDetail = lazy(() => import("./pages/PackageBuilderDetail"));
  const ManageEmailTemplatesWrapper = lazy(() => import("./pages/ManageEmailTemplatesWrapper"));
- const DocumentDetailWrapper = lazy(() => import("./pages/DocumentDetailWrapper"));
  const TeamSettingsWrapper = lazy(() => import("./pages/TeamSettingsWrapper"));
  const SettingsWrapper = lazy(() => import("./pages/SettingsWrapper"));
  const CalendarWrapper = lazy(() => import("./pages/CalendarWrapper"));
@@ -526,15 +525,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/document/:id" 
-              element={
-                <ProtectedRoute>
-                  <DocumentDetailWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
+            <Route
               path="/user-profile/:userId"
               element={
                 <ProtectedRoute>

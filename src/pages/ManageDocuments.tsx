@@ -1189,9 +1189,6 @@ export default function ManageDocuments() {
       });
     }
   };
-  const handleSendDocument = (docId: number) => {
-    navigate(`/document/${docId}`);
-  };
   const toggleSelectDocument = (docId: number) => {
     setSelectedDocuments(prev => prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]);
   };
