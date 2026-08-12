@@ -677,10 +677,13 @@ export default function ManageDocuments() {
       setLoading(false);
     }
   };
-  // Compute duplicate counts — keyed by title AND format, so a Word/PDF pair
-  // of the same title (a legitimate format variant) isn't flagged as a duplicate.
-  const duplicateKey = (doc: { title?: string | null; format?: string | null }) =>
-    `${(doc.title || '').toLowerCase().trim()}||${(doc.format || '').toLowerCase().trim()}`;
+  // Compute duplicate counts — keyed by title, format, AND category, so a
+  // Word/PDF pair of the same title (a legitimate format variant) or two
+  // documents that share a generic title but cover different categories
+  // (e.g. state-specific "gto-vic" vs "gto-nsw" variants) aren't flagged
+  // as duplicates.
+  const duplicateKey = (doc: { title?: string | null; format?: string | null; category?: string | null }) =>
+    `${(doc.title || '').toLowerCase().trim()}||${(doc.format || '').toLowerCase().trim()}||${(doc.category || '').toLowerCase().trim()}`;
   const duplicateTitleCounts = (() => {
     const counts: Record<string, number> = {};
     documents.forEach(doc => {
