@@ -325,34 +325,43 @@ export default function AudienceHubPage({
       </div>
 
       {/* Hidden clones used only to measure each pill's natural rendered
-          width for the fit calculation above — never shown. */}
-      <div aria-hidden className="absolute invisible h-0 overflow-hidden flex items-center gap-1 pointer-events-none">
-        {allBuckets.map((b, i) => (
-          <button
-            key={b.tag}
-            ref={itemRef(i)}
-            type="button"
-            tabIndex={-1}
-            className="px-3 py-2 text-sm font-medium whitespace-nowrap"
-          >
-            {bucketLabel(b)} ({b.count})
+          width for the fit calculation above — never shown. The unwrapped
+          flex row is far wider than the viewport (every tag on the page,
+          unwrapped, plus every active-More variant), so it needs its own
+          clipped, positioned parent — AcademyLayout's <main> has no
+          overflow-x constraint (unlike ClientLayout, where this pattern
+          originated), so without this the wide invisible row blows out
+          horizontal scroll on any pathway with more tags than fit on
+          screen. */}
+      <div className="relative h-0 overflow-hidden">
+        <div aria-hidden className="absolute invisible flex items-center gap-1 pointer-events-none">
+          {allBuckets.map((b, i) => (
+            <button
+              key={b.tag}
+              ref={itemRef(i)}
+              type="button"
+              tabIndex={-1}
+              className="px-3 py-2 text-sm font-medium whitespace-nowrap"
+            >
+              {bucketLabel(b)} ({b.count})
+            </button>
+          ))}
+          <button ref={moreMeasureRef} type="button" tabIndex={-1} className="px-3 py-2 text-sm font-medium flex items-center gap-1">
+            More <ChevronDown className="h-3.5 w-3.5" />
           </button>
-        ))}
-        <button ref={moreMeasureRef} type="button" tabIndex={-1} className="px-3 py-2 text-sm font-medium flex items-center gap-1">
-          More <ChevronDown className="h-3.5 w-3.5" />
-        </button>
-        {allBuckets.map((b, i) => (
-          <button
-            key={`more-${b.tag}`}
-            ref={activeMoreMeasureRef(i)}
-            type="button"
-            tabIndex={-1}
-            className="px-3 py-2 text-sm font-medium flex items-center gap-1"
-          >
-            {bucketLabel(b)} ({b.count})
-            <ChevronDown className="h-3.5 w-3.5" />
-          </button>
-        ))}
+          {allBuckets.map((b, i) => (
+            <button
+              key={`more-${b.tag}`}
+              ref={activeMoreMeasureRef(i)}
+              type="button"
+              tabIndex={-1}
+              className="px-3 py-2 text-sm font-medium flex items-center gap-1"
+            >
+              {bucketLabel(b)} ({b.count})
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Loading */}

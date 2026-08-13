@@ -16,7 +16,12 @@ import {
   Search, Pencil, Trash2, ChevronDown, ChevronRight, ExternalLink, Check, X, Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAcademyTagStats, useRenameAcademyTag, type TagStat } from "@/hooks/academy/useAcademyTagManagement";
+import {
+  useAcademyTagStats,
+  useRenameAcademyTag,
+  normalizeTagValue,
+  type TagStat,
+} from "@/hooks/academy/useAcademyTagManagement";
 
 export default function AcademyTagManagementPage() {
   const [search, setSearch] = useState("");
@@ -51,7 +56,7 @@ export default function AcademyTagManagementPage() {
   };
 
   const confirmEdit = (oldTag: string) => {
-    const newTag = editValue.trim();
+    const newTag = normalizeTagValue(editValue);
     if (!newTag || newTag === oldTag) {
       cancelEditing();
       return;
@@ -62,9 +67,16 @@ export default function AcademyTagManagementPage() {
     );
   };
 
+  // Matches the same normalization the mutation itself applies, so this
+  // preview never claims a merge that the actual save wouldn't perform.
   const willMergeInto = editingTag
-    ? tags.find((t) => t.tag === editValue.trim() && t.tag !== editingTag)
+    ? tags.find((t) => t.tag === normalizeTagValue(editValue) && t.tag !== editingTag)
     : undefined;
+
+  // Only one rename/delete may be in flight at a time — prevents two
+  // overlapping operations from touching the same course and having
+  // whichever write lands last silently win.
+  const anyMutationPending = renameTag.isPending;
 
   return (
     <DashboardLayout>
@@ -221,7 +233,12 @@ export default function AcademyTagManagementPage() {
                         <TableCell>
                           {!isEditing && (
                             <div className="flex items-center gap-1.5">
-                              <Button variant="outline" size="sm" onClick={() => startEditing(t.tag)}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={anyMutationPending}
+                                onClick={() => startEditing(t.tag)}
+                              >
                                 <Pencil className="h-3.5 w-3.5 mr-1" />
                                 Rename / merge
                               </Button>
@@ -229,6 +246,7 @@ export default function AcademyTagManagementPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-9 w-9 text-destructive hover:text-destructive"
+                                disabled={anyMutationPending}
                                 onClick={() => setDeleteTarget(t)}
                                 aria-label={`Delete tag ${t.tag}`}
                               >

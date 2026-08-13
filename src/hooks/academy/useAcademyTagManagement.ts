@@ -50,6 +50,17 @@ export function useAcademyTagStats() {
 }
 
 /**
+ * Tags are stored lowercase with spaces (the convention 162 real tags
+ * already use — see docs/audit-log/entries/2026-08-13-academy-tag-cleanup.md).
+ * Only normalizes casing/whitespace, not hyphenation — TagChipInput's own
+ * kebab-casing of newly-typed tags is a separate, pre-existing inconsistency
+ * this doesn't attempt to resolve.
+ */
+export function normalizeTagValue(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/**
  * Renames a tag across every course that carries it. Passing a name that
  * already exists as a different tag on a course is how "merge" works — the
  * two collapse into one entry on that course, no separate merge code path.
@@ -58,16 +69,30 @@ export function useAcademyTagStats() {
 export function useRenameAcademyTag() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ oldTag, newTag }: { oldTag: string; newTag: string | null }) => {
+    mutationFn: async ({ oldTag, newTag: rawNewTag }: { oldTag: string; newTag: string | null }) => {
+      const newTag = rawNewTag ? normalizeTagValue(rawNewTag) : null;
+
+      // Scoped to non-archived courses, matching useAcademyTagStats — so the
+      // count shown before running an action is exactly what gets touched.
       const { data: courses, error } = await supabase
         .from("academy_courses")
         .select("id, tags")
-        .contains("tags", [oldTag]);
+        .contains("tags", [oldTag])
+        .neq("status", "archived");
       if (error) throw error;
       if (!courses?.length) return { affected: 0 };
 
+      // Re-read each row's own current tags immediately before writing it
+      // (rather than reusing the snapshot above) so this survives another
+      // rename/delete touching the same course while this one is in flight.
       for (const course of courses as { id: number; tags: string[] | null }[]) {
-        const current = course.tags ?? [];
+        const { data: fresh, error: freshErr } = await supabase
+          .from("academy_courses")
+          .select("tags")
+          .eq("id", course.id)
+          .single();
+        if (freshErr) throw freshErr;
+        const current = (fresh?.tags as string[] | null) ?? [];
         const next = Array.from(
           new Set(
             current
