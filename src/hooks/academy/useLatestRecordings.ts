@@ -2,61 +2,42 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface LatestRecording {
-  id: string;
-  video_name: string;
+  id: number;
+  title: string;
   thumbnail: string | null;
-  duration_seconds: number | null;
-  folder_name: string | null;
-  lessonId: number;
+  deliveryDate: string | null;
+  estimatedMinutes: number | null;
   courseSlug: string;
 }
 
+/**
+ * Most recently *delivered* published courses (by delivery_date), not most
+ * recently uploaded video — a course can be re-recorded/re-edited long after
+ * it was actually run, so upload time doesn't reflect what clients mean by
+ * "recent".
+ */
 export function useLatestRecordings() {
   return useQuery({
     queryKey: ["latest-recordings"],
     queryFn: async (): Promise<LatestRecording[]> => {
       const { data, error } = await supabase
-        .from("training_videos")
-        .select(`
-          id,
-          video_name,
-          thumbnail,
-          duration_seconds,
-          folder_name,
-          created_at,
-          academy_lessons!video_id(
-            id,
-            is_published,
-            lesson_type,
-            academy_courses!course_id(slug)
-          )
-        `)
-        .order("created_at", { ascending: false })
+        .from("academy_courses")
+        .select("id, title, slug, thumbnail_url, delivery_date, estimated_minutes")
+        .eq("status", "published")
+        .not("delivery_date", "is", null)
+        .order("delivery_date", { ascending: false })
         .limit(5);
 
       if (error) throw error;
 
-      return (data ?? []).flatMap((video: any) => {
-        const lessons = video.academy_lessons as Array<{
-          id: number;
-          is_published: boolean | null;
-          lesson_type: string | null;
-          academy_courses: { slug: string } | null;
-        }>;
-        const lesson = lessons?.find(
-          (l) => l.is_published === true && l.lesson_type === "video"
-        );
-        if (!lesson || !lesson.academy_courses) return [];
-        return [{
-          id: video.id,
-          video_name: video.video_name,
-          thumbnail: video.thumbnail,
-          duration_seconds: video.duration_seconds,
-          folder_name: video.folder_name,
-          lessonId: lesson.id,
-          courseSlug: lesson.academy_courses.slug,
-        }];
-      });
+      return (data ?? []).map((course) => ({
+        id: course.id,
+        title: course.title,
+        thumbnail: course.thumbnail_url,
+        deliveryDate: course.delivery_date,
+        estimatedMinutes: course.estimated_minutes,
+        courseSlug: course.slug,
+      }));
     },
   });
 }
