@@ -1128,6 +1128,8 @@ export type Database = {
           lesson_type: string | null
           module_id: number
           resource_id: string | null
+          segment_end_seconds: number | null
+          segment_start_seconds: number | null
           sort_order: number
           title: string
           updated_at: string | null
@@ -1147,6 +1149,8 @@ export type Database = {
           lesson_type?: string | null
           module_id: number
           resource_id?: string | null
+          segment_end_seconds?: number | null
+          segment_start_seconds?: number | null
           sort_order?: number
           title: string
           updated_at?: string | null
@@ -1166,6 +1170,8 @@ export type Database = {
           lesson_type?: string | null
           module_id?: number
           resource_id?: string | null
+          segment_end_seconds?: number | null
+          segment_start_seconds?: number | null
           sort_order?: number
           title?: string
           updated_at?: string | null
@@ -70831,6 +70837,10 @@ export type Database = {
           p_status: string
         }
         Returns: undefined
+      }
+      fn_consolidate_compliance_lab_segments: {
+        Args: { p_dry_run?: boolean }
+        Returns: Json
       }
       fn_email_tickets_flag_sla_breaches: { Args: never; Returns: undefined }
       fn_generate_portal_activity_digest: { Args: never; Returns: undefined }
