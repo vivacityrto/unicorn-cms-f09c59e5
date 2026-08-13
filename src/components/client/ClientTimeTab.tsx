@@ -1550,7 +1550,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                     billable: e.is_billable ? 'Yes' : 'No',
                     notes: (e.notes || '—').substring(0, 40),
                   }));
-                  const header = { date: 'Date', user: 'User', dur: 'Duration', type: 'Type', billable: 'Billable', notes: 'Notes' };
+                  const header = { date: 'Date', user: 'User', dur: 'Duration', type: 'Type', billable: 'Billable', notes: 'Description' };
                   const all = [header, ...rows];
                   const w = {
                     date: Math.max(...all.map(r => r.date.length)),
@@ -1674,7 +1674,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                     <TableHead>Type</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Billable</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

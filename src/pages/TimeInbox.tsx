@@ -807,7 +807,7 @@ export default function TimeInbox() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Notes</Label>
+                    <Label>Description</Label>
                     <Textarea
                       value={formData.notes}
                       onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}

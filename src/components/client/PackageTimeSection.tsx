@@ -259,7 +259,7 @@ export function PackageTimeSection({
                   <TableHead>Type</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Billable</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
