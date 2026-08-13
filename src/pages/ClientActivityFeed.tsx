@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { usePortfolioTimeline } from '@/hooks/usePortfolioTimeline';
+import { groupedEventHref } from '@/hooks/portfolioTimelineGrouping';
 import { EVENT_TYPE_FILTERS } from '@/hooks/useClientManagementData';
 import { FILTER_OPTIONS } from '@/components/client/ClientTimelineTab';
 import { EVENT_ICON_MAP, EVENT_COLOR_MAP } from '@/components/client/TimelineEventCard';
@@ -264,9 +265,7 @@ export default function ClientActivityFeed() {
                             <button
                               type="button"
                               onClick={() =>
-                                event.group_kind === 'broadcast'
-                                  ? navigate('/communications')
-                                  : navigate(`/tenant/${event.tenant_id}?tab=timeline`)
+                                navigate(groupedEventHref(event) ?? `/tenant/${event.tenant_id}?tab=timeline`)
                               }
                               className="w-full py-2.5 flex items-start gap-3 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
                             >

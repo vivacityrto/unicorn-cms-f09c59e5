@@ -6,19 +6,29 @@ import type { TimelineEvent } from './useClientManagementData';
  * intentionally keeps one row per underlying client_timeline_events row so
  * staff can see exactly which users/messages made up an admin action.
  *
- * A single bulk academy enrollment (useBulkEnroll/useEnrollTenant) or a
- * broadcast campaign fanned out to many tenants each fire a DB trigger once
- * per inserted row, so the raw feed shows one near-identical row per
- * user/tenant. This collapses those into one summary row for display.
+ * A bulk/auto academy enrollment (useBulkEnroll/useEnrollTenant, or a
+ * course published with available_to_all_clients) or a broadcast campaign
+ * fanned out to many tenants each fire a DB trigger once per inserted row,
+ * so the raw feed shows one near-identical row per user/tenant. This
+ * collapses those into one summary row for display.
  */
 
 export interface PortfolioTimelineEvent extends TimelineEvent {
   tenant_name: string;
   /** Present only on a synthetic row produced by grouping >1 raw events. */
   group_count?: number;
-  group_kind?: 'enrollment' | 'broadcast';
-  /** All distinct tenant_ids folded into a broadcast group. */
+  group_kind?: 'enrollment' | 'enrollment_multi' | 'broadcast';
+  /** All distinct tenant_ids folded into a multi-tenant enrollment or broadcast group. */
   group_tenant_ids?: number[];
+  /** Set on 'enrollment_multi' groups when the course's slug is known, for click-through. */
+  group_course_slug?: string;
+}
+
+/** Course info needed to word/link a grouped enrollment event — fetched by the caller. */
+export interface CourseActorInfo {
+  title: string;
+  slug: string | null;
+  actorUuid: string | null;
 }
 
 const ENROLLMENT_GROUP_WINDOW_MS = 10 * 60 * 1000;
@@ -43,8 +53,11 @@ function groupKeyFor(e: PortfolioTimelineEvent): GroupKeyInfo | null {
   if (e.event_type === 'academy_enrolled') {
     const courseId = (e.metadata as Record<string, unknown> | null)?.course_id;
     if (courseId == null) return null;
+    // Bucketed by course only (not tenant) so one platform-wide action — e.g.
+    // publishing a course with available_to_all_clients — collapses into a
+    // single cross-tenant row instead of one row per tenant.
     return {
-      bucketKey: `enrollment:${e.tenant_id}:${String(courseId)}`,
+      bucketKey: `enrollment:${String(courseId)}`,
       windowMs: ENROLLMENT_GROUP_WINDOW_MS,
       kind: 'enrollment',
     };
@@ -67,7 +80,9 @@ function groupKeyFor(e: PortfolioTimelineEvent): GroupKeyInfo | null {
 
 function buildGroupedEvent(
   cluster: PortfolioTimelineEvent[],
-  kind: 'enrollment' | 'broadcast'
+  kind: 'enrollment' | 'broadcast',
+  courseInfoByCourseId: Map<string, CourseActorInfo>,
+  actorNameByUuid: Map<string, string>
 ): PortfolioTimelineEvent {
   if (cluster.length === 1) return cluster[0];
 
@@ -76,14 +91,35 @@ function buildGroupedEvent(
   const count = cluster.length;
 
   if (kind === 'enrollment') {
-    const courseTitle = extractCourseTitle(newest.title);
-    const courseId = (newest.metadata as Record<string, unknown> | null)?.course_id;
+    const courseId = String((newest.metadata as Record<string, unknown> | null)?.course_id ?? '');
+    const courseInfo = courseInfoByCourseId.get(courseId);
+    const courseTitle = courseInfo?.title || extractCourseTitle(newest.title);
+    const actorName = courseInfo?.actorUuid ? actorNameByUuid.get(courseInfo.actorUuid) : undefined;
+    const verb = actorName ? `${actorName} auto enrolled` : 'Auto enrolled';
+    const tenantIds = [...new Set(cluster.map((e) => e.tenant_id))];
+
+    if (tenantIds.length === 1) {
+      return {
+        ...newest,
+        id: `group:enrollment:${courseId}:${newest.id}`,
+        title: `${verb} ${count} users to ${courseTitle}`,
+        group_count: count,
+        group_kind: 'enrollment',
+      };
+    }
+
+    // Cross-tenant: lead with the course (the informative part, like the
+    // broadcast subject) and fold the client count into the subtitle
+    // instead of leaving a bare "N clients" as the headline.
     return {
       ...newest,
-      id: `group:enrollment:${newest.tenant_id}:${String(courseId)}:${newest.id}`,
-      title: `${count} users enrolled in ${courseTitle}`,
+      id: `group:enrollment-multi:${courseId}:${newest.id}`,
+      title: `${verb} ${count} users across ${tenantIds.length} clients`,
+      tenant_name: courseTitle,
       group_count: count,
-      group_kind: 'enrollment',
+      group_kind: 'enrollment_multi',
+      group_tenant_ids: tenantIds,
+      group_course_slug: courseInfo?.slug ?? undefined,
     };
   }
 
@@ -95,8 +131,8 @@ function buildGroupedEvent(
   return {
     ...newest,
     id: `group:broadcast:${newest.created_by ?? 'unknown'}:${newest.id}`,
-    title: subject ? `Broadcast sent to ${tenantIds.length} clients: ${subject}` : `Broadcast sent to ${tenantIds.length} clients`,
-    tenant_name: `${tenantIds.length} clients`,
+    title: `Sent to ${tenantIds.length} clients`,
+    tenant_name: subject || 'Broadcast message',
     group_count: count,
     group_kind: 'broadcast',
     group_tenant_ids: tenantIds,
@@ -104,13 +140,33 @@ function buildGroupedEvent(
 }
 
 /**
+ * A cross-tenant grouped row (broadcast, or an enrollment spanning many
+ * clients) has no single tenant to open — route it somewhere more useful
+ * than a misleading single-tenant Timeline. Returns null for anything that
+ * should keep the default `/tenant/{tenant_id}?tab=timeline` navigation.
+ */
+export function groupedEventHref(event: PortfolioTimelineEvent): string | null {
+  if (event.group_kind === 'broadcast') return '/communications';
+  if (event.group_kind === 'enrollment_multi') {
+    return event.group_course_slug ? `/academy/course/${event.group_course_slug}` : '/academy/courses';
+  }
+  return null;
+}
+
+/**
  * Groups is display-only: it never mutates or removes the underlying
  * client_timeline_events rows, and the per-tenant Timeline reads that table
  * directly (via RPC) so it stays fully granular. `events` must already be
  * sorted newest-first (the query already does this).
+ *
+ * `courseInfoByCourseId`/`actorNameByUuid` are pre-fetched by the caller
+ * (usePortfolioTimeline) since this function stays a pure, synchronous
+ * transform — no DB access here.
  */
 export function groupPortfolioTimelineEvents(
-  events: PortfolioTimelineEvent[]
+  events: PortfolioTimelineEvent[],
+  courseInfoByCourseId: Map<string, CourseActorInfo> = new Map(),
+  actorNameByUuid: Map<string, string> = new Map()
 ): PortfolioTimelineEvent[] {
   const buckets = new Map<string, PortfolioTimelineEvent[]>();
   const bucketMeta = new Map<string, GroupKeyInfo>();
@@ -137,7 +193,7 @@ export function groupPortfolioTimelineEvents(
       const curr = members[i];
       const gapMs = curr ? occurredAtMs(prev) - occurredAtMs(curr) : Infinity;
       if (!curr || gapMs > meta.windowMs) {
-        output.push(buildGroupedEvent(members.slice(clusterStart, i), meta.kind));
+        output.push(buildGroupedEvent(members.slice(clusterStart, i), meta.kind, courseInfoByCourseId, actorNameByUuid));
         clusterStart = i;
       }
     }

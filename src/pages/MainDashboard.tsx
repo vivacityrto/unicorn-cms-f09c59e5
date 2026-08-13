@@ -42,6 +42,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow, format } from "date-fns";
 import { clientAvatarColor, clientInitials } from "@/lib/clientAvatarColor";
 import { usePortfolioTimeline } from "@/hooks/usePortfolioTimeline";
+import { groupedEventHref } from "@/hooks/portfolioTimelineGrouping";
 import { EVENT_ICON_MAP, EVENT_COLOR_MAP } from "@/components/client/TimelineEventCard";
 import type { TimelineEventType } from "@/types/timeline";
 
@@ -324,9 +325,7 @@ function ClientActivityPanel({ className, limit = 8 }: { className?: string; lim
                 <button
                   type="button"
                   onClick={() =>
-                    e.group_kind === 'broadcast'
-                      ? navigate('/communications')
-                      : navigate(`/tenant/${e.tenant_id}?tab=timeline`)
+                    navigate(groupedEventHref(e) ?? `/tenant/${e.tenant_id}?tab=timeline`)
                   }
                   className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
                 >
@@ -628,6 +627,7 @@ export default function MainDashboard() {
         .from("tenant_conversations" as any)
         .select("id, tenant_id, subject, topic, last_message_at, last_message_preview")
         .not("last_message_at", "is", null)
+        .neq("type", "broadcast")
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(3);
       const rows = (convos ?? []) as any[];
