@@ -24,7 +24,12 @@ export function useLatestRecordings() {
       // pre-published ahead of an upcoming live session could carry a
       // future delivery_date — exclude those so "recent" only ever means
       // already-delivered content, not something scheduled but not yet run.
-      const today = new Date().toISOString().slice(0, 10);
+      // Uses local calendar date, not toISOString()'s UTC — delivery_date
+      // is a local date from the course-builder date picker, and
+      // toISOString() would still read as yesterday for the first ~10-11
+      // hours of the day in Australian timezones.
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
       const { data, error } = await supabase
         .from("academy_courses")
