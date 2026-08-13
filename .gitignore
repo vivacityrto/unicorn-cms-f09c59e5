@@ -30,3 +30,20 @@ supabase/.temp/
 .env
 .env.local
 .env.*.local
+
+# Personal Claude Code overrides — never commit
+.claude/settings.local.json
+
+# Local MCP server configs — commonly hold personal access tokens, never commit
+.mcp.json
+.cursor/mcp.json
+
+# Parallel git worktrees used for hotfix/feature branches (see AGENTS.md)
+.worktrees/
+worktrees/
+
+# Codex CLI local state/logs
+.codex/
+
+# Playwright MCP local run artefacts (screenshots, traces, console logs)
+.playwright-mcp/
