@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { TimelineEvent } from './useClientManagementData';
-import type { CourseActorInfo } from './portfolioTimelineGrouping';
+import type { CourseActorInfo, ActorProfile } from './portfolioTimelineGrouping';
 
 interface CourseRow {
   id: number | string;
@@ -14,11 +14,12 @@ interface ActorRow {
   user_uuid: string;
   first_name: string | null;
   last_name: string | null;
+  avatar_url: string | null;
 }
 
 export interface EnrollmentCourseContext {
   courseInfoByCourseId: Map<string, CourseActorInfo>;
-  actorNameByUuid: Map<string, string>;
+  actorByUuid: Map<string, ActorProfile>;
 }
 
 /**
@@ -39,7 +40,7 @@ export async function fetchEnrollmentCourseContext(rows: TimelineEvent[]): Promi
     ),
   ];
   if (courseIds.length === 0) {
-    return { courseInfoByCourseId: new Map(), actorNameByUuid: new Map() };
+    return { courseInfoByCourseId: new Map(), actorByUuid: new Map() };
   }
 
   const { data: courses } = await supabase
@@ -56,19 +57,27 @@ export async function fetchEnrollmentCourseContext(rows: TimelineEvent[]): Promi
 
   const actorUuids = [...new Set([...courseInfoByCourseId.values()].map((c) => c.actorUuid).filter(Boolean))] as string[];
   if (actorUuids.length === 0) {
-    return { courseInfoByCourseId, actorNameByUuid: new Map() };
+    return { courseInfoByCourseId, actorByUuid: new Map() };
   }
 
   const { data: actors } = await supabase
     .from('users')
-    .select('user_uuid, first_name, last_name')
+    .select('user_uuid, first_name, last_name, avatar_url')
     .in('user_uuid', actorUuids);
 
-  const actorNameByUuid = new Map<string, string>(
+  const actorByUuid = new Map<string, ActorProfile>(
     ((actors || []) as ActorRow[])
-      .map((u): [string, string] => [u.user_uuid, [u.first_name, u.last_name].filter(Boolean).join(' ').trim()])
-      .filter(([, name]) => !!name)
+      .map((u): [string, ActorProfile] => [
+        u.user_uuid,
+        {
+          name: [u.first_name, u.last_name].filter(Boolean).join(' ').trim(),
+          first_name: u.first_name,
+          last_name: u.last_name,
+          avatar_url: u.avatar_url,
+        },
+      ])
+      .filter(([, profile]) => !!profile.name)
   );
 
-  return { courseInfoByCourseId, actorNameByUuid };
+  return { courseInfoByCourseId, actorByUuid };
 }

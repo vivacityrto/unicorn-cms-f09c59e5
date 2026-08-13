@@ -74,8 +74,8 @@ async function fetchPortfolioTimeline({
 
   const enriched = rows.map((r) => ({ ...r, tenant_name: nameMap.get(r.tenant_id) ?? 'Unknown client' }));
 
-  const { courseInfoByCourseId, actorNameByUuid } = await fetchEnrollmentCourseContext(rows);
-  const grouped = groupPortfolioTimelineEvents(enriched, courseInfoByCourseId, actorNameByUuid);
+  const { courseInfoByCourseId, actorByUuid } = await fetchEnrollmentCourseContext(rows);
+  const grouped = groupPortfolioTimelineEvents(enriched, courseInfoByCourseId, actorByUuid);
 
   return {
     events: grouped.slice(0, limit),

@@ -33,6 +33,14 @@ export interface CourseActorInfo {
   actorUuid: string | null;
 }
 
+/** Resolved profile for a course's published_by/created_by — fetched by the caller. */
+export interface ActorProfile {
+  name: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+}
+
 const ENROLLMENT_GROUP_WINDOW_MS = 10 * 60 * 1000;
 const BROADCAST_GROUP_WINDOW_MS = 30 * 60 * 1000;
 
@@ -89,7 +97,7 @@ function buildGroupedEvent(
   cluster: PortfolioTimelineEvent[],
   kind: 'enrollment' | 'broadcast',
   courseInfoByCourseId: Map<string, CourseActorInfo>,
-  actorNameByUuid: Map<string, string>
+  actorByUuid: Map<string, ActorProfile>
 ): PortfolioTimelineEvent {
   // Cluster is sorted newest-first; use the newest row as the template.
   const newest = cluster[0];
@@ -106,14 +114,31 @@ function buildGroupedEvent(
     const courseId = String(metadata?.course_id ?? '');
     const courseInfo = courseInfoByCourseId.get(courseId);
     const courseTitle = courseInfo?.title || extractCourseTitle(newest.title);
-    const actorName = courseInfo?.actorUuid ? actorNameByUuid.get(courseInfo.actorUuid) : undefined;
-    const verb = actorName ? `${actorName} auto enrolled` : 'Auto enrolled';
+    const actorProfile = courseInfo?.actorUuid ? actorByUuid.get(courseInfo.actorUuid) : undefined;
+    const verb = actorProfile ? `${actorProfile.name} auto enrolled` : 'Auto enrolled';
     const tenantIds = [...new Set(cluster.map((e) => e.tenant_id))];
+
+    // The trigger stamps created_by as enrolled_by, falling back to the
+    // enrolled user's own id when no admin is recorded — exactly the case
+    // here (that's why we're resolving the actor from the course at all).
+    // Override both fields so the creator chip agrees with the headline,
+    // instead of showing whichever enrolled user happened to be "newest".
+    const actorOverride = actorProfile
+      ? {
+          created_by: courseInfo!.actorUuid,
+          creator: {
+            first_name: actorProfile.first_name,
+            last_name: actorProfile.last_name,
+            avatar_url: actorProfile.avatar_url,
+          },
+        }
+      : {};
 
     if (count === 1) {
       const userName = extractUserName(newest.title);
       return {
         ...newest,
+        ...actorOverride,
         id: `group:enrollment:${courseId}:${newest.id}`,
         title: userName ? `${verb} ${userName} in ${courseTitle}` : `${verb} to ${courseTitle}`,
         group_kind: 'enrollment',
@@ -123,6 +148,7 @@ function buildGroupedEvent(
     if (tenantIds.length === 1) {
       return {
         ...newest,
+        ...actorOverride,
         id: `group:enrollment:${courseId}:${newest.id}`,
         title: `${verb} ${count} users to ${courseTitle}`,
         group_count: count,
@@ -135,6 +161,7 @@ function buildGroupedEvent(
     // instead of leaving a bare "N clients" as the headline.
     return {
       ...newest,
+      ...actorOverride,
       id: `group:enrollment-multi:${courseId}:${newest.id}`,
       title: `${verb} ${count} users across ${tenantIds.length} clients`,
       tenant_name: courseTitle,
@@ -184,14 +211,14 @@ export function groupedEventHref(event: PortfolioTimelineEvent): string | null {
  * directly (via RPC) so it stays fully granular. `events` must already be
  * sorted newest-first (the query already does this).
  *
- * `courseInfoByCourseId`/`actorNameByUuid` are pre-fetched by the caller
- * (usePortfolioTimeline) since this function stays a pure, synchronous
- * transform — no DB access here.
+ * `courseInfoByCourseId`/`actorByUuid` are pre-fetched by the caller
+ * (fetchEnrollmentCourseContext) since this function stays a pure,
+ * synchronous transform — no DB access here.
  */
 export function groupPortfolioTimelineEvents(
   events: PortfolioTimelineEvent[],
   courseInfoByCourseId: Map<string, CourseActorInfo> = new Map(),
-  actorNameByUuid: Map<string, string> = new Map()
+  actorByUuid: Map<string, ActorProfile> = new Map()
 ): PortfolioTimelineEvent[] {
   const buckets = new Map<string, PortfolioTimelineEvent[]>();
   const bucketMeta = new Map<string, GroupKeyInfo>();
@@ -218,7 +245,7 @@ export function groupPortfolioTimelineEvents(
       const curr = members[i];
       const gapMs = curr ? occurredAtMs(prev) - occurredAtMs(curr) : Infinity;
       if (!curr || gapMs > meta.windowMs) {
-        output.push(buildGroupedEvent(members.slice(clusterStart, i), meta.kind, courseInfoByCourseId, actorNameByUuid));
+        output.push(buildGroupedEvent(members.slice(clusterStart, i), meta.kind, courseInfoByCourseId, actorByUuid));
         clusterStart = i;
       }
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { groupPortfolioTimelineEvents } from '@/hooks/portfolioTimelineGrouping';
@@ -141,6 +141,12 @@ export interface DateRange {
 
 export function useClientTimeline(tenantId: number | null, clientId: string | null) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
+  // Raw (ungrouped) rows accumulated across "Load more" pages. Grouping
+  // must run over this full accumulator each time, not per-page — a single
+  // burst (all rows sharing one timestamp) can span more than one page,
+  // and grouping each page in isolation fragments it into one fake
+  // cluster per page instead of the one real cluster it actually is.
+  const rawEventsRef = useRef<TimelineEvent[]>([]);
   const [pinnedNotes, setPinnedNotes] = useState<PinnedNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -231,24 +237,26 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
         creator: creatorsMap.get(event.created_by)
       })) as TimelineEvent[];
 
+      rawEventsRef.current = offset === 0
+        ? eventsWithCreators
+        : [...rawEventsRef.current, ...eventsWithCreators];
+
       // Same display-only grouping as the portfolio-wide feed: collapses a
       // mass/auto academy enrollment into one row and rewords even a lone
       // auto-enrolled row so it doesn't read as the user's own action.
       // Scoped to this one tenant already (RPC-filtered), so it never
-      // produces a cross-tenant 'enrollment_multi' group here.
-      const { courseInfoByCourseId, actorNameByUuid } = await fetchEnrollmentCourseContext(eventsWithCreators);
+      // produces a cross-tenant 'enrollment_multi' group here. Regrouped
+      // over the full raw accumulator (not just this page) so a burst that
+      // spans a "Load more" page boundary still collapses into one row.
+      const { courseInfoByCourseId, actorByUuid } = await fetchEnrollmentCourseContext(rawEventsRef.current);
       const groupedEvents = groupPortfolioTimelineEvents(
-        eventsWithCreators.map((e) => ({ ...e, tenant_name: '' })),
+        rawEventsRef.current.map((e) => ({ ...e, tenant_name: '' })),
         courseInfoByCourseId,
-        actorNameByUuid
+        actorByUuid
       ) as TimelineEvent[];
 
-      if (offset === 0) {
-        setEvents(groupedEvents);
-      } else {
-        setEvents(prev => [...prev, ...groupedEvents]);
-      }
-      
+      setEvents(groupedEvents);
+
       setHasMore((data?.length || 0) === limit);
     } catch (error: any) {
       console.error('Error fetching timeline:', error);
