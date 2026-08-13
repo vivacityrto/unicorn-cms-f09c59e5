@@ -333,7 +333,7 @@ export default function AudienceHubPage({
           originated), so without this the wide invisible row blows out
           horizontal scroll on any pathway with more tags than fit on
           screen. */}
-      <div className="relative h-0 overflow-hidden">
+      <div className="relative h-0 overflow-hidden !mt-0">
         <div aria-hidden className="absolute invisible flex items-center gap-1 pointer-events-none">
           {allBuckets.map((b, i) => (
             <button
