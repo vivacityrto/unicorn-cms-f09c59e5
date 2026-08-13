@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
+import { useFacilitatorNames } from "@/hooks/academy/useFacilitatorNames";
 
 export interface AcademyCourse {
   id: number;
@@ -17,6 +19,10 @@ export interface AcademyCourse {
   webinar_series: string | null;
   sort_order: number | null;
   certificate_enabled: boolean | null;
+  delivery_date: string | null;
+  facilitator_id: string | null;
+  // Resolved client-side from facilitator_id, see useFacilitatorNames
+  facilitator_name: string | null;
   // Joined from progress view / enrollment
   enrollment_status: string | null;
   progress_percentage: number;
@@ -30,15 +36,17 @@ interface UseAcademyCoursesOptions {
   audienceKey: string; // "trainer" | "compliance_manager" | "governance_person"
 }
 
+type AcademyCourseRow = Omit<AcademyCourse, "facilitator_name">;
+
 export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
   const { userId } = useAcademyActingUserId();
-  return useQuery({
+  const coursesQuery = useQuery({
     queryKey: ["academy-courses", audienceKey, userId],
-    queryFn: async (): Promise<AcademyCourse[]> => {
+    queryFn: async (): Promise<AcademyCourseRow[]> => {
       // Fetch published courses for this audience
       const { data: courses, error: coursesErr } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, thumbnail_url, target_audience, estimated_minutes, difficulty_level, status, tags, webinar_series, sort_order, certificate_enabled")
+        .select("id, title, slug, description, short_description, thumbnail_url, target_audience, estimated_minutes, difficulty_level, status, tags, webinar_series, sort_order, certificate_enabled, delivery_date, facilitator_id")
         .eq("status", "published")
         .contains("target_audience", [audienceKey])
         .order("sort_order", { ascending: true, nullsFirst: false })
@@ -101,6 +109,27 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
     },
     staleTime: 30_000,
   });
+
+  const facilitatorIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const c of coursesQuery.data ?? []) {
+      if (c.facilitator_id) ids.add(c.facilitator_id);
+    }
+    return [...ids];
+  }, [coursesQuery.data]);
+
+  const { data: facilitatorNameById = {} } = useFacilitatorNames(facilitatorIds);
+
+  const data = useMemo<AcademyCourse[]>(
+    () =>
+      (coursesQuery.data ?? []).map((c) => ({
+        ...c,
+        facilitator_name: c.facilitator_id ? facilitatorNameById[c.facilitator_id] ?? null : null,
+      })),
+    [coursesQuery.data, facilitatorNameById],
+  );
+
+  return { ...coursesQuery, data };
 }
 
 /** Dashboard stats hook */

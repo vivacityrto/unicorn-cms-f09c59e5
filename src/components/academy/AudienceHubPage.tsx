@@ -4,6 +4,7 @@ import { ChevronDown, GraduationCap, Search } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useOverflowTabs } from "@/hooks/useOverflowTabs";
+import { formatDeliveryDate } from "@/lib/academy/formatDeliveryDate";
 import CourseCard from "@/components/academy/CourseCard";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 import { Input } from "@/components/ui/input";
@@ -419,6 +420,8 @@ export default function AudienceHubPage({
                 totalLessons={course.total_lessons}
                 accentColour={accentColour}
                 thumbnailUrl={course.thumbnail_url}
+                deliveryDateLabel={formatDeliveryDate(course.delivery_date)}
+                facilitatorName={course.facilitator_name}
                 onClick={
                   status === "completed"
                     ? () => handleReview(course)
