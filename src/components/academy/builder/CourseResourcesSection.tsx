@@ -41,14 +41,14 @@ type AddMode = "file" | "link";
 
 function SortableResourceRow({
   resource,
-  canEdit,
+  canManage,
   index,
   total,
   onRemove,
   onMove,
 }: {
   resource: CourseResource;
-  canEdit: boolean;
+  canManage: boolean;
   index: number;
   total: number;
   onRemove: (resource: CourseResource) => void;
@@ -56,7 +56,7 @@ function SortableResourceRow({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: resource.linkId,
-    disabled: !canEdit,
+    disabled: !canManage,
   });
 
   const style = {
@@ -71,7 +71,7 @@ function SortableResourceRow({
       style={style}
       className="flex items-center gap-1 min-w-0 rounded-md border bg-card px-1.5 py-1"
     >
-      {canEdit && (
+      {canManage && (
         <button
           type="button"
           className="p-0.5 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
@@ -86,7 +86,7 @@ function SortableResourceRow({
       <span className="flex-1 min-w-0 truncate text-xs text-foreground" title={resource.title}>
         {resource.title}
       </span>
-      {canEdit && (
+      {canManage && (
         <>
           <button
             type="button"
@@ -122,10 +122,10 @@ function SortableResourceRow({
 
 export default function CourseResourcesSection({
   courseId,
-  canEdit,
+  canManage,
 }: {
   courseId: number;
-  canEdit: boolean;
+  canManage: boolean;
 }) {
   const qc = useQueryClient();
   const { data: resources = [], isLoading } = useAcademyCourseResources(courseId);
@@ -259,7 +259,7 @@ export default function CourseResourcesSection({
                 <SortableResourceRow
                   key={resource.linkId}
                   resource={resource}
-                  canEdit={canEdit}
+                  canManage={canManage}
                   index={index}
                   total={resources.length}
                   onRemove={(row) => removeResource.mutate(row.linkId)}
@@ -271,13 +271,13 @@ export default function CourseResourcesSection({
         </DndContext>
       )}
 
-      {canEdit && !formOpen && (
+      {canManage && !formOpen && (
         <Button type="button" variant="outline" size="sm" className="w-full mt-1" onClick={() => setFormOpen(true)}>
           <Plus className="h-3.5 w-3.5 mr-1" /> Add Resource
         </Button>
       )}
 
-      {canEdit && formOpen && (
+      {canManage && formOpen && (
         <div className="space-y-2 rounded-md border p-2 mt-1">
           <ToggleGroup
             type="single"

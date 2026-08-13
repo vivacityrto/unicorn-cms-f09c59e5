@@ -9,6 +9,18 @@ export const REJECTED_FILE_MESSAGE =
 
 export type CourseResourceKind = "pdf" | "word" | "link";
 
+/**
+ * Client-side equivalent of public.can_manage_academy_resources():
+ * is_super_admin() OR unicorn_role IN ('Team Leader', 'Team Member').
+ * Intentionally narrower than academy.builder.edit (which also grants BGT).
+ */
+export function canManageAcademyResources(
+  unicornRole: string | null | undefined,
+  isSuperAdmin: boolean,
+): boolean {
+  return isSuperAdmin || unicornRole === "Team Leader" || unicornRole === "Team Member";
+}
+
 export function fileExtension(filename: string): string {
   const i = filename.lastIndexOf(".");
   return i >= 0 ? filename.slice(i).toLowerCase() : "";

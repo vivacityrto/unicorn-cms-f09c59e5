@@ -44,6 +44,8 @@ import CourseResourcesSection from "@/components/academy/builder/CourseResources
 import TagChipInput from "@/components/academy/TagChipInput";
 import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
 import { todayLocalISODate } from "@/lib/academy/aiAssist";
+import { canManageAcademyResources } from "@/lib/academy/courseResources";
+import { useAuth } from "@/hooks/useAuth";
 import { usePermission } from "@/hooks/usePermission";
 import { cn } from "@/lib/utils";
 
@@ -312,6 +314,10 @@ export default function AcademyBuilderCourse() {
   // ── RBAC gates ──
   const canEdit = usePermission('academy.builder.edit');
   const canPublishOrDelete = usePermission('academy.builder.publish');
+  // Resources writes are gated by can_manage_academy_resources() (SA/TL/TM),
+  // which is narrower than academy.builder.edit (also grants BGT).
+  const { profile, isSuperAdmin } = useAuth();
+  const canManageResources = canManageAcademyResources(profile?.unicorn_role, isSuperAdmin());
 
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
@@ -760,7 +766,7 @@ export default function AcademyBuilderCourse() {
               </Field>
 
               {courseId != null && (
-                <CourseResourcesSection courseId={courseId} canEdit={canEdit} />
+                <CourseResourcesSection courseId={courseId} canManage={canManageResources} />
               )}
 
               <Field label="Difficulty Level">
