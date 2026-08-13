@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { groupPortfolioTimelineEvents } from '@/hooks/portfolioTimelineGrouping';
+import { fetchEnrollmentCourseContext } from '@/hooks/academyEnrollmentActorContext';
 
 // =============================================
 // Types
@@ -229,10 +231,22 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
         creator: creatorsMap.get(event.created_by)
       })) as TimelineEvent[];
 
+      // Same display-only grouping as the portfolio-wide feed: collapses a
+      // mass/auto academy enrollment into one row and rewords even a lone
+      // auto-enrolled row so it doesn't read as the user's own action.
+      // Scoped to this one tenant already (RPC-filtered), so it never
+      // produces a cross-tenant 'enrollment_multi' group here.
+      const { courseInfoByCourseId, actorNameByUuid } = await fetchEnrollmentCourseContext(eventsWithCreators);
+      const groupedEvents = groupPortfolioTimelineEvents(
+        eventsWithCreators.map((e) => ({ ...e, tenant_name: '' })),
+        courseInfoByCourseId,
+        actorNameByUuid
+      ) as TimelineEvent[];
+
       if (offset === 0) {
-        setEvents(eventsWithCreators);
+        setEvents(groupedEvents);
       } else {
-        setEvents(prev => [...prev, ...eventsWithCreators]);
+        setEvents(prev => [...prev, ...groupedEvents]);
       }
       
       setHasMore((data?.length || 0) === limit);

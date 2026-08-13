@@ -1,16 +1,18 @@
 import type { TimelineEvent } from './useClientManagementData';
 
 /**
- * Cross-tenant "Client Activity" dashboard feed only — never applied to the
- * per-tenant Timeline (rpc_search_timeline_events / ClientTimelineTab), which
- * intentionally keeps one row per underlying client_timeline_events row so
- * staff can see exactly which users/messages made up an admin action.
+ * Used by both the cross-tenant "Client Activity" dashboard feed
+ * (usePortfolioTimeline) and the per-tenant Timeline (useClientTimeline) —
+ * display-only in both cases, never mutating the underlying
+ * client_timeline_events rows.
  *
  * A bulk/auto academy enrollment (useBulkEnroll/useEnrollTenant, or a
  * course published with available_to_all_clients) or a broadcast campaign
  * fanned out to many tenants each fire a DB trigger once per inserted row,
  * so the raw feed shows one near-identical row per user/tenant. This
- * collapses those into one summary row for display.
+ * collapses those into one summary row for display, and — even for a
+ * lone row — rewords a clearly-automated enrollment (metadata.source is
+ * set and isn't 'manual') so it doesn't read as the user's own action.
  */
 
 export interface PortfolioTimelineEvent extends TimelineEvent {
@@ -41,6 +43,11 @@ function occurredAtMs(e: PortfolioTimelineEvent): number {
 function extractCourseTitle(title: string): string {
   const match = /enrolled in (.+)$/i.exec(title);
   return match?.[1]?.trim() || 'an Academy course';
+}
+
+function extractUserName(title: string): string | null {
+  const match = /^(.+?) enrolled in /i.exec(title);
+  return match?.[1]?.trim() || null;
 }
 
 interface GroupKeyInfo {
@@ -84,19 +91,34 @@ function buildGroupedEvent(
   courseInfoByCourseId: Map<string, CourseActorInfo>,
   actorNameByUuid: Map<string, string>
 ): PortfolioTimelineEvent {
-  if (cluster.length === 1) return cluster[0];
-
   // Cluster is sorted newest-first; use the newest row as the template.
   const newest = cluster[0];
   const count = cluster.length;
 
   if (kind === 'enrollment') {
-    const courseId = String((newest.metadata as Record<string, unknown> | null)?.course_id ?? '');
+    const metadata = newest.metadata as Record<string, unknown> | null;
+    const source = metadata?.source;
+    const isAutoOrBulk = typeof source === 'string' && source !== 'manual';
+    // A lone row with no bulk/auto signal is a genuine, ambiguous-actor
+    // single enrollment — leave it exactly as the trigger wrote it.
+    if (count === 1 && !isAutoOrBulk) return newest;
+
+    const courseId = String(metadata?.course_id ?? '');
     const courseInfo = courseInfoByCourseId.get(courseId);
     const courseTitle = courseInfo?.title || extractCourseTitle(newest.title);
     const actorName = courseInfo?.actorUuid ? actorNameByUuid.get(courseInfo.actorUuid) : undefined;
     const verb = actorName ? `${actorName} auto enrolled` : 'Auto enrolled';
     const tenantIds = [...new Set(cluster.map((e) => e.tenant_id))];
+
+    if (count === 1) {
+      const userName = extractUserName(newest.title);
+      return {
+        ...newest,
+        id: `group:enrollment:${courseId}:${newest.id}`,
+        title: userName ? `${verb} ${userName} in ${courseTitle}` : `${verb} to ${courseTitle}`,
+        group_kind: 'enrollment',
+      };
+    }
 
     if (tenantIds.length === 1) {
       return {
@@ -123,6 +145,9 @@ function buildGroupedEvent(
     };
   }
 
+  // Broadcast bucket entry already required conversation_type === 'broadcast'
+  // (see groupKeyFor), so every row here — even a lone one — gets the
+  // subject-forward headline instead of the generic "X sent a message".
   const subject = (newest.metadata as Record<string, unknown> | null)?.conversation_subject as
     | string
     | null
@@ -131,9 +156,9 @@ function buildGroupedEvent(
   return {
     ...newest,
     id: `group:broadcast:${newest.created_by ?? 'unknown'}:${newest.id}`,
-    title: `Sent to ${tenantIds.length} clients`,
+    title: `Sent to ${tenantIds.length} client${tenantIds.length === 1 ? '' : 's'}`,
     tenant_name: subject || 'Broadcast message',
-    group_count: count,
+    ...(count > 1 ? { group_count: count } : {}),
     group_kind: 'broadcast',
     group_tenant_ids: tenantIds,
   };
