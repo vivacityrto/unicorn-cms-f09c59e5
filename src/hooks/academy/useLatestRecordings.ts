@@ -20,11 +20,18 @@ export function useLatestRecordings() {
   return useQuery({
     queryKey: ["latest-recordings"],
     queryFn: async (): Promise<LatestRecording[]> => {
+      // The course-builder date field has no upper bound, so a course
+      // pre-published ahead of an upcoming live session could carry a
+      // future delivery_date — exclude those so "recent" only ever means
+      // already-delivered content, not something scheduled but not yet run.
+      const today = new Date().toISOString().slice(0, 10);
+
       const { data, error } = await supabase
         .from("academy_courses")
         .select("id, title, slug, thumbnail_url, delivery_date, estimated_minutes")
         .eq("status", "published")
         .not("delivery_date", "is", null)
+        .lte("delivery_date", today)
         .order("delivery_date", { ascending: false })
         .limit(5);
 
