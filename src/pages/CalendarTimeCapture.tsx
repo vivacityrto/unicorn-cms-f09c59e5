@@ -785,8 +785,8 @@ export default function CalendarTimeCapture() {
               </div>
 
               <div className="space-y-2">
-                <Label>Notes</Label>
-                <Textarea 
+                <Label>Description</Label>
+                <Textarea
                   value={draftForm.notes}
                   onChange={e => setDraftForm(prev => ({ ...prev, notes: e.target.value }))}
                   rows={3}

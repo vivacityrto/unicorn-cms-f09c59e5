@@ -492,7 +492,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           {/* Notes with dictation */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="edit-notes">Notes</Label>
+              <Label htmlFor="edit-notes">Description</Label>
               {isSupported && (
                 <Button
                   type="button"

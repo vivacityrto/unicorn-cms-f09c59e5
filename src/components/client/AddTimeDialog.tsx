@@ -725,7 +725,7 @@ export function AddTimeDialog({
           {/* Notes */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">Description</Label>
               {isSupported && (
                 <Button
                   type="button"
