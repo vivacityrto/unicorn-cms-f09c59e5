@@ -105,8 +105,15 @@ function buildGroupedEvent(
 
   if (kind === 'enrollment') {
     const metadata = newest.metadata as Record<string, unknown> | null;
-    const source = metadata?.source;
-    const isAutoOrBulk = typeof source === 'string' && source !== 'manual';
+    // Classify off the whole cluster, not just the newest row: a cluster is
+    // sorted newest-first, so a single coincidental 'manual' enrollment
+    // landing just after a large auto_all_clients burst (same course, same
+    // 10-minute window) would otherwise flip the entire burst's wording and
+    // attribution onto the manual path. Any auto/bulk row is proof enough.
+    const isAutoOrBulk = cluster.some((e) => {
+      const s = (e.metadata as Record<string, unknown> | null)?.source;
+      return typeof s === 'string' && s !== 'manual';
+    });
     // A lone row with no bulk/auto signal is a genuine, ambiguous-actor
     // single enrollment — leave it exactly as the trigger wrote it.
     if (count === 1 && !isAutoOrBulk) return newest;
