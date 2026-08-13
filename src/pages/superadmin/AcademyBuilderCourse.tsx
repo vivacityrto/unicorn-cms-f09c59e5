@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import LessonEditorPanel from "@/components/academy/builder/LessonEditorPanel";
 import ImportVideosPanel from "@/components/academy/builder/ImportVideosPanel";
+import ShowcaseImportPanel from "@/components/academy/builder/ShowcaseImportPanel";
 import AssessmentEditorTab from "@/components/academy/builder/AssessmentEditorTab";
 import PackageRulesTab from "@/components/academy/builder/PackageRulesTab";
 import AiAssistPanel, { type AiAssistResult } from "@/components/academy/builder/AiAssistPanel";
@@ -881,6 +882,10 @@ export default function AcademyBuilderCourse() {
                   <Button size="sm" variant="outline" onClick={handleBackToDraft}>Restore to Draft</Button>
                 )}
               </div>
+
+              {canEdit && courseId != null && (
+                <ShowcaseImportPanel courseId={courseId} />
+              )}
 
               {/* Modules */}
               {modulesLoading ? (
