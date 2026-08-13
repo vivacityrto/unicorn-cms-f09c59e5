@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from "react";
+import { Fragment, ReactNode, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, GraduationCap, Search } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -57,6 +57,8 @@ export interface AudienceHubPageProps {
 
 const ALL_TAB = "__all__";
 const ALL_SERIES = "__all__";
+const ALL_DATES = "__all__";
+const UNDATED_BUCKET = "__undated__";
 
 const collator = new Intl.Collator("en-AU", { sensitivity: "base" });
 
@@ -82,14 +84,103 @@ function buildTagBuckets(courses: AcademyCourse[]): TagBucket[] {
     });
 }
 
-function buildSeriesOptions(courses: AcademyCourse[]): string[] {
-  const series = new Set<string>();
+interface SeriesOption {
+  value: string;
+  count: number;
+}
+
+function buildSeriesOptions(courses: AcademyCourse[]): SeriesOption[] {
+  const counts = new Map<string, number>();
   for (const c of courses) {
     const value = c.webinar_series?.trim();
-    if (value) series.add(value);
+    if (!value) continue;
+    counts.set(value, (counts.get(value) ?? 0) + 1);
   }
-  return Array.from(series).sort((a, b) => collator.compare(a, b));
+  return Array.from(counts.entries())
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => collator.compare(a.value, b.value));
 }
+
+interface DateBucket {
+  /** "month:2026-06" | "year:2024" | UNDATED_BUCKET */
+  value: string;
+  label: string;
+  count: number;
+}
+
+function monthLabel(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-AU", { month: "long", year: "numeric" });
+}
+
+/**
+ * Data-derived "when delivered" buckets — built only from months/years that
+ * actually have a course in them, never a full calendar grid (see
+ * docs — the Academy Timeline design proposal). Real delivery dates are
+ * heavily front-loaded into the last few months with a long, sparse tail
+ * behind them, so a year only expands into per-month entries when it has
+ * enough in it to make that granularity useful (>=6 courses or >=3 distinct
+ * months); otherwise it collapses to a single year entry. Undated courses
+ * get their own explicit bucket rather than being silently dropped.
+ */
+function buildDateBuckets(courses: AcademyCourse[]): DateBucket[] {
+  const monthCounts = new Map<string, number>();
+  let undatedCount = 0;
+  for (const c of courses) {
+    if (!c.delivery_date) {
+      undatedCount++;
+      continue;
+    }
+    const month = c.delivery_date.slice(0, 7);
+    monthCounts.set(month, (monthCounts.get(month) ?? 0) + 1);
+  }
+
+  const yearMonths = new Map<string, Map<string, number>>();
+  for (const [month, count] of monthCounts) {
+    const year = month.slice(0, 4);
+    if (!yearMonths.has(year)) yearMonths.set(year, new Map());
+    yearMonths.get(year)!.set(month, count);
+  }
+
+  const buckets: DateBucket[] = [];
+  const years = Array.from(yearMonths.keys()).sort((a, b) => b.localeCompare(a));
+  for (const year of years) {
+    const months = yearMonths.get(year)!;
+    const totalInYear = Array.from(months.values()).reduce((sum, n) => sum + n, 0);
+    if (totalInYear >= 6 || months.size >= 3) {
+      const sortedMonths = Array.from(months.keys()).sort((a, b) => b.localeCompare(a));
+      for (const month of sortedMonths) {
+        buckets.push({ value: `month:${month}`, label: monthLabel(month), count: months.get(month)! });
+      }
+    } else {
+      buckets.push({ value: `year:${year}`, label: year, count: totalInYear });
+    }
+  }
+
+  if (undatedCount > 0) {
+    buckets.push({ value: UNDATED_BUCKET, label: "Date not recorded", count: undatedCount });
+  }
+
+  return buckets;
+}
+
+function courseMatchesDateBucket(course: AcademyCourse, bucketValue: string): boolean {
+  if (bucketValue === ALL_DATES) return true;
+  if (bucketValue === UNDATED_BUCKET) return !course.delivery_date;
+  if (!course.delivery_date) return false;
+  if (bucketValue.startsWith("month:")) return course.delivery_date.slice(0, 7) === bucketValue.slice(6);
+  if (bucketValue.startsWith("year:")) return course.delivery_date.slice(0, 4) === bucketValue.slice(5);
+  return true;
+}
+
+type SortMode = "recommended" | "recent" | "oldest" | "az";
+
+const SORT_LABELS: Record<SortMode, string> = {
+  recommended: "Recommended",
+  recent: "Most recent first",
+  oldest: "Oldest first",
+  az: "A–Z",
+};
 
 function courseMatchesSearch(course: AcademyCourse, query: string): boolean {
   if (!query) return true;
@@ -100,6 +191,31 @@ function courseMatchesSearch(course: AcademyCourse, query: string): boolean {
     ...(course.tags ?? []),
   ];
   return haystacks.some((value) => value.toLowerCase().includes(query));
+}
+
+interface FacetFilters {
+  series: string;
+  tag: string;
+  date: string;
+  search: string;
+}
+
+/**
+ * Applies whichever facets are passed. Each facet's own option list is
+ * built by calling this with that facet reset to "all" but the *other*
+ * three still applied — standard faceted-search composition, so picking a
+ * series narrows which tags/dates are offered (and their counts), and
+ * vice versa, rather than every facet independently showing whole-pathway
+ * counts that don't reflect what's actually still reachable.
+ */
+function applyFacetFilters(courses: AcademyCourse[], filters: FacetFilters): AcademyCourse[] {
+  return courses.filter((c) => {
+    if (filters.series !== ALL_SERIES && c.webinar_series?.trim() !== filters.series) return false;
+    if (!courseMatchesSearch(c, filters.search)) return false;
+    if (filters.tag !== ALL_TAB && !(c.tags ?? []).includes(filters.tag)) return false;
+    if (!courseMatchesDateBucket(c, filters.date)) return false;
+    return true;
+  });
 }
 
 // Sector acronyms that should render fully uppercase rather than
@@ -135,6 +251,8 @@ export default function AudienceHubPage({
   const [activeTag, setActiveTag] = useState<string>(ALL_TAB);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSeries, setActiveSeries] = useState<string>(ALL_SERIES);
+  const [activeDateBucket, setActiveDateBucket] = useState<string>(ALL_DATES);
+  const [sortMode, setSortMode] = useState<SortMode>("recommended");
   const [moreOpen, setMoreOpen] = useState(false);
 
   const { data: courses = [], isLoading, isError, error } = useAcademyCourses({
@@ -150,14 +268,68 @@ export default function AudienceHubPage({
     return m;
   }, [enrolled]);
 
-  const tagBuckets = useMemo(() => buildTagBuckets(courses), [courses]);
-  const seriesOptions = useMemo(() => buildSeriesOptions(courses), [courses]);
+  const trimmedSearch = searchQuery.trim().toLowerCase();
+
+  // Each facet's own options/counts come from the courses matching every
+  // *other* active facet, never itself — so selecting a series narrows the
+  // tag pills and date buckets (and their counts) to what's actually still
+  // reachable, instead of every facet independently showing whole-pathway
+  // numbers that stop meaning anything once another filter is active.
+  const coursesForTagFacet = useMemo(
+    () => applyFacetFilters(courses, { series: activeSeries, tag: ALL_TAB, date: activeDateBucket, search: trimmedSearch }),
+    [courses, activeSeries, activeDateBucket, trimmedSearch],
+  );
+  const coursesForSeriesFacet = useMemo(
+    () => applyFacetFilters(courses, { series: ALL_SERIES, tag: activeTag, date: activeDateBucket, search: trimmedSearch }),
+    [courses, activeTag, activeDateBucket, trimmedSearch],
+  );
+  const coursesForDateFacet = useMemo(
+    () => applyFacetFilters(courses, { series: activeSeries, tag: activeTag, date: ALL_DATES, search: trimmedSearch }),
+    [courses, activeSeries, activeTag, trimmedSearch],
+  );
+
+  const tagBuckets = useMemo(() => buildTagBuckets(coursesForTagFacet), [coursesForTagFacet]);
+  const seriesOptions = useMemo(() => buildSeriesOptions(coursesForSeriesFacet), [coursesForSeriesFacet]);
+  const dateBuckets = useMemo(() => buildDateBuckets(coursesForDateFacet), [coursesForDateFacet]);
+
+  // If a choice made earlier is no longer reachable once another facet
+  // narrows things (e.g. picking a series that has zero courses under the
+  // currently-active tag), reset that stale selection back to "all" rather
+  // than leaving it selected-but-invisible with the grid just showing zero
+  // results and no visible way to tell what's still filtering it.
+  useEffect(() => {
+    if (activeTag !== ALL_TAB && !tagBuckets.some((b) => b.tag === activeTag)) {
+      setActiveTag(ALL_TAB);
+    }
+  }, [tagBuckets, activeTag]);
+  useEffect(() => {
+    if (activeSeries !== ALL_SERIES && !seriesOptions.some((s) => s.value === activeSeries)) {
+      setActiveSeries(ALL_SERIES);
+    }
+  }, [seriesOptions, activeSeries]);
+  useEffect(() => {
+    if (activeDateBucket === ALL_DATES) return;
+    // Not a plain "is this value still in the list" check like tag/series
+    // above — a date bucket's own granularity reshapes between month:YYYY-MM
+    // and year:YYYY as other facets narrow the data (see buildDateBuckets'
+    // coarsening rule), so a selection can still match real courses even
+    // when its exact bucket string briefly isn't one of the currently-listed
+    // options. Only reset when it truly matches nothing any more.
+    const stillMatchesSomething = coursesForDateFacet.some((c) =>
+      courseMatchesDateBucket(c, activeDateBucket),
+    );
+    if (!stillMatchesSomething) {
+      setActiveDateBucket(ALL_DATES);
+    }
+  }, [coursesForDateFacet, activeDateBucket]);
 
   // "All" is a pill like any other tag bucket for width-measurement/overflow
   // purposes, so it shares the same array the fit calculation runs over.
+  // Its count reflects the other active facets (series/date/search), same
+  // as every real tag bucket does.
   const allBuckets = useMemo<TagBucket[]>(
-    () => [{ tag: ALL_TAB, count: courses.length }, ...tagBuckets],
-    [tagBuckets, courses.length],
+    () => [{ tag: ALL_TAB, count: coursesForTagFacet.length }, ...tagBuckets],
+    [tagBuckets, coursesForTagFacet.length],
   );
   const bucketLabel = (b: TagBucket) => (b.tag === ALL_TAB ? "All" : prettyTag(b.tag));
 
@@ -167,22 +339,39 @@ export default function AudienceHubPage({
   const overflowTags = allBuckets.slice(visibleCount);
   const activeOverflowTag = overflowTags.find((b) => b.tag === activeTag);
 
-  const trimmedSearch = searchQuery.trim().toLowerCase();
-  const hasSearchOrSeriesFilter =
-    trimmedSearch.length > 0 || activeSeries !== ALL_SERIES;
+  const hasActiveFilters =
+    trimmedSearch.length > 0 ||
+    activeSeries !== ALL_SERIES ||
+    activeDateBucket !== ALL_DATES ||
+    activeTag !== ALL_TAB;
 
-  const filtered = useMemo(() => {
-    return courses.filter((c) => {
-      if (activeSeries !== ALL_SERIES && c.webinar_series?.trim() !== activeSeries) {
-        return false;
-      }
-      if (!courseMatchesSearch(c, trimmedSearch)) return false;
-      if (activeTag !== ALL_TAB && !(c.tags ?? []).includes(activeTag)) {
-        return false;
-      }
-      return true;
-    });
-  }, [courses, activeTag, activeSeries, trimmedSearch]);
+  const filtered = useMemo(
+    () => applyFacetFilters(courses, { series: activeSeries, tag: activeTag, date: activeDateBucket, search: trimmedSearch }),
+    [courses, activeTag, activeSeries, activeDateBucket, trimmedSearch],
+  );
+
+  // "Recommended" keeps the server order (curator sort_order, then title).
+  // The date sorts always collect undated courses at the end, under a
+  // divider, rather than interleaving them arbitrarily among real dates.
+  const sortedResult = useMemo(() => {
+    if (sortMode === "az") {
+      return { ordered: [...filtered].sort((a, b) => collator.compare(a.title, b.title)), dividerIndex: null as number | null };
+    }
+    if (sortMode === "recent" || sortMode === "oldest") {
+      const dated = filtered.filter((c) => c.delivery_date);
+      const undated = filtered.filter((c) => !c.delivery_date);
+      dated.sort((a, b) =>
+        sortMode === "recent"
+          ? b.delivery_date!.localeCompare(a.delivery_date!)
+          : a.delivery_date!.localeCompare(b.delivery_date!),
+      );
+      return {
+        ordered: [...dated, ...undated],
+        dividerIndex: dated.length > 0 && undated.length > 0 ? dated.length : null,
+      };
+    }
+    return { ordered: filtered, dividerIndex: null as number | null };
+  }, [filtered, sortMode]);
 
   const handleStart = async (course: AcademyCourse) => {
     try {
@@ -242,9 +431,9 @@ export default function AudienceHubPage({
       icon={icon}
       accentColour={accentColour}
     >
-      {/* Search + Series filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="relative flex-1 min-w-0">
+      {/* Search + Series + When delivered + Sort filters */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 mb-4">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             type="search"
@@ -257,19 +446,46 @@ export default function AudienceHubPage({
         </div>
         {seriesOptions.length > 0 && (
           <Select value={activeSeries} onValueChange={setActiveSeries}>
-            <SelectTrigger className="sm:w-[280px]" aria-label="Filter by series">
+            <SelectTrigger className="sm:w-[220px]" aria-label="Filter by series">
               <SelectValue placeholder="All series" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_SERIES}>All series</SelectItem>
-              {seriesOptions.map((series) => (
-                <SelectItem key={series} value={series}>
-                  {series}
+              <SelectItem value={ALL_SERIES}>All series ({coursesForSeriesFacet.length})</SelectItem>
+              {seriesOptions.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.value} ({s.count})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         )}
+        {dateBuckets.length > 0 && (
+          <Select value={activeDateBucket} onValueChange={setActiveDateBucket}>
+            <SelectTrigger className="sm:w-[190px]" aria-label="Filter by when delivered">
+              <SelectValue placeholder="Any time" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_DATES}>Any time ({coursesForDateFacet.length})</SelectItem>
+              {dateBuckets.map((b) => (
+                <SelectItem key={b.value} value={b.value}>
+                  {b.label} ({b.count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+          <SelectTrigger className="sm:w-[190px]" aria-label="Sort courses">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(SORT_LABELS) as SortMode[]).map((mode) => (
+              <SelectItem key={mode} value={mode}>
+                {SORT_LABELS[mode]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Sub-tabs — as many pills render directly as fit the available width
@@ -397,39 +613,47 @@ export default function AudienceHubPage({
       {/* Course grid */}
       {!isLoading && !isError && filtered.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((course) => {
+          {sortedResult.ordered.map((course, index) => {
             const status = mapEnrollmentStatus(
               course.enrollment_status,
               course.has_certificate,
             );
             const onClickCard = () => navigate(`/academy/course/${course.slug}`);
             return (
-              <CourseCard
-                key={course.id}
-                title={course.title}
-                category={getCourseCategory(course.tags, course.target_audience)}
-                duration={formatDuration(course.estimated_minutes)}
-                lessonCount={course.total_lessons}
-                difficulty={
-                  (course.difficulty_level as "Beginner" | "Intermediate" | "Advanced") ??
-                  "Beginner"
-                }
-                status={status}
-                progressPercent={course.progress_percentage}
-                completedLessons={course.completed_lessons}
-                totalLessons={course.total_lessons}
-                accentColour={accentColour}
-                thumbnailUrl={course.thumbnail_url}
-                deliveryDateLabel={formatDeliveryDate(course.delivery_date)}
-                facilitatorName={course.facilitator_name}
-                onClick={
-                  status === "completed"
-                    ? () => handleReview(course)
-                    : onClickCard
-                }
-                onStart={() => handleStart(course)}
-                onContinue={() => handleContinue(course)}
-              />
+              <Fragment key={course.id}>
+                {index === sortedResult.dividerIndex && (
+                  <div className="col-span-full flex items-center gap-3 py-1 text-xs text-muted-foreground">
+                    <span className="flex-1 border-t border-border" />
+                    Date not recorded
+                    <span className="flex-1 border-t border-border" />
+                  </div>
+                )}
+                <CourseCard
+                  title={course.title}
+                  category={getCourseCategory(course.tags, course.target_audience)}
+                  duration={formatDuration(course.estimated_minutes)}
+                  lessonCount={course.total_lessons}
+                  difficulty={
+                    (course.difficulty_level as "Beginner" | "Intermediate" | "Advanced") ??
+                    "Beginner"
+                  }
+                  status={status}
+                  progressPercent={course.progress_percentage}
+                  completedLessons={course.completed_lessons}
+                  totalLessons={course.total_lessons}
+                  accentColour={accentColour}
+                  thumbnailUrl={course.thumbnail_url}
+                  deliveryDateLabel={formatDeliveryDate(course.delivery_date)}
+                  facilitatorName={course.facilitator_name}
+                  onClick={
+                    status === "completed"
+                      ? () => handleReview(course)
+                      : onClickCard
+                  }
+                  onStart={() => handleStart(course)}
+                  onContinue={() => handleContinue(course)}
+                />
+              </Fragment>
             );
           })}
         </div>
@@ -438,9 +662,9 @@ export default function AudienceHubPage({
       {/* Empty */}
       {!isLoading && !isError && filtered.length === 0 && (
         <div className="text-center py-16">
-          {hasSearchOrSeriesFilter ? (
+          {hasActiveFilters ? (
             <p className="font-medium text-foreground">
-              No courses match — try a different search or series
+              No courses match — try a different search, series, or date range
             </p>
           ) : (
             <>
