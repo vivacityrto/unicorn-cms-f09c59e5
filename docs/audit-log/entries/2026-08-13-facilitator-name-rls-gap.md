@@ -53,8 +53,23 @@ label (`AcademyLessonViewerPage.tsx`). Not a broader review of `users` RLS.
   mode permission classifier as a schema-adjacent change; re-confirmed via
   AskUserQuestion, then applied).
 
-## Open questions parked
+## Correction (2026-08-13, same PR, before merge)
 
-- Whether `AcademyBuilderLibrary.tsx` (superadmin-only, staff already pass
-  `users_select_staff`) should also switch to the RPC for consistency — not
-  actioned, no bug there today.
+Cursor Bugbot flagged two real issues on the PR:
+
+- **Migration missing from git (Medium).** The `SECURITY DEFINER` function
+  was applied straight to prod via Supabase MCP, but no matching file was
+  committed under `supabase/migrations/`, unlike the same-day
+  `add_transcript_to_academy_courses` change. Added
+  `supabase/migrations/20260813053000_add_get_academy_facilitator_names_safe.sql`
+  with the exact SQL already applied, so git can recreate/review it.
+- **Draft-only facilitators broke in the builder (Low).** This directly hit
+  the "open question" above: `AcademyBuilderLibrary.tsx` (superadmin,
+  lists drafts too) shared `useFacilitatorNames`, so switching that hook to
+  the published-only RPC meant a facilitator set only on an unpublished
+  course silently showed "Not set" in the builder. Fixed by giving the
+  builder its own `useStaffFacilitatorNames` hook that queries `users`
+  directly (safe — every caller is gated behind `ProtectedRoute
+  requireSuperAdmin`, so it always passes `users_select_staff`), while
+  `useFacilitatorNames` (client-facing: course cards, lesson viewer) stays
+  on the published-only RPC.

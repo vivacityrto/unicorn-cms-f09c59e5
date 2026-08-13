@@ -33,7 +33,7 @@ import { toast } from "sonner";
 import { usePermission } from "@/hooks/usePermission";
 import { formatTargetAudienceLabel } from "@/lib/academy/pathways";
 import { formatDeliveryDate } from "@/lib/academy/formatDeliveryDate";
-import { useFacilitatorNames } from "@/hooks/academy/useFacilitatorNames";
+import { useStaffFacilitatorNames } from "@/hooks/academy/useStaffFacilitatorNames";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -151,7 +151,7 @@ export default function AcademyBuilderLibrary() {
     return [...ids];
   }, [courses]);
 
-  const { data: facilitatorNameById = {} } = useFacilitatorNames(facilitatorIds);
+  const { data: facilitatorNameById = {} } = useStaffFacilitatorNames(facilitatorIds);
 
   const userTypeOptions = useMemo(() => {
     const distinct = new Set<string>();
