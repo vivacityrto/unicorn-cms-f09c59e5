@@ -320,8 +320,6 @@ export default function AcademyBuilderCourse() {
   const [editingLesson, setEditingLesson] = useState<{ lesson: AcademyLesson | null; moduleId: number; courseId: number } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "module" | "lesson"; id: number; name: string; hasChildren?: boolean } | null>(null);
   const [importVideosModuleId, setImportVideosModuleId] = useState<number | null>(null);
-  // Session-only transcript from AI Assist (powers Assessment quiz generation)
-  const [aiTranscript, setAiTranscript] = useState("");
 
   // Fetch course
   const { data: course, isLoading: courseLoading } = useQuery({
@@ -400,6 +398,7 @@ export default function AcademyBuilderCourse() {
     delivery_date: string | null;
     thumbnail_url: string | null;
     webinar_series: string | null;
+    transcript: string;
   };
 
   const buildForm = useCallback((c: any): SettingsForm => {
@@ -422,6 +421,7 @@ export default function AcademyBuilderCourse() {
       delivery_date: existingDelivery ?? (neverPublished ? todayLocalISODate() : null),
       thumbnail_url: c?.thumbnail_url ?? null,
       webinar_series: c?.webinar_series ?? null,
+      transcript: c?.transcript ?? "",
     };
   }, []);
 
@@ -435,11 +435,6 @@ export default function AcademyBuilderCourse() {
       baselineRef.current = next;
     }
   }, [course, buildForm]);
-
-  // Clear session transcript when navigating to a different course
-  useEffect(() => {
-    setAiTranscript("");
-  }, [courseId]);
 
   const isDirty = useMemo(
     () => JSON.stringify(formState) !== JSON.stringify(baselineRef.current),
@@ -504,8 +499,8 @@ export default function AcademyBuilderCourse() {
       tags: result.tags,
       thumbnail_url: result.thumbnail_url,
       webinar_series: result.webinar_series,
+      transcript: result.transcript || p.transcript,
     }));
-    setAiTranscript(result.transcript || "");
   };
 
   // Note: in-app navigation guard via useBlocker requires a data router; this app uses BrowserRouter.
@@ -940,7 +935,7 @@ export default function AcademyBuilderCourse() {
             courseTitle={formState.title || course.title}
             courseDescription={formState.description || course.description}
             courseTargetAudience={formState.target_audience.length ? formState.target_audience : course.target_audience}
-            aiTranscript={aiTranscript}
+            aiTranscript={formState.transcript}
             lessonCount={
               courseTotals?.lesson_count
               ?? modules.reduce((sum, m) => sum + (m.lessons?.length ?? 0), 0)

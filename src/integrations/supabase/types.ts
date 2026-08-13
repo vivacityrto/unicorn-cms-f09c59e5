@@ -724,6 +724,7 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           trailer_video_id: string | null
+          transcript: string | null
           updated_at: string | null
           webinar_series: string | null
         }
@@ -759,6 +760,7 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           trailer_video_id?: string | null
+          transcript?: string | null
           updated_at?: string | null
           webinar_series?: string | null
         }
@@ -794,6 +796,7 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           trailer_video_id?: string | null
+          transcript?: string | null
           updated_at?: string | null
           webinar_series?: string | null
         }
