@@ -31,9 +31,13 @@ interface PortfolioTimelineResult {
 // Mass admin actions (bulk enrollment, a broadcast fanned out to many
 // tenants) fire the same DB trigger once per row, so `limit` raw rows can
 // collapse into far fewer grouped rows. Over-fetch so the requested `limit`
-// is met in *grouped* rows, not raw ones, without an unbounded query.
+// is met in *grouped* rows, not raw ones, without an unbounded query. The
+// cap is generous (not just a small multiple of `limit`) because a handful
+// of real-world mass-enrollment bursts can each run into the hundreds of
+// rows and land back-to-back — a small cap gets entirely consumed by the
+// two or three most recent bursts with no room left to reach anything else.
 const RAW_FETCH_MULTIPLIER = 5;
-const RAW_FETCH_CAP = 500;
+const RAW_FETCH_CAP = 2000;
 
 async function fetchRawRows(
   rawLimit: number,
