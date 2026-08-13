@@ -119,6 +119,7 @@ const academyBuilderMenuItems = [
   { icon: Award, label: "Certificates", path: "/superadmin/academy/certificates" },
   { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
   { icon: Search, label: "Course Cleanup", path: "/superadmin/academy/course-cleanup" },
+  { icon: Tags, label: "Tag Management", path: "/superadmin/academy/tag-management" },
   { icon: GraduationCap, label: "Package → Course Rules", path: "/superadmin/academy/package-course-rules" },
   { icon: ClipboardList, label: "Workforce PDP", path: "/superadmin/workforce-pdp" },
 ];
@@ -600,6 +601,10 @@ export const DashboardLayout = ({
                     }
                     // Workforce PDP: route is requireSuperAdmin, so SA only
                     if (item.path === "/superadmin/workforce-pdp") {
+                      return isSuperAdmin;
+                    }
+                    // Tag Management: route is requireSuperAdmin, so SA only
+                    if (item.path === "/superadmin/academy/tag-management") {
                       return isSuperAdmin;
                     }
                     // All other academy items: SA + TL (hide from Integrator)
