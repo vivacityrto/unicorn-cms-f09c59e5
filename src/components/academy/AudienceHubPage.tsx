@@ -1,4 +1,4 @@
-import { Fragment, ReactNode, useMemo, useState } from "react";
+import { Fragment, ReactNode, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, GraduationCap, Search } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -84,13 +84,21 @@ function buildTagBuckets(courses: AcademyCourse[]): TagBucket[] {
     });
 }
 
-function buildSeriesOptions(courses: AcademyCourse[]): string[] {
-  const series = new Set<string>();
+interface SeriesOption {
+  value: string;
+  count: number;
+}
+
+function buildSeriesOptions(courses: AcademyCourse[]): SeriesOption[] {
+  const counts = new Map<string, number>();
   for (const c of courses) {
     const value = c.webinar_series?.trim();
-    if (value) series.add(value);
+    if (!value) continue;
+    counts.set(value, (counts.get(value) ?? 0) + 1);
   }
-  return Array.from(series).sort((a, b) => collator.compare(a, b));
+  return Array.from(counts.entries())
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => collator.compare(a.value, b.value));
 }
 
 interface DateBucket {
@@ -185,6 +193,31 @@ function courseMatchesSearch(course: AcademyCourse, query: string): boolean {
   return haystacks.some((value) => value.toLowerCase().includes(query));
 }
 
+interface FacetFilters {
+  series: string;
+  tag: string;
+  date: string;
+  search: string;
+}
+
+/**
+ * Applies whichever facets are passed. Each facet's own option list is
+ * built by calling this with that facet reset to "all" but the *other*
+ * three still applied — standard faceted-search composition, so picking a
+ * series narrows which tags/dates are offered (and their counts), and
+ * vice versa, rather than every facet independently showing whole-pathway
+ * counts that don't reflect what's actually still reachable.
+ */
+function applyFacetFilters(courses: AcademyCourse[], filters: FacetFilters): AcademyCourse[] {
+  return courses.filter((c) => {
+    if (filters.series !== ALL_SERIES && c.webinar_series?.trim() !== filters.series) return false;
+    if (!courseMatchesSearch(c, filters.search)) return false;
+    if (filters.tag !== ALL_TAB && !(c.tags ?? []).includes(filters.tag)) return false;
+    if (!courseMatchesDateBucket(c, filters.date)) return false;
+    return true;
+  });
+}
+
 // Sector acronyms that should render fully uppercase rather than
 // title-cased (e.g. "rto compliance" -> "RTO Compliance", not "Rto
 // Compliance") — evidence-based from the actual tags in use, see
@@ -235,15 +268,58 @@ export default function AudienceHubPage({
     return m;
   }, [enrolled]);
 
-  const tagBuckets = useMemo(() => buildTagBuckets(courses), [courses]);
-  const seriesOptions = useMemo(() => buildSeriesOptions(courses), [courses]);
-  const dateBuckets = useMemo(() => buildDateBuckets(courses), [courses]);
+  const trimmedSearch = searchQuery.trim().toLowerCase();
+
+  // Each facet's own options/counts come from the courses matching every
+  // *other* active facet, never itself — so selecting a series narrows the
+  // tag pills and date buckets (and their counts) to what's actually still
+  // reachable, instead of every facet independently showing whole-pathway
+  // numbers that stop meaning anything once another filter is active.
+  const coursesForTagFacet = useMemo(
+    () => applyFacetFilters(courses, { series: activeSeries, tag: ALL_TAB, date: activeDateBucket, search: trimmedSearch }),
+    [courses, activeSeries, activeDateBucket, trimmedSearch],
+  );
+  const coursesForSeriesFacet = useMemo(
+    () => applyFacetFilters(courses, { series: ALL_SERIES, tag: activeTag, date: activeDateBucket, search: trimmedSearch }),
+    [courses, activeTag, activeDateBucket, trimmedSearch],
+  );
+  const coursesForDateFacet = useMemo(
+    () => applyFacetFilters(courses, { series: activeSeries, tag: activeTag, date: ALL_DATES, search: trimmedSearch }),
+    [courses, activeSeries, activeTag, trimmedSearch],
+  );
+
+  const tagBuckets = useMemo(() => buildTagBuckets(coursesForTagFacet), [coursesForTagFacet]);
+  const seriesOptions = useMemo(() => buildSeriesOptions(coursesForSeriesFacet), [coursesForSeriesFacet]);
+  const dateBuckets = useMemo(() => buildDateBuckets(coursesForDateFacet), [coursesForDateFacet]);
+
+  // If a choice made earlier is no longer reachable once another facet
+  // narrows things (e.g. picking a series that has zero courses under the
+  // currently-active tag), reset that stale selection back to "all" rather
+  // than leaving it selected-but-invisible with the grid just showing zero
+  // results and no visible way to tell what's still filtering it.
+  useEffect(() => {
+    if (activeTag !== ALL_TAB && !tagBuckets.some((b) => b.tag === activeTag)) {
+      setActiveTag(ALL_TAB);
+    }
+  }, [tagBuckets, activeTag]);
+  useEffect(() => {
+    if (activeSeries !== ALL_SERIES && !seriesOptions.some((s) => s.value === activeSeries)) {
+      setActiveSeries(ALL_SERIES);
+    }
+  }, [seriesOptions, activeSeries]);
+  useEffect(() => {
+    if (activeDateBucket !== ALL_DATES && !dateBuckets.some((b) => b.value === activeDateBucket)) {
+      setActiveDateBucket(ALL_DATES);
+    }
+  }, [dateBuckets, activeDateBucket]);
 
   // "All" is a pill like any other tag bucket for width-measurement/overflow
   // purposes, so it shares the same array the fit calculation runs over.
+  // Its count reflects the other active facets (series/date/search), same
+  // as every real tag bucket does.
   const allBuckets = useMemo<TagBucket[]>(
-    () => [{ tag: ALL_TAB, count: courses.length }, ...tagBuckets],
-    [tagBuckets, courses.length],
+    () => [{ tag: ALL_TAB, count: coursesForTagFacet.length }, ...tagBuckets],
+    [tagBuckets, coursesForTagFacet.length],
   );
   const bucketLabel = (b: TagBucket) => (b.tag === ALL_TAB ? "All" : prettyTag(b.tag));
 
@@ -253,23 +329,16 @@ export default function AudienceHubPage({
   const overflowTags = allBuckets.slice(visibleCount);
   const activeOverflowTag = overflowTags.find((b) => b.tag === activeTag);
 
-  const trimmedSearch = searchQuery.trim().toLowerCase();
   const hasActiveFilters =
-    trimmedSearch.length > 0 || activeSeries !== ALL_SERIES || activeDateBucket !== ALL_DATES;
+    trimmedSearch.length > 0 ||
+    activeSeries !== ALL_SERIES ||
+    activeDateBucket !== ALL_DATES ||
+    activeTag !== ALL_TAB;
 
-  const filtered = useMemo(() => {
-    return courses.filter((c) => {
-      if (activeSeries !== ALL_SERIES && c.webinar_series?.trim() !== activeSeries) {
-        return false;
-      }
-      if (!courseMatchesSearch(c, trimmedSearch)) return false;
-      if (activeTag !== ALL_TAB && !(c.tags ?? []).includes(activeTag)) {
-        return false;
-      }
-      if (!courseMatchesDateBucket(c, activeDateBucket)) return false;
-      return true;
-    });
-  }, [courses, activeTag, activeSeries, trimmedSearch, activeDateBucket]);
+  const filtered = useMemo(
+    () => applyFacetFilters(courses, { series: activeSeries, tag: activeTag, date: activeDateBucket, search: trimmedSearch }),
+    [courses, activeTag, activeSeries, activeDateBucket, trimmedSearch],
+  );
 
   // "Recommended" keeps the server order (curator sort_order, then title).
   // The date sorts always collect undated courses at the end, under a
@@ -371,10 +440,10 @@ export default function AudienceHubPage({
               <SelectValue placeholder="All series" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_SERIES}>All series</SelectItem>
-              {seriesOptions.map((series) => (
-                <SelectItem key={series} value={series}>
-                  {series}
+              <SelectItem value={ALL_SERIES}>All series ({coursesForSeriesFacet.length})</SelectItem>
+              {seriesOptions.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.value} ({s.count})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -386,7 +455,7 @@ export default function AudienceHubPage({
               <SelectValue placeholder="Any time" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_DATES}>Any time</SelectItem>
+              <SelectItem value={ALL_DATES}>Any time ({coursesForDateFacet.length})</SelectItem>
               {dateBuckets.map((b) => (
                 <SelectItem key={b.value} value={b.value}>
                   {b.label} ({b.count})
