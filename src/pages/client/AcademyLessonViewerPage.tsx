@@ -28,6 +28,7 @@ import { friendlyDbError } from "@/lib/friendlyDbError";
 import { useAuth } from "@/hooks/useAuth";
 import { useCurrentCycle } from "@/features/pdp/hooks";
 import { QuickReflectionDrawer } from "@/components/academy/pdp/QuickReflectionDrawer";
+import CourseLessonResources from "@/components/academy/CourseLessonResources";
 
 const ACCENT = "#23c0dd";
 const PROGRESS_THROTTLE_MS = 10_000;
@@ -855,6 +856,8 @@ export default function AcademyLessonViewerPage() {
             <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(lesson.content_markdown) }} />
           </div>
         )}
+
+        <CourseLessonResources courseId={course.id} />
 
         {/* Mark Complete / Navigation */}
         <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "hsl(var(--border))" }}>
