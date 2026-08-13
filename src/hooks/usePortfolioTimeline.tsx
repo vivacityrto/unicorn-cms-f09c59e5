@@ -35,13 +35,10 @@ interface PortfolioTimelineResult {
 const RAW_FETCH_MULTIPLIER = 5;
 const RAW_FETCH_CAP = 500;
 
-async function fetchPortfolioTimeline({
-  limit,
-  eventTypes,
-  tenantIds,
-  search,
-}: Required<UsePortfolioTimelineOptions>): Promise<PortfolioTimelineResult> {
-  const rawLimit = Math.min(limit * RAW_FETCH_MULTIPLIER, RAW_FETCH_CAP);
+async function fetchRawRows(
+  rawLimit: number,
+  { eventTypes, tenantIds, search }: Omit<Required<UsePortfolioTimelineOptions>, 'limit'>
+): Promise<TimelineEvent[]> {
   let query = supabase
     .from('client_timeline_events')
     .select('*')
@@ -61,21 +58,46 @@ async function fetchPortfolioTimeline({
 
   const { data, error } = await query;
   if (error) throw error;
+  return (data || []) as unknown as TimelineEvent[];
+}
 
-  const rows = (data || []) as unknown as TimelineEvent[];
+async function fetchPortfolioTimeline({
+  limit,
+  eventTypes,
+  tenantIds,
+  search,
+}: Required<UsePortfolioTimelineOptions>): Promise<PortfolioTimelineResult> {
+  let rawLimit = Math.min(limit * RAW_FETCH_MULTIPLIER, RAW_FETCH_CAP);
+  let rows = await fetchRawRows(rawLimit, { eventTypes, tenantIds, search });
   if (rows.length === 0) return { events: [], hasMore: false };
 
-  const distinctTenantIds = [...new Set(rows.map((r) => r.tenant_id))];
-  const { data: tenants } = await supabase
-    .from('tenants')
-    .select('id, name')
-    .in('id', distinctTenantIds);
-  const nameMap = new Map<number, string>((tenants || []).map((t: any) => [t.id, t.name]));
+  let grouped: PortfolioTimelineEvent[] = [];
+  // A single large burst (e.g. one course auto-enrolling dozens of clients)
+  // can dominate the most-recent raw rows entirely, leaving nothing else in
+  // the window to group — grouped.length would collapse to 1 even though
+  // there's plenty of older, still-relevant activity just past the fetch
+  // window. Keep widening the raw fetch until there are enough *grouped*
+  // items to satisfy `limit`, or we've genuinely run out of matching rows,
+  // or hit the cap.
+  while (true) {
+    const distinctTenantIds = [...new Set(rows.map((r) => r.tenant_id))];
+    const { data: tenants } = await supabase
+      .from('tenants')
+      .select('id, name')
+      .in('id', distinctTenantIds);
+    const nameMap = new Map<number, string>((tenants || []).map((t: any) => [t.id, t.name]));
 
-  const enriched = rows.map((r) => ({ ...r, tenant_name: nameMap.get(r.tenant_id) ?? 'Unknown client' }));
+    const enriched = rows.map((r) => ({ ...r, tenant_name: nameMap.get(r.tenant_id) ?? 'Unknown client' }));
+    const { courseInfoByCourseId, actorByUuid } = await fetchEnrollmentCourseContext(rows);
+    grouped = groupPortfolioTimelineEvents(enriched, courseInfoByCourseId, actorByUuid);
 
-  const { courseInfoByCourseId, actorByUuid } = await fetchEnrollmentCourseContext(rows);
-  const grouped = groupPortfolioTimelineEvents(enriched, courseInfoByCourseId, actorByUuid);
+    const exhausted = rows.length < rawLimit; // DB returned fewer than asked — nothing more exists
+    const atCap = rawLimit >= RAW_FETCH_CAP;
+    if (grouped.length >= limit || exhausted || atCap) break;
+
+    rawLimit = Math.min(rawLimit * 2, RAW_FETCH_CAP);
+    rows = await fetchRawRows(rawLimit, { eventTypes, tenantIds, search });
+  }
 
   return {
     events: grouped.slice(0, limit),
