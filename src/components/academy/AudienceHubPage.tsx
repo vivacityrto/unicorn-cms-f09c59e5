@@ -308,10 +308,20 @@ export default function AudienceHubPage({
     }
   }, [seriesOptions, activeSeries]);
   useEffect(() => {
-    if (activeDateBucket !== ALL_DATES && !dateBuckets.some((b) => b.value === activeDateBucket)) {
+    if (activeDateBucket === ALL_DATES) return;
+    // Not a plain "is this value still in the list" check like tag/series
+    // above — a date bucket's own granularity reshapes between month:YYYY-MM
+    // and year:YYYY as other facets narrow the data (see buildDateBuckets'
+    // coarsening rule), so a selection can still match real courses even
+    // when its exact bucket string briefly isn't one of the currently-listed
+    // options. Only reset when it truly matches nothing any more.
+    const stillMatchesSomething = coursesForDateFacet.some((c) =>
+      courseMatchesDateBucket(c, activeDateBucket),
+    );
+    if (!stillMatchesSomething) {
       setActiveDateBucket(ALL_DATES);
     }
-  }, [dateBuckets, activeDateBucket]);
+  }, [coursesForDateFacet, activeDateBucket]);
 
   // "All" is a pill like any other tag bucket for width-measurement/overflow
   // purposes, so it shares the same array the fit calculation runs over.
