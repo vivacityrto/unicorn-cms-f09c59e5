@@ -30,6 +30,8 @@ export interface AcademyLesson {
   video_id?: string | null;
   resource_id?: string | null;
   content_markdown?: string | null;
+  segment_start_seconds?: number | null;
+  segment_end_seconds?: number | null;
 }
 
 export function useModulesWithLessons(courseId: number | null, opts?: { admin?: boolean }) {

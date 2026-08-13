@@ -327,7 +327,7 @@ export default function AcademyQuickAddPage() {
       const timestamped: string = vimeo?.transcript_timestamped || "";
       setTranscriptTimestamped(timestamped);
 
-      // Workshops split into one course per topic segment before review.
+      // Workshops split into topic segments; each becomes a lesson in one course.
       if (isWorkshop) {
         setDrafts([]);
         setSplitConfirmed(false);
@@ -551,13 +551,8 @@ export default function AcademyQuickAddPage() {
     segmentEnd: number | null;
   }
 
-  const createCourse = async (
-    spec: CourseSpec,
-    videoId: string,
-    userId: string | null,
-  ): Promise<number> => {
-    // unique slug
-    let slug = generateSlug(spec.title);
+  const uniqueSlug = async (rawTitle: string): Promise<string> => {
+    let slug = generateSlug(rawTitle);
     const { data: slugRows } = await supabase
       .from("academy_courses")
       .select("slug")
@@ -568,6 +563,67 @@ export default function AcademyQuickAddPage() {
       let i = 2;
       while (taken.has(slug)) { slug = `${base}-${i}`; i++; }
     }
+    return slug;
+  };
+
+  const insertPackageRules = async (courseId: number, userId: string | null) => {
+    if (availableToAll || packageIds.length === 0) return;
+    const { error: prErr } = await supabase
+      .from("academy_package_course_rules")
+      .insert(
+        packageIds.map((pid) => ({
+          package_id: pid,
+          course_id: courseId,
+          is_active: true,
+          created_by: userId,
+        })) as any,
+      );
+    if (prErr) throw prErr;
+  };
+
+  const insertCompletionQuiz = async (
+    courseId: number,
+    quizTitle: string,
+    questionsIn: QuizQuestion[],
+    userId: string | null,
+  ) => {
+    const survivors = questionsIn.filter((q) => q.question_text.trim());
+    if (survivors.length === 0) return;
+    const { data: assessment, error: aErr } = await supabase
+      .from("academy_assessments")
+      .insert({
+        course_id: courseId,
+        title: `${quizTitle} — Completion Quiz`,
+        pass_score: 80,
+        is_required_for_certificate: true,
+        created_by: userId,
+      } as any)
+      .select("id")
+      .single();
+    if (aErr) throw aErr;
+
+    const { error: qErr } = await supabase
+      .from("academy_assessment_questions")
+      .insert(
+        survivors.map((q, i) => ({
+          assessment_id: assessment.id,
+          question_text: q.question_text,
+          question_type: "multiple_choice",
+          options: q.options,
+          explanation: q.explanation || null,
+          points: 1,
+          sort_order: i + 1,
+        })) as any,
+      );
+    if (qErr) throw qErr;
+  };
+
+  const createCourse = async (
+    spec: CourseSpec,
+    videoId: string,
+    userId: string | null,
+  ): Promise<number> => {
+    const slug = await uniqueSlug(spec.title);
 
     const { data: course, error: cErr } = await supabase
       .from("academy_courses")
@@ -597,19 +653,7 @@ export default function AcademyQuickAddPage() {
     if (cErr) throw cErr;
     const courseId = course.id as number;
 
-    if (!availableToAll && packageIds.length > 0) {
-      const { error: prErr } = await supabase
-        .from("academy_package_course_rules")
-        .insert(
-          packageIds.map((pid) => ({
-            package_id: pid,
-            course_id: courseId,
-            is_active: true,
-            created_by: userId,
-          })) as any,
-        );
-      if (prErr) throw prErr;
-    }
+    await insertPackageRules(courseId, userId);
 
     const { data: mod, error: mErr } = await supabase
       .from("academy_modules")
@@ -634,40 +678,91 @@ export default function AcademyQuickAddPage() {
         video_id: videoId,
         sort_order: 1,
         is_published: true,
+        segment_start_seconds: spec.segmentStart,
+        segment_end_seconds: spec.segmentEnd,
       } as any);
     if (lErr) throw lErr;
 
-    const survivors = spec.questions.filter((q) => q.question_text.trim());
-    if (survivors.length > 0) {
-      const { data: assessment, error: aErr } = await supabase
-        .from("academy_assessments")
-        .insert({
+    await insertCompletionQuiz(courseId, spec.title.trim(), spec.questions, userId);
+    return courseId;
+  };
+
+  const createWorkshopCourse = async (
+    videoId: string,
+    userId: string | null,
+  ): Promise<number> => {
+    const courseTitle = (episodeTitle.trim() || title.trim()).trim();
+    const slug = await uniqueSlug(courseTitle);
+    const audience = [...new Set(drafts.flatMap((d) => d.targetAudience))];
+    const tagsUnion = [...new Set(drafts.flatMap((d) => d.tags))];
+    const first = drafts[0];
+
+    const { data: course, error: cErr } = await supabase
+      .from("academy_courses")
+      .insert({
+        title: courseTitle,
+        slug,
+        description: first?.description || null,
+        short_description: first?.shortDescription || null,
+        thumbnail_url: thumbnailUrl,
+        target_audience: audience.length ? audience : null,
+        difficulty_level: first?.difficulty || "beginner",
+        tags: tagsUnion.length ? tagsUnion : null,
+        status: "draft",
+        session_type: sessionType,
+        webinar_series: WORKSHOP_SERIES,
+        source_video_id: videoId,
+        segment_start_seconds: null,
+        segment_end_seconds: null,
+        available_to_all_clients: availableToAll,
+        ai_generated: true,
+        created_by: userId,
+        facilitator_id: facilitatorId,
+        delivery_date: deliveryDate,
+      } as any)
+      .select("id")
+      .single();
+    if (cErr) throw cErr;
+    const courseId = course.id as number;
+
+    await insertPackageRules(courseId, userId);
+
+    const { data: mod, error: mErr } = await supabase
+      .from("academy_modules")
+      .insert({
+        course_id: courseId,
+        title: "Workshop",
+        sort_order: 1,
+        is_published: true,
+      } as any)
+      .select("id")
+      .single();
+    if (mErr) throw mErr;
+
+    const { error: lErr } = await supabase
+      .from("academy_lessons")
+      .insert(
+        drafts.map((d, i) => ({
           course_id: courseId,
-          title: `${spec.title.trim()} — Completion Quiz`,
-          pass_score: 80,
-          is_required_for_certificate: true,
-          created_by: userId,
-        } as any)
-        .select("id")
-        .single();
-      if (aErr) throw aErr;
+          module_id: mod.id,
+          title: d.title.trim(),
+          description: d.shortDescription || null,
+          lesson_type: "video",
+          video_id: videoId,
+          sort_order: i + 1,
+          is_published: true,
+          segment_start_seconds: d.segment.start_seconds,
+          segment_end_seconds: d.segment.end_seconds,
+        })) as any,
+      );
+    if (lErr) throw lErr;
 
-      const { error: qErr } = await supabase
-        .from("academy_assessment_questions")
-        .insert(
-          survivors.map((q, i) => ({
-            assessment_id: assessment.id,
-            question_text: q.question_text,
-            question_type: "multiple_choice",
-            options: q.options,
-            explanation: q.explanation || null,
-            points: 1,
-            sort_order: i + 1,
-          })) as any,
-        );
-      if (qErr) throw qErr;
-    }
-
+    await insertCompletionQuiz(
+      courseId,
+      courseTitle,
+      drafts.flatMap((d) => d.questions),
+      userId,
+    );
     return courseId;
   };
 
@@ -680,31 +775,16 @@ export default function AcademyQuickAddPage() {
       return;
     }
 
-    const specs: CourseSpec[] = workshopActive
-      ? drafts.map((d) => ({
-          title: d.title,
-          shortDescription: d.shortDescription,
-          description: d.description,
-          targetAudience: d.targetAudience,
-          difficulty: d.difficulty,
-          tags: d.tags,
-          questions: d.questions,
-          segmentStart: d.segment.start_seconds,
-          segmentEnd: d.segment.end_seconds,
-        }))
-      : [{
-          title,
-          shortDescription,
-          description,
-          targetAudience,
-          difficulty,
-          tags,
-          questions,
-          segmentStart: null,
-          segmentEnd: null,
-        }];
-
-    if (specs.some((sp) => !sp.title.trim())) {
+    if (workshopActive) {
+      if (!(episodeTitle.trim() || title.trim())) {
+        toast.error("The course needs a title");
+        return;
+      }
+      if (drafts.some((d) => !d.title.trim())) {
+        toast.error("Every lesson needs a title");
+        return;
+      }
+    } else if (!title.trim()) {
       toast.error("Every course needs a title");
       return;
     }
@@ -714,8 +794,9 @@ export default function AcademyQuickAddPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ?? null;
       const cleanUrl = vimeoUrl.trim();
+      const videoName = (episodeTitle.trim() || title.trim()).trim();
 
-      // 1. training_videos — imported once per recording, reused by every segment
+      // 1. training_videos — imported once per recording, reused by every lesson
       const { data: existingVideo, error: vLookupErr } = await supabase
         .from("training_videos")
         .select("id")
@@ -725,7 +806,6 @@ export default function AcademyQuickAddPage() {
 
       let videoId = existingVideo?.id as string | undefined;
       if (!videoId) {
-        // folder_id is required — resolve (or create) the folder for this series
         const folderName = (series || "").trim() || "Quick Add Recordings";
         const { data: existingFolder, error: fLookupErr } = await supabase
           .from("training_folders")
@@ -749,7 +829,7 @@ export default function AcademyQuickAddPage() {
           .from("training_videos")
           .insert({
             folder_id: folderId,
-            video_name: (episodeTitle.trim() || specs[0].title).trim(),
+            video_name: videoName,
             vimeo_url: cleanUrl,
             duration_seconds: durationSeconds,
             thumbnail: thumbnailUrl,
@@ -762,19 +842,22 @@ export default function AcademyQuickAddPage() {
         videoId = newVideo.id as string;
       }
 
+      const courseId = workshopActive
+        ? await createWorkshopCourse(videoId!, userId)
+        : await createCourse({
+            title,
+            shortDescription,
+            description,
+            targetAudience,
+            difficulty,
+            tags,
+            questions,
+            segmentStart: null,
+            segmentEnd: null,
+          }, videoId!, userId);
 
-      const createdIds: number[] = [];
-      for (const spec of specs) {
-        createdIds.push(await createCourse(spec, videoId!, userId));
-      }
-
-      if (createdIds.length > 1) {
-        toast.success(`${createdIds.length} draft courses created — review and publish each one`);
-        navigate("/superadmin/academy/builder");
-      } else {
-        toast.success("Draft course created — review and publish when ready");
-        navigate(`/superadmin/academy/builder/${createdIds[0]}`);
-      }
+      toast.success("Draft course created — review and publish when ready");
+      navigate(`/superadmin/academy/builder/${courseId}`);
     } catch (e: any) {
       toast.error(e?.message || "Failed to save draft course");
     } finally {
@@ -984,12 +1067,25 @@ export default function AcademyQuickAddPage() {
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Reviewing segment {draftIndex + 1} of {drafts.length}. Each becomes its own draft course.
+                  Reviewing segment {draftIndex + 1} of {drafts.length}. Each becomes a lesson in this course.
+                </p>
+              </div>
+            )}
+            {workshopActive && (
+              <div className="space-y-2">
+                <Label>Course title</Label>
+                <Input
+                  value={episodeTitle}
+                  onChange={(e) => setEpisodeTitle(e.target.value)}
+                  placeholder="Inclusive Practice & Reasonable Adjustment Plans"
+                />
+                <p className="text-xs text-muted-foreground">
+                  The name of the whole recording — one course, with a lesson per segment below.
                 </p>
               </div>
             )}
             <div className="space-y-2">
-              <Label>Course title</Label>
+              <Label>{workshopActive ? "Lesson title" : "Course title"}</Label>
               <Input value={vTitle} onChange={(e) => setVTitle(e.target.value)} />
             </div>
             <div className="space-y-2">
@@ -1172,7 +1268,7 @@ export default function AcademyQuickAddPage() {
         <div className="flex items-center justify-between pb-6">
           <p className="text-sm text-muted-foreground">
             {workshopActive
-              ? `Saves ${drafts.length} draft courses — one per segment — publish each from the course builder after review.`
+              ? "Saves one draft course with a lesson per segment — publish it from the course builder after review."
               : "Saves as a draft course — publish it from the course builder after review."}
           </p>
           <Button
@@ -1182,13 +1278,13 @@ export default function AcademyQuickAddPage() {
               !vimeoUrl.trim() ||
               !facilitatorId ||
               !deliveryDate ||
-              (isWorkshop ? !workshopActive : !title.trim())
+              (isWorkshop ? !workshopActive || !(episodeTitle.trim() || title.trim()) : !title.trim())
             }
             className="text-white hover:opacity-90"
             style={{ backgroundColor: "#23c0dd" }}
           >
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            {workshopActive ? `Save ${drafts.length} drafts` : "Save as draft"}
+            {workshopActive ? "Save draft course" : "Save as draft"}
           </Button>
         </div>
         {!generated && (
