@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatDeliveryDate } from "@/lib/academy/formatDeliveryDate";
 
 const roleTiles = [
   {
@@ -251,17 +252,17 @@ export default function AcademyDashboardPage() {
             </div>
           )}
           {!recordingsLoading &&
-            latestRecordings.map((video) => (
+            latestRecordings.map((course) => (
               <Link
-                key={video.id}
-                to={`/academy/course/${video.courseSlug}/lesson/${video.lessonId}`}
+                key={course.id}
+                to={`/academy/course/${course.courseSlug}`}
                 className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
               >
                 <div className="h-12 w-20 rounded overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
-                  {video.thumbnail ? (
+                  {course.thumbnail ? (
                     <img
-                      src={video.thumbnail}
-                      alt={video.video_name}
+                      src={course.thumbnail}
+                      alt={course.title}
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -270,13 +271,13 @@ export default function AcademyDashboardPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-medium text-sm text-foreground truncate">
-                    {video.video_name}
+                    {course.title}
                   </h4>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {video.folder_name && <span>{video.folder_name} · </span>}
-                    {video.duration_seconds
-                      ? formatDuration(Math.round(video.duration_seconds / 60))
-                      : "Recording"}
+                    {formatDeliveryDate(course.deliveryDate) && (
+                      <span>{formatDeliveryDate(course.deliveryDate)} · </span>
+                    )}
+                    {course.estimatedMinutes ? formatDuration(course.estimatedMinutes) : "Recording"}
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
