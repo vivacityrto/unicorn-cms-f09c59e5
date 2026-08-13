@@ -40,6 +40,7 @@ import AssessmentEditorTab from "@/components/academy/builder/AssessmentEditorTa
 import PackageRulesTab from "@/components/academy/builder/PackageRulesTab";
 import AiAssistPanel, { type AiAssistResult } from "@/components/academy/builder/AiAssistPanel";
 import PathwayMultiSelect from "@/components/academy/PathwayMultiSelect";
+import CourseResourcesSection from "@/components/academy/builder/CourseResourcesSection";
 import TagChipInput from "@/components/academy/TagChipInput";
 import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
 import { todayLocalISODate } from "@/lib/academy/aiAssist";
@@ -757,6 +758,10 @@ export default function AcademyBuilderCourse() {
                   onChange={(v) => setFormState((p) => ({ ...p, target_audience: v }))}
                 />
               </Field>
+
+              {courseId != null && (
+                <CourseResourcesSection courseId={courseId} canEdit={canEdit} />
+              )}
 
               <Field label="Difficulty Level">
                 <Select value={formState.difficulty_level} onValueChange={(v) => setFormState((p) => ({ ...p, difficulty_level: v }))}>
