@@ -32,7 +32,6 @@ interface LinkRow {
   course_id: number;
   resource_id: string;
   sort_order: number | null;
-  title?: string | null;
 }
 
 interface LibraryRow {
@@ -65,7 +64,7 @@ function mapRows(links: LinkRow[], library: LibraryRow[]): CourseResource[] {
         courseId: link.course_id,
         resourceId: resource.id,
         sortOrder: link.sort_order ?? 0,
-        title: resource.title || link.title || "Untitled resource",
+        title: resource.title || "Untitled resource",
         resourceType: resource.resource_type || (resource.file_url && !resource.storage_path ? "link" : "file"),
         storageBucket: resource.storage_bucket ?? null,
         storagePath: resource.storage_path ?? null,
@@ -78,7 +77,7 @@ function mapRows(links: LinkRow[], library: LibraryRow[]): CourseResource[] {
 
 export async function fetchCourseResources(courseId: number): Promise<CourseResource[]> {
   const { data: linkData, error: linkError } = await courseResourcesTable()
-    .select("id, course_id, resource_id, sort_order, title")
+    .select("id, course_id, resource_id, sort_order")
     .eq("course_id", courseId)
     .order("sort_order", { ascending: true });
   if (linkError) throw linkError;
@@ -157,7 +156,6 @@ export function useAddCourseFileResource(courseId: number) {
         course_id: courseId,
         resource_id: resourceId,
         sort_order: nextOrder,
-        title: title.trim(),
         ...(userId ? { created_by: userId } : {}),
       });
       if (linkError) {
@@ -215,7 +213,6 @@ export function useAddCourseLinkResource(courseId: number) {
         course_id: courseId,
         resource_id: libraryRow.id,
         sort_order: nextOrder,
-        title: title.trim(),
         ...(userId ? { created_by: userId } : {}),
       });
       if (linkError) {
