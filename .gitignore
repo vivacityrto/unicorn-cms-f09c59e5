@@ -47,3 +47,12 @@ worktrees/
 
 # Playwright MCP local run artefacts (screenshots, traces, console logs)
 .playwright-mcp/
+
+# Lovable's @lovable.dev/mcp-js Vite plugin regenerates this bundle from
+# src/lib/mcp/index.ts on every local `npm run dev`/build, producing a
+# broken stub (hardcoded absolute local path, stale package version) that
+# differs from the correctly-bundled version Lovable's own build produces —
+# showing up as a permanent, un-committable local diff. Not deployed via git
+# anyway (see AGENTS.md → Supabase deployment workflow), so nothing is lost
+# by not tracking it.
+supabase/functions/mcp/index.ts
