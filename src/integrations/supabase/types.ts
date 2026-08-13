@@ -70908,6 +70908,13 @@ export type Database = {
         Args: { p_email: string; p_user_id: string }
         Returns: string
       }
+      get_academy_facilitator_names_safe: {
+        Args: { p_facilitator_ids: string[] }
+        Returns: {
+          full_name: string
+          user_uuid: string
+        }[]
+      }
       get_active_membership_packages: {
         Args: { p_tenant_id: number }
         Returns: {

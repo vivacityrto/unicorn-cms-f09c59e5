@@ -11,10 +11,15 @@ export function useFacilitatorNames(facilitatorIds: string[]) {
     queryKey: ["academy-facilitator-names", facilitatorIds],
     enabled: facilitatorIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("user_uuid, full_name")
-        .in("user_uuid", facilitatorIds);
+      // Client-side auth can't read arbitrary `users` rows (RLS scopes reads
+      // to self / own tenant / assigned CSC), but a course facilitator's
+      // name is meant to be public to anyone who can see that published
+      // course — so this goes through a SECURITY DEFINER RPC that only
+      // ever returns a name already surfaced as a published course's
+      // facilitator_id, not an arbitrary users lookup.
+      const { data, error } = await supabase.rpc("get_academy_facilitator_names_safe", {
+        p_facilitator_ids: facilitatorIds,
+      });
       if (error) throw error;
       const map: Record<string, string> = {};
       for (const u of data ?? []) {
