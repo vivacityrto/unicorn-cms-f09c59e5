@@ -41,3 +41,17 @@ broader review of other facilitator fields (e.g. `created_by`).
   user is currently logged in — not actioned here, parked as a possible
   small follow-up alongside the same-Vimeo-URL double-submit guard noted in
   the duplicate-course entry above.
+
+## Correction (2026-08-13, same day)
+
+- Carl confirmed the real presenter for the Trainers Edge series was Samantha
+  Holtman, not Angela Connell-Richards — the initial decision above assumed
+  Angela because she was the only *other* facilitator anywhere in the
+  catalog, but that assumption was wrong for this series specifically.
+- No `users` row exists for Samantha Holtman yet (checked by name and email),
+  so she isn't currently selectable in the facilitator picker — likely how
+  "Test CSC" leaked in during the original batch import in the first place.
+- Reverted `facilitator_id` to `null` on all 6 courses (48, 50, 51, 52, 53,
+  54) rather than guess again. Once Samantha has a `users` row, assign her
+  via Course Cleanup (`/superadmin/academy/course-cleanup` → "Missing
+  facilitator" filter).
