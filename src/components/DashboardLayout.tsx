@@ -231,6 +231,7 @@ export const DashboardLayout = ({
   const isTeamLeader = userRole === "Team Leader";
   const isTeamMember = userRole === "Team Member";
   const isIntegrator = userRole === "Integrator";
+  const isCSC = userRole === "CSC";
 
   // Scroll active menu item into view immediately on route changes
   useLayoutEffect(() => {
@@ -585,31 +586,12 @@ export const DashboardLayout = ({
                   "administration"
                 )}
 
-              {/* 6. ACADEMY BUILDER Section - SA + TL always; Integrator only sees Package → Course Rules */}
-              {(isSuperAdmin || isTeamLeader || isIntegrator) &&
+              {/* 6. ACADEMY BUILDER Section - SA, TL, Integrator, CSC all have full parity */}
+              {(isSuperAdmin || isTeamLeader || isIntegrator || isCSC) &&
                 renderSection(
                   "academyBuilder",
                   "Academy",
-                  academyBuilderMenuItems.filter((item) => {
-                    // Tenant Access: SA + TL only
-                    if (item.path === "/superadmin/academy/tenant-access") {
-                      return isSuperAdmin || isTeamLeader;
-                    }
-                    // Package → Course Rules: SA + TL + Integrator
-                    if (item.path === "/superadmin/academy/package-course-rules") {
-                      return isSuperAdmin || isTeamLeader || isIntegrator;
-                    }
-                    // Workforce PDP: route is requireSuperAdmin, so SA only
-                    if (item.path === "/superadmin/workforce-pdp") {
-                      return isSuperAdmin;
-                    }
-                    // Tag Management: route is requireSuperAdmin, so SA only
-                    if (item.path === "/superadmin/academy/tag-management") {
-                      return isSuperAdmin;
-                    }
-                    // All other academy items: SA + TL (hide from Integrator)
-                    return isSuperAdmin || isTeamLeader;
-                  }),
+                  academyBuilderMenuItems,
                   "academyBuilder"
                 )}
 

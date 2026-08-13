@@ -12,9 +12,11 @@ import { Button } from '@/components/ui/button';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireSuperAdmin?: boolean;
+  /** Non-SuperAdmin unicorn_role values allowed through; SuperAdmin is always allowed. */
+  allowedRoles?: string[];
 }
 
-export const ProtectedRoute = ({ children, requireSuperAdmin = false }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRoles }: ProtectedRouteProps) => {
   const { user, profile, loading } = useAuth();
   const { canAccessRoute, isSuperAdmin, canAccessEOS, isVivacityTeam } = useRBAC();
   const { hasAcademyOnly, hasFullAccess, isVivacityStaff, isLoading: accessLoading } = useUserAccess();
@@ -128,6 +130,10 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
   }
 
   if (requireSuperAdmin && !isSuperAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (allowedRoles && !isSuperAdmin && !allowedRoles.includes(profile?.unicorn_role ?? '')) {
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -20,6 +20,9 @@ import { startVersionChecking, stopVersionChecking } from "./utils/versionCheck"
 import { DevDiagnosticsPanel } from "./components/DevDiagnosticsPanel";
 import { CelebrationProvider } from "./components/ui/celebration";
 
+// Non-SuperAdmin roles allowed on Academy Builder admin routes (SuperAdmin is always allowed by ProtectedRoute).
+const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"];
+
  // Lazy load all page components for code splitting
  const Index = lazy(() => import("./pages/Index"));
  const Login = lazy(() => import("./pages/Login"));
@@ -1176,18 +1179,18 @@ const App = () => (
             <Route path="/support-tickets/:id" element={<ProtectedRoute><SuggestionDetail /></ProtectedRoute>} />
             <Route path="/admin/merge-field-tags" element={<ProtectedRoute requireSuperAdmin><MergeFieldTagsAdmin /></ProtectedRoute>} />
             <Route path="/admin/settings/reporting-obligations" element={<ProtectedRoute requireSuperAdmin><ReportingObligationsAdmin /></ProtectedRoute>} />
-            {/* SuperAdmin Academy Management */}
-            <Route path="/superadmin/academy/enrollments" element={<ProtectedRoute requireSuperAdmin><AcademyEnrolmentsPage /></ProtectedRoute>} />
-            <Route path="/superadmin/workforce-pdp" element={<ProtectedRoute requireSuperAdmin><SuperAdminWorkforcePdp /></ProtectedRoute>} />
-            <Route path="/superadmin/academy/tenant-access" element={<ProtectedRoute requireSuperAdmin><AcademyTenantAccessPage /></ProtectedRoute>} />
-            <Route path="/superadmin/academy/certificates" element={<ProtectedRoute requireSuperAdmin><AcademyCertificatesAdminPage /></ProtectedRoute>} />
-            <Route path="/superadmin/academy/builder" element={<ProtectedRoute requireSuperAdmin><AcademyBuilderLibrary /></ProtectedRoute>} />
-            <Route path="/superadmin/academy/quick-add" element={<ProtectedRoute requireSuperAdmin><AcademyQuickAddPage /></ProtectedRoute>} />
-            <Route path="/superadmin/academy/bulk-import" element={<ProtectedRoute requireSuperAdmin><AcademyBulkImportPage /></ProtectedRoute>} />
-            <Route path="/superadmin/academy/course-cleanup" element={<ProtectedRoute requireSuperAdmin><AcademyCourseCleanupPage /></ProtectedRoute>} />
-            <Route path="/superadmin/academy/tag-management" element={<ProtectedRoute requireSuperAdmin><AcademyTagManagementPage /></ProtectedRoute>} />
-            <Route path="/superadmin/academy/builder/:courseId" element={<ProtectedRoute requireSuperAdmin><AcademyBuilderCourse /></ProtectedRoute>} />
-            <Route path="/superadmin/academy/package-course-rules" element={<ProtectedRoute requireSuperAdmin><AcademyPackageCourseRulesPage /></ProtectedRoute>} />
+            {/* Academy Management - SuperAdmin, Team Leader, Integrator, CSC */}
+            <Route path="/superadmin/academy/enrollments" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyEnrolmentsPage /></ProtectedRoute>} />
+            <Route path="/superadmin/workforce-pdp" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><SuperAdminWorkforcePdp /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/tenant-access" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyTenantAccessPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/certificates" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyCertificatesAdminPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/builder" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyBuilderLibrary /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/quick-add" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyQuickAddPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/bulk-import" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyBulkImportPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/course-cleanup" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyCourseCleanupPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/tag-management" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyTagManagementPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/builder/:courseId" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyBuilderCourse /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/package-course-rules" element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><AcademyPackageCourseRulesPage /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCoursesListPage /></ProtectedRoute>} />
             <Route path="/academy/certificates" element={<ProtectedRoute><AcademyCertificatesPage /></ProtectedRoute>} />
