@@ -79,7 +79,13 @@ async function fetchPortfolioTimeline({
 
   return {
     events: grouped.slice(0, limit),
-    hasMore: grouped.length > limit || rows.length === rawLimit,
+    // "Load more" works by widening `limit` (and so `rawLimit`) on the next
+    // fetch, not by an offset — so once `rawLimit` is pinned at the cap,
+    // fetching again can never return anything new, and claiming hasMore
+    // off `rows.length === rawLimit` alone would offer a "Load more" that
+    // does nothing forever. Only claim more raw data is reachable while
+    // there's still room to grow the fetch past the cap.
+    hasMore: grouped.length > limit || (rows.length === rawLimit && rawLimit < RAW_FETCH_CAP),
   };
 }
 

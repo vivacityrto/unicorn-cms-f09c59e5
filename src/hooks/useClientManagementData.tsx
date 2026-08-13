@@ -248,11 +248,15 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
       // produces a cross-tenant 'enrollment_multi' group here. Regrouped
       // over the full raw accumulator (not just this page) so a burst that
       // spans a "Load more" page boundary still collapses into one row.
+      // Broadcasts are left ungrouped here (groupBroadcasts: false) — this
+      // view renders title/body only, not tenant_name, so the dashboard's
+      // subject-in-tenant_name rewording would just lose the message.
       const { courseInfoByCourseId, actorByUuid } = await fetchEnrollmentCourseContext(rawEventsRef.current);
       const groupedEvents = groupPortfolioTimelineEvents(
         rawEventsRef.current.map((e) => ({ ...e, tenant_name: '' })),
         courseInfoByCourseId,
-        actorByUuid
+        actorByUuid,
+        { groupBroadcasts: false }
       ) as TimelineEvent[];
 
       setEvents(groupedEvents);
@@ -346,7 +350,11 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
     dateRange,
     setDateRange,
     refresh: () => { fetchEvents(); fetchPinnedNotes(); },
-    loadMore: (offset: number) => fetchEvents(30, offset),
+    // Always paginate off the raw (ungrouped) accumulator length, not the
+    // displayed `events.length` — grouping can collapse many raw rows into
+    // one, so the caller's displayed count under-advances the RPC offset
+    // and re-fetches rows already seen.
+    loadMore: () => fetchEvents(30, rawEventsRef.current.length),
     addQuickNote,
     toggleNotePin
   };

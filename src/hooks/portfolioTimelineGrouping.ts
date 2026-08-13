@@ -64,7 +64,7 @@ interface GroupKeyInfo {
   kind: 'enrollment' | 'broadcast';
 }
 
-function groupKeyFor(e: PortfolioTimelineEvent): GroupKeyInfo | null {
+function groupKeyFor(e: PortfolioTimelineEvent, groupBroadcasts: boolean): GroupKeyInfo | null {
   if (e.event_type === 'academy_enrolled') {
     const courseId = (e.metadata as Record<string, unknown> | null)?.course_id;
     if (courseId == null) return null;
@@ -78,7 +78,7 @@ function groupKeyFor(e: PortfolioTimelineEvent): GroupKeyInfo | null {
     };
   }
 
-  if (e.event_type === 'message_sent') {
+  if (e.event_type === 'message_sent' && groupBroadcasts) {
     const metadata = e.metadata as Record<string, unknown> | null;
     if (metadata?.conversation_type !== 'broadcast') return null;
     const subject = String(metadata?.conversation_subject ?? '');
@@ -114,25 +114,46 @@ function buildGroupedEvent(
     const courseId = String(metadata?.course_id ?? '');
     const courseInfo = courseInfoByCourseId.get(courseId);
     const courseTitle = courseInfo?.title || extractCourseTitle(newest.title);
-    const actorProfile = courseInfo?.actorUuid ? actorByUuid.get(courseInfo.actorUuid) : undefined;
-    const verb = actorProfile ? `${actorProfile.name} auto enrolled` : 'Auto enrolled';
     const tenantIds = [...new Set(cluster.map((e) => e.tenant_id))];
 
-    // The trigger stamps created_by as enrolled_by, falling back to the
-    // enrolled user's own id when no admin is recorded — exactly the case
-    // here (that's why we're resolving the actor from the course at all).
-    // Override both fields so the creator chip agrees with the headline,
-    // instead of showing whichever enrolled user happened to be "newest".
-    const actorOverride = actorProfile
-      ? {
-          created_by: courseInfo!.actorUuid,
-          creator: {
-            first_name: actorProfile.first_name,
-            last_name: actorProfile.last_name,
-            avatar_url: actorProfile.avatar_url,
-          },
-        }
-      : {};
+    let verb: string;
+    let actorOverride: Partial<PortfolioTimelineEvent> = {};
+
+    if (isAutoOrBulk) {
+      // The trigger stamps created_by as enrolled_by, falling back to the
+      // enrolled user's own id when no admin is recorded — true for this
+      // source, so the row's own created_by can't be trusted. Resolve the
+      // actor from the course instead, and override both fields so the
+      // creator chip agrees with the headline.
+      const actorProfile = courseInfo?.actorUuid ? actorByUuid.get(courseInfo.actorUuid) : undefined;
+      verb = actorProfile ? `${actorProfile.name} auto enrolled` : 'Auto enrolled';
+      actorOverride = actorProfile
+        ? {
+            created_by: courseInfo!.actorUuid,
+            creator: {
+              first_name: actorProfile.first_name,
+              last_name: actorProfile.last_name,
+              avatar_url: actorProfile.avatar_url,
+            },
+          }
+        : {};
+    } else {
+      // metadata.source is 'manual' (or unset) and count > 1 — a deliberate
+      // admin bulk-select (e.g. useBulkEnroll), which *does* set enrolled_by
+      // reliably. Use the cluster's own actor rather than the course
+      // publisher, and don't call it "auto" since a human chose these users.
+      const rowActorUuids = new Set(cluster.map((e) => e.created_by).filter(Boolean));
+      const rowActorUuid = rowActorUuids.size === 1 ? [...rowActorUuids][0] : null;
+      const actorProfile = rowActorUuid ? actorByUuid.get(rowActorUuid) : undefined;
+      if (actorProfile) {
+        verb = `${actorProfile.name} enrolled`;
+      } else {
+        // Mixed/unresolved actors — a coincidental cluster, not one
+        // action. Don't claim a specific actor rather than guess wrong.
+        verb = 'Multiple staff enrolled';
+        actorOverride = { creator: undefined };
+      }
+    }
 
     if (count === 1) {
       const userName = extractUserName(newest.title);
@@ -205,6 +226,17 @@ export function groupedEventHref(event: PortfolioTimelineEvent): string | null {
   return null;
 }
 
+export interface GroupOptions {
+  /**
+   * Broadcast collapsing only makes sense where `tenant_name` is actually
+   * rendered (the cross-tenant dashboard) — the per-tenant Timeline shows
+   * `title`/`body` only, so rewording a broadcast there would just lose
+   * the subject and message body. Default true (dashboard); pass false
+   * for the per-tenant Timeline.
+   */
+  groupBroadcasts?: boolean;
+}
+
 /**
  * Groups is display-only: it never mutates or removes the underlying
  * client_timeline_events rows, and the per-tenant Timeline reads that table
@@ -218,15 +250,38 @@ export function groupedEventHref(event: PortfolioTimelineEvent): string | null {
 export function groupPortfolioTimelineEvents(
   events: PortfolioTimelineEvent[],
   courseInfoByCourseId: Map<string, CourseActorInfo> = new Map(),
-  actorByUuid: Map<string, ActorProfile> = new Map()
+  actorByUuid: Map<string, ActorProfile> = new Map(),
+  options: GroupOptions = {}
 ): PortfolioTimelineEvent[] {
+  const { groupBroadcasts = true } = options;
   const buckets = new Map<string, PortfolioTimelineEvent[]>();
   const bucketMeta = new Map<string, GroupKeyInfo>();
+
+  // A broadcast's fan-out is exactly one message per tenant conversation
+  // (entity_id = conversation_id). A later reply lands in that same
+  // conversation and would otherwise share the bucket key (sender+subject)
+  // and get folded into the original blast, inflating its count. Only the
+  // earliest message per conversation is eligible for bucketing; anything
+  // later sharing that entity_id is a reply and stays its own row. Computed
+  // up front (not "first seen while iterating") since `events` is
+  // newest-first and the earliest message is what we actually want to keep.
+  const earliestAtByEntityId = new Map<string, number>();
+  for (const e of events) {
+    if (e.event_type !== 'message_sent' || !e.entity_id) continue;
+    const t = occurredAtMs(e);
+    const cur = earliestAtByEntityId.get(e.entity_id);
+    if (cur === undefined || t < cur) earliestAtByEntityId.set(e.entity_id, t);
+  }
+
   const output: PortfolioTimelineEvent[] = [];
 
   for (const e of events) {
-    const key = groupKeyFor(e);
+    const key = groupKeyFor(e, groupBroadcasts);
     if (!key) {
+      output.push(e);
+      continue;
+    }
+    if (key.kind === 'broadcast' && e.entity_id && occurredAtMs(e) !== earliestAtByEntityId.get(e.entity_id)) {
       output.push(e);
       continue;
     }

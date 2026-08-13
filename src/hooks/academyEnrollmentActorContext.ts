@@ -55,7 +55,20 @@ export async function fetchEnrollmentCourseContext(rows: TimelineEvent[]): Promi
     ])
   );
 
-  const actorUuids = [...new Set([...courseInfoByCourseId.values()].map((c) => c.actorUuid).filter(Boolean))] as string[];
+  // Two distinct actor sources: the course's own published_by/created_by
+  // (for auto/bulk rows, whose own created_by can't be trusted — see the
+  // module docstring), and the row's own created_by for 'manual'-source
+  // rows, which IS reliable there (e.g. useBulkEnroll sets enrolled_by).
+  const courseActorUuids = [...courseInfoByCourseId.values()].map((c) => c.actorUuid).filter(Boolean) as string[];
+  const rowActorUuids = rows
+    .filter((r) => {
+      if (r.event_type !== 'academy_enrolled') return false;
+      const source = (r.metadata as Record<string, unknown> | null)?.source;
+      return !(typeof source === 'string' && source !== 'manual');
+    })
+    .map((r) => r.created_by)
+    .filter((id): id is string => !!id);
+  const actorUuids = [...new Set([...courseActorUuids, ...rowActorUuids])];
   if (actorUuids.length === 0) {
     return { courseInfoByCourseId, actorByUuid: new Map() };
   }
