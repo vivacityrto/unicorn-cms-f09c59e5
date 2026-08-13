@@ -45,10 +45,10 @@ broader review of other facilitator fields (e.g. `created_by`).
 ## Correction (2026-08-13, same day)
 
 - Carl confirmed the real presenter for the Trainers Edge series was Samantha
-  Holtman, not Angela Connell-Richards — the initial decision above assumed
+  Holtham, not Angela Connell-Richards — the initial decision above assumed
   Angela because she was the only *other* facilitator anywhere in the
   catalog, but that assumption was wrong for this series specifically.
-- No `users` row exists for Samantha Holtman yet (checked by name and email),
+- No `users` row exists for Samantha Holtham yet (checked by name and email),
   so she isn't currently selectable in the facilitator picker — likely how
   "Test CSC" leaked in during the original batch import in the first place.
 - Reverted `facilitator_id` to `null` on all 6 courses (48, 50, 51, 52, 53,
