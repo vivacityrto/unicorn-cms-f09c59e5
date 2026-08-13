@@ -31,13 +31,19 @@ interface PortfolioTimelineResult {
 // Mass admin actions (bulk enrollment, a broadcast fanned out to many
 // tenants) fire the same DB trigger once per row, so `limit` raw rows can
 // collapse into far fewer grouped rows. Over-fetch so the requested `limit`
-// is met in *grouped* rows, not raw ones, without an unbounded query. The
-// cap is generous (not just a small multiple of `limit`) because a handful
-// of real-world mass-enrollment bursts can each run into the hundreds of
-// rows and land back-to-back — a small cap gets entirely consumed by the
-// two or three most recent bursts with no room left to reach anything else.
+// is met in *grouped* rows, not raw ones, without an unbounded query.
+//
+// The cap is pinned to 1000, not just "generous" — verified empirically
+// against the live project (authenticated fetch, .limit(1500/2000/5000) all
+// silently returned exactly 1000 rows) that PostgREST enforces a hard
+// max-rows ceiling here regardless of what's requested. Asking for more
+// than 1000 doesn't fetch more; it just makes `rows.length < rawLimit`
+// (our "exhausted" signal) fire incorrectly once rawLimit exceeds the real
+// ceiling, since the response looks short even when the table has far more
+// matching rows. Keeping the cap at the verified ceiling keeps that check
+// honest.
 const RAW_FETCH_MULTIPLIER = 5;
-const RAW_FETCH_CAP = 2000;
+const RAW_FETCH_CAP = 1000;
 
 async function fetchRawRows(
   rawLimit: number,
