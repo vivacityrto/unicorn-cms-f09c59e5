@@ -400,3 +400,9 @@ verify_jwt = true
 # permission gate handled in-function (anon key is a valid JWT).
 [functions.release-audit-report]
 verify_jwt = false
+
+# Academy: import a Vimeo Showcase into a course as modules/lessons.
+# Auth handled in-function (check_permission academy.builder.edit); gateway
+# verify_jwt alone accepts the public anon key.
+[functions.academy-import-vimeo-showcase]
+verify_jwt = false
