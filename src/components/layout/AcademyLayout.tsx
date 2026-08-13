@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import {
   LayoutDashboard,
   BookOpen,
@@ -89,6 +89,20 @@ const AcademyLayoutInner = ({
   const { isPreviewMode } = useClientPreview();
   const navRef = useRef<HTMLElement>(null);
 
+  // Academy has no dark mode of its own — force light regardless of a staff
+  // member's dashboard preference (same fix as ClientLayout). The "light"
+  // class on the root div below only reaches this subtree, so also strip
+  // .dark off <html> for Radix content that portals straight onto <body>
+  // (Sheet, Dialog, Popover, DropdownMenu, HelpCenterDrawer...).
+  useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    if (hadDark) root.classList.remove("dark");
+    return () => {
+      if (hadDark) root.classList.add("dark");
+    };
+  }, []);
+
   // Show team section only for Team and Elite tiers
   const showTeamSection = academyTier === "team" || academyTier === "elite";
 
@@ -161,7 +175,7 @@ const AcademyLayoutInner = ({
 
   if (academyAccessLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="light min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--viv-fuchsia)]" />
       </div>
     );
@@ -169,7 +183,7 @@ const AcademyLayoutInner = ({
 
   if (!academyAccessEnabled) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center px-6">
+      <div className="light min-h-screen flex flex-col items-center justify-center bg-background text-center px-6">
         <div
           className="flex items-center justify-center h-20 w-20 rounded-2xl mb-6"
           style={{ background: "linear-gradient(135deg, #7130A0, #ed1878)" }}
@@ -191,7 +205,7 @@ const AcademyLayoutInner = ({
   }
 
   return (
-    <div className="min-h-screen bg-background academy-scope">
+    <div className="light min-h-screen bg-background academy-scope">
       {/* Impersonation Banner (fixed; spacer pushes layout down) */}
       {isPreviewMode && (
         <>
