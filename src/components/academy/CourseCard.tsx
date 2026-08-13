@@ -6,6 +6,7 @@ import {
   Award,
   ChevronRight,
   ExternalLink,
+  CalendarDays,
 } from "lucide-react";
 
 export interface CourseCardProps {
@@ -20,6 +21,9 @@ export interface CourseCardProps {
   totalLessons?: number;
   accentColour?: string;
   thumbnailUrl?: string | null;
+  /** Already-formatted delivery date label (e.g. "13 July 2026"), or null/undefined to omit the line. */
+  deliveryDateLabel?: string | null;
+  facilitatorName?: string | null;
   onContinue?: () => void;
   onStart?: () => void;
   onClick?: () => void;
@@ -57,6 +61,8 @@ export default function CourseCard({
   totalLessons,
   accentColour = "#23c0dd",
   thumbnailUrl,
+  deliveryDateLabel,
+  facilitatorName,
   onContinue,
   onStart,
   onClick,
@@ -154,6 +160,19 @@ export default function CourseCard({
         >
           {title}
         </h3>
+
+        {/* Delivery date + facilitator — its own line so it doesn't crowd
+            the duration/lessons/difficulty row at the sm breakpoint */}
+        {(deliveryDateLabel || facilitatorName) && (
+          <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground truncate">
+            <CalendarDays className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="truncate">
+              {deliveryDateLabel}
+              {deliveryDateLabel && facilitatorName ? " · " : ""}
+              {facilitatorName}
+            </span>
+          </div>
+        )}
 
         {/* Meta row */}
         <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
