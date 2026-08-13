@@ -160,12 +160,11 @@ export default function ClientActivityFeed() {
     [selectedTenantIds]
   );
 
-  const { events, isLoading } = usePortfolioTimeline({ limit, eventTypes, tenantIds, search });
+  const { events, hasMore, isLoading } = usePortfolioTimeline({ limit, eventTypes, tenantIds, search });
 
   const resetPaging = () => setLimit(PAGE_SIZE);
 
   const dateGroups = useMemo(() => groupByDate(events), [events]);
-  const hasMore = events.length === limit;
 
   return (
     <DashboardLayout>
@@ -264,7 +263,11 @@ export default function ClientActivityFeed() {
                           <li key={event.id}>
                             <button
                               type="button"
-                              onClick={() => navigate(`/tenant/${event.tenant_id}?tab=timeline`)}
+                              onClick={() =>
+                                event.group_kind === 'broadcast'
+                                  ? navigate('/communications')
+                                  : navigate(`/tenant/${event.tenant_id}?tab=timeline`)
+                              }
                               className="w-full py-2.5 flex items-start gap-3 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
                             >
                               <div className={`flex h-8 w-8 items-center justify-center rounded-full shrink-0 ${colorClass}`}>
@@ -280,6 +283,9 @@ export default function ClientActivityFeed() {
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-center gap-1.5 min-w-0">
                                     <span className="text-sm font-medium text-foreground truncate">{event.tenant_name}</span>
+                                    {event.group_count && (
+                                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 shrink-0">×{event.group_count}</Badge>
+                                    )}
                                     {isVivacityTeam && event.visibility === 'internal' && (
                                       <Badge variant="secondary" className="text-[10px] h-4 px-1.5 shrink-0">Internal</Badge>
                                     )}

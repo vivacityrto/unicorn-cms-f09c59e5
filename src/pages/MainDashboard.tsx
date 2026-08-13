@@ -323,7 +323,11 @@ function ClientActivityPanel({ className, limit = 8 }: { className?: string; lim
               <li key={e.id}>
                 <button
                   type="button"
-                  onClick={() => navigate(`/tenant/${e.tenant_id}?tab=timeline`)}
+                  onClick={() =>
+                    e.group_kind === 'broadcast'
+                      ? navigate('/communications')
+                      : navigate(`/tenant/${e.tenant_id}?tab=timeline`)
+                  }
                   className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
                 >
                   <div className={`flex h-7 w-7 items-center justify-center rounded-full shrink-0 ${colorClass}`}>
@@ -331,7 +335,12 @@ function ClientActivityPanel({ className, limit = 8 }: { className?: string; lim
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="text-sm font-medium text-foreground truncate">{e.tenant_name}</div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-medium text-foreground truncate">{e.tenant_name}</span>
+                        {e.group_count && (
+                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 shrink-0">×{e.group_count}</Badge>
+                        )}
+                      </div>
                       <span className="text-[11px] text-muted-foreground shrink-0">
                         {formatDistanceToNow(new Date(e.occurred_at || e.created_at), { addSuffix: true })}
                       </span>
