@@ -11,7 +11,8 @@ import RulesMatrixTab from "@/components/academy/admin/rules/RulesMatrixTab";
 import RulesListTab from "@/components/academy/admin/rules/RulesListTab";
 import CreateRuleModal from "@/components/academy/admin/rules/CreateRuleModal";
 import { useRuleStats, useRulesRealtime } from "@/hooks/academy/useAcademyPackageRules";
-import { usePermission } from "@/hooks/usePermission";
+import { usePermission, usePermissionDetailed } from "@/hooks/usePermission";
+import { Loader2 } from "lucide-react";
 
 export default function AcademyPackageCourseRulesPage() {
   useRulesRealtime();
@@ -19,9 +20,22 @@ export default function AcademyPackageCourseRulesPage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   // ── RBAC gates ──
-  const hasAccess = usePermission('academy.mapping.view', 'full');
+  const { granted: hasAccess, isLoading: accessLoading } = usePermissionDetailed('academy.mapping.view', 'full');
   const canManage = usePermission('academy.mapping.edit');
   const readOnly = !canManage;
+
+  // Wait for role_permissions to resolve before deciding - `granted` defaults
+  // to false while loading, which would otherwise redirect away non-SuperAdmin
+  // roles (CSC, Integrator, Team Leader) on every first visit/deep link.
+  if (accessLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center p-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!hasAccess) {
     return <Navigate to="/dashboard" replace />;
