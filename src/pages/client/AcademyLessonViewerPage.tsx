@@ -90,7 +90,7 @@ export default function AcademyLessonViewerPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_lessons")
-        .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown, completion_threshold")
+        .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown, completion_threshold, segment_start_seconds, segment_end_seconds")
         .eq("id", numericLessonId!)
         .single();
       if (error) throw error;
@@ -730,8 +730,8 @@ export default function AcademyLessonViewerPage() {
             vimeoUrl={video?.vimeo_url ?? null}
             title={lesson.title}
             startPositionSeconds={currentProgress?.last_position_seconds ?? 0}
-            segmentStartSeconds={(course as any)?.segment_start_seconds ?? null}
-            segmentEndSeconds={(course as any)?.segment_end_seconds ?? null}
+            segmentStartSeconds={(lesson as any)?.segment_start_seconds ?? (course as any)?.segment_start_seconds ?? null}
+            segmentEndSeconds={(lesson as any)?.segment_end_seconds ?? (course as any)?.segment_end_seconds ?? null}
             completionThreshold={completionThreshold}
             onFirstPlay={() => {
               if (canTrackProgress) {

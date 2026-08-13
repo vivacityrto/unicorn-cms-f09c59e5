@@ -138,8 +138,8 @@ export default function WorkshopSegmentSplit({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Each segment becomes its own draft course, module, lesson and quiz — and its own certificate.
-          The same Vimeo recording is reused for every segment.
+          Each segment becomes a lesson in this course, sharing the same Vimeo recording.
+          Playback starts and stops at the timestamps you set below.
         </p>
 
         {usedFallback && (
@@ -256,7 +256,7 @@ export default function WorkshopSegmentSplit({
             style={{ backgroundColor: "#7130A0" }}
           >
             {confirming ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
-            {confirmed ? "Split confirmed" : `Confirm split & draft ${segments.length} course${segments.length === 1 ? "" : "s"}`}
+            {confirmed ? "Split confirmed" : `Confirm split & draft ${segments.length} lesson${segments.length === 1 ? "" : "s"}`}
           </Button>
           {confirming && confirmProgress && (
             <span className="text-sm text-muted-foreground">{confirmProgress}</span>
