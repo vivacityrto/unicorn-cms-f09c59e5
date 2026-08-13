@@ -69,7 +69,7 @@ function SortableResourceRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-1 rounded-md border bg-card px-1.5 py-1"
+      className="flex items-center gap-1 min-w-0 rounded-md border bg-card px-1.5 py-1"
     >
       {canEdit && (
         <button
@@ -287,12 +287,12 @@ export default function CourseResourcesSection({
             }}
             variant="outline"
             size="sm"
-            className="w-full grid grid-cols-2"
+            className="w-full justify-start"
           >
-            <ToggleGroupItem value="file" className="text-[11px] h-8">
+            <ToggleGroupItem value="file" className="flex-1 text-[11px] h-8">
               Upload a file
             </ToggleGroupItem>
-            <ToggleGroupItem value="link" className="text-[11px] h-8">
+            <ToggleGroupItem value="link" className="flex-1 text-[11px] h-8">
               Add a link
             </ToggleGroupItem>
           </ToggleGroup>

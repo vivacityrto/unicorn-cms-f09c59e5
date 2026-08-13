@@ -146,7 +146,7 @@ export function useAddCourseFileResource(courseId: number) {
         file_name: file.name,
         mime_type: mimeForUpload(file),
         file_size: file.size,
-        created_by: userId,
+        ...(userId ? { created_by: userId } : {}),
       } as any);
       if (libraryError) {
         await supabase.storage.from(bucket).remove([storagePath]).catch(() => {});
@@ -158,7 +158,7 @@ export function useAddCourseFileResource(courseId: number) {
         resource_id: resourceId,
         sort_order: nextOrder,
         title: title.trim(),
-        created_by: userId,
+        ...(userId ? { created_by: userId } : {}),
       });
       if (linkError) {
         await supabase.from("resource_library").delete().eq("id", resourceId);
@@ -205,7 +205,7 @@ export function useAddCourseLinkResource(courseId: number) {
           access_level: accessLevel,
           resource_type: "link",
           file_url: trimmedUrl,
-          created_by: userId,
+          ...(userId ? { created_by: userId } : {}),
         } as any)
         .select("id")
         .single();
@@ -216,7 +216,7 @@ export function useAddCourseLinkResource(courseId: number) {
         resource_id: libraryRow.id,
         sort_order: nextOrder,
         title: title.trim(),
-        created_by: userId,
+        ...(userId ? { created_by: userId } : {}),
       });
       if (linkError) {
         await supabase.from("resource_library").delete().eq("id", libraryRow.id);

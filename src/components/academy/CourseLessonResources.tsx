@@ -65,7 +65,7 @@ export default function CourseLessonResources({ courseId }: { courseId: number }
           return (
             <li
               key={resource.linkId}
-              className="flex items-center gap-2 rounded-lg border px-3 py-2"
+              className="flex items-center gap-2 min-w-0 rounded-lg border px-3 py-2"
               style={{ borderColor: "hsl(var(--border))" }}
             >
               <CourseResourceTypeIcon kind={resource.kind} />
