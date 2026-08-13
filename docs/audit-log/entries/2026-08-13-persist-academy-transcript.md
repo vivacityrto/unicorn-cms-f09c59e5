@@ -11,7 +11,7 @@ AiAssistPanel.tsx, AssessmentEditorTab.tsx, or the edge function.
   of whether AI Assist had been run.
 
 ## Code changes (if this entry accompanies one)
-- pending: add academy_courses.transcript column; fold transcript
+- 832d6f6a: add academy_courses.transcript column; fold transcript
   into Structure-tab formState instead of separate session state.
 
 ## Decisions
