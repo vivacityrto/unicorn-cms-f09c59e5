@@ -210,6 +210,7 @@ const AcademyBuilderCourse = lazy(() => import("./pages/superadmin/AcademyBuilde
 const AcademyQuickAddPage = lazy(() => import("./pages/superadmin/AcademyQuickAddPage"));
 const AcademyBulkImportPage = lazy(() => import("./pages/superadmin/AcademyBulkImportPage"));
 const AcademyCourseCleanupPage = lazy(() => import("./pages/superadmin/AcademyCourseCleanupPage"));
+const AcademyTagManagementPage = lazy(() => import("./pages/superadmin/AcademyTagManagementPage"));
 const AcademyPackageCourseRulesPage = lazy(() => import("./pages/superadmin/AcademyPackageCourseRulesPage"));
 const RolePermissionsEditor = lazy(() => import("./pages/admin/RolePermissionsEditor"));
 
@@ -1184,6 +1185,7 @@ const App = () => (
             <Route path="/superadmin/academy/quick-add" element={<ProtectedRoute requireSuperAdmin><AcademyQuickAddPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/bulk-import" element={<ProtectedRoute requireSuperAdmin><AcademyBulkImportPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/course-cleanup" element={<ProtectedRoute requireSuperAdmin><AcademyCourseCleanupPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/tag-management" element={<ProtectedRoute requireSuperAdmin><AcademyTagManagementPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/builder/:courseId" element={<ProtectedRoute requireSuperAdmin><AcademyBuilderCourse /></ProtectedRoute>} />
             <Route path="/superadmin/academy/package-course-rules" element={<ProtectedRoute requireSuperAdmin><AcademyPackageCourseRulesPage /></ProtectedRoute>} />
             {/* Academy Routes */}

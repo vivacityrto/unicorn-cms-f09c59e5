@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown, GraduationCap, Search } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useOverflowTabs } from "@/hooks/useOverflowTabs";
 import CourseCard from "@/components/academy/CourseCard";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 import { Input } from "@/components/ui/input";
@@ -55,7 +56,6 @@ export interface AudienceHubPageProps {
 
 const ALL_TAB = "__all__";
 const ALL_SERIES = "__all__";
-const VISIBLE_TAB_LIMIT = 6; // includes the "All" pill
 
 const collator = new Intl.Collator("en-AU", { sensitivity: "base" });
 
@@ -101,11 +101,23 @@ function courseMatchesSearch(course: AcademyCourse, query: string): boolean {
   return haystacks.some((value) => value.toLowerCase().includes(query));
 }
 
+// Sector acronyms that should render fully uppercase rather than
+// title-cased (e.g. "rto compliance" -> "RTO Compliance", not "Rto
+// Compliance") — evidence-based from the actual tags in use, see
+// docs/audit-log/entries/2026-08-13-academy-tag-cleanup.md.
+const TAG_ACRONYMS = new Set([
+  "asqa", "rto", "vet", "ai", "tas", "aqf", "rpl", "cricos", "eos", "tae", "srto", "pd",
+]);
+
 function prettyTag(tag: string): string {
   return tag
     .split(/[-_\s]+/)
     .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .map((w) => {
+      const lower = w.toLowerCase();
+      if (TAG_ACRONYMS.has(lower)) return lower.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
     .join(" ");
 }
 
@@ -140,8 +152,19 @@ export default function AudienceHubPage({
   const tagBuckets = useMemo(() => buildTagBuckets(courses), [courses]);
   const seriesOptions = useMemo(() => buildSeriesOptions(courses), [courses]);
 
-  const visibleTags = tagBuckets.slice(0, VISIBLE_TAB_LIMIT - 1);
-  const overflowTags = tagBuckets.slice(VISIBLE_TAB_LIMIT - 1);
+  // "All" is a pill like any other tag bucket for width-measurement/overflow
+  // purposes, so it shares the same array the fit calculation runs over.
+  const allBuckets = useMemo<TagBucket[]>(
+    () => [{ tag: ALL_TAB, count: courses.length }, ...tagBuckets],
+    [tagBuckets, courses.length],
+  );
+  const bucketLabel = (b: TagBucket) => (b.tag === ALL_TAB ? "All" : prettyTag(b.tag));
+
+  const { containerRef, itemRef, moreMeasureRef, activeMoreMeasureRef, visibleCount } =
+    useOverflowTabs(allBuckets.length, 4); // matches the row's gap-1 (4px)
+  const visibleTags = allBuckets.slice(0, visibleCount);
+  const overflowTags = allBuckets.slice(visibleCount);
+  const activeOverflowTag = overflowTags.find((b) => b.tag === activeTag);
 
   const trimmedSearch = searchQuery.trim().toLowerCase();
   const hasSearchOrSeriesFilter =
@@ -248,27 +271,31 @@ export default function AudienceHubPage({
         )}
       </div>
 
-      {/* Sub-tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b">
-        {renderTabButton(`All`, courses.length, ALL_TAB)}
-        {visibleTags.map((b) => renderTabButton(prettyTag(b.tag), b.count, b.tag))}
+      {/* Sub-tabs — as many pills render directly as fit the available width
+          (see useOverflowTabs); the rest collapse into "More", which swaps
+          its own label to the active tag when that tag is one of the
+          overflowed ones, so the active filter is never hidden behind an
+          anonymous "More". */}
+      <div ref={containerRef} className="flex items-center gap-1 pb-1 border-b min-w-0">
+        {visibleTags.map((b) => renderTabButton(bucketLabel(b), b.count, b.tag))}
         {overflowTags.length > 0 && (
           <Popover open={moreOpen} onOpenChange={setMoreOpen}>
             <PopoverTrigger asChild>
               <button
                 className={cn(
-                  "px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t-md transition-colors flex items-center gap-1",
-                  overflowTags.some((b) => b.tag === activeTag)
-                    ? "border-b-2"
-                    : "text-muted-foreground hover:text-foreground",
+                  "px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t-md transition-colors flex items-center gap-1 shrink-0",
+                  activeOverflowTag ? "border-b-2" : "text-muted-foreground hover:text-foreground",
                 )}
-                style={
-                  overflowTags.some((b) => b.tag === activeTag)
-                    ? { color: accentColour, borderColor: accentColour }
-                    : undefined
-                }
+                style={activeOverflowTag ? { color: accentColour, borderColor: accentColour } : undefined}
               >
-                More <ChevronDown className="h-3.5 w-3.5" />
+                {activeOverflowTag ? (
+                  <>
+                    {bucketLabel(activeOverflowTag)} ({activeOverflowTag.count})
+                  </>
+                ) : (
+                  "More"
+                )}
+                <ChevronDown className="h-3.5 w-3.5" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-64 p-0" align="start" collisionPadding={16}>
@@ -280,13 +307,13 @@ export default function AudienceHubPage({
                     {overflowTags.map((b) => (
                       <CommandItem
                         key={b.tag}
-                        value={prettyTag(b.tag)}
+                        value={bucketLabel(b)}
                         onSelect={() => {
                           setActiveTag(b.tag);
                           setMoreOpen(false);
                         }}
                       >
-                        {prettyTag(b.tag)} ({b.count})
+                        {bucketLabel(b)} ({b.count})
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -295,6 +322,46 @@ export default function AudienceHubPage({
             </PopoverContent>
           </Popover>
         )}
+      </div>
+
+      {/* Hidden clones used only to measure each pill's natural rendered
+          width for the fit calculation above — never shown. The unwrapped
+          flex row is far wider than the viewport (every tag on the page,
+          unwrapped, plus every active-More variant), so it needs its own
+          clipped, positioned parent — AcademyLayout's <main> has no
+          overflow-x constraint (unlike ClientLayout, where this pattern
+          originated), so without this the wide invisible row blows out
+          horizontal scroll on any pathway with more tags than fit on
+          screen. */}
+      <div className="relative h-0 overflow-hidden !mt-0">
+        <div aria-hidden className="absolute invisible flex items-center gap-1 pointer-events-none">
+          {allBuckets.map((b, i) => (
+            <button
+              key={b.tag}
+              ref={itemRef(i)}
+              type="button"
+              tabIndex={-1}
+              className="px-3 py-2 text-sm font-medium whitespace-nowrap"
+            >
+              {bucketLabel(b)} ({b.count})
+            </button>
+          ))}
+          <button ref={moreMeasureRef} type="button" tabIndex={-1} className="px-3 py-2 text-sm font-medium flex items-center gap-1">
+            More <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+          {allBuckets.map((b, i) => (
+            <button
+              key={`more-${b.tag}`}
+              ref={activeMoreMeasureRef(i)}
+              type="button"
+              tabIndex={-1}
+              className="px-3 py-2 text-sm font-medium flex items-center gap-1"
+            >
+              {bucketLabel(b)} ({b.count})
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Loading */}
