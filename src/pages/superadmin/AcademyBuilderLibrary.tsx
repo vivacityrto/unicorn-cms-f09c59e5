@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAdminAcademyCourses, useCreateCourse, useDeleteCourse, usePermanentDeleteCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,9 +30,10 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
-import { format, parseISO, isValid } from "date-fns";
 import { usePermission } from "@/hooks/usePermission";
 import { formatTargetAudienceLabel } from "@/lib/academy/pathways";
+import { formatDeliveryDate } from "@/lib/academy/formatDeliveryDate";
+import { useFacilitatorNames } from "@/hooks/academy/useFacilitatorNames";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -73,15 +74,7 @@ function formatAudiencePreview(audience: string[] | null | undefined): string | 
 }
 
 function formatDeliveryDateLabel(dateString: string | null | undefined): string {
-  if (!dateString) return "Not set";
-  try {
-    const raw = dateString.includes("T") ? dateString : `${dateString}T00:00:00`;
-    const date = parseISO(raw);
-    if (!isValid(date)) return "Not set";
-    return format(date, "d MMMM yyyy");
-  } catch {
-    return "Not set";
-  }
+  return formatDeliveryDate(dateString) ?? "Not set";
 }
 
 function groupCoursesBySeries(courses: AdminCourse[]): CourseSection[] {
@@ -158,23 +151,7 @@ export default function AcademyBuilderLibrary() {
     return [...ids];
   }, [courses]);
 
-  const { data: facilitatorNameById = {} } = useQuery({
-    queryKey: ["academy-builder-library-facilitators", facilitatorIds],
-    enabled: facilitatorIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("user_uuid, full_name")
-        .in("user_uuid", facilitatorIds);
-      if (error) throw error;
-      const map: Record<string, string> = {};
-      for (const u of data ?? []) {
-        const name = u.full_name?.trim();
-        if (u.user_uuid && name) map[u.user_uuid] = name;
-      }
-      return map;
-    },
-  });
+  const { data: facilitatorNameById = {} } = useFacilitatorNames(facilitatorIds);
 
   const userTypeOptions = useMemo(() => {
     const distinct = new Set<string>();

@@ -10,8 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { format, parseISO, isValid } from "date-fns";
 import VimeoPlayer from "@/components/academy/VimeoPlayer";
+import { formatDeliveryDate } from "@/lib/academy/formatDeliveryDate";
+import { useFacilitatorNames } from "@/hooks/academy/useFacilitatorNames";
 import { sanitizeHtml } from "@/lib/sanitize";
 import {
   AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalDescription, AppModalBody, AppModalFooter,
@@ -31,18 +32,6 @@ import { QuickReflectionDrawer } from "@/components/academy/pdp/QuickReflectionD
 
 const ACCENT = "#23c0dd";
 const PROGRESS_THROTTLE_MS = 10_000;
-
-function formatDeliveryDate(dateString: string | null | undefined): string | null {
-  if (!dateString) return null;
-  try {
-    const raw = dateString.includes("T") ? dateString : `${dateString}T00:00:00`;
-    const date = parseISO(raw);
-    if (!isValid(date)) return null;
-    return format(date, "d MMMM yyyy");
-  } catch {
-    return null;
-  }
-}
 
 export default function AcademyLessonViewerPage() {
   const { slug, lessonId } = useParams<{ slug: string; lessonId: string }>();
@@ -86,20 +75,12 @@ export default function AcademyLessonViewerPage() {
   });
 
   // Facilitator display name (omit UI row when unset / unresolved)
-  const { data: facilitatorName } = useQuery({
-    queryKey: ["academy-course-facilitator", course?.facilitator_id],
-    enabled: !!course?.facilitator_id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("full_name")
-        .eq("user_uuid", course!.facilitator_id!)
-        .maybeSingle();
-      if (error) throw error;
-      const name = data?.full_name?.trim();
-      return name || null;
-    },
-  });
+  const facilitatorLookupIds = useMemo(
+    () => (course?.facilitator_id ? [course.facilitator_id] : []),
+    [course?.facilitator_id],
+  );
+  const { data: facilitatorNameById = {} } = useFacilitatorNames(facilitatorLookupIds);
+  const facilitatorName = course?.facilitator_id ? facilitatorNameById[course.facilitator_id] : undefined;
 
   // Fetch current lesson
   const { data: lesson, isLoading: lessonLoading } = useQuery({
