@@ -374,7 +374,7 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => loadMore(events.length)}
+                      onClick={() => loadMore()}
                       disabled={loading}
                     >
                       {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

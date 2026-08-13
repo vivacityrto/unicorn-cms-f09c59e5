@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { TimelineEvent } from './useClientManagementData';
+import { groupPortfolioTimelineEvents, type PortfolioTimelineEvent } from './portfolioTimelineGrouping';
+import { fetchEnrollmentCourseContext } from './academyEnrollmentActorContext';
 
 /**
  * Portfolio-wide (all clients) version of the per-client Timeline feed.
@@ -10,9 +12,7 @@ import type { TimelineEvent } from './useClientManagementData';
  * 20260710000744) — no tenant filter, no new RPC needed.
  */
 
-export interface PortfolioTimelineEvent extends TimelineEvent {
-  tenant_name: string;
-}
+export type { PortfolioTimelineEvent };
 
 export const PORTFOLIO_TIMELINE_QUERY_KEY = ['portfolio-timeline'] as const;
 
@@ -23,17 +23,30 @@ interface UsePortfolioTimelineOptions {
   search?: string;
 }
 
+interface PortfolioTimelineResult {
+  events: PortfolioTimelineEvent[];
+  hasMore: boolean;
+}
+
+// Mass admin actions (bulk enrollment, a broadcast fanned out to many
+// tenants) fire the same DB trigger once per row, so `limit` raw rows can
+// collapse into far fewer grouped rows. Over-fetch so the requested `limit`
+// is met in *grouped* rows, not raw ones, without an unbounded query.
+const RAW_FETCH_MULTIPLIER = 5;
+const RAW_FETCH_CAP = 500;
+
 async function fetchPortfolioTimeline({
   limit,
   eventTypes,
   tenantIds,
   search,
-}: Required<UsePortfolioTimelineOptions>): Promise<PortfolioTimelineEvent[]> {
+}: Required<UsePortfolioTimelineOptions>): Promise<PortfolioTimelineResult> {
+  const rawLimit = Math.min(limit * RAW_FETCH_MULTIPLIER, RAW_FETCH_CAP);
   let query = supabase
     .from('client_timeline_events')
     .select('*')
     .order('occurred_at', { ascending: false })
-    .limit(limit);
+    .limit(rawLimit);
 
   if (eventTypes && eventTypes.length > 0) {
     query = query.in('event_type', eventTypes);
@@ -50,7 +63,7 @@ async function fetchPortfolioTimeline({
   if (error) throw error;
 
   const rows = (data || []) as unknown as TimelineEvent[];
-  if (rows.length === 0) return [];
+  if (rows.length === 0) return { events: [], hasMore: false };
 
   const distinctTenantIds = [...new Set(rows.map((r) => r.tenant_id))];
   const { data: tenants } = await supabase
@@ -59,7 +72,21 @@ async function fetchPortfolioTimeline({
     .in('id', distinctTenantIds);
   const nameMap = new Map<number, string>((tenants || []).map((t: any) => [t.id, t.name]));
 
-  return rows.map((r) => ({ ...r, tenant_name: nameMap.get(r.tenant_id) ?? 'Unknown client' }));
+  const enriched = rows.map((r) => ({ ...r, tenant_name: nameMap.get(r.tenant_id) ?? 'Unknown client' }));
+
+  const { courseInfoByCourseId, actorByUuid } = await fetchEnrollmentCourseContext(rows);
+  const grouped = groupPortfolioTimelineEvents(enriched, courseInfoByCourseId, actorByUuid);
+
+  return {
+    events: grouped.slice(0, limit),
+    // "Load more" works by widening `limit` (and so `rawLimit`) on the next
+    // fetch, not by an offset — so once `rawLimit` is pinned at the cap,
+    // fetching again can never return anything new, and claiming hasMore
+    // off `rows.length === rawLimit` alone would offer a "Load more" that
+    // does nothing forever. Only claim more raw data is reachable while
+    // there's still room to grow the fetch past the cap.
+    hasMore: grouped.length > limit || (rows.length === rawLimit && rawLimit < RAW_FETCH_CAP),
+  };
 }
 
 /**
@@ -108,7 +135,8 @@ export function usePortfolioTimeline(options: UsePortfolioTimelineOptions = {}) 
   }, [queryClient]);
 
   return {
-    events: data ?? [],
+    events: data?.events ?? [],
+    hasMore: data?.hasMore ?? false,
     isLoading,
     error,
     refetch,
