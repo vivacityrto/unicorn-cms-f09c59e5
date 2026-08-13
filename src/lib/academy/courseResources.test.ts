@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bucketForUpload,
+  canManageAcademyResources,
   fileExtension,
   isAllowedUploadFile,
   isHttpsUrl,
@@ -46,6 +47,17 @@ describe("course resource helpers", () => {
     expect(resourceKind({ resource_type: "file", storage_bucket: "resource-templates", storage_path: "id/a.docx" })).toBe("word");
     expect(resourceKind({ resource_type: "file", storage_path: "id/notes.doc" })).toBe("word");
     expect(resourceKind({ file_url: "https://example.com", storage_path: null })).toBe("link");
+  });
+
+  it("matches can_manage_academy_resources(), not academy.builder.edit", () => {
+    expect(canManageAcademyResources("Super Admin", true)).toBe(true);
+    expect(canManageAcademyResources("Team Leader", false)).toBe(true);
+    expect(canManageAcademyResources("Team Member", false)).toBe(true);
+    expect(canManageAcademyResources("BGT", false)).toBe(false);
+    expect(canManageAcademyResources("Integrator", false)).toBe(false);
+    expect(canManageAcademyResources("CSC", false)).toBe(false);
+    expect(canManageAcademyResources(null, false)).toBe(false);
+    expect(canManageAcademyResources("BGT", true)).toBe(true);
   });
 
   it("derives a title from the filename", () => {
