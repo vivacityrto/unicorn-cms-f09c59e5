@@ -22,6 +22,7 @@ import TagChipInput from "@/components/academy/TagChipInput";
 import WorkshopSegmentSplit, {
   formatTimecode, validateSegments, type WorkshopSegment,
 } from "@/components/academy/WorkshopSegmentSplit";
+import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
 
 function todayLocalISODate(): string {
   const d = new Date();
@@ -211,6 +212,15 @@ export default function AcademyQuickAddPage() {
     staleTime: 60_000,
   });
 
+  // Same distinct-tag source Tag Management and the course builder use, so
+  // Quick Add's tag chip input suggests real existing tags instead of
+  // operating in a vacuum and drifting from the curated list.
+  const { data: distinctTags = [] } = useQuery({
+    queryKey: ["academy-distinct-tags"],
+    queryFn: fetchDistinctAcademyTags,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Step 2 results
   const [generating, setGenerating] = useState(false);
   const [hasTranscript, setHasTranscript] = useState<boolean | null>(null);
@@ -363,6 +373,7 @@ export default function AcademyQuickAddPage() {
           title: resolvedTitle,
           transcript: tx,
           webinar_series: series,
+          existing_tags: distinctTags,
         },
       });
       if (cErr) throw new Error(await extractEdgeError(cErr, "AI classification failed"));
@@ -404,6 +415,14 @@ export default function AcademyQuickAddPage() {
     setSplitProgress(null);
     try {
       const built: SegmentDraft[] = [];
+      // Seeded from the platform-wide catalog, then grown with each
+      // segment's own chosen tags — so segment 2 onward sees what segment 1
+      // already picked and reuses it instead of coining a same-topic variant
+      // ("quality assurance" vs "quality_assurance" vs "quality"). Without
+      // this, each segment's classification call is blind to the other 7 in
+      // the same recording, and a single workshop course ends up unioning
+      // 30+ near-duplicate tags across its segments.
+      const sessionTags = new Set(distinctTags);
       for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
         setSplitProgress(`Drafting segment ${i + 1} of ${segments.length}…`);
@@ -418,12 +437,14 @@ export default function AcademyQuickAddPage() {
             title: seg.suggested_title,
             transcript: segTranscript,
             webinar_series: WORKSHOP_SERIES,
+            existing_tags: Array.from(sessionTags),
           },
         });
         if (cErr) throw new Error(await extractEdgeError(cErr, `AI classification failed for segment ${i + 1}`));
         const audience: string[] = Array.isArray(cls?.target_audience) ? cls.target_audience : [];
         const level: string = cls?.difficulty_level || "beginner";
         const aiTags: string[] = Array.isArray(cls?.tags) ? cls.tags : [];
+        aiTags.forEach((t) => sessionTags.add(t));
 
         const { data: desc, error: dErr } = await supabase.functions.invoke("academy-ai-generate", {
           body: {
@@ -1129,7 +1150,7 @@ export default function AcademyQuickAddPage() {
                 </Select>
                 <div className="pt-2 space-y-2">
                   <Label>Tags</Label>
-                  <TagChipInput value={vTags} onChange={setVTags} />
+                  <TagChipInput value={vTags} onChange={setVTags} suggestions={distinctTags} />
                 </div>
               </div>
             </div>

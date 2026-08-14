@@ -10,8 +10,12 @@ interface Props {
   placeholder?: string;
 }
 
-function toKebab(raw: string): string {
-  return raw.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+// Matches the real tag convention (162 tags, lowercase with spaces — see
+// normalizeTagValue in useAcademyTagManagement.ts). Previously kebab-cased
+// input, which meant even clicking an existing "rto compliance" suggestion
+// silently created a near-duplicate "rto-compliance" tag instead of reusing it.
+function normalizeTag(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, " ").replace(/[^a-z0-9 ]/g, "");
 }
 
 export function TagChipInput({ value, onChange, suggestions = [], placeholder = "Type a tag and press Enter" }: Props) {
@@ -22,7 +26,7 @@ export function TagChipInput({ value, onChange, suggestions = [], placeholder = 
   const tags = value ?? [];
 
   const addTag = (raw: string) => {
-    const v = toKebab(raw);
+    const v = normalizeTag(raw);
     if (!v) return;
     if (tags.includes(v)) return;
     onChange([...tags, v]);
