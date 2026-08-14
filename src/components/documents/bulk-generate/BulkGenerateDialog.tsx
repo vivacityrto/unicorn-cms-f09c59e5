@@ -87,10 +87,12 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
     setGuardAcknowledged(false);
   }, [scope.scope, scope.tenant_ids, documentIds]);
 
-  const guardPairs = useMemo<DeliveryGuardPair[]>(() => {
+  const tenantIdsForGuard = useMemo(() => {
     if (documentIds.length === 0) return [];
-    const tenantIdsForGuard =
-      scope.scope === "selected" ? scope.tenant_ids : allActiveTenantIds ?? [];
+    return scope.scope === "selected" ? scope.tenant_ids : allActiveTenantIds ?? [];
+  }, [documentIds.length, scope.scope, scope.tenant_ids, allActiveTenantIds]);
+
+  const guardPairs = useMemo<DeliveryGuardPair[]>(() => {
     if (tenantIdsForGuard.length === 0) return [];
     const out: DeliveryGuardPair[] = [];
     for (const tenantId of tenantIdsForGuard) {
@@ -99,9 +101,43 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
       }
     }
     return out;
-  }, [documentIds, scope.scope, scope.tenant_ids, allActiveTenantIds]);
+  }, [documentIds, tenantIdsForGuard]);
 
   const guards = useDocumentDeliveryGuards(guardPairs, open);
+
+  // Names for the guard panel's "which clients" breakdown — fetched by id so
+  // it works whether scope is "all" or "selected".
+  const { data: guardTenantNames } = useQuery({
+    queryKey: ["bulk-generate-guard-tenant-names", tenantIdsForGuard],
+    enabled: open && tenantIdsForGuard.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tenants")
+        .select("id, name, rto_name")
+        .in("id", tenantIdsForGuard);
+      const map: Record<number, string> = {};
+      for (const t of data ?? []) {
+        map[t.id] = t.name ?? t.rto_name ?? `Tenant #${t.id}`;
+      }
+      return map;
+    },
+  });
+
+  const { data: guardDocumentNames } = useQuery({
+    queryKey: ["bulk-generate-guard-document-names", documentIds],
+    enabled: open && documentIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("documents")
+        .select("id, title")
+        .in("id", documentIds);
+      const map: Record<number, string> = {};
+      for (const d of data ?? []) {
+        map[d.id] = d.title;
+      }
+      return map;
+    },
+  });
 
   // Any filter change marks preview stale.
   useEffect(() => {
@@ -249,6 +285,10 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
                   ? "Narrow the document filter above to check tailoring completeness and TGA snapshot status before launching."
                   : undefined
               }
+              tenantIssues={guards.tenantIssues}
+              tenantNames={guardTenantNames}
+              pairStatuses={guards.pairStatuses}
+              documentNames={guardDocumentNames}
             />
           </section>
         </div>

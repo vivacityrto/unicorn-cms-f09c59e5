@@ -278,6 +278,22 @@ export function TargetedMode({ tenants }: Props) {
     setGuardAcknowledged(false);
   }, [selectedTriples, validDocumentIds]);
 
+  const tenantNames = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const t of tenants) {
+      map[t.id] = t.name ?? t.rto_name ?? `Tenant #${t.id}`;
+    }
+    return map;
+  }, [tenants]);
+
+  const documentNames = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const d of docs.data ?? []) {
+      map[d.id] = d.title;
+    }
+    return map;
+  }, [docs.data]);
+
   const toggleTenant = (tenantId: number, checked: boolean) => {
     setPreviewStale(true);
     setSelectedTenants((prev) => {
@@ -681,6 +697,10 @@ export function TargetedMode({ tenants }: Props) {
                     hasBlockingIssues={guards.hasBlockingIssues}
                     acknowledged={guardAcknowledged}
                     onAcknowledgedChange={setGuardAcknowledged}
+                    tenantIssues={guards.tenantIssues}
+                    tenantNames={tenantNames}
+                    pairStatuses={guards.pairStatuses}
+                    documentNames={documentNames}
                   />
                 </div>
               )}

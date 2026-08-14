@@ -28,6 +28,12 @@ export interface DeliveryGuardSummary {
   missingSnapshot: number;
 }
 
+export interface DeliveryGuardTenantIssue {
+  tenantId: number;
+  riskLevel: GuardRiskLevel;
+  missingSnapshot: boolean;
+}
+
 export function useDocumentDeliveryGuards(pairs: DeliveryGuardPair[], enabled = true) {
   const documentIds = useMemo(
     () => Array.from(new Set(pairs.map((p) => p.documentId))),
@@ -126,5 +132,28 @@ export function useDocumentDeliveryGuards(pairs: DeliveryGuardPair[], enabled = 
   const isLoading = active && (!requiredTagsByDoc || !tenantMergeData || !snapshotByTenant);
   const hasBlockingIssues = summary.incomplete > 0 || summary.missingSnapshot > 0;
 
-  return { active, isLoading, pairStatuses, summary, hasBlockingIssues };
+  // Per-tenant breakdown — which specific clients need attention, not just
+  // aggregate counts, so staff know who to check before acknowledging.
+  const tenantIssues = useMemo<DeliveryGuardTenantIssue[]>(() => {
+    if (!active || isLoading) return [];
+    const out: DeliveryGuardTenantIssue[] = [];
+    for (const tenantId of tenantIds) {
+      const hasSnapshot = !!snapshotByTenant?.has(tenantId);
+      let worst: GuardRiskLevel = 'complete';
+      for (const p of pairStatuses) {
+        if (p.tenantId !== tenantId) continue;
+        if (p.riskLevel === 'incomplete') {
+          worst = 'incomplete';
+          break;
+        }
+        if (p.riskLevel === 'partial') worst = 'partial';
+      }
+      if (worst !== 'complete' || !hasSnapshot) {
+        out.push({ tenantId, riskLevel: worst, missingSnapshot: !hasSnapshot });
+      }
+    }
+    return out;
+  }, [active, isLoading, tenantIds, pairStatuses, snapshotByTenant]);
+
+  return { active, isLoading, pairStatuses, summary, hasBlockingIssues, tenantIssues };
 }
