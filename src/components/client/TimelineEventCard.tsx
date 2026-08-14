@@ -19,7 +19,7 @@ import {
   ChevronDown, ChevronUp, Pin, PinOff, Package,
   UserPlus, UserCheck, UserX, UserCog, UserMinus, LogIn, MessageSquare,
   GraduationCap, BookOpenCheck, Award, ListChecks, MousePointerClick, ArrowRightLeft,
-  Eye, Receipt, CircleDollarSign,
+  Eye, Receipt, CircleDollarSign, Rocket,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { LucideIcon } from 'lucide-react';
@@ -75,6 +75,7 @@ export const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   academy_enrolled: GraduationCap,
   academy_lesson_completed: BookOpenCheck,
   academy_certificate_issued: Award,
+  academy_course_published: Rocket,
   stage_status_changed: ListChecks,
   portal_activity_summary: MousePointerClick,
   tenant_status_changed: ArrowRightLeft,
@@ -134,6 +135,7 @@ export const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   academy_enrolled: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   academy_lesson_completed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
   academy_certificate_issued: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  academy_course_published: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
   stage_status_changed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   portal_activity_summary: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
   tenant_status_changed: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',

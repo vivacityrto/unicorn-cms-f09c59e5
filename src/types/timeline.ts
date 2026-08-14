@@ -59,6 +59,8 @@ export const TIMELINE_EVENT_TYPES = [
   'academy_enrolled',
   'academy_lesson_completed',
   'academy_certificate_issued',
+  // Course publishing — internal staff action, attributed to the system tenant
+  'academy_course_published',
   // Stage progression (internal-only)
   'stage_status_changed',
   // Client portal page-view digest (internal-only)
