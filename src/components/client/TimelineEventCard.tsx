@@ -53,6 +53,7 @@ export const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   action_item_created: CheckSquare,
   action_item_updated: CheckSquare,
   action_item_completed: CheckSquare,
+  action_item_comment: MessageSquare,
   email_linked: Mail,
   email_attachment_saved: Paperclip,
   email_sent: Mail,
@@ -77,6 +78,7 @@ export const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   academy_certificate_issued: Award,
   academy_course_published: Rocket,
   stage_status_changed: ListChecks,
+  package_status_changed: Package,
   portal_activity_summary: MousePointerClick,
   tenant_status_changed: ArrowRightLeft,
   invitation_sent: UserPlus,
@@ -86,6 +88,8 @@ export const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   invitation_accepted: UserCheck,
   xero_invoice_paid: CircleDollarSign,
   xero_invoice_issued: Receipt,
+  audit_created: Shield,
+  audit_completed: FileCheck,
 };
 
 /**
@@ -113,6 +117,7 @@ export const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   action_item_created: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   action_item_updated: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   action_item_completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  action_item_comment: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   email_linked: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   email_attachment_saved: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   email_sent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
@@ -137,6 +142,7 @@ export const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   academy_certificate_issued: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   academy_course_published: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
   stage_status_changed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  package_status_changed: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   portal_activity_summary: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
   tenant_status_changed: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   invitation_sent: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -146,6 +152,8 @@ export const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   invitation_accepted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   xero_invoice_paid: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   xero_invoice_issued: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  audit_created: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  audit_completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
 };
 
 // =============================================
@@ -164,9 +172,11 @@ function getModuleChip(eventType: string): string | null {
   if (eventType === 'message_sent') return 'Messages';
   if (eventType.startsWith('academy_')) return 'Academy';
   if (eventType === 'stage_status_changed') return 'Stages';
+  if (eventType === 'package_status_changed') return 'Packages';
   if (eventType === 'portal_activity_summary') return 'Portal Activity';
   if (eventType === 'tenant_status_changed') return 'Tenant Status';
   if (eventType.startsWith('xero_invoice')) return 'Invoices';
+  if (eventType.startsWith('audit_')) return 'Audits';
   return null;
 }
 
@@ -211,6 +221,7 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
     case 'message_sent':
       return { label: 'View conversation', path: `/tenant/${event.tenant_id}?tab=messages` };
     case 'stage_status_changed':
+    case 'package_status_changed':
       return { label: 'View package', path: `/tenant/${event.tenant_id}?tab=packages` };
     case 'account_invited':
     case 'account_activated':

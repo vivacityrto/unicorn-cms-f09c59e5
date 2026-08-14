@@ -87,26 +87,6 @@ export function useAdminAcademyCourses(filters?: CourseFilters) {
   });
 }
 
-export function useCreateCourse() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: Partial<AdminCourse>) => {
-      const { data: row, error } = await supabase
-        .from("academy_courses")
-        .insert(data as any)
-        .select()
-        .single();
-      if (error) throw error;
-      return row;
-    },
-    onSuccess: () => {
-      toast.success("Course created");
-      qc.invalidateQueries({ queryKey: [QUERY_KEY] });
-    },
-    onError: (e: any) => toast.error(e?.message || "Failed to create course"),
-  });
-}
-
 export function useUpdateCourse() {
   const qc = useQueryClient();
   return useMutation({
