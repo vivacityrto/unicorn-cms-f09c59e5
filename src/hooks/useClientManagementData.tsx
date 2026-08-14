@@ -103,7 +103,7 @@ export const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   accounts: ['account_invited', 'account_activated', 'account_deactivated', 'account_role_changed', 'account_removed', 'invitation_sent', 'invitation_opened', 'invitation_clicked', 'invitation_bounced', 'invitation_accepted'],
   logins: ['client_login'],
   messages: ['message_sent'],
-  academy: ['academy_enrolled', 'academy_lesson_completed', 'academy_certificate_issued'],
+  academy: ['academy_enrolled', 'academy_lesson_completed', 'academy_certificate_issued', 'academy_course_published'],
   stages: ['stage_status_changed'],
   portal_activity: ['portal_activity_summary'],
   tenant_status: ['tenant_status_changed'],
