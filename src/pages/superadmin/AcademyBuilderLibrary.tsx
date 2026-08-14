@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAdminAcademyCourses, useCreateCourse, useDeleteCourse, usePermanentDeleteCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
+import { useAdminAcademyCourses, useDeleteCourse, usePermanentDeleteCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -26,7 +23,7 @@ import {
 } from "@/components/ui/accordion";
 import { MultiSelect } from "@/components/documents/bulk-generate/MultiSelect";
 import {
-  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter, Users, User, Calendar,
+  Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter, Users, User, Calendar,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
@@ -111,14 +108,6 @@ function groupCoursesBySeries(courses: AdminCourse[]): CourseSection[] {
   return sections;
 }
 
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 80);
-}
 
 export default function AcademyBuilderLibrary() {
   const navigate = useNavigate();
@@ -127,8 +116,6 @@ export default function AcademyBuilderLibrary() {
   const [userTypeFilter, setUserTypeFilter] = useState<string[]>([]);
   const [openSections, setOpenSections] = useState<string[]>([]);
   const seenSectionKeysRef = useRef<Set<string>>(new Set());
-  const [newCourseOpen, setNewCourseOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
   const [backfillConfirmOpen, setBackfillConfirmOpen] = useState(false);
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminCourse | null>(null);
@@ -194,7 +181,6 @@ export default function AcademyBuilderLibrary() {
   const allVisibleExpanded =
     sections.length > 0 && sections.every((s) => openSections.includes(s.key));
 
-  const createCourse = useCreateCourse();
   const archiveCourse = useDeleteCourse();
   const deleteCourse = usePermanentDeleteCourse();
 
@@ -233,35 +219,6 @@ export default function AcademyBuilderLibrary() {
     }
   };
 
-  const handleCreateCourse = async () => {
-    if (!newTitle.trim()) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    let slug = generateSlug(newTitle);
-    // Check uniqueness
-    const { data: existing } = await supabase
-      .from("academy_courses")
-      .select("slug")
-      .ilike("slug", `${slug}%`);
-    if (existing && existing.length > 0) {
-      const existingSlugs = new Set(existing.map((r: any) => r.slug));
-      let i = 2;
-      while (existingSlugs.has(slug)) {
-        slug = `${generateSlug(newTitle)}-${i}`;
-        i++;
-      }
-    }
-    createCourse.mutate(
-      { title: newTitle.trim(), slug, status: "draft", created_by: user?.id } as any,
-      {
-        onSuccess: (row: any) => {
-          setNewCourseOpen(false);
-          setNewTitle("");
-          navigate(`/superadmin/academy/builder/${row.id}`);
-        },
-      }
-    );
-  };
-
   return (
     <DashboardLayout>
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -298,13 +255,12 @@ export default function AcademyBuilderLibrary() {
             </Button>
           )}
           {canCreateCourse && (
-            <Button variant="outline" onClick={() => navigate("/superadmin/academy/quick-add")}>
+            <Button
+              onClick={() => navigate("/superadmin/academy/quick-add")}
+              className="text-white hover:opacity-90"
+              style={{ backgroundColor: "#23c0dd" }}
+            >
               <Sparkles className="h-4 w-4 mr-2" /> Quick Add Recording
-            </Button>
-          )}
-          {canCreateCourse && (
-            <Button onClick={() => setNewCourseOpen(true)} className="text-white hover:opacity-90" style={{ backgroundColor: "#23c0dd" }}>
-              <Plus className="h-4 w-4 mr-2" /> New Course
             </Button>
           )}
         </div>
@@ -499,38 +455,6 @@ export default function AcademyBuilderLibrary() {
           </Accordion>
         </div>
       )}
-
-      {/* New Course Dialog */}
-      <Dialog open={newCourseOpen} onOpenChange={setNewCourseOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Course</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-sm font-medium text-foreground">Course Title</label>
-              <Input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="e.g. RTO Compliance Fundamentals"
-                className="mt-1"
-                onKeyDown={(e) => e.key === "Enter" && handleCreateCourse()}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewCourseOpen(false)}>Cancel</Button>
-            <Button
-              onClick={handleCreateCourse}
-              disabled={!newTitle.trim() || createCourse.isPending}
-              className="text-white hover:opacity-90"
-              style={{ backgroundColor: "#23c0dd" }}
-            >
-              {createCourse.isPending ? "Creating…" : "Create Course"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Backfill Confirmation */}
       <AlertDialog open={backfillConfirmOpen} onOpenChange={setBackfillConfirmOpen}>

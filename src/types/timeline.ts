@@ -30,6 +30,7 @@ export const TIMELINE_EVENT_TYPES = [
   'action_item_created',
   'action_item_updated',
   'action_item_completed',
+  'action_item_comment',
   // Emails
   'email_linked',
   'email_attachment_saved',
@@ -63,6 +64,8 @@ export const TIMELINE_EVENT_TYPES = [
   'academy_course_published',
   // Stage progression (internal-only)
   'stage_status_changed',
+  // Package membership state changes (internal-only)
+  'package_status_changed',
   // Client portal page-view digest (internal-only)
   'portal_activity_summary',
   // Tenant lifecycle status (internal-only)
@@ -76,6 +79,12 @@ export const TIMELINE_EVENT_TYPES = [
   // Xero invoice activity (internal-only, no amounts/numbers/references)
   'xero_invoice_paid',
   'xero_invoice_issued',
+  // Compliance audit lifecycle (internal-only). Reconciled 2026-08-14 from
+  // live-vs-git drift on the DB CHECK constraint — allowed in the DB since
+  // before this, but nothing writes them yet (no live trigger/RPC inserts
+  // these two today, unlike every other type in this file).
+  'audit_created',
+  'audit_completed',
 ] as const;
 
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
