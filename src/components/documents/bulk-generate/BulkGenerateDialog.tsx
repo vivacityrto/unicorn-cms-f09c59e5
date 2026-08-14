@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -14,12 +15,15 @@ import { ScopeStep, type ScopeValue } from "./steps/ScopeStep";
 import { PackageFilterStep } from "./steps/PackageFilterStep";
 import { StageDocFilterStep } from "./steps/StageDocFilterStep";
 import { PreviewPanel } from "./PreviewPanel";
+import { DeliveryGuardPanel } from "./DeliveryGuardPanel";
 import {
   launcherCreate,
   launcherPreview,
   type PreviewRow,
 } from "./useBulkGenerateLauncher";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useDocumentDeliveryGuards, type DeliveryGuardPair } from "@/hooks/useDocumentDeliveryGuards";
 
 interface Props {
   open: boolean;
@@ -43,6 +47,7 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   const [confirming, setConfirming] = useState(false);
+  const [guardAcknowledged, setGuardAcknowledged] = useState(false);
 
   // Reset state on close.
   useEffect(() => {
@@ -56,8 +61,83 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
       setPreviewLoading(false);
       setPreviewError(null);
       setConfirming(false);
+      setGuardAcknowledged(false);
     }
   }, [open]);
+
+  // All active, non-system tenant ids — only needed for the guard check when
+  // scope is "all" (explicit tenant_ids already cover the "selected" case).
+  const { data: allActiveTenantIds } = useQuery({
+    queryKey: ["bulk-generate-guard-all-tenant-ids"],
+    enabled: open && scope.scope === "all" && documentIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("status", "active")
+        .eq("is_system_tenant", false);
+      return (data ?? []).map((t) => t.id as number);
+    },
+  });
+
+  // Reset acknowledgement whenever the scope changes underneath it — an
+  // acknowledgement for one set of clients/documents shouldn't silently
+  // carry over to a different selection.
+  useEffect(() => {
+    setGuardAcknowledged(false);
+  }, [scope.scope, scope.tenant_ids, documentIds]);
+
+  const tenantIdsForGuard = useMemo(() => {
+    if (documentIds.length === 0) return [];
+    return scope.scope === "selected" ? scope.tenant_ids : allActiveTenantIds ?? [];
+  }, [documentIds.length, scope.scope, scope.tenant_ids, allActiveTenantIds]);
+
+  const guardPairs = useMemo<DeliveryGuardPair[]>(() => {
+    if (tenantIdsForGuard.length === 0) return [];
+    const out: DeliveryGuardPair[] = [];
+    for (const tenantId of tenantIdsForGuard) {
+      for (const documentId of documentIds) {
+        out.push({ tenantId, documentId });
+      }
+    }
+    return out;
+  }, [documentIds, tenantIdsForGuard]);
+
+  const guards = useDocumentDeliveryGuards(guardPairs, open);
+
+  // Names for the guard panel's "which clients" breakdown — fetched by id so
+  // it works whether scope is "all" or "selected".
+  const { data: guardTenantNames } = useQuery({
+    queryKey: ["bulk-generate-guard-tenant-names", tenantIdsForGuard],
+    enabled: open && tenantIdsForGuard.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tenants")
+        .select("id, name, rto_name")
+        .in("id", tenantIdsForGuard);
+      const map: Record<number, string> = {};
+      for (const t of data ?? []) {
+        map[t.id] = t.name ?? t.rto_name ?? `Tenant #${t.id}`;
+      }
+      return map;
+    },
+  });
+
+  const { data: guardDocumentNames } = useQuery({
+    queryKey: ["bulk-generate-guard-document-names", documentIds],
+    enabled: open && documentIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("documents")
+        .select("id, title")
+        .in("id", documentIds);
+      const map: Record<number, string> = {};
+      for (const d of data ?? []) {
+        map[d.id] = d.title;
+      }
+      return map;
+    },
+  });
 
   // Any filter change marks preview stale.
   useEffect(() => {
@@ -91,7 +171,8 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
     !confirming &&
     !previewStale &&
     !!preview &&
-    preview.eligible_count > 0;
+    preview.eligible_count > 0 &&
+    (!guards.hasBlockingIssues || guardAcknowledged);
 
   const runPreview = async () => {
     setPreviewLoading(true);
@@ -187,6 +268,27 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
               stale={previewStale && !!preview}
               loading={previewLoading}
               error={previewError}
+            />
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold mb-2">Tailoring &amp; TGA snapshot check</h3>
+            <DeliveryGuardPanel
+              active={guards.active}
+              isLoading={guards.isLoading}
+              summary={guards.summary}
+              hasBlockingIssues={guards.hasBlockingIssues}
+              acknowledged={guardAcknowledged}
+              onAcknowledgedChange={setGuardAcknowledged}
+              inactiveHint={
+                documentIds.length === 0
+                  ? "Narrow the document filter above to check tailoring completeness and TGA snapshot status before launching."
+                  : undefined
+              }
+              tenantIssues={guards.tenantIssues}
+              tenantNames={guardTenantNames}
+              pairStatuses={guards.pairStatuses}
+              documentNames={guardDocumentNames}
             />
           </section>
         </div>

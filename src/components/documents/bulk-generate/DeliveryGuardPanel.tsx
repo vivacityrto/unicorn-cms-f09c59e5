@@ -1,0 +1,220 @@
+import { useState } from "react";
+import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type {
+  DeliveryGuardPairStatus,
+  DeliveryGuardSummary,
+  DeliveryGuardTenantIssue,
+} from "@/hooks/useDocumentDeliveryGuards";
+
+interface Props {
+  active: boolean;
+  isLoading: boolean;
+  summary: DeliveryGuardSummary;
+  hasBlockingIssues: boolean;
+  acknowledged: boolean;
+  onAcknowledgedChange: (v: boolean) => void;
+  /** Shown when the guard couldn't be computed for the current scope (e.g. no documents narrowed down yet). */
+  inactiveHint?: string;
+  /** Per-tenant breakdown so staff can see exactly which clients need attention. */
+  tenantIssues?: DeliveryGuardTenantIssue[];
+  /** tenantId -> display name, for rendering tenantIssues. Omit to hide the affected-clients list. */
+  tenantNames?: Record<number, string>;
+  /** Per (tenant, document) completeness detail, for the per-client expanded view. */
+  pairStatuses?: DeliveryGuardPairStatus[];
+  /** documentId -> display name, for rendering pairStatuses in the expanded view. */
+  documentNames?: Record<number, string>;
+}
+
+/**
+ * Tailoring-completeness + TGA-snapshot warning banners and the required
+ * acknowledgement checkbox — same pattern GovernanceDeliveryDialog uses for
+ * a single document, generalised for Bulk Generate's many-document scope.
+ */
+export function DeliveryGuardPanel({
+  active,
+  isLoading,
+  summary,
+  hasBlockingIssues,
+  acknowledged,
+  onAcknowledgedChange,
+  inactiveHint,
+  tenantIssues,
+  tenantNames,
+  pairStatuses,
+  documentNames,
+}: Props) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [expandedTenants, setExpandedTenants] = useState<Set<number>>(new Set());
+
+  if (!active) {
+    return inactiveHint ? (
+      <p className="text-xs text-muted-foreground">{inactiveHint}</p>
+    ) : null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="text-xs text-muted-foreground p-2 rounded border bg-muted/30">
+        Checking tailoring completeness and TGA snapshot status…
+      </div>
+    );
+  }
+
+  const namedIssues = tenantNames
+    ? (tenantIssues ?? []).filter((t) => t.riskLevel !== "complete" || t.missingSnapshot)
+    : [];
+
+  const toggleTenant = (tenantId: number) => {
+    setExpandedTenants((prev) => {
+      const next = new Set(prev);
+      if (next.has(tenantId)) next.delete(tenantId);
+      else next.add(tenantId);
+      return next;
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3 text-xs p-2 rounded bg-muted/50 border flex-wrap">
+        <span className="text-emerald-600 dark:text-emerald-400 font-medium">{summary.complete} fully tailored</span>
+        {summary.partial > 0 && <span className="text-amber-500 dark:text-amber-400 font-medium">{summary.partial} partial</span>}
+        {summary.incomplete > 0 && <span className="text-destructive font-medium">{summary.incomplete} incomplete</span>}
+      </div>
+      {summary.missingSnapshot > 0 && (
+        <div className="flex items-center gap-2 text-xs p-2 rounded bg-muted/50 border text-destructive">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          <span className="font-medium">
+            {summary.missingSnapshot} client{summary.missingSnapshot !== 1 ? 's' : ''} missing TGA snapshot
+          </span>
+        </div>
+      )}
+      {namedIssues.length > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => setDialogOpen(true)}
+        >
+          Which clients ({namedIssues.length})
+        </Button>
+      )}
+      {hasBlockingIssues && (
+        <label className="flex items-center gap-2 p-2 rounded border border-destructive/30 bg-destructive/5 cursor-pointer">
+          <Checkbox
+            checked={acknowledged}
+            onCheckedChange={(v) => onAcknowledgedChange(!!v)}
+          />
+          <span className="text-xs text-destructive">
+            I acknowledge some clients have incomplete tailoring (&lt;75% fields populated) or no TGA snapshot on file
+          </span>
+        </label>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[85vh] flex flex-col overflow-hidden gap-3">
+          <DialogHeader>
+            <DialogTitle>Clients needing attention ({namedIssues.length})</DialogTitle>
+          </DialogHeader>
+
+          <ul className="flex-1 overflow-y-auto divide-y pr-1">
+            {namedIssues.map((t) => {
+              const tenantDocIssues = (pairStatuses ?? []).filter(
+                (p) => p.tenantId === t.tenantId && p.riskLevel !== "complete",
+              );
+              const canExpandDetail = documentNames && tenantDocIssues.length > 0;
+              const detailOpen = expandedTenants.has(t.tenantId);
+              const tenantMissingFieldCounts = new Map<string, number>();
+              for (const p of tenantDocIssues) {
+                for (const field of p.missingFields) {
+                  tenantMissingFieldCounts.set(field, (tenantMissingFieldCounts.get(field) ?? 0) + 1);
+                }
+              }
+              const tenantTopMissingFields = Array.from(tenantMissingFieldCounts.entries()).sort(
+                (a, b) => b[1] - a[1],
+              );
+              return (
+                <li key={t.tenantId} className="text-sm py-2 first:pt-0 last:pb-0">
+                  <div
+                    className={`flex items-center gap-2 ${canExpandDetail ? "cursor-pointer" : ""}`}
+                    onClick={canExpandDetail ? () => toggleTenant(t.tenantId) : undefined}
+                  >
+                    {canExpandDetail ? (
+                      detailOpen ? (
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      )
+                    ) : (
+                      <span className="w-3.5 shrink-0" />
+                    )}
+                    <span className="truncate flex-1 font-medium">{tenantNames?.[t.tenantId] ?? `Tenant #${t.tenantId}`}</span>
+                    {t.riskLevel !== "complete" && (
+                      <Badge
+                        variant="outline"
+                        className={
+                          t.riskLevel === "incomplete"
+                            ? "text-[10px] px-1.5 py-0 border-destructive/40 text-destructive"
+                            : "text-[10px] px-1.5 py-0 border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-300"
+                        }
+                      >
+                        {t.riskLevel === "incomplete" ? "incomplete" : "partial"}
+                      </Badge>
+                    )}
+                    {t.missingSnapshot && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 border-destructive/40 text-destructive"
+                      >
+                        no snapshot
+                      </Badge>
+                    )}
+                  </div>
+                  {detailOpen && canExpandDetail && (
+                    <div className="mt-2 pl-6 space-y-2 text-xs">
+                      {t.missingSnapshot && (
+                        <div className="text-muted-foreground">No TGA snapshot on file for this client.</div>
+                      )}
+                      {tenantTopMissingFields.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-muted-foreground">Most commonly missing:</span>
+                          {tenantTopMissingFields.map(([field, count]) => (
+                            <Badge key={field} variant="secondary" className="text-[10px] font-normal">
+                              {field} × {count}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      {tenantDocIssues.map((p) => (
+                        <div key={p.documentId}>
+                          <span className="font-medium">
+                            {documentNames?.[p.documentId] ?? `Document #${p.documentId}`}
+                          </span>{" "}
+                          <span className="text-muted-foreground">— {p.completeness}% tailored</span>
+                          {p.missingFields.length > 0 && (
+                            <div className="text-muted-foreground">
+                              Missing: {p.missingFields.join(", ")}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
