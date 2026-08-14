@@ -65,8 +65,8 @@ export function ScopeStep({ value, onChange }: Props) {
                       className={cn(
                         "text-[10px] px-1.5 py-0 border",
                         s.has_shared
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                          : "bg-amber-50 text-amber-800 border-amber-300",
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                          : "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
                       )}
                     >
                       Shared
@@ -85,8 +85,8 @@ export function ScopeStep({ value, onChange }: Props) {
                       className={cn(
                         "text-[10px] px-1.5 py-0 border",
                         s.has_governance
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                          : "bg-amber-50 text-amber-800 border-amber-300",
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                          : "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
                       )}
                     >
                       Gov

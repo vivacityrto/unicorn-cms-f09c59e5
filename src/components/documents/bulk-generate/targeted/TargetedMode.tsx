@@ -855,7 +855,7 @@ function TenantRow({
             <Button
               size="sm"
               variant="outline"
-              className="h-6 px-2 text-[11px] text-amber-800 border-amber-300 hover:bg-amber-50"
+              className="h-6 px-2 text-[11px] text-amber-800 border-amber-300 hover:bg-amber-50 dark:text-amber-300 dark:border-amber-800 dark:hover:bg-amber-950/40"
               onClick={onFix}
               title="Fix SharePoint folder"
             >
@@ -925,10 +925,10 @@ function FolderBadge({
           className={cn(
             "text-[10px] px-1.5 py-0 border",
             isOk
-              ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
               : state === "error"
-                ? "bg-rose-50 text-rose-800 border-rose-300"
-                : "bg-amber-50 text-amber-800 border-amber-300",
+                ? "bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"
+                : "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
           )}
         >
           {isOk ? (
