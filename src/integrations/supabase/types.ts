@@ -691,12 +691,62 @@ export type Database = {
           },
         ]
       }
+      academy_course_resources: {
+        Row: {
+          course_id: number
+          created_at: string
+          created_by: string | null
+          id: string
+          resource_id: string
+          sort_order: number
+        }
+        Insert: {
+          course_id: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          resource_id: string
+          sort_order?: number
+        }
+        Update: {
+          course_id?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          resource_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_course_resources_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "academy_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_course_resources_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "academy_course_resources_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resource_library"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academy_courses: {
         Row: {
           ai_generated: boolean
           ai_reviewed_at: string | null
           ai_reviewed_by: string | null
           archived_at: string | null
+          auto_enrol_all_clients: boolean
           available_to_all_clients: boolean
           certificate_enabled: boolean | null
           created_at: string | null
@@ -733,6 +783,7 @@ export type Database = {
           ai_reviewed_at?: string | null
           ai_reviewed_by?: string | null
           archived_at?: string | null
+          auto_enrol_all_clients?: boolean
           available_to_all_clients?: boolean
           certificate_enabled?: boolean | null
           created_at?: string | null
@@ -769,6 +820,7 @@ export type Database = {
           ai_reviewed_at?: string | null
           ai_reviewed_by?: string | null
           archived_at?: string | null
+          auto_enrol_all_clients?: boolean
           available_to_all_clients?: boolean
           certificate_enabled?: boolean | null
           created_at?: string | null
@@ -42930,9 +42982,16 @@ export type Database = {
           access_level: string | null
           category: string
           created_at: string | null
+          created_by: string | null
           description: string | null
+          file_name: string | null
+          file_size: number | null
           file_url: string | null
           id: string
+          mime_type: string | null
+          resource_type: string
+          storage_bucket: string | null
+          storage_path: string | null
           tags: string[] | null
           title: string
           updated_at: string | null
@@ -42943,9 +43002,16 @@ export type Database = {
           access_level?: string | null
           category: string
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          file_name?: string | null
+          file_size?: number | null
           file_url?: string | null
           id?: string
+          mime_type?: string | null
+          resource_type?: string
+          storage_bucket?: string | null
+          storage_path?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string | null
@@ -42956,9 +43022,16 @@ export type Database = {
           access_level?: string | null
           category?: string
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          file_name?: string | null
+          file_size?: number | null
           file_url?: string | null
           id?: string
+          mime_type?: string | null
+          resource_type?: string
+          storage_bucket?: string | null
+          storage_path?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string | null
@@ -70302,6 +70375,7 @@ export type Database = {
         Args: { _tenant_id: number; _user_id: string }
         Returns: boolean
       }
+      can_manage_academy_resources: { Args: never; Returns: boolean }
       can_manage_packages: { Args: never; Returns: boolean }
       can_upload_message_attachment: {
         Args: { p_owner: string; p_path: string }

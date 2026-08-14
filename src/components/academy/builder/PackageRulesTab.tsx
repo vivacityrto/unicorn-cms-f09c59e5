@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Globe, Package } from "lucide-react";
+import { Globe, Package, UserCheck } from "lucide-react";
 
 export default function PackageRulesTab({ courseId }: { courseId: number }) {
   const { data: packages = [], isLoading: pkgLoading } = usePackagesForCourseRules();
@@ -18,7 +18,7 @@ export default function PackageRulesTab({ courseId }: { courseId: number }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_courses")
-        .select("id, available_to_all_clients")
+        .select("id, available_to_all_clients, auto_enrol_all_clients")
         .eq("id", courseId)
         .maybeSingle();
       if (error) throw error;
@@ -27,6 +27,7 @@ export default function PackageRulesTab({ courseId }: { courseId: number }) {
   });
 
   const availableToAll = course?.available_to_all_clients ?? false;
+  const autoEnrolAllClients = course?.auto_enrol_all_clients ?? false;
 
   const availabilityMutation = useMutation({
     mutationFn: async (enable: boolean) => {
@@ -40,6 +41,20 @@ export default function PackageRulesTab({ courseId }: { courseId: number }) {
       qc.invalidateQueries({ queryKey: ["academy-course-availability", courseId] });
     },
     onError: (e: any) => toast.error(e?.message || "Failed to update availability"),
+  });
+
+  const autoEnrolMutation = useMutation({
+    mutationFn: async (enable: boolean) => {
+      const { error } = await supabase
+        .from("academy_courses")
+        .update({ auto_enrol_all_clients: enable } as any)
+        .eq("id", courseId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["academy-course-availability", courseId] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Failed to update auto-enrol"),
   });
 
 
@@ -105,6 +120,28 @@ export default function PackageRulesTab({ courseId }: { courseId: number }) {
         <p className="text-sm text-muted-foreground">
           This course is available to every active client — no package configuration needed.
         </p>
+
+        <div
+          className="flex items-center justify-between p-4 rounded-lg border bg-muted/30"
+          style={{ borderColor: "hsl(var(--border))" }}
+        >
+          <div className="flex items-center gap-3">
+            <UserCheck className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Auto-enrol all eligible clients</p>
+              <p className="text-xs text-muted-foreground max-w-md">
+                Automatically enrol every active user at a tenant with Academy access when this
+                course publishes. Off by default — reserve this for genuinely mandatory training;
+                most courses should let clients opt in themselves via Enrol.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={autoEnrolAllClients}
+            onCheckedChange={(v) => autoEnrolMutation.mutate(v)}
+            disabled={autoEnrolMutation.isPending}
+          />
+        </div>
       </div>
     );
   }
