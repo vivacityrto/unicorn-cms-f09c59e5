@@ -53,6 +53,8 @@ import { useTemplatedDocuments } from "../useTemplatedDocuments";
 import { useCscAssignments } from "@/hooks/useCscAssignments";
 import { MultiSelect } from "../MultiSelect";
 import { PreviewPanel } from "../PreviewPanel";
+import { DeliveryGuardPanel } from "../DeliveryGuardPanel";
+import { useDocumentDeliveryGuards, type DeliveryGuardPair } from "@/hooks/useDocumentDeliveryGuards";
 import {
   launcherPreviewTargeted,
   launcherCreateTargeted,
@@ -239,6 +241,42 @@ export function TargetedMode({ tenants }: Props) {
     }
     return out;
   }, [selectedTriples, byTenant, docsByStage, validDocumentIds, tenants]);
+
+  // Exact (tenant, document) pairs actually in scope — same traversal as
+  // itemizedRows above, but numeric ids (deduped) for the guard check
+  // instead of display strings.
+  const guardPairs = useMemo<DeliveryGuardPair[]>(() => {
+    const rowByTriple = new Map<string, ClientTreeRow>();
+    for (const [tenantId, rows] of byTenant.entries()) {
+      for (const r of rows) {
+        rowByTriple.set(tripleKey(tenantId, r.package_instance_id, r.stage_id), r);
+      }
+    }
+    const docFilter = validDocumentIds.length > 0 ? new Set(validDocumentIds) : null;
+    const seen = new Set<string>();
+    const out: DeliveryGuardPair[] = [];
+    for (const key of selectedTriples) {
+      const row = rowByTriple.get(key);
+      if (!row) continue;
+      const stageDocs = docsByStage.get(row.stage_id) ?? [];
+      for (const d of stageDocs) {
+        if (docFilter && !docFilter.has(d.id)) continue;
+        const pairKey = `${row.tenant_id}:${d.id}`;
+        if (seen.has(pairKey)) continue;
+        seen.add(pairKey);
+        out.push({ tenantId: row.tenant_id, documentId: d.id });
+      }
+    }
+    return out;
+  }, [selectedTriples, byTenant, docsByStage, validDocumentIds]);
+
+  const guards = useDocumentDeliveryGuards(guardPairs);
+  const [guardAcknowledged, setGuardAcknowledged] = useState(false);
+
+  // Reset acknowledgement whenever the underlying selection changes.
+  useEffect(() => {
+    setGuardAcknowledged(false);
+  }, [selectedTriples, validDocumentIds]);
 
   const toggleTenant = (tenantId: number, checked: boolean) => {
     setPreviewStale(true);
@@ -634,6 +672,19 @@ export function TargetedMode({ tenants }: Props) {
                 error={previewError}
               />
 
+              {preview && !previewStale && (
+                <div className="mt-3">
+                  <DeliveryGuardPanel
+                    active={guards.active}
+                    isLoading={guards.isLoading}
+                    summary={guards.summary}
+                    hasBlockingIssues={guards.hasBlockingIssues}
+                    acknowledged={guardAcknowledged}
+                    onAcknowledgedChange={setGuardAcknowledged}
+                  />
+                </div>
+              )}
+
               {preview && !previewStale && itemizedRows.length > 0 && (
                 <div className="mt-3 border rounded-md">
                   <div className="w-full flex items-center gap-1 pr-1 text-xs font-medium hover:bg-muted/50">
@@ -745,7 +796,8 @@ export function TargetedMode({ tenants }: Props) {
               previewStale ||
               !preview ||
               preview.eligible_count === 0 ||
-              confirming
+              confirming ||
+              (guards.hasBlockingIssues && !guardAcknowledged)
             }
           >
             {confirming && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
