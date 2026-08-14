@@ -182,6 +182,12 @@ export function useBulkGeneration() {
       const skippedFromPlan = planData.skipped ?? [];
       setPlanSize(plan.length);
 
+      // One batch id per run so the client-visible timeline event for each
+      // document delivered in this run can be grouped into a single burst
+      // entry (same mechanism the bulk-generate job engine uses via its real
+      // job id — this flow has no job row, so it generates its own).
+      const batchId = plan.length > 1 ? crypto.randomUUID() : null;
+
 
       // Seed liveResults: planned (pending) first, then already-skipped at the end
       const seed: LiveResult[] = [
@@ -226,6 +232,7 @@ export function useBulkGeneration() {
               document_version_id: item.document_version_id,
               allow_incomplete: true,
               force: mode === 'overwrite_all',
+              batch_id: batchId ?? undefined,
             },
           });
 

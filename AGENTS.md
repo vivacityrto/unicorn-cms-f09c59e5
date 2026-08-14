@@ -200,6 +200,38 @@ testing. Before shipping this kind of change, run both checks:
   MCP `execute_sql` call. Also check for triggers on the table
   (`pg_trigger` / `pg_get_triggerdef`).
 
+**Guardrail: `apply_migration`/`execute_sql` take plain SQL — never HTML-escape
+the query text.** A 2026-08-14 session (see
+`docs/audit-log/entries/2026-08-14-bulk-generate-deliver-to-clients-foundation.md`)
+passed a migration with `<>`, `->>`, and `"` encoded as `&lt;&gt;`, `-&gt;&gt;`,
+`&quot;` — an unforced habit of treating the tool-call parameter like XML/HTML
+content. It isn't; it's a JSON string value that becomes the literal SQL sent
+to Postgres. The migration failed with a parser error (`missing "THEN"`)
+because `p_selections <> 'array'` became literal text `p_selections &lt;&gt;
+'array'`. Write SQL exactly as you'd put it in a `.sql` file — no entity
+encoding, regardless of what tool or harness is issuing the call.
+
+**Guardrail: changing a Postgres function's parameter list requires `DROP
+FUNCTION` first — `CREATE OR REPLACE` silently creates a second overload
+instead.** Same session: adding one optional parameter
+(`p_batch_id uuid DEFAULT NULL`) to
+`record_governance_delivery_and_mark_generated` via `CREATE OR REPLACE
+FUNCTION` did not replace the existing 13-arg function — Postgres matches
+`CREATE OR REPLACE` targets by exact argument-type signature, so a changed
+arity creates a **new overload** sharing the same name and first N parameter
+names. Confirmed via `pg_get_function_identity_arguments` that both the old
+13-arg and new 14-arg versions existed simultaneously after the migration —
+a call-resolution ambiguity risk for any caller still using the original
+parameter set. Whenever a migration adds, removes, or reorders a function's
+parameters (not just its body), `DROP FUNCTION IF EXISTS
+public.fn_name(old, arg, types);` before the `CREATE OR REPLACE`, and verify
+afterward with `select pg_get_function_identity_arguments(oid) from pg_proc
+where proname = '<fn_name>'` — it should return exactly one row. This also
+applies to functions with `RETURNS TABLE(...)`: Postgres additionally refuses
+the replace outright with `cannot change return type of existing function`
+if the output column set changed, so the drop-first step is required there
+too, not just recommended.
+
 ## Supabase deployment workflow
 
 Deploy hosted Supabase migrations and Edge Functions through the configured

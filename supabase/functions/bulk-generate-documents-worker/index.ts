@@ -349,6 +349,28 @@ Deno.serve(async (req: Request) => {
     return data as { id: string; storage_path: string | null; frozen_storage_path: string | null } | null;
   }
 
+  // A pinned document_version_id (set at job-creation time for a specific
+  // already-published version — e.g. the Deliver to Clients flow) always
+  // wins over "latest published". Classic bulk-generate items never carry a
+  // pinned version, so this falls through to latestPublishedVersion exactly
+  // as before.
+  async function pinnedOrLatestVersion(
+    documentId: number,
+    pinnedVersionId: string | null,
+  ): Promise<{ id: string; storage_path: string | null; frozen_storage_path: string | null } | null> {
+    if (!pinnedVersionId) return latestPublishedVersion(documentId);
+    const { data, error } = await supabaseService
+      .from('document_versions')
+      .select('id, storage_path, frozen_storage_path')
+      .eq('id', pinnedVersionId)
+      .maybeSingle();
+    if (error) {
+      console.error('[worker] pinnedVersion lookup error', pinnedVersionId, error);
+      return null;
+    }
+    return data as { id: string; storage_path: string | null; frozen_storage_path: string | null } | null;
+  }
+
   async function documentMeta(
     documentId: number,
   ): Promise<{ format: string | null; source_template_url: string | null } | null> {
@@ -427,6 +449,9 @@ Deno.serve(async (req: Request) => {
       document_id: number;
       package_instance_id: number;
       stageinstance_id: number;
+      document_version_id: string | null;
+      snapshot_id: string | null;
+      allow_incomplete: boolean;
     }>;
     if (items.length === 0) break;
 
@@ -460,7 +485,7 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const version = await latestPublishedVersion(item.document_id);
+        const version = await pinnedOrLatestVersion(item.document_id, item.document_version_id);
         if (!version) {
           await record(item.id, 'skipped', 'no_published_version', {}, null, null);
           continue;
@@ -498,8 +523,10 @@ Deno.serve(async (req: Request) => {
           body: JSON.stringify({
             tenant_id: item.tenant_id,
             document_version_id: version.id,
-            allow_incomplete: true,
+            allow_incomplete: item.allow_incomplete,
+            snapshot_id: item.snapshot_id ?? undefined,
             force: true,
+            batch_id: jobId,
           }),
         });
 
