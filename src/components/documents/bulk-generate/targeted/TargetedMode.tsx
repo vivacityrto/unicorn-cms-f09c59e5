@@ -434,7 +434,7 @@ export function TargetedMode({ tenants }: Props) {
   const anySelection = selectedTriples.size > 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_360px] gap-4 h-full min-h-0">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.8fr)] gap-4 h-full min-h-0">
       {/* Left — tenant list */}
       <div className="rounded-lg border bg-card flex flex-col min-h-0 overflow-hidden">
         <div className="p-3 border-b space-y-2 shrink-0">
@@ -959,7 +959,7 @@ function LivenessBadges({
   loading: boolean;
 }) {
   if (loading && !liveness) {
-    return <Skeleton className="h-4 w-14" />;
+    return <Skeleton className="h-6 w-14" />;
   }
   if (!liveness) return null;
 
@@ -995,7 +995,7 @@ function FolderBadge({
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] px-1.5 py-0 border",
+            "h-6 px-2 text-[11px] border inline-flex items-center",
             isOk
               ? "bg-emerald-50 text-emerald-700 border-emerald-300"
               : state === "error"
@@ -1004,9 +1004,9 @@ function FolderBadge({
           )}
         >
           {isOk ? (
-            <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+            <CheckCircle2 className="h-3 w-3 mr-1" />
           ) : (
-            <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+            <AlertTriangle className="h-3 w-3 mr-1" />
           )}
           {label}
         </Badge>
