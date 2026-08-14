@@ -570,16 +570,23 @@ async function handlePublish(
     });
   }
 
-  // Check merge field mappings exist
-  const { count: mappingCount } = await supabase
-    .from('document_template_mappings')
-    .select('id', { count: 'exact', head: true })
-    .eq('template_version_id', version_id);
+  // Check merge field mappings exist. Merge fields are a Word/PowerPoint
+  // concept (the auto-scan on import only ever runs for .docx/.pptx) — an
+  // Excel workbook can be a perfectly valid, publishable template with zero
+  // {{tag}} placeholders, so don't gate it on a mapping table that Excel
+  // imports never populate.
+  const isExcelFile = /\.(xlsx|xls)$/i.test(version.file_name || '');
+  if (!isExcelFile) {
+    const { count: mappingCount } = await supabase
+      .from('document_template_mappings')
+      .select('id', { count: 'exact', head: true })
+      .eq('template_version_id', version_id);
 
-  if (!mappingCount || mappingCount === 0) {
-    return new Response(JSON.stringify({ error: 'Cannot publish without merge field mappings defined. Add mappings first.' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    if (!mappingCount || mappingCount === 0) {
+      return new Response(JSON.stringify({ error: 'Cannot publish without merge field mappings defined. Add mappings first.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   // Drift detection: re-download source and compare checksum. Proceed if the
