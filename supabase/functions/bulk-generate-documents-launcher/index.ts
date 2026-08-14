@@ -42,7 +42,7 @@ const SelectionSchema = z.object({
 });
 
 const BodySchema = z.object({
-  action: z.enum(['create', 'preview', 'cancel', 'create_targeted', 'preview_targeted', 'retry', 'skip_items']),
+  action: z.enum(['create', 'preview', 'cancel', 'create_targeted', 'preview_targeted', 'retry', 'skip_items', 'create_delivery']),
   scope: z.enum(['all', 'selected']).optional(),
   tenant_ids: z.array(z.number().int().positive()).optional().nullable(),
   package_ids: z.array(z.number().int().positive()).optional().nullable(),
@@ -52,6 +52,10 @@ const BodySchema = z.object({
   job_id: z.string().uuid().optional(),
   reason: z.string().max(500).optional().nullable(),
   item_ids: z.array(z.number().int().positive()).optional().nullable(),
+  document_id: z.number().int().positive().optional(),
+  document_version_id: z.string().uuid().optional(),
+  snapshot_ids: z.record(z.string(), z.string().uuid()).optional().nullable(),
+  allow_incomplete_tenant_ids: z.array(z.number().int().positive()).optional().nullable(),
 });
 
 function kickoffWorker(jobId: string, authHeader: string) {
@@ -153,6 +157,28 @@ Deno.serve(async (req: Request) => {
       if (error) {
         console.error('[launcher] create_targeted_bulk_document_job error', error);
         return json({ error: 'create_targeted_failed', status: error.code, details: error.message }, 400);
+      }
+      const jobId = data as string;
+      kickoffWorker(jobId, authHeader);
+      return json({ job_id: jobId });
+    }
+
+    if (parsed.action === 'create_delivery') {
+      if (!parsed.document_id) return json({ error: 'document_id is required for create_delivery' }, 400);
+      if (!parsed.document_version_id) return json({ error: 'document_version_id is required for create_delivery' }, 400);
+      if (!parsed.tenant_ids || parsed.tenant_ids.length === 0) {
+        return json({ error: 'tenant_ids is required for create_delivery' }, 400);
+      }
+      const { data, error } = await supabase.rpc('create_document_delivery_job', {
+        p_document_id: parsed.document_id,
+        p_document_version_id: parsed.document_version_id,
+        p_tenant_ids: parsed.tenant_ids,
+        p_snapshot_ids: (parsed.snapshot_ids ?? {}) as unknown as never,
+        p_allow_incomplete_tenant_ids: parsed.allow_incomplete_tenant_ids ?? [],
+      });
+      if (error) {
+        console.error('[launcher] create_document_delivery_job error', error);
+        return json({ error: 'create_delivery_failed', status: error.code, details: error.message }, 400);
       }
       const jobId = data as string;
       kickoffWorker(jobId, authHeader);

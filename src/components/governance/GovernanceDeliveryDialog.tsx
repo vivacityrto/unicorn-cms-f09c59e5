@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/modals';
@@ -11,10 +11,19 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Send, CheckCircle, XCircle, Loader2, SkipForward, AlertTriangle, ShieldCheck, ShieldAlert, Square, RotateCcw, Clock } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
+import { useCscAssignments } from '@/hooks/useCscAssignments';
+import { TenantFilterBar, type CscFilterOption } from '@/components/documents/bulk-generate/TenantFilterBar';
+import {
+  launcherCreateDelivery,
+  launcherCancel,
+  launcherRetry,
+} from '@/components/documents/bulk-generate/useBulkGenerateLauncher';
 
 interface GovernanceDeliveryDialogProps {
   documentId: number;
   documentVersionId: string;
+  /** Preferred over versionNumber when present — e.g. "2026.00.00" vs a bare "v3". */
+  displayVersion?: string | null;
   versionNumber: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,26 +45,44 @@ interface TenantTailoring {
 
 type DeliveryStatus = 'pending' | 'delivering' | 'success' | 'skipped' | 'failed';
 
-interface DeliveryState {
-  [tenantId: number]: { status: DeliveryStatus; error?: string };
+interface JobItemRow {
+  id: number;
+  tenant_id: number;
+  state: 'pending' | 'leased' | 'generated' | 'skipped' | 'failed' | 'cancelled';
+  last_error: string | null;
+  outcome: Record<string, unknown> | null;
 }
 
-const THROTTLE_DELAY_MS = 1500;
+function itemStatus(state: JobItemRow['state'], outcome: Record<string, unknown> | null): DeliveryStatus {
+  if (state === 'pending') return 'pending';
+  if (state === 'leased') return 'delivering';
+  if (state === 'cancelled') return 'skipped';
+  if (state === 'skipped') return 'skipped';
+  if (state === 'failed') return 'failed';
+  // 'generated' — the worker records this state even when
+  // deliver-governance-document reported skipped:true (already delivered);
+  // that distinction lives in outcome.skipped for display only.
+  return outcome?.skipped ? 'skipped' : 'success';
+}
 
 export function GovernanceDeliveryDialog({
   documentId,
   documentVersionId,
+  displayVersion,
   versionNumber,
   open,
   onOpenChange,
   onSuccess,
 }: GovernanceDeliveryDialogProps) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [delivering, setDelivering] = useState(false);
-  const [deliveryState, setDeliveryState] = useState<DeliveryState>({});
   const [acknowledgeIncomplete, setAcknowledgeIncomplete] = useState(false);
-  const cancelledRef = useRef(false);
-  const [cancelled, setCancelled] = useState(false);
+  const [search, setSearch] = useState('');
+  const [cscFilter, setCscFilter] = useState('all');
+
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [launching, setLaunching] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   // Fetch required tags for this document
   const { data: requiredTags } = useQuery({
@@ -106,6 +133,49 @@ export function GovernanceDeliveryDialog({
       }));
     },
   });
+
+  const allTenantIds = useMemo(() => (tenants || []).map((t) => t.id), [tenants]);
+  const cscAssignments = useCscAssignments(allTenantIds);
+
+  // Same "who counts as a CSC" definition TargetedMode uses, for the shared filter bar.
+  const { data: cscOptions = [] } = useQuery({
+    queryKey: ['delivery-dialog-csc-options'],
+    enabled: open,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<CscFilterOption[]> => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('user_uuid, first_name, last_name, staff_teams, staff_team, archived, disabled')
+        .eq('disabled', false)
+        .order('archived', { ascending: true })
+        .order('first_name', { ascending: true });
+      if (error) throw error;
+      return ((data ?? []) as any[])
+        .filter((u) => {
+          const inTeams = Array.isArray(u.staff_teams) && u.staff_teams.includes('client_success');
+          const inTeam = u.staff_team === 'client_success';
+          return inTeams || inTeam;
+        })
+        .map((u) => ({
+          user_uuid: u.user_uuid,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          archived: !!u.archived,
+        }));
+    },
+  });
+
+  const filteredTenants = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const cscMap = cscAssignments.data ?? {};
+    return (tenants ?? []).filter((t) => {
+      if (q && !t.name.toLowerCase().includes(q)) return false;
+      if (cscFilter === 'all') return true;
+      const cscId = cscMap[t.id]?.csc_user_id ?? null;
+      if (cscFilter === 'unassigned') return !cscId;
+      return cscId === cscFilter;
+    });
+  }, [tenants, search, cscFilter, cscAssignments.data]);
 
   // Fetch merge field data for all eligible tenants
   const eligibleTenantIds = useMemo(
@@ -178,17 +248,15 @@ export function GovernanceDeliveryDialog({
     return result;
   }, [requiredTags, tenantMergeData, eligibleTenantIds]);
 
-  // Auto-select eligible tenants on load
-  useEffect(() => {
-    if (tenants && !delivering) {
-      const eligible = tenants
-        .filter((t) => t.hasGovernanceFolder && !t.alreadyDelivered)
-        .map((t) => t.id);
-      setSelected(new Set(eligible));
-    }
-  }, [tenants, delivering]);
-
   const eligibleTenants = tenants?.filter((t) => t.hasGovernanceFolder && !t.alreadyDelivered) || [];
+
+  // Auto-select every eligible tenant currently passing the filter — the
+  // filter narrows which tenants are visible/selectable, it doesn't persist
+  // a separate selection set.
+  const eligibleFilteredIds = useMemo(
+    () => filteredTenants.filter((t) => t.hasGovernanceFolder && !t.alreadyDelivered).map((t) => t.id),
+    [filteredTenants],
+  );
 
   const toggleTenant = (id: number) => {
     setSelected((prev) => {
@@ -200,11 +268,15 @@ export function GovernanceDeliveryDialog({
   };
 
   const toggleAll = () => {
-    if (selected.size === eligibleTenants.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(eligibleTenants.map((t) => t.id)));
-    }
+    const allSelected = eligibleFilteredIds.length > 0 && eligibleFilteredIds.every((id) => selected.has(id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of eligibleFilteredIds) {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
   };
 
   // Check if any selected tenant is incomplete
@@ -224,147 +296,113 @@ export function GovernanceDeliveryDialog({
       if (!snapshotData?.has(id)) missingSnapshot++;
     }
     return { complete, partial, incomplete, missingSnapshot };
-  }, [eligibleTenantIds, tenantTailoring]);
+  }, [eligibleTenantIds, tenantTailoring, snapshotData]);
 
-  const canDeliver = selected.size > 0 && (!hasIncompleteSelected || acknowledgeIncomplete);
-
-  /** Core delivery loop — used for initial delivery and retry */
-  const runDeliveryLoop = async (tenantIds: number[]) => {
-    cancelledRef.current = false;
-    setCancelled(false);
-    setDelivering(true);
-
-    // Initialise state for these tenants
-    setDeliveryState((prev) => {
-      const next = { ...prev };
-      tenantIds.forEach((id) => (next[id] = { status: 'pending' }));
-      return next;
-    });
-
-    let successCount = 0;
-    let failCount = 0;
-    const failedTenantIds: number[] = [];
-
-    // Pre-fetch latest snapshot per tenant for batch consistency
-    const snapshotMap = snapshotData ?? new Map<number, { id: string; created_at: string }>();
-
-    for (let i = 0; i < tenantIds.length; i++) {
-      const tenantId = tenantIds[i];
-
-      // Check cancellation
-      if (cancelledRef.current) {
-        setCancelled(true);
-        break;
-      }
-
-      setDeliveryState((prev) => ({
-        ...prev,
-        [tenantId]: { status: 'delivering' },
-      }));
-
-      const isIncomplete = tenantTailoring[tenantId]?.riskLevel === 'incomplete';
-
-      try {
-        const { data, error } = await supabase.functions.invoke(
-          'deliver-governance-document',
-          {
-            body: {
-              tenant_id: tenantId,
-              document_version_id: documentVersionId,
-              ...(isIncomplete ? { allow_incomplete: true } : {}),
-              snapshot_id: snapshotMap.get(tenantId)?.id,
-            },
-          },
-        );
-
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-
-        setDeliveryState((prev) => ({
-          ...prev,
-          [tenantId]: { status: data?.skipped ? 'skipped' : 'success' },
-        }));
-        successCount++;
-      } catch (err: any) {
-        setDeliveryState((prev) => ({
-          ...prev,
-          [tenantId]: { status: 'failed', error: err.message },
-        }));
-        failCount++;
-        failedTenantIds.push(tenantId);
-      }
-
-      // Throttle delay between requests (skip after last)
-      if (i < tenantIds.length - 1 && !cancelledRef.current) {
-        await new Promise((r) => setTimeout(r, THROTTLE_DELAY_MS));
-      }
-    }
-
-    const wasCancelled = cancelledRef.current;
-
-    // Insert batch audit record
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('document_activity_log').insert({
-          tenant_id: tenantIds[0],
-          document_id: documentId,
-          activity_type: 'governance_bulk_delivery_complete',
-          actor_user_id: user.id,
-          metadata: {
-            document_version_id: documentVersionId,
-            total: tenantIds.length,
-            success: successCount,
-            failed: failCount,
-            cancelled: wasCancelled,
-            failed_tenant_ids: failedTenantIds,
-            all_tenant_ids: tenantIds,
-            snapshot_ids: Object.fromEntries(
-              Array.from(snapshotMap.entries()).filter(([tid]) => tenantIds.includes(tid)).map(([tid, s]) => [tid, s.id])
-            ),
-            tenants_without_snapshot: tenantIds.filter((id) => !snapshotMap.has(id)),
-          },
-        });
-      }
-    } catch (auditErr) {
-      console.error('Failed to write batch audit record:', auditErr);
-    }
-
-    if (wasCancelled) {
-      toast.info(`Stopped — ${successCount} of ${tenantIds.length} delivered`);
-    } else {
-      toast.success(`Delivery complete: ${successCount} succeeded, ${failCount} failed`);
-    }
-    onSuccess();
-  };
+  const canDeliver = selected.size > 0 && (!hasIncompleteSelected || acknowledgeIncomplete) && !launching;
 
   const handleDeliver = async () => {
     if (!canDeliver) return;
-    const ids = Array.from(selected);
-    setDeliveryState({});
-    await runDeliveryLoop(ids);
+    setLaunching(true);
+    try {
+      const selectedIds = Array.from(selected);
+      const snapshotIds: Record<string, string> = {};
+      for (const id of selectedIds) {
+        const snap = snapshotData?.get(id);
+        if (snap) snapshotIds[String(id)] = snap.id;
+      }
+      const allowIncompleteTenantIds = selectedIds.filter(
+        (id) => tenantTailoring[id]?.riskLevel === 'incomplete',
+      );
+      const { job_id } = await launcherCreateDelivery({
+        document_id: documentId,
+        document_version_id: documentVersionId,
+        tenant_ids: selectedIds,
+        snapshot_ids: snapshotIds,
+        allow_incomplete_tenant_ids: allowIncompleteTenantIds,
+      });
+      setJobId(job_id);
+    } catch (e) {
+      toast.error((e as Error).message || 'Could not start delivery');
+    } finally {
+      setLaunching(false);
+    }
   };
 
-  const handleStop = () => {
-    cancelledRef.current = true;
-    setCancelled(true);
+  // Poll the job row + its items while a job is active. Same tables/shape
+  // Bulk Generate's job progress page reads — this is the same engine.
+  const { data: jobRow } = useQuery({
+    queryKey: ['delivery-job', jobId],
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+      const status = (query.state.data as { status?: string } | undefined)?.status;
+      return status === 'running' ? 2000 : false;
+    },
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('bulk_document_jobs')
+        .select('status')
+        .eq('id', jobId!)
+        .maybeSingle();
+      return data as { status: string } | null;
+    },
+  });
+
+  const { data: jobItems } = useQuery({
+    queryKey: ['delivery-job-items', jobId],
+    enabled: !!jobId,
+    refetchInterval: jobRow?.status === 'running' ? 2000 : false,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('bulk_document_job_items')
+        .select('id, tenant_id, state, last_error, outcome')
+        .eq('job_id', jobId!);
+      return (data || []) as JobItemRow[];
+    },
+  });
+
+  const itemByTenant = useMemo(() => {
+    const map = new Map<number, JobItemRow>();
+    for (const item of jobItems || []) map.set(item.tenant_id, item);
+    return map;
+  }, [jobItems]);
+
+  const completedCount = (jobItems || []).filter((i) => i.state !== 'pending' && i.state !== 'leased').length;
+  const totalCount = (jobItems || []).length;
+  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const hasFailures = (jobItems || []).some((i) => i.state === 'failed');
+  const isFinished = !!jobId && jobRow?.status !== undefined && jobRow.status !== 'running';
+
+  const handleStop = async () => {
+    if (!jobId) return;
+    setCancelling(true);
+    try {
+      await launcherCancel(jobId, 'Stopped by staff');
+    } catch (e) {
+      toast.error((e as Error).message || 'Could not stop delivery');
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleRetryFailed = async () => {
-    const failedIds = Object.entries(deliveryState)
-      .filter(([, s]) => s.status === 'failed')
-      .map(([id]) => Number(id));
-    if (failedIds.length === 0) return;
-    await runDeliveryLoop(failedIds);
+    if (!jobId) return;
+    setRetrying(true);
+    try {
+      await launcherRetry(jobId);
+    } catch (e) {
+      toast.error((e as Error).message || 'Could not retry failed deliveries');
+    } finally {
+      setRetrying(false);
+    }
   };
 
-  const completedCount = Object.values(deliveryState).filter(
-    (s) => s.status === 'success' || s.status === 'skipped' || s.status === 'failed',
-  ).length;
-  const totalCount = Object.keys(deliveryState).length;
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-  const hasFailures = Object.values(deliveryState).some((s) => s.status === 'failed');
-  const isFinished = delivering && (completedCount === totalCount || cancelled) && totalCount > 0;
+  const handleClose = () => {
+    onOpenChange(false);
+    if (jobId) onSuccess();
+    setSelected(new Set());
+    setAcknowledgeIncomplete(false);
+    setJobId(null);
+  };
 
   const statusIcon = (status: DeliveryStatus) => {
     switch (status) {
@@ -459,32 +497,35 @@ export function GovernanceDeliveryDialog({
     return null;
   };
 
+  const versionLabel = displayVersion || `v${versionNumber}`;
+
   return (
-    <AppModal open={open} onOpenChange={delivering ? undefined : onOpenChange}>
+    <AppModal open={open} onOpenChange={jobId && !isFinished ? undefined : (o) => (o ? onOpenChange(o) : handleClose())}>
       <AppModalContent size="lg">
         <AppModalHeader>
-          <AppModalTitle>Deliver v{versionNumber} to Clients</AppModalTitle>
+          <AppModalTitle>Deliver {versionLabel} to Clients</AppModalTitle>
         </AppModalHeader>
         <AppModalBody>
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading tenants…</p>
-          ) : delivering ? (
+          ) : jobId ? (
             <div className="space-y-4">
               <Progress value={progress} showValue label="Delivery progress" />
               <ScrollArea className="h-[320px]">
                 <div className="space-y-2">
                   {tenants
-                    ?.filter((t) => t.id in deliveryState)
+                    ?.filter((t) => itemByTenant.has(t.id))
                     .map((t) => {
-                      const ds = deliveryState[t.id];
+                      const item = itemByTenant.get(t.id)!;
+                      const status = itemStatus(item.state, item.outcome);
                       return (
                         <div key={t.id} className="flex items-center justify-between px-2 py-1.5 rounded border">
                           <span className="text-sm">{t.name}</span>
                           <div className="flex items-center gap-2">
-                            {ds && statusIcon(ds.status)}
-                            {ds?.error && (
+                            {statusIcon(status)}
+                            {item.last_error && (
                               <span className="text-xs text-destructive max-w-[200px] truncate">
-                                {ds.error}
+                                {item.last_error}
                               </span>
                             )}
                           </div>
@@ -511,17 +552,25 @@ export function GovernanceDeliveryDialog({
                 </div>
               )}
 
+              <TenantFilterBar
+                search={search}
+                onSearchChange={setSearch}
+                cscFilter={cscFilter}
+                onCscFilterChange={setCscFilter}
+                cscOptions={cscOptions}
+              />
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
                   {selected.size} of {eligibleTenants.length} selected
                 </span>
                 <Button variant="ghost" size="sm" onClick={toggleAll}>
-                  {selected.size === eligibleTenants.length ? 'Deselect All' : 'Select All'}
+                  {eligibleFilteredIds.length > 0 && eligibleFilteredIds.every((id) => selected.has(id)) ? 'Deselect All' : 'Select All'}
                 </Button>
               </div>
               <ScrollArea className="h-[280px]">
                 <div className="space-y-1">
-                  {tenants?.map((t) => {
+                  {filteredTenants.map((t) => {
                     const disabled = !t.hasGovernanceFolder || t.alreadyDelivered;
                     return (
                       <label
@@ -547,6 +596,9 @@ export function GovernanceDeliveryDialog({
                       </label>
                     );
                   })}
+                  {filteredTenants.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-6">No clients match this filter.</p>
+                  )}
                 </div>
               </ScrollArea>
 
@@ -569,23 +621,23 @@ export function GovernanceDeliveryDialog({
           {isFinished ? (
             <div className="flex items-center gap-2">
               {hasFailures && (
-                <Button variant="outline" onClick={handleRetryFailed}>
-                  <RotateCcw className="h-4 w-4 mr-2" />
+                <Button variant="outline" onClick={handleRetryFailed} disabled={retrying}>
+                  {retrying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
                   Retry Failed
                 </Button>
               )}
-              <Button onClick={() => onOpenChange(false)}>Close</Button>
+              <Button onClick={handleClose}>Close</Button>
             </div>
-          ) : delivering ? (
-            <Button variant="destructive" onClick={handleStop}>
-              <Square className="h-4 w-4 mr-2" />
+          ) : jobId ? (
+            <Button variant="destructive" onClick={handleStop} disabled={cancelling}>
+              {cancelling ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Square className="h-4 w-4 mr-2" />}
               Stop
             </Button>
           ) : (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button onClick={handleDeliver} disabled={!canDeliver}>
-                <Send className="h-4 w-4 mr-2" />
+                {launching ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
                 Deliver to {selected.size} Client{selected.size !== 1 ? 's' : ''}
               </Button>
             </>

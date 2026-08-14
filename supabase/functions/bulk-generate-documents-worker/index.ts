@@ -423,7 +423,7 @@ Deno.serve(async (req: Request) => {
     }
     const { data: job, error: jobErr } = await supabaseService
       .from('bulk_document_jobs')
-      .select('status')
+      .select('status, origin')
       .eq('id', jobId)
       .maybeSingle();
     if (jobErr || !job) {
@@ -434,6 +434,11 @@ Deno.serve(async (req: Request) => {
       console.log(`[worker] job status=${job.status}, halting new leases`);
       break;
     }
+    // Deliver to Clients respects deliver-governance-document's own
+    // idempotency check (skip if already delivered for this snapshot) —
+    // classic bulk-generate keeps forcing regeneration, unchanged from
+    // before this job type existed.
+    const forceDelivery = job.origin !== 'deliver_to_clients';
 
     const { data: leased, error: leaseErr } = await supabaseService.rpc(
       'lease_bulk_document_job_items',
@@ -525,7 +530,7 @@ Deno.serve(async (req: Request) => {
             document_version_id: version.id,
             allow_incomplete: item.allow_incomplete,
             snapshot_id: item.snapshot_id ?? undefined,
-            force: true,
+            force: forceDelivery,
             batch_id: jobId,
           }),
         });

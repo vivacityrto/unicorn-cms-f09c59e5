@@ -363,6 +363,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         <GovernanceDeliveryDialog
           documentId={documentId}
           documentVersionId={publishedVersion.id}
+          displayVersion={publishedVersion.display_version}
           versionNumber={publishedVersion.version_number}
           open={showDelivery}
           onOpenChange={setShowDelivery}

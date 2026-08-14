@@ -120,3 +120,17 @@ export async function launcherCreateTargeted(
     document_ids: document_ids ?? null,
   });
 }
+
+export async function launcherCreateDelivery(params: {
+  document_id: number;
+  document_version_id: string;
+  tenant_ids: number[];
+  snapshot_ids?: Record<string, string>;
+  allow_incomplete_tenant_ids?: number[];
+}): Promise<{ job_id: string }> {
+  await refreshSessionBestEffort();
+  return invokeLauncher<{ job_id: string }>({
+    action: "create_delivery",
+    ...params,
+  });
+}
