@@ -303,7 +303,10 @@ export default function ManageDocuments() {
   const {
     profile
   } = useAuth();
-  const isTeamLeader = isVivacityStaffRole(profile?.unicorn_role);
+  // Any internal Vivacity staff role (Super Admin, Team Leader, Integrator,
+  // BGT, CSC, CET) gets the same admin management view on this page — the
+  // document data-fetch above already treats them as equivalent.
+  const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
   const queryClient = useQueryClient();
 
   // Governance features state
@@ -1497,24 +1500,27 @@ export default function ManageDocuments() {
     </div>;
   }
   const isSuperAdmin = currentUserRole === "Super Admin" || currentUserRole === "SuperAdmin";
+  // Admin management view (stats, filters, bulk actions, extra columns) is
+  // for any Vivacity staff role, not just Super Admin — see isVivacityStaff.
+  const showAdminView = isSuperAdmin || isVivacityStaff;
   return <div className="space-y-6 p-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-[28px] font-bold">Manage Documents</h1>
           <p className="text-muted-foreground">
-            {isSuperAdmin ? "View and manage all system documents" : "View your documents"}
+            {showAdminView ? "View and manage all system documents" : "View your documents"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <BulkGenerateButton />
-          {isSuperAdmin && selectedDocuments.length > 0 && (
+          {showAdminView && selectedDocuments.length > 0 && (
               <Button variant="destructive" className="gap-2" onClick={() => setIsBulkDeleteDialogOpen(true)}>
                 <Trash2 className="h-4 w-4" />
                 Delete ({selectedDocuments.length})
               </Button>
             )}
-          {(isSuperAdmin || isTeamLeader) && <Dialog open={isCreateDialogOpen} onOpenChange={open => {
+          {showAdminView && <Dialog open={isCreateDialogOpen} onOpenChange={open => {
           setIsCreateDialogOpen(open);
           if (open) {
             // Opening for create: start on browse step (edit path never uses it)
@@ -1897,8 +1903,8 @@ export default function ManageDocuments() {
         </div>
       </div>
 
-      {/* Statistics Cards - Only for Super Admins */}
-      {isSuperAdmin && <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Statistics Cards - Vivacity staff only */}
+      {showAdminView && <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div 
             onClick={() => setFormatFilter("all")}
             className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
@@ -1959,7 +1965,7 @@ export default function ManageDocuments() {
 
         <div className="flex flex-wrap gap-4">
           {/* Duplicates Filter */}
-          {isSuperAdmin && duplicateDocCount > 0 && (
+          {showAdminView && duplicateDocCount > 0 && (
             <Button
               variant={showDuplicatesOnly ? "default" : "outline"}
               className={cn(
@@ -2018,7 +2024,7 @@ export default function ManageDocuments() {
           </div>
 
           {/* Framework Filter */}
-          {isSuperAdmin && (
+          {showAdminView && (
             <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
               <SelectTrigger className="flex-1 min-w-[180px] h-12 bg-card border-border/50 rounded-lg font-semibold">
                 <SelectValue placeholder="Framework" />
@@ -2034,7 +2040,7 @@ export default function ManageDocuments() {
           )}
 
           {/* SharePoint Status Filter */}
-          {isSuperAdmin && (
+          {showAdminView && (
             <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
               <SelectTrigger className="flex-1 min-w-[170px] h-12 bg-card border-border/50 rounded-lg font-semibold">
                 <SelectValue placeholder="SP Status" />
@@ -2050,7 +2056,7 @@ export default function ManageDocuments() {
       </div>
 
       {/* File Status Filter */}
-      {isSuperAdmin && (
+      {showAdminView && (
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">File status:</span>
           <div className="inline-flex rounded-lg border border-border/50 bg-card p-1 shadow-sm">
@@ -2083,7 +2089,7 @@ export default function ManageDocuments() {
           <Table className="min-w-[1600px]">
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
-                {isSuperAdmin && (
+                {showAdminView && (
                   <TableHead className="w-12 bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
                     <Checkbox 
                       checked={selectedDocuments.length === filteredDocuments.length && filteredDocuments.length > 0}
@@ -2095,7 +2101,7 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-24">
                   ID
                 </TableHead>
-                {isSuperAdmin && (
+                {showAdminView && (
                   <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-16 text-center">
                     File
                   </TableHead>
@@ -2134,7 +2140,7 @@ export default function ManageDocuments() {
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 12 : 10} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={showAdminView ? 12 : 10} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -2148,7 +2154,7 @@ export default function ManageDocuments() {
             }} onClick={() => {
               setSelectedDocId(doc.id);
             }}>
-                      {isSuperAdmin && (
+                      {showAdminView && (
                         <TableCell className="py-6 border-r border-border/50" style={{ paddingRight: '19px' }} onClick={e => e.stopPropagation()}>
                           <Checkbox 
                             checked={isSelected}
@@ -2160,7 +2166,7 @@ export default function ManageDocuments() {
                       <TableCell className="py-6 border-r border-border/50 w-24">
                         <span className="font-semibold text-foreground">{doc.id}</span>
                       </TableCell>
-                      {isSuperAdmin && (
+                      {showAdminView && (
                         <TableCell className="py-6 border-r border-border/50 w-16 text-center" onClick={e => e.stopPropagation()}>
                           {doc.file_status === 'no_package' ? (
                             <Tooltip>
