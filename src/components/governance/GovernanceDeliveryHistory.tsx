@@ -33,13 +33,15 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
         .in('id', tenantIds);
       const tenantMap = new Map(tenants?.map((t) => [t.id, t.name]) || []);
 
-      // Enrich with version numbers
+      // Enrich with version labels
       const versionIds = [...new Set(data.map((d) => d.document_version_id))];
       const { data: versions } = await supabase
         .from('document_versions')
-        .select('id, version_number')
+        .select('id, version_number, display_version')
         .in('id', versionIds);
-      const versionMap = new Map(versions?.map((v) => [v.id, v.version_number]) || []);
+      const versionMap = new Map(
+        versions?.map((v) => [v.id, v.display_version || `v${v.version_number}`]) || [],
+      );
 
       // Enrich with user names
       const userIds = [...new Set(data.map((d) => d.delivered_by).filter(Boolean))] as string[];
@@ -58,7 +60,7 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
       return data.map((d) => ({
         ...d,
         tenant_name: tenantMap.get(d.tenant_id) || `Tenant ${d.tenant_id}`,
-        version_number: versionMap.get(d.document_version_id) ?? '?',
+        version_label: versionMap.get(d.document_version_id) ?? '—',
         delivered_by_name: d.delivered_by ? userMap.get(d.delivered_by) || '—' : '—',
         snapshot_date: d.snapshot_id ? snapshotMap.get(d.snapshot_id) || null : null,
       }));
@@ -161,7 +163,7 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
             {deliveries.map((d) => (
               <TableRow key={d.id}>
                 <TableCell className="font-medium text-sm">{d.tenant_name}</TableCell>
-                <TableCell className="text-sm">v{String(d.version_number)}</TableCell>
+                <TableCell className="text-sm">{d.version_label}</TableCell>
                 <TableCell>{statusBadge(d.status)}</TableCell>
                 <TableCell>{tailoringBadge(d.tailoring_risk_level)}</TableCell>
                 <TableCell>{issuesPopover(d)}</TableCell>
