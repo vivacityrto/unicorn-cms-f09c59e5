@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
     const { action } = body;
 
     if (action === "generate_classification") {
-      const { title, transcript, webinar_series } = body;
+      const { title, transcript, webinar_series, existing_tags } = body;
 
       if (!title) {
         return new Response(
@@ -104,10 +104,23 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Vivacity Academy's tag catalog is manually curated (see
+      // docs/audit-log/entries/2026-08-13-academy-tag-cleanup.md — 190 tags
+      // collapsed to 162 after a cleanup pass). Every prior Quick Add run
+      // invented fresh tags with no awareness of that catalog, which is how
+      // it grew near-duplicates in the first place. Passing the existing
+      // list lets the AI reuse a real tag instead of coining another variant.
+      const existingTagList: string[] = Array.isArray(existing_tags)
+        ? existing_tags.filter((t: unknown): t is string => typeof t === "string" && t.trim().length > 0).slice(0, 300)
+        : [];
+      const tagGuidance = existingTagList.length
+        ? `\n\nExisting tag catalog (reuse one of these whenever it genuinely fits — only coin a new tag when none of these capture the topic):\n${existingTagList.join(", ")}`
+        : "";
+
       const ai = await callAi(
         LOVABLE_API_KEY,
         "You classify professional training content for Vivacity Academy, which serves Australian RTOs. You answer strictly with JSON.",
-        `Classify this recording.\n\nTitle: ${title}\nSeries: ${webinar_series || "Not specified"}\nTranscript (may be truncated):\n${String(transcript || "").slice(0, 20000)}\n\nReturn ONLY JSON, no markdown:\n{"target_audience": ["ceo","compliance_manager","trainer","administrator"], "difficulty_level": "beginner|intermediate|advanced", "tags": ["3-6 short lowercase topical tags"]}\nChoose only audiences that genuinely apply.`,
+        `Classify this recording.\n\nTitle: ${title}\nSeries: ${webinar_series || "Not specified"}\nTranscript (may be truncated):\n${String(transcript || "").slice(0, 20000)}${tagGuidance}\n\nReturn ONLY JSON, no markdown:\n{"target_audience": ["ceo","compliance_manager","trainer","administrator"], "difficulty_level": "beginner|intermediate|advanced", "tags": ["3-6 short lowercase topical tags, lowercase with spaces not hyphens, preferring the existing catalog above where it fits"]}\nChoose only audiences that genuinely apply.`,
       );
       if (!ai.ok) {
         return new Response(JSON.stringify({ error: ai.error }), {

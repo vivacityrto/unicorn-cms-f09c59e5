@@ -22,6 +22,7 @@ import TagChipInput from "@/components/academy/TagChipInput";
 import WorkshopSegmentSplit, {
   formatTimecode, validateSegments, type WorkshopSegment,
 } from "@/components/academy/WorkshopSegmentSplit";
+import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
 
 function todayLocalISODate(): string {
   const d = new Date();
@@ -211,6 +212,27 @@ export default function AcademyQuickAddPage() {
     staleTime: 60_000,
   });
 
+  // Same distinct-tag source Tag Management and the course builder use, so
+  // Quick Add's tag chip input suggests real existing tags instead of
+  // operating in a vacuum and drifting from the curated list.
+  const { data: distinctTags = [] } = useQuery({
+    queryKey: ["academy-distinct-tags"],
+    queryFn: fetchDistinctAcademyTags,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Duplicate-video guard: Quick Add previously had no way to know a Vimeo
+  // recording had already been imported, which is exactly how the 2026-08-13
+  // "Diversity Inclusion Cultural Safety" duplicate happened (same video run
+  // through Quick Add twice, 2 minutes apart). Matched on the numeric Vimeo
+  // ID the fetch edge function resolves (not the raw pasted URL, which can
+  // vary in format — share link, privacy hash, embed URL — for the same
+  // video), against every non-archived course already pointing at it.
+  const [duplicateVideo, setDuplicateVideo] = useState<{
+    videoId: string;
+    courses: { id: number; title: string; status: string | null }[];
+  } | null>(null);
+
   // Step 2 results
   const [generating, setGenerating] = useState(false);
   const [hasTranscript, setHasTranscript] = useState<boolean | null>(null);
@@ -293,7 +315,7 @@ export default function AcademyQuickAddPage() {
   };
 
   // ── Step 2: Generate with AI ──
-  const handleGenerate = async () => {
+  const handleGenerate = async (skipDuplicateCheck = false) => {
     setGenerateError(null);
     if (!vimeoUrl.trim()) { setGenerateError("Vimeo URL is required"); return; }
     if (!series) { setGenerateError("Select a series before generating."); return; }
@@ -315,6 +337,27 @@ export default function AcademyQuickAddPage() {
         );
       }
 
+      const videoId: string | null = vimeo?.video_id ?? null;
+      if (videoId && !skipDuplicateCheck) {
+        const { data: matchingVideos } = await supabase
+          .from("training_videos")
+          .select("id")
+          .ilike("vimeo_url", `%${videoId}%`);
+        const matchIds = (matchingVideos ?? []).map((v: any) => v.id);
+        if (matchIds.length > 0) {
+          const { data: existingCourses } = await supabase
+            .from("academy_courses")
+            .select("id, title, status")
+            .in("source_video_id", matchIds)
+            .neq("status", "archived");
+          if (existingCourses && existingCourses.length > 0) {
+            setDuplicateVideo({ videoId, courses: existingCourses as any });
+            setGenerating(false);
+            return;
+          }
+        }
+      }
+      setDuplicateVideo(null);
 
       const resolvedTitle = (episodeTitle.trim() || vimeo?.title || "").trim();
       const tx: string = vimeo?.transcript || "";
@@ -363,6 +406,7 @@ export default function AcademyQuickAddPage() {
           title: resolvedTitle,
           transcript: tx,
           webinar_series: series,
+          existing_tags: distinctTags,
         },
       });
       if (cErr) throw new Error(await extractEdgeError(cErr, "AI classification failed"));
@@ -404,6 +448,14 @@ export default function AcademyQuickAddPage() {
     setSplitProgress(null);
     try {
       const built: SegmentDraft[] = [];
+      // Seeded from the platform-wide catalog, then grown with each
+      // segment's own chosen tags — so segment 2 onward sees what segment 1
+      // already picked and reuses it instead of coining a same-topic variant
+      // ("quality assurance" vs "quality_assurance" vs "quality"). Without
+      // this, each segment's classification call is blind to the other 7 in
+      // the same recording, and a single workshop course ends up unioning
+      // 30+ near-duplicate tags across its segments.
+      const sessionTags = new Set(distinctTags);
       for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
         setSplitProgress(`Drafting segment ${i + 1} of ${segments.length}…`);
@@ -418,12 +470,14 @@ export default function AcademyQuickAddPage() {
             title: seg.suggested_title,
             transcript: segTranscript,
             webinar_series: WORKSHOP_SERIES,
+            existing_tags: Array.from(sessionTags),
           },
         });
         if (cErr) throw new Error(await extractEdgeError(cErr, `AI classification failed for segment ${i + 1}`));
         const audience: string[] = Array.isArray(cls?.target_audience) ? cls.target_audience : [];
         const level: string = cls?.difficulty_level || "beginner";
         const aiTags: string[] = Array.isArray(cls?.tags) ? cls.tags : [];
+        aiTags.forEach((t) => sessionTags.add(t));
 
         const { data: desc, error: dErr } = await supabase.functions.invoke("academy-ai-generate", {
           body: {
@@ -888,7 +942,10 @@ export default function AcademyQuickAddPage() {
               <Label>Vimeo URL *</Label>
               <Input
                 value={vimeoUrl}
-                onChange={(e) => setVimeoUrl(e.target.value)}
+                onChange={(e) => {
+                  setVimeoUrl(e.target.value);
+                  setDuplicateVideo(null);
+                }}
                 placeholder="https://vimeo.com/1234567890"
                 aria-invalid={!!generateError}
                 aria-describedby="vimeo-url-help"
@@ -915,7 +972,7 @@ export default function AcademyQuickAddPage() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={handleGenerate}
+                      onClick={() => handleGenerate()}
                       disabled={generating}
                     >
                       {generating ? (
@@ -987,7 +1044,7 @@ export default function AcademyQuickAddPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 flex-wrap">
               <Button
-                onClick={handleGenerate}
+                onClick={() => handleGenerate()}
                 disabled={generating || !vimeoUrl.trim() || !series}
                 className="text-white hover:opacity-90"
                 style={{ backgroundColor: "#7130A0" }}
@@ -1001,6 +1058,51 @@ export default function AcademyQuickAddPage() {
                 </span>
               )}
             </div>
+            {duplicateVideo && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="space-y-2">
+                  <span className="block">
+                    This Vimeo video (id {duplicateVideo.videoId}) is already used by{" "}
+                    {duplicateVideo.courses.length === 1 ? "a course" : `${duplicateVideo.courses.length} courses`}:
+                  </span>
+                  <ul className="list-disc pl-5 space-y-0.5">
+                    {duplicateVideo.courses.map((c) => (
+                      <li key={c.id}>
+                        <a
+                          href={`/superadmin/academy/builder/${c.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline"
+                        >
+                          {c.title}
+                        </a>{" "}
+                        <Badge variant="outline" className="ml-1 text-[10px]">{c.status}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleGenerate(true)}
+                      disabled={generating}
+                    >
+                      Create another course from this video anyway
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setDuplicateVideo(null)}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
             {hasTranscript === false && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
@@ -1129,7 +1231,7 @@ export default function AcademyQuickAddPage() {
                 </Select>
                 <div className="pt-2 space-y-2">
                   <Label>Tags</Label>
-                  <TagChipInput value={vTags} onChange={setVTags} />
+                  <TagChipInput value={vTags} onChange={setVTags} suggestions={distinctTags} />
                 </div>
               </div>
             </div>
