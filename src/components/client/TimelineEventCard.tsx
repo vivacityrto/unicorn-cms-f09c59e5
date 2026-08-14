@@ -214,7 +214,15 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
     case 'document_uploaded':
     case 'document_downloaded':
     case 'document_shared_to_client':
-      if (event.entity_id) return { label: 'View document', path: `/documents/${event.entity_id}` };
+      // `/documents/:id` was never a real route (confirmed against App.tsx) —
+      // dead since these event types were first declared, never noticed
+      // because none of the three ever actually inserted a row until this
+      // same change set fixed the two silent-failure bugs blocking them.
+      // Points at the staff-facing Manage Documents detail view, the
+      // primary consumer of this card (the portfolio-wide Client Activity
+      // feed); the client-portal case may need its own destination as a
+      // follow-up.
+      if (event.entity_id) return { label: 'View document', path: `/manage-documents?doc=${event.entity_id}` };
       return null;
     case 'microsoft_sync_failed':
       return { label: 'Fix connection', path: '/settings?tab=calendar' };

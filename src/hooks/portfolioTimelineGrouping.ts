@@ -19,7 +19,7 @@ export interface PortfolioTimelineEvent extends TimelineEvent {
   tenant_name: string;
   /** Present only on a synthetic row produced by grouping >1 raw events. */
   group_count?: number;
-  group_kind?: 'enrollment' | 'enrollment_multi' | 'broadcast';
+  group_kind?: 'enrollment' | 'enrollment_multi' | 'broadcast' | 'document_delivery';
   /** All distinct tenant_ids folded into a multi-tenant enrollment or broadcast group. */
   group_tenant_ids?: number[];
   /** Set on 'enrollment_multi' groups when the course's slug is known, for click-through. */
@@ -43,6 +43,13 @@ export interface ActorProfile {
 
 const ENROLLMENT_GROUP_WINDOW_MS = 10 * 60 * 1000;
 const BROADCAST_GROUP_WINDOW_MS = 30 * 60 * 1000;
+// document_shared_to_client rows carry a real metadata.batch_id shared by
+// every delivery in the same bulk-generate job / Generate-All run — a
+// precise correlator, unlike broadcast's reconstructed sender+subject key.
+// Still windowed (not grouped unconditionally) as a safety cap bounding
+// memory/display, generous enough to cover a large bulk job's worker
+// draining its item queue over time.
+const DOCUMENT_DELIVERY_GROUP_WINDOW_MS = 2 * 60 * 60 * 1000;
 
 function occurredAtMs(e: PortfolioTimelineEvent): number {
   return new Date(e.occurred_at || e.created_at).getTime();
@@ -61,7 +68,7 @@ function extractUserName(title: string): string | null {
 interface GroupKeyInfo {
   bucketKey: string;
   windowMs: number;
-  kind: 'enrollment' | 'broadcast';
+  kind: 'enrollment' | 'broadcast' | 'document_delivery';
 }
 
 function groupKeyFor(e: PortfolioTimelineEvent, groupBroadcasts: boolean): GroupKeyInfo | null {
@@ -90,12 +97,25 @@ function groupKeyFor(e: PortfolioTimelineEvent, groupBroadcasts: boolean): Group
     };
   }
 
+  if (e.event_type === 'document_shared_to_client') {
+    const batchId = (e.metadata as Record<string, unknown> | null)?.batch_id;
+    // No batch_id means this delivery wasn't part of a job/batch run (e.g. a
+    // one-off single-document delivery) — nothing to correlate it with, so
+    // it stays its own row.
+    if (batchId == null) return null;
+    return {
+      bucketKey: `document_delivery:${String(batchId)}`,
+      windowMs: DOCUMENT_DELIVERY_GROUP_WINDOW_MS,
+      kind: 'document_delivery',
+    };
+  }
+
   return null;
 }
 
 function buildGroupedEvent(
   cluster: PortfolioTimelineEvent[],
-  kind: 'enrollment' | 'broadcast',
+  kind: 'enrollment' | 'broadcast' | 'document_delivery',
   courseInfoByCourseId: Map<string, CourseActorInfo>,
   actorByUuid: Map<string, ActorProfile>
 ): PortfolioTimelineEvent {
@@ -200,6 +220,49 @@ function buildGroupedEvent(
     };
   }
 
+  if (kind === 'document_delivery') {
+    // A lone delivery (no burst in this batch) keeps its own natural title —
+    // no rewording needed, unlike broadcast/enrollment which reword even a
+    // single row for attribution reasons.
+    if (count === 1) return newest;
+
+    const tenantIds = [...new Set(cluster.map((e) => e.tenant_id))];
+    const documentIds = new Set(
+      cluster
+        .map((e) => (e.metadata as Record<string, unknown> | null)?.document_id)
+        .filter((id) => id != null),
+    );
+    const docCount = documentIds.size;
+    const batchId = (newest.metadata as Record<string, unknown> | null)?.batch_id;
+
+    if (tenantIds.length === 1) {
+      return {
+        ...newest,
+        id: `group:document_delivery:${String(batchId)}:${newest.id}`,
+        title: `${count} documents delivered to your account`,
+        group_count: count,
+        group_kind: 'document_delivery',
+      };
+    }
+
+    // Cross-tenant — mirrors the broadcast headline shape ("Sent to N
+    // clients"), with the document (or "bulk document generation" when the
+    // batch spans more than one) as the subtitle.
+    const singleDocTitle =
+      docCount === 1
+        ? (newest.metadata as Record<string, unknown> | null)?.delivered_file_name as string | undefined
+        : undefined;
+    return {
+      ...newest,
+      id: `group:document_delivery:${String(batchId)}:${newest.id}`,
+      title: `Delivered to ${tenantIds.length} clients`,
+      tenant_name: singleDocTitle || `${docCount} documents`,
+      group_count: count,
+      group_kind: 'document_delivery',
+      group_tenant_ids: tenantIds,
+    };
+  }
+
   // Broadcast bucket entry already required conversation_type === 'broadcast'
   // (see groupKeyFor), so every row here — even a lone one — gets the
   // subject-forward headline instead of the generic "X sent a message".
@@ -230,6 +293,10 @@ export function groupedEventHref(event: PortfolioTimelineEvent): string | null {
   if (event.group_kind === 'enrollment_multi') {
     return event.group_course_slug ? `/academy/course/${event.group_course_slug}` : '/academy/courses';
   }
+  // Only the cross-tenant document_delivery shape needs an override — the
+  // single-tenant multi-doc case has group_tenant_ids unset and falls
+  // through to the default per-tenant Timeline href, which is already right.
+  if (event.group_kind === 'document_delivery' && event.group_tenant_ids) return '/manage-documents';
   return null;
 }
 
