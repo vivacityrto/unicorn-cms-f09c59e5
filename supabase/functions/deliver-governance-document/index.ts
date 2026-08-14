@@ -680,7 +680,7 @@ serve(async (req) => {
 
     // Parse request
     const body = await req.json();
-    const { tenant_id, document_version_id, allow_incomplete, snapshot_id: pinned_snapshot_id, force } = body;
+    const { tenant_id, document_version_id, allow_incomplete, snapshot_id: pinned_snapshot_id, force, batch_id } = body;
     if (!tenant_id || !document_version_id) {
       return new Response(
         JSON.stringify({ error: "tenant_id and document_version_id are required" }),
@@ -1112,6 +1112,7 @@ serve(async (req) => {
         p_missing_merge_fields: missingTags,
         p_invalid_merge_fields: invalidTags,
         p_tailoring_risk_level: riskLevel,
+        p_batch_id: batch_id ?? null,
       },
     );
 
