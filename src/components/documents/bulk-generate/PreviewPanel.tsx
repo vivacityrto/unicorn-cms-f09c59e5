@@ -46,15 +46,15 @@ export function PreviewPanel({ preview, stale, loading, error }: Props) {
     <div
       className={cn(
         "rounded-md border p-4 space-y-3",
-        stale && "border-amber-300 bg-amber-50/40",
-        zero && !stale && "border-slate-300 bg-slate-50",
+        stale && "border-amber-300 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-950/20",
+        zero && !stale && "border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40",
       )}
     >
       <div className="flex items-start gap-2">
         {zero ? (
-          <AlertCircle className="h-4 w-4 mt-0.5 text-slate-500 shrink-0" />
+          <AlertCircle className="h-4 w-4 mt-0.5 text-slate-500 dark:text-slate-400 shrink-0" />
         ) : (
-          <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600 shrink-0" />
+          <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
         )}
         <div className="flex-1">
           <div className="text-sm font-medium">
@@ -82,14 +82,14 @@ export function PreviewPanel({ preview, stale, loading, error }: Props) {
       {!zero && preview.distinct_tenants > 0 && (
         <div className="text-xs pt-2 border-t">
           {preview.needs_provisioning_tenants === 0 ? (
-            <span className="text-emerald-700">
+            <span className="text-emerald-700 dark:text-emerald-400">
               All {preview.distinct_tenants} selected client
               {preview.distinct_tenants === 1 ? "" : "s"} fully provisioned in
               SharePoint.
             </span>
           ) : (
             <div className="space-y-1">
-              <div className="text-slate-700">
+              <div className="text-slate-700 dark:text-slate-300">
                 {preview.fully_provisioned_tenants} of{" "}
                 {preview.distinct_tenants} selected client
                 {preview.distinct_tenants === 1 ? "" : "s"} fully provisioned —{" "}
@@ -112,7 +112,7 @@ export function PreviewPanel({ preview, stale, loading, error }: Props) {
       )}
 
       {stale && (
-        <div className="text-xs text-amber-800 flex items-center gap-1">
+        <div className="text-xs text-amber-800 dark:text-amber-300 flex items-center gap-1">
           <AlertCircle className="h-3.5 w-3.5" />
           Filters changed — re-run Preview to refresh.
         </div>
