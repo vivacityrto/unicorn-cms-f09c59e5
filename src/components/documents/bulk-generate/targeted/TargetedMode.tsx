@@ -53,6 +53,8 @@ import { useTemplatedDocuments } from "../useTemplatedDocuments";
 import { useCscAssignments } from "@/hooks/useCscAssignments";
 import { MultiSelect } from "../MultiSelect";
 import { PreviewPanel } from "../PreviewPanel";
+import { DeliveryGuardPanel } from "../DeliveryGuardPanel";
+import { useDocumentDeliveryGuards, type DeliveryGuardPair } from "@/hooks/useDocumentDeliveryGuards";
 import {
   launcherPreviewTargeted,
   launcherCreateTargeted,
@@ -240,6 +242,58 @@ export function TargetedMode({ tenants }: Props) {
     return out;
   }, [selectedTriples, byTenant, docsByStage, validDocumentIds, tenants]);
 
+  // Exact (tenant, document) pairs actually in scope — same traversal as
+  // itemizedRows above, but numeric ids (deduped) for the guard check
+  // instead of display strings.
+  const guardPairs = useMemo<DeliveryGuardPair[]>(() => {
+    const rowByTriple = new Map<string, ClientTreeRow>();
+    for (const [tenantId, rows] of byTenant.entries()) {
+      for (const r of rows) {
+        rowByTriple.set(tripleKey(tenantId, r.package_instance_id, r.stage_id), r);
+      }
+    }
+    const docFilter = validDocumentIds.length > 0 ? new Set(validDocumentIds) : null;
+    const seen = new Set<string>();
+    const out: DeliveryGuardPair[] = [];
+    for (const key of selectedTriples) {
+      const row = rowByTriple.get(key);
+      if (!row) continue;
+      const stageDocs = docsByStage.get(row.stage_id) ?? [];
+      for (const d of stageDocs) {
+        if (docFilter && !docFilter.has(d.id)) continue;
+        const pairKey = `${row.tenant_id}:${d.id}`;
+        if (seen.has(pairKey)) continue;
+        seen.add(pairKey);
+        out.push({ tenantId: row.tenant_id, documentId: d.id });
+      }
+    }
+    return out;
+  }, [selectedTriples, byTenant, docsByStage, validDocumentIds]);
+
+  const guards = useDocumentDeliveryGuards(guardPairs);
+  const [guardAcknowledged, setGuardAcknowledged] = useState(false);
+
+  // Reset acknowledgement whenever the underlying selection changes.
+  useEffect(() => {
+    setGuardAcknowledged(false);
+  }, [selectedTriples, validDocumentIds]);
+
+  const tenantNames = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const t of tenants) {
+      map[t.id] = t.name ?? t.rto_name ?? `Tenant #${t.id}`;
+    }
+    return map;
+  }, [tenants]);
+
+  const documentNames = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const d of docs.data ?? []) {
+      map[d.id] = d.title;
+    }
+    return map;
+  }, [docs.data]);
+
   const toggleTenant = (tenantId: number, checked: boolean) => {
     setPreviewStale(true);
     setSelectedTenants((prev) => {
@@ -380,7 +434,7 @@ export function TargetedMode({ tenants }: Props) {
   const anySelection = selectedTriples.size > 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_360px] gap-4 h-full min-h-0">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.8fr)] gap-4 h-full min-h-0">
       {/* Left — tenant list */}
       <div className="rounded-lg border bg-card flex flex-col min-h-0 overflow-hidden">
         <div className="p-3 border-b space-y-2 shrink-0">
@@ -634,6 +688,23 @@ export function TargetedMode({ tenants }: Props) {
                 error={previewError}
               />
 
+              {preview && !previewStale && (
+                <div className="mt-3">
+                  <DeliveryGuardPanel
+                    active={guards.active}
+                    isLoading={guards.isLoading}
+                    summary={guards.summary}
+                    hasBlockingIssues={guards.hasBlockingIssues}
+                    acknowledged={guardAcknowledged}
+                    onAcknowledgedChange={setGuardAcknowledged}
+                    tenantIssues={guards.tenantIssues}
+                    tenantNames={tenantNames}
+                    pairStatuses={guards.pairStatuses}
+                    documentNames={documentNames}
+                  />
+                </div>
+              )}
+
               {preview && !previewStale && itemizedRows.length > 0 && (
                 <div className="mt-3 border rounded-md">
                   <div className="w-full flex items-center gap-1 pr-1 text-xs font-medium hover:bg-muted/50">
@@ -745,7 +816,8 @@ export function TargetedMode({ tenants }: Props) {
               previewStale ||
               !preview ||
               preview.eligible_count === 0 ||
-              confirming
+              confirming ||
+              (guards.hasBlockingIssues && !guardAcknowledged)
             }
           >
             {confirming && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -887,7 +959,7 @@ function LivenessBadges({
   loading: boolean;
 }) {
   if (loading && !liveness) {
-    return <Skeleton className="h-4 w-14" />;
+    return <Skeleton className="h-6 w-14" />;
   }
   if (!liveness) return null;
 
@@ -923,7 +995,7 @@ function FolderBadge({
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] px-1.5 py-0 border",
+            "h-6 px-2 text-[11px] border inline-flex items-center",
             isOk
               ? "bg-emerald-50 text-emerald-700 border-emerald-300"
               : state === "error"
@@ -932,9 +1004,9 @@ function FolderBadge({
           )}
         >
           {isOk ? (
-            <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+            <CheckCircle2 className="h-3 w-3 mr-1" />
           ) : (
-            <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+            <AlertTriangle className="h-3 w-3 mr-1" />
           )}
           {label}
         </Badge>
