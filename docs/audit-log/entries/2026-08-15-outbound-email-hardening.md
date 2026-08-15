@@ -21,9 +21,15 @@ or any Postgres function / cron job / vault secret.
   keep working once `CRON_FUNCTION_JWT` (or `INTERNAL_EMAIL_SECRET`) matches
   the vault value — or if that vault value is already the service-role JWT.
 - Three `send-test-email` deployments existed as UUID slugs, all
-  `verify_jwt=false` with no caller check. There is no Management API delete;
-  two (plus the third leftover open relay) are 410-stubbed. The named slug
+  `verify_jwt=false` with no caller check. There is no Management API delete.
+  `dcd6c745-…` and `c22daa64-…` are 410-stubbed. The named slug
   `send-test-email` is the Super-Admin-gated keeper.
+- `64329f1f-48e1-4374-8ddf-6e66e42d33de` could **not** be redeployed: the
+  Supabase MCP `deploy_edge_function` `name` field rejects slugs that start
+  with a digit (`/^[A-Za-z][A-Za-z0-9_-]*$/`). That copy is a different
+  unauthenticated SendGrid sender (still `verify_jwt=false`, CORS `*`) and
+  remains live. Parked — needs a dashboard delete or a Management API call
+  that accepts the raw slug.
 - `verify_jwt=true` on `send-enhanced-email` / `send-mailgun-template` was
   providing no authorization (anon key satisfies it). Both are now
   `verify_jwt=false` with in-function `requireCaller`.
@@ -56,5 +62,8 @@ or any Postgres function / cron job / vault secret.
 - `CRON_FUNCTION_JWT` Deno secret may still need to be set to the vault
   `cron_function_jwt` value if that value is not already the service-role
   key. Not verified here (would require reading the vault secret).
+- `64329f1f-48e1-4374-8ddf-6e66e42d33de` (`send-test-email` SendGrid copy)
+  is still an unauthenticated send surface. MCP cannot update a slug that
+  starts with a digit.
 - `send-composed-email` / `send-stage-email` remain a separate outbound
   surface and were out of scope.
