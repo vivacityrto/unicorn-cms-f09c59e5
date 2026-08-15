@@ -34,14 +34,20 @@ Did not change Microsoft or Xero app registrations (console-only follow-up).
 
 ## Code changes (if this entry accompanies one)
 
+- `36c35c86`: edge-function + frontend hardening and the `consumed_at`
+  migration file.
 - `oauth_states.consumed_at timestamptz` (nullable) plus a partial index on
   unused rows. Applied via Supabase MCP `apply_migration` as
-  `oauth_states_consumed_at`.
-- `outlook-auth` / `xero-auth`: env-derived allowlist; reject a supplied
-  `redirect_uri` that is not the provider's canonical URI; store `user_id`
-  from the verified caller only; require a verified caller on
-  `exchange-code` and refuse unless `caller.id === stateData.user_id`; mark
-  `consumed_at` atomically on first exchange and refuse reuse.
+  `oauth_states_consumed_at` on `yxkgdalkbrriasiyyrwk`. Verified live:
+  column is nullable timestamptz; a throwaway row consumed once then
+  refused a second `UPDATE ... WHERE consumed_at IS NULL` (0 rows).
+- Edge functions deployed the same session: `outlook-auth` v602,
+  `xero-auth` v35 (`verify_jwt` still false; auth is in-function). Live
+  smoke: `exchange-code` without a session is 401 (Outlook) / 403 (Xero)
+  and does not write tokens. Git keeps `../_shared/` imports (repo
+  convention); the hosted bundle uses `_shared/` paths because the
+  deploy bundler rejected `../_shared/` plus object-literal
+  `{ ok: true, redirectUri }` as a type-member parse error.
 - Frontend connect/callback callers no longer send `redirect_uri`. Callback
   pages require a signed-in session before invoking `exchange-code`.
 
