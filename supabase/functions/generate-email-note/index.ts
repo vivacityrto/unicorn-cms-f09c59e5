@@ -7,6 +7,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const AI_DESTINATION = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_MODEL = "google/gemini-3-flash-preview";
+const EXTERNAL_FORWARD_FLAG = "ai_email_note_external_forward_enabled";
+
+function json(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 function decodeHtmlEntities(v: string) {
   return v
     .replace(/&nbsp;/gi, " ")
@@ -33,16 +44,41 @@ function htmlToPlainText(html?: string | null) {
     .trim();
 }
 
+/**
+ * Client privacy terms do not name Lovable AI Gateway / Google Gemini as a
+ * subprocessor for correspondence content. Forwarding an email body is
+ * therefore gated on an explicit per-tenant opt-in
+ * (`ai_email_note_external_forward_enabled`), default OFF.
+ */
+async function tenantAllowsExternalEmailForward(
+  serviceClient: ReturnType<typeof createClient>,
+  tenantId: number
+): Promise<boolean> {
+  const { data: override } = await serviceClient
+    .from("ai_feature_overrides")
+    .select("enabled")
+    .eq("tenant_id", tenantId)
+    .eq("flag_name", EXTERNAL_FORWARD_FLAG)
+    .maybeSingle();
+
+  if (override) return override.enabled === true;
+
+  const { data: settings } = await serviceClient
+    .from("app_settings")
+    .select(EXTERNAL_FORWARD_FLAG)
+    .limit(1)
+    .maybeSingle();
+
+  return (settings as Record<string, unknown> | null)?.[EXTERNAL_FORWARD_FLAG] === true;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json(401, { error: "Missing authorization" });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -54,31 +90,37 @@ serve(async (req) => {
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json(401, { error: "Unauthorized" });
     }
 
     const { email_id } = await req.json();
     if (!email_id || typeof email_id !== "string") {
-      return new Response(JSON.stringify({ error: "email_id is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json(400, { error: "email_id is required" });
     }
 
-    const serviceClient = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const { data: email, error: emailErr } = await serviceClient
+    // IDOR: read the row as the caller so email_messages RLS applies
+    // (owner / vivacity team / superadmin). Service role would bypass it.
+    // emails_restrict_staff_only is the equivalent RESTRICTIVE backstop on
+    // public.emails (stage templates); this function reads email_messages.
+    const { data: email, error: emailErr } = await userClient
       .from("email_messages")
-      .select("subject, sender_name, sender_email, received_at, body_html, body_preview")
+      .select(
+        "id, tenant_id, subject, sender_name, sender_email, received_at, body_html, body_preview"
+      )
       .eq("id", email_id)
       .maybeSingle();
 
     if (emailErr || !email) {
-      return new Response(JSON.stringify({ error: "Email not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return json(404, { error: "Email not found" });
+    }
+
+    const serviceClient = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    if (!(await tenantAllowsExternalEmailForward(serviceClient, email.tenant_id))) {
+      return json(403, {
+        code: "AI_FORWARD_NOT_OPTED_IN",
+        error:
+          "Forwarding this email to an external AI provider is not covered by the client's privacy terms and has not been opted in for this tenant.",
       });
     }
 
@@ -89,10 +131,26 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json(500, { error: "AI not configured" });
+    }
+
+    const { error: auditErr } = await serviceClient.from("client_audit_log").insert({
+      tenant_id: email.tenant_id,
+      actor_user_id: userData.user.id,
+      action: "ai.email_forwarded_external",
+      entity_type: "email_message",
+      entity_id: email_id,
+      details: {
+        caller_id: userData.user.id,
+        email_id,
+        destination: AI_DESTINATION,
+        destination_provider: "lovable_ai_gateway",
+        model: AI_MODEL,
+      },
+    });
+    if (auditErr) {
+      console.error("Audit log insert failed:", auditErr.message);
+      return json(500, { error: "Failed to record audit log" });
     }
 
     const userPrompt = `You are a professional consultant's note-taking assistant. Convert the following email into a structured consultation note.
@@ -113,14 +171,14 @@ Write in first-person professional tone as if the consultant wrote this note aft
 
 Also produce a brief title under 8 words in sentence case derived from the subject.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch(AI_DESTINATION, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: AI_MODEL,
         messages: [
           { role: "system", content: "You convert emails into structured consultation notes for a CRM." },
           { role: "user", content: userPrompt },
@@ -149,23 +207,14 @@ Also produce a brief title under 8 words in sentence case derived from the subje
 
     if (!aiResp.ok) {
       if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "AI rate limit reached. Please try again shortly." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json(429, { error: "AI rate limit reached. Please try again shortly." });
       }
       if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json(402, { error: "AI credits exhausted. Please add credits." });
       }
       const errText = await aiResp.text();
       console.error("AI gateway error:", aiResp.status, errText);
-      return new Response(JSON.stringify({ error: "AI generation failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json(500, { error: "AI generation failed" });
     }
 
     const data = await aiResp.json();
@@ -185,10 +234,7 @@ Also produce a brief title under 8 words in sentence case derived from the subje
       note_content = (data.choices?.[0]?.message?.content || "").trim();
     }
     if (!note_content) {
-      return new Response(JSON.stringify({ error: "AI returned empty result" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json(500, { error: "AI returned empty result" });
     }
 
     // Cap title to 8 words
@@ -196,15 +242,9 @@ Also produce a brief title under 8 words in sentence case derived from the subje
     if (words.length > 8) title = words.slice(0, 8).join(" ");
     if (!title) title = (email.subject ?? "Email note").slice(0, 80);
 
-    return new Response(JSON.stringify({ title, note_content }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json(200, { title, note_content });
   } catch (e) {
     console.error("generate-email-note error:", e);
-    return new Response(JSON.stringify({ error: (e as Error).message || "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json(500, { error: (e as Error).message || "Unknown error" });
   }
 });

@@ -21,6 +21,7 @@ interface GlobalFlags {
   ai_doc_extract_enabled: boolean;
   ai_phase_check_enabled: boolean;
   ai_risk_radar_enabled: boolean;
+  ai_email_note_external_forward_enabled: boolean;
 }
 
 interface TenantOverride {
@@ -53,6 +54,11 @@ const FLAG_LABELS: Record<string, { label: string; description: string }> = {
     label: "Risk Radar AI",
     description: "AI-powered risk explanations and suggested actions",
   },
+  ai_email_note_external_forward_enabled: {
+    label: "Email-to-note external AI",
+    description:
+      "Forward a linked email body to Lovable AI Gateway / Gemini to draft a consultation note. Not covered by standard client privacy terms — enable only with an explicit per-tenant opt-in.",
+  },
 };
 
 const FLAG_NAMES = Object.keys(FLAG_LABELS);
@@ -75,7 +81,7 @@ export default function AdminAiFeatureFlags() {
       // Load global flags
       const { data: settings } = await supabase
         .from("app_settings")
-        .select("ai_meeting_summary_enabled, ai_doc_extract_enabled, ai_phase_check_enabled, ai_risk_radar_enabled")
+        .select("ai_meeting_summary_enabled, ai_doc_extract_enabled, ai_phase_check_enabled, ai_risk_radar_enabled, ai_email_note_external_forward_enabled")
         .limit(1)
         .single();
 
