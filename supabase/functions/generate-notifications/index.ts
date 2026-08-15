@@ -764,7 +764,7 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-      } else if (!isCronAuthorized(req)) {
+      } else if (!await isCronAuthorized(req)) {
         const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
         if (!token) return cronUnauthorizedResponse(corsHeaders);
         const userId = await getUserIdFromJwt(supabase, token);
@@ -794,7 +794,7 @@ Deno.serve(async (req) => {
     let meetingsCreated = 0;
     let obligationsCreated = 0;
 
-    if (!isCronAuthorized(req)) {
+    if (!await isCronAuthorized(req)) {
       const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
       if (!token) return cronUnauthorizedResponse(corsHeaders);
       const userId = await getUserIdFromJwt(supabase, token);

@@ -67,7 +67,7 @@ serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  if (!isCronAuthorized(req)) {
+  if (!await isCronAuthorized(req)) {
     return cronUnauthorizedResponse(corsHeaders);
   }
 

@@ -35,6 +35,13 @@ beyond adding the new header to their job commands so they are ready.
 - Live HTTP cron inventory is **15 jobs**, not ~25. Both quoting styles
   (`'Authorization', 'Bearer ' || …` and the compacted job-15 form) are
   covered by the DML migration.
+- First deploy compared the cron Bearer token to
+  `SUPABASE_SERVICE_ROLE_KEY`. That failed in production: vault
+  `cron_function_jwt` is a long-lived service_role JWT and is **not**
+  identical to the current function-env key. A live `net.http_post`
+  mirroring cron returned 401. Fixed by
+  `public.cron_presented_secret_matches`, which compares the presented
+  value to the vault secret pg_cron actually sends.
 
 ## KB changes shipped
 
@@ -52,7 +59,11 @@ beyond adding the new header to their job commands so they are ready.
   `private.cron_invoke_secret()` (reads vault; secret value created
   out-of-band, never committed).
 - `supabase/migrations/20260815080100_cron_jobs_send_invoke_secret.sql` —
-  DML on `cron.job`, applied **after** the functions are deployed.
+  DML on `cron.job` via `cron.alter_job` (direct `UPDATE` is denied),
+  applied **after** the functions are deployed.
+- `supabase/migrations/20260815081500_cron_presented_secret_matches.sql` —
+  service_role-only RPC so functions can verify the vault JWT / invoke
+  secret even when they differ from function env vars.
 
 ## Decisions
 

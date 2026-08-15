@@ -66,6 +66,56 @@ export function hasValidLegacyCronJwt(req: Request): boolean {
   return constantTimeEqual(token, serviceKey);
 }
 
+type RpcAdmin = {
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+};
+
+function serviceRoleAdmin(): RpcAdmin | null {
+  const url = Deno.env.get("SUPABASE_URL") ?? "";
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!url || !key) return null;
+  return {
+    async rpc(fn, args) {
+      const res = await fetch(`${url}/rest/v1/rpc/${fn}`, {
+        method: "POST",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(args),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        return { data: null, error: { message: text.slice(0, 200) } };
+      }
+      const data = await res.json().catch(() => null);
+      return { data, error: null };
+    },
+  };
+}
+
+async function matchesVaultSecret(
+  kind: "jwt" | "invoke",
+  presented: string,
+): Promise<boolean> {
+  if (!presented) return false;
+  const admin = serviceRoleAdmin();
+  if (!admin) return false;
+  const { data, error } = await admin.rpc("cron_presented_secret_matches", {
+    p_kind: kind,
+    p_presented: presented,
+  });
+  if (error) {
+    console.error("[cron-auth] vault compare failed:", error.message);
+    return false;
+  }
+  return data === true;
+}
+
 /**
  * Verify a caller JWT via the Auth admin API. The cron JWT is not a user
  * token, so this returns null for pg_cron invocations; human callers with
@@ -80,9 +130,17 @@ export async function getUserIdFromJwt(
   return data.user.id;
 }
 
-export function isCronAuthorized(req: Request): boolean {
+export async function isCronAuthorized(req: Request): Promise<boolean> {
   if (hasValidCronInvokeSecret(req)) return true;
   if (hasValidLegacyCronJwt(req)) return true;
+  // Vault values can differ from the function env (cron_function_jwt is a
+  // long-lived service_role JWT, not necessarily the current
+  // SUPABASE_SERVICE_ROLE_KEY). Compare the presented credential against
+  // what pg_cron actually sends.
+  const token = extractBearerToken(req);
+  if (token && await matchesVaultSecret("jwt", token)) return true;
+  const header = req.headers.get(CRON_INVOKE_SECRET_HEADER) ?? "";
+  if (header && await matchesVaultSecret("invoke", header)) return true;
   return false;
 }
 

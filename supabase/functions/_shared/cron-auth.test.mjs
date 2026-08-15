@@ -45,6 +45,7 @@ describe("cron-auth helper", () => {
   it("keeps a transition path for the service_role JWT cron already sends", () => {
     assert.match(helperSrc, /ACCEPT_LEGACY_SERVICE_ROLE_JWT/);
     assert.match(helperSrc, /SUPABASE_SERVICE_ROLE_KEY/);
+    assert.match(helperSrc, /cron_presented_secret_matches/);
   });
 });
 

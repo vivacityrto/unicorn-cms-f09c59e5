@@ -159,7 +159,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (!isCronAuthorized(req)) {
+  if (!await isCronAuthorized(req)) {
     return cronUnauthorizedResponse(corsHeaders);
   }
 
