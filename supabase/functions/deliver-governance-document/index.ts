@@ -11,7 +11,7 @@ import {
   resolveDriveItemFromSharingUrl,
   type DriveItem,
 } from "../_shared/graph-app-client.ts";
-import { VIVACITY_STAFF_ROLES } from "../_shared/auth-helpers.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -605,77 +605,19 @@ serve(async (req) => {
   try {
     const supabase = createServiceClient();
 
-    // Auth check — Vivacity staff only
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      {
-        global: { headers: { Authorization: authHeader } },
-        auth: { autoRefreshToken: false, persistSession: false },
-      },
-    );
-
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    const claims = claimsData?.claims;
-    const userId = claims?.sub;
-
-    if (claimsError || !userId) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: userData } = await supabase
-      .from("users")
-      .select("unicorn_role, global_role, is_team")
-      .eq("user_uuid", userId)
-      .maybeSingle();
-
-    const normaliseRole = (value: unknown) =>
-      typeof value === "string" ? value.toLowerCase().replace(/\s+/g, " ").trim() : "";
-
-    const staffRoles = new Set(VIVACITY_STAFF_ROLES.map((r) => r.toLowerCase()));
-    const claimRole = normaliseRole((claims as Record<string, unknown>)?.["unicorn_role"]);
-    const metadataRole = normaliseRole(
-      ((claims as Record<string, unknown>)?.["user_metadata"] as Record<string, unknown> | undefined)?.["unicorn_role"],
-    );
-    const dbRole = normaliseRole(userData?.unicorn_role);
-    const globalRole = normaliseRole(userData?.global_role);
-
-    const isStaff = userData?.is_team === true ||
-      staffRoles.has(dbRole) ||
-      staffRoles.has(globalRole) ||
-      staffRoles.has(claimRole) ||
-      staffRoles.has(metadataRole);
-
-    console.log("[deliver] auth", {
-      userId,
-      isTeam: userData?.is_team ?? null,
-      dbRole: userData?.unicorn_role ?? null,
-      globalRole: userData?.global_role ?? null,
-      claimRole,
-      metadataRole,
-      isStaff,
+    // Staff gate via check_permission. JWT user_metadata unicorn_role is
+    // user-editable and is no longer consulted (tightening vs the previous
+    // claim/metadata fallback).
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffDocumentsGenerate,
+      headers: corsHeaders,
+      unauthorizedMessage: "Missing authorization",
+      forbiddenMessage: "Permission denied — Vivacity staff only",
     });
+    if (!caller.ok) return caller.response;
+    const userId = caller.user.id;
 
-    if (!isStaff) {
-      return new Response(JSON.stringify({ error: "Permission denied — Vivacity staff only" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    console.log("[deliver] auth", { userId, via: caller.via });
 
 
     // Parse request

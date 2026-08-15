@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 import {
   getAppToken,
   graphGet,
@@ -411,17 +412,17 @@ serve(async (req) => {
         authHeader.replace("Bearer ", ""),
       );
       if (user) {
-        const { data: callerUser } = await supabaseAdmin
-          .from("users")
-          .select("is_vivacity_internal")
-          .eq("user_uuid", user.id)
-          .single();
-        if (!callerUser?.is_vivacity_internal) {
-          return new Response(
-            JSON.stringify({ success: false, error: "Forbidden — Vivacity staff only" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
+        const caller = await requireCallerByUserId(
+          supabaseAdmin,
+          { id: user.id, email: user.email },
+          {
+            featureKey: FeatureKeys.staffSharepoint,
+            headers: corsHeaders,
+            forbiddenMessage: "Forbidden — Vivacity staff only",
+          },
+          corsHeaders,
+        );
+        if (!caller.ok) return caller.response;
         callerUserId = user.id;
       }
     }

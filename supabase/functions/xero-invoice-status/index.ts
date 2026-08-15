@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,23 +40,13 @@ Deno.serve(async (req) => {
     // Auth: any Vivacity staff may check invoice status (read-only,
     // lower stakes than connecting/disconnecting the shared credential -
     // see xero-auth).
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return json(401, { error: "Missing bearer token" });
-    }
-    const token = authHeader.replace(/^Bearer\s+/i, "");
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) {
-      return json(401, { error: "Invalid or expired token" });
-    }
-    const { data: callerProfile } = await supabaseAdmin
-      .from("users")
-      .select("is_vivacity_internal")
-      .eq("user_uuid", user.id)
-      .maybeSingle();
-    if (!callerProfile?.is_vivacity_internal) {
-      return json(403, { error: "Vivacity staff only" });
-    }
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffXeroView,
+      headers: corsHeaders,
+      unauthorizedMessage: "Missing bearer token",
+      forbiddenMessage: "Vivacity staff only",
+    });
+    if (!caller.ok) return caller.response;
 
     const body = await req.json().catch(() => ({}));
     const tenantId = body.tenant_id as number | undefined;

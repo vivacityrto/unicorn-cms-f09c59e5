@@ -1,6 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
-import { VIVACITY_STAFF_ROLES } from '../_shared/auth-helpers.ts';
+import { requireCaller, FeatureKeys, allowTenantMember } from '../_shared/requireCaller.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
@@ -65,15 +65,6 @@ Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // ── Auth ──────────────────────────────────────────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('Missing authorization header');
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-    if (userError || !user) throw new Error('Unauthorized');
-
     const body: BulkGenerateRequest = await req.json();
     const {
       tenant_id,
@@ -84,25 +75,17 @@ Deno.serve(async (req: Request) => {
       record_audit = false,
     } = body;
 
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffDocumentsGenerate,
+      headers: corsHeaders,
+      unauthorizedMessage: 'Missing authorization header',
+      forbiddenMessage: 'Access denied',
+      orAllow: ({ userId, admin }) => allowTenantMember(admin, userId, tenant_id),
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
+
     console.log('[bulk-gen] request', { tenant_id, stageinstance_id, package_id, mode, plan_only, record_audit, user: user.id });
-
-    // Verify tenant access (SuperAdmin bypass)
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('unicorn_role')
-      .eq('user_uuid', user.id)
-      .single();
-
-    const isVivacityStaff = VIVACITY_STAFF_ROLES.includes(userProfile?.unicorn_role ?? '');
-    if (!isVivacityStaff) {
-      const { data: tenantMember } = await supabase
-        .from('tenant_users')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('tenant_id', tenant_id)
-        .maybeSingle();
-      if (!tenantMember) throw new Error('Access denied');
-    }
 
     // ── record_audit: write the bulk-run summary row and return ──────────
     if (record_audit) {

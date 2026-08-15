@@ -23,6 +23,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { graphPost, graphGet } from "../_shared/graph-app-client.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -73,29 +74,16 @@ function json(status: number, body: unknown) {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const auth = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!auth) return json(401, { ok: false, error: "Missing Authorization" });
-
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // Verify caller is Vivacity staff
-  const { data: { user }, error: authErr } = await admin.auth.getUser(auth);
-  if (authErr || !user) return json(401, { ok: false, error: "Unauthorized" });
-
-  const { data: profile } = await admin
-    .from("users")
-    .select("user_uuid, unicorn_role, global_role, user_type, superadmin_level")
-    .eq("user_uuid", user.id)
-    .maybeSingle();
-
-  // Restricted to SuperAdmin only — provisioning M365 users is a privileged op
-  const isSuperAdmin =
-    profile?.global_role === "SuperAdmin" ||
-    profile?.unicorn_role === "Super Admin";
-
-  if (!isSuperAdmin) {
-    return json(403, { ok: false, error: "Super Admin only" });
-  }
+  const caller = await requireCaller(req, admin, {
+    featureKey: FeatureKeys.adminSystemConfig,
+    headers: corsHeaders,
+    unauthorizedMessage: "Missing Authorization",
+    forbiddenMessage: "Super Admin only",
+  });
+  if (!caller.ok) return caller.response;
+  const user = caller.user;
 
   let body: Body;
   try {
@@ -146,7 +134,7 @@ serve(async (req) => {
       job_title: body.job_title,
       start_date: body.start_date,
       team_leader_id: body.team_leader_id,
-      requested_by: profile!.user_uuid,
+      requested_by: user.id,
       upn: body.upn,
       mail_nickname: body.mail_nickname,
       display_name: body.display_name,
@@ -423,7 +411,7 @@ serve(async (req) => {
           run_id: run.id,
           role_code: body.role_code,
           location_code: body.location_code,
-          requested_by: profile!.user_uuid,
+          requested_by: user.id,
         },
       });
     } catch (e) {

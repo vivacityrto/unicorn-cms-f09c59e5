@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const CENTER_X = 297.64;
 const FUCHSIA = rgb(0.929, 0.094, 0.471);
@@ -56,17 +57,7 @@ serve(async (req) => {
   });
 
   try {
-    // 1. Auth
-    const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-    if (!callerToken) {
-      return jsonResponse(401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
-    }
-    const { data: callerUser, error: callerErr } = await supabase.auth.getUser(callerToken);
-    if (callerErr || !callerUser?.user) {
-      return jsonResponse(401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message ?? "Invalid token" });
-    }
-
-    // 2. Body
+    // 1. Body
     let body: { tenant_id?: unknown } = {};
     try {
       body = await req.json();
@@ -78,20 +69,22 @@ serve(async (req) => {
       return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "tenant_id (number) required" });
     }
 
-    // 3. Authorise — caller must belong to this tenant or be Vivacity internal
-    const { data: callerRow, error: callerRowErr } = await supabase
-      .from("users")
-      .select("tenant_id, is_vivacity_internal")
-      .eq("user_uuid", callerUser.user.id)
-      .maybeSingle();
-    if (callerRowErr) {
-      return jsonResponse(500, { ok: false, code: "AUTH_LOOKUP_FAILED", detail: callerRowErr.message });
-    }
-    const isInternal = !!callerRow?.is_vivacity_internal;
-    const isMember = Number(callerRow?.tenant_id) === tenantId;
-    if (!isInternal && !isMember) {
-      return jsonResponse(403, { ok: false, code: "FORBIDDEN", detail: "Not authorised for this tenant" });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffDocumentsGenerate,
+      headers: corsHeaders,
+      errorStyle: "ok-code",
+      unauthorizedMessage: "Missing Authorization header",
+      forbiddenMessage: "Not authorised for this tenant",
+      orAllow: async ({ userId, admin }) => {
+        const { data: callerRow } = await admin
+          .from("users")
+          .select("tenant_id")
+          .eq("user_uuid", userId)
+          .maybeSingle();
+        return Number(callerRow?.tenant_id) === tenantId;
+      },
+    });
+    if (!caller.ok) return caller.response;
 
     // 4. Lookup active membership package instance for this tenant (flat queries — no PostgREST joins)
     const { data: piRow, error: piErr } = await supabase

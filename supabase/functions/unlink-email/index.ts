@@ -1,14 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const VIVACITY_STAFF_ROLES = [
-  "Super Admin", "Team Leader", "Team Member",
-  "Integrator", "BGT", "CSC", "CET",
-];
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -21,31 +16,17 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json(401, { error: "Missing Authorization header" });
-
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData?.user) return json(401, { error: "Unauthorized" });
-    const userId = userData.user.id;
-
     const svc = createClient(supabaseUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Authorization: Vivacity internal staff only
-    const { data: profile } = await svc
-      .from("users")
-      .select("unicorn_role, is_vivacity_internal")
-      .eq("user_uuid", userId)
-      .maybeSingle();
-
-    const isStaff =
-      profile?.is_vivacity_internal === true ||
-      (profile?.unicorn_role && VIVACITY_STAFF_ROLES.includes(profile.unicorn_role));
-    if (!isStaff) return json(403, { error: "Insufficient permissions" });
+    const caller = await requireCaller(req, svc, {
+      featureKey: FeatureKeys.staffEmailSend,
+      headers: corsHeaders,
+      unauthorizedMessage: "Missing Authorization header",
+      forbiddenMessage: "Insufficient permissions",
+    });
+    if (!caller.ok) return caller.response;
 
     const body = await req.json().catch(() => null);
     const emailId: string | undefined = body?.email_id;

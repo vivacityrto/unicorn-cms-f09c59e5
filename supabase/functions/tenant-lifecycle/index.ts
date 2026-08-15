@@ -14,9 +14,10 @@
  * - Archive locked unless closed_at > 30 days (SuperAdmin can override)
  */
 
-import { extractToken, verifyAuth, checkSuperAdmin, checkVivacityTeam } from "../_shared/auth-helpers.ts";
+import { extractToken, verifyAuth, checkSuperAdmin } from "../_shared/auth-helpers.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { jsonOk, jsonError, handleCors, CommonErrors } from "../_shared/response-helpers.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 // Transition rules remain as business logic — only display values are externalised
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -37,14 +38,18 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return handleCors();
   if (req.method !== "POST") return CommonErrors.methodNotAllowed();
 
-  const token = extractToken(req);
-  if (!token) return CommonErrors.unauthorized();
-
   const supabase = createServiceClient();
-  const { user, profile, error: authError } = await verifyAuth(supabase, token);
-  if (authError || !user || !profile) return jsonError(401, "UNAUTHORIZED", authError || "Auth failed");
+  const caller = await requireCaller(req, supabase, {
+    featureKey: FeatureKeys.staffInternal,
+    errorStyle: "ok-code",
+    unauthorizedMessage: "Authentication required",
+    forbiddenMessage: "Access denied",
+  });
+  if (!caller.ok) return caller.response;
 
-  if (!checkVivacityTeam(profile)) return CommonErrors.forbidden();
+  const token = extractToken(req);
+  const { user, profile, error: authError } = await verifyAuth(supabase, token!);
+  if (authError || !user || !profile) return jsonError(401, "UNAUTHORIZED", authError || "Auth failed");
 
   let body: { tenant_id?: number; action?: string; reason?: string; force_override?: boolean };
   try {

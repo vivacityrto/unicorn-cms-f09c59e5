@@ -10,13 +10,14 @@
 //   'unconfigured'  no drive_id / item_id recorded yet
 //   'error'         Graph returned another non-200 status or the call threw
 //
-// Auth:        internal Vivacity staff only (RPC is_vivacity_internal_safe).
+// Auth:        internal Vivacity staff only (requireCaller / staff.sharepoint.use).
 // Concurrency: at most CONCURRENCY Graph calls in flight across the batch.
 // Cap:         at most MAX_TENANTS tenants per request.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { graphGet } from '../_shared/graph-app-client.ts';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,7 +27,6 @@ const corsHeaders = {
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const CONCURRENCY = 8;
@@ -99,11 +99,6 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return json({ error: 'Unauthorized', details: 'Missing bearer token' }, 401);
-  }
-
   let parsed: z.infer<typeof BodySchema>;
   try {
     const raw = await req.json();
@@ -116,31 +111,18 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  // Staff gate — is_vivacity_internal_safe under the caller's JWT.
-  const supabaseAsCaller = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
+  const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const caller = await requireCaller(req, supabaseService, {
+    featureKey: FeatureKeys.staffSharepoint,
+    headers: corsHeaders,
+    unauthorizedMessage: 'Unauthorized',
+    forbiddenMessage: 'Forbidden',
   });
-  const { data: userData, error: userErr } = await supabaseAsCaller.auth.getUser();
-  if (userErr || !userData?.user) {
-    return json({ error: 'Unauthorized', details: 'Invalid token' }, 401);
-  }
-  const { data: isStaff, error: gateErr } = await supabaseAsCaller.rpc(
-    'is_vivacity_internal_safe',
-    { p_user_id: userData.user.id },
-  );
-  if (gateErr) {
-    return json({ error: 'Permission check failed', details: gateErr.message }, 500);
-  }
-  if (!isStaff) {
-    return json({ error: 'Forbidden', details: 'Internal staff only' }, 403);
-  }
+  if (!caller.ok) return caller.response;
 
   if (parsed.tenant_ids.length === 0) {
     return json({ results: [] });
   }
-
-  // Service-role read of tenant_sharepoint_settings — small, no side effects.
-  const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const { data: settingsRows, error: sErr } = await supabaseService
     .from('tenant_sharepoint_settings')
     .select(

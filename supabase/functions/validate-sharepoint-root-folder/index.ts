@@ -1,5 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 import { graphGet, getAppToken, _clearTokenCache, type DriveItem } from '../_shared/graph-app-client.ts';
 import { emitTimelineEvent } from '../_shared/emit-timeline-event.ts';
 
@@ -173,21 +174,14 @@ Deno.serve(async (req: Request) => {
 
     // ── Resolve Drive ID mode: just fetch /sites/{siteId}/drive and return ──
     if (resolve_drive_id && graph_site_id) {
-      // Auth check first
-      const authHeader2 = req.headers.get('Authorization');
-      if (!authHeader2?.startsWith('Bearer ')) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
       const supabaseAdmin2 = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const jwt2 = authHeader2.replace('Bearer ', '');
-      const { data: { user: user2 }, error: authErr2 } = await supabaseAdmin2.auth.getUser(jwt2);
-      if (authErr2 || !user2) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-      const { data: caller2 } = await supabaseAdmin2.from('users').select('is_vivacity_internal').eq('user_uuid', user2.id).single();
-      if (!caller2?.is_vivacity_internal) {
-        return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
+      const caller2 = await requireCaller(req, supabaseAdmin2, {
+        featureKey: FeatureKeys.staffSharepoint,
+        headers: corsHeaders,
+        unauthorizedMessage: 'Unauthorized',
+        forbiddenMessage: 'Forbidden',
+      });
+      if (!caller2.ok) return caller2.response;
 
       console.log('[validate-sp] Resolving drive for site:', graph_site_id);
       
@@ -237,38 +231,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Auth
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const jwt = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { data: callerUser } = await supabaseAdmin
-      .from('users')
-      .select('is_vivacity_internal')
-      .eq('user_uuid', user.id)
-      .single();
-
-    if (!callerUser?.is_vivacity_internal) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden — Vivacity staff only' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffSharepoint,
+      headers: corsHeaders,
+      unauthorizedMessage: 'Unauthorized',
+      forbiddenMessage: 'Forbidden — Vivacity staff only',
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     console.log('[validate-sp] URL:', root_folder_url);
 

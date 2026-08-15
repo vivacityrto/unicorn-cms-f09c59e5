@@ -71,3 +71,56 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Edge-function authorisation
+
+Every user-JWT edge function gates the caller through
+`public.check_permission` via `supabase/functions/_shared/requireCaller.ts`.
+Do not add new `unicorn_role` / `global_role` / `is_vivacity_internal` /
+`role_type` allowlists. `public.users` has no `role_type` column — that
+legacy check failed closed.
+
+```ts
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
+
+const caller = await requireCaller(req, admin, {
+  featureKey: FeatureKeys.staffEmailSend,
+  orAllow: ({ userId, admin }) => allowTenantMember(admin, userId, tenant_id),
+});
+if (!caller.ok) return caller.response;
+```
+
+`check_permission` always admits Super Admin. Other roles come from
+`role_permissions`. Unknown feature keys return false (fail closed).
+
+### Feature-key taxonomy
+
+`module.feature.action`. Reuse an existing key when the allowed-set matches;
+add a new key (and seed `role_permissions` in the same PR) when the
+capability is distinct.
+
+| Prefix | Meaning | Typical grants |
+|---|---|---|
+| `admin.*` | Privileged administration | Super Admin `full`; others `none` unless noted |
+| `staff.*` | Any Vivacity internal staff | All internal roles `full` (incl. Team Member) |
+| `staff.addin.use` | Outlook add-in | Super Admin / Team Leader / Team Member |
+| `admin.integrations.xero_connect` | Connect/disconnect Xero | Super Admin + Integrator |
+| `clients.*` / `packages.*` / `audits.*` / `academy.*` / `eos.*` | Product modules | Per the Role Permissions editor |
+
+Staff capability keys (prefer the specific one):
+
+- `staff.internal` — generic fallback for `is_vivacity_internal`
+- `staff.sharepoint.use`
+- `staff.email.send` — composed + Graph send; tenant members via `orAllow`
+- `staff.documents.generate`
+- `staff.ai.use`
+- `staff.research.use`
+- `staff.meetings.use`
+- `staff.billing.xero_view`
+- `staff.integrations.tga`
+
+Do **not** put a user-JWT gate on cron / webhook / token-redeem workers.
+
+Leave mixed staff-OR-tenant-admin paths as `requireCaller` + `orAllow`
+(`allowClientAdmin` / `allowTenantMember`). Do not fold client Admin into
+`role_permissions` — they are not `is_vivacity_internal`.

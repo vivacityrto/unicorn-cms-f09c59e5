@@ -5,7 +5,7 @@
  * Auth: SuperAdmin only
  */
 import { corsHeaders } from "../_shared/cors.ts";
-import { extractToken, verifyAuth, checkSuperAdmin } from "../_shared/auth-helpers.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
@@ -19,29 +19,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const token = extractToken(req);
-    if (!token) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: "No token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const { user, profile, error: authError } = await verifyAuth(supabase, token);
-    if (authError || !user || !profile) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: authError || "Auth failed" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!checkSuperAdmin(profile)) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Super Admin access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.adminSystemConfig,
+      headers: corsHeaders,
+      errorStyle: "ok-code",
+      unauthorizedMessage: "No token",
+      forbiddenMessage: "Super Admin access required",
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const { tenant_id, website, abn, rto_code } = await req.json();
 
