@@ -406,3 +406,23 @@ verify_jwt = false
 # verify_jwt alone accepts the public anon key.
 [functions.academy-import-vimeo-showcase]
 verify_jwt = false
+
+# Outbound email surface — auth is in-function via requireCaller.
+# Gateway verify_jwt accepts the public anon key and is not authorization.
+[functions.send-notification-email]
+verify_jwt = false
+
+[functions.send-automated-email]
+verify_jwt = false
+
+[functions.send-test-email]
+verify_jwt = false
+
+[functions.send-enhanced-email]
+verify_jwt = false
+
+[functions.send-mailgun-template]
+verify_jwt = false
+
+[functions.send-staff-onboarding-email]
+verify_jwt = false
