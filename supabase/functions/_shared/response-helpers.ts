@@ -1,35 +1,21 @@
 /**
  * Response Helpers for Edge Functions
- * 
- * Provides standardised response formatting with CORS support.
- * 
+ *
+ * Provides standardised response formatting with allowlisted CORS support.
+ *
  * Usage:
  * ```typescript
- * import { jsonOk, jsonError, handleCors, corsHeaders } from "../_shared/response-helpers.ts";
- * 
- * // Handle CORS preflight
- * if (req.method === "OPTIONS") return handleCors();
- * 
- * // Success response
- * return jsonOk({ user: userData });
- * 
- * // Error response
- * return jsonError(401, "UNAUTHORIZED", "Invalid token");
+ * import { jsonOk, jsonError, handleCors } from "../_shared/response-helpers.ts";
+ *
+ * if (req.method === "OPTIONS") return handleCors(req);
+ * return jsonOk(req, { user: userData });
+ * return jsonError(req, 401, "UNAUTHORIZED", "Invalid token");
  * ```
  */
 
-/**
- * Standard CORS headers for all edge functions.
- * Includes support for modern Supabase client headers.
- */
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": 
-    "authorization, x-client-info, apikey, content-type, " +
-    "x-supabase-client-platform, x-supabase-client-platform-version, " +
-    "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-};
+import { corsHeaders, handleCors } from "./cors.ts";
+
+export { corsHeaders, handleCors };
 
 /**
  * Standard success response structure.
@@ -49,22 +35,9 @@ interface ErrorResponse {
 }
 
 /**
- * Handle CORS preflight requests.
- * 
- * @returns Response with CORS headers and 200 status
- */
-export function handleCors(): Response {
-  return new Response("ok", { headers: corsHeaders });
-}
-
-/**
  * Create a successful JSON response.
- * 
- * @param data - The data to include in the response
- * @param status - HTTP status code (default: 200)
- * @returns Response with JSON body and CORS headers
  */
-export function jsonOk<T>(data: T, status = 200): Response {
+export function jsonOk<T>(req: Request, data: T, status = 200): Response {
   const body: SuccessResponse<T> = {
     ok: true,
     data,
@@ -75,20 +48,20 @@ export function jsonOk<T>(data: T, status = 200): Response {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
-      ...corsHeaders,
+      ...corsHeaders(req),
     },
   });
 }
 
 /**
  * Create an error JSON response.
- * 
- * @param status - HTTP status code
- * @param code - Error code (e.g., "UNAUTHORIZED", "NOT_FOUND")
- * @param detail - Optional human-readable error message
- * @returns Response with JSON body and CORS headers
  */
-export function jsonError(status: number, code: string, detail?: string): Response {
+export function jsonError(
+  req: Request,
+  status: number,
+  code: string,
+  detail?: string,
+): Response {
   const body: ErrorResponse = {
     ok: false,
     code,
@@ -100,26 +73,21 @@ export function jsonError(status: number, code: string, detail?: string): Respon
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
-      ...corsHeaders,
+      ...corsHeaders(req),
     },
   });
 }
 
 /**
  * Create a raw JSON response without the ok/data wrapper.
- * Useful for compatibility with existing API contracts.
- * 
- * @param data - The data to serialize
- * @param status - HTTP status code (default: 200)
- * @returns Response with JSON body and CORS headers
  */
-export function jsonRaw<T>(data: T, status = 200): Response {
+export function jsonRaw<T>(req: Request, data: T, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
-      ...corsHeaders,
+      ...corsHeaders(req),
     },
   });
 }
@@ -128,11 +96,15 @@ export function jsonRaw<T>(data: T, status = 200): Response {
  * Common error responses for reuse.
  */
 export const CommonErrors = {
-  unauthorized: () => jsonError(401, "UNAUTHORIZED", "Authentication required"),
-  forbidden: () => jsonError(403, "FORBIDDEN", "Access denied"),
-  notFound: (entity = "Resource") => jsonError(404, "NOT_FOUND", `${entity} not found`),
-  badRequest: (detail: string) => jsonError(400, "BAD_REQUEST", detail),
-  methodNotAllowed: () => jsonError(405, "METHOD_NOT_ALLOWED", "Method not allowed"),
-  internalError: (detail = "An unexpected error occurred") => 
-    jsonError(500, "INTERNAL_ERROR", detail),
+  unauthorized: (req: Request) =>
+    jsonError(req, 401, "UNAUTHORIZED", "Authentication required"),
+  forbidden: (req: Request) => jsonError(req, 403, "FORBIDDEN", "Access denied"),
+  notFound: (req: Request, entity = "Resource") =>
+    jsonError(req, 404, "NOT_FOUND", `${entity} not found`),
+  badRequest: (req: Request, detail: string) =>
+    jsonError(req, 400, "BAD_REQUEST", detail),
+  methodNotAllowed: (req: Request) =>
+    jsonError(req, 405, "METHOD_NOT_ALLOWED", "Method not allowed"),
+  internalError: (req: Request, detail = "An unexpected error occurred") =>
+    jsonError(req, 500, "INTERNAL_ERROR", detail),
 };

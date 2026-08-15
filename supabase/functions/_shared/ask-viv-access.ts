@@ -7,6 +7,7 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { UserProfile } from "./auth-helpers.ts";
+import { corsHeaders } from "./cors.ts";
 
 /**
  * Vivacity internal roles that can access Ask Viv
@@ -89,15 +90,10 @@ async function logDeniedAccess(
 /**
  * JSON error response for denied access
  */
-export function askVivAccessDeniedResponse(reason: string = "Ask Viv is restricted to Vivacity Team members."): Response {
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": 
-      "authorization, x-client-info, apikey, content-type, " +
-      "x-supabase-client-platform, x-supabase-client-platform-version, " +
-      "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  };
-
+export function askVivAccessDeniedResponse(
+  req: Request,
+  reason: string = "Ask Viv is restricted to Vivacity Team members.",
+): Response {
   return new Response(
     JSON.stringify({
       error: "FORBIDDEN",
@@ -107,7 +103,7 @@ export function askVivAccessDeniedResponse(reason: string = "Ask Viv is restrict
     {
       status: 403,
       headers: {
-        ...corsHeaders,
+        ...corsHeaders(req),
         "Content-Type": "application/json",
       },
     }
