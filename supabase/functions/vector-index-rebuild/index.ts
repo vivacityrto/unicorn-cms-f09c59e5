@@ -13,6 +13,7 @@ import { extractToken, verifyAuth, checkSuperAdmin, UserProfile } from "../_shar
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   buildClientSummary,
   buildPhaseSummary,
@@ -23,15 +24,6 @@ import {
   buildNamespaceKey,
   IndexResult,
 } from "../_shared/vector-helpers.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": 
-    "authorization, x-client-info, apikey, content-type, " +
-    "x-supabase-client-platform, x-supabase-client-platform-version, " +
-    "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 const VALID_SOURCE_TYPES = [
   "client_summary",
@@ -48,36 +40,36 @@ interface RequestPayload {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   if (req.method !== "POST") {
-    return jsonError(405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
+    return jsonError(req, 405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
   }
 
   try {
     // Authenticate
     const token = extractToken(req);
     if (!token) {
-      return jsonError(401, "UNAUTHORIZED", "No authorization token provided");
+      return jsonError(req, 401, "UNAUTHORIZED", "No authorization token provided");
     }
 
     const supabase = createServiceClient();
     const { user, profile, error: authError } = await verifyAuth(supabase, token);
     
     if (authError || !user || !profile) {
-      return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
+      return jsonError(req, 401, "UNAUTHORIZED", authError || "Authentication failed");
     }
 
     // Validate Ask Viv access - Vivacity internal only
     const accessCheck = await validateAskVivAccess(supabase, user.id, profile, "vector-index-rebuild");
     if (!accessCheck.allowed) {
-      return askVivAccessDeniedResponse(accessCheck.reason);
+      return askVivAccessDeniedResponse(req, accessCheck.reason);
     }
 
     // Only SuperAdmins can rebuild indexes
     if (!checkSuperAdmin(profile)) {
-      return jsonError(403, "FORBIDDEN", "Super Admin access required");
+      return jsonError(req, 403, "FORBIDDEN", "Super Admin access required");
     }
 
     // Parse request
@@ -85,13 +77,13 @@ Deno.serve(async (req) => {
     try {
       payload = await req.json();
     } catch {
-      return jsonError(400, "BAD_REQUEST", "Invalid JSON body");
+      return jsonError(req, 400, "BAD_REQUEST", "Invalid JSON body");
     }
 
     const { tenant_id, source_types } = payload;
     
     if (!tenant_id || typeof tenant_id !== "number") {
-      return jsonError(400, "BAD_REQUEST", "tenant_id is required");
+      return jsonError(req, 400, "BAD_REQUEST", "tenant_id is required");
     }
 
     const typesToIndex = source_types?.filter(t => VALID_SOURCE_TYPES.includes(t)) 
@@ -101,7 +93,7 @@ Deno.serve(async (req) => {
 
     // Embedding key check (OpenAI direct via shared helper)
     if (!Deno.env.get("OPENAI_API_KEY")) {
-      return jsonError(500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
+      return jsonError(req, 500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
     }
 
     const result: IndexResult = {
@@ -152,14 +144,14 @@ Deno.serve(async (req) => {
 
     result.success = result.errors.length === 0;
 
-    return jsonOk({
+    return jsonOk(req, {
       message: `Index rebuild complete for tenant ${tenant_id}`,
       ...result,
     });
 
   } catch (err) {
     console.error("Vector index rebuild error:", err);
-    return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonError(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
 

@@ -10,14 +10,14 @@
  * import { jsonError } from "../_shared/response-helpers.ts";
  * 
  * const token = extractToken(req);
- * if (!token) return jsonError(401, "UNAUTHORIZED", "No token provided");
+ * if (!token) return jsonError(req, 401, "UNAUTHORIZED", "No token provided");
  * 
  * const supabase = createServiceClient();
  * const { user, profile, error } = await verifyAuth(supabase, token);
- * if (error) return jsonError(401, "UNAUTHORIZED", error);
+ * if (error) return jsonError(req, 401, "UNAUTHORIZED", error);
  * 
  * if (!checkSuperAdmin(profile)) {
- *   return jsonError(403, "FORBIDDEN", "Super Admin access required");
+ *   return jsonError(req, 403, "FORBIDDEN", "Super Admin access required");
  * }
  * ```
  */

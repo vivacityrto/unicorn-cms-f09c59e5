@@ -1,14 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Connection, Request as TdsRequest, TYPES } from "npm:tedious@18.6.1";
+import { corsHeaders } from "../_shared/cors.ts";
 
 type SvcClient = ReturnType<typeof createClient>;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 function connectMssql(): Promise<Connection> {
   return new Promise((resolve, reject) => {
@@ -246,7 +241,7 @@ async function seedChildInstances(
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -254,7 +249,7 @@ serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const supabase = createClient(
@@ -268,7 +263,7 @@ serve(async (req) => {
     if (claimsErr || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const currentUserId = claimsData.claims.sub;
@@ -287,7 +282,7 @@ serve(async (req) => {
     if (!isSA) {
       return new Response(JSON.stringify({ error: "Forbidden – SuperAdmin only" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -295,7 +290,7 @@ serve(async (req) => {
     if (!client_id || typeof client_id !== "number") {
       return new Response(
         JSON.stringify({ error: "client_id (number) is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     const opts = {
@@ -329,7 +324,7 @@ serve(async (req) => {
         if (clients.length === 0) {
           return new Response(
             JSON.stringify({ error: `Client ${client_id} not found in Unicorn 1` }),
-            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
           );
         }
         const c = clients[0];
@@ -629,7 +624,7 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify(results), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     } finally {
       conn.close();
@@ -638,7 +633,7 @@ serve(async (req) => {
     console.error("import-unicorn1-client error:", err);
     return new Response(
       JSON.stringify({ error: err.message || "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

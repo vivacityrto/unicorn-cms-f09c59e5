@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitPublishEvents } from "../_shared/emit-timeline-event.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -219,7 +215,7 @@ function generateBrandedHtml(content: MinutesContent, tenantName: string, publis
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -227,7 +223,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -237,7 +233,7 @@ serve(async (req) => {
     if (!minutesId) {
       return new Response(
         JSON.stringify({ error: 'minutes_id is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -251,7 +247,7 @@ serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -265,7 +261,7 @@ serve(async (req) => {
     if (!userRecord?.is_vivacity_internal) {
       return new Response(
         JSON.stringify({ error: 'Only Vivacity team can publish minutes' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -279,7 +275,7 @@ serve(async (req) => {
     if (minutesError || !minutes) {
       return new Response(
         JSON.stringify({ error: 'Minutes not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -290,7 +286,7 @@ serve(async (req) => {
     if (!content.attendees?.length || (!content.decisions?.length && !content.actions?.length && !content.discussion_notes)) {
       return new Response(
         JSON.stringify({ error: 'Minutes must have attendees and at least one of: decisions, actions, or discussion notes' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -362,7 +358,7 @@ serve(async (req) => {
         console.error('[publish-minutes] Portal doc creation failed:', portalError);
         return new Response(
           JSON.stringify({ error: 'Failed to create portal document' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
       portalDocId = portalDoc.id;
@@ -434,13 +430,13 @@ serve(async (req) => {
         version: newVersion,
         regenerated: isRegenerate,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('[publish-minutes] Error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

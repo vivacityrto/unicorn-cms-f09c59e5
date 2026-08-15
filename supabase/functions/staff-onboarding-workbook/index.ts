@@ -10,13 +10,13 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return jsonErr(401, "UNAUTHORIZED", "No authorization header");
+      return jsonErr(req, 401, "UNAUTHORIZED", "No authorization header");
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      return jsonErr(401, "UNAUTHORIZED", "Invalid token");
+      return jsonErr(req, 401, "UNAUTHORIZED", "Invalid token");
     }
 
     // Match storage RLS: admin.team_users.manage (full) — HR/Admin only.
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       p_feature_key: "admin.team_users.manage",
       p_min_level: "full",
     });
-    if (!allowed) return jsonErr(403, "FORBIDDEN", "HR/Admin only");
+    if (!allowed) return jsonErr(req, 403, "FORBIDDEN", "HR/Admin only");
 
     const contentType = req.headers.get("content-type") ?? "";
     const body = contentType.includes("multipart/form-data")
@@ -43,8 +43,8 @@ Deno.serve(async (req) => {
     const action = body.action;
     const runId = Number(body.runId);
 
-    if (!action) return jsonErr(400, "MISSING_ACTION", "Action is required");
-    if (!Number.isInteger(runId) || runId <= 0) return jsonErr(400, "INVALID_RUN", "Valid run id is required");
+    if (!action) return jsonErr(req, 400, "MISSING_ACTION", "Action is required");
+    if (!Number.isInteger(runId) || runId <= 0) return jsonErr(req, 400, "INVALID_RUN", "Valid run id is required");
 
     const { data: run, error: runError } = await supabase
       .from("staff_provisioning_runs")
@@ -52,55 +52,55 @@ Deno.serve(async (req) => {
       .eq("id", runId)
       .single();
 
-    if (runError || !run) return jsonErr(404, "RUN_NOT_FOUND", "Provisioning run not found");
+    if (runError || !run) return jsonErr(req, 404, "RUN_NOT_FOUND", "Provisioning run not found");
 
     if (action === "upload") {
       await ensureBucket(supabase);
 
       const file = body.file;
-      if (!(file instanceof File)) return jsonErr(400, "MISSING_FILE", "Workbook PDF is required");
-      if (file.type !== "application/pdf") return jsonErr(400, "INVALID_FILE", "Workbook must be a PDF file");
-      if (file.size > MAX_BYTES) return jsonErr(400, "FILE_TOO_LARGE", "Workbook PDF must be 25 MB or smaller");
+      if (!(file instanceof File)) return jsonErr(req, 400, "MISSING_FILE", "Workbook PDF is required");
+      if (file.type !== "application/pdf") return jsonErr(req, 400, "INVALID_FILE", "Workbook must be a PDF file");
+      if (file.size > MAX_BYTES) return jsonErr(req, 400, "FILE_TOO_LARGE", "Workbook PDF must be 25 MB or smaller");
 
       const path = `workbooks/run-${runId}-${Date.now()}.pdf`;
       const { error: uploadError } = await supabase.storage
         .from(BUCKET)
         .upload(path, file, { contentType: "application/pdf", upsert: false });
 
-      if (uploadError) return jsonErr(400, "UPLOAD_FAILED", uploadError.message);
+      if (uploadError) return jsonErr(req, 400, "UPLOAD_FAILED", uploadError.message);
 
       const { error: updateError } = await supabase
         .from("staff_provisioning_runs")
         .update({ workbook_file_path: path })
         .eq("id", runId);
 
-      if (updateError) return jsonErr(400, "UPDATE_FAILED", updateError.message);
+      if (updateError) return jsonErr(req, 400, "UPDATE_FAILED", updateError.message);
 
       if (run.workbook_file_path && run.workbook_file_path !== path) {
         await supabase.storage.from(BUCKET).remove([run.workbook_file_path]);
       }
 
-      return jsonOk({ path });
+      return jsonOk(req, { path });
     }
 
     if (action === "signed-url") {
       const requestedPath = String(body.path ?? "");
       if (!requestedPath || requestedPath !== run.workbook_file_path) {
-        return jsonErr(403, "PATH_NOT_ALLOWED", "Workbook path is not attached to this run");
+        return jsonErr(req, 403, "PATH_NOT_ALLOWED", "Workbook path is not attached to this run");
       }
 
       const { data, error } = await supabase.storage
         .from(BUCKET)
         .createSignedUrl(requestedPath, SIGNED_URL_TTL_SECONDS);
 
-      if (error) return jsonErr(400, "SIGNED_URL_FAILED", error.message);
-      return jsonOk({ signedUrl: data.signedUrl });
+      if (error) return jsonErr(req, 400, "SIGNED_URL_FAILED", error.message);
+      return jsonOk(req, { signedUrl: data.signedUrl });
     }
 
     if (action === "remove") {
       const requestedPath = String(body.path ?? "");
       if (!requestedPath || requestedPath !== run.workbook_file_path) {
-        return jsonErr(403, "PATH_NOT_ALLOWED", "Workbook path is not attached to this run");
+        return jsonErr(req, 403, "PATH_NOT_ALLOWED", "Workbook path is not attached to this run");
       }
 
       await supabase.storage.from(BUCKET).remove([requestedPath]);
@@ -109,15 +109,15 @@ Deno.serve(async (req) => {
         .update({ workbook_file_path: null })
         .eq("id", runId);
 
-      if (updateError) return jsonErr(400, "UPDATE_FAILED", updateError.message);
-      return jsonOk({ removed: true });
+      if (updateError) return jsonErr(req, 400, "UPDATE_FAILED", updateError.message);
+      return jsonOk(req, { removed: true });
     }
 
-    return jsonErr(400, "UNKNOWN_ACTION", "Unsupported workbook action");
+    return jsonErr(req, 400, "UNKNOWN_ACTION", "Unsupported workbook action");
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("staff-onboarding-workbook failed", e);
-    return jsonErr(500, "UNHANDLED", message);
+    return jsonErr(req, 500, "UNHANDLED", message);
   }
 });
 
@@ -149,16 +149,16 @@ async function readJsonBody(req: Request) {
   return await req.json() as { action?: string; runId?: number | string; path?: string };
 }
 
-function jsonOk(body: Record<string, unknown>) {
+function jsonOk(req: Request, body: Record<string, unknown>) {
   return new Response(JSON.stringify({ ok: true, ...body }), {
-    headers: { "content-type": "application/json", ...corsHeaders },
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
     status: 200,
   });
 }
 
-function jsonErr(status: number, code: string, detail: string) {
+function jsonErr(req: Request, status: number, code: string, detail: string) {
   return new Response(JSON.stringify({ ok: false, code, detail }), {
-    headers: { "content-type": "application/json", ...corsHeaders },
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
     status,
   });
 }

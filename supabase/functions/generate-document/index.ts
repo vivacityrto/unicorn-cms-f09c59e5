@@ -16,7 +16,7 @@ interface GenerateDocumentRequest {
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -43,31 +43,31 @@ Deno.serve(async (req: Request) => {
     if (!document_id || typeof document_id !== 'number' || !Number.isInteger(document_id) || document_id <= 0) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid document_id: must be a positive integer' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }, status: 400 }
       );
     }
     if (!tenant_id || typeof tenant_id !== 'number' || !Number.isInteger(tenant_id) || tenant_id <= 0) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid tenant_id: must be a positive integer' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }, status: 400 }
       );
     }
     if (!stage_id || typeof stage_id !== 'number' || !Number.isInteger(stage_id) || stage_id <= 0) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid stage_id: must be a positive integer' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }, status: 400 }
       );
     }
     if (!package_id || typeof package_id !== 'number' || !Number.isInteger(package_id) || package_id <= 0) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid package_id: must be a positive integer' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }, status: 400 }
       );
     }
     if (client_legacy_id !== undefined && client_legacy_id !== null && typeof client_legacy_id !== 'string') {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid client_legacy_id: must be a string' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
@@ -204,7 +204,7 @@ Deno.serve(async (req: Request) => {
         message: `Document "${document.title}" generated for ${tenantName}`
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         status: 200
       }
     );
@@ -219,7 +219,7 @@ Deno.serve(async (req: Request) => {
         error: 'Unable to generate document. Please try again or contact support.'
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         status: 400
       }
     );

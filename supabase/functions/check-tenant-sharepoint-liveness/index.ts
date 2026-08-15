@@ -17,13 +17,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { graphGet } from '../_shared/graph-app-client.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -45,10 +39,10 @@ type TenantLiveness = {
   error: string | null;
 };
 
-function json(body: unknown, status = 200): Response {
+function json(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -96,12 +90,12 @@ async function pMapLimit<T, R>(
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(req) });
+  if (req.method !== 'POST') return json(req, { error: 'Method not allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
-    return json({ error: 'Unauthorized', details: 'Missing bearer token' }, 401);
+    return json(req, { error: 'Unauthorized', details: 'Missing bearer token' }, 401);
   }
 
   let parsed: z.infer<typeof BodySchema>;
@@ -109,11 +103,11 @@ Deno.serve(async (req: Request) => {
     const raw = await req.json();
     const result = BodySchema.safeParse(raw);
     if (!result.success) {
-      return json({ error: 'Invalid body', details: result.error.flatten() }, 400);
+      return json(req, { error: 'Invalid body', details: result.error.flatten() }, 400);
     }
     parsed = result.data;
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+    return json(req, { error: 'Invalid JSON body' }, 400);
   }
 
   // Staff gate — is_vivacity_internal_safe under the caller's JWT.
@@ -122,21 +116,21 @@ Deno.serve(async (req: Request) => {
   });
   const { data: userData, error: userErr } = await supabaseAsCaller.auth.getUser();
   if (userErr || !userData?.user) {
-    return json({ error: 'Unauthorized', details: 'Invalid token' }, 401);
+    return json(req, { error: 'Unauthorized', details: 'Invalid token' }, 401);
   }
   const { data: isStaff, error: gateErr } = await supabaseAsCaller.rpc(
     'is_vivacity_internal_safe',
     { p_user_id: userData.user.id },
   );
   if (gateErr) {
-    return json({ error: 'Permission check failed', details: gateErr.message }, 500);
+    return json(req, { error: 'Permission check failed', details: gateErr.message }, 500);
   }
   if (!isStaff) {
-    return json({ error: 'Forbidden', details: 'Internal staff only' }, 403);
+    return json(req, { error: 'Forbidden', details: 'Internal staff only' }, 403);
   }
 
   if (parsed.tenant_ids.length === 0) {
-    return json({ results: [] });
+    return json(req, { results: [] });
   }
 
   // Service-role read of tenant_sharepoint_settings — small, no side effects.
@@ -149,7 +143,7 @@ Deno.serve(async (req: Request) => {
     .in('tenant_id', parsed.tenant_ids);
 
   if (sErr) {
-    return json({ error: 'Failed to read settings', details: sErr.message }, 500);
+    return json(req, { error: 'Failed to read settings', details: sErr.message }, 500);
   }
 
   type SRow = {
@@ -270,5 +264,5 @@ Deno.serve(async (req: Request) => {
     writeCache().catch(() => {});
   }
 
-  return json({ results });
+  return json(req, { results });
 });

@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { extractToken, verifyAuth, checkVivacityTeam, checkTenantAccess } from "../_shared/auth-helpers.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface DocumentSignals {
   filename_tokens: string[];
@@ -683,7 +679,7 @@ async function scanPptx(fileContent: ArrayBuffer): Promise<DocumentSignals> {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -692,7 +688,7 @@ serve(async (req) => {
     if (!document_id && !storage_path) {
       return new Response(
         JSON.stringify({ error: "document_id or storage_path is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -705,7 +701,7 @@ serve(async (req) => {
     if (!token) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -713,7 +709,7 @@ serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -727,7 +723,7 @@ serve(async (req) => {
     if (storage_path && !isStaff) {
       return new Response(
         JSON.stringify({ error: "Forbidden: staff access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -742,7 +738,7 @@ serve(async (req) => {
       if (docError || !doc) {
         return new Response(
           JSON.stringify({ error: "Document not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -755,7 +751,7 @@ serve(async (req) => {
         if (!allowed) {
           return new Response(
             JSON.stringify({ error: "Forbidden: no access to this document" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
           );
         }
       }
@@ -764,7 +760,7 @@ serve(async (req) => {
       if (uploadedFiles.length === 0) {
         return new Response(
           JSON.stringify({ error: "Document has no files" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -797,7 +793,7 @@ serve(async (req) => {
       }
       return new Response(
         JSON.stringify({ error: "Failed to download file" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -823,7 +819,7 @@ serve(async (req) => {
           skipped: true,
           message: "Unsupported file type for AI analysis" 
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -961,14 +957,14 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, ...result }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
 
   } catch (error) {
     console.error("Analysis error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

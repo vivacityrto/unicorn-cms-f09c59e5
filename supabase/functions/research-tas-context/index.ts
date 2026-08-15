@@ -86,7 +86,7 @@ async function scrapeUrl(firecrawlKey: string, url: string): Promise<{ markdown:
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     if (!token) {
       return new Response(
         JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: "No token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -103,14 +103,14 @@ Deno.serve(async (req) => {
     if (authError || !user || !profile) {
       return new Response(
         JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: authError || "Auth failed" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     if (!checkVivacityTeam(profile)) {
       return new Response(
         JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Vivacity Team access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
     if (!tenant_id || !stage_instance_id) {
       return new Response(
         JSON.stringify({ ok: false, code: "BAD_REQUEST", detail: "tenant_id and stage_instance_id required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     if (!firecrawlKey || !perplexityKey) {
       return new Response(
         JSON.stringify({ ok: false, code: "CONFIG_ERROR", detail: "API keys not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
       console.error("Job creation error:", jobError);
       return new Response(
         JSON.stringify({ ok: false, code: "DB_ERROR", detail: "Failed to create job" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ ok: false, code: "SCRAPE_FAILED", detail: "No content scraped" }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 422, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -486,13 +486,13 @@ ${qualification_code ? `**Qualification:** ${qualification_code}\n` : ""}${deliv
         citations,
         risk_flags: riskFlags,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("research-tas-context error:", err);
     return new Response(
       JSON.stringify({ ok: false, code: "INTERNAL_ERROR", detail: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

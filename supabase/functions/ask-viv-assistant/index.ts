@@ -78,6 +78,7 @@ import {
 } from "../_shared/ask-viv-fact-builder/index.ts";
 import { buildPortfolioFacts } from "../_shared/ask-viv-fact-builder/portfolio-facts.ts";
 import { generateEmbedding } from "../_shared/openai-embeddings.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   callAnthropic,
   callAnthropicHaiku,
@@ -89,15 +90,6 @@ import {
   type AnthropicToolDefinition,
   type AnthropicResponse,
 } from "../_shared/anthropic-client.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, " +
-    "x-supabase-client-platform, x-supabase-client-platform-version, " +
-    "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 // Hard cap on tool-call round trips per user message — a reliability guardrail
 // as much as a cost one, since an unbounded agentic loop could otherwise spin
@@ -1687,44 +1679,44 @@ async function maybeSummarizeConversation(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return jsonError(405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
+    return jsonError(req, 405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
   }
 
   try {
     const token = extractToken(req);
     if (!token) {
-      return jsonError(401, "UNAUTHORIZED", "No authorization token provided");
+      return jsonError(req, 401, "UNAUTHORIZED", "No authorization token provided");
     }
 
     const supabase = createServiceClient();
     const { user, profile, error: authError } = await verifyAuth(supabase, token);
     if (authError || !user || !profile) {
-      return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
+      return jsonError(req, 401, "UNAUTHORIZED", authError || "Authentication failed");
     }
 
     const accessCheck = await validateAskVivAccess(supabase, user.id, profile, "ask-viv-assistant");
     if (!accessCheck.allowed) {
-      return askVivAccessDeniedResponse(accessCheck.reason);
+      return askVivAccessDeniedResponse(req, accessCheck.reason);
     }
 
     const enabled = await isAssistantEnabledForUser(supabase, user.id, profile);
     if (!enabled) {
-      return jsonError(403, "NOT_ENABLED", "Ask Viv Assistant isn't available for your account yet.");
+      return jsonError(req, 403, "NOT_ENABLED", "Ask Viv Assistant isn't available for your account yet.");
     }
 
     let payload: RequestPayload;
     try {
       payload = await req.json();
     } catch {
-      return jsonError(400, "BAD_REQUEST", "Invalid JSON body");
+      return jsonError(req, 400, "BAD_REQUEST", "Invalid JSON body");
     }
 
     const message = payload.message?.trim();
     if (!message) {
-      return jsonError(400, "BAD_REQUEST", "message is required");
+      return jsonError(req, 400, "BAD_REQUEST", "message is required");
     }
 
     // Best-effort hint of which client the user is currently viewing in the
@@ -1755,7 +1747,7 @@ Deno.serve(async (req) => {
     if (!withinCap) {
       const limitMessage = "You've reached today's usage limit for Ask Viv Assistant. It resets tomorrow.";
       await logTurn(supabase, conversationId, "assistant", limitMessage, "assistant");
-      return jsonRaw({ content: limitMessage, conversation_id: conversationId, sources_used: [], limited: true });
+      return jsonRaw(req, { content: limitMessage, conversation_id: conversationId, sources_used: [], limited: true });
     }
 
     // Load + (if needed) refresh the conversation's summarized context before
@@ -1869,13 +1861,13 @@ Deno.serve(async (req) => {
 
     await logTurn(supabase, conversationId, "assistant", finalText, "assistant");
 
-    return jsonRaw({
+    return jsonRaw(req, {
       content: finalText,
       conversation_id: conversationId,
       sources_used: sourcesUsed,
     });
   } catch (err) {
     console.error("Ask Viv Assistant error:", err);
-    return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonError(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });

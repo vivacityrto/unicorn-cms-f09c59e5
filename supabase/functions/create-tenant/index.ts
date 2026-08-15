@@ -16,11 +16,7 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface CreateTenantRequest {
   name: string;
@@ -30,7 +26,7 @@ interface CreateTenantRequest {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders(req) })
   }
 
   try {
@@ -90,7 +86,7 @@ serve(async (req) => {
         message: 'Tenant created successfully'
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         status: 201,
       }
     )
@@ -104,7 +100,7 @@ serve(async (req) => {
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         status: 400,
       }
     )

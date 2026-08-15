@@ -50,6 +50,7 @@ import { buildAskVivFacts, formatFactsForLLM } from "../_shared/ask-viv-fact-bui
 import { filterFactsForClient, buildFriendlyRecords } from "../_shared/ask-viv-client-redaction.ts";
 import { findPortalPages } from "../_shared/ask-viv-client-navigation.ts";
 import { generateEmbedding } from "../_shared/openai-embeddings.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   callAnthropic,
   extractText,
@@ -60,15 +61,6 @@ import {
   type AnthropicToolDefinition,
   type AnthropicResponse,
 } from "../_shared/anthropic-client.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, " +
-    "x-supabase-client-platform, x-supabase-client-platform-version, " +
-    "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 const MAX_TOOL_ITERATIONS = 6;
 const DAILY_QUERY_CAP = 20;
@@ -572,22 +564,22 @@ async function executeClientTool(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return jsonError(405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
+    return jsonError(req, 405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
   }
 
   try {
     const token = extractToken(req);
     if (!token) {
-      return jsonError(401, "UNAUTHORIZED", "No authorization token provided");
+      return jsonError(req, 401, "UNAUTHORIZED", "No authorization token provided");
     }
 
     const supabase = createUserClient(req.headers.get("Authorization"));
     const { user, profile, error: authError } = await verifyAuth(supabase, token);
     if (authError || !user || !profile) {
-      return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
+      return jsonError(req, 401, "UNAUTHORIZED", authError || "Authentication failed");
     }
 
     // app_settings' own RLS restricts SELECT to staff (is_super_admin_safe()
@@ -602,23 +594,23 @@ Deno.serve(async (req) => {
     try {
       payload = await req.json();
     } catch {
-      return jsonError(400, "BAD_REQUEST", "Invalid JSON body");
+      return jsonError(req, 400, "BAD_REQUEST", "Invalid JSON body");
     }
 
     const message = payload.message?.trim();
     if (!message) {
-      return jsonError(400, "BAD_REQUEST", "message is required");
+      return jsonError(req, 400, "BAD_REQUEST", "message is required");
     }
 
     // Clients cannot supply scope — tenant_id always comes from the access
     // gate below, never from the request body.
     for (const forbidden of ["tenant_id", "client_id", "package_id", "phase_id"]) {
       if (forbidden in (payload as Record<string, unknown>)) {
-        return jsonError(400, "BAD_REQUEST", `Field '${forbidden}' is not allowed; scope is resolved server-side`);
+        return jsonError(req, 400, "BAD_REQUEST", `Field '${forbidden}' is not allowed; scope is resolved server-side`);
       }
     }
     if (!isVivacityInternal(profile) && "preview_tenant_id" in (payload as Record<string, unknown>)) {
-      return jsonError(400, "BAD_REQUEST", "Field 'preview_tenant_id' is not allowed");
+      return jsonError(req, 400, "BAD_REQUEST", "Field 'preview_tenant_id' is not allowed");
     }
 
     const access = await validateClientAskVivAccess(
@@ -629,13 +621,13 @@ Deno.serve(async (req) => {
       payload.preview_tenant_id
     );
     if (!access.allowed) {
-      return askVivAccessDeniedResponse(clientAskVivDenialMessage(access.reason));
+      return askVivAccessDeniedResponse(req, clientAskVivDenialMessage(access.reason));
     }
     const tenantId = access.tenant_id;
 
     const enabled = await isClientAssistantEnabledForTenant(serviceClient, tenantId);
     if (!enabled) {
-      return jsonError(403, "NOT_ENABLED", "Ask Viv isn't available for your account yet.");
+      return jsonError(req, 403, "NOT_ENABLED", "Ask Viv isn't available for your account yet.");
     }
 
     // Daily cap — reuses the existing ai_client_query_usage table/shape from
@@ -663,14 +655,14 @@ Deno.serve(async (req) => {
         }),
         {
           status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(retryAfter), "Cache-Control": "no-store" },
+          headers: { ...corsHeaders(req), "Content-Type": "application/json", "Retry-After": String(retryAfter), "Cache-Control": "no-store" },
         }
       );
     }
 
     const tokenCap = await checkClientTokenUsageCap(serviceClient, user.id);
     if (!tokenCap.withinCap) {
-      return jsonError(429, "DAILY_LIMIT_REACHED", "You've reached today's usage limit for Ask Viv. It resets tomorrow.");
+      return jsonError(req, 429, "DAILY_LIMIT_REACHED", "You've reached today's usage limit for Ask Viv. It resets tomorrow.");
     }
 
     const conversationId = await resolveOrCreateClientConversation(supabase, user.id, tenantId, payload.conversation_id, message);
@@ -746,9 +738,9 @@ Deno.serve(async (req) => {
     const sourcesUsed = toolCalls.map((tc) => ({ tool: tc.name, summary: tc.summary }));
     await logClientTurn(supabase, conversationId, "assistant", finalText, toolCalls);
 
-    return jsonRaw({ content: finalText, conversation_id: conversationId, sources_used: sourcesUsed });
+    return jsonRaw(req, { content: finalText, conversation_id: conversationId, sources_used: sourcesUsed });
   } catch (err) {
     console.error("Ask Viv client assistant error:", err);
-    return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonError(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });

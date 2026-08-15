@@ -12,15 +12,7 @@ import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkSuperAdmin } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": 
-    "authorization, x-client-info, apikey, content-type, " +
-    "x-supabase-client-platform, x-supabase-client-platform-version, " +
-    "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface RequestPayload {
   tenant_id: number;
@@ -30,37 +22,37 @@ interface RequestPayload {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   // Accept both DELETE and POST for compatibility
   if (req.method !== "DELETE" && req.method !== "POST") {
-    return jsonError(405, "METHOD_NOT_ALLOWED", "Only DELETE/POST requests are accepted");
+    return jsonError(req, 405, "METHOD_NOT_ALLOWED", "Only DELETE/POST requests are accepted");
   }
 
   try {
     // Authenticate
     const token = extractToken(req);
     if (!token) {
-      return jsonError(401, "UNAUTHORIZED", "No authorization token provided");
+      return jsonError(req, 401, "UNAUTHORIZED", "No authorization token provided");
     }
 
     const supabase = createServiceClient();
     const { user, profile, error: authError } = await verifyAuth(supabase, token);
     
     if (authError || !user || !profile) {
-      return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
+      return jsonError(req, 401, "UNAUTHORIZED", authError || "Authentication failed");
     }
 
     // Validate Ask Viv access - Vivacity internal only
     const accessCheck = await validateAskVivAccess(supabase, user.id, profile, "vector-index-remove");
     if (!accessCheck.allowed) {
-      return askVivAccessDeniedResponse(accessCheck.reason);
+      return askVivAccessDeniedResponse(req, accessCheck.reason);
     }
 
     // Only SuperAdmins can remove indexes
     if (!checkSuperAdmin(profile)) {
-      return jsonError(403, "FORBIDDEN", "Super Admin access required");
+      return jsonError(req, 403, "FORBIDDEN", "Super Admin access required");
     }
 
     // Parse request
@@ -68,13 +60,13 @@ Deno.serve(async (req) => {
     try {
       payload = await req.json();
     } catch {
-      return jsonError(400, "BAD_REQUEST", "Invalid JSON body");
+      return jsonError(req, 400, "BAD_REQUEST", "Invalid JSON body");
     }
 
     const { tenant_id, source_type, record_id } = payload;
     
     if (!tenant_id || typeof tenant_id !== "number") {
-      return jsonError(400, "BAD_REQUEST", "tenant_id is required");
+      return jsonError(req, 400, "BAD_REQUEST", "tenant_id is required");
     }
 
     let query = supabase
@@ -94,7 +86,7 @@ Deno.serve(async (req) => {
 
     if (deleteError) {
       console.error("Delete error:", deleteError);
-      return jsonError(500, "DELETE_ERROR", "Failed to remove embeddings");
+      return jsonError(req, 500, "DELETE_ERROR", "Failed to remove embeddings");
     }
 
     const removedCount = count || 0;
@@ -113,7 +105,7 @@ Deno.serve(async (req) => {
       },
     });
 
-    return jsonOk({
+    return jsonOk(req, {
       message: `Removed ${removedCount} embeddings`,
       removed: removedCount,
       scope: {
@@ -125,6 +117,6 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error("Vector index remove error:", err);
-    return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonError(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });

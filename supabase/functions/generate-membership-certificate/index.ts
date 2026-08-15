@@ -6,10 +6,10 @@ import { corsHeaders } from "../_shared/cors.ts";
 const CENTER_X = 297.64;
 const FUCHSIA = rgb(0.929, 0.094, 0.471);
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
@@ -46,7 +46,7 @@ function tierFromCode(code: string | null | undefined): string | null {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -59,11 +59,11 @@ serve(async (req) => {
     // 1. Auth
     const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
     if (!callerToken) {
-      return jsonResponse(401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
+      return jsonResponse(req, 401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
     }
     const { data: callerUser, error: callerErr } = await supabase.auth.getUser(callerToken);
     if (callerErr || !callerUser?.user) {
-      return jsonResponse(401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message ?? "Invalid token" });
+      return jsonResponse(req, 401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message ?? "Invalid token" });
     }
 
     // 2. Body
@@ -71,11 +71,11 @@ serve(async (req) => {
     try {
       body = await req.json();
     } catch {
-      return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "Invalid JSON body" });
+      return jsonResponse(req, 400, { ok: false, code: "BAD_REQUEST", detail: "Invalid JSON body" });
     }
     const tenantId = Number(body.tenant_id);
     if (!Number.isFinite(tenantId)) {
-      return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "tenant_id (number) required" });
+      return jsonResponse(req, 400, { ok: false, code: "BAD_REQUEST", detail: "tenant_id (number) required" });
     }
 
     // 3. Authorise — caller must belong to this tenant or be Vivacity internal
@@ -85,12 +85,12 @@ serve(async (req) => {
       .eq("user_uuid", callerUser.user.id)
       .maybeSingle();
     if (callerRowErr) {
-      return jsonResponse(500, { ok: false, code: "AUTH_LOOKUP_FAILED", detail: callerRowErr.message });
+      return jsonResponse(req, 500, { ok: false, code: "AUTH_LOOKUP_FAILED", detail: callerRowErr.message });
     }
     const isInternal = !!callerRow?.is_vivacity_internal;
     const isMember = Number(callerRow?.tenant_id) === tenantId;
     if (!isInternal && !isMember) {
-      return jsonResponse(403, { ok: false, code: "FORBIDDEN", detail: "Not authorised for this tenant" });
+      return jsonResponse(req, 403, { ok: false, code: "FORBIDDEN", detail: "Not authorised for this tenant" });
     }
 
     // 4. Lookup active membership package instance for this tenant (flat queries — no PostgREST joins)
@@ -104,10 +104,10 @@ serve(async (req) => {
       .maybeSingle();
 
     if (piErr) {
-      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: piErr.message });
+      return jsonResponse(req, 500, { ok: false, code: "LOOKUP_FAILED", detail: piErr.message });
     }
     if (!piRow) {
-      return jsonResponse(404, { ok: false, code: "NO_MEMBERSHIP" });
+      return jsonResponse(req, 404, { ok: false, code: "NO_MEMBERSHIP" });
     }
 
     const { data: pkgRow, error: pkgErr } = await supabase
@@ -117,7 +117,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pkgErr) {
-      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: pkgErr.message });
+      return jsonResponse(req, 500, { ok: false, code: "LOOKUP_FAILED", detail: pkgErr.message });
     }
 
     const { data: tenantRow, error: tenantErr } = await supabase
@@ -127,7 +127,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (tenantErr) {
-      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: tenantErr.message });
+      return jsonResponse(req, 500, { ok: false, code: "LOOKUP_FAILED", detail: tenantErr.message });
     }
 
     const safeRtoName = ((tenantRow as any)?.rto_name || (tenantRow as any)?.name || "Vivacity")
@@ -141,7 +141,7 @@ serve(async (req) => {
     // 5. Tier mapping
     const tier = tierFromCode(packageCode);
     if (!tier) {
-      return jsonResponse(404, { ok: false, code: "NO_CERTIFICATE_FOR_TIER" });
+      return jsonResponse(req, 404, { ok: false, code: "NO_CERTIFICATE_FOR_TIER" });
     }
 
     // 6. Template
@@ -157,7 +157,7 @@ serve(async (req) => {
       .from("doc-templates")
       .download(templatePath);
     if (tplErr || !tplBlob) {
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "TEMPLATE_FETCH_FAILED",
         detail: tplErr?.message ?? "Template missing",
@@ -188,7 +188,7 @@ serve(async (req) => {
 
       pdfBytes = await pdfDoc.save();
     } catch (e) {
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "PDF_GENERATION_FAILED",
         detail: (e as Error).message,
@@ -201,10 +201,10 @@ serve(async (req) => {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${downloadFilename}"`,
         "Access-Control-Expose-Headers": "Content-Disposition",
-        ...corsHeaders,
+        ...corsHeaders(req),
       },
     });
   } catch (e) {
-    return jsonResponse(500, { ok: false, code: "PDF_GENERATION_FAILED", detail: (e as Error).message });
+    return jsonResponse(req, 500, { ok: false, code: "PDF_GENERATION_FAILED", detail: (e as Error).message });
   }
 });

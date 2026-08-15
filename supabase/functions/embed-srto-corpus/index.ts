@@ -114,10 +114,10 @@ function qualityAreaForPracticeGuide(filename: string): string | null {
 }
 
 // ----- Helpers ------------------------------------------------------
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -286,13 +286,13 @@ function documentKeyFromPath(path: string): string {
 // ----- Main ---------------------------------------------------------
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   const t0 = Date.now();
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
+  if (!authHeader) return json(req, { error: 'Missing authorisation header' }, 401);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -300,7 +300,7 @@ Deno.serve(async (req) => {
   const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
   if (!OPENAI_API_KEY) {
-    return json({ error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
+    return json(req, { error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
   }
 
   // 1. Validate caller JWT and Super Admin role.
@@ -310,7 +310,7 @@ Deno.serve(async (req) => {
 
   const { data: userRes, error: userErr } = await userClient.auth.getUser();
   if (userErr || !userRes?.user) {
-    return json({ error: 'Not authenticated' }, 401);
+    return json(req, { error: 'Not authenticated' }, 401);
   }
 
   const { data: callerRow, error: roleErr } = await userClient
@@ -320,10 +320,10 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   if (roleErr) {
-    return json({ error: 'Failed to resolve caller role', detail: roleErr.message }, 500);
+    return json(req, { error: 'Failed to resolve caller role', detail: roleErr.message }, 500);
   }
   if (callerRow?.unicorn_role !== 'Super Admin') {
-    return json({ error: 'Super Admin role required' }, 403);
+    return json(req, { error: 'Super Admin role required' }, 403);
   }
 
   // 1b. Health-check short-circuit.
@@ -370,7 +370,7 @@ Deno.serve(async (req) => {
     try {
       const vec = await generateEmbedding('health check');
       const latency_ms = Date.now() - tPing;
-      return json(
+      return json(req, 
         {
           ok: true,
           embedding_provider: EMBEDDING_PROVIDER,
@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const isCredits = /\b402\b/.test(msg);
-      return json(
+      return json(req, 
         {
           ok: false,
           embedding_provider: EMBEDDING_PROVIDER,
@@ -413,7 +413,7 @@ Deno.serve(async (req) => {
       body = await req.json();
     }
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+    return json(req, { error: 'Invalid JSON body' }, 400);
   }
 
   const force = body.force_reembed === true;
@@ -454,7 +454,7 @@ Deno.serve(async (req) => {
   }
 
   if (targets.length === 0) {
-    return json(
+    return json(req, 
       {
         ok: true,
         documents_processed: 0,
@@ -586,7 +586,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  return json(
+  return json(req, 
     {
       ok: errors.length === 0,
       documents_processed: targets.length,

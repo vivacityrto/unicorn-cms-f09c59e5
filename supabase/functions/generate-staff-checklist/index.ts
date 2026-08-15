@@ -13,34 +13,30 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   const auth = req.headers.get("Authorization");
-  if (!auth) return json(401, { ok: false, error: "Missing Authorization" });
+  if (!auth) return json(req, 401, { ok: false, error: "Missing Authorization" });
 
   try {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { run_id, role_code, location_code, requested_by } = await req.json();
 
     if (!run_id || !role_code || !location_code) {
-      return json(400, { ok: false, error: "run_id, role_code and location_code are required" });
+      return json(req, 400, { ok: false, error: "run_id, role_code and location_code are required" });
     }
 
     // Load all active staff_onboarding templates
@@ -68,10 +64,10 @@ serve(async (req) => {
       if (insErr) throw insErr;
     }
 
-    return json(200, { ok: true, created: rows.length });
+    return json(req, 200, { ok: true, created: rows.length });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[generate-staff-checklist]", msg);
-    return json(500, { ok: false, error: msg });
+    return json(req, 500, { ok: false, error: msg });
   }
 });

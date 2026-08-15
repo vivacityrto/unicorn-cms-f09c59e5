@@ -65,10 +65,10 @@ const AUDIENCE_MAP: Record<string, string> = {
   admin: "administration_assistant",
 };
 
-function jsonResponse(status: number, body: Record<string, unknown>): Response {
+function jsonResponse(req: Request, status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -110,10 +110,10 @@ function todayInSydney(): { year: number; isoDate: string; endIsoDate: string } 
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return jsonResponse(405, { error: "method_not_allowed" });
+    return jsonResponse(req, 405, { error: "method_not_allowed" });
   }
 
   // ---- Validate body ----
@@ -121,11 +121,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     raw = await req.json();
   } catch {
-    return jsonResponse(400, { error: "invalid_json" });
+    return jsonResponse(req, 400, { error: "invalid_json" });
   }
   const parsed = BodySchema.safeParse(raw);
   if (!parsed.success) {
-    return jsonResponse(400, { error: "invalid_body", details: parsed.error.flatten() });
+    return jsonResponse(req, 400, { error: "invalid_body", details: parsed.error.flatten() });
   }
   const { enrollment_id } = parsed.data;
 
@@ -170,18 +170,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   if (enrErr) {
     console.error("[pdp-auto-evidence] enrollment fetch error:", enrErr);
-    return jsonResponse(500, { error: "enrollment_fetch_failed" });
+    return jsonResponse(req, 500, { error: "enrollment_fetch_failed" });
   }
   if (!enrollment) {
-    return jsonResponse(404, { error: "enrollment_not_found" });
+    return jsonResponse(req, 404, { error: "enrollment_not_found" });
   }
   if (enrollment.status !== "completed") {
-    return jsonResponse(200, { skipped: "not_completed" });
+    return jsonResponse(req, 200, { skipped: "not_completed" });
   }
 
   // ---- Authorisation for direct user calls ----
   if (mode === "user" && actorUserId !== enrollment.user_id && !callerIsVivacityStaff) {
-    return jsonResponse(403, { error: "forbidden" });
+    return jsonResponse(req, 403, { error: "forbidden" });
   }
 
   // System-mode actor = the learner (mirrors complete_academy_enrollment).
@@ -197,10 +197,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   if (existingErr) {
     console.error("[pdp-auto-evidence] idempotency lookup error:", existingErr);
-    return jsonResponse(500, { error: "idempotency_lookup_failed" });
+    return jsonResponse(req, 500, { error: "idempotency_lookup_failed" });
   }
   if (existing) {
-    return jsonResponse(200, {
+    return jsonResponse(req, 200, {
       evidence_item_id: existing.id,
       skipped: "duplicate",
       mode,
@@ -227,7 +227,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   if (cycleErr) {
     console.error("[pdp-auto-evidence] cycle lookup error:", cycleErr);
-    return jsonResponse(500, { error: "cycle_lookup_failed" });
+    return jsonResponse(req, 500, { error: "cycle_lookup_failed" });
   }
 
   let cycleId: number;
@@ -255,7 +255,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .maybeSingle<{ code: string; target_pd_hours_default: number | null }>();
     if (audErr) {
       console.error("[pdp-auto-evidence] audience lookup error:", audErr);
-      return jsonResponse(500, { error: "audience_lookup_failed" });
+      return jsonResponse(req, 500, { error: "audience_lookup_failed" });
     }
     const targetHours = audienceRow?.target_pd_hours_default ?? 20;
 
@@ -282,7 +282,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .single<{ id: number }>();
     if (insCycleErr || !newCycle) {
       console.error("[pdp-auto-evidence] cycle insert error:", insCycleErr);
-      return jsonResponse(500, { error: "cycle_insert_failed" });
+      return jsonResponse(req, 500, { error: "cycle_insert_failed" });
     }
     cycleId = newCycle.id;
   }
@@ -296,7 +296,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .maybeSingle<CourseRow>();
   if (courseErr || !course) {
     console.error("[pdp-auto-evidence] course fetch error:", courseErr);
-    return jsonResponse(500, { error: "course_fetch_failed" });
+    return jsonResponse(req, 500, { error: "course_fetch_failed" });
   }
 
   // Primary: sum of estimated_minutes across published lessons for this course.
@@ -358,7 +358,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           .eq("evidence_type", "academy_completion")
           .maybeSingle<{ id: number }>();
         if (dup) {
-          return jsonResponse(200, {
+          return jsonResponse(req, 200, {
             evidence_item_id: dup.id,
             skipped: "duplicate_race",
             mode,
@@ -366,7 +366,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         }
       }
       console.error("[pdp-auto-evidence] evidence insert error:", insErr);
-      return jsonResponse(500, { error: "evidence_insert_failed" });
+      return jsonResponse(req, 500, { error: "evidence_insert_failed" });
     }
     evidenceItemId = inserted!.id;
   }
@@ -443,7 +443,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.error("[pdp-auto-evidence] audit insert error:", err);
   }
 
-  return jsonResponse(200, {
+  return jsonResponse(req, 200, {
     evidence_item_id: evidenceItemId,
     certificate_evidence_id: certificateEvidenceId,
     cycle_id: cycleId,

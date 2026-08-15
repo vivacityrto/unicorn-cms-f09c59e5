@@ -1,16 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { extractToken, verifyAuth, checkVivacityTeam, checkTenantAccess } from "../_shared/auth-helpers.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
   
   try {
@@ -19,7 +15,7 @@ serve(async (req) => {
     if (!tenant_id || !stage_id || !document_ids || !Array.isArray(document_ids) || document_ids.length === 0) {
       return new Response(
         JSON.stringify({ error: "tenant_id, stage_id, and document_ids array are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -34,7 +30,7 @@ serve(async (req) => {
     if (!token) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -42,7 +38,7 @@ serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -53,7 +49,7 @@ serve(async (req) => {
       if (!hasAccess) {
         return new Response(
           JSON.stringify({ error: "Forbidden: no access to this tenant" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
     }
@@ -70,7 +66,7 @@ serve(async (req) => {
       console.error("Error fetching documents:", docsError);
       return new Response(
         JSON.stringify({ error: "Failed to fetch documents" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -118,7 +114,7 @@ serve(async (req) => {
     if (filesToInclude.length === 0) {
       return new Response(
         JSON.stringify({ error: "No files available for the selected documents" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -148,7 +144,7 @@ serve(async (req) => {
       console.error("Error creating pack:", packError);
       return new Response(
         JSON.stringify({ error: "Failed to create pack record" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -197,7 +193,7 @@ serve(async (req) => {
         files: signedUrls,
         document_count: document_ids.length
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
     
   } catch (error) {
@@ -205,7 +201,7 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

@@ -13,6 +13,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   classifyVideos,
   distinctModuleNumbers,
@@ -23,50 +24,44 @@ import {
   type ShowcaseVideo,
 } from "./parse.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
 const VIDEO_FOLDER_NAME = "Course Lesson Videos";
 const PER_PAGE = 100;
 const MAX_PAGES = 20;
 const VIMEO_FIELDS =
   "uri,name,description,duration,link,pictures.sizes,player_embed_url";
 
-function json(body: unknown, status = 200) {
+function json(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return json(req, { error: "Method not allowed" }, 405);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceKey) {
     console.error("academy-import-vimeo-showcase missing Supabase configuration");
-    return json({ error: "Server configuration error" }, 500);
+    return json(req, { error: "Server configuration error" }, 500);
   }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return json({ error: "Unauthorized" }, 401);
+    return json(req, { error: "Unauthorized" }, 401);
   }
 
   const supabase = createClient(supabaseUrl, serviceKey);
   const token = authHeader.replace("Bearer ", "");
   const { data: { user }, error: userError } = await supabase.auth.getUser(token);
   if (userError || !user) {
-    return json({ error: "Unauthorized" }, 401);
+    return json(req, { error: "Unauthorized" }, 401);
   }
 
   const { data: allowed } = await supabase.rpc("check_permission", {
@@ -75,19 +70,19 @@ Deno.serve(async (req) => {
     p_min_level: "full",
   });
   if (!allowed) {
-    return json({ error: "You don't have permission to import into Academy courses." }, 403);
+    return json(req, { error: "You don't have permission to import into Academy courses." }, 403);
   }
 
   let body: { course_id?: unknown; showcase_url?: unknown; album_id?: unknown };
   try {
     body = await req.json();
   } catch {
-    return json({ error: "A JSON body with course_id and a showcase URL is required" }, 400);
+    return json(req, { error: "A JSON body with course_id and a showcase URL is required" }, 400);
   }
 
   const courseId = Number(body.course_id);
   if (!Number.isInteger(courseId) || courseId <= 0) {
-    return json({ error: "A valid course_id is required" }, 400);
+    return json(req, { error: "A valid course_id is required" }, 400);
   }
 
   const albumId = extractAlbumId(
@@ -95,7 +90,7 @@ Deno.serve(async (req) => {
     body.album_id as string | number | null | undefined,
   );
   if (!albumId) {
-    return json({
+    return json(req, {
       error: "Provide a Vimeo Showcase URL (vimeo.com/showcase/{id}) or a numeric album id",
     }, 400);
   }
@@ -107,16 +102,16 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (courseError) {
     console.error("academy-import-vimeo-showcase course lookup failed", courseError);
-    return json({ error: "Unable to load that course" }, 500);
+    return json(req, { error: "Unable to load that course" }, 500);
   }
   if (!course) {
-    return json({ error: "Course not found" }, 404);
+    return json(req, { error: "Course not found" }, 404);
   }
 
   const vimeoToken = Deno.env.get("VIMEO_ACCESS_TOKEN");
   if (!vimeoToken) {
     console.error("academy-import-vimeo-showcase missing VIMEO_ACCESS_TOKEN");
-    return json({ error: "Vimeo integration is not configured" }, 500);
+    return json(req, { error: "Vimeo integration is not configured" }, 500);
   }
 
   const videos: ShowcaseVideo[] = [];
@@ -126,7 +121,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Vimeo showcase fetch failed";
     console.error("academy-import-vimeo-showcase vimeo fetch failed", err);
-    return json({ error: message }, 502);
+    return json(req, { error: message }, 502);
   }
 
   const { parsed, unmatched } = classifyVideos(videos);
@@ -150,7 +145,7 @@ Deno.serve(async (req) => {
     console.error("academy-import-vimeo-showcase existing-row lookup failed", {
       modulesErr, lessonsErr, videosErr,
     });
-    return json({ error: "Unable to load existing Academy content" }, 500);
+    return json(req, { error: "Unable to load existing Academy content" }, 500);
   }
 
   const modules = (existingModules ?? []) as ExistingModule[];
@@ -192,7 +187,7 @@ Deno.serve(async (req) => {
       .single();
     if (insertErr || !created) {
       console.error("academy-import-vimeo-showcase module insert failed", insertErr);
-      return json({ error: `Failed to create ${title}` }, 500);
+      return json(req, { error: `Failed to create ${title}` }, 500);
     }
     moduleIdByNumber.set(moduleNumber, created.id as number);
     modules.push({ id: created.id as number, title: created.title as string });
@@ -208,7 +203,7 @@ Deno.serve(async (req) => {
   if (needsNewVideo) {
     folderId = await ensureVideoFolder(supabase);
     if (!folderId) {
-      return json({ error: "Failed to resolve the Course Lesson Videos folder" }, 500);
+      return json(req, { error: "Failed to resolve the Course Lesson Videos folder" }, 500);
     }
   }
 
@@ -239,7 +234,7 @@ Deno.serve(async (req) => {
         .single();
       if (videoErr || !createdVideo) {
         console.error("academy-import-vimeo-showcase video insert failed", videoErr);
-        return json({ error: `Failed to import video ${item.vimeoName}` }, 500);
+        return json(req, { error: `Failed to import video ${item.vimeoName}` }, 500);
       }
       videoId = createdVideo.id as string;
       videoByVimeoId.set(item.vimeoId, videoId);
@@ -267,7 +262,7 @@ Deno.serve(async (req) => {
       .single();
     if (lessonErr || !createdLesson) {
       console.error("academy-import-vimeo-showcase lesson insert failed", lessonErr);
-      return json({ error: `Failed to create lesson ${item.title}` }, 500);
+      return json(req, { error: `Failed to create lesson ${item.title}` }, 500);
     }
     lessonVideoIds.add(videoId);
     lessonsCreated.push({
@@ -278,7 +273,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  return json({
+  return json(req, {
     album_id: albumId,
     video_count: videos.length,
     modules_created: modulesCreated,

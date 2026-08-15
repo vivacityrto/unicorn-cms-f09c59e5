@@ -130,7 +130,7 @@ async function sendMailgun(to: string, subject: string, html: string): Promise<s
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const supabase = createServiceClient();
@@ -237,13 +237,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, sent, skippedAlreadySent, skippedNoEmail, errors }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } },
     );
   } catch (e: any) {
     console.error("send-action-item-due-reminders error:", e);
     return new Response(JSON.stringify({ success: false, error: e?.message || String(e) }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...corsHeaders(req) },
     });
   }
 });

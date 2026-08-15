@@ -9,11 +9,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -122,14 +118,14 @@ function classify(address: string | undefined): "general_email" | "client_messag
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing Authorization" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -141,7 +137,7 @@ serve(async (req) => {
     if (userErr || !userData?.user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const userId = userData.user.id;
@@ -153,7 +149,7 @@ serve(async (req) => {
     if (!staffCheck) {
       return new Response(JSON.stringify({ error: "Forbidden: staff only" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -169,7 +165,7 @@ serve(async (req) => {
       if (!inboundMessageId || !outboundMessageId) {
         return new Response(
           JSON.stringify({ error: "inboundMessageId and outboundMessageId are required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -182,7 +178,7 @@ serve(async (req) => {
       if (tokErrM || !tokenRowM) {
         return new Response(
           JSON.stringify({ error: "Outlook not connected for this user" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
       const accessTokenM = await refreshIfNeeded(admin, userId, tokenRowM as TokenRecord);
@@ -259,7 +255,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ ok: true, mode: "manual", inserted: 2 }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     // ---- end manual mode --------------------------------------------------
@@ -277,7 +273,7 @@ serve(async (req) => {
     if (tokErr || !tokenRow) {
       return new Response(
         JSON.stringify({ error: "Outlook not connected for this user" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -375,14 +371,14 @@ serve(async (req) => {
         inserted,
         updated,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     console.error("[kpi-email-log-sync] error:", msg);
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

@@ -12,7 +12,7 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -22,7 +22,7 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -30,7 +30,7 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
 
     if (!profile?.is_vivacity_internal) {
       return new Response(JSON.stringify({ error: 'Forbidden — Vivacity staff only' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
 
     if (!tenant_id) {
       return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
 
     if (tenantErr || !tenant) {
       return new Response(JSON.stringify({ error: `Tenant ${tenant_id} not found` }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({
         error: `Tenant is not active (status: ${tenant.status}). Governance folder creation is only allowed for active tenants.`,
       }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -93,7 +93,7 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({
         error: 'No Governance SharePoint site configured. Add a governance_client_files site to sharepoint_sites first.',
       }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -138,7 +138,7 @@ Deno.serve(async (req: Request) => {
           }
 
           return new Response(JSON.stringify(result), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
           });
         }
         // Otherwise fall through to create the actual client folder inside the container
@@ -211,7 +211,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
@@ -219,7 +219,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : 'Unknown error',
     }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 });

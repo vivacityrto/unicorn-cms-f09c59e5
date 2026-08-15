@@ -1,21 +1,16 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const MICROSOFT_CLIENT_ID = Deno.env.get("MICROSOFT_CLIENT_ID")!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
@@ -83,7 +78,7 @@ async function refreshTokenIfNeeded(
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -93,13 +88,13 @@ serve(async (req) => {
     const callerToken = req.headers
       .get("Authorization")
       ?.replace(/^Bearer\s+/i, "");
-    if (!callerToken) return jsonResponse(401, { error: "Missing Authorization" });
+    if (!callerToken) return jsonResponse(req, 401, { error: "Missing Authorization" });
 
     const {
       data: { user },
       error: authErr,
     } = await supabaseAdmin.auth.getUser(callerToken);
-    if (authErr || !user) return jsonResponse(401, { error: "Unauthorized" });
+    if (authErr || !user) return jsonResponse(req, 401, { error: "Unauthorized" });
 
     const { data: profile } = await supabaseAdmin
       .from("users")
@@ -109,7 +104,7 @@ serve(async (req) => {
       .eq("user_uuid", user.id)
       .single();
 
-    if (!profile) return jsonResponse(403, { error: "Profile not found" });
+    if (!profile) return jsonResponse(req, 403, { error: "Profile not found" });
 
     // Parse body
     const body = await req.json();
@@ -127,7 +122,7 @@ serve(async (req) => {
     } = body;
 
     if (!to || !subject || !body_html) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         error: "to, subject, and body_html are required",
       });
     }
@@ -141,7 +136,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (tokenError || !tokenData) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         error: "no_microsoft_connection",
         message:
           "No Microsoft 365 connection found. Please connect your account in Settings.",
@@ -151,7 +146,7 @@ serve(async (req) => {
     // Check if Mail.Send scope is present
     const scopeStr = tokenData.scope || "";
     if (!scopeStr.toLowerCase().includes("mail.send")) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         error: "insufficient_scope",
         message:
           "Your Microsoft connection does not have email sending permission. Please disconnect and reconnect to grant the Mail.Send scope.",
@@ -300,7 +295,7 @@ serve(async (req) => {
       .trim();
 
     if (dry_run) {
-      return jsonResponse(200, {
+      return jsonResponse(req, 200, {
         success: true,
         dry_run: true,
         preview: {
@@ -451,14 +446,14 @@ serve(async (req) => {
     });
 
     if (!graphRes.ok) {
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         success: false,
         error: "Failed to send email via Microsoft Graph",
         details: errorMessage,
       });
     }
 
-    return jsonResponse(200, {
+    return jsonResponse(req, 200, {
       success: true,
       message: `Email sent to ${renderedTo} via Microsoft 365`,
       sending_as: tokenData.account_email || profile.email,
@@ -466,6 +461,6 @@ serve(async (req) => {
     });
   } catch (e: any) {
     console.error("[send-email-graph] Error:", e);
-    return jsonResponse(500, { error: e?.message || String(e) });
+    return jsonResponse(req, 500, { error: e?.message || String(e) });
   }
 });

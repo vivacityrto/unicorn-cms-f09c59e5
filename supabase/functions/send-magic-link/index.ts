@@ -13,17 +13,13 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 type LinkType = "magiclink" | "recovery";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -43,7 +39,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ ok: false, code: "NO_AUTH", detail: "Missing Authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -54,7 +50,7 @@ serve(async (req) => {
     if (!email) {
       return new Response(
         JSON.stringify({ ok: false, code: "MISSING_EMAIL", detail: "email is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -67,7 +63,7 @@ serve(async (req) => {
           code: "AUTH_FAILED",
           detail: authError?.message || "Unable to authenticate caller",
         }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -91,14 +87,14 @@ serve(async (req) => {
           code: "FORBIDDEN",
           detail: "Only self-service or admin.team_users.manage (full) can send magic links",
         }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
     if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
       return new Response(
         JSON.stringify({ ok: false, code: "EMAIL_SEND_FAILED", detail: "Mailgun not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -116,7 +112,7 @@ serve(async (req) => {
           code: "MAGIC_LINK_FAILED",
           detail: linkError?.message || "Failed to generate link",
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -124,7 +120,7 @@ serve(async (req) => {
     if (!actionLink) {
       return new Response(
         JSON.stringify({ ok: false, code: "MAGIC_LINK_FAILED", detail: "No action_link generated" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -171,19 +167,19 @@ serve(async (req) => {
       const errorText = await mailgunResponse.text();
       return new Response(
         JSON.stringify({ ok: false, code: "EMAIL_SEND_FAILED", detail: errorText }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
     return new Response(
       JSON.stringify({ ok: true, email, type: linkType, message: "Link sent successfully" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   } catch (err: unknown) {
     const detail = err instanceof Error ? err.message : String(err);
     return new Response(
       JSON.stringify({ ok: false, code: "INTERNAL", detail }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   }
 });

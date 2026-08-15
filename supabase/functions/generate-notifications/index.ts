@@ -197,7 +197,6 @@ async function generateTaskNotifications(supabase: ReturnType<typeof createServi
     }
   }
 
-
   if (!rows.length) return 0;
 
   const { data: result, error: upsertErr } = await supabase
@@ -694,7 +693,7 @@ async function runReportingObligations(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -729,7 +728,7 @@ Deno.serve(async (req) => {
         if (!authHeader?.startsWith("Bearer ")) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
         const token = authHeader.replace("Bearer ", "");
@@ -738,7 +737,7 @@ Deno.serve(async (req) => {
         if (claimsErr || !claimsData?.claims?.sub) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
         actorUserId = claimsData.claims.sub as string;
@@ -748,13 +747,13 @@ Deno.serve(async (req) => {
         if (saErr || isSa !== true) {
           return new Response(JSON.stringify({ error: "Forbidden" }), {
             status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
         if (obligationId == null || Number.isNaN(obligationId)) {
           return new Response(JSON.stringify({ error: "obligation_id required" }), {
             status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
       }
@@ -765,7 +764,7 @@ Deno.serve(async (req) => {
       const payload = { scope, mode, ...result, ran_at: new Date().toISOString() };
       console.log("generate-notifications summary:", JSON.stringify(payload));
       return new Response(JSON.stringify(payload), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -792,13 +791,13 @@ Deno.serve(async (req) => {
     console.log("generate-notifications summary:", JSON.stringify(summary));
 
     return new Response(JSON.stringify(summary), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("generate-notifications error:", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

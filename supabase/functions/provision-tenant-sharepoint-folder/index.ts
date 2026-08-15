@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   getAppToken,
   graphGet,
@@ -10,12 +11,6 @@ import {
   buildClientFolderName,
   type DriveItem,
 } from "../_shared/graph-app-client.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -385,7 +380,7 @@ function isDueDiligencePackage(pkg: ActivePackageSummary | null | undefined): bo
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -399,7 +394,7 @@ serve(async (req) => {
     if (!tenant_id) {
       return new Response(
         JSON.stringify({ success: false, error: "tenant_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -419,7 +414,7 @@ serve(async (req) => {
         if (!callerUser?.is_vivacity_internal) {
           return new Response(
             JSON.stringify({ success: false, error: "Forbidden — Vivacity staff only" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
           );
         }
         callerUserId = user.id;
@@ -436,7 +431,7 @@ serve(async (req) => {
     if (tenantError || !tenant) {
       return new Response(
         JSON.stringify({ success: false, error: `Tenant ${tenant_id} not found` }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -444,7 +439,7 @@ serve(async (req) => {
     if (tenant.status !== 'active') {
       return new Response(
         JSON.stringify({ success: false, error: `Tenant is not active (status: ${tenant.status}). Folder provisioning is only allowed for active tenants.` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -463,7 +458,7 @@ serve(async (req) => {
             already_provisioned: true,
             message: "SharePoint folder already provisioned",
           }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
     } else {
@@ -695,7 +690,7 @@ serve(async (req) => {
         seed_links: seedResult.linksCreated,
         seed_copies: seedResult.filesCopied,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("[provision-sp] Error:", error);
@@ -731,7 +726,7 @@ serve(async (req) => {
         error: error instanceof Error ? error.message : "Unknown error",
         fallback: true,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   }
 });

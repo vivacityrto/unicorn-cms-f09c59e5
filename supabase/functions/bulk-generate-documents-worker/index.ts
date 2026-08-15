@@ -30,13 +30,7 @@
 //   error_code='auth_expired'.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-caller-authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -72,10 +66,10 @@ function jwtNearExpiry(bearer: string | null): boolean {
   return Date.now() >= exp - JWT_SAFETY_MARGIN_MS;
 }
 
-function json(body: unknown, status = 200): Response {
+function json(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -88,23 +82,23 @@ type RepairCacheEntry =
   | { ok: false; errorMessage: string };
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(req) });
+  if (req.method !== 'POST') return json(req, { error: 'Method not allowed' }, 405);
 
   const callerAuth = req.headers.get('x-caller-authorization');
   if (!callerAuth?.startsWith('Bearer ')) {
-    return json({ error: 'Missing x-caller-authorization' }, 401);
+    return json(req, { error: 'Missing x-caller-authorization' }, 401);
   }
 
   let jobId: string;
   try {
     const body = await req.json();
     if (!body?.job_id || typeof body.job_id !== 'string') {
-      return json({ error: 'job_id required' }, 400);
+      return json(req, { error: 'job_id required' }, 400);
     }
     jobId = body.job_id;
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+    return json(req, { error: 'Invalid JSON body' }, 400);
   }
 
   const WORKER_ID = crypto.randomUUID();
@@ -292,7 +286,6 @@ Deno.serve(async (req: Request) => {
     return entry;
   }
 
-
   async function ensureRepair(tenantId: number): Promise<RepairCacheEntry> {
     const cached = repairCache.get(tenantId);
     if (cached) return cached;
@@ -419,7 +412,7 @@ Deno.serve(async (req: Request) => {
   while (Date.now() - startedAt < TIME_BUDGET_MS) {
     if (jwtNearExpiry(callerAuth)) {
       await stallAndRelease('jwt_near_expiry');
-      return json({ worker_id: WORKER_ID, processed, stalled: true });
+      return json(req, { worker_id: WORKER_ID, processed, stalled: true });
     }
     const { data: job, error: jobErr } = await supabaseService
       .from('bulk_document_jobs')
@@ -467,7 +460,7 @@ Deno.serve(async (req: Request) => {
       }
       if (jwtNearExpiry(callerAuth)) {
         await stallAndRelease('jwt_near_expiry');
-        return json({ worker_id: WORKER_ID, processed, stalled: true });
+        return json(req, { worker_id: WORKER_ID, processed, stalled: true });
       }
       try {
         const bootstrap = await ensureSharepoint(item.tenant_id);
@@ -598,5 +591,5 @@ Deno.serve(async (req: Request) => {
   console.log(
     `[worker] END job=${jobId} worker_id=${WORKER_ID} processed=${processed} timed_out=${timedOut} remaining=${remaining}`,
   );
-  return json({ worker_id: WORKER_ID, processed, timed_out: timedOut, remaining });
+  return json(req, { worker_id: WORKER_ID, processed, timed_out: timedOut, remaining });
 });

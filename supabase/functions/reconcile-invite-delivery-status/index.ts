@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -15,17 +16,10 @@ const MAILGUN_REGION = (Deno.env.get("MAILGUN_REGION") || "eu").toLowerCase();
 const BATCH_SIZE = 50;
 const DELAY_BETWEEN_CALLS_MS = 250;
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-const json = (status: number, body: unknown) =>
+const json = (req: Request, status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 
 // Same mapping as mailgun-webhook/index.ts — keep in sync.
@@ -87,15 +81,15 @@ interface MailgunEventItem {
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   if (!authorizeRequest(req)) {
-    return json(401, { error: "Unauthorized" });
+    return json(req, 401, { error: "Unauthorized" });
   }
 
   if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
-    return json(500, {
+    return json(req, 500, {
       error: "Mailgun env not configured",
       missing: {
         MAILGUN_API_KEY: !MAILGUN_API_KEY,
@@ -128,7 +122,7 @@ serve(async (req: Request) => {
       "[reconcile-invite-delivery-status] select error:",
       selectErr.message,
     );
-    return json(500, { error: selectErr.message });
+    return json(req, 500, { error: selectErr.message });
   }
 
   const rows = pending ?? [];
@@ -284,5 +278,5 @@ serve(async (req: Request) => {
     summary,
   );
 
-  return json(200, { ok: true, summary });
+  return json(req, 200, { ok: true, summary });
 });

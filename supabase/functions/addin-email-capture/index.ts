@@ -47,11 +47,11 @@ interface AttachmentResponse {
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   if (req.method !== 'POST') {
-    return errorResponse(405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
+    return errorResponse(req, 405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
   }
 
   try {
@@ -59,7 +59,7 @@ serve(async (req) => {
     const authResult = await verifyAddinToken(req.headers.get('Authorization'), FUNCTION_NAME);
     if (!authResult.success || !authResult.payload) {
       await logFailedAction(FUNCTION_NAME, 'email_capture', null, authResult.error!.code, authResult.error!.message);
-      return errorResponse(authResult.error!.status, authResult.error!.code, authResult.error!.message);
+      return errorResponse(req, authResult.error!.status, authResult.error!.code, authResult.error!.message);
     }
     const tokenPayload = authResult.payload;
 
@@ -67,7 +67,7 @@ serve(async (req) => {
     const rbacResult = enforceVivacityTeamRole(tokenPayload);
     if (!rbacResult.success) {
       await logFailedAction(FUNCTION_NAME, 'email_capture', tokenPayload.user_uuid, rbacResult.error!.code, rbacResult.error!.message);
-      return errorResponse(rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
+      return errorResponse(req, rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
     }
 
     const idempotencyKey = req.headers.get('Idempotency-Key');
@@ -84,26 +84,26 @@ serve(async (req) => {
 
     // Validate required fields
     if (!body.external_message_id) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'external_message_id is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'external_message_id is required');
     }
     if (!body.link?.client_id) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'link.client_id is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'link.client_id is required');
     }
     if (!body.subject) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'subject is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'subject is required');
     }
     if (!body.sender?.email) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'sender.email is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'sender.email is required');
     }
     if (!body.received_at) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'received_at is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'received_at is required');
     }
 
     // RBAC: Verify user has access to the client
     const clientAccessResult = await verifyClientAccess(tokenPayload.user_uuid, body.link.client_id, FUNCTION_NAME);
     if (!clientAccessResult.success) {
       await logFailedAction(FUNCTION_NAME, 'email_capture', tokenPayload.user_uuid, clientAccessResult.error!.code, clientAccessResult.error!.message, { client_id: body.link.client_id });
-      return errorResponse(clientAccessResult.error!.status, clientAccessResult.error!.code, clientAccessResult.error!.message, clientAccessResult.error!.details || {});
+      return errorResponse(req, clientAccessResult.error!.status, clientAccessResult.error!.code, clientAccessResult.error!.message, clientAccessResult.error!.details || {});
     }
 
     const supabaseAdmin = createAdminClient();
@@ -111,7 +111,7 @@ serve(async (req) => {
     // Get user's tenant_id
     const tenantId = tokenPayload.tenant_id;
     if (!tenantId) {
-      return errorResponse(403, 'NO_TENANT', 'User is not associated with any tenant');
+      return errorResponse(req, 403, 'NO_TENANT', 'User is not associated with any tenant');
     }
 
     // Check if email already exists with a different owner
@@ -123,11 +123,11 @@ serve(async (req) => {
 
     if (checkError) {
       console.error('[addin-email-capture] Check error:', checkError);
-      return errorResponse(500, 'DATABASE_ERROR', 'Failed to check existing email', { detail: checkError.message });
+      return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to check existing email', { detail: checkError.message });
     }
 
     if (existingEmail && existingEmail.user_uuid !== tokenPayload.user_uuid) {
-      return errorResponse(409, 'EMAIL_ALREADY_LINKED_BY_ANOTHER_USER', 'This email has already been captured by another user.', {});
+      return errorResponse(req, 409, 'EMAIL_ALREADY_LINKED_BY_ANOTHER_USER', 'This email has already been captured by another user.', {});
     }
 
     // Verify client exists
@@ -138,7 +138,7 @@ serve(async (req) => {
       .single();
 
     if (clientError || !client) {
-      return errorResponse(404, 'CLIENT_NOT_FOUND', 'Client not found', { client_id: body.link.client_id });
+      return errorResponse(req, 404, 'CLIENT_NOT_FOUND', 'Client not found', { client_id: body.link.client_id });
     }
 
     // Determine if this is an insert or update
@@ -205,7 +205,7 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('[addin-email-capture] Insert error:', insertError);
-      return errorResponse(500, 'DATABASE_ERROR', 'Failed to save email record', { 
+      return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to save email record', { 
         detail: insertError.message 
       });
     }
@@ -305,12 +305,12 @@ serve(async (req) => {
         status: isUpdate ? 'updated' : 'upserted',
         audit_event_id: auditEvent?.id || null,
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('[addin-email-capture] Unhandled error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return errorResponse(500, 'INTERNAL_ERROR', message, {});
+    return errorResponse(req, 500, 'INTERNAL_ERROR', message, {});
   }
 });

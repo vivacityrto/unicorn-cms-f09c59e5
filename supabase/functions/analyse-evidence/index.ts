@@ -29,10 +29,10 @@ const MAX_DOC_BYTES = 25 * 1024 * 1024; // 25 MB per file
 const MAX_TEXT_CHARS_PER_DOC = 200_000;
 const STORAGE_BUCKET = 'documents';
 
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -165,34 +165,34 @@ function validateOut(raw: unknown): { ok: true; out: GeminiOut } | { ok: false; 
 // ─── Main ───────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   const t0 = Date.now();
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
+  if (!authHeader) return json(req, { error: 'Missing authorisation header' }, 401);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  if (!LOVABLE_API_KEY) return json({ error: 'LOVABLE_API_KEY is not configured' }, 500);
+  if (!LOVABLE_API_KEY) return json(req, { error: 'LOVABLE_API_KEY is not configured' }, 500);
 
   // 1. Caller-JWT client + verify auth.
   const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: userRes, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userRes?.user) return json({ error: 'Not authenticated' }, 401);
+  if (userErr || !userRes?.user) return json(req, { error: 'Not authenticated' }, 401);
   const callerUserId = userRes.user.id;
 
   // 2. Body.
   let body: { audit_id?: unknown; response_id?: unknown };
-  try { body = await req.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
+  try { body = await req.json(); } catch { return json(req, { error: 'Invalid JSON body' }, 400); }
   const auditId = typeof body.audit_id === 'string' ? body.audit_id : '';
   const responseId = typeof body.response_id === 'string' ? body.response_id : '';
-  if (!auditId || !responseId) return json({ error: 'audit_id and response_id are required' }, 400);
+  if (!auditId || !responseId) return json(req, { error: 'audit_id and response_id are required' }, 400);
 
   // 3. Audit access gate via JWT (RLS filters).
   const { data: auditRow, error: auditErr } = await userClient
@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
     .select('id, audit_type, snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code, is_cricos, is_rto, subject_tenant_id, template_id')
     .eq('id', auditId)
     .maybeSingle();
-  if (auditErr || !auditRow) return json({ error: "You don't have access to this audit." }, 403);
+  if (auditErr || !auditRow) return json(req, { error: "You don't have access to this audit." }, 403);
   const audit = auditRow as Record<string, any>;
   // Note: when corpus retrieval is added here, resolve framework via
   // compliance_templates.framework and pass `framework` to
@@ -221,7 +221,7 @@ Deno.serve(async (req) => {
     .eq('status', 'success');
   if (capErr) console.error('Cap check failed', capErr.message);
   if ((usedToday ?? 0) >= DAILY_CAP) {
-    return json({ error: `Daily AI evidence analysis limit reached (${DAILY_CAP}). Resets at midnight UTC.`, cap: DAILY_CAP }, 429);
+    return json(req, { error: `Daily AI evidence analysis limit reached (${DAILY_CAP}). Resets at midnight UTC.`, cap: DAILY_CAP }, 429);
   }
 
   // 6. Load response + question + linked documents (under caller JWT).
@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
     .eq('id', responseId)
     .eq('audit_id', auditId)
     .maybeSingle();
-  if (respErr || !responseRow) return json({ error: 'Response not found in this audit' }, 404);
+  if (respErr || !responseRow) return json(req, { error: 'Response not found in this audit' }, 404);
   const r = responseRow as Record<string, any>;
   const q = r.compliance_template_questions ?? {};
 
@@ -245,9 +245,9 @@ Deno.serve(async (req) => {
     .from('client_audit_response_documents' as any)
     .select('document_id')
     .eq('response_id', responseId);
-  if (linkErr) return json({ error: 'Failed to load linked documents', detail: linkErr.message }, 500);
+  if (linkErr) return json(req, { error: 'Failed to load linked documents', detail: linkErr.message }, 500);
   if (!links || links.length === 0) {
-    return json({ error: 'No documents linked to this response. Link evidence first.' }, 400);
+    return json(req, { error: 'No documents linked to this response. Link evidence first.' }, 400);
   }
   const documentIds = (links as any[]).map((l) => l.document_id);
 
@@ -258,12 +258,12 @@ Deno.serve(async (req) => {
     .from('documents')
     .select('id, title, tenant_id, uploaded_files, file_names')
     .in('id', documentIds);
-  if (docsErr || !docs) return json({ error: 'Failed to load documents', detail: docsErr?.message ?? null }, 500);
+  if (docsErr || !docs) return json(req, { error: 'Failed to load documents', detail: docsErr?.message ?? null }, 500);
 
   for (const d of docs) {
     if (d.tenant_id !== null && d.tenant_id !== audit.subject_tenant_id) {
       console.warn(`Cross-tenant document leakage attempt: doc=${d.id} doc.tenant=${d.tenant_id} audit.tenant=${audit.subject_tenant_id} caller=${callerUserId}`);
-      return json({ error: 'One or more linked documents do not belong to this audit\'s tenant.' }, 403);
+      return json(req, { error: 'One or more linked documents do not belong to this audit\'s tenant.' }, 403);
     }
   }
 
@@ -290,7 +290,7 @@ Deno.serve(async (req) => {
   }
 
   if (sources.length === 0) {
-    return json({ error: 'Could not extract text from any linked document.' }, 422);
+    return json(req, { error: 'Could not extract text from any linked document.' }, 422);
   }
 
   // 9. Build the user prompt.
@@ -357,20 +357,20 @@ Return your suggestion as JSON matching the schema in the system prompt. Every q
         user_id: callerUserId, response_id: responseId, audit_id: auditId,
         document_count: sources.length, model: MODEL, status: 'rate_limited', error: 'gateway 429',
       });
-      return json({ error: 'AI gateway is rate limited. Try again shortly.' }, 429);
+      return json(req, { error: 'AI gateway is rate limited. Try again shortly.' }, 429);
     }
     if (aiResp.status === 402) {
-      return json({ error: 'AI credits exhausted. Add credits in Lovable AI workspace settings.' }, 402);
+      return json(req, { error: 'AI credits exhausted. Add credits in Lovable AI workspace settings.' }, 402);
     }
     if (!aiResp.ok) {
       const txt = await aiResp.text();
       console.error('Gateway error', aiResp.status, txt);
-      return json({ error: `AI call failed (${aiResp.status})` }, 502);
+      return json(req, { error: `AI call failed (${aiResp.status})` }, 502);
     }
     const aiJson = await aiResp.json();
     const content = aiJson?.choices?.[0]?.message?.content;
     const finishReason = aiJson?.choices?.[0]?.finish_reason;
-    if (!content) return json({ error: 'AI returned no content' }, 502);
+    if (!content) return json(req, { error: 'AI returned no content' }, 502);
     raw = safeParse(content);
     if (raw === null || finishReason === 'length') {
       console.error('Gemini analyse-evidence unparseable', {
@@ -378,15 +378,15 @@ Return your suggestion as JSON matching the schema in the system prompt. Every q
         contentPreview: typeof content === 'string' ? content.slice(0, 500) : content,
         usage: aiJson?.usage,
       });
-      if (raw === null) return json({ error: 'AI response was not valid JSON' }, 502);
+      if (raw === null) return json(req, { error: 'AI response was not valid JSON' }, 502);
     }
   } catch (e) {
     console.error('Gemini call threw:', (e as Error).message);
-    return json({ error: 'AI call failed' }, 502);
+    return json(req, { error: 'AI call failed' }, 502);
   }
 
   const v = validateOut(raw);
-  if (!v.ok) return json({ error: `AI output invalid: ${v.reason}` }, 502);
+  if (!v.ok) return json(req, { error: `AI output invalid: ${v.reason}` }, 502);
   const out = v.out;
 
   // 11. Hallucination check — every excerpt must be findable in a source.
@@ -424,7 +424,7 @@ Return your suggestion as JSON matching the schema in the system prompt. Every q
     .eq('id', responseId);
   if (updErr) {
     console.error('Failed to persist AI suggestion', updErr.message);
-    return json({ error: 'Failed to persist suggestion', detail: updErr.message }, 500);
+    return json(req, { error: 'Failed to persist suggestion', detail: updErr.message }, 500);
   }
 
   // 13. Log usage.
@@ -438,7 +438,7 @@ Return your suggestion as JSON matching the schema in the system prompt. Every q
   });
 
   const elapsedMs = Date.now() - t0;
-  return json({
+  return json(req, {
     ok: true,
     analysis_id: analysisId,
     suggested_rating: out.suggested_rating,

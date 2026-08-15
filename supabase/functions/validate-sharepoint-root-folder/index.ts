@@ -158,7 +158,7 @@ async function getUserDelegatedToken(
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -176,17 +176,17 @@ Deno.serve(async (req: Request) => {
       // Auth check first
       const authHeader2 = req.headers.get('Authorization');
       if (!authHeader2?.startsWith('Bearer ')) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } });
       }
       const supabaseAdmin2 = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const jwt2 = authHeader2.replace('Bearer ', '');
       const { data: { user: user2 }, error: authErr2 } = await supabaseAdmin2.auth.getUser(jwt2);
       if (authErr2 || !user2) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } });
       }
       const { data: caller2 } = await supabaseAdmin2.from('users').select('is_vivacity_internal').eq('user_uuid', user2.id).single();
       if (!caller2?.is_vivacity_internal) {
-        return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } });
       }
 
       console.log('[validate-sp] Resolving drive for site:', graph_site_id);
@@ -199,13 +199,13 @@ Deno.serve(async (req: Request) => {
         if (!drivesRes.ok) {
           return new Response(
             JSON.stringify({ success: false, error: `Cannot access drives for this site (status ${driveRes.status}). Check Sites.Selected permission.` }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
         // Return all drives so user can pick
         return new Response(
           JSON.stringify({ success: true, drives: drivesRes.data.value }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -218,7 +218,7 @@ Deno.serve(async (req: Request) => {
           default_drive: { id: driveRes.data.id, name: driveRes.data.name, webUrl: driveRes.data.webUrl, driveType: driveRes.data.driveType },
           drives: allDrivesRes.ok ? allDrivesRes.data.value : [driveRes.data],
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -227,13 +227,13 @@ Deno.serve(async (req: Request) => {
       if (!root_folder_url) {
         return new Response(
           JSON.stringify({ error: 'root_folder_url is required for site access test' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
     } else if (!tenant_id || !root_folder_url) {
       return new Response(
         JSON.stringify({ error: 'tenant_id and root_folder_url are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -242,7 +242,7 @@ Deno.serve(async (req: Request) => {
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -253,7 +253,7 @@ Deno.serve(async (req: Request) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -266,7 +266,7 @@ Deno.serve(async (req: Request) => {
     if (!callerUser?.is_vivacity_internal) {
       return new Response(
         JSON.stringify({ error: 'Forbidden — Vivacity staff only' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -288,7 +288,7 @@ Deno.serve(async (req: Request) => {
       }
       return new Response(
         JSON.stringify({ success: false, error: errorMessage }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -385,7 +385,7 @@ Deno.serve(async (req: Request) => {
         }
         return new Response(
           JSON.stringify({ success: false, error: errorMessage }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -405,7 +405,7 @@ Deno.serve(async (req: Request) => {
         }
         return new Response(
           JSON.stringify({ success: false, error: errorMessage }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -471,7 +471,7 @@ Deno.serve(async (req: Request) => {
               }
               return new Response(
                 JSON.stringify({ success: false, error: errorMessage }),
-                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
               );
             }
             driveItem = rootRes.data;
@@ -490,7 +490,7 @@ Deno.serve(async (req: Request) => {
             }
             return new Response(
               JSON.stringify({ success: false, error: errorMessage }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
             );
           }
           driveItem = rootRes.data;
@@ -515,7 +515,7 @@ Deno.serve(async (req: Request) => {
           }
           return new Response(
             JSON.stringify({ success: false, error: errorMessage }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
         driveItem = folderRes.data;
@@ -531,7 +531,7 @@ Deno.serve(async (req: Request) => {
           }
           return new Response(
             JSON.stringify({ success: false, error: errorMessage }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
         driveItem = rootRes.data;
@@ -549,7 +549,7 @@ Deno.serve(async (req: Request) => {
       }
       return new Response(
         JSON.stringify({ success: false, error: errorMessage, is_folder: false }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -593,13 +593,13 @@ Deno.serve(async (req: Request) => {
         web_url: webUrl,
         is_folder: true,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('[validate-sp] Unhandled error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

@@ -1,10 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 type BulkActionBody = {
   user_uuids: string[];
@@ -14,7 +10,7 @@ type BulkActionBody = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -23,15 +19,15 @@ Deno.serve(async (req) => {
 
     // Validate input
     if (!Array.isArray(user_uuids) || user_uuids.length === 0) {
-      return jsonErr(400, "MISSING_USERS", "At least one user UUID is required");
+      return jsonErr(req, 400, "MISSING_USERS", "At least one user UUID is required");
     }
 
     if (!['activate', 'deactivate', 'change_role'].includes(action)) {
-      return jsonErr(400, "INVALID_ACTION", "Action must be activate, deactivate, or change_role");
+      return jsonErr(req, 400, "INVALID_ACTION", "Action must be activate, deactivate, or change_role");
     }
 
     if (action === 'change_role' && !role) {
-      return jsonErr(400, "MISSING_ROLE", "Role is required for change_role action");
+      return jsonErr(req, 400, "MISSING_ROLE", "Role is required for change_role action");
     }
 
     const supabase = createClient(
@@ -42,14 +38,14 @@ Deno.serve(async (req) => {
     // Authenticate caller
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonErr(401, "UNAUTHORIZED", "No authorization header");
+      return jsonErr(req, 401, "UNAUTHORIZED", "No authorization header");
     }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !currentUser) {
-      return jsonErr(401, "UNAUTHORIZED", "Invalid token");
+      return jsonErr(req, 401, "UNAUTHORIZED", "Invalid token");
     }
 
     // Verify permission via central RPC
@@ -60,7 +56,7 @@ Deno.serve(async (req) => {
     });
 
     if (!allowed) {
-      return jsonErr(403, "FORBIDDEN", "You do not have permission to perform bulk user actions");
+      return jsonErr(req, 403, "FORBIDDEN", "You do not have permission to perform bulk user actions");
     }
 
     // Get tenant_id for audit logging (use first user's tenant)
@@ -114,7 +110,7 @@ Deno.serve(async (req) => {
 
       if (updateError) {
         console.error("Update error:", updateError);
-        return jsonErr(400, "UPDATE_FAILED", updateError.message);
+        return jsonErr(req, 400, "UPDATE_FAILED", updateError.message);
       }
       successUuids = (updatedUsers || []).map((u: any) => u.user_uuid);
 
@@ -145,7 +141,6 @@ Deno.serve(async (req) => {
 
     const updatedUsers = successUuids.map((user_uuid) => ({ user_uuid }));
 
-
     // Create audit log entries
     const auditEntries = user_uuids.map(uuid => ({
       user_id: currentUser.id,
@@ -169,18 +164,18 @@ Deno.serve(async (req) => {
       successCount: updatedUsers?.length || 0,
       requestedCount: user_uuids.length,
     }), {
-      headers: { "content-type": "application/json", ...corsHeaders },
+      headers: { "content-type": "application/json", ...corsHeaders(req) },
       status: 200,
     });
   } catch (e: any) {
     console.error("Error in bulk-user-action:", e);
-    return jsonErr(500, "UNHANDLED", e?.message ?? String(e));
+    return jsonErr(req, 500, "UNHANDLED", e?.message ?? String(e));
   }
 });
 
-function jsonErr(status: number, code: string, detail?: string) {
+function jsonErr(req: Request, status: number, code: string, detail?: string) {
   return new Response(JSON.stringify({ ok: false, code, detail }), {
-    headers: { "content-type": "application/json", ...corsHeaders },
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
     status,
   });
 }

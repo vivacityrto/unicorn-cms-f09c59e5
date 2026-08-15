@@ -27,11 +27,11 @@ interface CreateTaskRequest {
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   if (req.method !== 'POST') {
-    return errorResponse(405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
+    return errorResponse(req, 405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
   }
 
   try {
@@ -39,7 +39,7 @@ serve(async (req) => {
     const authResult = await verifyAddinToken(req.headers.get('Authorization'), FUNCTION_NAME);
     if (!authResult.success || !authResult.payload) {
       await logFailedAction(FUNCTION_NAME, 'task_create', null, authResult.error!.code, authResult.error!.message);
-      return errorResponse(authResult.error!.status, authResult.error!.code, authResult.error!.message);
+      return errorResponse(req, authResult.error!.status, authResult.error!.code, authResult.error!.message);
     }
     const tokenPayload = authResult.payload;
 
@@ -47,7 +47,7 @@ serve(async (req) => {
     const rbacResult = enforceVivacityTeamRole(tokenPayload);
     if (!rbacResult.success) {
       await logFailedAction(FUNCTION_NAME, 'task_create', tokenPayload.user_uuid, rbacResult.error!.code, rbacResult.error!.message);
-      return errorResponse(rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
+      return errorResponse(req, rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
     }
 
     const idempotencyKey = req.headers.get('Idempotency-Key');
@@ -64,23 +64,23 @@ serve(async (req) => {
 
     // Validate required fields
     if (!body.external_message_id) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'external_message_id is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'external_message_id is required');
     }
     if (!body.client_id) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'client_id is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'client_id is required');
     }
     if (!body.task?.title) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'task.title is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'task.title is required');
     }
     if (!body.task?.assigned_to_user_uuid) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'task.assigned_to_user_uuid is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'task.assigned_to_user_uuid is required');
     }
 
     // RBAC: Verify user has access to the client
     const clientAccessResult = await verifyClientAccess(tokenPayload.user_uuid, body.client_id, FUNCTION_NAME);
     if (!clientAccessResult.success) {
       await logFailedAction(FUNCTION_NAME, 'task_create', tokenPayload.user_uuid, clientAccessResult.error!.code, clientAccessResult.error!.message, { client_id: body.client_id });
-      return errorResponse(clientAccessResult.error!.status, clientAccessResult.error!.code, clientAccessResult.error!.message, clientAccessResult.error!.details || {});
+      return errorResponse(req, clientAccessResult.error!.status, clientAccessResult.error!.code, clientAccessResult.error!.message, clientAccessResult.error!.details || {});
     }
 
     const supabaseAdmin = createAdminClient();
@@ -88,7 +88,7 @@ serve(async (req) => {
     // Get user's tenant_id
     const tenantId = tokenPayload.tenant_id;
     if (!tenantId) {
-      return errorResponse(403, 'NO_TENANT', 'User is not associated with any tenant');
+      return errorResponse(req, 403, 'NO_TENANT', 'User is not associated with any tenant');
     }
 
     // Check if email record exists (must be captured first)
@@ -101,11 +101,11 @@ serve(async (req) => {
 
     if (emailError) {
       console.error('[addin-email-create-task] Email lookup error:', emailError);
-      return errorResponse(500, 'DATABASE_ERROR', 'Failed to lookup email record', { detail: emailError.message });
+      return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to lookup email record', { detail: emailError.message });
     }
 
     if (!existingEmail) {
-      return errorResponse(404, 'EMAIL_NOT_FOUND', 'Email record not found. Capture the email first.', {});
+      return errorResponse(req, 404, 'EMAIL_NOT_FOUND', 'Email record not found. Capture the email first.', {});
     }
 
     // Verify client exists
@@ -116,7 +116,7 @@ serve(async (req) => {
       .single();
 
     if (clientError || !client) {
-      return errorResponse(404, 'CLIENT_NOT_FOUND', 'Client not found', { client_id: body.client_id });
+      return errorResponse(req, 404, 'CLIENT_NOT_FOUND', 'Client not found', { client_id: body.client_id });
     }
 
     // Verify assigned user exists
@@ -127,7 +127,7 @@ serve(async (req) => {
       .single();
 
     if (assigneeError || !assignee) {
-      return errorResponse(404, 'USER_NOT_FOUND', 'Assigned user not found', { assigned_to_user_uuid: body.task.assigned_to_user_uuid });
+      return errorResponse(req, 404, 'USER_NOT_FOUND', 'Assigned user not found', { assigned_to_user_uuid: body.task.assigned_to_user_uuid });
     }
 
     // Create the task
@@ -150,7 +150,7 @@ serve(async (req) => {
 
     if (taskError) {
       console.error('[addin-email-create-task] Task creation error:', taskError);
-      return errorResponse(500, 'DATABASE_ERROR', 'Failed to create task', { 
+      return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to create task', { 
         detail: taskError.message 
       });
     }
@@ -215,12 +215,12 @@ serve(async (req) => {
           open_client: `/clients/${body.client_id}`,
         },
       }),
-      { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 201, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('[addin-email-create-task] Unhandled error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return errorResponse(500, 'INTERNAL_ERROR', message, {});
+    return errorResponse(req, 500, 'INTERNAL_ERROR', message, {});
   }
 });

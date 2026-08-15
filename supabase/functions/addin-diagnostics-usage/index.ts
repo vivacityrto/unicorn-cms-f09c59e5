@@ -14,18 +14,18 @@ const SUPER_ADMIN_ROLES = ['Super Admin', 'SuperAdmin'];
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   if (req.method !== 'GET') {
-    return errorResponse(405, 'METHOD_NOT_ALLOWED', 'Only GET requests are allowed');
+    return errorResponse(req, 405, 'METHOD_NOT_ALLOWED', 'Only GET requests are allowed');
   }
 
   try {
     // Verify token
     const authResult = await verifyAddinToken(req.headers.get('Authorization'), FUNCTION_NAME);
     if (!authResult.success) {
-      return errorResponse(
+      return errorResponse(req, 
         authResult.error!.status,
         authResult.error!.code,
         authResult.error!.message
@@ -37,7 +37,7 @@ serve(async (req) => {
     // Enforce SuperAdmin role
     if (!SUPER_ADMIN_ROLES.includes(tokenPayload.role)) {
       console.warn(`[${FUNCTION_NAME}] Access denied for role: ${tokenPayload.role}, user: ${tokenPayload.email}`);
-      return errorResponse(403, 'FORBIDDEN', 'Access restricted to SuperAdmins only.');
+      return errorResponse(req, 403, 'FORBIDDEN', 'Access restricted to SuperAdmins only.');
     }
 
     // Parse query params for date range
@@ -65,7 +65,7 @@ serve(async (req) => {
 
     if (auditError) {
       console.error(`[${FUNCTION_NAME}] Error querying addin_audit_log:`, auditError);
-      return errorResponse(500, 'DATABASE_ERROR', 'Failed to fetch usage data');
+      return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to fetch usage data');
     }
 
     // Count by action type
@@ -126,11 +126,11 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(response), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
 
   } catch (err) {
     console.error(`[${FUNCTION_NAME}] Unexpected error:`, err);
-    return errorResponse(500, 'INTERNAL_ERROR', 'An unexpected error occurred');
+    return errorResponse(req, 500, 'INTERNAL_ERROR', 'An unexpected error occurred');
   }
 });

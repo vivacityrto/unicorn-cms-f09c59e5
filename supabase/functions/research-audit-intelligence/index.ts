@@ -40,7 +40,7 @@ const AUDIT_TYPE_LABELS: Record<string, string> = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     if (!token) {
       return new Response(
         JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: "No token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -57,14 +57,14 @@ Deno.serve(async (req) => {
     if (authError || !user || !profile) {
       return new Response(
         JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: authError || "Auth failed" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     if (!checkVivacityTeam(profile)) {
       return new Response(
         JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Vivacity Team access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     if (!tenant_id || !audit_type) {
       return new Response(
         JSON.stringify({ ok: false, code: "BAD_REQUEST", detail: "tenant_id and audit_type required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     if (!perplexityKey) {
       return new Response(
         JSON.stringify({ ok: false, code: "CONFIG_ERROR", detail: "Perplexity API key not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       console.error("Job creation error:", jobError);
       return new Response(
         JSON.stringify({ ok: false, code: "DB_ERROR", detail: "Failed to create job" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -340,13 +340,13 @@ End with: "This pack provides contextual preparation guidance only and does not 
         checklist,
         citations,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("research-audit-intelligence error:", err);
     return new Response(
       JSON.stringify({ ok: false, code: "INTERNAL_ERROR", detail: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

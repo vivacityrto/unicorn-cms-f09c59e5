@@ -36,10 +36,10 @@ const COOLDOWN_MINUTES = 5;
 const MAX_CLAUSE_RETRIEVALS = 8;
 const MIN_FINDINGS_FOR_SYNTHESIS = 3;
 
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -173,20 +173,20 @@ interface FindingRow {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   const t0 = Date.now();
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
+  if (!authHeader) return json(req, { error: 'Missing authorisation header' }, 401);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   if (!LOVABLE_API_KEY) {
-    return json({ error: 'LOVABLE_API_KEY is not configured' }, 500);
+    return json(req, { error: 'LOVABLE_API_KEY is not configured' }, 500);
   }
 
   // 1. Caller-JWT client. Verify auth.
@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: userRes, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userRes?.user) return json({ error: 'Not authenticated' }, 401);
+  if (userErr || !userRes?.user) return json(req, { error: 'Not authenticated' }, 401);
   const callerUserId = userRes.user.id;
 
   // 2. Body.
@@ -202,10 +202,10 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+    return json(req, { error: 'Invalid JSON body' }, 400);
   }
   const auditId = typeof body.audit_id === 'string' ? body.audit_id : '';
-  if (!auditId) return json({ error: 'audit_id is required' }, 400);
+  if (!auditId) return json(req, { error: 'audit_id is required' }, 400);
 
   // 3. Audit access gate via RLS.
   const { data: auditRow, error: auditErr } = await userClient
@@ -224,7 +224,7 @@ Deno.serve(async (req) => {
       errorMessage: auditErr?.message ?? null,
       errorCode: (auditErr as any)?.code ?? null,
     });
-    return json({ error: "You don't have access to this audit." }, 403);
+    return json(req, { error: "You don't have access to this audit." }, 403);
   }
   const audit = auditRow as Record<string, any>;
 
@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
   if (cdErr) {
     console.error('Cool-down check failed:', cdErr.message);
   } else if ((recentCount ?? 0) >= 1) {
-    return json(
+    return json(req, 
       {
         error: `You generated an executive summary draft for this audit less than ${COOLDOWN_MINUTES} minutes ago. Please wait before regenerating.`,
         cooldown_minutes: COOLDOWN_MINUTES,
@@ -291,7 +291,7 @@ Deno.serve(async (req) => {
     )
     .eq('audit_id', auditId);
   if (findingsErr) {
-    return json({ error: 'Failed to load findings', detail: findingsErr.message }, 500);
+    return json(req, { error: 'Failed to load findings', detail: findingsErr.message }, 500);
   }
   const findingRows: FindingRow[] = (findingRowsRaw ?? []).map((row: any) => ({
     id: row.id,
@@ -307,7 +307,7 @@ Deno.serve(async (req) => {
   }));
 
   if (findingRows.length < MIN_FINDINGS_FOR_SYNTHESIS) {
-    return json(
+    return json(req, 
       {
         error: `An executive summary draft requires at least ${MIN_FINDINGS_FOR_SYNTHESIS} findings. This audit has ${findingRows.length}.`,
       },
@@ -555,13 +555,13 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === 'GATEWAY_402') {
-      return json({ error: 'AI credits exhausted. Top up at Settings > Workspace > Usage.' }, 402);
+      return json(req, { error: 'AI credits exhausted. Top up at Settings > Workspace > Usage.' }, 402);
     }
     if (msg === 'GATEWAY_429') {
-      return json({ error: 'AI gateway rate limit exceeded. Please try again shortly.' }, 429);
+      return json(req, { error: 'AI gateway rate limit exceeded. Please try again shortly.' }, 429);
     }
     console.error('Gateway call failed:', msg);
-    return json({ error: 'AI gateway error', detail: msg }, 502);
+    return json(req, { error: 'AI gateway error', detail: msg }, 502);
   }
 
   // ── Validation gate ───────────────────────────────────────────────
@@ -569,7 +569,7 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
   // so `validation.draft` is structurally accessible. The log insert
   // is unreachable in the failure case.
   if (!validation.ok) {
-    return json({ error: 'AI draft failed validation after retry', detail: validation.reason }, 502);
+    return json(req, { error: 'AI draft failed validation after retry', detail: validation.reason }, 502);
   }
 
   let draft = validation.draft;
@@ -636,10 +636,10 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
 
   if (logErr) {
     console.error('Audit log insert failed:', logErr.message);
-    return json({ error: 'Failed to record audit log', detail: logErr.message }, 500);
+    return json(req, { error: 'Failed to record audit log', detail: logErr.message }, 500);
   }
 
-  return json(
+  return json(req, 
     {
       draft,
       source_summary: sourceSummary,

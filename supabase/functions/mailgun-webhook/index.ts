@@ -3,21 +3,15 @@
 // Verifies HMAC-SHA256 signature when MAILGUN_WEBHOOK_SIGNING_KEY is set.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-const ok = () =>
+const ok = (req: Request) =>
   new Response(JSON.stringify({ ok: true }), {
     status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 
 async function verifySignature(
@@ -60,14 +54,14 @@ function mapEvent(
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
     const body = await req.json().catch(() => null) as any;
     if (!body || typeof body !== "object") {
       console.log("mailgun-webhook: invalid JSON body");
-      return ok();
+      return ok(req);
     }
 
     // Signature verification
@@ -84,7 +78,7 @@ serve(async (req: Request) => {
         ))
       ) {
         console.log("mailgun-webhook: invalid signature, ignoring");
-        return ok();
+        return ok(req);
       }
     } else {
       console.warn(
@@ -103,7 +97,7 @@ serve(async (req: Request) => {
     let messageId: string | undefined = headers["message-id"];
     if (!messageId || !event) {
       console.log("mailgun-webhook: missing event or message-id", { event });
-      return ok();
+      return ok(req);
     }
 
     messageId = String(messageId).trim();
@@ -115,7 +109,7 @@ serve(async (req: Request) => {
     const isEngagement = event === "opened" || event === "clicked";
     if (!status && !isEngagement) {
       console.log("mailgun-webhook: ignored event", { event, severity });
-      return ok();
+      return ok(req);
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -131,11 +125,11 @@ serve(async (req: Request) => {
 
     if (lookupErr) {
       console.log("mailgun-webhook: lookup error", lookupErr.message);
-      return ok();
+      return ok(req);
     }
     if (!invite) {
       console.log("mailgun-webhook: no invitation for message-id", messageId);
-      return ok();
+      return ok(req);
     }
 
     const eventAtIso = Number.isFinite(timestamp)
@@ -154,7 +148,7 @@ serve(async (req: Request) => {
 
       if (updateErr) {
         console.log("mailgun-webhook: update error", updateErr.message);
-        return ok();
+        return ok(req);
       }
 
       console.log("mailgun-webhook: updated invitation", {
@@ -163,7 +157,7 @@ serve(async (req: Request) => {
         event,
         severity,
       });
-      return ok();
+      return ok(req);
     }
 
     // Branch B — engagement (opened / clicked). Independent from delivery_status.
@@ -186,7 +180,7 @@ serve(async (req: Request) => {
         "mailgun-webhook: engagement update error",
         engagementErr.message,
       );
-      return ok();
+      return ok(req);
     }
 
     console.log("mailgun-webhook: engagement", {
@@ -195,9 +189,9 @@ serve(async (req: Request) => {
       open_count: patch.open_count,
       click_count: patch.click_count,
     });
-    return ok();
+    return ok(req);
   } catch (err) {
     console.log("mailgun-webhook: unexpected error", (err as Error).message);
-    return ok();
+    return ok(req);
   }
 });

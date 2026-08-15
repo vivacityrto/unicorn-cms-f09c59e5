@@ -38,17 +38,17 @@ function isRoleAllowed(tenant_id: number, unicorn_role: UnicornRole) {
   return CLIENT_ROLES.includes(unicorn_role);
 }
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -63,7 +63,7 @@ serve(async (req) => {
     // 1. Validate caller's auth token
     const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
     if (!callerToken) {
-      return jsonResponse(401, {
+      return jsonResponse(req, 401, {
         ok: false,
         code: "NO_AUTH",
         detail: "Missing Authorization header",
@@ -73,7 +73,7 @@ serve(async (req) => {
     // 2. Get caller's user info
     const { data: callerUser, error: callerErr } = await supabase.auth.getUser(callerToken);
     if (callerErr || !callerUser?.user) {
-      return jsonResponse(401, {
+      return jsonResponse(req, 401, {
         ok: false,
         code: "AUTH_FAILED",
         detail: callerErr?.message || "Unable to authenticate caller",
@@ -89,7 +89,7 @@ serve(async (req) => {
 
     if (roleErr) {
       console.error("Role lookup error:", roleErr);
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "ROLE_LOOKUP_FAILED",
         detail: "Unable to verify user permissions",
@@ -97,7 +97,7 @@ serve(async (req) => {
     }
 
     if (!callerProfile) {
-      return jsonResponse(403, {
+      return jsonResponse(req, 403, {
         ok: false,
         code: "FORBIDDEN",
         detail: "User profile not found",
@@ -109,7 +109,7 @@ serve(async (req) => {
     try {
       payload = await req.json();
     } catch {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         ok: false,
         code: "BAD_JSON",
         detail: "Request body must be valid JSON",
@@ -134,7 +134,7 @@ serve(async (req) => {
     const isTenantAdmin = !isVivacityStaff && callerProfile.unicorn_role === 'Admin';
 
     if (!isVivacityStaff && !isTenantAdmin) {
-      return jsonResponse(403, {
+      return jsonResponse(req, 403, {
         ok: false,
         code: "FORBIDDEN",
         detail: "You don't have permission to invite users to this tenant",
@@ -146,7 +146,7 @@ serve(async (req) => {
     // mirrors this for direct PostgREST writes; service-role callers (this fn) are
     // short-circuited by the trigger via request.jwt.claim.role = 'service_role'.
     if (payload.invite_as === 'VIVACITY' && !canManageVivacityUsers) {
-      return jsonResponse(403, {
+      return jsonResponse(req, 403, {
         ok: false,
         code: "FORBIDDEN",
         detail: "Only a Super Admin may invite Vivacity team members",
@@ -163,7 +163,7 @@ serve(async (req) => {
       );
       if (capErr) {
         console.error('[capacity] rpc error:', capErr);
-        return jsonResponse(500, {
+        return jsonResponse(req, 500, {
           ok: false,
           code: 'CAPACITY_CHECK_FAILED',
           detail: 'Unable to verify user capacity',
@@ -182,7 +182,7 @@ serve(async (req) => {
             detail: `cap ${cap.used}/${cap.limit}`,
           });
         } catch (_) { /* swallow audit failure */ }
-        return jsonResponse(403, {
+        return jsonResponse(req, 403, {
           ok: false,
           code: 'USER_LIMIT_REACHED',
           detail: 'User limit reached for this membership. Contact Vivacity to add more users.',
@@ -201,7 +201,7 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!memberCheck) {
-        return jsonResponse(403, {
+        return jsonResponse(req, 403, {
           ok: false,
           code: "FORBIDDEN",
           detail: "You can only invite users to your own organisation",
@@ -213,7 +213,7 @@ serve(async (req) => {
     if (isTenantAdmin && payload.invite_as === 'CLIENT') {
       const allowed = ['academy_user', 'secondary_contact', 'user'];
       if (!payload.relationship_role || !allowed.includes(payload.relationship_role)) {
-        return jsonResponse(403, {
+        return jsonResponse(req, 403, {
           ok: false,
           code: "RELATIONSHIP_ROLE_NOT_ALLOWED",
           detail: "Primary/secondary contacts can only invite Academy users, a Secondary contact, or a Full access user.",
@@ -221,10 +221,9 @@ serve(async (req) => {
       }
     }
 
-
     // Tenant admins can only assign Admin or User roles (not Super Admin, Team Leader, etc.)
     if (!isVivacityStaff && !CLIENT_ROLES.includes(payload.unicorn_role)) {
-      return jsonResponse(403, {
+      return jsonResponse(req, 403, {
         ok: false,
         code: "FORBIDDEN",
         detail: "You can only assign Admin or User roles",
@@ -234,7 +233,7 @@ serve(async (req) => {
     // 4. Validate payload fields
 
     if (!payload.email || !payload.first_name || !payload.unicorn_role || typeof payload.tenant_id !== "number") {
-      return jsonResponse(422, {
+      return jsonResponse(req, 422, {
         ok: false,
         code: "INVALID_PAYLOAD",
         detail: "email, first_name, unicorn_role, and tenant_id are required",
@@ -243,7 +242,7 @@ serve(async (req) => {
 
     // Validate invite_as and tenant_id match
     if (payload.invite_as === 'CLIENT' && (!payload.tenant_id || payload.tenant_id === VIVACITY_TENANT_ID)) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         ok: false,
         code: "TENANT_REQUIRED",
         detail: "Tenant is required for client invites",
@@ -251,7 +250,7 @@ serve(async (req) => {
     }
 
     if (payload.invite_as === 'VIVACITY' && payload.tenant_id !== VIVACITY_TENANT_ID) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         ok: false,
         code: "INVALID_TENANT",
         detail: `Vivacity users must be assigned to tenant ${VIVACITY_TENANT_ID}`,
@@ -259,7 +258,7 @@ serve(async (req) => {
     }
 
     if (!isValidEmail(payload.email)) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         ok: false,
         code: "INVALID_EMAIL",
         detail: "Please provide a valid email address",
@@ -267,7 +266,7 @@ serve(async (req) => {
     }
 
     if (!isRoleAllowed(payload.tenant_id, payload.unicorn_role)) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         ok: false,
         code: "ROLE_NOT_ALLOWED",
         detail: `Role ${payload.unicorn_role} is not allowed for this tenant`,
@@ -278,7 +277,7 @@ serve(async (req) => {
     if (payload.relationship_role) {
       const allowedRR: RelationshipRole[] = ['primary_contact', 'secondary_contact', 'user', 'academy_user'];
       if (!allowedRR.includes(payload.relationship_role)) {
-        return jsonResponse(400, {
+        return jsonResponse(req, 400, {
           ok: false,
           code: "RELATIONSHIP_ROLE_NOT_ALLOWED",
           detail: `Relationship role '${payload.relationship_role}' is not valid`,
@@ -298,7 +297,7 @@ serve(async (req) => {
           .maybeSingle();
 
         if (existingPrimary) {
-          return jsonResponse(409, {
+          return jsonResponse(req, 409, {
             ok: false,
             code: "PRIMARY_CONTACT_TAKEN",
             detail: "This organisation already has a primary contact. Use the transfer flow to reassign.",
@@ -317,7 +316,7 @@ serve(async (req) => {
           .maybeSingle();
 
         if (pendingPrimary) {
-          return jsonResponse(409, {
+          return jsonResponse(req, 409, {
             ok: false,
             code: "PRIMARY_CONTACT_PENDING",
             detail: "A pending invitation already nominates someone as primary contact.",
@@ -336,7 +335,7 @@ serve(async (req) => {
           .maybeSingle();
 
         if (existingSecondary) {
-          return jsonResponse(409, {
+          return jsonResponse(req, 409, {
             ok: false,
             code: "SECONDARY_CONTACT_TAKEN",
             detail: "This organisation already has a secondary contact.",
@@ -356,7 +355,7 @@ serve(async (req) => {
           .maybeSingle();
 
         if (pendingSecondary) {
-          return jsonResponse(409, {
+          return jsonResponse(req, 409, {
             ok: false,
             code: "SECONDARY_CONTACT_PENDING",
             detail: "A pending invite already nominates someone as secondary contact.",
@@ -374,7 +373,7 @@ serve(async (req) => {
       .gte('created_at', oneHourAgo);
 
     if (recentAttempts && recentAttempts.length >= 5) {
-      return jsonResponse(429, {
+      return jsonResponse(req, 429, {
         ok: false,
         code: 'RATE_LIMIT_EXCEEDED',
         detail: 'Too many invitation attempts for this email. Please try again later.',
@@ -390,7 +389,7 @@ serve(async (req) => {
 
     if (tenantError) {
       console.error("Tenant lookup error:", tenantError);
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "TENANT_LOOKUP_FAILED",
         detail: "Unable to verify tenant",
@@ -398,7 +397,7 @@ serve(async (req) => {
     }
 
     if (!tenantData) {
-      return jsonResponse(404, {
+      return jsonResponse(req, 404, {
         ok: false,
         code: "TENANT_NOT_FOUND",
         detail: `Tenant ${payload.tenant_id} does not exist`,
@@ -505,7 +504,7 @@ serve(async (req) => {
 
         if (insertError) {
           console.error('[skip_email] Failed to create user:', insertError);
-          return jsonResponse(500, {
+          return jsonResponse(req, 500, {
             ok: false,
             code: 'USER_CREATE_FAILED',
             detail: 'Unable to create user record',
@@ -524,7 +523,7 @@ serve(async (req) => {
 
       if (existingTu) {
         console.log(`[skip_email] ${payload.email} is already a member of tenant ${payload.tenant_id}, returning success`);
-        return jsonResponse(200, {
+        return jsonResponse(req, 200, {
           ok: true,
           detail: `${payload.email} is already a member of this tenant`,
           user_uuid: userUuid,
@@ -548,7 +547,7 @@ serve(async (req) => {
 
       if (tuError) {
         console.error('[skip_email] Failed to create tenant_users:', tuError);
-        return jsonResponse(500, {
+        return jsonResponse(req, 500, {
           ok: false,
           code: 'TENANT_USER_CREATE_FAILED',
           detail: 'Unable to add user to tenant',
@@ -597,7 +596,7 @@ serve(async (req) => {
 
       console.log(`[skip_email] Successfully added ${payload.email} to tenant ${payload.tenant_id}`);
 
-      return jsonResponse(200, {
+      return jsonResponse(req, 200, {
         ok: true,
         detail: 'User added successfully (no invitation sent)',
         user_uuid: userUuid,
@@ -624,7 +623,7 @@ serve(async (req) => {
       const isExpired = new Date(existingInvite.expires_at) < new Date();
       
       if (!isExpired) {
-        return jsonResponse(409, {
+        return jsonResponse(req, 409, {
           ok: false,
           code: "INVITE_EXISTS",
           detail: `An active invitation already exists for ${payload.email}`,
@@ -669,7 +668,7 @@ serve(async (req) => {
 
     if (inviteError || !insertedInvite) {
       console.error("Failed to create invitation:", inviteError);
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "INVITATION_CREATE_FAILED",
         detail: "Unable to create invitation",
@@ -730,7 +729,7 @@ serve(async (req) => {
 
     console.log(`Successfully invited ${payload.email} to tenant ${payload.tenant_id} with role ${payload.unicorn_role} (attempt ${attemptCount})`);
 
-    return jsonResponse(200, {
+    return jsonResponse(req, 200, {
       ok: true,
       detail: "Invitation sent successfully",
       invitation_id: insertedInvite.id,
@@ -769,7 +768,7 @@ serve(async (req) => {
       console.error("Failed to log error:", logError);
     }
     
-    return jsonResponse(500, {
+    return jsonResponse(req, 500, {
       ok: false,
       code: "INTERNAL_ERROR",
       detail: "An unexpected error occurred",

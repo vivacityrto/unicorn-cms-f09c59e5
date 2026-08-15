@@ -8,10 +8,10 @@ interface Body {
   new_password: string;
 }
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -24,7 +24,7 @@ async function sha256Hex(input: string): Promise<string> {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -39,7 +39,7 @@ serve(async (req) => {
     try {
       body = await req.json();
     } catch {
-      return json(400, { ok: false, code: "BAD_JSON", detail: "Invalid JSON" });
+      return json(req, 400, { ok: false, code: "BAD_JSON", detail: "Invalid JSON" });
     }
 
     const token_plaintext = typeof body?.token_plaintext === "string" ? body.token_plaintext : "";
@@ -47,14 +47,14 @@ serve(async (req) => {
     const new_password = typeof body?.new_password === "string" ? body.new_password : "";
 
     if (!token_plaintext || !email || !new_password) {
-      return json(400, {
+      return json(req, 400, {
         ok: false,
         code: "INVALID_INPUT",
         detail: "token_plaintext, email, and new_password are required",
       });
     }
     if (new_password.length < 8) {
-      return json(400, {
+      return json(req, 400, {
         ok: false,
         code: "INVALID_INPUT",
         detail: "Password must be at least 8 characters",
@@ -73,15 +73,15 @@ serve(async (req) => {
 
     if (inviteErr) {
       console.error("invitation lookup failed", inviteErr);
-      return json(500, { ok: false, code: "LOOKUP_FAILED", detail: inviteErr.message });
+      return json(req, 500, { ok: false, code: "LOOKUP_FAILED", detail: inviteErr.message });
     }
     if (!invitation) {
-      return json(400, { ok: false, code: "INVALID_TOKEN" });
+      return json(req, 400, { ok: false, code: "INVALID_TOKEN" });
     }
 
     const emailLc = email.toLowerCase();
     if ((invitation.email || "").toLowerCase() !== emailLc) {
-      return json(400, { ok: false, code: "EMAIL_MISMATCH" });
+      return json(req, 400, { ok: false, code: "EMAIL_MISMATCH" });
     }
 
     // Find auth user by email
@@ -91,7 +91,7 @@ serve(async (req) => {
       const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
       if (listErr) {
         console.error("listUsers failed", listErr);
-        return json(500, { ok: false, code: "AUTH_LOOKUP_FAILED", detail: listErr.message });
+        return json(req, 500, { ok: false, code: "AUTH_LOOKUP_FAILED", detail: listErr.message });
       }
       const found = list?.users?.find((u) => u.email?.toLowerCase() === emailLc);
       if (found) {
@@ -103,7 +103,7 @@ serve(async (req) => {
     }
 
     if (!authUser) {
-      return json(404, { ok: false, code: "AUTH_USER_NOT_FOUND" });
+      return json(req, 404, { ok: false, code: "AUTH_USER_NOT_FOUND" });
     }
 
     const isGhost = (authUser.user_metadata as any)?.ghost_activation === true;
@@ -122,7 +122,7 @@ serve(async (req) => {
     }
 
     if (!isGhost && !neverSignedIn) {
-      return json(403, {
+      return json(req, 403, {
         ok: false,
         code: "NOT_GHOST_ACCOUNT",
         detail: "Use your existing password or Forgot Password.",
@@ -134,7 +134,7 @@ serve(async (req) => {
     });
     if (updateErr) {
       console.error("updateUserById failed", updateErr);
-      return json(500, {
+      return json(req, 500, {
         ok: false,
         code: "PASSWORD_UPDATE_FAILED",
         detail: updateErr.message,
@@ -168,9 +168,9 @@ serve(async (req) => {
       console.error("audit insert failed (non-fatal)", auditErr);
     }
 
-    return json(200, { ok: true, email: authUser.email });
+    return json(req, 200, { ok: true, email: authUser.email });
   } catch (err: any) {
     console.error("set-invite-password error", err);
-    return json(500, { ok: false, code: "UNEXPECTED", detail: err?.message || "Unexpected error" });
+    return json(req, 500, { ok: false, code: "UNEXPECTED", detail: err?.message || "Unexpected error" });
   }
 });

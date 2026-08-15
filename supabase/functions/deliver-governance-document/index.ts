@@ -599,7 +599,7 @@ async function resolveMergeFields(
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -610,7 +610,7 @@ serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -633,7 +633,7 @@ serve(async (req) => {
     if (claimsError || !userId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -673,10 +673,9 @@ serve(async (req) => {
     if (!isStaff) {
       return new Response(JSON.stringify({ error: "Permission denied — Vivacity staff only" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
-
 
     // Parse request
     const body = await req.json();
@@ -684,7 +683,7 @@ serve(async (req) => {
     if (!tenant_id || !document_version_id) {
       return new Response(
         JSON.stringify({ error: "tenant_id and document_version_id are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -702,7 +701,7 @@ serve(async (req) => {
     if (vErr || !version) {
       return new Response(JSON.stringify({ error: "Document version not found", detail: vErr?.message }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -710,7 +709,7 @@ serve(async (req) => {
     if (!doc) {
       return new Response(JSON.stringify({ error: "Parent document not found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -750,7 +749,7 @@ serve(async (req) => {
         console.log(`[deliver] Already delivered — returning existing record ${existing.id}`);
         return new Response(
           JSON.stringify({ success: true, skipped: true, delivery: existing }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
     } else {
@@ -804,13 +803,13 @@ serve(async (req) => {
         const msg = err instanceof Error ? err.message : String(err);
         return new Response(JSON.stringify({ error: `Failed to download template from SharePoint: ${msg}` }), {
           status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders(req), "Content-Type": "application/json" },
         });
       }
     } else {
       return new Response(JSON.stringify({ error: "No template source: neither Supabase storage_path nor documents.source_template_url is set" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
     void templateSource;
@@ -946,7 +945,7 @@ serve(async (req) => {
             risk_level: riskLevel,
           },
         }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 422, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -987,10 +986,9 @@ serve(async (req) => {
       });
       return new Response(
         JSON.stringify({ error: errorMsg, error_code: "SHARED_FOLDER_MISSING" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
-
 
     const driveId = spSettings.drive_id as string;
     const sharedRootId = spSettings.shared_folder_item_id as string;
@@ -1082,10 +1080,6 @@ serve(async (req) => {
 
     console.log(`[deliver] Uploaded to SharePoint: ${driveItem.webUrl}`);
 
-
-
-
-
     // ── Atomically record the delivery and mark document_instances generated ──
     // Both writes (plus resolving any open document_generation_errors) happen
     // inside a single DB function call, which Postgres runs as one implicit
@@ -1151,7 +1145,7 @@ serve(async (req) => {
         },
 
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("[deliver] Error:", error);
@@ -1197,7 +1191,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

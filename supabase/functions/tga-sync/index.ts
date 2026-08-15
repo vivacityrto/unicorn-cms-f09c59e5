@@ -1,12 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-action',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
 const TGA_ENV = Deno.env.get('TGA_ENV') || 'prod';
@@ -1699,7 +1694,7 @@ async function testConnection(correlationId?: string): Promise<{ success: boolea
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response(null, { status: 200, headers: corsHeaders(req) });
   }
 
   const correlationId = generateCorrelationId();
@@ -1709,7 +1704,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -1723,7 +1718,7 @@ serve(async (req) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -1757,7 +1752,7 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
         correlationId,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -1766,7 +1761,7 @@ serve(async (req) => {
       if (!isSuperAdmin) {
         return new Response(JSON.stringify({ error: 'SuperAdmin access required' }), {
           status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -1782,7 +1777,7 @@ serve(async (req) => {
         .eq('id', 1);
 
       return new Response(JSON.stringify({ ...result, correlationId }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -1791,7 +1786,7 @@ serve(async (req) => {
       if (!isSuperAdmin) {
         return new Response(JSON.stringify({ error: 'SuperAdmin access required' }), {
           status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -1854,7 +1849,7 @@ serve(async (req) => {
       };
 
       return new Response(JSON.stringify(diagnosticsResult), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -1863,7 +1858,7 @@ serve(async (req) => {
       if (!isSuperAdmin) {
         return new Response(JSON.stringify({ error: 'SuperAdmin access required' }), {
           status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -1873,7 +1868,7 @@ serve(async (req) => {
       if (!code) {
         return new Response(JSON.stringify({ error: 'code parameter required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -1889,7 +1884,7 @@ serve(async (req) => {
           raw: result.raw.substring(0, 2000),
           error: result.error,
         }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       } else {
         const result = await fetchTrainingComponent(code, correlationId);
@@ -1902,7 +1897,7 @@ serve(async (req) => {
           raw: result.raw.substring(0, 2000),
           error: result.error,
         }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
     }
@@ -1915,7 +1910,7 @@ serve(async (req) => {
       if (!tenant_id) {
         return new Response(JSON.stringify({ error: 'tenant_id required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -1923,7 +1918,7 @@ serve(async (req) => {
       if (!Number.isFinite(tenantIdNum)) {
         return new Response(JSON.stringify({ error: `Invalid tenant_id: ${tenant_id}` }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -1937,7 +1932,7 @@ serve(async (req) => {
       if (tenantErr || !tenantRow) {
         return new Response(JSON.stringify({ error: `Tenant ${tenantIdNum} not found` }), {
           status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -1952,7 +1947,7 @@ serve(async (req) => {
           merged_into: mergedInto ?? null,
         }), {
           status: 409,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -1978,7 +1973,7 @@ serve(async (req) => {
           tenant_id: tenantIdNum,
         }), {
           status: 422,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -2058,7 +2053,7 @@ serve(async (req) => {
             rto_number: effectiveRto,
             tenant_id: tenantIdNum,
           }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
           });
         }
 
@@ -2497,7 +2492,7 @@ serve(async (req) => {
           syncStatus,
           sectionPresence,
         }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
@@ -2549,7 +2544,7 @@ serve(async (req) => {
           rto_number: effectiveRto,
         }), {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
     }
@@ -2561,7 +2556,7 @@ serve(async (req) => {
       if (!tenant_id || !rto_code) {
         return new Response(JSON.stringify({ error: 'tenant_id and rto_code required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
       
@@ -2581,7 +2576,7 @@ serve(async (req) => {
           correlationId,
         }), {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
       
@@ -2590,7 +2585,7 @@ serve(async (req) => {
         correlationId,
         ...result,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -2601,7 +2596,7 @@ serve(async (req) => {
       if (!run_id) {
         return new Response(JSON.stringify({ error: 'run_id required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
       
@@ -2616,7 +2611,7 @@ serve(async (req) => {
           correlationId,
         }), {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
       
@@ -2625,7 +2620,7 @@ serve(async (req) => {
         correlationId,
         ...progress,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -2650,7 +2645,7 @@ serve(async (req) => {
         endpoints: TGA_ENDPOINTS,
         syncStatus: syncStatus || null,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -2660,7 +2655,7 @@ serve(async (req) => {
       correlationId,
     }), {
       status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
 
   } catch (error: unknown) {
@@ -2672,7 +2667,7 @@ serve(async (req) => {
       correlationId,
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 });

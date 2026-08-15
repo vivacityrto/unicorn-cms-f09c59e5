@@ -1,12 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const STAFF_ROLES = ["Super Admin", "Team Leader", "Team Member"] as const;
 
@@ -14,19 +8,19 @@ const BodySchema = z.object({
   suggest_item_id: z.string().uuid(),
 });
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return json(405, { error: "Method not allowed" });
+    return json(req, 405, { error: "Method not allowed" });
   }
 
   try {
@@ -35,18 +29,18 @@ Deno.serve(async (req) => {
     try {
       raw = await req.json();
     } catch {
-      return json(400, { error: "Invalid JSON body" });
+      return json(req, 400, { error: "Invalid JSON body" });
     }
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
-      return json(400, { error: parsed.error.flatten().fieldErrors });
+      return json(req, 400, { error: parsed.error.flatten().fieldErrors });
     }
     const { suggest_item_id } = parsed.data;
 
     // 2. Authn — validate Authorization header shape, then let Supabase verify the JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return json(401, { error: "Unauthorized" });
+      return json(req, 401, { error: "Unauthorized" });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -63,7 +57,7 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user?.id) {
-      return json(401, { error: "Unauthorized" });
+      return json(req, 401, { error: "Unauthorized" });
     }
     const callerId = userData.user.id;
 
@@ -87,14 +81,14 @@ Deno.serve(async (req) => {
         .eq("user_id", callerId);
       if (scopesErr) {
         console.error("tenant_users scope fetch error", scopesErr);
-        return json(500, { error: scopesErr.message });
+        return json(req, 500, { error: scopesErr.message });
       }
       const rows = scopes ?? [];
       const allAcademyOnly =
         rows.length === 0 ||
         rows.every((r: { access_scope: string | null }) => r.access_scope === "academy_only");
       if (allAcademyOnly) {
-        return json(403, { error: "Suggestions are not available on your plan." });
+        return json(req, 403, { error: "Suggestions are not available on your plan." });
       }
     }
 
@@ -107,10 +101,10 @@ Deno.serve(async (req) => {
 
     if (itemErr) {
       console.error("suggest_items fetch error", itemErr);
-      return json(500, { error: itemErr.message });
+      return json(req, 500, { error: itemErr.message });
     }
     if (!item || item.is_deleted) {
-      return json(404, { error: "Suggestion not found" });
+      return json(req, 404, { error: "Suggestion not found" });
     }
 
     // 4a. Per-tenant academy-only check: defense against multi-tenant callers
@@ -124,15 +118,15 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (tenantScopeErr) {
         console.error("tenant_users per-tenant scope fetch error", tenantScopeErr);
-        return json(500, { error: tenantScopeErr.message });
+        return json(req, 500, { error: tenantScopeErr.message });
       }
       if (tenantScope?.access_scope === "academy_only") {
-        return json(403, { error: "Suggestions are not available on your plan." });
+        return json(req, 403, { error: "Suggestions are not available on your plan." });
       }
     }
 
     if (!isStaff && item.reported_by !== callerId) {
-      return json(403, { error: "Forbidden" });
+      return json(req, 403, { error: "Forbidden" });
     }
 
     // 5. Service-role lookups (bypass RLS for tenant name + staff list)
@@ -218,13 +212,13 @@ Deno.serve(async (req) => {
 
     if (upsertErr) {
       console.error("user_notifications upsert error", upsertErr);
-      return json(500, { error: upsertErr.message });
+      return json(req, 500, { error: upsertErr.message });
     }
 
-    return json(200, { notified: rows.length });
+    return json(req, 200, { notified: rows.length });
   } catch (e) {
     console.error("notify-suggestion-submitted unexpected", e);
     const message = e instanceof Error ? e.message : "Unexpected error";
-    return json(500, { error: message });
+    return json(req, 500, { error: message });
   }
 });

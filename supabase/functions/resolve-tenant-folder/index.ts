@@ -21,7 +21,7 @@ interface FolderCandidate {
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -32,7 +32,7 @@ Deno.serve(async (req: Request) => {
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
     if (!profile?.is_vivacity_internal) {
       return new Response(JSON.stringify({ error: 'Forbidden — Vivacity staff only' }), {
         status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -70,7 +70,7 @@ Deno.serve(async (req: Request) => {
     if (!tenant_id) {
       return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
     if (tenantErr || !tenant) {
       return new Response(JSON.stringify({ error: `Tenant ${tenant_id} not found` }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -92,7 +92,7 @@ Deno.serve(async (req: Request) => {
     if (tenant.status !== 'active') {
       return new Response(JSON.stringify({ error: `Tenant is not active (status: ${tenant.status}). Folder resolution is only allowed for active tenants.` }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -128,7 +128,7 @@ Deno.serve(async (req: Request) => {
             : 'No client SharePoint drive configured',
         }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -140,7 +140,7 @@ Deno.serve(async (req: Request) => {
       if (!folderResp.ok) {
         return new Response(JSON.stringify({ error: 'Could not retrieve folder from SharePoint' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -188,7 +188,7 @@ Deno.serve(async (req: Request) => {
       if (persistResult.error) {
         return new Response(JSON.stringify({ error: persistResult.error.message }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -211,7 +211,7 @@ Deno.serve(async (req: Request) => {
         success: true,
         folder: { item_id: folder.id, name: folder.name, web_url: folder.webUrl },
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -258,7 +258,7 @@ Deno.serve(async (req: Request) => {
         error: `No SharePoint drive configured for purpose '${effectivePurpose}'. Please add a site to sharepoint_sites first.`,
       }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -361,7 +361,7 @@ Deno.serve(async (req: Request) => {
       candidates: candidates.slice(0, 10), // Cap at 10 results
       has_existing_mapping: !!spSettings?.root_item_id,
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
@@ -370,7 +370,7 @@ Deno.serve(async (req: Request) => {
       error: error instanceof Error ? error.message : 'Unknown error',
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 });

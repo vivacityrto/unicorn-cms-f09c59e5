@@ -16,6 +16,7 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
 const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
@@ -27,12 +28,6 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au";
 
 const VIVACITY_TENANT_ID = 6372;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 interface RequestBody {
   invitation_id: string;
@@ -52,10 +47,10 @@ const ROLE_LABELS: Record<string, string> = {
   "Academy User": "Academy User",
 };
 
-function jsonResponse(status: number, body: unknown): Response {
+function jsonResponse(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
@@ -91,7 +86,7 @@ function timingSafeEqualHex(a: string, b: string): boolean {
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -99,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
     const authHeader = req.headers.get("Authorization") ?? "";
     const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
     if (!bearer) {
-      return jsonResponse(401, { error: "Missing Authorization header" });
+      return jsonResponse(req, 401, { error: "Missing Authorization header" });
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -114,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!isTrustedInternalCall) {
       const { data: callerData, error: callerErr } = await supabase.auth.getUser(bearer);
       if (callerErr || !callerData?.user) {
-        return jsonResponse(401, { error: "Unauthorized" });
+        return jsonResponse(req, 401, { error: "Unauthorized" });
       }
       callerId = callerData.user.id;
     }
@@ -122,14 +117,14 @@ const handler = async (req: Request): Promise<Response> => {
     // ── 2. Parse body ─────────────────────────────────────────────────────
     const body = (await req.json()) as RequestBody;
     if (!body?.invitation_id || !body?.token_plaintext) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         error: "invitation_id and token_plaintext are required",
       });
     }
 
     if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
       console.error("Missing Mailgun configuration");
-      return jsonResponse(500, { error: "Mailgun configuration is missing" });
+      return jsonResponse(req, 500, { error: "Mailgun configuration is missing" });
     }
 
     // ── 3. Load invitation (include token_hash + tenant/creator for scope) ─
@@ -143,7 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (invErr || !invitation) {
       console.error("Invitation lookup failed:", invErr);
-      return jsonResponse(404, { error: "Invitation not found" });
+      return jsonResponse(req, 404, { error: "Invitation not found" });
     }
 
     // ── 4. Authorise non-service callers against invitation tenant/scope ──
@@ -195,7 +190,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       if (!authorised) {
-        return jsonResponse(403, {
+        return jsonResponse(req, 403, {
           error: "You don't have permission to send this invitation email",
         });
       }
@@ -203,11 +198,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     // ── 5. Possession proof: re-hash token_plaintext vs stored token_hash ─
     if (!invitation.token_hash) {
-      return jsonResponse(400, { error: "Invitation token is invalid or revoked" });
+      return jsonResponse(req, 400, { error: "Invitation token is invalid or revoked" });
     }
     const expectedHash = await sha256Hex(body.token_plaintext);
     if (!timingSafeEqualHex(expectedHash, invitation.token_hash)) {
-      return jsonResponse(400, { error: "Invitation token mismatch" });
+      return jsonResponse(req, 400, { error: "Invitation token mismatch" });
     }
 
     // ── 6. Build and send email ───────────────────────────────────────────
@@ -292,7 +287,7 @@ const handler = async (req: Request): Promise<Response> => {
         statusText: mailgunResponse.statusText,
         body: errorText,
       });
-      return jsonResponse(502, {
+      return jsonResponse(req, 502, {
         error: "Failed to send invitation email",
         detail: errorText,
       });
@@ -310,14 +305,14 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq("id", invitation.id);
 
-    return jsonResponse(200, {
+    return jsonResponse(req, 200, {
       success: true,
       messageId: result?.id,
       invite_url: inviteUrl,
     });
   } catch (error: any) {
     console.error("Error in send-invitation-email:", error);
-    return jsonResponse(500, {
+    return jsonResponse(req, 500, {
       error: error?.message || "Failed to send invitation email",
     });
   }

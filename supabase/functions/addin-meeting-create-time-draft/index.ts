@@ -57,11 +57,11 @@ function applyTimeRules(minutes: number, rules: TimeRules): number {
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   if (req.method !== 'POST') {
-    return errorResponse(405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
+    return errorResponse(req, 405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
   }
 
   try {
@@ -69,7 +69,7 @@ serve(async (req) => {
     const authResult = await verifyAddinToken(req.headers.get('Authorization'), FUNCTION_NAME);
     if (!authResult.success || !authResult.payload) {
       await logFailedAction(FUNCTION_NAME, 'time_draft_create', null, authResult.error!.code, authResult.error!.message);
-      return errorResponse(authResult.error!.status, authResult.error!.code, authResult.error!.message);
+      return errorResponse(req, authResult.error!.status, authResult.error!.code, authResult.error!.message);
     }
     const tokenPayload = authResult.payload;
 
@@ -77,7 +77,7 @@ serve(async (req) => {
     const rbacResult = enforceVivacityTeamRole(tokenPayload);
     if (!rbacResult.success) {
       await logFailedAction(FUNCTION_NAME, 'time_draft_create', tokenPayload.user_uuid, rbacResult.error!.code, rbacResult.error!.message);
-      return errorResponse(rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
+      return errorResponse(req, rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
     }
 
     const idempotencyKey = req.headers.get('Idempotency-Key');
@@ -95,7 +95,7 @@ serve(async (req) => {
 
     // Validate required fields
     if (!body.external_event_id) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'external_event_id is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'external_event_id is required');
     }
 
     const supabaseAdmin = createAdminClient();
@@ -103,7 +103,7 @@ serve(async (req) => {
     // Get user's tenant_id
     const tenantId = tokenPayload.tenant_id;
     if (!tenantId) {
-      return errorResponse(403, 'NO_TENANT', 'User is not associated with any tenant');
+      return errorResponse(req, 403, 'NO_TENANT', 'User is not associated with any tenant');
     }
 
     // Find the meeting (must be captured first)
@@ -116,11 +116,11 @@ serve(async (req) => {
 
     if (meetingError) {
       console.error('[addin-meeting-create-time-draft] Meeting lookup error:', meetingError);
-      return errorResponse(500, 'DATABASE_ERROR', 'Failed to lookup meeting', { detail: meetingError.message });
+      return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to lookup meeting', { detail: meetingError.message });
     }
 
     if (!meeting) {
-      return errorResponse(404, 'MEETING_NOT_FOUND', 'Meeting not found. Capture the meeting first.', {});
+      return errorResponse(req, 404, 'MEETING_NOT_FOUND', 'Meeting not found. Capture the meeting first.', {});
     }
 
     // Determine client_id - prefer request, fallback to meeting
@@ -132,7 +132,7 @@ serve(async (req) => {
       const clientAccessResult = await verifyClientAccess(tokenPayload.user_uuid, clientId, FUNCTION_NAME);
       if (!clientAccessResult.success) {
         await logFailedAction(FUNCTION_NAME, 'time_draft_create', tokenPayload.user_uuid, clientAccessResult.error!.code, clientAccessResult.error!.message, { client_id: clientId });
-        return errorResponse(clientAccessResult.error!.status, clientAccessResult.error!.code, clientAccessResult.error!.message, clientAccessResult.error!.details || {});
+        return errorResponse(req, clientAccessResult.error!.status, clientAccessResult.error!.code, clientAccessResult.error!.message, clientAccessResult.error!.details || {});
       }
     }
 
@@ -147,11 +147,11 @@ serve(async (req) => {
 
     if (draftCheckError) {
       console.error('[addin-meeting-create-time-draft] Draft check error:', draftCheckError);
-      return errorResponse(500, 'DATABASE_ERROR', 'Failed to check existing draft', { detail: draftCheckError.message });
+      return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to check existing draft', { detail: draftCheckError.message });
     }
 
     if (existingDraft) {
-      return errorResponse(409, 'TIME_DRAFT_ALREADY_EXISTS', 'A draft time entry already exists for this meeting.', {
+      return errorResponse(req, 409, 'TIME_DRAFT_ALREADY_EXISTS', 'A draft time entry already exists for this meeting.', {
         meeting_id: meeting.id,
         time_entry_id: existingDraft.id,
       });
@@ -191,7 +191,7 @@ serve(async (req) => {
 
     if (draftError) {
       console.error('[addin-meeting-create-time-draft] Draft creation error:', draftError);
-      return errorResponse(500, 'DATABASE_ERROR', 'Failed to create time draft', { detail: draftError.message });
+      return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to create time draft', { detail: draftError.message });
     }
 
     // Log audit event
@@ -245,12 +245,12 @@ serve(async (req) => {
         audit_event_id: auditEvent?.id || null,
         links,
       }),
-      { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 201, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('[addin-meeting-create-time-draft] Unhandled error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return errorResponse(500, 'INTERNAL_ERROR', message, {});
+    return errorResponse(req, 500, 'INTERNAL_ERROR', message, {});
   }
 });

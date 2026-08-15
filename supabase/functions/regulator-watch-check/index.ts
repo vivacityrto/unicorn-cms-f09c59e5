@@ -17,7 +17,7 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
         if (!profile || profile.unicorn_role !== "Super Admin") {
           return new Response(
             JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Super Admin access required" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
           );
         }
       }
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     if (!firecrawlKey) {
       return new Response(
         JSON.stringify({ ok: false, code: "CONFIG_ERROR", detail: "Firecrawl not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -64,14 +64,14 @@ Deno.serve(async (req) => {
     if (fetchError) {
       return new Response(
         JSON.stringify({ ok: false, code: "DB_ERROR", detail: "Failed to fetch watchlist" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     if (!entries || entries.length === 0) {
       return new Response(
         JSON.stringify({ ok: true, message: "No active watchlist entries", checked: 0 }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     if (dueEntries.length === 0) {
       return new Response(
         JSON.stringify({ ok: true, message: "No entries due for check", checked: 0 }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -309,13 +309,13 @@ End with: "This summary identifies potential operational impacts only. Human rev
     const changedCount = results.filter(r => r.changed).length;
     return new Response(
       JSON.stringify({ ok: true, checked: results.length, changed: changedCount, results }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("regulator-watch-check error:", err);
     return new Response(
       JSON.stringify({ ok: false, code: "INTERNAL_ERROR", detail: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

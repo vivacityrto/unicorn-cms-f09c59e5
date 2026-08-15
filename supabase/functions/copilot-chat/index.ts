@@ -12,12 +12,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const MAX_MESSAGES_PER_SESSION = 20;
 
@@ -45,7 +40,7 @@ RESPONSE FORMAT:
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -56,7 +51,7 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -75,7 +70,7 @@ Deno.serve(async (req) => {
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "Authentication required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -89,7 +84,7 @@ Deno.serve(async (req) => {
     if (!userData?.is_vivacity_internal) {
       return new Response(
         JSON.stringify({ error: "Copilot is restricted to Vivacity internal team" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -116,7 +111,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ session }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -135,7 +130,7 @@ Deno.serve(async (req) => {
       if (!session) {
         return new Response(
           JSON.stringify({ error: "Session not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -143,7 +138,7 @@ Deno.serve(async (req) => {
       if (session.message_count >= MAX_MESSAGES_PER_SESSION * 2) {
         return new Response(
           JSON.stringify({ error: "Session message limit reached. Please start a new session." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -236,13 +231,13 @@ Deno.serve(async (req) => {
         if (aiResponse.status === 429) {
           return new Response(
             JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { status: 429, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
           );
         }
         if (aiResponse.status === 402) {
           return new Response(
             JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
-            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { status: 402, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
           );
         }
         const errText = await aiResponse.text();
@@ -281,7 +276,7 @@ Deno.serve(async (req) => {
           response: responseContent,
           citations,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -299,7 +294,7 @@ Deno.serve(async (req) => {
       if (!session) {
         return new Response(
           JSON.stringify({ error: "Session not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -311,19 +306,19 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ session, messages }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
       JSON.stringify({ error: "Invalid action. Use: start_session, send_message, get_session" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("Copilot error:", err);
     return new Response(
       JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

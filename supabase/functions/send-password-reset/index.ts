@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface PasswordResetRequest {
   user_uuid: string;
@@ -13,7 +9,7 @@ interface PasswordResetRequest {
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -28,7 +24,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Missing Mailgun configuration");
       return new Response(
         JSON.stringify({ ok: false, code: "MAILGUN_NOT_CONFIGURED" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -42,7 +38,7 @@ serve(async (req: Request): Promise<Response> => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ ok: false, code: "NO_AUTH_HEADER" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -53,7 +49,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Auth error:", authError);
       return new Response(
         JSON.stringify({ ok: false, code: "INVALID_TOKEN" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -68,7 +64,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Caller lookup error:", callerError);
       return new Response(
         JSON.stringify({ ok: false, code: "CALLER_NOT_FOUND" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -86,7 +82,7 @@ serve(async (req: Request): Promise<Response> => {
     if (!isSuperAdmin && !isTenantAdmin) {
       return new Response(
         JSON.stringify({ ok: false, code: "INSUFFICIENT_PERMISSIONS" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -96,7 +92,7 @@ serve(async (req: Request): Promise<Response> => {
     if (!user_uuid) {
       return new Response(
         JSON.stringify({ ok: false, code: "MISSING_USER_UUID" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -111,7 +107,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Target user lookup error:", targetError);
       return new Response(
         JSON.stringify({ ok: false, code: "USER_NOT_FOUND" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -120,7 +116,7 @@ serve(async (req: Request): Promise<Response> => {
       if (targetUser.tenant_id !== callerData.tenant_id) {
         return new Response(
           JSON.stringify({ ok: false, code: "CROSS_TENANT_NOT_ALLOWED" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
     }
@@ -137,7 +133,7 @@ serve(async (req: Request): Promise<Response> => {
           code: "AUTH_USER_NOT_FOUND",
           detail: "This user has not yet activated their account. Please send them an invitation instead.",
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -157,7 +153,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Failed to generate reset link:", linkError);
       return new Response(
         JSON.stringify({ ok: false, code: "LINK_GENERATION_FAILED", detail: linkError?.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -166,7 +162,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("No action_link in response");
       return new Response(
         JSON.stringify({ ok: false, code: "NO_ACTION_LINK" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -177,7 +173,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Could not extract token from action_link");
       return new Response(
         JSON.stringify({ ok: false, code: "TOKEN_EXTRACT_FAILED" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     const safeResetLink = `${APP_BASE_URL}/activate?token=${encodeURIComponent(rawToken)}&type=recovery&email=${encodeURIComponent(targetUser.email)}`;
@@ -274,7 +270,7 @@ serve(async (req: Request): Promise<Response> => {
           detail: errorText,
           mailgun_status: mailgunResponse.status,
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -299,14 +295,14 @@ serve(async (req: Request): Promise<Response> => {
         email: targetUser.email,
         message: "Password reset email sent successfully" 
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
 
   } catch (error: any) {
     console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ ok: false, code: "UNEXPECTED_ERROR", detail: "An unexpected error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

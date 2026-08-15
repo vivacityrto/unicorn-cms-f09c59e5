@@ -20,7 +20,7 @@ type UpdateProfileBody = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     const { user_uuid, user_type, unicorn_role, archived, email, ...updates } = body;
 
     if (!user_uuid) {
-      return jsonErr(400, "MISSING_USER_ID", "User UUID is required");
+      return jsonErr(req, 400, "MISSING_USER_ID", "User UUID is required");
     }
 
     const supabase = createClient(
@@ -40,14 +40,14 @@ Deno.serve(async (req) => {
     // Get current user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonErr(401, "UNAUTHORIZED", "No authorization header");
+      return jsonErr(req, 401, "UNAUTHORIZED", "No authorization header");
     }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !currentUser) {
-      return jsonErr(401, "UNAUTHORIZED", "Invalid token");
+      return jsonErr(req, 401, "UNAUTHORIZED", "Invalid token");
     }
 
     // Check if user is editing themselves or if they're an admin
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
           targetUserData?.tenant_id === currentUserData?.tenant_id;
 
         if (!isClientAdmin) {
-          return jsonErr(403, "FORBIDDEN", "You don't have permission to edit this user");
+          return jsonErr(req, 403, "FORBIDDEN", "You don't have permission to edit this user");
         }
       }
     }
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       .eq("user_uuid", user_uuid);
 
     if (updateError) {
-      return jsonErr(400, "UPDATE_FAILED", updateError.message);
+      return jsonErr(req, 400, "UPDATE_FAILED", updateError.message);
     }
 
     // Audit log
@@ -125,18 +125,18 @@ Deno.serve(async (req) => {
     console.log(`Profile updated successfully for ${user_uuid}`);
 
     return new Response(JSON.stringify({ ok: true }), {
-      headers: { "content-type": "application/json", ...corsHeaders },
+      headers: { "content-type": "application/json", ...corsHeaders(req) },
       status: 200,
     });
   } catch (e: any) {
     console.error("Error updating profile:", e);
-    return jsonErr(500, "UNHANDLED", e?.message ?? String(e));
+    return jsonErr(req, 500, "UNHANDLED", e?.message ?? String(e));
   }
 });
 
-function jsonErr(status: number, code: string, detail?: string) {
+function jsonErr(req: Request, status: number, code: string, detail?: string) {
   return new Response(JSON.stringify({ ok: false, code, detail }), {
-    headers: { "content-type": "application/json", ...corsHeaders },
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
     status,
   });
 }

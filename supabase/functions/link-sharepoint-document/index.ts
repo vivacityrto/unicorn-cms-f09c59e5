@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID')!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
@@ -220,7 +216,7 @@ async function fetchItemMetadata(accessToken: string, driveId: string, itemId: s
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   console.log('[link-sharepoint] Request received');
@@ -230,7 +226,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -243,7 +239,7 @@ serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -263,7 +259,7 @@ serve(async (req) => {
     if (tokenError || !tokenRecord) {
       return new Response(
         JSON.stringify({ error: 'Not connected to Microsoft. Please connect first.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -273,7 +269,7 @@ serve(async (req) => {
     } catch (refreshError) {
       return new Response(
         JSON.stringify({ error: 'Token expired. Please reconnect to Microsoft.' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -283,7 +279,7 @@ serve(async (req) => {
         const drives = await fetchDrives(accessToken);
         return new Response(
           JSON.stringify({ drives }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -291,13 +287,13 @@ serve(async (req) => {
         if (!body.drive_id) {
           return new Response(
             JSON.stringify({ error: 'drive_id is required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
         const items = await fetchDriveItems(accessToken, body.drive_id, body.folder_id);
         return new Response(
           JSON.stringify({ items }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -305,13 +301,13 @@ serve(async (req) => {
         if (!body.drive_id || !body.search_query) {
           return new Response(
             JSON.stringify({ error: 'drive_id and search_query are required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
         const items = await searchDriveItems(accessToken, body.drive_id, body.search_query);
         return new Response(
           JSON.stringify({ items }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -319,7 +315,7 @@ serve(async (req) => {
         if (!body.document_link_id) {
           return new Response(
             JSON.stringify({ error: 'document_link_id is required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -333,7 +329,7 @@ serve(async (req) => {
         if (docError || !docLink) {
           return new Response(
             JSON.stringify({ error: 'Document link not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -350,7 +346,7 @@ serve(async (req) => {
             storedVersionId: docLink.version_id,
             lastModified: currentItem.lastModifiedDateTime
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -358,7 +354,7 @@ serve(async (req) => {
         if (!body.document_link_id) {
           return new Response(
             JSON.stringify({ error: 'document_link_id is required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -372,7 +368,7 @@ serve(async (req) => {
         if (docError || !docLink) {
           return new Response(
             JSON.stringify({ error: 'Document link not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -404,7 +400,7 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true, newVersionId }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -412,7 +408,7 @@ serve(async (req) => {
         if (!body.drive_id || !body.item_id) {
           return new Response(
             JSON.stringify({ error: 'drive_id and item_id are required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -423,7 +419,7 @@ serve(async (req) => {
         } catch (e) {
           return new Response(
             JSON.stringify({ error: e instanceof Error ? e.message : 'Failed to fetch file metadata' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -470,7 +466,7 @@ serve(async (req) => {
           if (insertError.code === '23505') {
             return new Response(
               JSON.stringify({ error: 'This document is already linked' }),
-              { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { status: 409, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
             );
           }
           throw insertError;
@@ -534,7 +530,7 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true, documentLink: docLink }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -543,14 +539,14 @@ serve(async (req) => {
         if (!body.client_id) {
           return new Response(
             JSON.stringify({ error: 'client_id is required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
 
         if (!body.attachment_list || !Array.isArray(body.attachment_list) || body.attachment_list.length === 0) {
           return new Response(
             JSON.stringify({ error: 'attachment_list is required and must be non-empty' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -641,14 +637,14 @@ serve(async (req) => {
             linkedCount: linkedDocuments.length,
             errors: errors.length > 0 ? errors : undefined
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid action' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
     }
 
@@ -656,7 +652,7 @@ serve(async (req) => {
     console.error('[link-sharepoint] Unhandled error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

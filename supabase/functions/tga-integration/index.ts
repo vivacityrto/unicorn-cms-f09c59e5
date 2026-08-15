@@ -1,11 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 // TGA API configuration
 const TGA_MODE = Deno.env.get('TGA_MODE') || 'REST';
@@ -195,7 +191,7 @@ async function fetchProduct(code: string): Promise<{ mapped: TGAProduct | null; 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -204,7 +200,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -221,7 +217,7 @@ serve(async (req) => {
       console.error('[TGA] Auth error:', authError);
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -234,7 +230,7 @@ serve(async (req) => {
       if (!isProbe || !probeCode) {
         return new Response(JSON.stringify({ error: 'Probe mode requires ?probe=1&code=CODE' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -243,7 +239,7 @@ serve(async (req) => {
       if (!tenantId) {
         return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -268,11 +264,10 @@ serve(async (req) => {
         if (!membership || membership.role !== 'Admin') {
           return new Response(JSON.stringify({ error: 'Access required: Vivacity staff or Tenant Admin' }), {
             status: 403,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
           });
         }
       }
-
 
       // Perform probe - no DB writes
       console.log(`[TGA] Probe mode for code: ${probeCode}`);
@@ -287,7 +282,7 @@ serve(async (req) => {
       };
 
       return new Response(JSON.stringify(probeResult), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -299,14 +294,14 @@ serve(async (req) => {
       if (!tenant_id) {
         return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
       if (!codes || !Array.isArray(codes) || codes.length === 0) {
         return new Response(JSON.stringify({ error: 'codes array is required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -331,11 +326,10 @@ serve(async (req) => {
         if (!membership || membership.role !== 'Admin') {
           return new Response(JSON.stringify({ error: 'Access required: Vivacity staff or Tenant Admin' }), {
             status: 403,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
           });
         }
       }
-
 
       console.log(`[TGA] Sync mode for ${codes.length} codes, tenant: ${tenant_id}`);
 
@@ -443,19 +437,19 @@ serve(async (req) => {
         rows_upserted: rowsUpserted,
         results,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {
     console.error('[TGA] Unhandled error:', error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 });

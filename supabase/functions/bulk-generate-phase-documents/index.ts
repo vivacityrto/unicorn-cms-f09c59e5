@@ -50,16 +50,16 @@ interface PlanItem {
 
 const SUPPORTED_FORMATS = new Set(['docx', 'xlsx', 'xls', 'xlsm', 'pptx']);
 
-function jsonResponse(body: unknown, status = 200) {
+function jsonResponse(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     status,
   });
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -131,7 +131,7 @@ Deno.serve(async (req: Request) => {
         },
       });
 
-      return jsonResponse({ success: true });
+      return jsonResponse(req, { success: true });
     }
 
     // ── Pre-flight: SharePoint governance folder must be mapped ──────────
@@ -142,7 +142,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (!spSettings?.governance_drive_id || !spSettings?.governance_folder_item_id) {
-      return jsonResponse({
+      return jsonResponse(req, {
         success: false,
         error: 'No governance folder configured for this tenant. Please verify the governance folder from the SharePoint Folder Mapping page (Admin → SharePoint Folder Mapping) before generating documents.',
         error_code: 'GOVERNANCE_FOLDER_MISSING',
@@ -150,7 +150,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!spSettings?.drive_id || !spSettings?.shared_folder_item_id) {
-      return jsonResponse({
+      return jsonResponse(req, {
         success: false,
         error: 'No shared folder configured for this tenant. Please configure the Shared Folder in Admin → Integrations → SharePoint before generating documents.',
         error_code: 'SHARED_FOLDER_MISSING',
@@ -172,11 +172,11 @@ Deno.serve(async (req: Request) => {
       if (recentBulkErr) {
         console.error('[bulk-gen] rate-limit lookup failed', recentBulkErr);
         // fail-closed: don't let a broken filter silently disable the guard
-        return jsonResponse({ success: false, error: 'Rate limit check failed' }, 500);
+        return jsonResponse(req, { success: false, error: 'Rate limit check failed' }, 500);
       }
 
       if (recentBulk && recentBulk.length > 0) {
-        return jsonResponse({
+        return jsonResponse(req, {
           success: false,
           error: 'Rate limited. Please wait 5 minutes between bulk generations.'
         }, 429);
@@ -193,9 +193,9 @@ Deno.serve(async (req: Request) => {
     if (instError) throw instError;
     if (!instances || instances.length === 0) {
       if (plan_only) {
-        return jsonResponse({ success: true, plan: [], total_eligible: 0, skipped: [] });
+        return jsonResponse(req, { success: true, plan: [], total_eligible: 0, skipped: [] });
       }
-      return jsonResponse({ success: true, total: 0, generated: 0, skipped: 0, failed: 0, results: [] });
+      return jsonResponse(req, { success: true, total: 0, generated: 0, skipped: 0, failed: 0, results: [] });
     }
 
     // ── Fetch document metadata ──────────────────────────────────────────
@@ -241,7 +241,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (eligible.length > 500) {
-      return jsonResponse({
+      return jsonResponse(req, {
         success: false,
         error: `Batch too large (${eligible.length}). Maximum is 500 documents per call.`
       }, 400);
@@ -303,7 +303,7 @@ Deno.serve(async (req: Request) => {
 
     // ── plan_only: return the planned + already-skipped list ────────────
     if (plan_only) {
-      return jsonResponse({
+      return jsonResponse(req, {
         success: true,
         plan,
         total_eligible: plan.length,
@@ -340,7 +340,7 @@ Deno.serve(async (req: Request) => {
         };
 
         if (respBody?.error_code === 'SHARED_FOLDER_MISSING' || respBody?.error_code === 'GOVERNANCE_FOLDER_MISSING') {
-          return jsonResponse({
+          return jsonResponse(req, {
             success: false,
             error: respBody.error,
             error_code: respBody.error_code,
@@ -410,13 +410,13 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[bulk-gen] complete: ${generated}/${total} generated, ${skipped} skipped, ${failed} failed`);
 
-    return jsonResponse({
+    return jsonResponse(req, {
       success: true, total, generated, skipped, failed, results,
     });
 
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('[bulk-gen] error:', msg);
-    return jsonResponse({ success: false, error: msg }, 400);
+    return jsonResponse(req, { success: false, error: msg }, 400);
   }
 });

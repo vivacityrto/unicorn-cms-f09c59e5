@@ -51,11 +51,11 @@ interface CaptureRequest {
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   if (req.method !== 'POST') {
-    return errorResponse(405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
+    return errorResponse(req, 405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
   }
 
   try {
@@ -63,7 +63,7 @@ serve(async (req) => {
     const authResult = await verifyAddinToken(req.headers.get('Authorization'), FUNCTION_NAME);
     if (!authResult.success || !authResult.payload) {
       await logFailedAction(FUNCTION_NAME, 'meeting_capture', null, authResult.error!.code, authResult.error!.message);
-      return errorResponse(authResult.error!.status, authResult.error!.code, authResult.error!.message);
+      return errorResponse(req, authResult.error!.status, authResult.error!.code, authResult.error!.message);
     }
     const tokenPayload = authResult.payload;
 
@@ -71,7 +71,7 @@ serve(async (req) => {
     const rbacResult = enforceVivacityTeamRole(tokenPayload);
     if (!rbacResult.success) {
       await logFailedAction(FUNCTION_NAME, 'meeting_capture', tokenPayload.user_uuid, rbacResult.error!.code, rbacResult.error!.message);
-      return errorResponse(rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
+      return errorResponse(req, rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
     }
 
     const idempotencyKey = req.headers.get('Idempotency-Key');
@@ -90,19 +90,19 @@ serve(async (req) => {
 
     // Validate required fields
     if (!body.external_event_id) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'external_event_id is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'external_event_id is required');
     }
     if (!body.title) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'title is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'title is required');
     }
     if (!body.starts_at) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'starts_at is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'starts_at is required');
     }
     if (!body.ends_at) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'ends_at is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'ends_at is required');
     }
     if (!body.organiser?.email) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'organiser.email is required');
+      return errorResponse(req, 400, 'VALIDATION_ERROR', 'organiser.email is required');
     }
 
     // RBAC: Verify user has access to the client if linking
@@ -110,7 +110,7 @@ serve(async (req) => {
       const clientAccessResult = await verifyClientAccess(tokenPayload.user_uuid, body.link.client_id, FUNCTION_NAME);
       if (!clientAccessResult.success) {
         await logFailedAction(FUNCTION_NAME, 'meeting_capture', tokenPayload.user_uuid, clientAccessResult.error!.code, clientAccessResult.error!.message, { client_id: body.link.client_id });
-        return errorResponse(clientAccessResult.error!.status, clientAccessResult.error!.code, clientAccessResult.error!.message, clientAccessResult.error!.details || {});
+        return errorResponse(req, clientAccessResult.error!.status, clientAccessResult.error!.code, clientAccessResult.error!.message, clientAccessResult.error!.details || {});
       }
     }
 
@@ -119,7 +119,7 @@ serve(async (req) => {
     // Get user's tenant_id
     const tenantId = tokenPayload.tenant_id;
     if (!tenantId) {
-      return errorResponse(403, 'NO_TENANT', 'User is not associated with any tenant');
+      return errorResponse(req, 403, 'NO_TENANT', 'User is not associated with any tenant');
     }
 
     // Check if event already exists for this user
@@ -132,7 +132,7 @@ serve(async (req) => {
 
     if (checkError) {
       console.error('[addin-meeting-capture] Check error:', checkError);
-      return errorResponse(500, 'DATABASE_ERROR', 'Failed to check existing event', { detail: checkError.message });
+      return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to check existing event', { detail: checkError.message });
     }
 
     // Determine if this is an insert or update
@@ -260,7 +260,7 @@ serve(async (req) => {
 
       if (updateError) {
         console.error('[addin-meeting-capture] Update error:', updateError);
-        return errorResponse(500, 'DATABASE_ERROR', 'Failed to update event', { detail: updateError.message });
+        return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to update event', { detail: updateError.message });
       }
       eventRecord = data;
     } else {
@@ -273,7 +273,7 @@ serve(async (req) => {
 
       if (insertError) {
         console.error('[addin-meeting-capture] Insert error:', insertError);
-        return errorResponse(500, 'DATABASE_ERROR', 'Failed to create event', { detail: insertError.message });
+        return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to create event', { detail: insertError.message });
       }
       eventRecord = data;
     }
@@ -362,12 +362,12 @@ serve(async (req) => {
         audit_event_id: auditEvent?.id || null,
         links,
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('[addin-meeting-capture] Unhandled error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return errorResponse(500, 'INTERNAL_ERROR', message, {});
+    return errorResponse(req, 500, 'INTERNAL_ERROR', message, {});
   }
 });

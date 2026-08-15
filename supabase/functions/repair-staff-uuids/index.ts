@@ -9,13 +9,7 @@
 //   ?dry_run=true   read-only; returns the same plan without any UPDATEs.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -33,16 +27,16 @@ interface SweepDetail {
   message?: string;
 }
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -53,7 +47,7 @@ Deno.serve(async (req) => {
       : null;
 
     if (!token) {
-      return json(401, { ok: false, code: "UNAUTHORIZED", detail: "Missing bearer token" });
+      return json(req, 401, { ok: false, code: "UNAUTHORIZED", detail: "Missing bearer token" });
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -62,7 +56,7 @@ Deno.serve(async (req) => {
 
     const { data: userResult, error: userErr } = await admin.auth.getUser(token);
     if (userErr || !userResult?.user) {
-      return json(401, { ok: false, code: "UNAUTHORIZED", detail: userErr?.message ?? "Invalid token" });
+      return json(req, 401, { ok: false, code: "UNAUTHORIZED", detail: userErr?.message ?? "Invalid token" });
     }
     const callerId = userResult.user.id;
 
@@ -73,10 +67,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (profileErr || !callerProfile) {
-      return json(403, { ok: false, code: "FORBIDDEN", detail: "Caller profile not found" });
+      return json(req, 403, { ok: false, code: "FORBIDDEN", detail: "Caller profile not found" });
     }
     if (callerProfile.unicorn_role !== "Super Admin") {
-      return json(403, { ok: false, code: "FORBIDDEN", detail: "Super Admin access required" });
+      return json(req, 403, { ok: false, code: "FORBIDDEN", detail: "Super Admin access required" });
     }
 
     // ---- Mode ----
@@ -90,7 +84,7 @@ Deno.serve(async (req) => {
     while (true) {
       const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
       if (error) {
-        return json(500, { ok: false, code: "AUTH_LIST_FAILED", detail: error.message });
+        return json(req, 500, { ok: false, code: "AUTH_LIST_FAILED", detail: error.message });
       }
       const users = data?.users ?? [];
       for (const u of users) {
@@ -107,7 +101,7 @@ Deno.serve(async (req) => {
       .select("user_uuid, email, unicorn_role, disabled, archived");
 
     if (profilesErr) {
-      return json(500, { ok: false, code: "PROFILES_LOAD_FAILED", detail: profilesErr.message });
+      return json(req, 500, { ok: false, code: "PROFILES_LOAD_FAILED", detail: profilesErr.message });
     }
 
     // ---- Step 3: classify ----
@@ -231,7 +225,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return json(200, {
+    return json(req, 200, {
       ok: true,
       dry_run: dryRun,
       ran_by: callerProfile.email,
@@ -242,6 +236,6 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[repair-staff-uuids] fatal:", message);
-    return json(500, { ok: false, code: "INTERNAL_ERROR", detail: message });
+    return json(req, 500, { ok: false, code: "INTERNAL_ERROR", detail: message });
   }
 });

@@ -36,19 +36,19 @@ import { corsHeaders } from '../_shared/cors.ts';
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
   if (req.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
+    return json(req, { error: 'Method not allowed' }, 405);
   }
 
   try {
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     // ─── 1. Resolve caller from forwarded Authorization ───────────────
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return json({ error: 'Missing authorisation header' }, 401);
+      return json(req, { error: 'Missing authorisation header' }, 401);
     }
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     });
     const { data: userRes, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userRes?.user) {
-      return json({ error: 'Not authenticated' }, 401);
+      return json(req, { error: 'Not authenticated' }, 401);
     }
     const callerUserId = userRes.user.id;
 
@@ -87,10 +87,10 @@ Deno.serve(async (req) => {
         callerUserId,
         errorMessage: permErr.message,
       });
-      return json({ error: 'Forbidden' }, 403);
+      return json(req, { error: 'Forbidden' }, 403);
     }
     if (!allowed) {
-      return json({ error: 'Forbidden' }, 403);
+      return json(req, { error: 'Forbidden' }, 403);
     }
 
     // ─── 2. Body ──────────────────────────────────────────────────────
@@ -98,22 +98,22 @@ Deno.serve(async (req) => {
     try {
       body = await req.json();
     } catch {
-      return json({ error: 'Invalid JSON body' }, 400);
+      return json(req, { error: 'Invalid JSON body' }, 400);
     }
 
     const auditId = typeof body.audit_id === 'string' ? body.audit_id.trim() : '';
     if (!auditId) {
-      return json({ error: 'audit_id is required' }, 400);
+      return json(req, { error: 'audit_id is required' }, 400);
     }
     if (!UUID_RE.test(auditId)) {
-      return json({ error: 'audit_id must be a valid UUID' }, 400);
+      return json(req, { error: 'audit_id must be a valid UUID' }, 400);
     }
 
     let releaseNotes: string | null = null;
     if (typeof body.release_notes === 'string') {
       const trimmed = body.release_notes.trim();
       if (trimmed.length > 4000) {
-        return json({ error: 'Release notes must be 4000 characters or fewer.' }, 400);
+        return json(req, { error: 'Release notes must be 4000 characters or fewer.' }, 400);
       }
       releaseNotes = trimmed.length > 0 ? trimmed : null;
     }
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
         callerUserId,
         errorMessage: auditErr?.message ?? null,
       });
-      return json({ error: "You don't have access to this audit." }, 403);
+      return json(req, { error: "You don't have access to this audit." }, 403);
     }
 
     const audit = auditRow as {
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
 
     // ─── 4. Idempotency / preconditions ───────────────────────────────
     if (audit.report_client_visible) {
-      return json(
+      return json(req, 
         {
           error: 'Report already released',
           released_at: audit.report_released_at,
@@ -161,14 +161,14 @@ Deno.serve(async (req) => {
     }
 
     if (audit.score_pct == null && audit.score_total == null) {
-      return json(
+      return json(req, 
         { error: 'This audit has no score yet — complete the audit first.' },
         422,
       );
     }
 
     if (!audit.report_pdf_path) {
-      return json(
+      return json(req, 
         { error: 'No report PDF has been generated yet' },
         422,
       );
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
         errorMessage: insertErr?.message ?? null,
         errorCode: (insertErr as { code?: string } | null)?.code ?? null,
       });
-      return json(
+      return json(req, 
         { error: "Couldn't release the report. Try again, or contact support." },
         500,
       );
@@ -245,13 +245,13 @@ Deno.serve(async (req) => {
           errorMessage: rollbackErr.message,
         });
       }
-      return json(
+      return json(req, 
         { error: "Couldn't release the report. Try again, or contact support." },
         500,
       );
     }
 
-    return json(
+    return json(req, 
       {
         success: true,
         portal_document_id: (portalDoc as { id: string }).id,
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error('[release-audit-report] unhandled', err);
-    return json(
+    return json(req, 
       { error: "Couldn't release the report. Try again, or contact support." },
       500,
     );

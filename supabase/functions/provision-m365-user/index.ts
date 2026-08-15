@@ -23,11 +23,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { graphPost, graphGet } from "../_shared/graph-app-client.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -63,24 +59,24 @@ interface TranscriptStep {
   data?: unknown;
 }
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   const auth = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!auth) return json(401, { ok: false, error: "Missing Authorization" });
+  if (!auth) return json(req, 401, { ok: false, error: "Missing Authorization" });
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   // Verify caller is Vivacity staff
   const { data: { user }, error: authErr } = await admin.auth.getUser(auth);
-  if (authErr || !user) return json(401, { ok: false, error: "Unauthorized" });
+  if (authErr || !user) return json(req, 401, { ok: false, error: "Unauthorized" });
 
   const { data: profile } = await admin
     .from("users")
@@ -94,14 +90,14 @@ serve(async (req) => {
     profile?.unicorn_role === "Super Admin";
 
   if (!isSuperAdmin) {
-    return json(403, { ok: false, error: "Super Admin only" });
+    return json(req, 403, { ok: false, error: "Super Admin only" });
   }
 
   let body: Body;
   try {
     body = await req.json();
   } catch {
-    return json(400, { ok: false, error: "Invalid JSON body" });
+    return json(req, 400, { ok: false, error: "Invalid JSON body" });
   }
 
   const required: (keyof Body)[] = [
@@ -109,7 +105,7 @@ serve(async (req) => {
     "upn", "mail_nickname", "display_name", "temp_password",
   ];
   for (const f of required) {
-    if (!body[f]) return json(400, { ok: false, error: `Missing field: ${String(f)}` });
+    if (!body[f]) return json(req, 400, { ok: false, error: `Missing field: ${String(f)}` });
   }
 
   // Load resolved rule (optional — fall back to empty defaults if none configured)
@@ -121,7 +117,7 @@ serve(async (req) => {
     .eq("is_active", true)
     .maybeSingle();
 
-  if (ruleErr) return json(500, { ok: false, error: ruleErr.message });
+  if (ruleErr) return json(req, 500, { ok: false, error: ruleErr.message });
   const rule = ruleRow ?? {
     role_code: body.role_code,
     location_code: body.location_code,
@@ -155,7 +151,7 @@ serve(async (req) => {
     .select()
     .single();
 
-  if (runErr || !run) return json(500, { ok: false, error: runErr?.message ?? "Failed to create run" });
+  if (runErr || !run) return json(req, 500, { ok: false, error: runErr?.message ?? "Failed to create run" });
 
   const transcript: TranscriptStep[] = [];
   let msUserId: string | null = null;
@@ -431,7 +427,7 @@ serve(async (req) => {
     }
   }
 
-  return json(200, {
+  return json(req, 200, {
     ok: true,
     run_id: run.id,
     ms_user_id: msUserId,

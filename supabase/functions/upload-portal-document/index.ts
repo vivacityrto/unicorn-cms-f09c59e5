@@ -1,11 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const MAX_BYTES = 50 * 1024 * 1024;
 const BUCKET = "portal-documents";
@@ -31,10 +25,10 @@ function sanitiseFilename(name: string): string {
   return finalName.length > 150 ? finalName.slice(-150) : finalName;
 }
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -54,10 +48,10 @@ function optionalNumber(form: FormData, key: string): number | null {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return json(405, { error: "Method not allowed" });
+    return json(req, 405, { error: "Method not allowed" });
   }
 
   try {
@@ -66,7 +60,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.toLowerCase().startsWith("bearer ")) {
-      return json(401, { error: "Missing Authorization header" });
+      return json(req, 401, { error: "Missing Authorization header" });
     }
     const token = authHeader.slice(7).trim();
 
@@ -76,7 +70,7 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: authErr } = await admin.auth.getUser(token);
     if (authErr || !userData?.user) {
-      return json(401, { error: "Invalid auth token" });
+      return json(req, 401, { error: "Invalid auth token" });
     }
     const uid = userData.user.id;
 
@@ -84,22 +78,22 @@ Deno.serve(async (req) => {
     try {
       form = await req.formData();
     } catch {
-      return json(400, { error: "Expected multipart/form-data" });
+      return json(req, 400, { error: "Expected multipart/form-data" });
     }
 
     const file = form.get("file");
     if (!(file instanceof File)) {
-      return json(400, { error: "file is required" });
+      return json(req, 400, { error: "file is required" });
     }
 
     const tenantIdNum = optionalNumber(form, "tenant_id");
     if (tenantIdNum === null) {
-      return json(400, { error: "tenant_id is required" });
+      return json(req, 400, { error: "tenant_id is required" });
     }
 
     const direction = optionalString(form, "direction");
     if (!direction || !ALLOWED_DIRECTIONS.has(direction)) {
-      return json(400, { error: "direction is required and must be valid" });
+      return json(req, 400, { error: "direction is required and must be valid" });
     }
 
     const isClientVisible =
@@ -117,7 +111,7 @@ Deno.serve(async (req) => {
           tags = parsed.map((t) => String(t));
         }
       } catch {
-        return json(400, { error: "tags must be a JSON string array" });
+        return json(req, 400, { error: "tags must be a JSON string array" });
       }
     }
 
@@ -130,7 +124,7 @@ Deno.serve(async (req) => {
     );
 
     if (file.size > MAX_BYTES) {
-      return json(413, { error: `"${file.name}" exceeds 50 MB limit.` });
+      return json(req, 413, { error: `"${file.name}" exceeds 50 MB limit.` });
     }
 
     // Authorisation
@@ -146,7 +140,7 @@ Deno.serve(async (req) => {
       staffRow.disabled !== true;
 
     if (STAFF_ONLY_DIRECTIONS.has(direction) && !isStaff) {
-      return json(403, {
+      return json(req, 403, {
         error: "Only Vivacity staff can upload documents in this direction",
       });
     }
@@ -159,7 +153,7 @@ Deno.serve(async (req) => {
         .eq("tenant_id", tenantIdNum)
         .maybeSingle();
       if (!memberRow) {
-        return json(403, {
+        return json(req, 403, {
           error: "Not authorised to upload for this tenant",
         });
       }
@@ -176,7 +170,7 @@ Deno.serve(async (req) => {
         upsert: false,
       });
     if (upErr) {
-      return json(500, { error: `Storage upload failed: ${upErr.message}` });
+      return json(req, 500, { error: `Storage upload failed: ${upErr.message}` });
     }
 
     const { data: inserted, error: insErr } = await admin
@@ -204,7 +198,7 @@ Deno.serve(async (req) => {
 
     if (insErr || !inserted) {
       await admin.storage.from(BUCKET).remove([storage_path]).catch(() => {});
-      return json(500, {
+      return json(req, 500, {
         error: `DB insert failed: ${insErr?.message ?? "unknown error"}`,
       });
     }
@@ -226,10 +220,10 @@ Deno.serve(async (req) => {
       console.error("portal_document_audit insert failed", auditErr);
     }
 
-    return json(200, inserted);
+    return json(req, 200, inserted);
   } catch (e) {
     console.error("upload-portal-document unexpected error", e);
-    return json(500, {
+    return json(req, 500, {
       error: e instanceof Error ? e.message : "Unexpected error",
     });
   }

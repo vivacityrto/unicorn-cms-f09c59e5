@@ -1,9 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 // Trimmed defensively - see xero-auth for why (trailing whitespace from
 // pasting into Supabase's secrets UI breaks Basic Auth with no visible
@@ -19,16 +15,16 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // separate Contact-matching step needed.
 const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
 
-function json(status: number, body: Record<string, unknown>): Response {
+function json(req: Request, status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -41,12 +37,12 @@ Deno.serve(async (req) => {
     // see xero-auth).
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return json(401, { error: "Missing bearer token" });
+      return json(req, 401, { error: "Missing bearer token" });
     }
     const token = authHeader.replace(/^Bearer\s+/i, "");
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
-      return json(401, { error: "Invalid or expired token" });
+      return json(req, 401, { error: "Invalid or expired token" });
     }
     const { data: callerProfile } = await supabaseAdmin
       .from("users")
@@ -54,13 +50,13 @@ Deno.serve(async (req) => {
       .eq("user_uuid", user.id)
       .maybeSingle();
     if (!callerProfile?.is_vivacity_internal) {
-      return json(403, { error: "Vivacity staff only" });
+      return json(req, 403, { error: "Vivacity staff only" });
     }
 
     const body = await req.json().catch(() => ({}));
     const tenantId = body.tenant_id as number | undefined;
     if (!tenantId) {
-      return json(400, { error: "tenant_id is required" });
+      return json(req, 400, { error: "tenant_id is required" });
     }
 
     const { data: tenantRow } = await supabaseAdmin
@@ -71,7 +67,7 @@ Deno.serve(async (req) => {
 
     const contactMatch = tenantRow?.xero_contact_url?.match(CONTACT_ID_RE);
     if (!contactMatch) {
-      return json(200, {
+      return json(req, 200, {
         connected: null,
         linked: false,
         error: "This client has no Xero Contact URL saved, so there is no Xero Contact to look up.",
@@ -88,14 +84,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!tokenRow) {
-      return json(200, { connected: false, linked: true, error: "Xero is not connected. Ask a Super Admin to connect it." });
+      return json(req, 200, { connected: false, linked: true, error: "Xero is not connected. Ask a Super Admin to connect it." });
     }
 
     let accessToken = tokenRow.access_token as string;
     const tenantAccountId = tokenRow.provider_account_id as string | null;
 
     if (!tenantAccountId) {
-      return json(200, {
+      return json(req, 200, {
         connected: false,
         linked: true,
         error: "Xero connection is missing its organisation id - reconnect from Admin > Integrations > Xero.",
@@ -125,7 +121,7 @@ Deno.serve(async (req) => {
         await supabaseAdmin.from("oauth_tokens")
           .update({ last_error: `Token refresh failed: ${errText}`, updated_at: new Date().toISOString() })
           .eq("provider", "xero");
-        return json(200, {
+        return json(req, 200, {
           connected: false,
           linked: true,
           error: "Xero connection has expired and could not refresh. Ask a Super Admin to reconnect.",
@@ -161,7 +157,7 @@ Deno.serve(async (req) => {
       await supabaseAdmin.from("oauth_tokens")
         .update({ last_error: `Invoice lookup failed (${invoicesResp.status}): ${errText}`, updated_at: new Date().toISOString() })
         .eq("provider", "xero");
-      return json(200, { connected: true, linked: true, error: "Failed to fetch invoices from Xero." });
+      return json(req, 200, { connected: true, linked: true, error: "Failed to fetch invoices from Xero." });
     }
 
     // Already requested with order=Date DESC. DRAFT/VOIDED/DELETED carry
@@ -197,7 +193,7 @@ Deno.serve(async (req) => {
       xero_invoice_checked_at: new Date().toISOString(),
     }).eq("id", tenantId);
 
-    return json(200, {
+    return json(req, 200, {
       connected: true,
       linked: true,
       has_invoices: !!mostRecent,
@@ -207,6 +203,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("[xero-invoice-status] Unhandled error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return json(500, { error: message });
+    return json(req, 500, { error: message });
   }
 });
