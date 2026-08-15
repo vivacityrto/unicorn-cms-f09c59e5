@@ -20,7 +20,9 @@
 //
 // Auth model (Option A):
 //   Caller JWT is forwarded from the launcher via x-caller-authorization.
-//   It's reused as the Authorization header for every downstream edge-
+//   The worker verifies it with admin.auth.getUser (and reads exp via
+//   getClaims — never by decoding an unverified payload). The same JWT is
+//   reused as the Authorization header for every downstream edge-
 //   function fetch (provision-tenant-sharepoint-folder, verify-compliance-
 //   folder, deliver-governance-document), for the staff-gated
 //   repair_package_instance_stages RPC (via an anon-key Supabase client
@@ -48,28 +50,14 @@ const SUPPORTED_FORMATS = new Set(['docx', 'xlsx', 'xls', 'xlsm', 'pptx']);
 
 // Stop leasing/processing when the forwarded caller JWT is within this window
 // of expiring, so we don't burn through remaining items with an unauthorised
-// token. Fail-safe: if `exp` can't be decoded we behave exactly as today.
+// token. `exp` is only read from a signature-verified claims set
+// (auth.getClaims after auth.getUser). Fail-safe: if verified `exp` is
+// missing we keep going (token is valid right now).
 const JWT_SAFETY_MARGIN_MS = 90_000;
 
-function jwtExpMs(bearer: string | null): number | null {
-  if (!bearer?.startsWith('Bearer ')) return null;
-  const token = bearer.slice(7);
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  try {
-    const payload = JSON.parse(
-      atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')),
-    );
-    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
-  } catch {
-    return null;
-  }
-}
-
-function jwtNearExpiry(bearer: string | null): boolean {
-  const exp = jwtExpMs(bearer);
-  if (exp === null) return false;
-  return Date.now() >= exp - JWT_SAFETY_MARGIN_MS;
+function jwtNearExpiry(expMs: number | null): boolean {
+  if (expMs === null) return false;
+  return Date.now() >= expMs - JWT_SAFETY_MARGIN_MS;
 }
 
 function json(body: unknown, status = 200): Response {
@@ -114,6 +102,22 @@ Deno.serve(async (req: Request) => {
   const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const callerToken = callerAuth.slice('Bearer '.length).trim();
+  const { data: callerUser, error: callerErr } = await supabaseService.auth.getUser(
+    callerToken,
+  );
+  if (callerErr || !callerUser?.user) {
+    return json({ error: 'Invalid or expired caller token' }, 401);
+  }
+
+  // Read exp only from a verified claims set. Do not decode the JWT
+  // payload locally — a forged exp would skip the near-expiry stall.
+  let callerExpMs: number | null = null;
+  const { data: claimsData } = await supabaseService.auth.getClaims(callerToken);
+  if (typeof claimsData?.claims?.exp === 'number') {
+    callerExpMs = claimsData.claims.exp * 1000;
+  }
 
   // Anon-key client with the caller's Authorization forwarded, used for
   // staff-gated RPCs (repair_package_instance_stages) where auth.uid() must
@@ -417,7 +421,7 @@ Deno.serve(async (req: Request) => {
   let timedOut = false;
 
   while (Date.now() - startedAt < TIME_BUDGET_MS) {
-    if (jwtNearExpiry(callerAuth)) {
+    if (jwtNearExpiry(callerExpMs)) {
       await stallAndRelease('jwt_near_expiry');
       return json({ worker_id: WORKER_ID, processed, stalled: true });
     }
@@ -465,7 +469,7 @@ Deno.serve(async (req: Request) => {
         timedOut = true;
         break;
       }
-      if (jwtNearExpiry(callerAuth)) {
+      if (jwtNearExpiry(callerExpMs)) {
         await stallAndRelease('jwt_near_expiry');
         return json({ worker_id: WORKER_ID, processed, stalled: true });
       }
