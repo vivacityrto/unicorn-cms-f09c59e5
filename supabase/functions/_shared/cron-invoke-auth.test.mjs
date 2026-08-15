@@ -45,6 +45,19 @@ describe("cron invoke secret comparison", () => {
   it("does not treat equal-length wrong secrets as a match", () => {
     assert.equal(cronInvokeSecretMatches("aaaaaaaa", "bbbbbbbb"), false);
   });
+
+  it("rejects a forged service_role JWT presented as the invoke secret", () => {
+    const payload = Buffer.from(
+      JSON.stringify({
+        role: "service_role",
+        iss: "supabase",
+        ref: "yxkgdalkbrriasiyyrwk",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      }),
+    ).toString("base64url");
+    const forged = `eyJhbGciOiJub25lIn0.${payload}.x`;
+    assert.equal(cronInvokeSecretMatches(forged, "correct-secret"), false);
+  });
 });
 
 const CRON_FUNCTIONS = [

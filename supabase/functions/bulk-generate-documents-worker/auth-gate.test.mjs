@@ -32,7 +32,7 @@ describe("bulk-generate-documents-worker caller JWT verification", () => {
 
   it("rejects an invalid caller token before leasing work", () => {
     const getUserIdx = src.indexOf(".auth.getUser(");
-    const leaseIdx = src.indexOf("lease_bulk_document_job_items");
+    const leaseIdx = src.indexOf("rpc(\n      'lease_bulk_document_job_items'");
     const unauthorizedIdx = src.indexOf("Invalid or expired caller token");
     assert.ok(getUserIdx >= 0, "getUser present");
     assert.ok(leaseIdx >= 0, "lease RPC present");
