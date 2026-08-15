@@ -82,6 +82,27 @@ policy on `email_messages`.
   `admin.email_templates.manage`, which would have locked the unlink
   button to Super Admin.
 
+## Verification
+
+- Migration applied to hosted `yxkgdalkbrriasiyyrwk` as
+  `unlink_email_soft_delete_and_permission`. Confirmed
+  `email_messages.unlinked_at` / `unlinked_by`, feature key
+  `clients.emails.manage` with `full` for all seven staff roles, SELECT
+  hides `unlinked_at IS NOT NULL`, and restrictive
+  `email_messages_restrict_staff_only` (`is_staff() OR is_super_admin()`).
+- `unlink-email` deployed as version 49 with
+  `import { corsHeaders } from "../_shared/cors.ts"` (plus the shared
+  file in the bundle). `verify_jwt` remains false.
+- Boot probe against the live function:
+  - `OPTIONS` → 200 `ok` with the shared CORS allow-headers
+  - `POST` with no `Authorization` → 401
+    `{"error":"Missing Authorization header"}` (handler ran; not a
+    worker boot / import crash)
+  - `POST` with the anon key as Bearer → 401 `{"error":"Unauthorized"}`
+- `capture-outlook-email` and `addin-email-capture` relink changes are
+  in this PR and still need a hosted deploy so a later re-link does not
+  collide with `(user_uuid, external_message_id)`.
+
 ## Open questions parked
 
 - `academy-fetch-vimeo-transcript` still imports CORS from the same
