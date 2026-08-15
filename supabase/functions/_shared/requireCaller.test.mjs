@@ -27,13 +27,16 @@ describe("requireCaller helper", () => {
   });
 
   it("does not consult role_type, unicorn_role, or global_role for the gate", () => {
-    assert.doesNotMatch(src, /role_type/);
-    assert.doesNotMatch(src, /global_role/);
-    assert.doesNotMatch(src, /is_vivacity_internal/);
+    const withoutComments = src
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    assert.doesNotMatch(withoutComments, /role_type/);
+    assert.doesNotMatch(withoutComments, /global_role/);
+    assert.doesNotMatch(withoutComments, /is_vivacity_internal/);
     // unicorn_role is only used by allowClientAdmin (orAllow helper), not the gate.
-    const gateBody = src.slice(
-      src.indexOf("export async function requireCaller("),
-      src.indexOf("export async function requireCallerByUserId("),
+    const gateBody = withoutComments.slice(
+      withoutComments.indexOf("export async function requireCaller("),
+      withoutComments.indexOf("export async function requireCallerByUserId("),
     );
     assert.doesNotMatch(gateBody, /unicorn_role/);
   });

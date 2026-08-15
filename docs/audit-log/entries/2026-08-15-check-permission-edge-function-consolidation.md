@@ -87,3 +87,7 @@ rollout Super Admin bypass (`ai-orchestrator` / assistant flags).
   explicit `check_permission` gate — same parked item as
   `2026-08-11-audit-feature-review`.
 - `is_super_admin_safe` itself still has `search_path=public`.
+- Converted edge functions are not all redeployed in this session;
+  `permission_features` rows are live so a later MCP deploy will not
+  fail-closed. Existing deployed functions still use the old gates
+  until redeployed.
