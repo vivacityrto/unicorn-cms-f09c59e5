@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
 import {
   allowlistFromAppBaseUrl,
   constantTimeEqual,
@@ -7,57 +8,57 @@ import {
 
 describe("parseBearerToken", () => {
   it("accepts exactly Bearer <token>", () => {
-    expect(parseBearerToken("Bearer abc.def.ghi")).toBe("abc.def.ghi");
+    assert.equal(parseBearerToken("Bearer abc.def.ghi"), "abc.def.ghi");
   });
 
   it("rejects a missing header", () => {
-    expect(parseBearerToken(null)).toBeNull();
+    assert.equal(parseBearerToken(null), null);
   });
 
   it("rejects a raw token with no Bearer scheme", () => {
-    expect(parseBearerToken("abc.def.ghi")).toBeNull();
+    assert.equal(parseBearerToken("abc.def.ghi"), null);
   });
 
   it("rejects a prefix-only strip candidate (Bearer glued to token)", () => {
-    expect(parseBearerToken("Bearerabc.def.ghi")).toBeNull();
+    assert.equal(parseBearerToken("Bearerabc.def.ghi"), null);
   });
 
   it("rejects extra parts", () => {
-    expect(parseBearerToken("Bearer abc extra")).toBeNull();
+    assert.equal(parseBearerToken("Bearer abc extra"), null);
   });
 
   it("rejects an empty token after Bearer", () => {
-    expect(parseBearerToken("Bearer ")).toBeNull();
+    assert.equal(parseBearerToken("Bearer "), null);
   });
 });
 
 describe("allowlistFromAppBaseUrl", () => {
   it("includes the trimmed base and the www/apex variant", () => {
     const set = allowlistFromAppBaseUrl("https://unicorn-cms.au/");
-    expect(set.has("https://unicorn-cms.au")).toBe(true);
-    expect(set.has("https://www.unicorn-cms.au")).toBe(true);
+    assert.equal(set.has("https://unicorn-cms.au"), true);
+    assert.equal(set.has("https://www.unicorn-cms.au"), true);
   });
 
   it("does not allow every origin", () => {
     const set = allowlistFromAppBaseUrl("https://unicorn-cms.au");
-    expect(set.has("https://evil.example")).toBe(false);
-    expect(set.has("*")).toBe(false);
+    assert.equal(set.has("https://evil.example"), false);
+    assert.equal(set.has("*"), false);
   });
 
   it("returns an empty set when APP_BASE_URL is missing", () => {
-    expect(allowlistFromAppBaseUrl(null).size).toBe(0);
-    expect(allowlistFromAppBaseUrl("").size).toBe(0);
+    assert.equal(allowlistFromAppBaseUrl(null).size, 0);
+    assert.equal(allowlistFromAppBaseUrl("").size, 0);
   });
 });
 
 describe("constantTimeEqual", () => {
   it("returns true for equal secrets", () => {
-    expect(constantTimeEqual("shared-secret", "shared-secret")).toBe(true);
+    assert.equal(constantTimeEqual("shared-secret", "shared-secret"), true);
   });
 
   it("returns false for mismatched secrets and missing values", () => {
-    expect(constantTimeEqual("shared-secret", "other-secret")).toBe(false);
-    expect(constantTimeEqual("shared-secret", "")).toBe(false);
-    expect(constantTimeEqual("", "shared-secret")).toBe(false);
+    assert.equal(constantTimeEqual("shared-secret", "other-secret"), false);
+    assert.equal(constantTimeEqual("shared-secret", ""), false);
+    assert.equal(constantTimeEqual("", "shared-secret"), false);
   });
 });
