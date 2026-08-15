@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildScopeString, type SurfaceFlags } from "../_shared/microsoft-scopes.ts";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { oauthStateExpiresAt, resolveRedirectUri } from "../_shared/oauth-redirects.ts";
+import { consumeOAuthState } from "../_shared/oauth-states.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,7 +69,14 @@ serve(async (req) => {
         );
       }
 
-      const redirectUri = body.redirect_uri as string;
+      const resolved = resolveRedirectUri('outlook', body.redirect_uri);
+      if (!resolved.ok) {
+        return new Response(
+          JSON.stringify({ error: resolved.error }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const redirectUri = resolved.redirectUri;
       const tenantId = body.tenant_id as number;
       const surfaces = (body.surfaces as SurfaceFlags) || { mail: false, calendar: true, documents: false };
       const scopeString = buildScopeString(surfaces);
@@ -79,14 +88,8 @@ serve(async (req) => {
         scopeString
       });
 
-      if (!redirectUri) {
-        return new Response(
-          JSON.stringify({ error: 'redirect_uri is required' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Generate and store state for CSRF protection
+      // Generate and store state for CSRF protection. user_id comes from the
+      // verified JWT only — never from the request body.
       const state = crypto.randomUUID();
       const stateData = {
         user_id: user.id,
@@ -100,7 +103,7 @@ serve(async (req) => {
       const { error: stateError } = await supabaseAdmin.from('oauth_states').upsert({
         state,
         data: stateData,
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 min expiry
+        expires_at: oauthStateExpiresAt()
       });
 
       if (stateError) {
@@ -130,14 +133,30 @@ serve(async (req) => {
 
     // Action: Exchange code for tokens
     if (action === 'exchange-code') {
+      const caller = await getUser();
+      if (!caller) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const resolved = resolveRedirectUri('outlook', body.redirect_uri);
+      if (!resolved.ok) {
+        return new Response(
+          JSON.stringify({ error: resolved.error }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const code = body.code as string;
-      const redirectUri = body.redirect_uri as string;
       const state = body.state as string;
 
       console.log('[outlook-auth] exchange-code:', {
+        callerId: caller.id,
         hasCode: !!code,
         codeLength: code?.length,
-        redirectUri,
+        redirectUri: resolved.redirectUri,
         state: state?.substring(0, 8) + '...'
       });
 
@@ -148,51 +167,28 @@ serve(async (req) => {
         );
       }
 
-      // Verify state from database
-      const { data: stateRecord, error: stateError } = await supabaseAdmin
-        .from('oauth_states')
-        .select('*')
-        .eq('state', state)
-        .single();
-
-      console.log('[outlook-auth] State lookup result:', {
-        found: !!stateRecord,
-        error: stateError?.message
-      });
-
-      if (stateError || !stateRecord) {
-        console.error('[outlook-auth] Invalid state - not found in database');
+      const consumed = await consumeOAuthState(supabaseAdmin, state, caller.id);
+      if (!consumed.ok) {
         return new Response(
-          JSON.stringify({ error: 'Invalid or expired state. Please try connecting again.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: consumed.error }),
+          { status: consumed.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Check if state is expired
-      if (new Date(stateRecord.expires_at) < new Date()) {
-        console.error('[outlook-auth] State expired');
-        await supabaseAdmin.from('oauth_states').delete().eq('state', state);
-        return new Response(
-          JSON.stringify({ error: 'OAuth session expired. Please try connecting again.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const stateData = stateRecord.data as { 
-        user_id: string; 
-        tenant_id: number; 
-        redirect_uri: string;
+      const stateData = consumed.record.data as {
+        user_id: string;
+        tenant_id: number;
+        redirect_uri?: string;
         scope?: string;
       };
 
-      const canonicalRedirectUri = stateData.redirect_uri;
+      const canonicalRedirectUri = resolved.redirectUri;
       const exchangeScope = stateData.scope || 'openid profile email offline_access Calendars.Read';
 
       console.log('[outlook-auth] Exchanging code:', {
         userId: stateData.user_id,
         tenantId: stateData.tenant_id,
-        canonicalRedirectUri,
-        providedRedirectUri: redirectUri
+        canonicalRedirectUri
       });
 
       // Exchange code for tokens with Microsoft
@@ -203,7 +199,7 @@ serve(async (req) => {
           client_id: MICROSOFT_CLIENT_ID,
           client_secret: MICROSOFT_CLIENT_SECRET,
           code,
-          redirect_uri: canonicalRedirectUri, // Use the URI from when auth was initiated
+          redirect_uri: canonicalRedirectUri, // Env-derived allowlisted URI, never from the request
           grant_type: 'authorization_code',
           scope: exchangeScope
         })
@@ -288,9 +284,6 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      // Clean up state
-      await supabaseAdmin.from('oauth_states').delete().eq('state', state);
 
       console.log('[outlook-auth] Tokens stored successfully for user:', stateData.user_id);
 

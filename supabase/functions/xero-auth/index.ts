@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { oauthStateExpiresAt, resolveRedirectUri } from "../_shared/oauth-redirects.ts";
+import { consumeOAuthState } from "../_shared/oauth-states.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,16 +101,17 @@ Deno.serve(async (req) => {
         return json(403, { error: "Only Vivacity Super Admins or Integrators can connect Xero." });
       }
 
-      const redirectUri = body.redirect_uri as string;
-      if (!redirectUri) {
-        return json(400, { error: "redirect_uri is required" });
+      const resolved = resolveRedirectUri("xero", body.redirect_uri);
+      if (!resolved.ok) {
+        return json(400, { error: resolved.error });
       }
+      const redirectUri = resolved.redirectUri;
 
       const state = crypto.randomUUID();
       const { error: stateError } = await supabaseAdmin.from("oauth_states").upsert({
         state,
         data: { user_id: caller.id, redirect_uri: redirectUri, provider: "xero" },
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        expires_at: oauthStateExpiresAt(),
       });
 
       if (stateError) {
@@ -128,31 +131,30 @@ Deno.serve(async (req) => {
 
     // Action: Exchange the authorization code for tokens
     if (action === "exchange-code") {
+      const caller = await getAdminCaller();
+      if (!caller) {
+        return json(403, { error: "Only Vivacity Super Admins or Integrators can connect Xero." });
+      }
+
+      const resolved = resolveRedirectUri("xero", body.redirect_uri);
+      if (!resolved.ok) {
+        return json(400, { error: resolved.error });
+      }
+
       const code = body.code as string;
-      const redirectUri = body.redirect_uri as string;
       const state = body.state as string;
 
       if (!code || !state) {
         return json(400, { error: "code and state are required" });
       }
 
-      const { data: stateRecord, error: stateError } = await supabaseAdmin
-        .from("oauth_states")
-        .select("*")
-        .eq("state", state)
-        .single();
-
-      if (stateError || !stateRecord) {
-        return json(400, { error: "Invalid or expired state. Please try connecting again." });
+      const consumed = await consumeOAuthState(supabaseAdmin, state, caller.id);
+      if (!consumed.ok) {
+        return json(consumed.status, { error: consumed.error });
       }
 
-      if (new Date(stateRecord.expires_at) < new Date()) {
-        await supabaseAdmin.from("oauth_states").delete().eq("state", state);
-        return json(400, { error: "OAuth session expired. Please try connecting again." });
-      }
-
-      const stateData = stateRecord.data as { user_id: string; redirect_uri: string };
-      const canonicalRedirectUri = stateData.redirect_uri;
+      const stateData = consumed.record.data as { user_id: string; redirect_uri?: string };
+      const canonicalRedirectUri = resolved.redirectUri;
 
       const basicAuth = btoa(`${XERO_CLIENT_ID}:${XERO_CLIENT_SECRET}`);
       const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
@@ -238,8 +240,6 @@ Deno.serve(async (req) => {
         console.error("[xero-auth] Failed to store tokens:", upsertError);
         return json(500, { error: "Failed to store tokens" });
       }
-
-      await supabaseAdmin.from("oauth_states").delete().eq("state", state);
 
       return json(200, { success: true, organisation_name: tenantName });
     }
