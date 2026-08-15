@@ -59,6 +59,14 @@ other AI edge functions (Ask Viv, draft-finding, minutes, etc.).
   allows the whole Vivacity team; tightening it would change the inbox
   UI, which is out of scope for this IDOR fix.
 
+## Production apply (same session)
+
+- Migration `ai_email_note_external_forward_opt_in` applied via MCP to
+  `yxkgdalkbrriasiyyrwk`. Global flag reads `false`.
+- `send-email-graph` v361 and `generate-email-note` v109 deployed with
+  `verify_jwt=false` (unchanged). Unauthenticated smoke: both return 401
+  missing/invalid auth as expected.
+
 ## Open questions parked
 
 - Other AI functions that send client content to the Lovable gateway
