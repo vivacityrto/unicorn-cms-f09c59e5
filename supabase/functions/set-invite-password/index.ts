@@ -76,15 +76,15 @@ serve(async (req) => {
     if (!invitation) {
       return json(400, { ok: false, code: "INVALID_TOKEN" });
     }
-    if (invitation.status !== "pending") {
+    if (invitation.status === "successful" || invitation.status === "accepted") {
       return json(410, {
         ok: false,
         code: "TOKEN_CONSUMED",
         detail: "This invitation has already been used",
       });
     }
-    if (new Date(invitation.expires_at).getTime() <= Date.now()) {
-      return json(400, { ok: false, code: "INVALID_TOKEN", detail: "This invitation has expired" });
+    if (invitation.status !== "pending" || new Date(invitation.expires_at).getTime() <= Date.now()) {
+      return json(400, { ok: false, code: "INVALID_TOKEN", detail: "This invitation is not usable" });
     }
 
     const emailLc = email.toLowerCase();
