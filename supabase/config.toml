@@ -118,7 +118,13 @@ verify_jwt = false
 [functions.process-notification-outbox]
 verify_jwt = false
 
+[functions.process-notification-queue]
+verify_jwt = false
+
 [functions.send-action-item-due-reminders]
+verify_jwt = false
+
+[functions.reconcile-invite-delivery-status]
 verify_jwt = false
 
 [functions.addin-auth-exchange]
