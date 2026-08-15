@@ -187,6 +187,7 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'tenant_id,user_id' });
 
+    // Allowlisted write: server-computed role/type only. Never spread request body.
     await admin.from('users').update({
       unicorn_role: uRole,
       user_type: uType,
