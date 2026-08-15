@@ -163,10 +163,10 @@ serve(async (req) => {
         p_item_id: item.id, p_outcome: outcome, p_reason: reason, p_caller_id: caller.id,
       });
 
-      if (payload?.ok === true && typeof payload?.action_link === "string" && payload.action_link.length > 0) {
+      if (payload?.ok === true && typeof payload?.action_link === "string" && payload.action_link.length > 0) { // APP_BASE_URL from sender
         await admin
           .from("cohort_send_job_items")
-          .update({ action_link: payload.action_link })
+          .update({ action_link: payload.action_link }) // stored copy of APP_BASE_URL link
           .eq("id", item.id);
       }
 
