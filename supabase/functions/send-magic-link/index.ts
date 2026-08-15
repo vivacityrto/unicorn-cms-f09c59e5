@@ -13,6 +13,7 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,8 +34,6 @@ serve(async (req) => {
     const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
     const MAILGUN_FROM_EMAIL = Deno.env.get("MAILGUN_FROM_EMAIL");
     const MAILGUN_FROM_NAME = Deno.env.get("MAILGUN_FROM_NAME");
-    const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
-
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
