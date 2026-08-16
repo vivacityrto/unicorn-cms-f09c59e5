@@ -245,6 +245,15 @@ unicorn_role: invitationData!.unicornRole,
               setTimeout(() => navigate('/'), 2000);
               return;
             }
+            if (code === 'TOKEN_CONSUMED') {
+              toast({
+                title: 'Invitation already used',
+                description: 'This invitation link has already been used. Please log in, or ask your administrator for a new one.',
+                variant: 'destructive',
+              });
+              setTimeout(() => navigate('/'), 2000);
+              return;
+            }
             toast({
               title: 'Invitation expired',
               description: 'This invitation link has expired. Please ask your administrator for a new one.',

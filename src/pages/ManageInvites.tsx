@@ -48,6 +48,10 @@ type InviteRow = {
 
 const RECENT_ACTION_THRESHOLD_SECONDS = 120;
 
+function isInviteConsumed(status: string) {
+  return status === 'accepted' || status === 'successful';
+}
+
 function secondsSince(iso?: string | null): number | null {
   if (!iso) return null;
   const then = new Date(iso).getTime();
@@ -306,6 +310,7 @@ export default function ManageInvites() {
 
     switch (status) {
       case 'successful':
+      case 'accepted':
         return {
           variant: 'default' as const,
           icon: CheckCircle,
@@ -400,16 +405,16 @@ export default function ManageInvites() {
     pending: invites.filter(i => {
       const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
       // Pending = not expired AND not accepted
-      return !isExpired && (i.status as string) !== 'accepted';
+      return !isExpired && !isInviteConsumed(i.status as string);
     }).length,
     expired: invites.filter(i => {
       const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
       // Expired = past expiry AND not accepted
-      return isExpired && (i.status as string) !== 'accepted';
+      return isExpired && !isInviteConsumed(i.status as string);
     }).length,
     verified: invites.filter(i => {
       // Verified = invite has been accepted
-      return (i.status as string) === 'accepted';
+      return isInviteConsumed(i.status as string);
     }).length,
   };
 
@@ -470,9 +475,9 @@ export default function ManageInvites() {
     const matchesStatus = statusFilter === "all" || 
       (statusFilter === "sent" && invite.status === "sent") ||
       (statusFilter === "failed" && invite.status === "failed") ||
-      (statusFilter === "expired" && (invite.status === "expired" || isExpired) && (invite.status as string) !== 'accepted') ||
-      (statusFilter === "verified" && (invite.status as string) === 'accepted') ||
-      (statusFilter === "pending" && (invite.status === "pending" || invite.status === "sent") && !isExpired && (invite.status as string) !== 'accepted') ||
+      (statusFilter === "expired" && (invite.status === "expired" || isExpired) && !isInviteConsumed(invite.status as string)) ||
+      (statusFilter === "verified" && isInviteConsumed(invite.status as string)) ||
+      (statusFilter === "pending" && (invite.status === "pending" || invite.status === "sent") && !isExpired && !isInviteConsumed(invite.status as string)) ||
       (statusFilter === "bounced" && invite.delivery_status === 'bounced') ||
       (statusFilter === "delivery-failed" && invite.delivery_status === 'failed') ||
       (statusFilter === "spam" && invite.delivery_status === 'complained');
@@ -855,7 +860,7 @@ export default function ManageInvites() {
                   const tenantName = tenantNames.get(invite.tenant_id) || `ID: ${invite.tenant_id}`;
                   const userStatus = userStatuses.get(invite.email);
                   // If user exists in users table, they've successfully signed up - show Verified
-                  const isVerified = (invite.status as string) === 'accepted';
+                  const isVerified = isInviteConsumed(invite.status as string);
                   const statusBadge = isVerified 
                     ? { variant: 'default' as const, icon: CheckCircle, label: 'Verified', color: 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]' }
                     : getStatusBadge(invite.status, invite.expires_at);

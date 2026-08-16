@@ -140,7 +140,7 @@ serve(async (req) => {
     }
 
     // 6. Check if invitation was already accepted
-    if (invitation.status === 'accepted' || invitation.accepted_at) {
+    if (invitation.status === 'accepted' || invitation.status === 'successful' || invitation.accepted_at || invitation.used_at) {
       return jsonResponse(400, {
         ok: false,
         code: "INVITE_ALREADY_ACCEPTED",
