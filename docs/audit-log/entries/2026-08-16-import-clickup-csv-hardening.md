@@ -39,6 +39,12 @@ not add a new `permission_features` key.
 - `import-clickup-csv/clickup-csv-allowlist.ts` — explicit column lists
   matching `src/utils/clickup-import-mappings.ts` minus `tenant_id` / `id`
   / stamp fields.
+- Hosted function redeployed via MCP `deploy_edge_function` as version
+  **428** (`verify_jwt` still false). Live probe: unauthenticated POST
+  went from HTTP 200 `{"inserted":0,"errors":1}` (service-role upsert
+  attempted) to HTTP 401 `{"error":"Unauthorized"}`; anon JWT as Bearer
+  also 401; OPTIONS from `https://evil.example` omits
+  `Access-Control-Allow-Origin`; `https://unicorn-cms.au` is echoed.
 
 ## Decisions
 
