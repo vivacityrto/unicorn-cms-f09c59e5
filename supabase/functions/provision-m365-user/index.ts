@@ -418,7 +418,9 @@ serve(async (req) => {
   // Generate checklist instances (only meaningful if Unicorn user exists)
   if (unicornOk) {
     try {
+      const callerAuth = req.headers.get("Authorization");
       await admin.functions.invoke("generate-staff-checklist", {
+        headers: callerAuth ? { Authorization: callerAuth } : {},
         body: {
           run_id: run.id,
           role_code: body.role_code,
