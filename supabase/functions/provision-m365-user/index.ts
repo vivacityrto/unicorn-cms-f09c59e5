@@ -185,7 +185,7 @@ serve(async (req) => {
 
     if (existing?.user_uuid) {
       unicornUserUuid = existing.user_uuid;
-      // Update existing record with the latest details from the wizard
+      // Allowlisted write: named wizard columns only. Never spread request body.
       const { error: updErr } = await admin
         .from("users")
         .update({
@@ -211,6 +211,7 @@ serve(async (req) => {
       });
     } else {
       unicornUserUuid = crypto.randomUUID();
+      // Allowlisted insert: named columns + server-set role/type. Never spread body.
       const { error: insErr } = await admin.from("users").insert({
         user_uuid: unicornUserUuid,
         email: emailLower,
