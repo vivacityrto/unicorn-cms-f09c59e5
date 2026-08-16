@@ -102,7 +102,7 @@ export function LinkedEmailsList({
             <AlertDialogDescription>
               This will unlink <span className="font-medium">"{unlinkEmail?.subject || "(No subject)"}"</span> from
               this record. The email, its attachments, and any notes created from it are kept and can be
-              recovered by a Super Admin. The email can be linked again later.
+              linked again later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
