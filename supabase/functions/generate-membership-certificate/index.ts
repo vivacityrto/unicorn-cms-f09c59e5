@@ -76,12 +76,11 @@ serve(async (req) => {
       unauthorizedMessage: "Missing Authorization header",
       forbiddenMessage: "Not authorised for this tenant",
       orAllow: async ({ userId, admin }) => {
-        const { data: callerRow } = await admin
-          .from("users")
-          .select("tenant_id")
-          .eq("user_uuid", userId)
-          .maybeSingle();
-        return Number(callerRow?.tenant_id) === tenantId;
+        const tenantAccess = await hasTenantAccessSafe(admin, userId, tenantId);
+        if (tenantAccess.lookupFailed) {
+          throw new Error("TENANT_ACCESS_CHECK_FAILED");
+        }
+        return tenantAccess.allowed;
       },
     });
     if (!caller.ok) return caller.response;

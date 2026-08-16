@@ -35,10 +35,16 @@ describe("requireCaller helper", () => {
     assert.doesNotMatch(withoutComments, /is_vivacity_internal/);
     // unicorn_role is only used by allowClientAdmin (orAllow helper), not the gate.
     const gateBody = withoutComments.slice(
-      withoutComments.indexOf("export async function requireCaller("),
-      withoutComments.indexOf("export async function requireCallerByUserId("),
+      withoutComments.indexOf("async function requireCallerWithOptions("),
+      withoutComments.indexOf("async function requireCallerConvenience("),
     );
     assert.doesNotMatch(gateBody, /unicorn_role/);
+  });
+
+  it("re-exports the C1 helpers from main (strict Bearer, CORS allowlist, shared secret)", () => {
+    assert.match(src, /export function corsHeadersFor\(/);
+    assert.match(src, /export function requireSharedSecret\(/);
+    assert.match(src, /parseBearerToken/);
   });
 
   it("supports an orAllow escape hatch for tenant-admin / tenant-member paths", () => {
