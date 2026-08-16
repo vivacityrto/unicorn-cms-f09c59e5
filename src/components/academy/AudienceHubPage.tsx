@@ -645,6 +645,7 @@ export default function AudienceHubPage({
                   thumbnailUrl={course.thumbnail_url}
                   deliveryDateLabel={formatDeliveryDate(course.delivery_date)}
                   facilitatorName={course.facilitator_name}
+                  webinarSeries={course.webinar_series}
                   onClick={
                     status === "completed"
                       ? () => handleReview(course)

@@ -8,6 +8,7 @@ export interface LatestRecording {
   deliveryDate: string | null;
   estimatedMinutes: number | null;
   courseSlug: string;
+  webinarSeries: string | null;
 }
 
 /**
@@ -33,7 +34,7 @@ export function useLatestRecordings() {
 
       const { data, error } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, thumbnail_url, delivery_date, estimated_minutes")
+        .select("id, title, slug, thumbnail_url, delivery_date, estimated_minutes, webinar_series")
         .eq("status", "published")
         .not("delivery_date", "is", null)
         .lte("delivery_date", today)
@@ -49,6 +50,7 @@ export function useLatestRecordings() {
         deliveryDate: course.delivery_date,
         estimatedMinutes: course.estimated_minutes,
         courseSlug: course.slug,
+        webinarSeries: course.webinar_series ?? null,
       }));
     },
   });

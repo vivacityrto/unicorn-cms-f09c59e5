@@ -8,6 +8,7 @@ import {
   ExternalLink,
   CalendarDays,
 } from "lucide-react";
+import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
 
 export interface CourseCardProps {
   title: string;
@@ -24,6 +25,7 @@ export interface CourseCardProps {
   /** Already-formatted delivery date label (e.g. "13 July 2026"), or null/undefined to omit the line. */
   deliveryDateLabel?: string | null;
   facilitatorName?: string | null;
+  webinarSeries?: string | null;
   onContinue?: () => void;
   onStart?: () => void;
   onClick?: () => void;
@@ -63,6 +65,7 @@ export default function CourseCard({
   thumbnailUrl,
   deliveryDateLabel,
   facilitatorName,
+  webinarSeries,
   onContinue,
   onStart,
   onClick,
@@ -160,6 +163,7 @@ export default function CourseCard({
         >
           {title}
         </h3>
+        <WebinarSeriesSubtitle series={webinarSeries} className="mt-0.5" />
 
         {/* Delivery date + facilitator — its own line so it doesn't crowd
             the duration/lessons/difficulty row at the sm breakpoint */}

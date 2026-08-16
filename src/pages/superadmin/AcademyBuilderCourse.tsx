@@ -49,6 +49,7 @@ import { canManageAcademyResources } from "@/lib/academy/courseResources";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermission } from "@/hooks/usePermission";
 import { cn } from "@/lib/utils";
+import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -644,7 +645,10 @@ export default function AcademyBuilderCourse() {
         <Button variant="ghost" size="sm" onClick={() => navigate("/superadmin/academy/builder")}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Library
         </Button>
-        <h1 className="text-xl font-bold text-foreground truncate">{course.title}</h1>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-foreground truncate">{course.title}</h1>
+          <WebinarSeriesSubtitle series={formState.webinar_series} />
+        </div>
         <Badge className={`${statusColors[course.status ?? "draft"]} text-xs`}>{course.status ?? "draft"}</Badge>
       </div>
 
