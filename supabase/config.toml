@@ -345,6 +345,9 @@ verify_jwt = false
 [functions.send-email-graph]
 verify_jwt = false
 
+[functions.generate-email-note]
+verify_jwt = false
+
 [functions.extract-suggest-title]
 verify_jwt = false
 

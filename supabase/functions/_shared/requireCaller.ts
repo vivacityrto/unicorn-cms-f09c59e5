@@ -267,7 +267,9 @@ async function requireCallerWithOptions(
 ): Promise<RequireCallerResult> {
   const style = options.errorStyle ?? "error";
   const headers = options.headers ?? corsHeaders(req);
-  const token = parseBearerToken(req.headers.get("Authorization") ?? req.headers.get("authorization"));
+  const token = parseBearerToken(
+    req.headers.get("Authorization") ?? req.headers.get("authorization"),
+  );
   if (!token) {
     return {
       ok: false,
@@ -295,10 +297,9 @@ async function requireCallerWithOptions(
     };
   }
 
-  const user = { id: callerData.user.id, email: callerData.user.email };
   return requireCallerByUserId(
     admin,
-    user,
+    { id: callerData.user.id, email: callerData.user.email },
     options,
     headers,
     style,
@@ -308,12 +309,9 @@ async function requireCallerWithOptions(
 
 async function requireCallerConvenience(
   req: Request,
-  featureKey: string,
+  featureKey: FeatureKey,
   minLevel: PermissionMinLevel = "full",
 ): Promise<{ userId: string } | Response> {
-  const token = parseBearerToken(req.headers.get("Authorization"));
-  if (!token) return convenienceJson(req, 401, { error: "Unauthorized" });
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceRoleKey) {
@@ -324,27 +322,19 @@ async function requireCallerConvenience(
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: callerData, error: callerErr } = await admin.auth.getUser(token);
-  if (callerErr || !callerData?.user) {
-    return convenienceJson(req, 401, { error: "Unauthorized" });
-  }
-
-  const mappedLevel = minLevel === "edit" || minLevel === "view" ? "limited" : minLevel;
-  const { data: allowed } = await admin.rpc("check_permission", {
-    p_user_id: callerData.user.id,
-    p_feature_key: featureKey,
-    p_min_level: mappedLevel,
+  const gated = await requireCallerWithOptions(req, admin, {
+    featureKey,
+    minLevel: minLevel === "edit" || minLevel === "view" || minLevel === "limited"
+      ? "limited"
+      : "full",
   });
-  if (allowed !== true) {
-    return convenienceJson(req, 403, { error: "Forbidden" });
-  }
-
-  return { userId: callerData.user.id };
+  if (!gated.ok) return gated.response;
+  return { userId: gated.user.id };
 }
 
 export async function requireCaller(
   req: Request,
-  featureKey: string,
+  featureKey: FeatureKey,
   minLevel?: PermissionMinLevel,
 ): Promise<{ userId: string } | Response>;
 export async function requireCaller(
@@ -354,17 +344,21 @@ export async function requireCaller(
 ): Promise<RequireCallerResult>;
 export async function requireCaller(
   req: Request,
-  adminOrFeature: SupabaseClient | string,
-  optionsOrLevel?: RequireCallerOptions | PermissionMinLevel,
+  adminOrFeatureKey: SupabaseClient | FeatureKey,
+  optionsOrMinLevel?: RequireCallerOptions | PermissionMinLevel,
 ): Promise<RequireCallerResult | { userId: string } | Response> {
-  if (typeof adminOrFeature === "string") {
+  if (typeof adminOrFeatureKey === "string") {
     return requireCallerConvenience(
       req,
-      adminOrFeature,
-      (optionsOrLevel as PermissionMinLevel | undefined) ?? "full",
+      adminOrFeatureKey,
+      typeof optionsOrMinLevel === "string" ? optionsOrMinLevel : "full",
     );
   }
-  return requireCallerWithOptions(req, adminOrFeature, optionsOrLevel as RequireCallerOptions);
+  return requireCallerWithOptions(
+    req,
+    adminOrFeatureKey,
+    optionsOrMinLevel as RequireCallerOptions,
+  );
 }
 
 /**

@@ -725,10 +725,8 @@ Deno.serve(async (req) => {
           ? Number(obligationIdRaw)
           : undefined;
 
-      // Preview/Broadcast: existing super-admin gate (human-triggered).
-      // Scheduled: cron gate (secret header or the service_role JWT cron
-      // already sends). Super-admin is accepted alongside so a staff
-      // caller can still run the scheduled scope manually.
+      // Scheduled: cron path, no JWT check (matches existing scopes).
+      // Preview/Broadcast: must be a super-admin.
       let actorUserId: string | undefined;
       if (isPreview || isBroadcast) {
         const authHeader = req.headers.get("Authorization");
@@ -765,9 +763,9 @@ Deno.serve(async (req) => {
         }
       } else if (!await isCronAuthorized(req)) {
         const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
-        if (!token) return cronUnauthorizedResponse(corsHeaders);
+        if (!token) return cronUnauthorizedResponse(req, corsHeaders);
         const userId = await getUserIdFromJwt(supabase, token);
-        if (!userId) return cronUnauthorizedResponse(corsHeaders);
+        if (!userId) return cronUnauthorizedResponse(req, corsHeaders);
         const { data: isSa, error: saErr } = await supabase.rpc("is_super_admin_safe", {
           p_user_id: userId,
         });
@@ -795,9 +793,9 @@ Deno.serve(async (req) => {
 
     if (!await isCronAuthorized(req)) {
       const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
-      if (!token) return cronUnauthorizedResponse(corsHeaders);
+      if (!token) return cronUnauthorizedResponse(req, corsHeaders);
       const userId = await getUserIdFromJwt(supabase, token);
-      if (!userId) return cronUnauthorizedResponse(corsHeaders);
+      if (!userId) return cronUnauthorizedResponse(req, corsHeaders);
       const { data: isSa, error: saErr } = await supabase.rpc("is_super_admin_safe", {
         p_user_id: userId,
       });

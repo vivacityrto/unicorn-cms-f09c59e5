@@ -37,10 +37,8 @@ export function useXeroConnectionStatus() {
 
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const redirectUri = `${window.location.origin}/admin/integrations/xero-callback`;
-
       const { data, error } = await supabase.functions.invoke('xero-auth', {
-        body: { action: 'get-auth-url', redirect_uri: redirectUri },
+        body: { action: 'get-auth-url' },
       });
 
       if (error || !data?.auth_url) {
@@ -48,7 +46,6 @@ export function useXeroConnectionStatus() {
       }
 
       localStorage.setItem('xero_oauth_state', data.state);
-      localStorage.setItem('xero_oauth_redirect', redirectUri);
 
       window.location.href = data.auth_url;
     },

@@ -43,7 +43,6 @@ export default function OutlookCallback() {
 
       // Get stored state from localStorage
       const savedState = localStorage.getItem('outlook_oauth_state');
-      const savedRedirectUri = localStorage.getItem('outlook_oauth_redirect');
 
       console.log('=== OUTLOOK CALLBACK START ===');
       console.log('[OutlookCallback] Current URL:', window.location.href);
@@ -57,7 +56,6 @@ export default function OutlookCallback() {
       });
       console.log('[OutlookCallback] LocalStorage:', {
         savedState: savedState?.substring(0, 8) + '...',
-        savedRedirectUri,
         stateMatch: state === savedState
       });
 
@@ -104,10 +102,8 @@ export default function OutlookCallback() {
         // This can happen if user is on a different domain than where they started
       }
 
-      // Session is OPTIONAL for this callback.
-      // Why: Microsoft may redirect back to a different preview domain (lovable.app vs lovableproject.com),
-      // which would not share localStorage with the origin where the user originally logged in.
-      // Token exchange is secured by the server-stored `state` and does not require the user session.
+      // Token exchange is bound to the verified caller. A session is required
+      // so the edge function can assert caller.id === oauth_states.user_id.
       setStatus('waiting-session');
       setMessage('Finalizing connection...');
 
@@ -123,18 +119,19 @@ export default function OutlookCallback() {
 
       console.log('[OutlookCallback] Session available:', sessionAvailable);
 
+      if (!sessionAvailable) {
+        setStatus('error');
+        setMessage('Please sign in on this site and try connecting Outlook again.');
+        return;
+      }
+
       // Exchange code for tokens
       setStatus('exchanging');
       setMessage('Exchanging authorization code...');
 
-      // Use the current origin as redirect URI if we don't have a saved one
-      // This handles the case where localStorage was cleared or user is on different domain
-      const redirectUri = savedRedirectUri || `${window.location.origin}/calendar/outlook-callback`;
-
       console.log('[OutlookCallback] Calling exchange-code with:', {
         codeLength: code.length,
-        state: state.substring(0, 8) + '...',
-        redirectUri
+        state: state.substring(0, 8) + '...'
       });
 
       setDiagnostics(prev => ({ ...prev, exchangeAttempted: true }));
@@ -146,7 +143,6 @@ export default function OutlookCallback() {
             body: { 
               action: 'exchange-code',
               code, 
-              redirect_uri: redirectUri, 
               state 
             }
           }
@@ -174,7 +170,7 @@ export default function OutlookCallback() {
 
         // Clean up localStorage
         localStorage.removeItem('outlook_oauth_state');
-        localStorage.removeItem('outlook_oauth_redirect');
+        localStorage.removeItem('outlook_oauth_redirect'); // leftover from pre-allowlist clients
 
         // Trigger initial sync
         setStatus('syncing');
