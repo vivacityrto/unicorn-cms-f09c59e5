@@ -25,6 +25,7 @@ import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDeliveryDate } from "@/lib/academy/formatDeliveryDate";
+import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
 
 const roleTiles = [
   {
@@ -204,6 +205,7 @@ export default function AcademyDashboardPage() {
               >
                 <div className="flex-1 min-w-0">
                   <h4 className="font-medium text-sm text-foreground">{c.course_title}</h4>
+                  <WebinarSeriesSubtitle series={c.webinar_series} />
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant={statusVariant(c.enrollment_status)} className="text-xs">
                       {statusLabel(c.enrollment_status)}
@@ -273,6 +275,7 @@ export default function AcademyDashboardPage() {
                   <h4 className="font-medium text-sm text-foreground truncate">
                     {course.title}
                   </h4>
+                  <WebinarSeriesSubtitle series={course.webinarSeries} />
                   <div className="text-xs text-muted-foreground mt-1">
                     {formatDeliveryDate(course.deliveryDate) && (
                       <span>{formatDeliveryDate(course.deliveryDate)} · </span>

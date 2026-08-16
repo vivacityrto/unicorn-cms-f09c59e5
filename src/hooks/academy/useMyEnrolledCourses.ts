@@ -17,6 +17,7 @@ export interface MyEnrolledCourse {
   module_count: number;
   next_lesson: { slug: string; lessonId: number } | null;
   has_certificate: boolean;
+  webinar_series: string | null;
 }
 
 export function useMyEnrolledCourses() {
@@ -40,7 +41,7 @@ export function useMyEnrolledCourses() {
       const [coursesRes, modulesRes, lessonsRes, completedRes] = await Promise.all([
         supabase
           .from("academy_courses")
-          .select("id, slug, description, thumbnail_url")
+          .select("id, slug, description, thumbnail_url, webinar_series")
           .in("id", courseIds),
         supabase
           .from("academy_modules")
@@ -61,9 +62,9 @@ export function useMyEnrolledCourses() {
           .eq("is_completed", true),
       ]);
 
-      const courseMap = new Map<number, { slug: string; description: string | null; thumbnail_url: string | null }>();
+      const courseMap = new Map<number, { slug: string; description: string | null; thumbnail_url: string | null; webinar_series: string | null }>();
       (coursesRes.data ?? []).forEach((c: any) =>
-        courseMap.set(c.id, { slug: c.slug, description: c.description, thumbnail_url: c.thumbnail_url })
+        courseMap.set(c.id, { slug: c.slug, description: c.description, thumbnail_url: c.thumbnail_url, webinar_series: c.webinar_series ?? null })
       );
 
       const moduleCountByCourse = new Map<number, number>();
@@ -116,6 +117,7 @@ export function useMyEnrolledCourses() {
               ? { slug: meta.slug, lessonId: nextLesson.id }
               : null,
           has_certificate: p.has_certificate ?? false,
+          webinar_series: meta?.webinar_series ?? null,
         };
       });
     },

@@ -30,6 +30,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCurrentCycle } from "@/features/pdp/hooks";
 import { QuickReflectionDrawer } from "@/components/academy/pdp/QuickReflectionDrawer";
 import CourseLessonResources from "@/components/academy/CourseLessonResources";
+import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
 
 const ACCENT = "#23c0dd";
 const PROGRESS_THROTTLE_MS = 10_000;
@@ -67,7 +68,7 @@ export default function AcademyLessonViewerPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, estimated_minutes, status, segment_start_seconds, segment_end_seconds, facilitator_id, delivery_date")
+        .select("id, title, slug, description, short_description, estimated_minutes, status, segment_start_seconds, segment_end_seconds, facilitator_id, delivery_date, webinar_series")
         .eq("slug", slug!)
         .single();
       if (error) throw error;
@@ -561,7 +562,10 @@ export default function AcademyLessonViewerPage() {
             Back to Course
           </Link>
 
-          <h3 className="text-sm font-semibold text-foreground truncate">{course.title}</h3>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-foreground truncate">{course.title}</h3>
+            <WebinarSeriesSubtitle series={course.webinar_series} />
+          </div>
 
           {enrollment && (
             <div className="space-y-1">

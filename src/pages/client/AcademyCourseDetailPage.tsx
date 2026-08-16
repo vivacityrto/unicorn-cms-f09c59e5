@@ -9,6 +9,7 @@ import { useModulesWithLessons } from "@/hooks/academy/useAcademyModulesLessons"
 import { formatDuration } from "@/hooks/useAcademyCourses";
 import { toast } from "sonner";
 import AssessmentEntrySection from "@/components/academy/AssessmentEntrySection";
+import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
 import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 import { useEnrolCourse } from "@/hooks/academy/useEnrolCourse";
 
@@ -25,7 +26,7 @@ export default function AcademyCourseDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, target_audience, estimated_minutes, difficulty_level, status, tags, thumbnail_url, certificate_enabled")
+        .select("id, title, slug, description, short_description, target_audience, estimated_minutes, difficulty_level, status, tags, thumbnail_url, certificate_enabled, webinar_series")
         .eq("slug", slug!)
         .eq("status", "published")
         .single();
@@ -148,6 +149,7 @@ export default function AcademyCourseDetailPage() {
 
         <div className="p-6 space-y-4">
           <h1 className="text-2xl font-bold text-foreground">{course.title}</h1>
+          <WebinarSeriesSubtitle series={course.webinar_series} />
 
           {/* Meta row */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
