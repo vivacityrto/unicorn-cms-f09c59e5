@@ -967,7 +967,6 @@ export default function TasksManagement() {
                                 assigned_by: creatorName,
                                 priority: newTask.priority || undefined,
                                 deep_link: deepLink,
-                                base_url: window.location.origin,
                               },
                               newTask.tenant_id || undefined,
                               newTask.package_id || undefined,
