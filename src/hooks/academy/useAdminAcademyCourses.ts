@@ -90,7 +90,17 @@ export function useAdminAcademyCourses(filters?: CourseFilters) {
 export function useUpdateCourse() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<AdminCourse> }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<AdminCourse> & {
+        ai_generated?: boolean;
+        ai_reviewed_by?: string | null;
+        ai_reviewed_at?: string | null;
+      };
+    }) => {
       const { error } = await supabase
         .from("academy_courses")
         .update(data as any)
