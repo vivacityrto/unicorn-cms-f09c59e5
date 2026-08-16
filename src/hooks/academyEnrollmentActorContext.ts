@@ -46,7 +46,7 @@ export async function fetchEnrollmentCourseContext(rows: TimelineEvent[]): Promi
   const { data: courses } = await supabase
     .from('academy_courses')
     .select('id, title, slug, published_by, created_by')
-    .in('id', courseIds);
+    .in('id', courseIds.map((id) => Number(id)));
 
   const courseInfoByCourseId = new Map<string, CourseActorInfo>(
     ((courses || []) as CourseRow[]).map((c) => [

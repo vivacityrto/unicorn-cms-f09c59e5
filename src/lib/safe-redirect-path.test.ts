@@ -39,7 +39,7 @@ describe("stripTrustedLinkKeys + spread order", () => {
       emailRedirectTo: "https://evil.example/phish3",
     };
     for (const k of ["appBaseUrl", "action_link", "redirect_to"]) delete mergeVars[k];
-    const vars = {
+    const vars: Record<string, unknown> = {
       preview_text: "Hello",
       ...mergeVars,
       appBaseUrl: "https://unicorn-cms.au",
