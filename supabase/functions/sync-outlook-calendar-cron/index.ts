@@ -15,6 +15,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SignJWT } from "https://esm.sh/jose@5.9.6";
 import { corsHeaders } from "../_shared/cors.ts";
+import { authorizeCronInvoke } from "../_shared/cron-invoke-auth.ts";
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -67,32 +69,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders(req) });
   }
 
-  // Authorize: require a Supabase-issued service_role JWT for this project.
-  // Accept either an exact match against SUPABASE_SERVICE_ROLE_KEY (manual
-  // invocation) or any token whose decoded payload has role=service_role and
-  // ref matching this project (pg_cron via private.cron_function_jwt()).
-  const auth = req.headers.get("Authorization") ?? "";
-  const presented = auth.replace(/^Bearer\s+/i, "").trim();
-  let authorized = presented === SUPABASE_SERVICE_ROLE_KEY;
-  if (!authorized && presented) {
-    try {
-      const parts = presented.split(".");
-      if (parts.length === 3) {
-        const padded = parts[1] + "=".repeat((4 - (parts[1].length % 4)) % 4);
-        const json = JSON.parse(
-          new TextDecoder().decode(
-            Uint8Array.from(atob(padded.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)),
-          ),
-        );
-        const projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
-        const notExpired = typeof json.exp !== "number" || json.exp * 1000 > Date.now();
-        authorized = json.role === "service_role" && json.iss === "supabase" && json.ref === projectRef && notExpired;
-      }
-    } catch (_err) {
-      authorized = false;
-    }
-  }
-  if (!authorized) {
+  // Cron-only. Auth is the shared invoke secret — a decoded-but-unverified
+  // JWT role=service_role claim is not evidence of anything.
+  if (!(await authorizeCronInvoke(req))) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders(req), "Content-Type": "application/json" },

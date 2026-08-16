@@ -14,6 +14,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller } from "../_shared/requireCaller.ts";
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -28,8 +30,9 @@ function json(req: Request, status: number, body: unknown) {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
-  const auth = req.headers.get("Authorization");
-  if (!auth) return json(req, 401, { ok: false, error: "Missing Authorization" });
+  const caller = await requireCaller(req, "admin.team_users.manage", "full");
+  if (caller instanceof Response) return caller;
+
 
   try {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

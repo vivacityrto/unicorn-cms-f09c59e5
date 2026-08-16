@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { authorizeCronInvoke } from "../_shared/cron-invoke-auth.ts";
+
 
 const XERO_CLIENT_ID = (Deno.env.get("XERO_CLIENT_ID") ?? "").trim();
 const XERO_CLIENT_SECRET = (Deno.env.get("XERO_CLIENT_SECRET") ?? "").trim();
@@ -25,27 +27,11 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders(req) });
   }
 
-  // Authorize: service-role only (cron-triggered), same pattern as
-  // sync-outlook-calendar-cron. This is a system job iterating every
-  // tenant, not acting on behalf of a specific staff member, so the
-  // per-caller is_vivacity_internal check the other xero-* functions use
-  // doesn't apply here - there is no real end-user JWT to check.
-  const auth = req.headers.get("Authorization") ?? "";
-  const presented = auth.replace(/^Bearer\s+/i, "").trim();
-  let authorized = presented === SUPABASE_SERVICE_ROLE_KEY;
-  if (!authorized && presented) {
-    try {
-      const [, payload] = presented.split(".");
-      const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-      const projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
-      const notExpired = typeof decoded.exp !== "number" || decoded.exp * 1000 > Date.now();
-      authorized = decoded.role === "service_role" && decoded.iss === "supabase" && decoded.ref === projectRef && notExpired;
-    } catch {
-      authorized = false;
-    }
-  }
-  if (!authorized) {
+  // Cron-only system job. Auth is the shared invoke secret, not a
+  // decoded-but-unverified JWT role claim (that path was a bypass).
+  if (!(await authorizeCronInvoke(req))) {
     return json(req, 401, { error: "Unauthorized" });
+
   }
 
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

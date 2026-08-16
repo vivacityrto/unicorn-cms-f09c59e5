@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller } from "../_shared/requireCaller.ts";
+
 import {
   getAppToken,
   graphGet,
@@ -383,6 +385,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders(req) });
   }
 
+  const caller = await requireCaller(req, "admin.documents.bulk_generate", "full");
+  if (caller instanceof Response) return caller;
+  const callerUserId = caller.userId;
+
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   let tenantIdForError: number | null = null;
 
@@ -396,29 +402,6 @@ serve(async (req) => {
         JSON.stringify({ success: false, error: "tenant_id is required" }),
         { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
-    }
-
-    // Auth — optional
-    let callerUserId: string | null = null;
-    const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      const { data: { user } } = await supabaseAdmin.auth.getUser(
-        authHeader.replace("Bearer ", ""),
-      );
-      if (user) {
-        const { data: callerUser } = await supabaseAdmin
-          .from("users")
-          .select("is_vivacity_internal")
-          .eq("user_uuid", user.id)
-          .single();
-        if (!callerUser?.is_vivacity_internal) {
-          return new Response(
-            JSON.stringify({ success: false, error: "Forbidden — Vivacity staff only" }),
-            { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
-          );
-        }
-        callerUserId = user.id;
-      }
     }
 
     // Load tenant

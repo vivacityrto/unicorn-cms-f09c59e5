@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
+
 
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID')!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
@@ -243,10 +245,33 @@ serve(async (req) => {
       );
     }
 
-    const body: LinkDocumentRequest = await req.json();
+    const body: LinkDocumentRequest & { tenant_id?: number } = await req.json();
     const { action } = body;
 
     console.log('[link-sharepoint] Action:', action, 'User:', user.id);
+
+    if (body.tenant_id != null) {
+      const tenantIdNum = Number(body.tenant_id);
+      if (!Number.isFinite(tenantIdNum)) {
+        return new Response(
+          JSON.stringify({ error: 'tenant_id must be a number' }),
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+      const tenantAccess = await hasTenantAccessSafe(supabaseAdmin, user.id, tenantIdNum);
+      if (tenantAccess.lookupFailed) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to verify tenant access' }),
+          { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!tenantAccess.allowed) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: no access to this tenant' }),
+          { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Get OAuth token
     const { data: tokenRecord, error: tokenError } = await supabaseAdmin

@@ -25,6 +25,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { corsHeaders } from "../_shared/cors.ts";
+import { parseBearerToken } from '../_shared/requireCaller.ts';
+
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -55,14 +57,14 @@ const BodySchema = z.object({
 function kickoffWorker(jobId: string, authHeader: string) {
   // Fire-and-forget. Anon key satisfies the platform JWT verification;
   // x-caller-authorization carries the real staff JWT to the worker for its
-  // internal downstream calls (this is the pattern the simple-path 'create'
-  // action has always used successfully).
+  // internal downstream calls; x-worker-secret is the M2M gate.
   const workerUrl = `${SUPABASE_URL}/functions/v1/bulk-generate-documents-worker`;
   fetch(workerUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-caller-authorization': authHeader,
+      'x-worker-secret': Deno.env.get('BULK_DOCUMENT_WORKER_SECRET') ?? '',
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     },
     body: JSON.stringify({ job_id: jobId }),
@@ -81,8 +83,9 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json(req, { error: 'Method not allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
+  if (!parseBearerToken(authHeader)) {
     return json(req, { error: 'Unauthorized', details: 'Missing bearer token' }, 401);
+
   }
 
   let parsed: z.infer<typeof BodySchema>;

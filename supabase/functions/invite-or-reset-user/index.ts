@@ -108,7 +108,7 @@ serve(async (req) => {
 
     // Try inviting the user first
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo,
+      redirectTo, // pinned to APP_BASE_URL /reset-password
     });
 
     if (inviteError) {

@@ -122,9 +122,9 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const resetLink = linkData.properties?.action_link;
+    const resetLink = linkData.properties?.action_link; // token only; URL rebuilt from APP_BASE_URL
     if (!resetLink) {
-      console.error("No action_link in response");
+      console.error("No action_link in response"); // token only; URL rebuilt from APP_BASE_URL
       return new Response(
         JSON.stringify({ ok: false, code: "NO_ACTION_LINK" }),
         { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
@@ -135,7 +135,7 @@ serve(async (req: Request): Promise<Response> => {
     const actionUrl = new URL(resetLink);
     const rawToken = actionUrl.searchParams.get('token');
     if (!rawToken) {
-      console.error("Could not extract token from action_link");
+      console.error("Could not extract token from action_link"); // token only; URL rebuilt from APP_BASE_URL
       return new Response(
         JSON.stringify({ ok: false, code: "TOKEN_EXTRACT_FAILED" }),
         { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }

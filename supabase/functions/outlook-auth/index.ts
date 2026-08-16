@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildScopeString, type SurfaceFlags } from "../_shared/microsoft-scopes.ts";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
+
 
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID')!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
@@ -80,6 +82,29 @@ serve(async (req) => {
           JSON.stringify({ error: 'redirect_uri is required' }),
           { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
+      }
+
+      if (tenantId != null) {
+        const tenantIdNum = Number(tenantId);
+        if (!Number.isFinite(tenantIdNum)) {
+          return new Response(
+            JSON.stringify({ error: 'tenant_id must be a number' }),
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+          );
+        }
+        const tenantAccess = await hasTenantAccessSafe(supabaseAdmin, user.id, tenantIdNum);
+        if (tenantAccess.lookupFailed) {
+          return new Response(
+            JSON.stringify({ error: 'Failed to verify tenant access' }),
+            { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+          );
+        }
+        if (!tenantAccess.allowed) {
+          return new Response(
+            JSON.stringify({ error: 'Forbidden: no access to this tenant' }),
+            { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       // Generate and store state for CSRF protection

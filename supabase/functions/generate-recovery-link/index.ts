@@ -126,9 +126,9 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const actionLink = linkData.properties?.action_link;
+    const actionLink = linkData.properties?.action_link; // token only; redirectTo was APP_BASE_URL
     if (!actionLink) {
-      console.error("No action_link in response");
+      console.error("No action_link in response"); // token only; redirectTo was APP_BASE_URL
       return new Response(
         JSON.stringify({ ok: false, code: "NO_ACTION_LINK" }),
         { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
@@ -152,7 +152,7 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({
         ok: true,
-        action_link: actionLink,
+        action_link: actionLink, // GoTrue link; redirectTo pinned to APP_BASE_URL
         email: targetUser.email,
       }),
       { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }

@@ -52,6 +52,9 @@ test("buildCorsHeaders echoes allowlisted Origin and omits it otherwise", () => 
   assert.equal(allowedHeaders.Vary, "Origin");
   assert.match(allowedHeaders["Access-Control-Allow-Headers"], /authorization/);
   assert.match(allowedHeaders["Access-Control-Allow-Headers"], /idempotency-key/);
+  assert.match(allowedHeaders["Access-Control-Allow-Headers"], /x-worker-secret/);
+  assert.match(allowedHeaders["Access-Control-Allow-Headers"], /x-cron-invoke-secret/);
+  assert.match(allowedHeaders["Access-Control-Allow-Headers"], /x-hook-secret/);
   assert.match(allowedHeaders["Access-Control-Allow-Methods"], /OPTIONS/);
 
   const wwwHeaders = buildCorsHeaders("https://www.unicorn-cms.au", allowed);

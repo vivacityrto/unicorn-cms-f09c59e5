@@ -18,6 +18,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { graphGet } from '../_shared/graph-app-client.ts';
 import { corsHeaders } from "../_shared/cors.ts";
+import { parseBearerToken } from '../_shared/requireCaller.ts';
+
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -45,6 +47,7 @@ function json(req: Request, body: unknown, status = 200): Response {
     headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
+
 
 /**
  * Live verification of a single (drive, item) — returns the enum branch
@@ -94,8 +97,9 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json(req, { error: 'Method not allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
+  if (!parseBearerToken(authHeader)) {
     return json(req, { error: 'Unauthorized', details: 'Missing bearer token' }, 401);
+
   }
 
   let parsed: z.infer<typeof BodySchema>;

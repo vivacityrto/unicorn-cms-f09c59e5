@@ -1,22 +1,6 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-
-type UpdateProfileBody = {
-  user_uuid: string;
-  first_name?: string;
-  last_name?: string;
-  full_name?: string;
-  job_title?: string;
-  mobile_phone?: string;
-  timezone?: string;
-  bio?: string;
-  email?: string;
-  personal_email?: string;
-  personal_phone?: string;
-  user_type?: string;
-  unicorn_role?: string;
-  archived?: boolean;
-};
+import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
+import { applyUsersProfileUpdate } from "../_shared/users-write-allowlist.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,102 +8,99 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = (await req.json()) as UpdateProfileBody;
-    const { user_uuid, user_type, unicorn_role, archived, email, ...updates } = body;
-
-    if (!user_uuid) {
-      return jsonErr(req, 400, "MISSING_USER_ID", "User UUID is required");
-    }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
-    );
-
-    // Get current user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return jsonErr(req, 401, "UNAUTHORIZED", "No authorization header");
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser(token);
-    
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonErr(req, 400, "BAD_JSON", "Invalid JSON body");
+    }
+
+    const user_uuid = typeof body.user_uuid === "string" ? body.user_uuid : "";
+    if (!user_uuid) {
+      return jsonErr(req, 400, "MISSING_USER_ID", "User UUID is required");
+    }
+
+    // JWT + anon key so the users UPDATE runs as `authenticated` and the
+    // three RESTRICTIVE policies on public.users apply as designed.
+    const userClient = createUserClient(authHeader);
+    // Service role is scoped to the audit insert only.
+    const serviceClient = createServiceClient();
+
+    const { data: { user: currentUser }, error: userError } = await userClient.auth.getUser();
     if (userError || !currentUser) {
       return jsonErr(req, 401, "UNAUTHORIZED", "Invalid token");
     }
 
-    // Check if user is editing themselves or if they're an admin
-    const isSelf = currentUser.id === user_uuid;
-    
-    // Vivacity staff permission via central RPC (used for admin path + protected fields)
-    const { data: vivacityAllowed } = await supabase.rpc('check_permission', {
+    const { data: vivacityAllowed } = await userClient.rpc("check_permission", {
       p_user_id: currentUser.id,
-      p_feature_key: 'admin.team_users.manage',
-      p_min_level: 'full',
+      p_feature_key: "admin.team_users.manage",
+      p_min_level: "full",
     });
-    const isSuperAdmin = !!vivacityAllowed;
+    const hasManagePermission = !!vivacityAllowed;
+    const isSelf = currentUser.id === user_uuid;
 
-    if (!isSelf) {
-      if (!isSuperAdmin) {
-        // Get current user's role/tenant (needed for client-admin path)
-        const { data: currentUserData } = await supabase
+    let isClientAdmin = false;
+    if (!isSelf && !hasManagePermission) {
+      const { data: currentUserData } = await userClient
+        .from("users")
+        .select("unicorn_role, user_type, tenant_id")
+        .eq("user_uuid", currentUser.id)
+        .single();
+
+      const { data: targetUserData } = await userClient
+        .from("users")
+        .select("tenant_id")
+        .eq("user_uuid", user_uuid)
+        .single();
+
+      isClientAdmin = currentUserData?.unicorn_role === "Admin" &&
+        (currentUserData?.user_type === "Client Parent" || currentUserData?.user_type === "Client") &&
+        targetUserData?.tenant_id === currentUserData?.tenant_id;
+    }
+
+    const outcome = await applyUsersProfileUpdate({
+      callerId: currentUser.id,
+      targetUserUuid: user_uuid,
+      hasManagePermission,
+      isClientAdmin,
+      body,
+      updateRow: async (uuid, updates) => {
+        const updatePayload = Object.assign({}, updates, {
+          updated_at: new Date().toISOString(),
+        });
+        const { error: updateError } = await userClient
           .from("users")
-          .select("unicorn_role, user_type, tenant_id")
-          .eq("user_uuid", currentUser.id)
-          .single();
+          .update(updatePayload)
+          .eq("user_uuid", uuid);
 
-        // Get target user's tenant to check if same as current user's tenant
-        const { data: targetUserData } = await supabase
-          .from("users")
-          .select("tenant_id")
-          .eq("user_uuid", user_uuid)
-          .single();
-
-        const isClientAdmin = currentUserData?.unicorn_role === "Admin" &&
-          (currentUserData?.user_type === "Client Parent" || currentUserData?.user_type === "Client") &&
-          targetUserData?.tenant_id === currentUserData?.tenant_id;
-
-        if (!isClientAdmin) {
-          return jsonErr(req, 403, "FORBIDDEN", "You don't have permission to edit this user");
+        if (updateError) {
+          const isRls = updateError.code === "42501" ||
+            /row-level security|permission denied/i.test(updateError.message);
+          const err = new Error(updateError.message) as Error & { status?: number; code?: string };
+          err.status = isRls ? 403 : 400;
+          err.code = isRls ? "FORBIDDEN" : "UPDATE_FAILED";
+          throw err;
         }
-      }
+        return updatePayload;
+      },
+    });
+
+    if (!outcome.ok) {
+      return jsonErr(req, outcome.status, outcome.code, outcome.detail);
     }
 
-    // Build update payload - only Super Admins can update user_type and unicorn_role
-    const updatePayload: Record<string, unknown> = {
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (isSuperAdmin) {
-      if (user_type) updatePayload.user_type = user_type;
-      if (unicorn_role) updatePayload.unicorn_role = unicorn_role;
-      if (archived !== undefined) updatePayload.archived = archived;
-      if (email) updatePayload.email = email.trim().toLowerCase();
-    } else if (user_type || unicorn_role || archived !== undefined || email) {
-      console.log("Non-Super Admin attempted to change protected fields - ignoring");
-    }
-
-    // Update the user
-    const { error: updateError } = await supabase
-      .from("users")
-      .update(updatePayload)
-      .eq("user_uuid", user_uuid);
-
-    if (updateError) {
-      return jsonErr(req, 400, "UPDATE_FAILED", updateError.message);
-    }
-
-    // Audit log
-    await supabase.from("audit_eos_events").insert({
+    await serviceClient.from("audit_eos_events").insert({
       user_id: currentUser.id,
       entity: "users",
       entity_id: user_uuid,
       action: "profile_updated",
       reason: isSelf ? "User updated own profile" : "Admin updated user profile",
-      details: updates,
+      details: outcome.updates,
     });
 
     console.log(`Profile updated successfully for ${user_uuid}`);
@@ -129,6 +110,9 @@ Deno.serve(async (req) => {
       status: 200,
     });
   } catch (e: any) {
+    if (typeof e?.status === "number" && e?.code) {
+      return jsonErr(req, e.status, e.code, e.message);
+    }
     console.error("Error updating profile:", e);
     return jsonErr(req, 500, "UNHANDLED", e?.message ?? String(e));
   }

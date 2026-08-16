@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import * as zip from "https://deno.land/x/zipjs@v2.7.32/index.js";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeadersFor, parseBearerToken } from "../_shared/requireCaller.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import {
   graphUploadSmall,
@@ -598,6 +598,7 @@ async function resolveMergeFields(
 // ── Main Handler ───────────────────────────────────────────────────────────
 
 serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
   }
@@ -607,14 +608,13 @@ serve(async (req) => {
 
     // Auth check — Vivacity staff only
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    const token = parseBearerToken(authHeader);
+    if (!token) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
         status: 401,
         headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
-
-    const token = authHeader.replace("Bearer ", "");
 
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
     const userClient = createClient(

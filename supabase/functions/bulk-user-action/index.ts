@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
         else console.warn(`rpc_set_client_account_status refused ${uuid}:`, res?.error);
       }
     } else if (action === 'change_role' && role) {
+      // Allowlisted write: unicorn_role + updated_at only. Never spread request body.
       const { data: updatedUsers, error: updateError } = await supabase
         .from("users")
         .update({ unicorn_role: role, updated_at: new Date().toISOString() })
