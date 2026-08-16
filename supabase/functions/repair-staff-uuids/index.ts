@@ -188,7 +188,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // 2. Update the user_uuid (CASCADE propagates to all child FKs)
+      // 2. Update the user_uuid (CASCADE propagates to all child FKs).
+      // Allowlisted write: user_uuid only. Never spread request body.
       const { error: updErr } = await admin
         .from("users")
         .update({ user_uuid: targetAuthId })

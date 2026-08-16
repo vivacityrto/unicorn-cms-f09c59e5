@@ -45,12 +45,6 @@ type TenantLiveness = {
   error: string | null;
 };
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
 
 /**
  * Live verification of a single (drive, item) — returns the enum branch
@@ -96,6 +90,13 @@ async function pMapLimit<T, R>(
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = corsHeadersFor(req);
+  const json = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 

@@ -14,7 +14,6 @@ export interface TaskNotificationPayload {
   assigned_by?: string;
   priority?: string;
   deep_link: string;
-  base_url?: string;
 }
 
 export interface PackageNotificationPayload {
@@ -24,7 +23,6 @@ export interface PackageNotificationPayload {
   hours_total: number;
   percentage: number;
   deep_link: string;
-  base_url?: string;
 }
 
 export interface RiskNotificationPayload {
@@ -33,7 +31,6 @@ export interface RiskNotificationPayload {
   risk_level: string;
   description?: string;
   deep_link: string;
-  base_url?: string;
 }
 
 export interface MeetingActionPayload {
@@ -41,7 +38,6 @@ export interface MeetingActionPayload {
   meeting_title?: string;
   client_name?: string;
   deep_link: string;
-  base_url?: string;
 }
 
 // Emit task assigned notification

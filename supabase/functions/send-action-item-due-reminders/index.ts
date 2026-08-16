@@ -19,13 +19,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { appUrl } from "../_shared/app-base-url.ts";
 
 const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
 const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
 const MAILGUN_REGION = (Deno.env.get("MAILGUN_REGION") || "us").toLowerCase();
 const MAILGUN_FROM_EMAIL = Deno.env.get("MAILGUN_FROM_EMAIL") || "noreply@vivacity.com.au";
 const MAILGUN_FROM_NAME = Deno.env.get("MAILGUN_FROM_NAME") || "Vivacity Unicorn";
-const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au";
 
 const MAILGUN_BASE_URL =
   MAILGUN_REGION === "eu" ? "https://api.eu.mailgun.net/v3" : "https://api.mailgun.net/v3";
@@ -77,7 +77,7 @@ function buildReminderEmailHtml(opts: {
 }): string {
   const { recipientName, tenantName, item, offsetDays } = opts;
   const priorityColor = PRIORITY_COLORS[item.priority] || "#64748b";
-  const actionUrl = `${APP_BASE_URL.replace(/\/$/, "")}/tenant/${item.tenant_id}?tab=actions`;
+  const actionUrl = appUrl(`/tenant/${item.tenant_id}?tab=actions`);
 
   return `
 <div style="font-family:Calibri,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;">

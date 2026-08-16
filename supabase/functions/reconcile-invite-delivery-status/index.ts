@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authorizeCronInvoke } from "../_shared/cron-invoke-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -18,7 +19,7 @@ const DELAY_BETWEEN_CALLS_MS = 250;
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-cron-invoke-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -48,35 +49,6 @@ function stripAngleBrackets(id: string): string {
   return out;
 }
 
-function authorizeRequest(req: Request): boolean {
-  const auth = req.headers.get("Authorization") ?? "";
-  const presented = auth.replace(/^Bearer\s+/i, "").trim();
-  if (!presented) return false;
-  if (presented === SUPABASE_SERVICE_ROLE_KEY) return true;
-  try {
-    const parts = presented.split(".");
-    if (parts.length !== 3) return false;
-    const padded = parts[1] + "=".repeat((4 - (parts[1].length % 4)) % 4);
-    const payload = JSON.parse(
-      new TextDecoder().decode(
-        Uint8Array.from(
-          atob(padded.replace(/-/g, "+").replace(/_/g, "/")),
-          (c) => c.charCodeAt(0),
-        ),
-      ),
-    );
-    const projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
-    const notExpired = typeof payload.exp !== "number" ||
-      payload.exp * 1000 > Date.now();
-    return payload.role === "service_role" &&
-      payload.iss === "supabase" &&
-      payload.ref === projectRef &&
-      notExpired;
-  } catch {
-    return false;
-  }
-}
-
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface MailgunEventItem {
@@ -90,7 +62,7 @@ serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  if (!authorizeRequest(req)) {
+  if (!(await authorizeCronInvoke(req))) {
     return json(401, { error: "Unauthorized" });
   }
 
