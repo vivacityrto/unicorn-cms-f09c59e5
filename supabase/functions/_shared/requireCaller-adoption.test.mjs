@@ -25,6 +25,7 @@ const mustAdopt = [
   "tenant-lifecycle",
   "bulk-generate-phase-documents",
   "resolve-sharepoint-folder-url",
+  "import-clickup-csv",
 ];
 
 describe("requireCaller adoption", () => {
