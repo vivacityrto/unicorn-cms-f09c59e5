@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyXeroSignature } from "../_shared/webhook-signature.ts";
 
 // No corsHeaders needed - Xero calls this server-to-server, never from a browser.
 
@@ -8,24 +9,21 @@ const XERO_CLIENT_SECRET = (Deno.env.get("XERO_CLIENT_SECRET") ?? "").trim();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
-
-async function computeSignature(rawBody: string, key: string): Promise<string> {
-  const enc = new TextEncoder();
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(key),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
+if (!XERO_WEBHOOK_KEY) {
+  console.error(
+    "[xero-webhook] XERO_WEBHOOK_KEY is not set — refusing all requests",
   );
-  const sigBuffer = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(rawBody));
-  return btoa(String.fromCharCode(...new Uint8Array(sigBuffer)));
 }
+
+const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+
+  if (!XERO_WEBHOOK_KEY) {
+    return new Response("Webhook is not configured", { status: 500 });
   }
 
   // Xero requires a bare 200 (no body needed) within 5 seconds, and
@@ -36,13 +34,8 @@ Deno.serve(async (req) => {
   const rawBody = await req.text();
   const signature = req.headers.get("x-xero-signature") ?? "";
 
-  if (!XERO_WEBHOOK_KEY) {
-    console.error("[xero-webhook] XERO_WEBHOOK_KEY not configured - cannot verify signature");
-    return new Response("Not configured", { status: 401 });
-  }
-
-  const expectedSignature = await computeSignature(rawBody, XERO_WEBHOOK_KEY);
-  if (signature !== expectedSignature) {
+  const valid = await verifyXeroSignature(XERO_WEBHOOK_KEY, rawBody, signature);
+  if (!valid) {
     console.error("[xero-webhook] Signature mismatch");
     return new Response("Invalid signature", { status: 401 });
   }

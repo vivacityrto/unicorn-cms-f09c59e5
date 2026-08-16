@@ -185,6 +185,8 @@ serve(async (req) => {
       task_id: body.link.task_id || null,
       linked_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      unlinked_at: null,
+      unlinked_by: null,
       // Graph-enriched fields
       importance: graphEnrichment?.importance || null,
       is_read: graphEnrichment?.isRead ?? null,

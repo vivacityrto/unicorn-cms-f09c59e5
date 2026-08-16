@@ -24104,6 +24104,8 @@ export type Database = {
           subject: string | null
           task_id: string | null
           tenant_id: number
+          unlinked_at: string | null
+          unlinked_by: string | null
           updated_at: string
           user_uuid: string
         }
@@ -24125,6 +24127,8 @@ export type Database = {
           subject?: string | null
           task_id?: string | null
           tenant_id: number
+          unlinked_at?: string | null
+          unlinked_by?: string | null
           updated_at?: string
           user_uuid: string
         }
@@ -24146,6 +24150,8 @@ export type Database = {
           subject?: string | null
           task_id?: string | null
           tenant_id?: number
+          unlinked_at?: string | null
+          unlinked_by?: string | null
           updated_at?: string
           user_uuid?: string
         }

@@ -100,11 +100,9 @@ export function LinkedEmailsList({
           <AlertDialogHeader>
             <AlertDialogTitle>Unlink this email?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove <span className="font-medium">"{unlinkEmail?.subject || "(No subject)"}"</span>,
-              its attachments, and any notes created from it via "Convert to Note". This action cannot be undone.
-              <br /><br />
-              Notes converted before this feature was added won't have a link back to the email and will need to be
-              removed manually.
+              This will unlink <span className="font-medium">"{unlinkEmail?.subject || "(No subject)"}"</span> from
+              this record. The email, its attachments, and any notes created from it are kept and can be
+              linked again later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -122,7 +120,7 @@ export function LinkedEmailsList({
                 }
               }}
             >
-              {isUnlinking ? "Unlinking..." : "Unlink and delete"}
+              {isUnlinking ? "Unlinking..." : "Unlink"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
