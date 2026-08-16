@@ -273,3 +273,121 @@ export async function requireCallerByUserId(
 
   return { ok: true, user, via: "permission" };
 }
+
+async function requireCallerWithOptions(
+  req: Request,
+  admin: SupabaseClient,
+  options: RequireCallerOptions,
+): Promise<RequireCallerResult> {
+  const headers = options.headers ?? defaultCorsHeaders;
+  const style = options.errorStyle ?? "error";
+  const token = parseBearerToken(
+    req.headers.get("Authorization") ?? req.headers.get("authorization"),
+  );
+  if (!token) {
+    return {
+      ok: false,
+      response: jsonResponse(
+        headers,
+        style,
+        401,
+        "UNAUTHORIZED",
+        options.unauthorizedMessage ?? "Unauthorized",
+      ),
+    };
+  }
+
+  const { data: callerData, error: callerErr } = await admin.auth.getUser(token);
+  if (callerErr || !callerData?.user) {
+    return {
+      ok: false,
+      response: jsonResponse(
+        headers,
+        style,
+        401,
+        "UNAUTHORIZED",
+        options.unauthorizedMessage ?? "Unauthorized",
+      ),
+    };
+  }
+
+  return requireCallerByUserId(
+    admin,
+    { id: callerData.user.id, email: callerData.user.email },
+    options,
+    headers,
+    style,
+    options.minLevel ?? "full",
+  );
+}
+
+async function requireCallerConvenience(
+  req: Request,
+  featureKey: FeatureKey,
+  minLevel: PermissionMinLevel = "full",
+): Promise<{ userId: string } | Response> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    return convenienceJson(req, 500, { error: "Server misconfigured" });
+  }
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const gated = await requireCallerWithOptions(req, admin, {
+    featureKey,
+    minLevel: minLevel === "limited" ? "limited" : "full",
+  });
+  if (!gated.ok) return gated.response;
+  return { userId: gated.user.id };
+}
+
+export async function requireCaller(
+  req: Request,
+  admin: SupabaseClient,
+  options: RequireCallerOptions,
+): Promise<RequireCallerResult>;
+export async function requireCaller(
+  req: Request,
+  featureKey: FeatureKey,
+  minLevel?: PermissionMinLevel,
+): Promise<{ userId: string } | Response>;
+export async function requireCaller(
+  req: Request,
+  adminOrFeatureKey: SupabaseClient | FeatureKey,
+  optionsOrMinLevel?: RequireCallerOptions | PermissionMinLevel,
+): Promise<RequireCallerResult | { userId: string } | Response> {
+  if (typeof adminOrFeatureKey === "string") {
+    return requireCallerConvenience(
+      req,
+      adminOrFeatureKey,
+      typeof optionsOrMinLevel === "string" ? optionsOrMinLevel : "full",
+    );
+  }
+  return requireCallerWithOptions(
+    req,
+    adminOrFeatureKey,
+    optionsOrMinLevel as RequireCallerOptions,
+  );
+}
+
+/**
+ * Machine-to-machine gate: constant-time compare of a request header against
+ * a Deno.env secret. Rejects when the secret is unset or the header is missing
+ * or mismatched. Never logs the secret or the provided value.
+ */
+export function requireSharedSecret(
+  req: Request,
+  envKey: string,
+  headerName = "x-worker-secret",
+  extraAllowHeaders: string[] = [],
+): { ok: true } | Response {
+  const expected = Deno.env.get(envKey) ?? "";
+  const provided = req.headers.get(headerName) ?? "";
+  if (!expected || !constantTimeEqual(provided, expected)) {
+    return convenienceJson(req, 401, { error: "Unauthorized" }, extraAllowHeaders);
+  }
+  return { ok: true };
+}
