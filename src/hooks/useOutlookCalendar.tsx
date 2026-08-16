@@ -106,10 +106,7 @@ export function useOutlookCalendar() {
       return;
     }
     
-    const redirectUri = getOutlookRedirectUri();
-    
-    console.log('[useOutlookCalendar] Starting OAuth with redirect URI:', redirectUri);
-    console.log('[useOutlookCalendar] Tenant ID:', tenantId);
+    console.log('[useOutlookCalendar] Starting OAuth for tenant:', tenantId);
     
     setLoading(true);
     
@@ -117,7 +114,6 @@ export function useOutlookCalendar() {
       const { data, error } = await supabase.functions.invoke('outlook-auth', {
         body: { 
           action: 'get-auth-url',
-          redirect_uri: redirectUri, 
           tenant_id: tenantId 
         }
       });
@@ -130,11 +126,9 @@ export function useOutlookCalendar() {
       }
       
       console.log('[useOutlookCalendar] Got auth URL, state:', data.state);
-      console.log('[useOutlookCalendar] Redirect URI saved in state:', redirectUri);
       
       // Store state in localStorage as backup (server has the canonical state)
       localStorage.setItem('outlook_oauth_state', data.state);
-      localStorage.setItem('outlook_oauth_redirect', redirectUri);
       
       // Check if running in an iframe (e.g., Lovable preview)
       // Microsoft login blocks rendering in iframes via X-Frame-Options
