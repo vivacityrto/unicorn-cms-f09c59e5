@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsHeaders } from "../_shared/cors.ts";
+import { appUrl } from "../_shared/app-base-url.ts";
 import { cronUnauthorizedResponse, isCronAuthorized } from "../_shared/cron-auth.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -20,14 +21,13 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Processing notification queue...");
 
-    // Get pending notifications that are due
     const now = new Date();
     const { data: pendingNotifications, error: fetchError } = await supabase
       .from("notification_schedule")
       .select("*")
       .eq("status", "pending")
       .lte("scheduled_for", now.toISOString())
-      .limit(50); // Process in batches
+      .limit(50);
 
     if (fetchError) {
       throw fetchError;
@@ -40,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
         {
           status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        },
       );
     }
 
@@ -51,7 +51,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const notification of pendingNotifications) {
       try {
-        // Check if entity still exists and is valid
         const isValid = await validateNotification(supabase, notification);
         if (!isValid) {
           console.log(`Cancelling invalid notification ${notification.id}`);
@@ -62,7 +61,6 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        // Get user preferences
         const { data: userPrefs } = await supabase
           .from("user_notification_prefs")
           .select("*")
@@ -70,25 +68,21 @@ const handler = async (req: Request): Promise<Response> => {
           .eq("tenant_id", notification.tenant_id)
           .single();
 
-        // Check quiet hours
         if (userPrefs && isInQuietHours(userPrefs.quiet_hours)) {
           console.log(`Skipping notification ${notification.id} due to quiet hours`);
-          // Reschedule for after quiet hours
           const rescheduleTime = calculateNextAvailableTime(userPrefs.quiet_hours);
           await supabase
             .from("notification_schedule")
             .update({
               scheduled_for: rescheduleTime.toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
             .eq("id", notification.id);
           continue;
         }
 
-        // Get notification data
         const notificationData = await getNotificationData(supabase, notification);
 
-        // Send notifications based on user preferences
         if (userPrefs?.email_enabled !== false) {
           await sendEmailNotification(supabase, notification, notificationData, userPrefs);
         }
@@ -97,30 +91,27 @@ const handler = async (req: Request): Promise<Response> => {
           await sendInAppNotification(supabase, notification, notificationData);
         }
 
-        // Mark as sent
         await supabase
           .from("notification_schedule")
           .update({
             status: "sent",
             sent_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq("id", notification.id);
 
-        // Update task reminder count if applicable
         if (notification.entity_type === "task") {
           await supabase
             .from("tasks_tenants")
             .update({
               last_reminder_at: new Date().toISOString(),
-              reminder_count: supabase.rpc('increment', { x: 1 })
+              reminder_count: supabase.rpc("increment", { x: 1 }),
             })
             .eq("id", notification.entity_id);
         }
 
         processed++;
         console.log(`Successfully processed notification ${notification.id}`);
-
       } catch (error: any) {
         console.error(`Error processing notification ${notification.id}:`, error);
         await supabase
@@ -128,7 +119,7 @@ const handler = async (req: Request): Promise<Response> => {
           .update({
             status: "failed",
             error_message: error.message,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq("id", notification.id);
         failed++;
@@ -142,12 +133,12 @@ const handler = async (req: Request): Promise<Response> => {
         success: true,
         processed,
         failed,
-        total: pendingNotifications.length
+        total: pendingNotifications.length,
       }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      },
     );
   } catch (error: any) {
     console.error("Error in process-notification-queue:", error);
@@ -156,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      },
     );
   }
 };
@@ -165,7 +156,6 @@ async function validateNotification(supabase: any, notification: any): Promise<b
   const { entity_type, entity_id, notification_type } = notification;
 
   if (entity_type === "task") {
-    // Check if task exists and is not completed
     const { data: task } = await supabase
       .from("tasks_tenants")
       .select("completed, status")
@@ -176,7 +166,6 @@ async function validateNotification(supabase: any, notification: any): Promise<b
       return false;
     }
 
-    // If this is an overdue notification, check if task is actually overdue
     if (notification_type === "overdue") {
       const { data: taskDetails } = await supabase
         .from("tasks_tenants")
@@ -185,7 +174,7 @@ async function validateNotification(supabase: any, notification: any): Promise<b
         .single();
 
       if (taskDetails && new Date(taskDetails.due_date) > new Date()) {
-        return false; // Task is not overdue yet
+        return false;
       }
     }
   }
@@ -197,10 +186,9 @@ function isInQuietHours(quietHours: any): boolean {
   if (!quietHours) return false;
 
   const now = new Date();
-  const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+  const currentTime = now.toTimeString().slice(0, 5);
   const { start, end } = quietHours;
 
-  // Handle quiet hours that span midnight
   if (start > end) {
     return currentTime >= start || currentTime <= end;
   }
@@ -210,13 +198,12 @@ function isInQuietHours(quietHours: any): boolean {
 
 function calculateNextAvailableTime(quietHours: any): Date {
   const now = new Date();
-  const endTime = quietHours.end; // e.g., "07:00"
-  const [hours, minutes] = endTime.split(':').map(Number);
+  const endTime = quietHours.end;
+  const [hours, minutes] = endTime.split(":").map(Number);
 
   const nextAvailable = new Date(now);
   nextAvailable.setHours(hours, minutes, 0, 0);
 
-  // If the end time has already passed today, schedule for tomorrow
   if (nextAvailable <= now) {
     nextAvailable.setDate(nextAvailable.getDate() + 1);
   }
@@ -243,28 +230,26 @@ async function getNotificationData(supabase: any, notification: any): Promise<an
       days_overdue: notification_type === "overdue"
         ? Math.floor((new Date().getTime() - new Date(task.due_date).getTime()) / (1000 * 60 * 60 * 24))
         : 0,
-      task_url: `${Deno.env.get("APP_URL") || "https://unicorn.vivacity.com.au"}/tasks/${entity_id}`,
-      tenant_name: task.tenants?.name
+      task_url: appUrl(`/tasks/${entity_id}`),
+      tenant_name: task.tenants?.name,
     };
   }
 
   return {};
 }
 
-async function sendEmailNotification(supabase: any, notification: any, data: any, userPrefs: any): Promise<void> {
-  // Get user email
+async function sendEmailNotification(supabase: any, notification: any, data: any, _userPrefs: any): Promise<void> {
   const { data: user } = await supabase.auth.admin.getUserById(notification.user_id);
   if (!user?.user?.email) {
     console.error("User email not found");
     return;
   }
 
-  // Map notification type to email type
   const emailTypeMap: Record<string, string> = {
-    'due_soon': 'task_due_soon',
-    'overdue': 'task_overdue',
-    'reminder_24h': 'meeting_reminder_24h',
-    'reminder_10m': 'meeting_reminder_10m'
+    due_soon: "task_due_soon",
+    overdue: "task_overdue",
+    reminder_24h: "meeting_reminder_24h",
+    reminder_10m: "meeting_reminder_10m",
   };
 
   const emailType = emailTypeMap[notification.notification_type];
@@ -273,18 +258,16 @@ async function sendEmailNotification(supabase: any, notification: any, data: any
     return;
   }
 
-  // Call send-notification-email function
   await supabase.functions.invoke("send-notification-email", {
     body: {
       to: user.user.email,
       type: emailType,
-      data
-    }
+      data,
+    },
   });
 }
 
 async function sendInAppNotification(supabase: any, notification: any, data: any): Promise<void> {
-  // Create in-app notification
   await supabase.from("notification_tenants").insert({
     tenant_id: notification.tenant_id,
     user_id: notification.user_id,
@@ -292,37 +275,37 @@ async function sendInAppNotification(supabase: any, notification: any, data: any
     title: getNotificationTitle(notification.notification_type, data),
     message: getNotificationMessage(notification.notification_type, data),
     link: data.task_url || data.meeting_url,
-    is_read: false
+    is_read: false,
   });
 }
 
-function getNotificationTitle(type: string, data: any): string {
+function getNotificationTitle(type: string, _data: any): string {
   switch (type) {
-    case 'due_soon':
+    case "due_soon":
       return `Task Due Soon`;
-    case 'overdue':
+    case "overdue":
       return `Task Overdue`;
-    case 'reminder_24h':
+    case "reminder_24h":
       return `Meeting Tomorrow`;
-    case 'reminder_10m':
+    case "reminder_10m":
       return `Meeting Starting Soon`;
     default:
-      return 'Notification';
+      return "Notification";
   }
 }
 
 function getNotificationMessage(type: string, data: any): string {
   switch (type) {
-    case 'due_soon':
+    case "due_soon":
       return `${data.task_name} is due on ${data.due_date}`;
-    case 'overdue':
+    case "overdue":
       return `${data.task_name} is ${data.days_overdue} day(s) overdue`;
-    case 'reminder_24h':
+    case "reminder_24h":
       return `${data.meeting_title} is scheduled for tomorrow`;
-    case 'reminder_10m':
+    case "reminder_10m":
       return `${data.meeting_title} starts in 10 minutes`;
     default:
-      return '';
+      return "";
   }
 }
 
