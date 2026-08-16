@@ -14,7 +14,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SignJWT } from "https://esm.sh/jose@5.9.6";
+import { corsHeaders } from "../_shared/cors.ts";
 import { authorizeCronInvoke } from "../_shared/cron-invoke-auth.ts";
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -23,12 +25,6 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const JWT_SECRET = Deno.env.get("EDGE_JWT_SECRET")!;
 
 const CONCURRENCY = 5;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-invoke-secret",
-};
 
 async function mintUserJwt(userId: string): Promise<string> {
   const secret = new TextEncoder().encode(JWT_SECRET);
@@ -70,7 +66,7 @@ async function syncOneUser(userId: string, accountEmail: string | null): Promise
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   // Cron-only. Auth is the shared invoke secret — a decoded-but-unverified
@@ -78,7 +74,7 @@ serve(async (req) => {
   if (!(await authorizeCronInvoke(req))) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -95,7 +91,7 @@ serve(async (req) => {
     console.error("[sync-cron] Failed to list oauth_tokens:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -120,6 +116,6 @@ serve(async (req) => {
 
   return new Response(JSON.stringify(summary), {
     status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 });

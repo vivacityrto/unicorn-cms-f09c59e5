@@ -23,7 +23,7 @@ async function sha256Hex(data: Uint8Array): Promise<string> {
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -31,7 +31,7 @@ Deno.serve(async (req: Request) => {
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.staffSharepoint,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: 'Unauthorized',
       forbiddenMessage: 'Forbidden — Vivacity staff only',
     });
@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
       return await handleCheckDrift(supabase, body);
     } else {
       return new Response(JSON.stringify({ error: `Unknown action: ${action}. Use "browse", "import", "publish" or "check_drift".` }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
   } catch (error) {
@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : 'Unknown error',
     }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 });
@@ -81,14 +81,14 @@ async function handleImport(
 
   if (!document_id || !source_drive_id || !source_item_id) {
     return new Response(JSON.stringify({ error: 'document_id, source_drive_id, and source_item_id are required' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
   const displayVersionFormat = /^\d{4}\.\d{2}\.\d{2}$/;
   if (!display_version || !displayVersionFormat.test(display_version)) {
     return new Response(JSON.stringify({ error: 'display_version is required and must match YYYY.MM.NN (e.g. 2026.03.00)' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -101,7 +101,7 @@ async function handleImport(
 
   if (existingLabel) {
     return new Response(JSON.stringify({ error: `Version ${display_version} already exists for this document. Choose a different label.` }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -109,7 +109,7 @@ async function handleImport(
   const itemResp = await graphGet<DriveItem>(`/drives/${source_drive_id}/items/${source_item_id}`);
   if (!itemResp.ok) {
     return new Response(JSON.stringify({ error: 'Could not retrieve source file from SharePoint' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -142,7 +142,7 @@ async function handleImport(
 
   if (uploadError) {
     return new Response(JSON.stringify({ error: `Storage upload failed: ${uploadError.message}` }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -177,7 +177,7 @@ async function handleImport(
 
   if (versionError) {
     return new Response(JSON.stringify({ error: `Version creation failed: ${versionError.message}` }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -280,7 +280,7 @@ async function handleImport(
     fields_linked,
     fields_auto_mapped,
   }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -494,7 +494,7 @@ async function handleCheckDrift(
 
   if (!version_id) {
     return new Response(JSON.stringify({ error: 'version_id is required' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -506,14 +506,14 @@ async function handleCheckDrift(
 
   if (vErr || !version) {
     return new Response(JSON.stringify({ error: 'Version not found' }), {
-      status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
   const result = await computeDrift(supabase, version);
 
   return new Response(JSON.stringify(result), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -529,7 +529,7 @@ async function handlePublish(
 
   if (!version_id) {
     return new Response(JSON.stringify({ error: 'version_id is required' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -542,13 +542,13 @@ async function handlePublish(
 
   if (vErr || !version) {
     return new Response(JSON.stringify({ error: 'Version not found' }), {
-      status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
   if (version.status !== 'draft') {
     return new Response(JSON.stringify({ error: `Version is not in draft status (current: ${version.status})` }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -566,7 +566,7 @@ async function handlePublish(
 
     if (!mappingCount || mappingCount === 0) {
       return new Response(JSON.stringify({ error: 'Cannot publish without merge field mappings defined. Add mappings first.' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
   }
@@ -582,7 +582,7 @@ async function handlePublish(
       imported_checksum: version.checksum_sha256,
       current_checksum: drift.current_checksum,
     }), {
-      status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 409, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
   if (!drift.checked && drift.error) {
@@ -608,7 +608,7 @@ async function handlePublish(
 
   if (pubErr) {
     return new Response(JSON.stringify({ error: `Publish failed: ${pubErr.message}` }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -639,7 +639,7 @@ async function handlePublish(
     version_number: version.version_number,
     published_at: new Date().toISOString(),
   }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -666,7 +666,7 @@ async function handleBrowse(
 
   if (!masterSite) {
     return new Response(JSON.stringify({ error: 'Master Documents site not configured' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -681,7 +681,7 @@ async function handleBrowse(
     const siteResp = await graphGet<{ id: string }>(`/sites/${url.hostname}:${sitePath}`);
     if (!siteResp.ok) {
       return new Response(JSON.stringify({ error: 'Could not resolve SharePoint site from Graph API' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
     graphSiteId = siteResp.data.id;
@@ -701,7 +701,7 @@ async function handleBrowse(
     );
     if (!drivesResp.ok || !drivesResp.data.value?.length) {
       return new Response(JSON.stringify({ error: 'Could not find document library drives' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
     // Prefer "Documents" or "Shared Documents", else first
@@ -725,7 +725,7 @@ async function handleBrowse(
   const listResp = await graphGet<{ value: DriveItem[] }>(listPath);
   if (!listResp.ok) {
     return new Response(JSON.stringify({ error: 'Failed to list SharePoint folder contents' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -744,6 +744,6 @@ async function handleBrowse(
     drive_id: driveId,
     items,
   }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }

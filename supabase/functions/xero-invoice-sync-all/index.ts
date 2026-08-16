@@ -1,10 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 import { authorizeCronInvoke } from "../_shared/cron-invoke-auth.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-invoke-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
 
 const XERO_CLIENT_ID = (Deno.env.get("XERO_CLIENT_ID") ?? "").trim();
 const XERO_CLIENT_SECRET = (Deno.env.get("XERO_CLIENT_SECRET") ?? "").trim();
@@ -18,22 +15,23 @@ const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-
 // discover Xero's actual practical limit the hard way.
 const BATCH_SIZE = 25;
 
-function json(status: number, body: Record<string, unknown>): Response {
+function json(req: Request, status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   // Cron-only system job. Auth is the shared invoke secret, not a
   // decoded-but-unverified JWT role claim (that path was a bypass).
   if (!(await authorizeCronInvoke(req))) {
-    return json(401, { error: "Unauthorized" });
+    return json(req, 401, { error: "Unauthorized" });
+
   }
 
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -50,14 +48,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!tokenRow) {
-      return json(200, { synced: 0, failed: 0, skipped_reason: "Xero not connected" });
+      return json(req, 200, { synced: 0, failed: 0, skipped_reason: "Xero not connected" });
     }
 
     let accessToken = tokenRow.access_token as string;
     const tenantAccountId = tokenRow.provider_account_id as string | null;
 
     if (!tenantAccountId) {
-      return json(200, { synced: 0, failed: 0, skipped_reason: "Xero connection missing organisation id" });
+      return json(req, 200, { synced: 0, failed: 0, skipped_reason: "Xero connection missing organisation id" });
     }
 
     const expiresAt = new Date(tokenRow.expires_at as string);
@@ -80,7 +78,7 @@ Deno.serve(async (req) => {
         await supabaseAdmin.from("oauth_tokens")
           .update({ last_error: `Token refresh failed: ${errText}`, updated_at: new Date().toISOString() })
           .eq("provider", "xero");
-        return json(200, { synced: 0, failed: 0, skipped_reason: "Token refresh failed" });
+        return json(req, 200, { synced: 0, failed: 0, skipped_reason: "Token refresh failed" });
       }
 
       const refreshed = await refreshResp.json();
@@ -103,7 +101,7 @@ Deno.serve(async (req) => {
 
     if (tenantsError) {
       console.error("[xero-invoice-sync-all] Failed to load tenants:", tenantsError);
-      return json(500, { error: "Failed to load tenants" });
+      return json(req, 500, { error: "Failed to load tenants" });
     }
 
     // Multiple tenants could theoretically share a ContactID (shouldn't
@@ -204,10 +202,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json(200, { synced, failed, total_contacts: contactIds.length });
+    return json(req, 200, { synced, failed, total_contacts: contactIds.length });
   } catch (error) {
     console.error("[xero-invoice-sync-all] Unhandled error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return json(500, { error: message });
+    return json(req, 500, { error: message });
   }
 });

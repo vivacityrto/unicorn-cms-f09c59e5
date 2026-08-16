@@ -18,6 +18,7 @@ import { extractToken, verifyAuth, checkSuperAdmin } from "../_shared/auth-helpe
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { jsonOk, jsonError, handleCors, CommonErrors } from "../_shared/response-helpers.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 // Transition rules remain as business logic — only display values are externalised
 const VALID_TRANSITIONS: Record<string, string[]> = {

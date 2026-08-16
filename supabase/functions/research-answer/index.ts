@@ -14,14 +14,14 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.staffResearch,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       errorStyle: "ok-code",
       unauthorizedMessage: "No token provided",
       forbiddenMessage: "Vivacity Team access required",
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     if (!job_id || !question) {
       return new Response(
         JSON.stringify({ ok: false, code: "BAD_REQUEST", detail: "job_id and question required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       console.error("PERPLEXITY_API_KEY not configured");
       return new Response(
         JSON.stringify({ ok: false, code: "CONFIG_ERROR", detail: "Perplexity not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ ok: false, code: "RATE_LIMITED", detail: `Perplexity returned ${ppxResponse.status}` }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 429, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ ok: false, code: "API_ERROR", detail: "Perplexity request failed" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 502, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ ok: false, code: "DB_ERROR", detail: "Failed to store finding" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -167,13 +167,13 @@ Deno.serve(async (req) => {
         summary_md: answerText,
         citations,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("research-answer error:", err);
     return new Response(
       JSON.stringify({ ok: false, code: "INTERNAL_ERROR", detail: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

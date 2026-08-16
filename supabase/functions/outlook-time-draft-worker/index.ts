@@ -1,9 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface WorkerResult {
   success: boolean
@@ -16,7 +12,7 @@ interface WorkerResult {
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders(req) })
   }
 
   console.log('[outlook-time-draft-worker] Starting worker run')
@@ -61,7 +57,7 @@ Deno.serve(async (req) => {
       console.error('[outlook-time-draft-worker] Error fetching events:', eventsError)
       return new Response(
         JSON.stringify({ success: false, error: eventsError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -77,7 +73,7 @@ Deno.serve(async (req) => {
     if (!events || events.length === 0) {
       return new Response(
         JSON.stringify(results),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -251,14 +247,14 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify(results),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('[outlook-time-draft-worker] Unexpected error:', error)
     return new Response(
       JSON.stringify({ success: false, error: String(error) }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     )
   }
 })

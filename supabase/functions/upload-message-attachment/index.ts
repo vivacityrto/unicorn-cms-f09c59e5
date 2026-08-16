@@ -1,12 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -30,19 +25,19 @@ function sanitiseFilename(name: string): string {
   return finalName.length > 150 ? finalName.slice(-150) : finalName;
 }
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return json(405, { error: "Method not allowed" });
+    return json(req, 405, { error: "Method not allowed" });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -56,7 +51,7 @@ Deno.serve(async (req) => {
   try {
     form = await req.formData();
   } catch {
-    return json(400, { error: "Expected multipart/form-data" });
+    return json(req, 400, { error: "Expected multipart/form-data" });
   }
 
   const file = form.get("file");
@@ -64,16 +59,16 @@ Deno.serve(async (req) => {
   const conversation_id = String(form.get("conversation_id") ?? "");
   const message_id = String(form.get("message_id") ?? "");
 
-  if (!(file instanceof File)) return json(400, { error: "file is required" });
-  if (!tenant_id) return json(400, { error: "tenant_id is required" });
-  if (!conversation_id) return json(400, { error: "conversation_id is required" });
-  if (!message_id) return json(400, { error: "message_id is required" });
+  if (!(file instanceof File)) return json(req, 400, { error: "file is required" });
+  if (!tenant_id) return json(req, 400, { error: "tenant_id is required" });
+  if (!conversation_id) return json(req, 400, { error: "conversation_id is required" });
+  if (!message_id) return json(req, 400, { error: "message_id is required" });
 
   if (file.size > MAX_BYTES) {
-    return json(400, { error: `"${file.name}" exceeds 10 MB limit.` });
+    return json(req, 400, { error: `"${file.name}" exceeds 10 MB limit.` });
   }
   if (!file.type || !ALLOWED_MIME.has(file.type)) {
-    return json(400, {
+    return json(req, 400, {
       error: `"${file.name}" is not an allowed file type.`,
     });
   }
@@ -81,7 +76,7 @@ Deno.serve(async (req) => {
   const tenantIdNum = Number(tenant_id);
   const caller = await requireCaller(req, admin, {
     featureKey: FeatureKeys.staffDocumentsGenerate,
-    headers: corsHeaders,
+    headers: corsHeaders(req),
     unauthorizedMessage: "Missing Authorization header",
     forbiddenMessage: "Not authorised to upload for this tenant",
     orAllow: async ({ userId, admin: svc }) => {
@@ -106,7 +101,7 @@ Deno.serve(async (req) => {
     .from(BUCKET)
     .upload(storage_path, file, { contentType: file.type, upsert: false });
   if (upErr) {
-    return json(500, { error: `Storage upload failed: ${upErr.message}` });
+    return json(req, 500, { error: `Storage upload failed: ${upErr.message}` });
   }
 
   const { data: row, error: insErr } = await admin
@@ -123,10 +118,10 @@ Deno.serve(async (req) => {
 
   if (insErr) {
     await admin.storage.from(BUCKET).remove([storage_path]).catch(() => {});
-    return json(500, { error: `DB insert failed: ${insErr.message}` });
+    return json(req, 500, { error: `DB insert failed: ${insErr.message}` });
   }
 
-  return json(200, {
+  return json(req, 200, {
     id: row?.id,
     created_at: row?.created_at,
     message_id,

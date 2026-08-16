@@ -21,13 +21,8 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 import { APP_BASE_URL } from "../_shared/app-base-url.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-};
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -56,10 +51,10 @@ const EMAIL_CTA: Record<TokenType, string> = {
   setpwd: "Set password",
 };
 
-function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+function jsonResponse(req: Request, body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -227,7 +222,7 @@ async function sendTokenEmail(opts: {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -237,15 +232,15 @@ serve(async (req) => {
     console.log(`[issue-token] UTC time: ${currentTime.toISOString()}`);
 
     if (!email || !type) {
-      return jsonResponse({ error: "Missing required fields" }, 400);
+      return jsonResponse(req, { error: "Missing required fields" }, 400);
     }
 
     if (typeof email !== "string" || typeof type !== "string") {
-      return jsonResponse({ error: "email and type must be strings" }, 400);
+      return jsonResponse(req, { error: "email and type must be strings" }, 400);
     }
 
     if (!(type in TTL)) {
-      return jsonResponse({ error: "Invalid token type" }, 400);
+      return jsonResponse(req, { error: "Invalid token type" }, 400);
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -256,7 +251,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || "";
     const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
     if (!bearer) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+      return jsonResponse(req, { error: "Unauthorized" }, 401);
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
@@ -267,7 +262,7 @@ serve(async (req) => {
     if (!isTrustedInternalCall) {
       const { data: callerData, error: callerErr } = await admin.auth.getUser(bearer);
       if (callerErr || !callerData?.user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse(req, { error: "Unauthorized" }, 401);
       }
 
       const caller = callerData.user;
@@ -279,7 +274,7 @@ serve(async (req) => {
           p_min_level: "full",
         });
         if (!allowed) {
-          return jsonResponse({ error: "Forbidden" }, 403);
+          return jsonResponse(req, { error: "Forbidden" }, 403);
         }
       }
     }
@@ -291,7 +286,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (userError || !userData) {
-      return jsonResponse({ error: "User not found" }, 404);
+      return jsonResponse(req, { error: "User not found" }, 404);
     }
 
     const user_id = userData.user_uuid;
@@ -345,7 +340,7 @@ serve(async (req) => {
       expiresAtUnix: exp,
     });
 
-    return jsonResponse({
+    return jsonResponse(req, {
       ok: true,
       email: normalizedEmail,
       type: tokenType,
@@ -354,6 +349,6 @@ serve(async (req) => {
     });
   } catch (error: any) {
     console.error("Error in issue-token function:", error);
-    return jsonResponse({ error: error?.message || "Unknown error" }, 500);
+    return jsonResponse(req, { error: error?.message || "Unknown error" }, 500);
   }
 });

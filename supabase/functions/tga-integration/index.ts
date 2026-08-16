@@ -2,11 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 // TGA API configuration
 const TGA_MODE = Deno.env.get('TGA_MODE') || 'REST';
@@ -196,7 +193,7 @@ async function fetchProduct(code: string): Promise<{ mapped: TGAProduct | null; 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -213,7 +210,7 @@ serve(async (req) => {
       if (!isProbe || !probeCode) {
         return new Response(JSON.stringify({ error: 'Probe mode requires ?probe=1&code=CODE' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
@@ -222,13 +219,13 @@ serve(async (req) => {
       if (!tenantId) {
         return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
       const caller = await requireCaller(req, supabase, {
         featureKey: FeatureKeys.staffTga,
-        headers: corsHeaders,
+        headers: corsHeaders(req),
         unauthorizedMessage: 'Missing authorization header',
         forbiddenMessage: 'Access required: Vivacity staff or Tenant Admin',
         orAllow: async ({ userId, admin }) => {
@@ -257,7 +254,7 @@ serve(async (req) => {
       };
 
       return new Response(JSON.stringify(probeResult), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -269,20 +266,20 @@ serve(async (req) => {
       if (!tenant_id) {
         return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
       if (!codes || !Array.isArray(codes) || codes.length === 0) {
         return new Response(JSON.stringify({ error: 'codes array is required' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         });
       }
 
       const caller = await requireCaller(req, supabase, {
         featureKey: FeatureKeys.staffTga,
-        headers: corsHeaders,
+        headers: corsHeaders(req),
         unauthorizedMessage: 'Missing authorization header',
         forbiddenMessage: 'Access required: Vivacity staff or Tenant Admin',
         orAllow: async ({ userId, admin }) => {
@@ -406,19 +403,19 @@ serve(async (req) => {
         rows_upserted: rowsUpserted,
         results,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {
     console.error('[TGA] Unhandled error:', error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 });

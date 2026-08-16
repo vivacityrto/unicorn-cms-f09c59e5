@@ -31,10 +31,10 @@ const MAX_AUDITOR_NOTE_INPUT_CHARS = 20_000;
 const MAX_AUDITOR_NOTE_PROMPT_CHARS = 8_000;
 
 // ─── Helpers ────────────────────────────────────────────────────────
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -335,20 +335,20 @@ function validateDraft(raw: unknown): { ok: true; draft: DraftJson } | { ok: fal
 // ─── Main ───────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   const t0 = Date.now();
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
+  if (!authHeader) return json(req, { error: 'Missing authorisation header' }, 401);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   if (!LOVABLE_API_KEY) {
-    return json({ error: 'LOVABLE_API_KEY is not configured' }, 500);
+    return json(req, { error: 'LOVABLE_API_KEY is not configured' }, 500);
   }
 
   // 1. Caller-JWT client. Verify auth.
@@ -356,7 +356,7 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: userRes, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userRes?.user) return json({ error: 'Not authenticated' }, 401);
+  if (userErr || !userRes?.user) return json(req, { error: 'Not authenticated' }, 401);
   const callerUserId = userRes.user.id;
 
   // 2. Parse body.
@@ -364,12 +364,12 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+    return json(req, { error: 'Invalid JSON body' }, 400);
   }
   const auditId = typeof body.audit_id === 'string' ? body.audit_id : '';
   const responseId = typeof body.response_id === 'string' ? body.response_id : '';
   if (!auditId || !responseId) {
-    return json({ error: 'audit_id and response_id are required' }, 400);
+    return json(req, { error: 'audit_id and response_id are required' }, 400);
   }
   let auditorNote: string | null = null;
   if (body.auditor_note !== undefined && body.auditor_note !== null) {
@@ -377,7 +377,7 @@ Deno.serve(async (req) => {
       typeof body.auditor_note !== 'string' ||
       body.auditor_note.length > MAX_AUDITOR_NOTE_INPUT_CHARS
     ) {
-      return json(
+      return json(req, 
         { error: `Auditor note must be no more than ${MAX_AUDITOR_NOTE_INPUT_CHARS.toLocaleString()} characters.` },
         400,
       );
@@ -395,7 +395,7 @@ Deno.serve(async (req) => {
     .eq('id', auditId)
     .maybeSingle();
   if (auditErr || !auditRow) {
-    return json({ error: "You don't have access to this audit." }, 403);
+    return json(req, { error: "You don't have access to this audit." }, 403);
   }
   const auditRowTyped = auditRow as Record<string, any>;
 
@@ -450,7 +450,7 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (respErr || !responseRow) {
     if (respErr) console.error('draft-finding: response lookup failed', respErr.message);
-    return json({ error: 'Response not found or not in this audit', detail: respErr?.message ?? null }, 404);
+    return json(req, { error: 'Response not found or not in this audit', detail: respErr?.message ?? null }, 404);
   }
   const r = responseRow as Record<string, any>;
   const q = r.compliance_template_questions ?? {};
@@ -458,7 +458,7 @@ Deno.serve(async (req) => {
 
   // Only at_risk / non_compliant warrant a draft.
   if (!['at_risk', 'non_compliant'].includes(r.rating)) {
-    return json({ error: 'Drafting is only available for at_risk and non_compliant ratings.' }, 422);
+    return json(req, { error: 'Drafting is only available for at_risk and non_compliant ratings.' }, 422);
   }
 
   const ctx: AssembledContext = {
@@ -591,17 +591,17 @@ Deno.serve(async (req) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === 'GATEWAY_402') {
-      return json({ error: 'AI credits exhausted. Top up at Settings > Workspace > Usage.' }, 402);
+      return json(req, { error: 'AI credits exhausted. Top up at Settings > Workspace > Usage.' }, 402);
     }
     if (msg === 'GATEWAY_429') {
-      return json({ error: 'AI gateway rate limit exceeded. Please try again shortly.' }, 429);
+      return json(req, { error: 'AI gateway rate limit exceeded. Please try again shortly.' }, 429);
     }
     console.error('Gateway call failed:', msg);
-    return json({ error: 'AI gateway error', detail: msg }, 502);
+    return json(req, { error: 'AI gateway error', detail: msg }, 502);
   }
 
   if (!validation.ok) {
-    return json({ error: 'AI draft failed validation after retry', detail: validation.reason }, 502);
+    return json(req, { error: 'AI draft failed validation after retry', detail: validation.reason }, 502);
   }
 
   let draft = validation.draft;
@@ -656,10 +656,10 @@ Deno.serve(async (req) => {
   if (logErr) {
     console.error('Audit log insert failed:', logErr.message);
     // Non-fatal for the user but we surface it so ops sees it.
-    return json({ error: 'Failed to record audit log', detail: logErr.message }, 500);
+    return json(req, { error: 'Failed to record audit log', detail: logErr.message }, 500);
   }
 
-  return json(
+  return json(req, 
     {
       draft,
       corpus_chunks_used: corpusSummary,

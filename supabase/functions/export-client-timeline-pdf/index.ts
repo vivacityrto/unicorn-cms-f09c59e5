@@ -1,10 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 interface RequestBody {
   tenant_id: number;
@@ -18,7 +15,7 @@ interface RequestBody {
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -35,7 +32,7 @@ Deno.serve(async (req) => {
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.adminSystemConfig,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: 'Unauthorized',
       forbiddenMessage: 'Access denied',
       orAllow: async ({ userId, admin }) => {
@@ -63,7 +60,7 @@ Deno.serve(async (req) => {
       console.error('Fetch error:', fetchError);
       return new Response(JSON.stringify({ error: 'Failed to fetch timeline data' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -92,7 +89,7 @@ Deno.serve(async (req) => {
     });
 
     return new Response(JSON.stringify({ pdf: pdfContent }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {
@@ -100,7 +97,7 @@ Deno.serve(async (req) => {
     console.error('Export error:', error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
     });
   }
 });

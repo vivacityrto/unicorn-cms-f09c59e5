@@ -1,16 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -20,7 +16,7 @@ serve(async (req: Request) => {
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.adminTestingSeed,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Unauthorized",
       forbiddenMessage: "Forbidden: Super Admin only",
     });
@@ -40,7 +36,7 @@ serve(async (req: Request) => {
       if (!tenants || tenants.length < 3) {
         return new Response(
           JSON.stringify({ error: "Need at least 3 active tenants to seed test states" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -141,7 +137,7 @@ serve(async (req: Request) => {
           },
           note: "Refresh the dashboard to see updated scores. Use cleanup_test_seeds to remove.",
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -159,18 +155,18 @@ serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({ success: true, message: "Cleaned up all test seed data (risk_events, alerts, notes)" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
       JSON.stringify({ error: 'Invalid action. Use "seed_test_states" or "cleanup_test_seeds".' }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

@@ -1,12 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 interface ActionInput {
   action_id: string;
@@ -22,7 +18,7 @@ interface ActionInput {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -33,7 +29,7 @@ Deno.serve(async (req) => {
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.adminSystemConfig,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Unauthorized",
       forbiddenMessage: "Forbidden: Vivacity Team only",
     });
@@ -48,7 +44,7 @@ Deno.serve(async (req) => {
     if (!minutes_id || !actions || !Array.isArray(actions) || actions.length === 0) {
       return new Response(JSON.stringify({ error: "minutes_id and actions[] are required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -62,7 +58,7 @@ Deno.serve(async (req) => {
     if (minErr || !minutes) {
       return new Response(JSON.stringify({ error: "Minutes not found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -212,13 +208,13 @@ Deno.serve(async (req) => {
         tasks: createdTasks,
         errors,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("create-tasks-from-minutes error:", err);
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

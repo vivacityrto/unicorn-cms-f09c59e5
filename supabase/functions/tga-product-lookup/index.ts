@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -14,7 +10,7 @@ const CACHE_TTL_DAYS = 7;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -23,7 +19,7 @@ serve(async (req) => {
     if (!tenantId || !productCode) {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing tenantId or productCode' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -45,7 +41,7 @@ serve(async (req) => {
       if (ageDays < CACHE_TTL_DAYS) {
         return new Response(
           JSON.stringify({ success: true, cached: true, data: cached }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -59,7 +55,7 @@ serve(async (req) => {
     if (!response.ok) {
       return new Response(
         JSON.stringify({ success: false, error: `TGA returned ${response.status}` }),
-        { status: response.status === 404 ? 404 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: response.status === 404 ? 404 : 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -83,12 +79,12 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, cached: false, data: record }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

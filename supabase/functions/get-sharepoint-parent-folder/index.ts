@@ -8,26 +8,26 @@ const BodySchema = z.object({
   tenant_id: z.number().int().positive().optional(),
 });
 
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return json(req, { error: "Method not allowed" }, 405);
   }
 
   // Auth
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return json({ error: "Unauthorized" }, 401);
+    return json(req, { error: "Unauthorized" }, 401);
   }
   const token = authHeader.replace("Bearer ", "");
 
@@ -37,11 +37,11 @@ Deno.serve(async (req) => {
     const raw = await req.json();
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
-      return json({ error: "Invalid request body", details: parsed.error.flatten().fieldErrors }, 400);
+      return json(req, { error: "Invalid request body", details: parsed.error.flatten().fieldErrors }, 400);
     }
     payload = parsed.data;
   } catch {
-    return json({ error: "Invalid JSON body" }, 400);
+    return json(req, { error: "Invalid JSON body" }, 400);
   }
 
   const { file_url } = payload;
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
   const { data: { user }, error: userError } = await supabase.auth.getUser(token);
   if (userError || !user) {
-    return json({ error: "Unauthorized" }, 401);
+    return json(req, { error: "Unauthorized" }, 401);
   }
 
   // Resolve sharing URL → driveId/itemId
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     resolved = await resolveDriveItemFromSharingUrl(file_url);
   } catch (err) {
     console.warn("[get-sharepoint-parent-folder] resolve failed:", err);
-    return json(
+    return json(req, 
       { error: "Unable to resolve SharePoint file. URL may be invalid or the app lacks access." },
       422,
     );
@@ -78,14 +78,14 @@ Deno.serve(async (req) => {
   );
   if (!itemResp.ok) {
     console.warn("[get-sharepoint-parent-folder] item fetch failed:", itemResp.status);
-    return json(
+    return json(req, 
       { error: `Failed to fetch drive item (Graph ${itemResp.status})` },
       itemResp.status >= 400 && itemResp.status < 600 ? itemResp.status : 502,
     );
   }
   const parentId = itemResp.data?.parentReference?.id;
   if (!parentId) {
-    return json({ error: "Drive item has no parent reference" }, 502);
+    return json(req, { error: "Drive item has no parent reference" }, 502);
   }
 
   // Step 2: fetch the parent folder's details
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
 
   if (!parentResp.ok) {
     console.warn("[get-sharepoint-parent-folder] parent fetch failed:", parentResp.status);
-    return json(
+    return json(req, 
       { error: `Failed to fetch parent folder (Graph ${parentResp.status})` },
       parentResp.status >= 400 && parentResp.status < 600 ? parentResp.status : 502,
     );
@@ -103,8 +103,8 @@ Deno.serve(async (req) => {
 
   const folderUrl = parentResp.data?.webUrl;
   if (!folderUrl) {
-    return json({ error: "Parent folder has no webUrl" }, 502);
+    return json(req, { error: "Parent folder has no webUrl" }, 502);
   }
 
-  return json({ folder_url: folderUrl }, 200);
+  return json(req, { folder_url: folderUrl }, 200);
 });

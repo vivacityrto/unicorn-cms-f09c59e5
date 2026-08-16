@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -267,7 +263,6 @@ async function fetchQualificationsFiltered(rtoId: string): Promise<{ items: any[
   return { items, urls };
 }
 
-
 // Categorise raw scope items by componentType
 function categoriseScope(items: any[]): Record<string, any[]> {
   const result: Record<string, any[]> = { qualification: [], unit: [], skillSet: [], accreditedCourse: [], trainingPackage: [] };
@@ -376,7 +371,7 @@ async function updateJobStatus(jobId: string | null, status: string, payload: Re
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   const startTime = Date.now();
@@ -387,7 +382,7 @@ serve(async (req) => {
     const { tenantId, rtoId, force = false } = await req.json();
 
     if (!tenantId || !rtoId) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing tenantId or rtoId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ success: false, error: 'Missing tenantId or rtoId' }), { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } });
     }
 
     const tenantIdNum = typeof tenantId === 'string' ? parseInt(tenantId, 10) : tenantId;
@@ -550,7 +545,7 @@ serve(async (req) => {
         raw_total: rawTotal,
         kept_total: 0,
         duration_ms: Date.now() - startTime,
-      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }), { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } });
     }
 
     // ── STAGE rows into tenant_rto_scope_staging ────────────────────
@@ -771,7 +766,7 @@ serve(async (req) => {
       urls_used: scopeUrls,
       errors: hasErrors ? scopeErrors : undefined,
       duration_ms: Date.now() - startTime,
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }), { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     log('error', 'Sync failed', { error: errorMsg, duration_ms: Date.now() - startTime });
@@ -780,6 +775,6 @@ serve(async (req) => {
     progress.duration_ms = Date.now() - startTime;
     await updateJobStatus(jobId, 'error', progress, errorMsg);
 
-    return new Response(JSON.stringify({ success: false, error: errorMsg, job_id: jobId, duration_ms: Date.now() - startTime }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ success: false, error: errorMsg, job_id: jobId, duration_ms: Date.now() - startTime }), { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } });
   }
 });

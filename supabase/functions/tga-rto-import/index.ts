@@ -1,11 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 // ============================================================================
 // TGA DATASET IMPORT EDGE FUNCTION
@@ -44,10 +40,10 @@ function logStage(correlationId: string, stage: string, data: Record<string, unk
   console.log(`[TGA-IMPORT] [${correlationId}] STAGE=${stage}`, JSON.stringify(sanitized));
 }
 
-function jsonResponse(body: object, status = 200): Response {
+function jsonResponse(req: Request, body: object, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -408,7 +404,7 @@ async function handleImport(
   // Create import run
   const runResult = await createImportRun(supabase, runType, userId, body.rtos_url || 'direct_upload', correlationId);
   if (!runResult.ok || !runResult.runId) {
-    return jsonResponse({
+    return jsonResponse(req, {
       ok: false,
       correlation_id: correlationId,
       stage: 'import_run.create.failed',
@@ -427,7 +423,7 @@ async function handleImport(
       const download = await downloadDataset(body.rtos_url, correlationId);
       if (!download.ok) {
         await completeImportRun(supabase, importId, 'failed', 0, `Failed to download RTOs: ${download.error}`, null, correlationId);
-        return jsonResponse({
+        return jsonResponse(req, {
           ok: false,
           correlation_id: correlationId,
           stage: 'dataset.download.failed',
@@ -444,7 +440,7 @@ async function handleImport(
       const rtosResult = await upsertRtos(supabase, rtos, importId, correlationId);
       if (!rtosResult.ok) {
         await completeImportRun(supabase, importId, 'failed', rtosResult.count, rtosResult.error || 'RTO upsert failed', checksum, correlationId);
-        return jsonResponse({
+        return jsonResponse(req, {
           ok: false,
           correlation_id: correlationId,
           stage: 'rtos.upsert.failed',
@@ -461,7 +457,7 @@ async function handleImport(
       const download = await downloadDataset(body.scope_url, correlationId);
       if (!download.ok) {
         await completeImportRun(supabase, importId, 'failed', totalRecords, `Failed to download scope: ${download.error}`, checksum, correlationId);
-        return jsonResponse({
+        return jsonResponse(req, {
           ok: false,
           correlation_id: correlationId,
           stage: 'dataset.download.failed',
@@ -478,7 +474,7 @@ async function handleImport(
       const scopeResult = await insertScopeItems(supabase, items, importId, correlationId);
       if (!scopeResult.ok) {
         await completeImportRun(supabase, importId, 'failed', totalRecords + scopeResult.count, scopeResult.error || 'Scope insert failed', checksum, correlationId);
-        return jsonResponse({
+        return jsonResponse(req, {
           ok: false,
           correlation_id: correlationId,
           stage: 'scope_items.insert.failed',
@@ -492,7 +488,7 @@ async function handleImport(
     // Complete import run
     await completeImportRun(supabase, importId, 'success', totalRecords, null, checksum, correlationId);
     
-    return jsonResponse({
+    return jsonResponse(req, {
       ok: true,
       correlation_id: correlationId,
       stage: 'import.complete',
@@ -505,7 +501,7 @@ async function handleImport(
     const errorMsg = err instanceof Error ? err.message : String(err);
     await completeImportRun(supabase, importId, 'failed', totalRecords, errorMsg, checksum, correlationId);
     
-    return jsonResponse({
+    return jsonResponse(req, {
       ok: false,
       correlation_id: correlationId,
       stage: 'import.exception',
@@ -549,7 +545,7 @@ async function handleStatus(
     .limit(1)
     .maybeSingle();
   
-  return jsonResponse({
+  return jsonResponse(req, {
     ok: true,
     correlation_id: correlationId,
     stage: 'status',
@@ -582,7 +578,7 @@ serve(async (req) => {
   
   // CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -604,7 +600,7 @@ serve(async (req) => {
     // Auth check for import operations
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return jsonResponse({
+      return jsonResponse(req, {
         ok: false,
         correlation_id: correlationId,
         stage: 'auth.missing',
@@ -620,7 +616,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      return jsonResponse({
+      return jsonResponse(req, {
         ok: false,
         correlation_id: correlationId,
         stage: 'auth.invalid',
@@ -655,7 +651,7 @@ serve(async (req) => {
     logStage(correlationId, 'unhandled.exception', { error: errorMessage });
     console.error(`[TGA-IMPORT] [${correlationId}] Unhandled exception:`, errorMessage, errorStack);
     
-    return jsonResponse({
+    return jsonResponse(req, {
       ok: false,
       correlation_id: correlationId,
       stage: 'unhandled.exception',

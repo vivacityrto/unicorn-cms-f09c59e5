@@ -1,22 +1,22 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth } from "../_shared/auth-helpers.ts";
-import { handleCors, jsonOk, jsonError, corsHeaders } from "../_shared/response-helpers.ts";
+import { handleCors, jsonOk, jsonError } from "../_shared/response-helpers.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return handleCors();
+  if (req.method === "OPTIONS") return handleCors(req);
 
   try {
     const token = extractToken(req);
-    if (!token) return jsonError(401, "UNAUTHORIZED", "No token provided");
+    if (!token) return jsonError(req, 401, "UNAUTHORIZED", "No token provided");
 
     const supabase = createServiceClient();
     const { user, profile, error: authErr } = await verifyAuth(supabase, token);
-    if (authErr || !user || !profile) return jsonError(401, "UNAUTHORIZED", authErr || "Auth failed");
+    if (authErr || !user || !profile) return jsonError(req, 401, "UNAUTHORIZED", authErr || "Auth failed");
 
     const { message, thread_id, tenant_id } = await req.json();
-    if (!message || typeof message !== "string") return jsonError(400, "BAD_REQUEST", "Message is required");
-    if (!tenant_id) return jsonError(400, "BAD_REQUEST", "tenant_id is required");
+    if (!message || typeof message !== "string") return jsonError(req, 400, "BAD_REQUEST", "Message is required");
+    if (!tenant_id) return jsonError(req, 400, "BAD_REQUEST", "tenant_id is required");
 
     let currentThreadId = thread_id;
 
@@ -35,7 +35,7 @@ serve(async (req) => {
 
       if (threadErr) {
         console.error("Thread creation error:", threadErr);
-        return jsonError(500, "INTERNAL_ERROR", "Failed to create thread");
+        return jsonError(req, 500, "INTERNAL_ERROR", "Failed to create thread");
       }
       currentThreadId = newThread.id;
     }
@@ -52,13 +52,13 @@ serve(async (req) => {
 
     if (userMsgErr) {
       console.error("User message save error:", userMsgErr);
-      return jsonError(500, "INTERNAL_ERROR", "Failed to save message");
+      return jsonError(req, 500, "INTERNAL_ERROR", "Failed to save message");
     }
 
     // Call Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return jsonError(500, "INTERNAL_ERROR", "AI service not configured");
+      return jsonError(req, 500, "INTERNAL_ERROR", "AI service not configured");
     }
 
     // Build conversation history for context
@@ -104,14 +104,14 @@ Never provide legal advice — recommend professional consultation for complex i
     if (!aiResponse.ok) {
       const status = aiResponse.status;
       if (status === 429) {
-        return jsonError(429, "RATE_LIMITED", "Too many requests. Please try again shortly.");
+        return jsonError(req, 429, "RATE_LIMITED", "Too many requests. Please try again shortly.");
       }
       if (status === 402) {
-        return jsonError(402, "PAYMENT_REQUIRED", "AI service credits exhausted.");
+        return jsonError(req, 402, "PAYMENT_REQUIRED", "AI service credits exhausted.");
       }
       const errText = await aiResponse.text();
       console.error("AI gateway error:", status, errText);
-      return jsonError(500, "INTERNAL_ERROR", "AI service error");
+      return jsonError(req, 500, "INTERNAL_ERROR", "AI service error");
     }
 
     const aiData = await aiResponse.json();
@@ -140,12 +140,12 @@ Never provide legal advice — recommend professional consultation for complex i
       .update({ updated_at: new Date().toISOString() })
       .eq("id", currentThreadId);
 
-    return jsonOk({
+    return jsonOk(req, {
       thread_id: currentThreadId,
       assistant_message: savedMsg || { content: assistantContent, created_at: new Date().toISOString() },
     });
   } catch (err) {
     console.error("help-center-chat error:", err);
-    return jsonError(500, "INTERNAL_ERROR", err instanceof Error ? err.message : "Unknown error");
+    return jsonError(req, 500, "INTERNAL_ERROR", err instanceof Error ? err.message : "Unknown error");
   }
 });

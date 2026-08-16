@@ -4,7 +4,10 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jwtVerify } from "https://deno.land/x/jose@v5.2.2/index.ts";
+import { corsHeaders } from "./cors.ts";
 import { checkPermission, FeatureKeys } from "./requireCaller.ts";
+
+export { corsHeaders };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -32,15 +35,16 @@ export interface RBACResult {
   error?: { status: number; code: string; message: string; details?: Record<string, unknown> };
 }
 
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, idempotency-key',
-};
-
-export function errorResponse(status: number, code: string, message: string, details: Record<string, unknown> = {}): Response {
+export function errorResponse(
+  req: Request,
+  status: number,
+  code: string,
+  message: string,
+  details: Record<string, unknown> = {},
+): Response {
   return new Response(
     JSON.stringify({ error: { code, message, details } }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    { status, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
   );
 }
 

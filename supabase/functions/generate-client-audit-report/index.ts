@@ -88,10 +88,10 @@ const FS_TINY = 7.5;
 
 const LH_BODY = 13;
 
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -313,11 +313,11 @@ function drawColouredBadge(
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
 
   const t0 = Date.now();
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
+  if (!authHeader) return json(req, { error: 'Missing authorisation header' }, 401);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -327,13 +327,13 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: userRes, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userRes?.user) return json({ error: 'Not authenticated' }, 401);
+  if (userErr || !userRes?.user) return json(req, { error: 'Not authenticated' }, 401);
   const callerUserId = userRes.user.id;
 
   let body: { audit_id?: unknown };
-  try { body = await req.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
+  try { body = await req.json(); } catch { return json(req, { error: 'Invalid JSON body' }, 400); }
   const auditId = typeof body.audit_id === 'string' ? body.audit_id : '';
-  if (!auditId) return json({ error: 'audit_id is required' }, 400);
+  if (!auditId) return json(req, { error: 'audit_id is required' }, 400);
 
   const { data: auditRow, error: auditErr } = await userClient
     .from('client_audits' as any)
@@ -353,7 +353,7 @@ Deno.serve(async (req) => {
     )
     .eq('id', auditId)
     .maybeSingle();
-  if (auditErr || !auditRow) return json({ error: "You don't have access to this audit." }, 403);
+  if (auditErr || !auditRow) return json(req, { error: "You don't have access to this audit." }, 403);
   const audit = auditRow as Record<string, any>;
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -798,7 +798,7 @@ Deno.serve(async (req) => {
     });
   if (uploadErr) {
     console.error('generate-client-audit-report upload failed:', uploadErr.message);
-    return json({ error: 'Failed to upload generated PDF', detail: uploadErr.message }, 500);
+    return json(req, { error: 'Failed to upload generated PDF', detail: uploadErr.message }, 500);
   }
 
   const generatedAt = new Date().toISOString();
@@ -812,7 +812,7 @@ Deno.serve(async (req) => {
     .eq('id', auditId);
   if (updErr) {
     console.error('generate-client-audit-report update failed:', updErr.message);
-    return json({
+    return json(req, {
       error: 'PDF generated but failed to record path on audit',
       detail: updErr.message, storage_path: storagePath,
     }, 500);
@@ -845,7 +845,7 @@ Deno.serve(async (req) => {
     },
   });
 
-  return json({
+  return json(req, {
     ok: true,
     audit_id: auditId,
     bucket: BUCKET,

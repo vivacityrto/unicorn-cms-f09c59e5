@@ -9,19 +9,15 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MICROSOFT_CLIENT_ID = Deno.env.get("MICROSOFT_CLIENT_ID");
 const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET");
 
-function json(s: number, b: unknown) {
-  return new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json", ...corsHeaders } });
+function json(req: Request, s: number, b: unknown) {
+  return new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json", ...corsHeaders(req) } });
 }
 
 async function sendMailgun(to: string, subject: string, html: string, text: string) {
@@ -102,16 +98,16 @@ async function sendGraph(admin: any, userId: string, to: string, subject: string
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   const auth = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!auth) return json(401, { ok: false, error: "Missing Authorization" });
+  if (!auth) return json(req, 401, { ok: false, error: "Missing Authorization" });
   try {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: { user }, error: aErr } = await admin.auth.getUser(auth);
-    if (aErr || !user) return json(401, { ok: false, error: "Unauthorized" });
+    if (aErr || !user) return json(req, 401, { ok: false, error: "Unauthorized" });
 
     const { to, subject, body, channel, run_id } = await req.json();
-    if (!to || !subject || !body || !channel) return json(400, { ok: false, error: "to, subject, body, channel required" });
+    if (!to || !subject || !body || !channel) return json(req, 400, { ok: false, error: "to, subject, body, channel required" });
 
     const html = body.replace(/\n/g, "<br>");
     if (channel === "mailgun") {
@@ -119,17 +115,17 @@ serve(async (req) => {
     } else if (channel === "graph") {
       await sendGraph(admin, user.id, to, subject, html);
     } else {
-      return json(400, { ok: false, error: `Unknown channel: ${channel}` });
+      return json(req, 400, { ok: false, error: `Unknown channel: ${channel}` });
     }
 
     if (run_id) {
       await admin.from("staff_provisioning_runs").update({ updated_at: new Date().toISOString() }).eq("id", run_id);
     }
-    return json(200, { ok: true });
+    return json(req, 200, { ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     const code = (e as any)?.code;
     console.error("[send-staff-onboarding-email]", msg);
-    return json(code === "no_microsoft_connection" ? 412 : 500, { ok: false, error: msg, code });
+    return json(req, code === "no_microsoft_connection" ? 412 : 500, { ok: false, error: msg, code });
   }
 });

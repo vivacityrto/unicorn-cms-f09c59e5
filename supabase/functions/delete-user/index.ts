@@ -8,14 +8,14 @@ type DeleteUserBody = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
     const { user_uuid } = (await req.json()) as DeleteUserBody;
 
     if (!user_uuid) {
-      return jsonErr(400, "MISSING_USER_ID", "User UUID is required");
+      return jsonErr(req, 400, "MISSING_USER_ID", "User UUID is required");
     }
 
     const supabase = createClient(
@@ -27,14 +27,14 @@ Deno.serve(async (req) => {
     // Get current user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonErr(401, "UNAUTHORIZED", "No authorization header");
+      return jsonErr(req, 401, "UNAUTHORIZED", "No authorization header");
     }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !currentUser) {
-      return jsonErr(401, "UNAUTHORIZED", "Invalid token");
+      return jsonErr(req, 401, "UNAUTHORIZED", "Invalid token");
     }
 
     // Get current user's role (still needed for client-admin path)
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     console.log("Is client admin:", isClientAdmin);
 
     if (!isSuperAdmin && !isClientAdmin) {
-      return jsonErr(403, "FORBIDDEN", "Only admins can delete users");
+      return jsonErr(req, 403, "FORBIDDEN", "Only admins can delete users");
     }
 
     // Create admin client (without user context)
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
         console.log(`Auth user not found (may be archived), proceeding to delete from users table`);
       } else {
         console.error("Auth delete error:", authDeleteError);
-        return jsonErr(400, "DELETE_FAILED", "Unable to delete user account");
+        return jsonErr(req, 400, "DELETE_FAILED", "Unable to delete user account");
       }
     } else {
       console.log(`Successfully deleted user ${user_uuid} from auth.users`);
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     
     if (deleteError) {
       console.error("Users table delete error:", deleteError);
-      return jsonErr(400, "DELETE_FAILED", "Unable to remove user record");
+      return jsonErr(req, 400, "DELETE_FAILED", "Unable to remove user record");
     }
 
     console.log(`Successfully deleted user ${user_uuid} from users table`);
@@ -148,18 +148,18 @@ Deno.serve(async (req) => {
     console.log(`User ${user_uuid} deleted successfully`);
 
     return new Response(JSON.stringify({ ok: true }), {
-      headers: { "content-type": "application/json", ...corsHeaders },
+      headers: { "content-type": "application/json", ...corsHeaders(req) },
       status: 200,
     });
   } catch (e: any) {
     console.error("Error deleting user:", e);
-    return jsonErr(500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonErr(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
 
-function jsonErr(status: number, code: string, detail?: string) {
+function jsonErr(req: Request, status: number, code: string, detail?: string) {
   return new Response(JSON.stringify({ ok: false, code, detail }), {
-    headers: { "content-type": "application/json", ...corsHeaders },
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
     status,
   });
 }

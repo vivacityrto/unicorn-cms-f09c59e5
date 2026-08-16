@@ -31,25 +31,25 @@ const EMAIL_MANAGE_FEATURE = "clients.emails.manage";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json(401, { error: "Missing Authorization header" });
+    if (!authHeader) return json(req, 401, { error: "Missing Authorization header" });
 
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData?.user) return json(401, { error: "Unauthorized" });
+    if (userErr || !userData?.user) return json(req, 401, { error: "Unauthorized" });
     const caller = userData.user;
 
     const { data: allowed, error: permErr } = await userClient.rpc(
@@ -62,15 +62,15 @@ Deno.serve(async (req) => {
     );
     if (permErr) {
       console.error("unlink-email check_permission failed:", permErr.message);
-      return json(500, { error: "Permission check failed" });
+      return json(req, 500, { error: "Permission check failed" });
     }
-    if (!allowed) return json(403, { error: "Insufficient permissions" });
+    if (!allowed) return json(req, 403, { error: "Insufficient permissions" });
 
     const body = await req.json().catch(() => null);
     const emailId: string | undefined = body?.email_id;
     const wantHardDelete = body?.hard_delete === true;
     if (!emailId || typeof emailId !== "string" || !UUID_RE.test(emailId)) {
-      return json(400, { error: "email_id required" });
+      return json(req, 400, { error: "email_id required" });
     }
 
     // Ownership / tenant scoping: ANON+JWT so RLS applies
@@ -82,9 +82,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (emailFetchErr) {
       console.error("unlink-email email fetch failed:", emailFetchErr.message);
-      return json(500, { error: "Failed to load email" });
+      return json(req, 500, { error: "Failed to load email" });
     }
-    if (!email) return json(404, { error: "Email not found" });
+    if (!email) return json(req, 404, { error: "Email not found" });
 
     const svc = createClient(supabaseUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       p_user_id: caller.id,
     });
     if (wantHardDelete && !isSuperAdmin) {
-      return json(403, { error: "Hard delete is restricted to Super Admin" });
+      return json(req, 403, { error: "Hard delete is restricted to Super Admin" });
     }
     const mode = wantHardDelete && isSuperAdmin ? "hard_delete" : "soft_unlink";
 
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
     });
     if (logErr) {
       console.error("unlink-email audit_log insert failed:", logErr.message);
-      return json(500, {
+      return json(req, 500, {
         error: "Failed to record audit log; unlink aborted",
       });
     }
@@ -155,9 +155,9 @@ Deno.serve(async (req) => {
         .eq("id", emailId)
         .is("unlinked_at", null);
       if (unlinkErr) {
-        return json(500, { error: `Unlink failed: ${unlinkErr.message}` });
+        return json(req, 500, { error: `Unlink failed: ${unlinkErr.message}` });
       }
-      return json(200, { ok: true, mode, email_id: emailId });
+      return json(req, 200, { ok: true, mode, email_id: emailId });
     }
 
     if (storagePaths.length > 0) {
@@ -171,23 +171,23 @@ Deno.serve(async (req) => {
       .from("email_message_attachments")
       .delete()
       .eq("email_message_id", emailId);
-    if (attErr) return json(500, { error: `Attachment delete failed: ${attErr.message}` });
+    if (attErr) return json(req, 500, { error: `Attachment delete failed: ${attErr.message}` });
 
     const { error: noteErr } = await svc
       .from("notes")
       .delete()
       .eq("source_email_id", emailId);
-    if (noteErr) return json(500, { error: `Notes delete failed: ${noteErr.message}` });
+    if (noteErr) return json(req, 500, { error: `Notes delete failed: ${noteErr.message}` });
 
     const { error: emailErr } = await svc
       .from("email_messages")
       .delete()
       .eq("id", emailId);
-    if (emailErr) return json(500, { error: `Email delete failed: ${emailErr.message}` });
+    if (emailErr) return json(req, 500, { error: `Email delete failed: ${emailErr.message}` });
 
-    return json(200, { ok: true, mode, email_id: emailId });
+    return json(req, 200, { ok: true, mode, email_id: emailId });
   } catch (err) {
     console.error("unlink-email error:", err);
-    return json(500, { error: (err as Error).message || "Internal error" });
+    return json(req, 500, { error: (err as Error).message || "Internal error" });
   }
 });

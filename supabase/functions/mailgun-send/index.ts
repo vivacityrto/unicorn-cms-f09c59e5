@@ -10,6 +10,7 @@
  */
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -22,10 +23,6 @@ const MAIL_FROM = Deno.env.get("MAIL_FROM") || "Unicorn Notifications <no-reply@
 const MAIL_REPLY_TO = Deno.env.get("MAIL_REPLY_TO") || "support@app.unicorn-cms.au";
 const MAILGUN_REGION = (Deno.env.get("MAILGUN_REGION") || "EU").toUpperCase(); // Default EU
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 type RoleType = "Admin" | "Staff" | "Super Admin" | string;
 
@@ -118,21 +115,21 @@ async function sendViaMailgun(to: string, subject: string, html: string, from: s
 }
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req) });
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: corsHeaders(req) });
 
   try {
     const { user, role } = await getUserAndRole(req);
     const privileged = role === "Admin" || role === "Staff" || role === "Super Admin";
     if (!user || !privileged) {
-      return new Response(JSON.stringify({ ok: false, error: "Forbidden" }), { status: 403, headers: corsHeaders });
+      return new Response(JSON.stringify({ ok: false, error: "Forbidden" }), { status: 403, headers: corsHeaders(req) });
     }
 
     const body = (await req.json()) as SendEmailRequest;
     const { templateSlug, to, overrides = {} } = body || {};
     const mergeVars: Record<string, any> = { ...(body?.mergeVars || {}) };
     if (!templateSlug || !to) {
-      return new Response(JSON.stringify({ ok: false, error: "Missing templateSlug or to" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ ok: false, error: "Missing templateSlug or to" }), { status: 400, headers: corsHeaders(req) });
     }
 
     const supabaseSrv = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -143,7 +140,7 @@ serve(async (req: Request) => {
       .maybeSingle();
 
     if (tplErr || !tpl) {
-      return new Response(JSON.stringify({ ok: false, error: "Template not found" }), { status: 404, headers: corsHeaders });
+      return new Response(JSON.stringify({ ok: false, error: "Template not found" }), { status: 404, headers: corsHeaders(req) });
     }
 
     // Trusted keys are server-owned. Delete any caller-supplied collision
@@ -204,13 +201,13 @@ serve(async (req: Request) => {
     };
     return new Response(JSON.stringify(resp), {
       status: mg.ok ? 200 : (mg.status || 500),
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...corsHeaders(req) },
     });
   } catch (err: any) {
     console.error("mailgun-send: unexpected error", err);
     return new Response(JSON.stringify({ ok: false, error: err?.message || "Internal error" }), {
       status: 500,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
     });
   }
 });

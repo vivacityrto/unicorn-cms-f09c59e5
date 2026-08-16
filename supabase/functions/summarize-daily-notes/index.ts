@@ -33,10 +33,10 @@ function checkCap(userId: string): { ok: boolean; hoursLeft: number } {
   return { ok: true, hoursLeft: Math.ceil((entry.resetsAt - now) / 3_600_000) };
 }
 
-function json(body: unknown, status = 200) {
+function json(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -54,12 +54,12 @@ function extractJson(text: string): unknown | null {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
-    return json({ error: 'Unauthorized' }, 401);
+    return json(req, { error: 'Unauthorized' }, 401);
   }
   const token = authHeader.slice('Bearer '.length);
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -67,12 +67,12 @@ Deno.serve(async (req) => {
   });
   const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(token);
   if (claimsErr || !claimsData?.claims?.sub) {
-    return json({ error: 'Unauthorized' }, 401);
+    return json(req, { error: 'Unauthorized' }, 401);
   }
   const callerId = claimsData.claims.sub as string;
 
   let body: Record<string, unknown>;
-  try { body = await req.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
+  try { body = await req.json(); } catch { return json(req, { error: 'Invalid JSON body' }, 400); }
 
   const userId = String(body?.user_id ?? '');
   const periodLabel = String(body?.period_label ?? '').slice(0, 200);
@@ -81,18 +81,18 @@ Deno.serve(async (req) => {
   const digest = String(body?.digest ?? '');
 
   if (!userId || !periodLabel || !periodStart || !periodEnd || !digest.trim()) {
-    return json({ error: 'Missing required fields' }, 400);
+    return json(req, { error: 'Missing required fields' }, 400);
   }
   if (userId !== callerId) {
-    return json({ error: 'Forbidden' }, 403);
+    return json(req, { error: 'Forbidden' }, 403);
   }
   if (new TextEncoder().encode(digest).byteLength > MAX_DIGEST_BYTES) {
-    return json({ error: 'Digest too large' }, 413);
+    return json(req, { error: 'Digest too large' }, 413);
   }
 
   const cap = checkCap(callerId);
   if (!cap.ok) {
-    return json(
+    return json(req, 
       { error: `Daily summary limit reached. Resets in ${cap.hoursLeft} hours.`, cap: DAILY_CAP },
       429,
     );
@@ -129,14 +129,14 @@ Deno.serve(async (req) => {
     const message = e instanceof Error ? e.message : String(e);
     console.error('Anthropic summary request failed', message.slice(0, 500));
     if (/\b(429|529)\b/.test(message)) {
-      return json({ error: 'Anthropic rate limit reached. Please try again shortly.' }, 429);
+      return json(req, { error: 'Anthropic rate limit reached. Please try again shortly.' }, 429);
     }
-    return json({ error: 'Anthropic summary service unavailable.' }, 502);
+    return json(req, { error: 'Anthropic summary service unavailable.' }, 502);
   }
 
   const parsed = extractJson(content);
   if (!parsed || typeof parsed !== 'object') {
-    return json({ error: 'AI returned an invalid response' }, 502);
+    return json(req, { error: 'AI returned an invalid response' }, 502);
   }
   const p = parsed as Record<string, unknown>;
   const headline = typeof p.headline === 'string' ? p.headline.slice(0, 200) : 'Notes summary';
@@ -145,5 +145,5 @@ Deno.serve(async (req) => {
     ? Math.max(0, Math.floor(p.open_count))
     : 0;
 
-  return json({ headline, summary, open_count: openCount });
+  return json(req, { headline, summary, open_count: openCount });
 });

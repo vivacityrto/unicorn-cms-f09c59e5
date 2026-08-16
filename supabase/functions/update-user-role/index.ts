@@ -1,10 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { corsHeaders } from "../_shared/cors.ts";
 import { authorizeRoleUpdateBody } from '../_shared/users-write-allowlist.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 interface UpdateUserRoleRequest {
   user_uuid: string;
@@ -20,7 +17,7 @@ interface UpdateUserRoleRequest {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -33,7 +30,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ ok: false, code: 'UNAUTHORIZED', detail: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -43,7 +40,7 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ ok: false, code: 'UNAUTHORIZED', detail: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -57,7 +54,7 @@ Deno.serve(async (req) => {
     if (!allowed) {
       return new Response(
         JSON.stringify({ ok: false, code: 'FORBIDDEN', detail: 'You do not have permission to update user roles' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -68,7 +65,7 @@ Deno.serve(async (req) => {
     if (!user_uuid) {
       return new Response(
         JSON.stringify({ ok: false, code: 'INVALID_REQUEST', detail: 'user_uuid is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -76,7 +73,7 @@ Deno.serve(async (req) => {
     if (!allowlisted.ok) {
       return new Response(
         JSON.stringify({ ok: false, code: allowlisted.code, detail: allowlisted.detail }),
-        { status: allowlisted.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: allowlisted.status, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -89,7 +86,7 @@ Deno.serve(async (req) => {
       if (unicorn_role === 'Super Admin' && !['Vivacity', 'Vivacity Team'].includes(user_type)) {
         return new Response(
           JSON.stringify({ ok: false, code: 'INVALID_COMBINATION', detail: 'Super Admin role requires Vivacity user type' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -97,14 +94,14 @@ Deno.serve(async (req) => {
       if (unicorn_role === 'Team Member' && !['Vivacity', 'Vivacity Team'].includes(user_type)) {
         return new Response(
           JSON.stringify({ ok: false, code: 'INVALID_COMBINATION', detail: 'Team Member role requires Vivacity user type' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
       if (user_type === 'Client' && tenant_id === null) {
         return new Response(
           JSON.stringify({ ok: false, code: 'INVALID_COMBINATION', detail: 'Client user type requires a tenant assignment' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -147,7 +144,7 @@ Deno.serve(async (req) => {
       console.error('Update error:', updateError);
       return new Response(
         JSON.stringify({ ok: false, code: 'UPDATE_FAILED', detail: updateError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -174,14 +171,14 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ ok: true, message: 'User role updated successfully' }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
     console.error('Unexpected error:', error);
     return new Response(
       JSON.stringify({ ok: false, code: 'INTERNAL_ERROR', detail: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

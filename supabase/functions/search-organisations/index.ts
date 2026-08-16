@@ -10,7 +10,7 @@ const SANDBOX_PASSWORD = Deno.env.get('TGA_SANDBOX_PASSWORD') || '';
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
         }),
         { 
           status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
           }),
           { 
             status: 401, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
           }
         );
       }
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
         count: organisations.length
       }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       }
     );
 
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
       }),
       { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       }
     );
   }

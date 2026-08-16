@@ -14,10 +14,10 @@ const THROTTLE_MS_DEFAULT = 400;
 const TIME_BUDGET_MS = 50_000;
 const MAX_CONSECUTIVE_FAILURES = 10;
 
-const json = (status: number, body: unknown) =>
+const json = (req: Request, status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -25,12 +25,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 interface Body { job_id?: string }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   const startedAt = Date.now();
   const authHeader = req.headers.get("Authorization");
   const token = authHeader?.replace(/^Bearer\s+/i, "");
-  if (!token) return json(401, { ok: false, code: "NO_AUTH" });
+  if (!token) return json(req, 401, { ok: false, code: "NO_AUTH" });
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -38,7 +38,7 @@ serve(async (req) => {
 
   // Authenticate caller
   const { data: callerData, error: callerErr } = await admin.auth.getUser(token);
-  if (callerErr || !callerData?.user) return json(401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message });
+  if (callerErr || !callerData?.user) return json(req, 401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message });
   const caller = callerData.user;
 
   // Permission gate via central RPC (service-role).
@@ -52,12 +52,12 @@ serve(async (req) => {
     p_feature_key: "admin.cohort.send",
     p_min_level: "full",
   });
-  if (!allowed) return json(403, { ok: false, code: "FORBIDDEN" });
+  if (!allowed) return json(req, 403, { ok: false, code: "FORBIDDEN" });
 
   let body: Body;
-  try { body = await req.json(); } catch { return json(400, { ok: false, code: "BAD_JSON" }); }
+  try { body = await req.json(); } catch { return json(req, 400, { ok: false, code: "BAD_JSON" }); }
   const jobId = body?.job_id;
-  if (!jobId) return json(400, { ok: false, code: "INVALID_PAYLOAD", detail: "job_id required" });
+  if (!jobId) return json(req, 400, { ok: false, code: "INVALID_PAYLOAD", detail: "job_id required" });
 
   // Load job (service role; RLS already enforced by staff gate)
   const { data: job, error: jobErr } = await admin
@@ -65,9 +65,9 @@ serve(async (req) => {
     .select("id, action, status, batch_size, throttle_ms, consecutive_failures")
     .eq("id", jobId)
     .maybeSingle();
-  if (jobErr || !job) return json(404, { ok: false, code: "JOB_NOT_FOUND" });
+  if (jobErr || !job) return json(req, 404, { ok: false, code: "JOB_NOT_FOUND" });
   if (job.status !== "running") {
-    return json(200, { ok: true, drained: 0, status: job.status, remaining: null, note: "Job not running" });
+    return json(req, 200, { ok: true, drained: 0, status: job.status, remaining: null, note: "Job not running" });
   }
 
   const action = job.action as "activate" | "reset";
@@ -111,8 +111,6 @@ serve(async (req) => {
         });
         skipped++; drained++; continue;
       }
-
-
 
       const invokeBody = action === "activate"
         ? { user_uuid: item.user_uuid, tenant_id: item.tenant_id }
@@ -197,7 +195,7 @@ serve(async (req) => {
     .eq("job_id", jobId)
     .eq("outcome", "pending");
 
-  return json(200, {
+  return json(req, 200, {
     ok: true,
     drained, sent, skipped, failed,
     aborted, status: finalStatus ?? "running",

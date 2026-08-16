@@ -1,10 +1,5 @@
 import { createServiceClient } from "../_shared/supabase-client.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 
@@ -71,7 +66,7 @@ function flattenComment(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -90,7 +85,7 @@ Deno.serve(async (req) => {
       if (!Array.isArray(task_ids) || task_ids.length === 0) {
         return new Response(
           JSON.stringify({ error: "task_ids array required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -136,7 +131,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ fetched: totalFetched, stored: totalStored, errors }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -163,7 +158,7 @@ Deno.serve(async (req) => {
       if (!tasks || tasks.length === 0) {
         return new Response(
           JSON.stringify({ fetched: 0, stored: 0, errors: [], has_more: false, next_offset: offset, total_tasks: totalTasks ?? 0 }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -219,19 +214,19 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ fetched: totalFetched, stored: totalStored, task_count: taskEntries.length, errors, has_more: hasMore, next_offset: nextOffset, total_tasks: totalTasks ?? 0 }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
       JSON.stringify({ error: "Invalid action. Use fetch_by_task_ids or fetch_by_tenant" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("fetch-clickup-comments error:", err);
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

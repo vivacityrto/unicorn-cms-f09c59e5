@@ -13,15 +13,7 @@ import { extractToken, verifyAuth, checkSuperAdmin, checkVivacityTeam } from "..
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": 
-    "authorization, x-client-info, apikey, content-type, " +
-    "x-supabase-client-platform, x-supabase-client-platform-version, " +
-    "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface RequestPayload {
   tenant_id: number;
@@ -44,31 +36,31 @@ interface SearchResult {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   if (req.method !== "POST") {
-    return jsonError(405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
+    return jsonError(req, 405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
   }
 
   try {
     // Authenticate
     const token = extractToken(req);
     if (!token) {
-      return jsonError(401, "UNAUTHORIZED", "No authorization token provided");
+      return jsonError(req, 401, "UNAUTHORIZED", "No authorization token provided");
     }
 
     const supabase = createServiceClient();
     const { user, profile, error: authError } = await verifyAuth(supabase, token);
     
     if (authError || !user || !profile) {
-      return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
+      return jsonError(req, 401, "UNAUTHORIZED", authError || "Authentication failed");
     }
 
     // Validate Ask Viv access - Vivacity internal only
     const accessCheck = await validateAskVivAccess(supabase, user.id, profile, "vector-search");
     if (!accessCheck.allowed) {
-      return askVivAccessDeniedResponse(accessCheck.reason);
+      return askVivAccessDeniedResponse(req, accessCheck.reason);
     }
 
     // Parse request
@@ -76,7 +68,7 @@ Deno.serve(async (req) => {
     try {
       payload = await req.json();
     } catch {
-      return jsonError(400, "BAD_REQUEST", "Invalid JSON body");
+      return jsonError(req, 400, "BAD_REQUEST", "Invalid JSON body");
     }
 
     const { 
@@ -89,26 +81,26 @@ Deno.serve(async (req) => {
     } = payload;
     
     if (!tenant_id || typeof tenant_id !== "number") {
-      return jsonError(400, "BAD_REQUEST", "tenant_id is required");
+      return jsonError(req, 400, "BAD_REQUEST", "tenant_id is required");
     }
 
     if (!query || typeof query !== "string") {
-      return jsonError(400, "BAD_REQUEST", "query is required");
+      return jsonError(req, 400, "BAD_REQUEST", "query is required");
     }
 
     if (!mode || !["knowledge", "compliance"].includes(mode)) {
-      return jsonError(400, "BAD_REQUEST", "mode must be 'knowledge' or 'compliance'");
+      return jsonError(req, 400, "BAD_REQUEST", "mode must be 'knowledge' or 'compliance'");
     }
 
     // Validate tenant access
     const hasAccess = await validateTenantAccess(supabase, user.id, profile, tenant_id);
     if (!hasAccess) {
-      return jsonError(403, "FORBIDDEN", "You do not have access to this tenant");
+      return jsonError(req, 403, "FORBIDDEN", "You do not have access to this tenant");
     }
 
     // Generate query embedding via OpenAI direct
     if (!Deno.env.get("OPENAI_API_KEY")) {
-      return jsonError(500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
+      return jsonError(req, 500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
     }
 
     let queryEmbedding: number[];
@@ -116,7 +108,7 @@ Deno.serve(async (req) => {
       queryEmbedding = await generateEmbeddingShared(query);
     } catch (err) {
       console.error("Embedding generation error:", err);
-      return jsonError(500, "EMBEDDING_ERROR", "Failed to generate query embedding");
+      return jsonError(req, 500, "EMBEDDING_ERROR", "Failed to generate query embedding");
     }
 
     // Perform vector search
@@ -134,7 +126,7 @@ Deno.serve(async (req) => {
 
     if (searchError) {
       console.error("Vector search error:", searchError);
-      return jsonError(500, "SEARCH_ERROR", "Failed to perform vector search");
+      return jsonError(req, 500, "SEARCH_ERROR", "Failed to perform vector search");
     }
 
     const searchResults: SearchResult[] = (results || []).map((r: any) => ({
@@ -150,7 +142,7 @@ Deno.serve(async (req) => {
     // Deduplicate by record_id (keep highest similarity)
     const deduped = deduplicateResults(searchResults);
 
-    return jsonOk({
+    return jsonOk(req, {
       results: deduped,
       count: deduped.length,
       query_tokens: Math.ceil(query.length / 4),
@@ -158,7 +150,7 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error("Vector search error:", err);
-    return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonError(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
 

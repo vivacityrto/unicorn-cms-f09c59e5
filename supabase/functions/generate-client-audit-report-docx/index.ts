@@ -41,10 +41,10 @@ import { corsHeaders } from '../_shared/cors.ts';
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -203,8 +203,8 @@ function infoTable(rows: Array<[string, string | null | undefined]>): Table {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
+  if (req.method !== 'POST') return json(req, { error: 'Method not allowed' }, 405);
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -213,13 +213,13 @@ Deno.serve(async (req) => {
 
     // 1. Auth
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
+    if (!authHeader) return json(req, { error: 'Missing authorisation header' }, 401);
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: userRes, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userRes?.user) return json({ error: 'Not authenticated' }, 401);
+    if (userErr || !userRes?.user) return json(req, { error: 'Not authenticated' }, 401);
     const callerUserId = userRes.user.id;
 
     // 2. Permission gate
@@ -230,20 +230,20 @@ Deno.serve(async (req) => {
     });
     if (permErr) {
       console.error('[generate-docx] check_permission failed', permErr.message);
-      return json({ error: 'Forbidden' }, 403);
+      return json(req, { error: 'Forbidden' }, 403);
     }
-    if (!allowed) return json({ error: 'Forbidden' }, 403);
+    if (!allowed) return json(req, { error: 'Forbidden' }, 403);
 
     // 3. Body
     let body: { audit_id?: unknown };
     try {
       body = await req.json();
     } catch {
-      return json({ error: 'Invalid JSON body' }, 400);
+      return json(req, { error: 'Invalid JSON body' }, 400);
     }
     const auditId = typeof body.audit_id === 'string' ? body.audit_id.trim() : '';
     if (!auditId || !UUID_RE.test(auditId)) {
-      return json({ error: 'audit_id must be a valid UUID' }, 400);
+      return json(req, { error: 'audit_id must be a valid UUID' }, 400);
     }
 
     // 4. Load audit + findings + actions (RLS)
@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (auditErr || !auditRow) {
-      return json({ error: "You don't have access to this audit." }, 403);
+      return json(req, { error: "You don't have access to this audit." }, 403);
     }
     const audit = auditRow as any;
 
@@ -831,7 +831,7 @@ Deno.serve(async (req) => {
       });
     if (upErr) {
       console.error('[generate-docx] upload failed', upErr.message);
-      return json({ error: 'Failed to store Word document', details: upErr.message }, 500);
+      return json(req, { error: 'Failed to store Word document', details: upErr.message }, 500);
     }
 
     const patch: Record<string, unknown> = { report_docx_path: path };
@@ -848,10 +848,10 @@ Deno.serve(async (req) => {
       .from('audit-documents')
       .createSignedUrl(path, 60 * 10);
     if (signErr || !signed?.signedUrl) {
-      return json({ error: 'Failed to sign URL', details: signErr?.message }, 500);
+      return json(req, { error: 'Failed to sign URL', details: signErr?.message }, 500);
     }
 
-    return json(
+    return json(req, 
       {
         success: true,
         download_url: signed.signedUrl,
@@ -862,6 +862,6 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error('[generate-docx] fatal', err);
-    return json({ error: (err as Error).message || 'Unexpected error' }, 500);
+    return json(req, { error: (err as Error).message || 'Unexpected error' }, 500);
   }
 });

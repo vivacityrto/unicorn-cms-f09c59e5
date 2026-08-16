@@ -1,12 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import { oauthStateExpiresAt, resolveRedirectUri } from "../_shared/oauth-redirects.ts";
 import { consumeOAuthState } from "../_shared/oauth-states.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
 
 // Trimmed defensively - a trailing newline/space from copy-pasting into
 // Supabase's secrets UI silently breaks Basic Auth encoding with no
@@ -30,16 +27,16 @@ const VIVACITY_SYSTEM_TENANT_ID = 6372;
 // Portal, which has no accounting.transactions entry at all).
 const XERO_SCOPES = "openid profile email offline_access accounting.invoices.read accounting.contacts.read";
 
-function json(status: number, body: Record<string, unknown>): Response {
+function json(req: Request, status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -59,14 +56,14 @@ Deno.serve(async (req) => {
   const getAdminCaller = (forbiddenMessage: string) =>
     requireCaller(req, supabaseAdmin, {
       featureKey: FeatureKeys.adminXeroConnect,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       forbiddenMessage,
     });
 
   const getVivacityStaffCaller = () =>
     requireCaller(req, supabaseAdmin, {
       featureKey: FeatureKeys.staffXeroView,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       forbiddenMessage: "Vivacity staff only",
     });
 
@@ -80,7 +77,7 @@ Deno.serve(async (req) => {
 
       const resolved = resolveRedirectUri("xero", body.redirect_uri);
       if (!resolved.ok) {
-        return json(400, { error: resolved.error });
+        return json(req, 400, { error: resolved.error });
       }
       const redirectUri = resolved.redirectUri;
 
@@ -93,7 +90,7 @@ Deno.serve(async (req) => {
 
       if (stateError) {
         console.error("[xero-auth] Failed to store state:", stateError);
-        return json(500, { error: "Failed to initialise OAuth" });
+        return json(req, 500, { error: "Failed to initialise OAuth" });
       }
 
       const authUrl = new URL("https://login.xero.com/identity/connect/authorize");
@@ -103,7 +100,7 @@ Deno.serve(async (req) => {
       authUrl.searchParams.set("scope", XERO_SCOPES);
       authUrl.searchParams.set("state", state);
 
-      return json(200, { auth_url: authUrl.toString(), state });
+      return json(req, 200, { auth_url: authUrl.toString(), state });
     }
 
     // Action: Exchange the authorization code for tokens
@@ -115,19 +112,19 @@ Deno.serve(async (req) => {
 
       const resolved = resolveRedirectUri("xero", body.redirect_uri);
       if (!resolved.ok) {
-        return json(400, { error: resolved.error });
+        return json(req, 400, { error: resolved.error });
       }
 
       const code = body.code as string;
       const state = body.state as string;
 
       if (!code || !state) {
-        return json(400, { error: "code and state are required" });
+        return json(req, 400, { error: "code and state are required" });
       }
 
       const consumed = await consumeOAuthState(supabaseAdmin, state, caller.user.id);
       if (!consumed.ok) {
-        return json(consumed.status, { error: consumed.error });
+        return json(req, consumed.status, { error: consumed.error });
       }
 
       const stateData = consumed.record.data as { user_id: string; redirect_uri?: string };
@@ -169,7 +166,7 @@ Deno.serve(async (req) => {
         } catch {
           // tokenText wasn't JSON - the raw-text fallback above already covers it
         }
-        return json(400, { error: errorMessage });
+        return json(req, 400, { error: errorMessage });
       }
 
       const tokens = JSON.parse(tokenText);
@@ -215,10 +212,10 @@ Deno.serve(async (req) => {
 
       if (upsertError) {
         console.error("[xero-auth] Failed to store tokens:", upsertError);
-        return json(500, { error: "Failed to store tokens" });
+        return json(req, 500, { error: "Failed to store tokens" });
       }
 
-      return json(200, { success: true, organisation_name: tenantName });
+      return json(req, 200, { success: true, organisation_name: tenantName });
     }
 
     // Action: Check connection status (any Vivacity staff can view)
@@ -236,7 +233,7 @@ Deno.serve(async (req) => {
 
       const isExpired = tokenRow ? new Date(tokenRow.expires_at) < new Date() : false;
 
-      return json(200, {
+      return json(req, 200, {
         connected: !!tokenRow,
         organisation_name: tokenRow?.account_email ?? null,
         expires_at: tokenRow?.expires_at ?? null,
@@ -255,13 +252,13 @@ Deno.serve(async (req) => {
 
       await supabaseAdmin.from("oauth_tokens").delete().eq("provider", "xero");
 
-      return json(200, { success: true });
+      return json(req, 200, { success: true });
     }
 
-    return json(400, { error: "Invalid action" });
+    return json(req, 400, { error: "Invalid action" });
   } catch (error) {
     console.error("[xero-auth] Unhandled error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return json(500, { error: message });
+    return json(req, 500, { error: message });
   }
 });

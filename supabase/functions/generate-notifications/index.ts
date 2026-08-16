@@ -11,6 +11,11 @@
 
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
+import {
+  cronUnauthorizedResponse,
+  getUserIdFromJwt,
+  isCronAuthorized,
+} from "../_shared/cron-auth.ts";
 
 interface NotificationRow {
   tenant_id: number;
@@ -196,7 +201,6 @@ async function generateTaskNotifications(supabase: ReturnType<typeof createServi
       });
     }
   }
-
 
   if (!rows.length) return 0;
 
@@ -694,7 +698,7 @@ async function runReportingObligations(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -721,7 +725,7 @@ Deno.serve(async (req) => {
           ? Number(obligationIdRaw)
           : undefined;
 
-      // Scheduled: cron path, no JWT check (matches existing scopes).
+      // Scheduled: cron invoke secret (or Super Admin JWT fallback).
       // Preview/Broadcast: must be a super-admin.
       let actorUserId: string | undefined;
       if (isPreview || isBroadcast) {
@@ -729,7 +733,7 @@ Deno.serve(async (req) => {
         if (!authHeader?.startsWith("Bearer ")) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
         const token = authHeader.replace("Bearer ", "");
@@ -738,7 +742,7 @@ Deno.serve(async (req) => {
         if (claimsErr || !claimsData?.claims?.sub) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
         actorUserId = claimsData.claims.sub as string;
@@ -748,13 +752,27 @@ Deno.serve(async (req) => {
         if (saErr || isSa !== true) {
           return new Response(JSON.stringify({ error: "Forbidden" }), {
             status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
         if (obligationId == null || Number.isNaN(obligationId)) {
           return new Response(JSON.stringify({ error: "obligation_id required" }), {
             status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+          });
+        }
+      } else if (!await isCronAuthorized(req)) {
+        const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
+        if (!token) return cronUnauthorizedResponse(req, corsHeaders);
+        const userId = await getUserIdFromJwt(supabase, token);
+        if (!userId) return cronUnauthorizedResponse(req, corsHeaders);
+        const { data: isSa, error: saErr } = await supabase.rpc("is_super_admin_safe", {
+          p_user_id: userId,
+        });
+        if (saErr || isSa !== true) {
+          return new Response(JSON.stringify({ error: "Forbidden" }), {
+            status: 403,
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
       }
@@ -765,13 +783,29 @@ Deno.serve(async (req) => {
       const payload = { scope, mode, ...result, ran_at: new Date().toISOString() };
       console.log("generate-notifications summary:", JSON.stringify(payload));
       return new Response(JSON.stringify(payload), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
     let tasksCreated = 0;
     let meetingsCreated = 0;
     let obligationsCreated = 0;
+
+    if (!await isCronAuthorized(req)) {
+      const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
+      if (!token) return cronUnauthorizedResponse(req, corsHeaders);
+      const userId = await getUserIdFromJwt(supabase, token);
+      if (!userId) return cronUnauthorizedResponse(req, corsHeaders);
+      const { data: isSa, error: saErr } = await supabase.rpc("is_super_admin_safe", {
+        p_user_id: userId,
+      });
+      if (saErr || isSa !== true) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+        });
+      }
+    }
 
     if (scope === "meetings" || scope === "all") {
       meetingsCreated = await generateMeetingNotifications(supabase);
@@ -792,13 +826,13 @@ Deno.serve(async (req) => {
     console.log("generate-notifications summary:", JSON.stringify(summary));
 
     return new Response(JSON.stringify(summary), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("generate-notifications error:", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

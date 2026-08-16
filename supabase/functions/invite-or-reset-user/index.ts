@@ -12,12 +12,8 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.53.0";
+import { corsHeaders } from "../_shared/cors.ts";
 import { APP_BASE_URL } from "../_shared/app-base-url.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 interface Payload {
   email: string;
@@ -25,7 +21,7 @@ interface Payload {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -35,7 +31,7 @@ serve(async (req) => {
     console.error("Missing Supabase env vars");
     return new Response(
       JSON.stringify({ error: "Missing Supabase configuration" }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
     );
   }
 
@@ -50,7 +46,7 @@ serve(async (req) => {
     if (!token) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
     }
 
@@ -58,7 +54,7 @@ serve(async (req) => {
     if (getUserError || !authData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
     }
 
@@ -71,7 +67,7 @@ serve(async (req) => {
     if (profileErr || !caller || caller.disabled) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
     }
 
@@ -84,7 +80,7 @@ serve(async (req) => {
     if (!allowed) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
     }
 
@@ -95,7 +91,7 @@ serve(async (req) => {
     if (!email) {
       return new Response(JSON.stringify({ error: "Email is required" }), {
         status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
     }
 
@@ -104,7 +100,7 @@ serve(async (req) => {
     if (!allowedEmails.has(email)) {
       return new Response(JSON.stringify({ error: "Not allowed" }), {
         status: 403,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
     }
 
@@ -133,7 +129,7 @@ serve(async (req) => {
           console.error("Token issue error:", tokenError);
           return new Response(
             JSON.stringify({ error: tokenError.message || "Failed to issue reset token" }),
-            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
           );
         }
 
@@ -141,7 +137,7 @@ serve(async (req) => {
           console.error("Token issue rejected:", tokenData);
           return new Response(
             JSON.stringify({ error: tokenData?.error || "Failed to issue reset token" }),
-            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
           );
         }
 
@@ -152,26 +148,26 @@ serve(async (req) => {
             message: `Password reset email sent to ${email}`,
             expiresAt: tokenData?.expiresAt,
           }),
-          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
         );
       }
 
       console.error("Invite error:", inviteError);
       return new Response(
         JSON.stringify({ error: inviteError.message || "Failed to invite user" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
       );
     }
 
     return new Response(
       JSON.stringify({ ok: true, mode: "invite", message: `Invitation email sent to ${email}`, data: inviteData }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
     );
   } catch (e: any) {
     console.error("Unhandled error:", e);
     return new Response(JSON.stringify({ error: e?.message || "Unknown error" }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...corsHeaders(req) },
     });
   }
 });

@@ -1,6 +1,6 @@
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3.23.8";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const BodySchema = z.object({
   vimeo_url: z.string().url().max(500),
@@ -26,10 +26,10 @@ type VimeoTextTrack = {
   type?: string;
 };
 
-function json(body: unknown, status = 200) {
+function json(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -109,7 +109,6 @@ async function resolveVimeoUrl(raw: string): Promise<VimeoLocation | null> {
   }
   return null;
 }
-
 
 function vimeoResource(location: VimeoLocation) {
   return location.privacyHash
@@ -209,8 +208,8 @@ async function fetchTranscript(location: VimeoLocation, token: string) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
+  if (req.method !== "POST") return json(req, { error: "Method not allowed" }, 405);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -218,24 +217,24 @@ Deno.serve(async (req) => {
     const vimeoToken = Deno.env.get("VIMEO_ACCESS_TOKEN");
     if (!supabaseUrl || !anonKey || !vimeoToken) {
       console.error("Required Academy Vimeo configuration is missing");
-      return json({ error: "Vimeo integration is not configured" }, 500);
+      return json(req, { error: "Vimeo integration is not configured" }, 500);
     }
 
     const authorization = req.headers.get("Authorization");
-    if (!authorization) return json({ error: "Unauthorized" }, 401);
+    if (!authorization) return json(req, { error: "Unauthorized" }, 401);
     const authClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authorization } },
     });
     const { data: { user }, error: authError } = await authClient.auth.getUser();
-    if (authError || !user) return json({ error: "Unauthorized" }, 401);
+    if (authError || !user) return json(req, { error: "Unauthorized" }, 401);
 
     const parsedBody = BodySchema.safeParse(await req.json());
     if (!parsedBody.success) {
-      return json({ error: "A valid Vimeo URL is required" }, 400);
+      return json(req, { error: "A valid Vimeo URL is required" }, 400);
     }
     const location = await resolveVimeoUrl(parsedBody.data.vimeo_url);
     if (!location) {
-      return json({
+      return json(req, {
         error:
           "Couldn't find a Vimeo video ID in that link. Open the video's own page in Vimeo and copy the link from your browser's address bar (e.g. https://vimeo.com/1194261152/ab12cd34ef).",
       }, 400);
@@ -251,7 +250,7 @@ Deno.serve(async (req) => {
         : `Vimeo could not resolve this video (status ${apiResult.status}).`;
       // External access state, not a function failure — return 200 so the caller
       // can show guidance without Supabase logging a runtime error.
-      return json({ accessible: false, error: hint, video_id: location.id });
+      return json(req, { accessible: false, error: hint, video_id: location.id });
     }
 
     if (
@@ -267,7 +266,7 @@ Deno.serve(async (req) => {
       // This is an external video-access state, not an Edge Function failure.
       // Return a successful transport response so Supabase does not report a
       // runtime error; the caller still blocks generation using `accessible`.
-      return json({
+      return json(req, {
         accessible: false,
         error: reason,
         video_id: location.id,
@@ -282,7 +281,7 @@ Deno.serve(async (req) => {
       ?.filter((picture) => picture.link)
       .sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0];
 
-    return json({
+    return json(req, {
       accessible: true,
       video_id: location.id,
       title: apiResult.metadata?.name ?? oEmbed?.title ?? "",
@@ -295,6 +294,6 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("academy-fetch-vimeo-transcript failed", error);
-    return json({ error: "Unable to read this Vimeo video right now" }, 500);
+    return json(req, { error: "Unable to read this Vimeo video right now" }, 500);
   }
 });

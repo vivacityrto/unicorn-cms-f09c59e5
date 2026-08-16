@@ -2,11 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAppToken } from "../_shared/graph-app-client.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeaders } from "../_shared/cors.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const MICROSOFT_CLIENT_ID = Deno.env.get("MICROSOFT_CLIENT_ID")!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET")!;
@@ -100,7 +97,7 @@ async function verifyWithinRoot(
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -111,7 +108,7 @@ serve(async (req) => {
 
     const caller = await requireCaller(req, supabaseAdmin, {
       featureKey: FeatureKeys.staffSharepoint,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Unauthorized",
       forbiddenMessage: "Unauthorized",
       orAllow: async ({ userId }) => {
@@ -142,20 +139,20 @@ serve(async (req) => {
       if (!Number.isFinite(requestedTenantIdNum)) {
         return new Response(
           JSON.stringify({ error: "tenant_id must be a number" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
       const tenantAccess = await hasTenantAccessSafe(supabaseAdmin, user.id, requestedTenantIdNum);
       if (tenantAccess.lookupFailed) {
         return new Response(
           JSON.stringify({ error: "Failed to verify tenant access" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
       if (!tenantAccess.allowed) {
         return new Response(
           JSON.stringify({ error: "Forbidden: no access to this tenant" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
     }
@@ -179,7 +176,7 @@ serve(async (req) => {
     if (!tenantId && !sitePurposeEarly) {
       return new Response(
         JSON.stringify({ error: "No tenant found for user" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -206,14 +203,14 @@ serve(async (req) => {
         console.error("[browse-sp] Failed to load sharepoint_sites config:", siteError);
         return new Response(
           JSON.stringify({ error: "Failed to load SharePoint site configuration" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
       if (!site?.drive_id) {
         return new Response(
           JSON.stringify({ error: `No SharePoint site configured for purpose: ${sitePurpose}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -231,7 +228,7 @@ serve(async (req) => {
       if (!settings || !settings.is_enabled || settings.validation_status !== "valid") {
         return new Response(
           JSON.stringify({ error: "SharePoint folder not configured or disabled for this tenant" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -265,7 +262,7 @@ serve(async (req) => {
       } catch {
         return new Response(
           JSON.stringify({ error: "Microsoft token expired. Please reconnect." }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
     } else {
@@ -277,7 +274,7 @@ serve(async (req) => {
         console.error("[browse-sp] App token fallback failed:", e);
         return new Response(
           JSON.stringify({ error: "Microsoft account not connected and app credentials unavailable" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
     }
@@ -302,7 +299,7 @@ serve(async (req) => {
           if (!withinRoot) {
             return new Response(
               JSON.stringify({ error: "Access denied — folder is outside the configured root" }),
-              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
             );
           }
         }
@@ -318,7 +315,7 @@ serve(async (req) => {
         console.error("[browse-sp] List failed:", res.status, errorText);
         return new Response(
           JSON.stringify({ error: "Failed to list folder contents" }),
-          { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: res.status, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -357,7 +354,7 @@ serve(async (req) => {
           root_name: displayRootName,
           start_folder_name: startFolderName,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -367,7 +364,7 @@ serve(async (req) => {
       if (!itemId) {
         return new Response(
           JSON.stringify({ error: "item_id is required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -377,7 +374,7 @@ serve(async (req) => {
         if (!withinRoot) {
           return new Response(
             JSON.stringify({ error: "Access denied — file is outside the configured root folder" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
           );
         }
       }
@@ -393,7 +390,7 @@ serve(async (req) => {
         console.error("[browse-sp] Meta fetch failed:", metaRes.status, errorText);
         return new Response(
           JSON.stringify({ error: "File not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -402,7 +399,7 @@ serve(async (req) => {
       if (!meta.file) {
         return new Response(
           JSON.stringify({ error: "Cannot download a folder" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -431,8 +428,7 @@ serve(async (req) => {
         });
 
         return new Response(content, {
-          headers: {
-            ...corsHeaders,
+          headers: { ...corsHeaders(req),
             "Content-Type": meta.file.mimeType || "application/octet-stream",
             "Content-Disposition": `attachment; filename="${meta.name}"`,
           },
@@ -456,7 +452,7 @@ serve(async (req) => {
           file_name: meta.name,
           mime_type: meta.file.mimeType,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -466,14 +462,14 @@ serve(async (req) => {
       if (!isSuperAdmin) {
         return new Response(
           JSON.stringify({ error: "SuperAdmin access required" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
       if (!sitePurpose) {
         return new Response(
           JSON.stringify({ error: "site_purpose is required for list_drives" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -488,7 +484,7 @@ serve(async (req) => {
       if (!siteRow?.graph_site_id) {
         return new Response(
           JSON.stringify({ error: "No graph_site_id found for this site purpose" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -502,7 +498,7 @@ serve(async (req) => {
         console.error("[browse-sp] list_drives failed:", drivesRes.status, errText);
         return new Response(
           JSON.stringify({ error: "Failed to list drives", status: drivesRes.status, detail: errText }),
-          { status: drivesRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: drivesRes.status, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -517,19 +513,19 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ site_name: siteRow.site_name, drives }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
       JSON.stringify({ error: 'Invalid action. Use "list", "download", or "list_drives".' }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("[browse-sp] Unhandled error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

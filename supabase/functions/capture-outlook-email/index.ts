@@ -1,12 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 interface EmailPayload {
   action?: "link-email" | "refresh-linked-email-metadata";
@@ -187,7 +183,7 @@ async function fetchGraphEmail(accessToken: string, messageId: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -195,7 +191,7 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -211,7 +207,7 @@ Deno.serve(async (req) => {
       console.error("Auth error:", claimsError);
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -224,14 +220,14 @@ Deno.serve(async (req) => {
     if (!message_id) {
       return new Response(
         JSON.stringify({ error: "message_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     if (!tenant_id) {
       return new Response(
         JSON.stringify({ error: "tenant_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -239,7 +235,7 @@ Deno.serve(async (req) => {
     if (!Number.isFinite(tenantIdNum)) {
       return new Response(
         JSON.stringify({ error: "tenant_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -248,13 +244,13 @@ Deno.serve(async (req) => {
     if (tenantAccess.lookupFailed) {
       return new Response(
         JSON.stringify({ error: "Failed to verify tenant access" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     if (!tenantAccess.allowed) {
       return new Response(
         JSON.stringify({ error: "Forbidden: no access to this tenant" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -275,7 +271,7 @@ Deno.serve(async (req) => {
       console.error("No Microsoft token found:", tokenError);
       return new Response(
         JSON.stringify({ error: "Microsoft account not connected" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -285,7 +281,7 @@ Deno.serve(async (req) => {
     } catch (tokenRefreshError) {
       return new Response(
         JSON.stringify({ error: tokenRefreshError instanceof Error ? tokenRefreshError.message : "Microsoft token expired. Please reconnect your Outlook account." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -293,7 +289,7 @@ Deno.serve(async (req) => {
       if (!email_id) {
         return new Response(
           JSON.stringify({ error: "email_id is required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -306,7 +302,7 @@ Deno.serve(async (req) => {
       if (existingEmailError || !existingEmail || existingEmail.user_uuid !== userId) {
         return new Response(
           JSON.stringify({ error: "Linked email not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -337,13 +333,13 @@ Deno.serve(async (req) => {
         console.error("Refresh update error:", updateError);
         return new Response(
           JSON.stringify({ error: "Failed to refresh linked email" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
         JSON.stringify({ success: true, refreshed: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -359,7 +355,7 @@ Deno.serve(async (req) => {
     if (existingEmail && !existingEmail.unlinked_at) {
       return new Response(
         JSON.stringify({ error: "Email already linked", email_id: existingEmail.id }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 409, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -423,7 +419,7 @@ Deno.serve(async (req) => {
       console.error("Insert error:", insertError);
       return new Response(
         JSON.stringify({ error: "Failed to save email record" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -541,13 +537,13 @@ Deno.serve(async (req) => {
           has_attachments: emailRecord.has_attachments,
         },
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ error: "An unexpected error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

@@ -1,10 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
 
 const XERO_CLIENT_ID = (Deno.env.get("XERO_CLIENT_ID") ?? "").trim();
 const XERO_CLIENT_SECRET = (Deno.env.get("XERO_CLIENT_SECRET") ?? "").trim();
@@ -13,10 +10,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
 
-function json(status: number, body: Record<string, unknown>): Response {
+function json(req: Request, status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -67,7 +64,7 @@ function redactInvoice(inv: any) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -82,7 +79,7 @@ Deno.serve(async (req) => {
     // already see.
     const caller = await requireCaller(req, supabaseAdmin, {
       featureKey: FeatureKeys.staffXeroView,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Missing bearer token",
       forbiddenMessage: "Vivacity staff only",
     });
@@ -91,7 +88,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const tenantId = body.tenant_id as number | undefined;
     if (!tenantId) {
-      return json(400, { error: "tenant_id is required" });
+      return json(req, 400, { error: "tenant_id is required" });
     }
 
     const { data: tenantRow } = await supabaseAdmin
@@ -102,7 +99,7 @@ Deno.serve(async (req) => {
 
     const contactMatch = tenantRow?.xero_contact_url?.match(CONTACT_ID_RE);
     if (!contactMatch) {
-      return json(200, { connected: null, linked: false, error: "This client has no Xero Contact URL saved." });
+      return json(req, 200, { connected: null, linked: false, error: "This client has no Xero Contact URL saved." });
     }
     const contactId = contactMatch[1];
 
@@ -115,14 +112,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!tokenRow) {
-      return json(200, { connected: false, linked: true, error: "Xero is not connected." });
+      return json(req, 200, { connected: false, linked: true, error: "Xero is not connected." });
     }
 
     let accessToken = tokenRow.access_token as string;
     const tenantAccountId = tokenRow.provider_account_id as string | null;
 
     if (!tenantAccountId) {
-      return json(200, { connected: false, linked: true, error: "Xero connection is missing its organisation id." });
+      return json(req, 200, { connected: false, linked: true, error: "Xero connection is missing its organisation id." });
     }
 
     const expiresAt = new Date(tokenRow.expires_at as string);
@@ -145,7 +142,7 @@ Deno.serve(async (req) => {
         await supabaseAdmin.from("oauth_tokens")
           .update({ last_error: `Token refresh failed: ${errText}`, updated_at: new Date().toISOString() })
           .eq("provider", "xero");
-        return json(200, { connected: false, linked: true, error: "Xero connection has expired and could not refresh." });
+        return json(req, 200, { connected: false, linked: true, error: "Xero connection has expired and could not refresh." });
       }
 
       const refreshed = await refreshResp.json();
@@ -179,7 +176,7 @@ Deno.serve(async (req) => {
 
       if (!resp.ok) {
         const errText = await resp.text();
-        return json(200, { connected: true, linked: true, error: `Failed to fetch invoices from Xero: ${errText}` });
+        return json(req, 200, { connected: true, linked: true, error: `Failed to fetch invoices from Xero: ${errText}` });
       }
 
       const data = await resp.json();
@@ -196,10 +193,10 @@ Deno.serve(async (req) => {
       .filter((inv: any) => inv.Status !== "DELETED")
       .map(redactInvoice);
 
-    return json(200, { connected: true, linked: true, invoices });
+    return json(req, 200, { connected: true, linked: true, invoices });
   } catch (error) {
     console.error("[xero-invoice-list] Unhandled error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return json(500, { error: message });
+    return json(req, 500, { error: message });
   }
 });

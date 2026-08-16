@@ -1,20 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const AI_DESTINATION = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const AI_MODEL = "google/gemini-3-flash-preview";
 const EXTERNAL_FORWARD_FLAG = "ai_email_note_external_forward_enabled";
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -73,12 +68,12 @@ async function tenantAllowsExternalEmailForward(
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return json(401, { error: "Missing authorization" });
+      return json(req, 401, { error: "Missing authorization" });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -90,12 +85,12 @@ serve(async (req) => {
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) {
-      return json(401, { error: "Unauthorized" });
+      return json(req, 401, { error: "Unauthorized" });
     }
 
     const { email_id } = await req.json();
     if (!email_id || typeof email_id !== "string") {
-      return json(400, { error: "email_id is required" });
+      return json(req, 400, { error: "email_id is required" });
     }
 
     // IDOR: read the row as the caller so email_messages RLS applies
@@ -111,13 +106,13 @@ serve(async (req) => {
       .maybeSingle();
 
     if (emailErr || !email) {
-      return json(404, { error: "Email not found" });
+      return json(req, 404, { error: "Email not found" });
     }
 
     const serviceClient = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     if (!(await tenantAllowsExternalEmailForward(serviceClient, email.tenant_id))) {
-      return json(403, {
+      return json(req, 403, {
         code: "AI_FORWARD_NOT_OPTED_IN",
         error:
           "Forwarding this email to an external AI provider is not covered by the client's privacy terms and has not been opted in for this tenant.",
@@ -131,7 +126,7 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return json(500, { error: "AI not configured" });
+      return json(req, 500, { error: "AI not configured" });
     }
 
     const { error: auditErr } = await serviceClient.from("client_audit_log").insert({
@@ -150,7 +145,7 @@ serve(async (req) => {
     });
     if (auditErr) {
       console.error("Audit log insert failed:", auditErr.message);
-      return json(500, { error: "Failed to record audit log" });
+      return json(req, 500, { error: "Failed to record audit log" });
     }
 
     const userPrompt = `You are a professional consultant's note-taking assistant. Convert the following email into a structured consultation note.
@@ -207,14 +202,14 @@ Also produce a brief title under 8 words in sentence case derived from the subje
 
     if (!aiResp.ok) {
       if (aiResp.status === 429) {
-        return json(429, { error: "AI rate limit reached. Please try again shortly." });
+        return json(req, 429, { error: "AI rate limit reached. Please try again shortly." });
       }
       if (aiResp.status === 402) {
-        return json(402, { error: "AI credits exhausted. Please add credits." });
+        return json(req, 402, { error: "AI credits exhausted. Please add credits." });
       }
       const errText = await aiResp.text();
       console.error("AI gateway error:", aiResp.status, errText);
-      return json(500, { error: "AI generation failed" });
+      return json(req, 500, { error: "AI generation failed" });
     }
 
     const data = await aiResp.json();
@@ -234,7 +229,7 @@ Also produce a brief title under 8 words in sentence case derived from the subje
       note_content = (data.choices?.[0]?.message?.content || "").trim();
     }
     if (!note_content) {
-      return json(500, { error: "AI returned empty result" });
+      return json(req, 500, { error: "AI returned empty result" });
     }
 
     // Cap title to 8 words
@@ -242,9 +237,9 @@ Also produce a brief title under 8 words in sentence case derived from the subje
     if (words.length > 8) title = words.slice(0, 8).join(" ");
     if (!title) title = (email.subject ?? "Email note").slice(0, 80);
 
-    return json(200, { title, note_content });
+    return json(req, 200, { title, note_content });
   } catch (e) {
     console.error("generate-email-note error:", e);
-    return json(500, { error: (e as Error).message || "Unknown error" });
+    return json(req, 500, { error: (e as Error).message || "Unknown error" });
   }
 });

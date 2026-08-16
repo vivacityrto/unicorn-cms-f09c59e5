@@ -1,12 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
 
@@ -348,7 +344,7 @@ function extractMinutesSections(text: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -359,7 +355,7 @@ Deno.serve(async (req) => {
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.adminSystemConfig,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Unauthorized",
       forbiddenMessage: "Forbidden: Vivacity Team only",
     });
@@ -376,7 +372,7 @@ Deno.serve(async (req) => {
     if (!meeting_id) {
       return new Response(JSON.stringify({ error: "meeting_id is required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -390,7 +386,7 @@ Deno.serve(async (req) => {
     if (meetingErr || !meeting) {
       return new Response(JSON.stringify({ error: "Meeting not found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -765,13 +761,13 @@ Deno.serve(async (req) => {
         needs_copilot_input: needsCopilotInput && !recapText,
         warnings,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("generate-minutes-draft error:", err);
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

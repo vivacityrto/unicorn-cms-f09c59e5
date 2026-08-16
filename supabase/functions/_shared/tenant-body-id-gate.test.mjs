@@ -48,11 +48,16 @@ describe("body-supplied tenant_id membership sweep", () => {
     assert.match(helper, /p_user_id:/);
   });
 
+  function deniesWith403(src) {
+    // Explicit 403 in the function, or requireCaller which returns 403.
+    return /403/.test(src) || /if\s*\(\s*!caller\.ok\s*\)\s*return caller\.response/.test(src);
+  }
+
   for (const name of MUST_CALL_RPC) {
     it(`${name} calls hasTenantAccessSafe and returns 403 on denial`, () => {
       const src = readFn(name);
       assert.match(src, /hasTenantAccessSafe\(/);
-      assert.match(src, /403/);
+      assert.ok(deniesWith403(src), `${name} must return 403 (literal or requireCaller)`);
     });
   }
 
@@ -60,7 +65,7 @@ describe("body-supplied tenant_id membership sweep", () => {
     it(`${name} keeps its existing staff/super-admin gate`, () => {
       const src = readFn(name);
       assert.match(src, gate);
-      assert.match(src, /403/);
+      assert.ok(deniesWith403(src), `${name} must return 403 (literal or requireCaller)`);
     });
   }
 });

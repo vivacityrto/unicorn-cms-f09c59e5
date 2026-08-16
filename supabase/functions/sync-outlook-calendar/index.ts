@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID')!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
@@ -253,7 +249,7 @@ async function fetchEmails(accessToken: string, folder: string, top: number, fil
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   console.log('[sync-outlook] Request received at:', new Date().toISOString());
@@ -285,7 +281,7 @@ serve(async (req) => {
       console.log('[sync-outlook] No auth header');
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -300,7 +296,7 @@ serve(async (req) => {
       console.log('[sync-outlook] Auth failed:', authError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -318,7 +314,7 @@ serve(async (req) => {
       console.log('[sync-outlook] No token found:', tokenError?.message);
       return new Response(
         JSON.stringify({ error: 'Not connected to Outlook. Please connect first.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -332,7 +328,7 @@ serve(async (req) => {
       console.error('[sync-outlook] Token refresh failed:', refreshError);
       return new Response(
         JSON.stringify({ error: 'Token expired. Please reconnect to Outlook.' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -342,7 +338,7 @@ serve(async (req) => {
       if (!messageId) {
         return new Response(
           JSON.stringify({ error: 'Missing messageId' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
       try {
@@ -364,13 +360,13 @@ serve(async (req) => {
             receivedDateTime: emailData.receivedDateTime,
             hasAttachments: emailData.hasAttachments,
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       } catch (err) {
         console.error('[sync-outlook] Email body fetch error:', err);
         return new Response(
           JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to fetch email body' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -394,7 +390,7 @@ serve(async (req) => {
             const status = message.includes('Token expired') ? 401 : message.includes('Not connected') ? 400 : 502;
             return new Response(
               JSON.stringify({ error: message }),
-              { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { status, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
             );
           }
           const inboxEmails = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -411,20 +407,20 @@ serve(async (req) => {
           ).slice(0, top);
           return new Response(
             JSON.stringify({ emails: merged }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         } else {
           const emails = await fetchEmails(accessToken, folder, top);
           return new Response(
             JSON.stringify({ emails }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
       } catch (emailError) {
         console.error('[sync-outlook] Email fetch error:', emailError);
         return new Response(
           JSON.stringify({ error: emailError instanceof Error ? emailError.message : 'Failed to fetch emails' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -437,7 +433,7 @@ serve(async (req) => {
       console.error('[sync-outlook] Graph API failed:', graphError);
       return new Response(
         JSON.stringify({ error: graphError instanceof Error ? graphError.message : 'Failed to fetch events' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -593,7 +589,7 @@ serve(async (req) => {
         errors,
         total: events.length 
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -601,7 +597,7 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

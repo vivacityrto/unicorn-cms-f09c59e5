@@ -2,11 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as zip from "https://deno.land/x/zipjs@v2.7.32/index.js";
 import { requireCaller, FeatureKeys, allowClientAdmin } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 interface ExportRequest {
   export_id: string;
@@ -25,7 +22,7 @@ function sanitize(name: string): string {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -35,7 +32,7 @@ serve(async (req) => {
   try {
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.auditsExportPack,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Missing authorization",
       forbiddenMessage: "Permission denied",
       orAllow: ({ userId, admin }) => allowClientAdmin(admin, userId),
@@ -55,7 +52,7 @@ serve(async (req) => {
     if (!export_id || typeof export_id !== 'string') {
       return new Response(
         JSON.stringify({ error: "export_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -63,7 +60,7 @@ serve(async (req) => {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(export_id)) {
       return new Response(
         JSON.stringify({ error: "Invalid export_id: must be a valid UUID" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -79,7 +76,7 @@ serve(async (req) => {
     if (exportError || !exportRecord) {
       return new Response(
         JSON.stringify({ error: "Export record not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -436,7 +433,7 @@ For questions, contact your system administrator.
         file_name: fileName,
         storage_path: storagePath
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
 
   } catch (error) {
@@ -483,7 +480,7 @@ For questions, contact your system administrator.
 
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });
