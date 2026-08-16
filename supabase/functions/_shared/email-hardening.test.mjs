@@ -121,8 +121,8 @@ describe("relative path + APP_BASE_URL construction", () => {
     assert.match(src, /meeting_url/);
     assert.match(src, /dashboard_url/);
     assert.match(src, /invite_url/);
-    assert.match(src, /action_link/);
-    assert.match(src, /redirect_to/);
+    assert.match(src, /action_link/); // keys rebuilt from APP_BASE_URL
+    assert.match(src, /redirect_to/); // keys rebuilt from APP_BASE_URL
   });
 });
 

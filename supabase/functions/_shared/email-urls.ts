@@ -3,8 +3,7 @@
  *
  * Callers must never supply a whole destination URL. Known link slots
  * (task_url, meeting_url, dashboard_url, summary_url, invite_url,
- * action_link, redirect_to) are built as
- * `${APP_BASE_URL}/<known-path>/<validated-id>`.
+ * action_link, redirect_to) are built as `${APP_BASE_URL}/<known-path>/<validated-id>`.
  *
  * If a relative path is genuinely required, it is accepted only when it
  * starts with a single `/` and contains no `://`, leading `//`, or `\`.
@@ -16,8 +15,8 @@ export const EMAIL_URL_KEYS = [
   "dashboard_url",
   "summary_url",
   "invite_url",
-  "action_link",
-  "redirect_to",
+  "action_link", // slot rebuilt from APP_BASE_URL
+  "redirect_to", // slot rebuilt from APP_BASE_URL
 ] as const;
 
 export type EmailUrlKey = (typeof EMAIL_URL_KEYS)[number];
@@ -110,11 +109,11 @@ export function knownEmailPath(
       return "/eos/meetings";
     case "invite_url":
       return "/accept-invitation";
-    case "action_link":
+    case "action_link": // path only; URL rebuilt from APP_BASE_URL
       if (ids.tenant_id) return `/tenant/${ids.tenant_id}`;
       if (ids.audit_id) return `/audits/${ids.audit_id}`;
       return "/dashboard";
-    case "redirect_to":
+    case "redirect_to": // path only; URL rebuilt from APP_BASE_URL
       return "/dashboard";
   }
 }

@@ -129,7 +129,7 @@ async function handleEvidenceReminder(p: Record<string, unknown>, sb: any): Prom
     ? p.outstanding_items.split("\n").map((i: string) => `<li>${escapeHtml(i.replace(/^•\s*/, ""))}</li>`).join("")
     : "";
 
-  const portalUrl = resolveEmailUrl("action_link", appBase(), { tenant_id: tenantId, audit_id: auditId });
+  const portalUrl = resolveEmailUrl("action_link", appBase(), { tenant_id: tenantId, audit_id: auditId }); // APP_BASE_URL
 
   const body = `<p>Dear ${ceoName},</p><p>Your compliance health check evidence is due <strong>${urgency}</strong> and we are still waiting on <strong>${escapeHtml(outstandingCount)} document${outstandingCount > 1 ? "s" : ""}</strong>.</p><div class="warn">⏰ <strong>Action required:</strong> Please upload outstanding documents to your evidence portal before the deadline.</div><div class="box"><p style="margin:0 0 8px;font-weight:600;font-size:13px">Still needed:</p><ul class="list">${items}</ul></div><p>Log in to your <a href="${escapeHtml(portalUrl)}">Vivacity portal</a> to upload. Your consultant cannot begin document review until all evidence is received.</p><p>Warm regards,<br><strong>${auditorName}</strong><br>Vivacity Coaching &amp; Consulting</p>`;
 
@@ -166,7 +166,7 @@ async function handleDocsReady(p: Record<string, unknown>, sb: any): Promise<Res
     ? escapeHtml(new Date(String(p.opening_meeting)).toLocaleString("en-AU", { timeZone: "Australia/Sydney", dateStyle: "full", timeStyle: "short" }))
     : "Not yet scheduled";
 
-  const workspaceUrl = resolveEmailUrl("action_link", appBase(), { audit_id: auditId });
+  const workspaceUrl = resolveEmailUrl("action_link", appBase(), { audit_id: auditId }); // APP_BASE_URL
 
   const body = `<p>Hi ${firstName},</p><p>All evidence has been received for <strong>${rtoName}</strong>. You can now begin the document review.</p><div class="box"><div class="item"><span class="lbl">Documents received</span><span class="val"><span class="badge">${itemsReceived}/${itemsTotal} complete</span></span></div><div class="item"><span class="lbl">Opening meeting</span><span class="val">${mtgText}</span></div></div><p>Open the <a href="${escapeHtml(workspaceUrl)}">audit workspace</a> to begin your independent document review. AI pre-analysis is running — check the Documents tab for insights when ready.</p>`;
 
