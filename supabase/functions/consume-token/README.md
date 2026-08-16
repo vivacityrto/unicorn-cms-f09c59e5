@@ -2,7 +2,8 @@
 
 Still ACTIVE on production (`yxkgdalkbrriasiyyrwk`). Validates an opaque
 HMAC-signed token and returns `{ user_id, email, type, meta, token_id }`
-without marking the row used.
+without marking the row used. Already-used tokens (`used_at` set) return
+HTTP 410 `TOKEN_CONSUMED`; expired or unknown tokens still return 400.
 
 Vendored alongside `issue-token` / `mark-token-used` for H3/H4 keeper-repo
 reconciliation (function id a052c3a1-d965-447f-83a9-2abb2ae55dee, version 89).
