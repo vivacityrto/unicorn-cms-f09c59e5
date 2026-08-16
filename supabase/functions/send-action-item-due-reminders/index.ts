@@ -11,14 +11,15 @@
  * the dedupe key so an edited due date that later crosses the same offset
  * threshold again correctly fires a fresh reminder.
  *
- * Cron-only function: verify_jwt = false (see supabase/config.toml), no
- * per-request caller check — mirrors process-notification-outbox /
- * run-tenant-risk-forecast, the two other verify_jwt=false cron functions in
- * this project. Uses the service-role client for all DB access.
+ * Cron-only function: verify_jwt = false (see supabase/config.toml).
+ * Caller must present the cron invoke secret or the service_role JWT
+ * private.cron_function_jwt() already sends — see _shared/cron-auth.ts.
+ * Uses the service-role client for all DB access.
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { cronUnauthorizedResponse, isCronAuthorized } from "../_shared/cron-auth.ts";
 import { appUrl } from "../_shared/app-base-url.ts";
 
 const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
@@ -131,6 +132,10 @@ async function sendMailgun(to: string, subject: string, html: string): Promise<s
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (!await isCronAuthorized(req)) {
+    return cronUnauthorizedResponse(corsHeaders);
   }
 
   const supabase = createServiceClient();
