@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitPublishEvents } from "../_shared/emit-timeline-event.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -223,13 +224,16 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffMeetings,
+      headers: corsHeaders,
+      unauthorizedMessage: 'Missing authorization header',
+      forbiddenMessage: 'Only Vivacity team can publish minutes',
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const body = await req.json();
     const minutesId: string = body?.minutes_id;
@@ -241,33 +245,11 @@ serve(async (req) => {
       );
     }
 
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // Authenticate user
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verify Vivacity team
     const { data: userRecord } = await supabaseAdmin
       .from('users')
-      .select('is_vivacity_internal, first_name, last_name')
+      .select('first_name, last_name')
       .eq('user_uuid', user.id)
       .single();
-
-    if (!userRecord?.is_vivacity_internal) {
-      return new Response(
-        JSON.stringify({ error: 'Only Vivacity team can publish minutes' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Get the minutes record
     const { data: minutes, error: minutesError } = await supabaseAdmin

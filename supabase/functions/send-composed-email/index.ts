@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
 
 interface SendComposedEmailRequest {
   tenant_id: number;
@@ -38,22 +39,7 @@ serve(async (req) => {
       ? "https://api.eu.mailgun.net/v3"
       : "https://api.mailgun.net/v3";
 
-    // Auth
-    const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-    if (!callerToken) return jsonResponse(401, { error: "Missing Authorization" });
-
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(callerToken);
-    if (authErr || !user) return jsonResponse(401, { error: "Unauthorized" });
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("unicorn_role, email, first_name, last_name, global_role, job_title, is_vivacity_internal")
-      .eq("user_uuid", user.id)
-      .single();
-
-    if (!profile) return jsonResponse(403, { error: "Profile not found" });
-
-    // Parse body
+    // Parse body first — tenant_id is required for the staff-OR-member gate.
     const body: SendComposedEmailRequest = await req.json();
     const { tenant_id, package_id, stage_instance_id, email_instance_id, to, cc, bcc, subject, body_html, dry_run } = body;
 
@@ -65,33 +51,25 @@ serve(async (req) => {
       return jsonResponse(400, { error: "tenant_id is required" });
     }
 
-    // SECURITY: Verify caller is either Vivacity staff or a member of the target tenant.
-    // Vivacity staff are identified by is_vivacity_internal flag OR by any known internal role
-    // (Super Admin, Team Leader, Team Member, Integrator, BGT, CSC, CET). CSC/Integrator/BGT/CET
-    // service client tenants without a tenant_users row, so a role-name allowlist alone is wrong.
-    const VIVACITY_STAFF_ROLES = [
-      "Super Admin", "SuperAdmin", "Team Leader", "Team Member",
-      "Integrator", "BGT", "CSC", "CET",
-    ];
-    const isVivacityStaff =
-      profile.is_vivacity_internal === true ||
-      VIVACITY_STAFF_ROLES.includes(profile.unicorn_role ?? "") ||
-      VIVACITY_STAFF_ROLES.includes(profile.global_role ?? "");
+    // staff.email.send replaces the unicorn_role / global_role / is_vivacity_internal
+    // / role_type split. Tenant members still pass via orAllow (unchanged).
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffEmailSend,
+      headers: corsHeaders,
+      unauthorizedMessage: "Missing Authorization",
+      forbiddenMessage: "Access denied: not a member of this tenant",
+      orAllow: ({ userId, admin }) => allowTenantMember(admin, userId, tenant_id),
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
+    const { data: profile } = await supabase
+      .from("users")
+      .select("email, first_name, last_name, job_title, unicorn_role")
+      .eq("user_uuid", user.id)
+      .single();
 
-    if (!isVivacityStaff) {
-      const { data: tenantMember } = await supabase
-        .from("tenant_users")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("tenant_id", tenant_id)
-        .maybeSingle();
-
-      if (!tenantMember) {
-        console.warn("[send-composed-email] Access denied", { user: user.id, tenant_id });
-        return jsonResponse(403, { error: "Access denied: not a member of this tenant" });
-      }
-    }
+    if (!profile) return jsonResponse(403, { error: "Profile not found" });
 
 
     // Resolve merge fields from tenant data

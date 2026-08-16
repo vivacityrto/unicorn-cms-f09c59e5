@@ -6,6 +6,7 @@ import {
   graphUploadSession,
   type DriveItem,
 } from "../_shared/graph-app-client.ts";
+import { requireCaller, FeatureKeys, checkPermission } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -128,17 +129,23 @@ serve(async (req) => {
   }
 
   try {
-    // Auth
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return jsonResponse(401, { error: "Unauthorized" });
-
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseAdmin.auth.getUser(authHeader.replace("Bearer ", ""));
-
-    if (authError || !user) return jsonResponse(401, { error: "Unauthorized" });
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffSharepoint,
+      headers: corsHeaders,
+      unauthorizedMessage: "Unauthorized",
+      forbiddenMessage: "Unauthorized",
+      orAllow: async ({ userId }) => {
+        const { data } = await supabaseAdmin
+          .from("users")
+          .select("tenant_id")
+          .eq("user_uuid", userId)
+          .maybeSingle();
+        return data?.tenant_id != null;
+      },
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     // Parse multipart body
     let formData: FormData;
@@ -164,13 +171,15 @@ serve(async (req) => {
     // Resolve tenant (SuperAdmins may override)
     const { data: userData } = await supabaseAdmin
       .from("users")
-      .select("tenant_id, unicorn_role, global_role")
+      .select("tenant_id")
       .eq("user_uuid", user.id)
       .single();
 
-    const isSuperAdmin =
-      userData?.global_role === "SuperAdmin" ||
-      userData?.unicorn_role === "Super Admin";
+    const isSuperAdmin = await checkPermission(
+      supabaseAdmin,
+      user.id,
+      FeatureKeys.adminSystemConfig,
+    );
 
     const requestedTenantId = tenantIdRaw ? Number(tenantIdRaw) : undefined;
     let tenantId: number | undefined;

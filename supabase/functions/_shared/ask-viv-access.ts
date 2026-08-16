@@ -7,27 +7,27 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { UserProfile } from "./auth-helpers.ts";
+import { checkPermission, FeatureKeys } from "./requireCaller.ts";
 
-/**
- * Vivacity internal roles that can access Ask Viv
- */
 const VIVACITY_INTERNAL_ROLES = [
   "Super Admin", "Team Leader", "Team Member",
   "Integrator", "BGT", "CSC", "CET",
 ];
 
 /**
- * Check if a user profile is Vivacity internal staff
+ * Sync profile-role helper used by client-mode preview UI.
+ * Staff endpoint gates go through check_permission (hasAskVivStaffAccess).
  */
 export function isVivacityInternal(profile: UserProfile | null): boolean {
-  if (!profile) return false;
-  
-  // Check unicorn_role for current role system
-  if (profile.unicorn_role && VIVACITY_INTERNAL_ROLES.includes(profile.unicorn_role)) {
-    return true;
-  }
-  
-  return false;
+  if (!profile?.unicorn_role) return false;
+  return VIVACITY_INTERNAL_ROLES.includes(profile.unicorn_role);
+}
+
+export async function hasAskVivStaffAccess(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  return checkPermission(supabase, userId, FeatureKeys.staffAi);
 }
 
 /**
@@ -41,11 +41,9 @@ export async function validateAskVivAccess(
   profile: UserProfile | null,
   endpoint: string
 ): Promise<{ allowed: boolean; reason?: string }> {
-  // Check if user is Vivacity internal
-  if (!isVivacityInternal(profile)) {
-    // Log the denied attempt
+  if (!(await hasAskVivStaffAccess(supabase, userId))) {
     await logDeniedAccess(supabase, userId, profile?.unicorn_role || "unknown", endpoint);
-    
+
     return {
       allowed: false,
       reason: "Ask Viv is restricted to Vivacity Team members.",
@@ -145,7 +143,7 @@ export async function validateClientAskVivAccess(
   | { allowed: false; reason: string }
 > {
   // Preview bypass — Vivacity internal staff testing client surface
-  if (previewTenantId != null && isVivacityInternal(profile)) {
+  if (previewTenantId != null && (await hasAskVivStaffAccess(supabase, userId))) {
     return { allowed: true, tenant_id: previewTenantId };
   }
 

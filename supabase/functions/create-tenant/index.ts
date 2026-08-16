@@ -16,6 +16,7 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,28 +40,20 @@ serve(async (req) => {
       throw new Error('No authorization header')
     }
 
-    // Forward caller JWT so is_superadmin() / create_tenant see auth.uid().
+    // Forward caller JWT so create_tenant sees auth.uid().
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    )
-
-    if (authError || !user) {
-      throw new Error('Invalid authentication')
-    }
-
-    // Match create_tenant's own gate (is_superadmin / global_role), not the
-    // broader admin.team_users.manage staff-management permission.
-    const { data: isSuperAdmin, error: permError } = await supabaseClient.rpc('is_superadmin')
-
-    if (permError || !isSuperAdmin) {
-      throw new Error('Insufficient permissions - SuperAdmin required')
-    }
+    const caller = await requireCaller(req, supabaseClient, {
+      featureKey: FeatureKeys.clientsCreate,
+      headers: corsHeaders,
+      unauthorizedMessage: "Invalid authentication",
+      forbiddenMessage: "Insufficient permissions - SuperAdmin required",
+    });
+    if (!caller.ok) return caller.response;
 
     const body: CreateTenantRequest = await req.json()
 

@@ -9,7 +9,7 @@
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
-import { extractToken, verifyAuth, checkSuperAdmin, checkVivacityTeam } from "../_shared/auth-helpers.ts";
+import { extractToken, verifyAuth } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
@@ -65,11 +65,6 @@ Deno.serve(async (req) => {
     const accessCheck = await validateAskVivAccess(supabase, user.id, profile, "vector-index-update");
     if (!accessCheck.allowed) {
       return askVivAccessDeniedResponse(accessCheck.reason);
-    }
-
-    // Only SuperAdmins and Vivacity Team can update indexes
-    if (!checkSuperAdmin(profile) && !checkVivacityTeam(profile)) {
-      return jsonError(403, "FORBIDDEN", "Elevated access required");
     }
 
     // Parse request

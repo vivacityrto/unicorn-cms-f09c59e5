@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
-import { corsHeadersFor, requireCaller } from "../_shared/requireCaller.ts";
+import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 import {
   getAppToken,
   graphGet,
@@ -401,6 +401,29 @@ serve(async (req) => {
         JSON.stringify({ success: false, error: "tenant_id is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // Auth — optional
+    let callerUserId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      const { data: { user } } = await supabaseAdmin.auth.getUser(
+        authHeader.replace("Bearer ", ""),
+      );
+      if (user) {
+        const caller = await requireCallerByUserId(
+          supabaseAdmin,
+          { id: user.id, email: user.email },
+          {
+            featureKey: FeatureKeys.staffSharepoint,
+            headers: corsHeaders,
+            forbiddenMessage: "Forbidden — Vivacity staff only",
+          },
+          corsHeaders,
+        );
+        if (!caller.ok) return caller.response;
+        callerUserId = user.id;
+      }
     }
 
     // Load tenant

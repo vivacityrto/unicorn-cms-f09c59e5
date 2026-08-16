@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { checkPermission, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -67,15 +68,7 @@ Deno.serve(async (req) => {
     }
     const callerId = userData.user.id;
 
-    // 3. Staff check (service-role lookup so RLS can't hide the role)
-    const { data: callerRow } = await adminClient
-      .from("users")
-      .select("unicorn_role")
-      .eq("user_uuid", callerId)
-      .maybeSingle();
-    const isStaff =
-      !!callerRow?.unicorn_role &&
-      (STAFF_ROLES as readonly string[]).includes(callerRow.unicorn_role);
+    const isStaff = await checkPermission(adminClient, callerId, FeatureKeys.staffInternal);
 
     // 3a. Academy-only pre-check (fast path): non-staff callers whose ENTIRE
     // tenant_users footprint is academy_only cannot submit suggestions.

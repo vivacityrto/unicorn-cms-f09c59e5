@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,21 +29,9 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.toLowerCase().startsWith("bearer ")) {
-    return json(401, { error: "Missing Authorization header" });
-  }
-  const token = authHeader.slice(7).trim();
-
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-
-  const { data: userData, error: authErr } = await admin.auth.getUser(token);
-  if (authErr || !userData?.user) {
-    return json(401, { error: "Invalid auth token" });
-  }
-  const uid = userData.user.id;
 
   let body: { storage_path?: unknown };
   try {
@@ -60,33 +49,26 @@ Deno.serve(async (req) => {
     return json(400, { error: "Invalid storage_path" });
   }
 
-  // Authorisation: Vivacity internal staff OR tenant member
-  const { data: staffRow } = await admin
-    .from("users")
-    .select("is_vivacity_internal, archived")
-    .eq("user_uuid", uid)
-    .maybeSingle();
-
-  const isStaff = !!staffRow
-    && staffRow.is_vivacity_internal === true
-    && staffRow.archived !== true;
-
-  let authorised = isStaff;
-  if (!authorised) {
-    const tenantIdNum = Number(tenantSegment);
-    const query = admin
-      .from("tenant_users")
-      .select("user_id")
-      .eq("user_id", uid);
-    const { data: memberRow } = await (Number.isFinite(tenantIdNum)
-      ? query.eq("tenant_id", tenantIdNum)
-      : query.eq("tenant_id", tenantSegment)
-    ).maybeSingle();
-    authorised = !!memberRow;
-  }
-  if (!authorised) {
-    return json(403, { error: "Not authorised to access this attachment" });
-  }
+  const tenantIdNum = Number(tenantSegment);
+  const caller = await requireCaller(req, admin, {
+    featureKey: FeatureKeys.staffDocumentsGenerate,
+    headers: corsHeaders,
+    unauthorizedMessage: "Missing Authorization header",
+    forbiddenMessage: "Not authorised to access this attachment",
+    orAllow: async ({ userId, admin: svc }) => {
+      if (Number.isFinite(tenantIdNum)) {
+        return allowTenantMember(svc, userId, tenantIdNum);
+      }
+      const { data: memberRow } = await svc
+        .from("tenant_users")
+        .select("user_id")
+        .eq("user_id", userId)
+        .eq("tenant_id", tenantSegment)
+        .maybeSingle();
+      return !!memberRow;
+    },
+  });
+  if (!caller.ok) return caller.response;
 
   const { data, error } = await admin.storage
     .from(BUCKET)

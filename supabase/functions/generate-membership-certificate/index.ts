@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import { corsHeaders } from "../_shared/cors.ts";
-import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const CENTER_X = 297.64;
 const FUCHSIA = rgb(0.929, 0.094, 0.471);
@@ -57,17 +57,7 @@ serve(async (req) => {
   });
 
   try {
-    // 1. Auth
-    const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-    if (!callerToken) {
-      return jsonResponse(401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
-    }
-    const { data: callerUser, error: callerErr } = await supabase.auth.getUser(callerToken);
-    if (callerErr || !callerUser?.user) {
-      return jsonResponse(401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message ?? "Invalid token" });
-    }
-
-    // 2. Body
+    // 1. Body
     let body: { tenant_id?: unknown } = {};
     try {
       body = await req.json();
@@ -79,14 +69,21 @@ serve(async (req) => {
       return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "tenant_id (number) required" });
     }
 
-    // 3. Authorise — Super Admin, Vivacity Team, or active tenant_members
-    const tenantAccess = await hasTenantAccessSafe(supabase, callerUser.user.id, tenantId);
-    if (tenantAccess.lookupFailed) {
-      return jsonResponse(500, { ok: false, code: "TENANT_ACCESS_CHECK_FAILED", detail: "Failed to verify tenant access" });
-    }
-    if (!tenantAccess.allowed) {
-      return jsonResponse(403, { ok: false, code: "FORBIDDEN", detail: "Not authorised for this tenant" });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffDocumentsGenerate,
+      headers: corsHeaders,
+      errorStyle: "ok-code",
+      unauthorizedMessage: "Missing Authorization header",
+      forbiddenMessage: "Not authorised for this tenant",
+      orAllow: async ({ userId, admin }) => {
+        const tenantAccess = await hasTenantAccessSafe(admin, userId, tenantId);
+        if (tenantAccess.lookupFailed) {
+          throw new Error("TENANT_ACCESS_CHECK_FAILED");
+        }
+        return tenantAccess.allowed;
+      },
+    });
+    if (!caller.ok) return caller.response;
 
     // 4. Lookup active membership package instance for this tenant (flat queries — no PostgREST joins)
     const { data: piRow, error: piErr } = await supabase

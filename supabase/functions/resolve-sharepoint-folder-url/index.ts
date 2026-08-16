@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { graphGet } from "../_shared/graph-app-client.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,13 +12,6 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const VIVACITY_STAFF_ROLES = [
-  "Super Admin", "Team Leader", "Team Member",
-  "Integrator", "BGT", "CSC", "CET",
-];
-const isVivacityStaffRole = (role?: string | null) =>
-  !!role && VIVACITY_STAFF_ROLES.includes(role);
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -27,38 +21,35 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const requestedTenantId = body?.tenant_id as number | undefined;
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseAdmin.auth.getUser(authHeader.replace("Bearer ", ""));
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffSharepoint,
+      headers: corsHeaders,
+      unauthorizedMessage: "Unauthorized",
+      forbiddenMessage: "Unauthorized",
+      orAllow: async ({ userId }) => {
+        const { data } = await supabaseAdmin
+          .from("users")
+          .select("tenant_id")
+          .eq("user_uuid", userId)
+          .maybeSingle();
+        return data?.tenant_id != null;
+      },
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const { data: userData } = await supabaseAdmin
       .from("users")
-      .select("tenant_id, unicorn_role, global_role")
+      .select("tenant_id")
       .eq("user_uuid", user.id)
       .single();
 
-    const isSuperAdmin =
-      isVivacityStaffRole(userData?.unicorn_role) || userData?.global_role === "SuperAdmin";
+    // Staff (check_permission) may override tenant_id; others stay on their own.
+    const isStaff = caller.via === "permission";
 
     let tenantId: number | undefined;
-    if (isSuperAdmin && requestedTenantId) {
+    if (isStaff && requestedTenantId) {
       tenantId = requestedTenantId;
     } else if (userData?.tenant_id) {
       tenantId = userData.tenant_id;
