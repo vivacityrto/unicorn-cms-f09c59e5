@@ -18,25 +18,21 @@
 //   service_role — because its permission gate silently no-ops when
 //   auth.uid() is NULL. This worker never calls cancel_bulk_document_job.
 //
-// Auth model (Option A):
-//   Caller JWT is forwarded from the launcher via x-caller-authorization.
-//   It's reused as the Authorization header for every downstream edge-
-//   function fetch (provision-tenant-sharepoint-folder, verify-compliance-
-//   folder, deliver-governance-document), for the staff-gated
-//   repair_package_instance_stages RPC (via an anon-key Supabase client
-//   with the caller Authorization forwarded), and for this worker's own
-//   fire-and-forget self re-invoke. Known limitation: Supabase access
-//   tokens expire ~1 hour; downstream 401s after expiry are recorded with
-//   error_code='auth_expired'.
+// Auth model:
+//   This function is invoked machine-to-machine by the launcher (and by
+//   its own fire-and-forget re-invoke), not by a browser. The gate is a
+//   shared secret (BULK_DOCUMENT_WORKER_SECRET) compared in constant time
+//   against x-worker-secret. Requests lacking that secret are rejected.
+//   The staff JWT is still forwarded via x-caller-authorization for
+//   downstream edge-function fetches and staff-gated RPCs. Known
+//   limitation: Supabase access tokens expire ~1 hour; downstream 401s
+//   after expiry are recorded with error_code='auth_expired'.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeadersFor, parseBearerToken, requireSharedSecret } from '../_shared/requireCaller.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-caller-authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const WORKER_CORS_EXTRA = ['x-caller-authorization', 'x-worker-secret'];
+const WORKER_SECRET_ENV = 'BULK_DOCUMENT_WORKER_SECRET';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -45,39 +41,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const TIME_BUDGET_MS = 50_000;
 const LEASE_BATCH = 5;
 const SUPPORTED_FORMATS = new Set(['docx', 'xlsx', 'xls', 'xlsm', 'pptx']);
-
-// Stop leasing/processing when the forwarded caller JWT is within this window
-// of expiring, so we don't burn through remaining items with an unauthorised
-// token. Fail-safe: if `exp` can't be decoded we behave exactly as today.
-const JWT_SAFETY_MARGIN_MS = 90_000;
-
-function jwtExpMs(bearer: string | null): number | null {
-  if (!bearer?.startsWith('Bearer ')) return null;
-  const token = bearer.slice(7);
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  try {
-    const payload = JSON.parse(
-      atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')),
-    );
-    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
-  } catch {
-    return null;
-  }
-}
-
-function jwtNearExpiry(bearer: string | null): boolean {
-  const exp = jwtExpMs(bearer);
-  if (exp === null) return false;
-  return Date.now() >= exp - JWT_SAFETY_MARGIN_MS;
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
 
 type BootstrapCacheEntry =
   | { ok: true }
@@ -88,11 +51,22 @@ type RepairCacheEntry =
   | { ok: false; errorMessage: string };
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = corsHeadersFor(req, WORKER_CORS_EXTRA);
+  const json = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  const secretGate = requireSharedSecret(req, WORKER_SECRET_ENV, 'x-worker-secret', WORKER_CORS_EXTRA);
+  if (secretGate instanceof Response) return secretGate;
+
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const callerAuth = req.headers.get('x-caller-authorization');
-  if (!callerAuth?.startsWith('Bearer ')) {
+  if (!parseBearerToken(callerAuth)) {
     return json({ error: 'Missing x-caller-authorization' }, 401);
   }
 
@@ -386,41 +360,11 @@ Deno.serve(async (req: Request) => {
     return (data as { format: string | null; source_template_url: string | null } | null) ?? null;
   }
 
-  // Release this worker's still-leased items back to pending (fenced on
-  // worker_id + state='leased') and stall the job. Called when the forwarded
-  // caller JWT is about to expire so we don't waste the remaining budget
-  // hammering deliver-governance-document with a soon-to-be-401 token.
-  async function stallAndRelease(reason: string): Promise<void> {
-    console.warn(`[worker] JWT near expiry — stalling job=${jobId} reason=${reason}`);
-    const { error: relErr } = await supabaseService
-      .from('bulk_document_job_items')
-      .update({
-        state: 'pending',
-        worker_id: null,
-        leased_at: null,
-        lease_expires_at: null,
-        started_at: null,
-      })
-      .eq('job_id', jobId)
-      .eq('worker_id', WORKER_ID)
-      .eq('state', 'leased');
-    if (relErr) console.error('[worker] stallAndRelease lease-release error', relErr);
-    const { error: stallErr } = await supabaseService.rpc('stall_bulk_document_job', {
-      p_job_id: jobId,
-      p_reason: reason,
-    });
-    if (stallErr) console.error('[worker] stall_bulk_document_job error', stallErr);
-  }
-
   // ── Main loop ──────────────────────────────────────────────────────────
   let processed = 0;
   let timedOut = false;
 
   while (Date.now() - startedAt < TIME_BUDGET_MS) {
-    if (jwtNearExpiry(callerAuth)) {
-      await stallAndRelease('jwt_near_expiry');
-      return json({ worker_id: WORKER_ID, processed, stalled: true });
-    }
     const { data: job, error: jobErr } = await supabaseService
       .from('bulk_document_jobs')
       .select('status, origin')
@@ -464,10 +408,6 @@ Deno.serve(async (req: Request) => {
       if (Date.now() - startedAt >= TIME_BUDGET_MS) {
         timedOut = true;
         break;
-      }
-      if (jwtNearExpiry(callerAuth)) {
-        await stallAndRelease('jwt_near_expiry');
-        return json({ worker_id: WORKER_ID, processed, stalled: true });
       }
       try {
         const bootstrap = await ensureSharepoint(item.tenant_id);
@@ -588,6 +528,7 @@ Deno.serve(async (req: Request) => {
         headers: {
           'Content-Type': 'application/json',
           'x-caller-authorization': callerAuth!,
+          'x-worker-secret': Deno.env.get(WORKER_SECRET_ENV) ?? '',
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         },
         body: JSON.stringify({ job_id: jobId }),
