@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const SIGNED_URL_TTL = 157_680_000; // 5 years
 const PAGE_W = 841.89;
@@ -37,18 +38,7 @@ serve(async (req) => {
   });
 
   try {
-    // 1. Auth
-    const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-    if (!callerToken) {
-      return jsonResponse(401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
-    }
-
-    const { data: callerUser, error: callerErr } = await supabase.auth.getUser(callerToken);
-    if (callerErr || !callerUser?.user) {
-      return jsonResponse(401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message ?? "Invalid token" });
-    }
-
-    // 2. Body
+    // 1. Body
     let body: { certificate_id?: unknown } = {};
     try {
       body = await req.json();
@@ -59,6 +49,24 @@ serve(async (req) => {
     if (!Number.isFinite(certificateId)) {
       return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "certificate_id (number) required" });
     }
+
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffInternal,
+      headers: corsHeaders,
+      errorStyle: "ok-code",
+      unauthorizedMessage: "Missing Authorization header",
+      forbiddenMessage: "Not authorised for this certificate",
+      orAllow: async ({ userId, admin }) => {
+        const { data: c } = await admin
+          .from("academy_certificates")
+          .select("user_id")
+          .eq("id", certificateId)
+          .maybeSingle();
+        if (!c) return true;
+        return c.user_id === userId;
+      },
+    });
+    if (!caller.ok) return caller.response;
 
     // 3. Fetch cert
     const { data: cert, error: certErr } = await supabase
@@ -72,23 +80,6 @@ serve(async (req) => {
     }
     if (!cert) {
       return jsonResponse(404, { ok: false, code: "NOT_FOUND", detail: "Certificate not found" });
-    }
-
-
-
-    // 4. Authorise
-    const isOwner = cert.user_id === callerUser.user.id;
-    let isInternal = false;
-    if (!isOwner) {
-      const { data: callerRow } = await supabase
-        .from("users")
-        .select("is_vivacity_internal")
-        .eq("user_uuid", callerUser.user.id)
-        .maybeSingle();
-      isInternal = !!callerRow?.is_vivacity_internal;
-    }
-    if (!isOwner && !isInternal) {
-      return jsonResponse(403, { ok: false, code: "FORBIDDEN", detail: "Not authorised for this certificate" });
     }
 
     // 5. Fast path

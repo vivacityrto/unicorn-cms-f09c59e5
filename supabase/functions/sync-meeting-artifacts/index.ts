@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -300,14 +301,6 @@ serve(async (req) => {
   console.log('[sync-artifacts] Request received');
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const body = await req.json();
     const meetingId: string = body?.meeting_id;
 
@@ -320,17 +313,23 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Authenticate user
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffMeetings,
+      headers: corsHeaders,
+      unauthorizedMessage: 'Missing authorization header',
+      forbiddenMessage: 'Access denied',
+      orAllow: async ({ userId, admin }) => {
+        const { data: m } = await admin
+          .from('meetings')
+          .select('owner_user_uuid')
+          .eq('id', meetingId)
+          .maybeSingle();
+        if (!m) return true;
+        return m.owner_user_uuid === userId;
+      },
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     // Get the meeting
     const { data: meeting, error: meetingError } = await supabaseAdmin
@@ -343,23 +342,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Meeting not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verify access: must be owner or Vivacity staff
-    const { data: userRecord } = await supabaseAdmin
-      .from('users')
-      .select('is_vivacity_internal, role')
-      .eq('user_uuid', user.id)
-      .single();
-
-    const isOwner = meeting.owner_user_uuid === user.id;
-    const isVivacity = userRecord?.is_vivacity_internal === true;
-
-    if (!isOwner && !isVivacity) {
-      return new Response(
-        JSON.stringify({ error: 'Access denied' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { extractToken, verifyAuth, checkVivacityTeam, checkTenantAccess } from "../_shared/auth-helpers.ts";
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -700,36 +700,31 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // SECURITY: require a valid authenticated session
-    const token = extractToken(req);
-    if (!token) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { user, profile, error: authError } = await verifyAuth(supabase, token);
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const isStaff = checkVivacityTeam(profile);
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffDocumentsGenerate,
+      headers: corsHeaders,
+      unauthorizedMessage: "Unauthorized",
+      forbiddenMessage: storage_path
+        ? "Forbidden: staff access required"
+        : "Forbidden: no access to this document",
+      orAllow: async ({ userId, admin }) => {
+        if (storage_path) return false;
+        if (!document_id) return false;
+        const { data: doc } = await admin
+          .from("documents")
+          .select("tenant_id")
+          .eq("id", document_id)
+          .maybeSingle();
+        if (!doc) return true;
+        if (doc.tenant_id === null || doc.tenant_id === undefined) return false;
+        return allowTenantMember(admin, userId, Number(doc.tenant_id));
+      },
+    });
+    if (!caller.ok) return caller.response;
 
     let filePath = storage_path;
     let fileName = filename || '';
     let docId = document_id;
-
-    // Raw storage paths bypass document-level ownership checks, so restrict to staff
-    if (storage_path && !isStaff) {
-      return new Response(
-        JSON.stringify({ error: "Forbidden: staff access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Fetch document info if ID provided
     if (document_id && !storage_path) {
@@ -744,20 +739,6 @@ serve(async (req) => {
           JSON.stringify({ error: "Document not found" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
-      }
-
-      // SECURITY: only staff, or members of the owning tenant, may analyse a document
-      if (!isStaff) {
-        const docTenantId = doc.tenant_id as number | null;
-        const allowed = docTenantId !== null && docTenantId !== undefined
-          ? await checkTenantAccess(supabase, user.id, Number(docTenantId))
-          : false;
-        if (!allowed) {
-          return new Response(
-            JSON.stringify({ error: "Forbidden: no access to this document" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
       }
 
       const uploadedFiles = doc.uploaded_files as string[] || [];

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 type Permission = "full" | "limited" | "owner_only" | "none";
 const VALID_PERMISSIONS: Permission[] = ["full", "limited", "owner_only", "none"];
@@ -28,42 +29,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return err(401, "UNAUTHORIZED", "Missing bearer token");
-    }
-    const token = authHeader.slice("Bearer ".length);
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
-    // 1. Authenticate
-    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr || !userData?.user) {
-      return err(401, "UNAUTHORIZED", "Invalid or expired token");
-    }
-    const callerId = userData.user.id;
-
-    // 2. Authorize caller: Super Admin + is_vivacity_internal
-    const { data: profile, error: profileErr } = await supabase
-      .from("users")
-      .select("unicorn_role, is_vivacity_internal")
-      .eq("user_uuid", callerId)
-      .maybeSingle();
-
-    if (profileErr) {
-      return err(500, "PROFILE_LOOKUP_FAILED", profileErr.message);
-    }
-    if (
-      !profile ||
-      profile.unicorn_role !== "Super Admin" ||
-      profile.is_vivacity_internal !== true
-    ) {
-      return err(403, "FORBIDDEN", "Super Admin (Vivacity internal) required");
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.adminPermissions,
+      headers: corsHeaders,
+      errorStyle: "ok-code",
+      unauthorizedMessage: "Missing bearer token",
+      forbiddenMessage: "Super Admin (Vivacity internal) required",
+    });
+    if (!caller.ok) return caller.response;
+    const callerId = caller.user.id;
 
     // 3. Parse + validate body
     let body: Body;

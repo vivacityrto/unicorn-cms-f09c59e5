@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,37 +15,13 @@ serve(async (req) => {
   });
 
   try {
-    // Validate caller is SuperAdmin
-    const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-    if (!token) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: callerUser } = await supabase.auth.getUser(token);
-    if (!callerUser?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("unicorn_role, global_role")
-      .eq("user_uuid", callerUser.user.id)
-      .maybeSingle();
-
-    const isSuperAdmin = profile?.global_role === "SuperAdmin" ||
-      profile?.unicorn_role === "Super Admin";
-    if (!isSuperAdmin) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.adminUnicorn1,
+      headers: corsHeaders,
+      unauthorizedMessage: "Unauthorized",
+      forbiddenMessage: "Forbidden",
+    });
+    if (!caller.ok) return caller.response;
 
     const { search, unmapped_only } = await req.json();
 

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as zip from "https://deno.land/x/zipjs@v2.7.32/index.js";
+import { requireCaller, FeatureKeys, allowClientAdmin } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,38 +33,21 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Authenticate user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.auditsExportPack,
+      headers: corsHeaders,
+      unauthorizedMessage: "Missing authorization",
+      forbiddenMessage: "Permission denied",
+      orAllow: ({ userId, admin }) => allowClientAdmin(admin, userId),
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check admin role
     const { data: userData } = await supabase
       .from("users")
-      .select("unicorn_role, first_name, last_name")
+      .select("first_name, last_name")
       .eq("user_uuid", user.id)
       .single();
-
-    if (!userData || !['Super Admin', 'Admin'].includes(userData.unicorn_role)) {
-      return new Response(
-        JSON.stringify({ error: "Permission denied" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     const body: ExportRequest = await req.json();
     const { export_id } = body;

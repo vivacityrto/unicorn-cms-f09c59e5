@@ -24107,6 +24107,8 @@ export type Database = {
           subject: string | null
           task_id: string | null
           tenant_id: number
+          unlinked_at: string | null
+          unlinked_by: string | null
           updated_at: string
           user_uuid: string
         }
@@ -24128,6 +24130,8 @@ export type Database = {
           subject?: string | null
           task_id?: string | null
           tenant_id: number
+          unlinked_at?: string | null
+          unlinked_by?: string | null
           updated_at?: string
           user_uuid: string
         }
@@ -24149,6 +24153,8 @@ export type Database = {
           subject?: string | null
           task_id?: string | null
           tenant_id?: number
+          unlinked_at?: string | null
+          unlinked_by?: string | null
           updated_at?: string
           user_uuid?: string
         }
@@ -71692,9 +71698,7 @@ export type Database = {
       is_qc_signed: { Args: { _qc_id: string }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_stage_in_active_use: { Args: { p_stage_id: number }; Returns: boolean }
-      is_super_admin:
-        | { Args: never; Returns: boolean }
-        | { Args: { p_user_id: string }; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       is_super_admin_admin: { Args: never; Returns: boolean }
       is_super_admin_by_role: { Args: never; Returns: boolean }
       is_super_admin_member: { Args: never; Returns: boolean }

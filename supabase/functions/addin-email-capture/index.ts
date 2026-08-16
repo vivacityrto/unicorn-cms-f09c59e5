@@ -64,7 +64,7 @@ serve(async (req) => {
     const tokenPayload = authResult.payload;
 
     // RBAC: Enforce Vivacity Team role
-    const rbacResult = enforceVivacityTeamRole(tokenPayload);
+    const rbacResult = await enforceVivacityTeamRole(tokenPayload);
     if (!rbacResult.success) {
       await logFailedAction(FUNCTION_NAME, 'email_capture', tokenPayload.user_uuid, rbacResult.error!.code, rbacResult.error!.message);
       return errorResponse(rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
@@ -185,6 +185,8 @@ serve(async (req) => {
       task_id: body.link.task_id || null,
       linked_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      unlinked_at: null,
+      unlinked_by: null,
       // Graph-enriched fields
       importance: graphEnrichment?.importance || null,
       is_read: graphEnrichment?.isRead ?? null,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -89,29 +90,10 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Auth
-    const callerToken = req.headers
-      .get("Authorization")
-      ?.replace(/^Bearer\s+/i, "");
-    if (!callerToken) return jsonResponse(401, { error: "Missing Authorization" });
-
-    const {
-      data: { user },
-      error: authErr,
-    } = await supabaseAdmin.auth.getUser(callerToken);
-    if (authErr || !user) return jsonResponse(401, { error: "Unauthorized" });
-
-    const { data: profile } = await supabaseAdmin
-      .from("users")
-      .select(
-        "unicorn_role, email, first_name, last_name, global_role, job_title"
-      )
-      .eq("user_uuid", user.id)
-      .single();
-
-    if (!profile) return jsonResponse(403, { error: "Profile not found" });
-
-    // Parse body
+    // Parse body first — tenant_id feeds the staff-OR-member gate, matching
+    // send-composed-email. Previously this function only required a valid
+    // JWT (no role / tenant check); aligning the two senders is the
+    // intended tightening on the email surface.
     const body = await req.json();
     const {
       tenant_id,
@@ -132,20 +114,40 @@ serve(async (req) => {
       });
     }
 
+    // Coerce before requireCaller so orAllow sees a numeric tenant id
+    // even when the client sent a string.
     const tenantId =
       typeof tenant_id === "string" ? Number(tenant_id) : tenant_id;
     if (!tenantId || !Number.isFinite(tenantId)) {
       return jsonResponse(400, { error: "tenant_id is required" });
     }
 
-    // IDOR: service-role reads of tenant/contact/CSC data must not run
-    // until the caller is allowed on this tenant. dry_run is a read
-    // oracle if this check sits after merge_data.
+    // staff.email.send lets any staff through without a tenant check.
+    // has_tenant_access_safe still required so staff cannot dry-run /
+    // merge-read another tenant's data (IDOR).
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffEmailSend,
+      headers: corsHeaders,
+      unauthorizedMessage: "Missing Authorization",
+      forbiddenMessage: "Access denied: not a member of this tenant",
+      orAllow: ({ userId, admin }) => allowTenantMember(admin, userId, tenantId),
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
+
     const { data: ok } = await supabaseAdmin.rpc("has_tenant_access_safe", {
       p_tenant_id: tenantId,
       p_user_id: user.id,
     });
     if (!ok) return jsonResponse(403, { code: "FORBIDDEN" });
+
+    const { data: profile } = await supabaseAdmin
+      .from("users")
+      .select("email, first_name, last_name, job_title, unicorn_role")
+      .eq("user_uuid", user.id)
+      .single();
+
+    if (!profile) return jsonResponse(403, { error: "Profile not found" });
 
     // Fetch Microsoft OAuth token
     const { data: tokenData, error: tokenError } = await supabaseAdmin
