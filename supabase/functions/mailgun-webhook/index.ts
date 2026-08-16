@@ -1,43 +1,31 @@
 // Mailgun delivery webhook. Public endpoint — Mailgun POSTs unauthenticated.
-// Always returns HTTP 200 { ok: true } so Mailgun does not retry.
-// Verifies HMAC-SHA256 signature when MAILGUN_WEBHOOK_SIGNING_KEY is set.
+// Fail-closed: MAILGUN_WEBHOOK_SIGNING_KEY is required at module load.
+// Invalid / stale signatures are rejected (401) and never processed.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  isWebhookTimestampFresh,
+  verifyMailgunSignature,
+} from "../_shared/webhook-signature.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SIGNING_KEY = (Deno.env.get("MAILGUN_WEBHOOK_SIGNING_KEY") ?? "").trim();
 
-const ok = (req: Request) =>
-  new Response(JSON.stringify({ ok: true }), {
-    status: 200,
+if (!SIGNING_KEY) {
+  console.error(
+    "mailgun-webhook: MAILGUN_WEBHOOK_SIGNING_KEY is not set — refusing all requests",
+  );
+}
+
+const json = (req: Request, status: number, body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status,
     headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 
-async function verifySignature(
-  signingKey: string,
-  timestamp: string,
-  token: string,
-  signature: string,
-): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(signingKey),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(String(timestamp) + String(token)),
-  );
-  const hex = Array.from(new Uint8Array(sig))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hex === signature;
-}
+const ok = (req: Request) => json(req, 200, { ok: true });
 
 function mapEvent(
   event: string,
@@ -57,39 +45,44 @@ serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders(req) });
   }
 
+  if (!SIGNING_KEY) {
+    return json(req, 500, { ok: false, error: "Webhook is not configured" });
+  }
+
   try {
     const body = await req.json().catch(() => null) as any;
     if (!body || typeof body !== "object") {
       console.log("mailgun-webhook: invalid JSON body");
-      return ok(req);
+      return json(req, 401, { ok: false, error: "Invalid signature" });
     }
 
-    // Signature verification
-    const signingKey = Deno.env.get("MAILGUN_WEBHOOK_SIGNING_KEY");
     const sigBlock = body.signature;
-    if (signingKey) {
-      if (
-        !sigBlock?.timestamp || !sigBlock?.token || !sigBlock?.signature ||
-        !(await verifySignature(
-          signingKey,
-          String(sigBlock.timestamp),
-          String(sigBlock.token),
-          String(sigBlock.signature),
-        ))
-      ) {
-        console.log("mailgun-webhook: invalid signature, ignoring");
-        return ok(req);
-      }
-    } else {
-      console.warn(
-        "mailgun-webhook: MAILGUN_WEBHOOK_SIGNING_KEY not set — skipping signature verification",
-      );
+    if (!sigBlock?.timestamp || !sigBlock?.token || !sigBlock?.signature) {
+      console.log("mailgun-webhook: missing signature fields");
+      return json(req, 401, { ok: false, error: "Invalid signature" });
+    }
+
+    const timestamp = String(sigBlock.timestamp);
+    if (!isWebhookTimestampFresh(timestamp)) {
+      console.log("mailgun-webhook: stale timestamp, rejecting");
+      return json(req, 401, { ok: false, error: "Stale timestamp" });
+    }
+
+    const valid = await verifyMailgunSignature(
+      SIGNING_KEY,
+      timestamp,
+      String(sigBlock.token),
+      String(sigBlock.signature),
+    );
+    if (!valid) {
+      console.log("mailgun-webhook: invalid signature, rejecting");
+      return json(req, 401, { ok: false, error: "Invalid signature" });
     }
 
     const ed = body["event-data"] ?? {};
     const event: string | undefined = ed.event;
     const severity: string | undefined = ed.severity;
-    const timestamp: number = typeof ed.timestamp === "number"
+    const eventTimestamp: number = typeof ed.timestamp === "number"
       ? ed.timestamp
       : Number(ed.timestamp);
 
@@ -132,8 +125,8 @@ serve(async (req: Request) => {
       return ok(req);
     }
 
-    const eventAtIso = Number.isFinite(timestamp)
-      ? new Date(timestamp * 1000).toISOString()
+    const eventAtIso = Number.isFinite(eventTimestamp)
+      ? new Date(eventTimestamp * 1000).toISOString()
       : new Date().toISOString();
 
     // Branch A — terminal delivery outcome. Unchanged semantics.
