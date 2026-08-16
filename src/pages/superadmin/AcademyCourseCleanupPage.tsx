@@ -178,11 +178,15 @@ export default function AcademyCourseCleanupPage() {
     if (!draft) return;
     setSavingField(`desc-${courseId}`);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       await updateCourse.mutateAsync({
         id: courseId,
         data: {
           short_description: draft.short_description,
           description: draft.description,
+          ai_generated: true,
+          ai_reviewed_by: user?.id ?? null,
+          ai_reviewed_at: new Date().toISOString(),
         },
       });
       setAiDrafts((prev) => {
