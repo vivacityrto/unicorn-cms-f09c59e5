@@ -774,7 +774,7 @@ Deno.serve(async (req) => {
         if (saErr || isSa !== true) {
           return new Response(JSON.stringify({ error: "Forbidden" }), {
             status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
       }
@@ -804,7 +804,7 @@ Deno.serve(async (req) => {
       if (saErr || isSa !== true) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
           status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders(req), "Content-Type": "application/json" },
         });
       }
     }
