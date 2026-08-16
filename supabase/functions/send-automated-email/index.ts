@@ -32,7 +32,7 @@ function wrapHtml(title: string, body: string, footer = "Vivacity Coaching & Con
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#111}.wrap{max-width:580px;margin:0 auto;background:#fff}.hdr{background:#6b21a8;padding:24px;text-align:center;color:#fff}.hdr img{height:40px;margin-bottom:12px}.hdr h1{margin:0;font-size:20px;font-weight:600}.body{padding:28px 24px}.box{background:#f8f5ff;border:1px solid #e9d5ff;border-radius:8px;padding:16px;margin:16px 0}.item{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #f0e8ff}.item:last-child{border-bottom:none}.lbl{color:#6b7280;font-size:13px;min-width:140px}.val{font-size:13px;font-weight:500}.badge{display:inline-block;background:#7c3aed;color:#fff;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}.warn{background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}.list{margin:8px 0;padding-left:20px}.list li{padding:3px 0;font-size:13px}.ftr{padding:16px;text-align:center;color:#9ca3af;font-size:11px;border-top:1px solid #f3f4f6}</style></head><body><div class="wrap"><div class="hdr"><img src="${EMAIL_LOGO_URL}" alt="${EMAIL_LOGO_ALT}"><h1>${title}</h1></div><div class="body">${body}</div><div class="ftr">${footer} &bull; Unicorn 2.0 &bull; Compliance made simple</div></div></body></html>`;
 }
 
-async function handle24hrConfirmation(p: any, sb: any): Promise<Response> {
+async function handle24hrConfirmation(req: Request, p: any, sb: any): Promise<Response> {
   const { rto_name, ceo_name, client_email, tenant_id, meeting_time, meeting_url, location, is_online, instructions, auditor_name, auditor_email, audit_id } = p;
   const { data: members } = await sb.from("tenant_members").select("users!inner(email)").eq("tenant_id", tenant_id).limit(5);
   const to: string[] = (members ?? []).map((m: any) => m.users?.email).filter(Boolean);
@@ -44,10 +44,10 @@ async function handle24hrConfirmation(p: any, sb: any): Promise<Response> {
   const body = `<p>Dear ${ceo_name || "Team"},</p><p>This is a reminder that your <strong>Compliance Health Check opening meeting</strong> is scheduled for <strong>tomorrow at ${meeting_time}</strong>.</p><div class="box"><div class="item"><span class="lbl">Meeting time</span><span class="val"><strong>Tomorrow at ${meeting_time}</strong></span></div>${mtg}<div class="item"><span class="lbl">Your consultant</span><span class="val">${auditor_name}</span></div></div><p><strong>Before the meeting, please confirm:</strong></p><ul class="list"><li>All required documents have been uploaded to your evidence portal</li><li>Your CEO / Principal is available for the full meeting duration</li><li>Your compliance team lead is available if needed</li>${is_online && meeting_url ? "<li>Test your meeting link now</li>" : ""}</ul>${instructions ? `<div class="box">${instructions}</div>` : ""}<p>We look forward to working with you tomorrow.</p><p>Warm regards,<br><strong>${auditor_name}</strong><br>Vivacity Coaching &amp; Consulting</p>`;
   const id = await sendViaMailgun(to.join(","), auditor_email, `Reminder: Compliance Health Check tomorrow — ${rto_name}`, wrapHtml("Opening Meeting Tomorrow", body), `${auditor_name} — Vivacity`);
   await sb.from("notification_schedule").insert({ tenant_id, notification_type: "audit_24hr_confirmation", payload: { audit_id, mailgun_id: id, sent_to: to }, scheduled_for: new Date().toISOString(), status: "sent" });
-  return new Response(JSON.stringify({ success: true, message_id: id }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
+  return new Response(JSON.stringify({ success: true, message_id: id }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } });
 }
 
-async function handleEvidenceReminder(p: any, sb: any): Promise<Response> {
+async function handleEvidenceReminder(req: Request, p: any, sb: any): Promise<Response> {
   const { rto_name, ceo_name, client_email, tenant_id, days_left, outstanding_count, outstanding_items, auditor_name, auditor_email, audit_id, request_id } = p;
   const { data: members } = await sb.from("tenant_members").select("users!inner(email)").eq("tenant_id", tenant_id).limit(5);
   const to: string[] = (members ?? []).map((m: any) => m.users?.email).filter(Boolean);
@@ -58,29 +58,29 @@ async function handleEvidenceReminder(p: any, sb: any): Promise<Response> {
   const body = `<p>Dear ${ceo_name || "Team"},</p><p>Your compliance health check evidence is due <strong>${urgency}</strong> and we are still waiting on <strong>${outstanding_count} document${outstanding_count > 1 ? "s" : ""}</strong>.</p><div class="warn">⏰ <strong>Action required:</strong> Please upload outstanding documents to your evidence portal before the deadline.</div><div class="box"><p style="margin:0 0 8px;font-weight:600;font-size:13px">Still needed:</p><ul class="list">${items}</ul></div><p>Log in to your Vivacity portal to upload. Your consultant cannot begin document review until all evidence is received.</p><p>Warm regards,<br><strong>${auditor_name}</strong><br>Vivacity Coaching &amp; Consulting</p>`;
   const id = await sendViaMailgun(to.join(","), auditor_email, `Action required: ${outstanding_count} document${outstanding_count > 1 ? "s" : ""} outstanding — due ${urgency} — ${rto_name}`, wrapHtml("Evidence Deadline Reminder", body), `${auditor_name} — Vivacity`);
   await sb.from("notification_schedule").insert({ tenant_id, notification_type: "audit_evidence_reminder", payload: { audit_id, request_id, days_left, outstanding_count, mailgun_id: id }, scheduled_for: new Date().toISOString(), status: "sent" });
-  return new Response(JSON.stringify({ success: true, message_id: id }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
+  return new Response(JSON.stringify({ success: true, message_id: id }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } });
 }
 
-async function handleDocsReady(p: any, sb: any): Promise<Response> {
+async function handleDocsReady(req: Request, p: any, sb: any): Promise<Response> {
   const { audit_id, request_id, rto_name, items_received, items_total, auditor_email, auditor_name, opening_meeting } = p;
   const mtgText = opening_meeting ? new Date(opening_meeting).toLocaleString("en-AU", { timeZone: "Australia/Sydney", dateStyle: "full", timeStyle: "short" }) : "Not yet scheduled";
   const firstName = (auditor_name || "Team").split(" ")[0];
   const body = `<p>Hi ${firstName},</p><p>All evidence has been received for <strong>${rto_name}</strong>. You can now begin the document review.</p><div class="box"><div class="item"><span class="lbl">Documents received</span><span class="val"><span class="badge">${items_received}/${items_total} complete</span></span></div><div class="item"><span class="lbl">Opening meeting</span><span class="val">${mtgText}</span></div></div><p>Open the audit workspace to begin your independent document review. AI pre-analysis is running — check the Documents tab for insights when ready.</p>`;
   const id = await sendViaMailgun(auditor_email, undefined, `✅ All evidence received — ${rto_name} — ready for document review`, wrapHtml("Evidence Ready for Review", body), "Unicorn 2.0 — Audit Workspace");
   await sb.from("notification_schedule").insert({ tenant_id: null, notification_type: "audit_docs_ready", payload: { audit_id, request_id, rto_name, auditor_email, mailgun_id: id }, scheduled_for: new Date().toISOString(), status: "sent" });
-  return new Response(JSON.stringify({ success: true, message_id: id }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
+  return new Response(JSON.stringify({ success: true, message_id: id }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } });
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req) });
   try {
     const body = await req.json();
     if (!MAILGUN_API_KEY) throw new Error("Mailgun API key not configured");
     const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
-    if (body.automation === "audit_24hr_confirmation") return await handle24hrConfirmation(body, supabase);
-    if (body.automation === "audit_evidence_reminder") return await handleEvidenceReminder(body, supabase);
-    if (body.automation === "audit_docs_ready") return await handleDocsReady(body, supabase);
+    if (body.automation === "audit_24hr_confirmation") return await handle24hrConfirmation(req, body, supabase);
+    if (body.automation === "audit_evidence_reminder") return await handleEvidenceReminder(req, body, supabase);
+    if (body.automation === "audit_docs_ready") return await handleDocsReady(req, body, supabase);
 
     const { task_id, document_id, email_id, trigger_type } = body;
     let tenant_id: number | undefined;
@@ -195,13 +195,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify({ success: true, message_id: mgId }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...corsHeaders(req) },
     });
   } catch (error: any) {
     console.error("Error in send-automated-email:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...corsHeaders(req) },
     });
   }
 };

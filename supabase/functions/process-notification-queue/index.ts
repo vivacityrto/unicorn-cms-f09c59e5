@@ -9,11 +9,11 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   if (!await isCronAuthorized(req)) {
-    return cronUnauthorizedResponse(corsHeaders);
+    return cronUnauthorizedResponse(req, corsHeaders);
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -39,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ success: true, processed: 0 }),
         {
           status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
+          headers: { "Content-Type": "application/json", ...corsHeaders(req) },
         },
       );
     }
@@ -137,7 +137,7 @@ const handler = async (req: Request): Promise<Response> => {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       },
     );
   } catch (error: any) {
@@ -146,7 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ error: error.message }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       },
     );
   }

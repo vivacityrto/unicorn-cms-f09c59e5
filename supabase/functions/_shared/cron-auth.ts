@@ -145,10 +145,11 @@ export async function isCronAuthorized(req: Request): Promise<boolean> {
 }
 
 export function cronUnauthorizedResponse(
-  corsHeaders: Record<string, string>,
+  req: Request,
+  corsHeadersFor: (req: Request) => Record<string, string>,
 ): Response {
   return new Response(JSON.stringify({ error: "Unauthorized" }), {
     status: 401,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeadersFor(req), "Content-Type": "application/json" },
   });
 }
