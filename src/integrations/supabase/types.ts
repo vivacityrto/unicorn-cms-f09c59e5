@@ -58352,6 +58352,7 @@ export type Database = {
           token_hash: string | null
           unicorn_role: string
           updated_at: string | null
+          used_at: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -58379,6 +58380,7 @@ export type Database = {
           token_hash?: string | null
           unicorn_role: string
           updated_at?: string | null
+          used_at?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -58406,6 +58408,7 @@ export type Database = {
           token_hash?: string | null
           unicorn_role?: string
           updated_at?: string | null
+          used_at?: string | null
         }
         Relationships: [
           {
