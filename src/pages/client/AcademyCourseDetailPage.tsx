@@ -148,8 +148,10 @@ export default function AcademyCourseDetailPage() {
         </div>
 
         <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-bold text-foreground">{course.title}</h1>
-          <WebinarSeriesSubtitle series={course.webinar_series} />
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{course.title}</h1>
+            <WebinarSeriesSubtitle series={course.webinar_series} />
+          </div>
 
           {/* Meta row */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">

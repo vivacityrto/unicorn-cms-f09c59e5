@@ -645,7 +645,7 @@ export default function AcademyBuilderCourse() {
         <Button variant="ghost" size="sm" onClick={() => navigate("/superadmin/academy/builder")}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Library
         </Button>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-foreground truncate">{course.title}</h1>
           <WebinarSeriesSubtitle series={formState.webinar_series} />
         </div>
