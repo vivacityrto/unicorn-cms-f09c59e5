@@ -18,7 +18,6 @@ const AFFECTED = [
   "process-notification-queue",
   "generate-notifications",
   "send-action-item-due-reminders",
-  "reconcile-invite-delivery-status",
 ];
 
 function functionSrc(name) {

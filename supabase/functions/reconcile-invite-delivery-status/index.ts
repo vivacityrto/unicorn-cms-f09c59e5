@@ -5,7 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { cronUnauthorizedResponse, isCronAuthorized } from "../_shared/cron-auth.ts";
+import { authorizeCronInvoke } from "../_shared/cron-invoke-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -49,11 +49,6 @@ function stripAngleBrackets(id: string): string {
   return out;
 }
 
-// C4: this function already had a caller check, but it accepted any
-// unsigned JWT whose payload claimed role=service_role. Replaced with
-// the shared cron gate (secret header + constant-time compare of the
-// credential cron already sends).
-
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface MailgunEventItem {
@@ -67,8 +62,8 @@ serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  if (!await isCronAuthorized(req)) {
-    return cronUnauthorizedResponse(corsHeaders);
+  if (!(await authorizeCronInvoke(req))) {
+    return json(401, { error: "Unauthorized" });
   }
 
   if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {

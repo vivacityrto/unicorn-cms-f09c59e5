@@ -17,13 +17,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { graphGet } from '../_shared/graph-app-client.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { corsHeadersFor, parseBearerToken } from '../_shared/requireCaller.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -45,12 +39,6 @@ type TenantLiveness = {
   error: string | null;
 };
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
 
 /**
  * Live verification of a single (drive, item) — returns the enum branch
@@ -96,11 +84,18 @@ async function pMapLimit<T, R>(
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = corsHeadersFor(req);
+  const json = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
+  if (!parseBearerToken(authHeader)) {
     return json({ error: 'Unauthorized', details: 'Missing bearer token' }, 401);
   }
 

@@ -191,6 +191,32 @@ export async function checkTenantAccess(
 }
 
 /**
+ * Assert access to a body-supplied tenant via the canonical RPC
+ * `public.has_tenant_access_safe(p_tenant_id bigint, p_user_id uuid)`.
+ *
+ * That helper is true for Super Admin, Vivacity Team, or an active
+ * `tenant_members` row. Call this after the caller is established and
+ * before any write that uses the requested tenant_id.
+ */
+export async function hasTenantAccessSafe(
+  supabase: SupabaseClient,
+  userId: string,
+  tenantId: number,
+): Promise<{ allowed: boolean; lookupFailed?: boolean }> {
+  const { data, error } = await supabase.rpc("has_tenant_access_safe", {
+    p_tenant_id: tenantId,
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.error("has_tenant_access_safe error:", error);
+    return { allowed: false, lookupFailed: true };
+  }
+
+  return { allowed: data === true };
+}
+
+/**
  * Get all tenant IDs a user has access to.
  * 
  * @param supabase - Supabase client
