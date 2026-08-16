@@ -21,23 +21,16 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-<<<<<<< HEAD
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
-=======
 import { corsHeaders } from "../_shared/cors.ts";
->>>>>>> origin/main
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-<<<<<<< HEAD
-=======
 const EMAIL_MANAGE_FEATURE = "clients.emails.manage";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
->>>>>>> origin/main
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
@@ -49,8 +42,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-<<<<<<< HEAD
-=======
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json(401, { error: "Missing Authorization header" });
 
@@ -95,31 +86,15 @@ Deno.serve(async (req) => {
     }
     if (!email) return json(404, { error: "Email not found" });
 
->>>>>>> origin/main
     const svc = createClient(supabaseUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-<<<<<<< HEAD
-    const caller = await requireCaller(req, svc, {
-      featureKey: FeatureKeys.staffEmailSend,
-      headers: corsHeaders,
-      unauthorizedMessage: "Missing Authorization header",
-      forbiddenMessage: "Insufficient permissions",
-    });
-    if (!caller.ok) return caller.response;
-
-    const body = await req.json().catch(() => null);
-    const emailId: string | undefined = body?.email_id;
-    if (!emailId || typeof emailId !== "string") {
-      return json(400, { error: "email_id required" });
-=======
     const { data: isSuperAdmin } = await svc.rpc("is_super_admin_safe", {
       p_user_id: caller.id,
     });
     if (wantHardDelete && !isSuperAdmin) {
       return json(403, { error: "Hard delete is restricted to Super Admin" });
->>>>>>> origin/main
     }
     const mode = wantHardDelete && isSuperAdmin ? "hard_delete" : "soft_unlink";
 
