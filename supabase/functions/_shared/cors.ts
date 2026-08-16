@@ -30,7 +30,6 @@
  * });
  * ```
  */
-
 const DEFAULT_APP_ORIGIN = "https://unicorn-cms.au";
 
 const CORS_ALLOW_HEADERS = [

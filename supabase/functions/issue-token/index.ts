@@ -22,6 +22,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -104,7 +105,6 @@ async function assertRateLimit(supabase: ReturnType<typeof createClient>, email:
 }
 
 function buildActionLink(type: TokenType, email: string, token: string): string {
-  const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
   const path = type === "magic" || type === "verify" ? "/auth/callback" : "/reset-password";
   const url = new URL(path, `${APP_BASE_URL}/`);
   url.searchParams.set("token", token);
@@ -119,7 +119,6 @@ function buildEmailHtml(opts: {
   actionLink: string;
   expiresAtUnix: number;
 }): string {
-  const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
   const recipientName = opts.firstName || "there";
   const cta = EMAIL_CTA[opts.type];
   const expiryLabel = new Date(opts.expiresAtUnix * 1000).toUTCString();

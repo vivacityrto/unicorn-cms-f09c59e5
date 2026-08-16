@@ -11,6 +11,11 @@
 
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
+import {
+  cronUnauthorizedResponse,
+  getUserIdFromJwt,
+  isCronAuthorized,
+} from "../_shared/cron-auth.ts";
 
 interface NotificationRow {
   tenant_id: number;
@@ -720,8 +725,10 @@ Deno.serve(async (req) => {
           ? Number(obligationIdRaw)
           : undefined;
 
-      // Scheduled: cron path, no JWT check (matches existing scopes).
-      // Preview/Broadcast: must be a super-admin.
+      // Preview/Broadcast: existing super-admin gate (human-triggered).
+      // Scheduled: cron gate (secret header or the service_role JWT cron
+      // already sends). Super-admin is accepted alongside so a staff
+      // caller can still run the scheduled scope manually.
       let actorUserId: string | undefined;
       if (isPreview || isBroadcast) {
         const authHeader = req.headers.get("Authorization");
@@ -756,6 +763,20 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders(req), "Content-Type": "application/json" },
           });
         }
+      } else if (!await isCronAuthorized(req)) {
+        const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
+        if (!token) return cronUnauthorizedResponse(corsHeaders);
+        const userId = await getUserIdFromJwt(supabase, token);
+        if (!userId) return cronUnauthorizedResponse(corsHeaders);
+        const { data: isSa, error: saErr } = await supabase.rpc("is_super_admin_safe", {
+          p_user_id: userId,
+        });
+        if (saErr || isSa !== true) {
+          return new Response(JSON.stringify({ error: "Forbidden" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
 
       const mode: ReportingMode = isPreview ? "preview" : isBroadcast ? "broadcast" : "scheduled";
@@ -771,6 +792,22 @@ Deno.serve(async (req) => {
     let tasksCreated = 0;
     let meetingsCreated = 0;
     let obligationsCreated = 0;
+
+    if (!await isCronAuthorized(req)) {
+      const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
+      if (!token) return cronUnauthorizedResponse(corsHeaders);
+      const userId = await getUserIdFromJwt(supabase, token);
+      if (!userId) return cronUnauthorizedResponse(corsHeaders);
+      const { data: isSa, error: saErr } = await supabase.rpc("is_super_admin_safe", {
+        p_user_id: userId,
+      });
+      if (saErr || isSa !== true) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     if (scope === "meetings" || scope === "all") {
       meetingsCreated = await generateMeetingNotifications(supabase);

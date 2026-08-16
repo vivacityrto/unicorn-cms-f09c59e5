@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 type UnicornRole =
   | "Super Admin" | "Team Leader" | "Team Member"
@@ -696,7 +697,6 @@ serve(async (req) => {
       console.warn('Failed to invoke send-invitation-email:', emailError);
     }
 
-    const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
     const inviteUrl = `${APP_BASE_URL}/accept-invitation?token=${inviteToken}`;
 
     // 10. Track invite attempts and log

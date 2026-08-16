@@ -17,6 +17,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { appUrl } from "../_shared/app-base-url.ts";
 
 const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
 const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
@@ -25,7 +26,6 @@ const MAILGUN_FROM_NAME = Deno.env.get("MAILGUN_FROM_NAME") || "Vivacity Unicorn
 const MAILGUN_REGION = (Deno.env.get("MAILGUN_REGION") || "eu").toLowerCase();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au";
 
 const VIVACITY_TENANT_ID = 6372;
 
@@ -234,9 +234,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    const inviteUrl = `${APP_BASE_URL.replace(/\/$/, "")}/accept-invitation?token=${encodeURIComponent(
-      body.token_plaintext,
-    )}`;
+    const inviteUrl = appUrl(
+      `/accept-invitation?token=${encodeURIComponent(body.token_plaintext)}`,
+    );
 
     const roleLabel = ROLE_LABELS[invitation.unicorn_role] || invitation.unicorn_role;
     const expiryDate = formatExpiry(invitation.expires_at);

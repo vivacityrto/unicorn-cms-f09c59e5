@@ -16,6 +16,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 // Env vars
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -28,7 +29,6 @@ const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN") || "";
 const MAILGUN_REGION = (Deno.env.get("MAILGUN_REGION") || "").toUpperCase(); // optional: "EU" | "US"
 const MAIL_FROM_ADDRESS = Deno.env.get("MAIL_FROM_ADDRESS") || Deno.env.get("MAILGUN_FROM_EMAIL") || "";
 const MAIL_FROM_NAME = Deno.env.get("MAIL_FROM_NAME") || "Vivacity";
-const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
 
 // Optional template names (can be overridden in project secrets)
 const TEMPLATE_PASSWORD_RESET = Deno.env.get("MAILGUN_TEMPLATE_PASSWORD_RESET") || "auth_password_reset";

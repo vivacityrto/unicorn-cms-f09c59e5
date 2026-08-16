@@ -139,7 +139,6 @@ export async function sendNoteNotifications({
               client_name: clientName,
               description: `${authorName} shared a note: "${displayTitle}"`,
               deep_link: deepLink,
-              base_url: window.location.origin,
             })),
             p_tenant_id: tenantId,
           });
@@ -187,7 +186,6 @@ export async function sendNoteNotifications({
             client_name: clientName,
             description: `${authorName} ${alreadyNotified ? 'shared' : 'added'} a note: "${displayTitle}"`,
             deep_link: deepLink,
-            base_url: window.location.origin,
           })),
           p_tenant_id: tenantId,
         });

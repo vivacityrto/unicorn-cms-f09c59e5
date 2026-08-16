@@ -7,6 +7,7 @@ import {
   getClientIp,
   recordPasswordResetAttempt,
 } from "../_shared/password-reset-rate-limit.ts";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 interface SelfPasswordResetRequest {
   email: string;
@@ -101,9 +102,6 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     console.log(`Generating self-service password reset link for ${targetUser.email}`);
-
-    // Get the origin for redirect URL
-    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au";
 
     // Generate password reset link using Supabase Admin API
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({

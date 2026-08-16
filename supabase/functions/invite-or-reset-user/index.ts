@@ -13,6 +13,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.53.0";
 import { corsHeaders } from "../_shared/cors.ts";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 interface Payload {
   email: string;
@@ -85,7 +86,6 @@ serve(async (req) => {
 
     const body: Payload = await req.json();
     const email = body?.email?.trim().toLowerCase();
-    const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
     const redirectTo = `${APP_BASE_URL}/reset-password`;
 
     if (!email) {
