@@ -10,20 +10,37 @@
  * their role grants live in permission_features / role_permissions;
  * see the "Edge-function authorisation" section of the repo README.
  *
- * Usage:
- * ```ts
- * import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+ * Two call shapes (merged from the C1 helper on main and this PR):
  *
+ * ```ts
+ * // Options form (orAllow, custom messages, injected admin client)
  * const caller = await requireCaller(req, admin, {
  *   featureKey: FeatureKeys.staffInternal,
  * });
  * if (!caller.ok) return caller.response;
- * const { user } = caller;
+ *
+ * // Convenience form (builds the service-role client internally)
+ * const caller = await requireCaller(req, "admin.team_users.manage", "full");
+ * if (caller instanceof Response) return caller;
  * ```
+ *
+ * Bearer tokens are accepted only as exactly `Bearer <token>` (two parts).
+ * Never base64-decode a JWT to read claims.
  */
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders as defaultCorsHeaders } from "./cors.ts";
+import {
+  allowlistFromAppBaseUrl,
+  constantTimeEqual,
+  parseBearerToken,
+} from "./requireCaller-helpers.ts";
+
+export {
+  allowlistFromAppBaseUrl,
+  constantTimeEqual,
+  parseBearerToken,
+} from "./requireCaller-helpers.ts";
 
 export const FeatureKeys = {
   staffInternal: "staff.internal",
@@ -55,6 +72,8 @@ export const FeatureKeys = {
 } as const;
 
 export type FeatureKey = (typeof FeatureKeys)[keyof typeof FeatureKeys] | (string & {});
+
+export type PermissionMinLevel = "full" | "limited" | "edit" | "view";
 
 export type RequireCallerSuccess = {
   ok: true;
@@ -89,6 +108,34 @@ export type RequireCallerOptions = {
   }) => Promise<boolean>;
 };
 
+const DEFAULT_ALLOW_HEADERS = [
+  "authorization",
+  "x-client-info",
+  "apikey",
+  "content-type",
+  "x-supabase-client-platform",
+  "x-supabase-client-platform-version",
+  "x-supabase-client-runtime",
+  "x-supabase-client-runtime-version",
+];
+
+export function corsHeadersFor(
+  req: Request,
+  extraAllowHeaders: string[] = [],
+): Record<string, string> {
+  const appBase = (Deno.env.get("APP_BASE_URL") ?? "").replace(/\/+$/, "");
+  const allowlist = allowlistFromAppBaseUrl(appBase);
+  const origin = req.headers.get("Origin");
+  const allowOrigin = origin && allowlist.has(origin) ? origin : (appBase || "null");
+  const allowHeaders = [...DEFAULT_ALLOW_HEADERS, ...extraAllowHeaders];
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": allowHeaders.join(", "),
+    "Access-Control-Allow-Methods": "POST, OPTIONS, GET, PUT, PATCH, DELETE",
+    Vary: "Origin",
+  };
+}
+
 function jsonBody(
   style: ErrorStyle,
   status: number,
@@ -114,11 +161,16 @@ function jsonResponse(
   });
 }
 
+function convenienceJson(req: Request, status: number, body: unknown, extraAllowHeaders?: string[]): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeadersFor(req, extraAllowHeaders), "Content-Type": "application/json" },
+  });
+}
+
+/** @deprecated Use parseBearerToken — same two-part Bearer rule. */
 export function extractBearerToken(req: Request): string | null {
-  const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
-  if (!authHeader) return null;
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
-  return match?.[1]?.trim() || null;
+  return parseBearerToken(req.headers.get("Authorization") ?? req.headers.get("authorization"));
 }
 
 /**
@@ -178,51 +230,6 @@ export async function checkPermission(
 }
 
 /**
- * Resolve the Bearer caller and require check_permission(featureKey).
- * Returns either `{ ok: true, user }` or `{ ok: false, response }` ready to return.
- */
-export async function requireCaller(
-  req: Request,
-  admin: SupabaseClient,
-  options: RequireCallerOptions,
-): Promise<RequireCallerResult> {
-  const headers = options.headers ?? defaultCorsHeaders;
-  const style = options.errorStyle ?? "error";
-  const minLevel = options.minLevel ?? "full";
-
-  const token = extractBearerToken(req);
-  if (!token) {
-    return {
-      ok: false,
-      response: jsonResponse(
-        headers,
-        style,
-        401,
-        "UNAUTHORIZED",
-        options.unauthorizedMessage ?? "Missing Authorization",
-      ),
-    };
-  }
-
-  const { data: authData, error: authErr } = await admin.auth.getUser(token);
-  if (authErr || !authData?.user) {
-    return {
-      ok: false,
-      response: jsonResponse(
-        headers,
-        style,
-        401,
-        "UNAUTHORIZED",
-        options.unauthorizedMessage ?? "Unauthorized",
-      ),
-    };
-  }
-
-  const user = { id: authData.user.id, email: authData.user.email };
-  return requireCallerByUserId(admin, user, options, headers, style, minLevel);
-}
-
-/**
  * Same gate as requireCaller, for callers already resolved (add-in JWT,
  * forwarded userClient.auth.getUser, etc.).
  */
@@ -265,4 +272,128 @@ export async function requireCallerByUserId(
   }
 
   return { ok: true, user, via: "permission" };
+}
+
+async function requireCallerWithOptions(
+  req: Request,
+  admin: SupabaseClient,
+  options: RequireCallerOptions,
+): Promise<RequireCallerResult> {
+  const headers = options.headers ?? defaultCorsHeaders;
+  const style = options.errorStyle ?? "error";
+  const minLevel = options.minLevel ?? "full";
+
+  const token = extractBearerToken(req);
+  if (!token) {
+    return {
+      ok: false,
+      response: jsonResponse(
+        headers,
+        style,
+        401,
+        "UNAUTHORIZED",
+        options.unauthorizedMessage ?? "Missing Authorization",
+      ),
+    };
+  }
+
+  const { data: authData, error: authErr } = await admin.auth.getUser(token);
+  if (authErr || !authData?.user) {
+    return {
+      ok: false,
+      response: jsonResponse(
+        headers,
+        style,
+        401,
+        "UNAUTHORIZED",
+        options.unauthorizedMessage ?? "Unauthorized",
+      ),
+    };
+  }
+
+  const user = { id: authData.user.id, email: authData.user.email };
+  return requireCallerByUserId(admin, user, options, headers, style, minLevel);
+}
+
+async function requireCallerConvenience(
+  req: Request,
+  featureKey: string,
+  minLevel: PermissionMinLevel = "full",
+): Promise<{ userId: string } | Response> {
+  const token = parseBearerToken(req.headers.get("Authorization"));
+  if (!token) return convenienceJson(req, 401, { error: "Unauthorized" });
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    return convenienceJson(req, 500, { error: "Server misconfigured" });
+  }
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data: callerData, error: callerErr } = await admin.auth.getUser(token);
+  if (callerErr || !callerData?.user) {
+    return convenienceJson(req, 401, { error: "Unauthorized" });
+  }
+
+  const { data: allowed } = await admin.rpc("check_permission", {
+    p_user_id: callerData.user.id,
+    p_feature_key: featureKey,
+    p_min_level: minLevel,
+  });
+  if (allowed !== true) {
+    return convenienceJson(req, 403, { error: "Forbidden" });
+  }
+
+  return { userId: callerData.user.id };
+}
+
+export async function requireCaller(
+  req: Request,
+  featureKey: string,
+  minLevel?: PermissionMinLevel,
+): Promise<{ userId: string } | Response>;
+export async function requireCaller(
+  req: Request,
+  admin: SupabaseClient,
+  options: RequireCallerOptions,
+): Promise<RequireCallerResult>;
+export async function requireCaller(
+  req: Request,
+  adminOrFeatureKey: SupabaseClient | string,
+  optionsOrMinLevel?: RequireCallerOptions | PermissionMinLevel,
+): Promise<RequireCallerResult | { userId: string } | Response> {
+  if (typeof adminOrFeatureKey === "string") {
+    return requireCallerConvenience(
+      req,
+      adminOrFeatureKey,
+      (optionsOrMinLevel as PermissionMinLevel | undefined) ?? "full",
+    );
+  }
+  return requireCallerWithOptions(
+    req,
+    adminOrFeatureKey,
+    optionsOrMinLevel as RequireCallerOptions,
+  );
+}
+
+/**
+ * Machine-to-machine gate: constant-time compare of a request header against
+ * a Deno.env secret. Rejects when the secret is unset or the header is missing
+ * or mismatched. Never logs the secret or the provided value.
+ */
+export function requireSharedSecret(
+  req: Request,
+  envKey: string,
+  headerName = "x-worker-secret",
+  extraAllowHeaders: string[] = [],
+): { ok: true } | Response {
+  const expected = Deno.env.get(envKey) ?? "";
+  const provided = req.headers.get(headerName) ?? "";
+  if (!expected || !constantTimeEqual(provided, expected)) {
+    return convenienceJson(req, 401, { error: "Unauthorized" }, extraAllowHeaders);
+  }
+  return { ok: true };
 }

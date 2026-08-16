@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAppToken } from "../_shared/graph-app-client.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -136,6 +137,29 @@ serve(async (req) => {
     const isSuperAdmin = caller.via === "permission";
     const requestedTenantId = body.tenant_id as number | undefined;
     const sitePurposeEarly = body.site_purpose as string | undefined;
+
+    if (requestedTenantId != null) {
+      const requestedTenantIdNum = Number(requestedTenantId);
+      if (!Number.isFinite(requestedTenantIdNum)) {
+        return new Response(
+          JSON.stringify({ error: "tenant_id must be a number" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const tenantAccess = await hasTenantAccessSafe(supabaseAdmin, user.id, requestedTenantIdNum);
+      if (tenantAccess.lookupFailed) {
+        return new Response(
+          JSON.stringify({ error: "Failed to verify tenant access" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!tenantAccess.allowed) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: no access to this tenant" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // Resolve effective tenant: SuperAdmins may pass an explicit tenant_id
     // (and may have no tenant_id of their own). Other users always use their own.

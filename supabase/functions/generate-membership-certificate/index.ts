@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const CENTER_X = 297.64;
 const FUCHSIA = rgb(0.929, 0.094, 0.471);
@@ -76,12 +77,11 @@ serve(async (req) => {
       unauthorizedMessage: "Missing Authorization header",
       forbiddenMessage: "Not authorised for this tenant",
       orAllow: async ({ userId, admin }) => {
-        const { data: callerRow } = await admin
-          .from("users")
-          .select("tenant_id")
-          .eq("user_uuid", userId)
-          .maybeSingle();
-        return Number(callerRow?.tenant_id) === tenantId;
+        const tenantAccess = await hasTenantAccessSafe(admin, userId, tenantId);
+        if (tenantAccess.lookupFailed) {
+          throw new Error("TENANT_ACCESS_CHECK_FAILED");
+        }
+        return tenantAccess.allowed;
       },
     });
     if (!caller.ok) return caller.response;

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import * as zip from "https://deno.land/x/zipjs@v2.7.32/index.js";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeadersFor, requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import {
   graphUploadSmall,
@@ -11,8 +11,6 @@ import {
   resolveDriveItemFromSharingUrl,
   type DriveItem,
 } from "../_shared/graph-app-client.ts";
-import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
-
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 interface ImageAsset {
@@ -598,6 +596,7 @@ async function resolveMergeFields(
 // ── Main Handler ───────────────────────────────────────────────────────────
 
 serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -607,7 +606,7 @@ serve(async (req) => {
 
     // Staff gate via check_permission. JWT user_metadata unicorn_role is
     // user-editable and is no longer consulted (tightening vs the previous
-    // claim/metadata fallback).
+    // claim/metadata fallback). Bearer parse is the C1 two-part rule.
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.staffDocumentsGenerate,
       headers: corsHeaders,

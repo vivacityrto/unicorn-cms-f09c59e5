@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
-import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeadersFor, requireCaller } from "../_shared/requireCaller.ts";
 import {
   getAppToken,
   graphGet,
@@ -11,12 +11,6 @@ import {
   buildClientFolderName,
   type DriveItem,
 } from "../_shared/graph-app-client.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -385,9 +379,14 @@ function isDueDiligencePackage(pkg: ActivePackageSummary | null | undefined): bo
 // ── Main Handler ──
 
 serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const caller = await requireCaller(req, "admin.documents.bulk_generate", "full");
+  if (caller instanceof Response) return caller;
+  const callerUserId = caller.userId;
 
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   let tenantIdForError: number | null = null;
@@ -402,29 +401,6 @@ serve(async (req) => {
         JSON.stringify({ success: false, error: "tenant_id is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    }
-
-    // Auth — optional
-    let callerUserId: string | null = null;
-    const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      const { data: { user } } = await supabaseAdmin.auth.getUser(
-        authHeader.replace("Bearer ", ""),
-      );
-      if (user) {
-        const caller = await requireCallerByUserId(
-          supabaseAdmin,
-          { id: user.id, email: user.email },
-          {
-            featureKey: FeatureKeys.staffSharepoint,
-            headers: corsHeaders,
-            forbiddenMessage: "Forbidden — Vivacity staff only",
-          },
-          corsHeaders,
-        );
-        if (!caller.ok) return caller.response;
-        callerUserId = user.id;
-      }
     }
 
     // Load tenant
