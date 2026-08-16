@@ -262,9 +262,36 @@ describe("HTML escaping is applied", () => {
 });
 
 describe("retired send-test-email UUID copies", () => {
-  it("stub returns FUNCTION_RETIRED 410", () => {
+  it("stub returns FUNCTION_RETIRED 410 and names all three UUID copies", () => {
     const src = read("_retired/send-test-email-stub/index.ts");
     assert.match(src, /FUNCTION_RETIRED/);
     assert.match(src, /status:\s*410/);
+    assert.match(src, /64329f1f/);
+    assert.match(src, /dcd6c745/);
+    assert.match(src, /c22daa64/);
+    assert.doesNotMatch(src, /SERVICE_ROLE|SENDGRID|sgMail/);
+  });
+
+  it("keeper docstring accounts for all three UUID copies, not two", () => {
+    const src = read("send-test-email/index.ts");
+    assert.match(src, /Three historical UUID-slug copies/);
+    assert.match(src, /64329f1f/);
+    assert.doesNotMatch(src, /Two are retired/);
+  });
+});
+
+describe("retired Lovable UUID-slug mocks", () => {
+  it("clickup-integration stub is a 410 with no credentials", () => {
+    const src = read("_retired/clickup-integration-stub/index.ts");
+    assert.match(src, /FUNCTION_RETIRED/);
+    assert.match(src, /status:\s*410/);
+    assert.doesNotMatch(src, /SERVICE_ROLE|SENDGRID|CLICKUP_TOKEN/);
+  });
+
+  it("unicorn-data-import stub is a 410 with no credentials", () => {
+    const src = read("_retired/unicorn-data-import-stub/index.ts");
+    assert.match(src, /FUNCTION_RETIRED/);
+    assert.match(src, /status:\s*410/);
+    assert.doesNotMatch(src, /SERVICE_ROLE|SENDGRID/);
   });
 });
