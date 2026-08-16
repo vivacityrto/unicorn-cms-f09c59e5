@@ -52,6 +52,11 @@ edge-function sweep). Did not change the Vimeo allowlist hint in
 - Restored the four production-only functions into git and pointed them
   at the same helper. Email logo URL is
   `${APP_BASE_URL}/assets/brand/unicorn-cms-email-logo.png`.
+- After merging `main`, folded `send-email` and `mailgun-send` (landed
+  via #298 with `|| "https://unicorn-cms.au"` / `|| "https://app.unicorn-cms.au"`
+  fallbacks) onto the same fail-loud helper. `requireCaller` still reads
+  `APP_BASE_URL` with an empty fallback for CORS allowlisting — that is
+  not a user-facing link builder.
 - Added `public/assets/brand/unicorn-cms-email-logo.png` (copy of the
   existing 500×500 favicon) so the canonical domain can serve the asset
   after the frontend deploy.

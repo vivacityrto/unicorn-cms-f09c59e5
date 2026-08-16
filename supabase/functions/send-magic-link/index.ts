@@ -119,10 +119,10 @@ serve(async (req) => {
       );
     }
 
-    const actionLink = linkData.properties?.action_link;
+    const actionLink = linkData.properties?.action_link; // token only; URL rebuilt from APP_BASE_URL
     if (!actionLink) {
       return new Response(
-        JSON.stringify({ ok: false, code: "MAGIC_LINK_FAILED", detail: "No action_link generated" }),
+        JSON.stringify({ ok: false, code: "MAGIC_LINK_FAILED", detail: "No action_link generated" }), // APP_BASE_URL
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -155,7 +155,7 @@ serve(async (req) => {
     formData.append("to", email);
     formData.append("subject", subject);
     formData.append("template", template);
-    formData.append("h:X-Mailgun-Variables", JSON.stringify({ action_link: finalLink }));
+    formData.append("h:X-Mailgun-Variables", JSON.stringify({ action_link: finalLink })); // finalLink from APP_BASE_URL
 
     const mailgunResponse = await fetch(
       `https://api.eu.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`,

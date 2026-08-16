@@ -488,6 +488,7 @@ serve(async (req) => {
       } else {
         // Create a new user record (no auth account)
         userUuid = crypto.randomUUID();
+        // Allowlisted insert: named columns + server-computed role/type. Never spread body.
         const { error: insertError } = await supabase
           .from('users')
           .insert({

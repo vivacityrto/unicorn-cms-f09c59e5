@@ -217,7 +217,7 @@ serve(async (req) => {
 
       return jsonResponse(200, {
         ok: true,
-        action_link: inviteUrl,
+        action_link: inviteUrl, // inviteUrl built from APP_BASE_URL
         detail: "Link generated without sending email",
         email: invitation.email,
       });
