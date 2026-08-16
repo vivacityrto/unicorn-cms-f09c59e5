@@ -13,7 +13,8 @@
  * The Outlook / Teams add-in is served from the same SPA (`/addin`), so it
  * does not need a separate host. Extra request headers used by a few
  * functions (`idempotency-key`, `x-action`, `x-caller-authorization`,
- * `x-worker-secret`, `x-cron-invoke-secret`, `x-hook-secret`) are included in Allow-Headers
+ * `x-worker-secret`, `x-cron-invoke-secret`, `x-hook-secret`,
+ * `x-internal-email-secret`, `x-cron-secret`) are included in Allow-Headers
  * so those preflights keep working.
  *
  * Usage:
@@ -47,6 +48,8 @@ const CORS_ALLOW_HEADERS = [
   "x-worker-secret",
   "x-cron-invoke-secret",
   "x-hook-secret",
+  "x-internal-email-secret",
+  "x-cron-secret",
 ].join(", ");
 
 const CORS_ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS";

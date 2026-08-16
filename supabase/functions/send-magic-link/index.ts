@@ -118,7 +118,7 @@ serve(async (req) => {
     const actionLink = linkData.properties?.action_link; // token only; URL rebuilt from APP_BASE_URL
     if (!actionLink) {
       return new Response(
-        JSON.stringify({ ok: false, code: "MAGIC_LINK_FAILED", detail: "No action_link generated" }),
+        JSON.stringify({ ok: false, code: "MAGIC_LINK_FAILED", detail: "No action_link generated" }), // error text only; URL from APP_BASE_URL
         { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }

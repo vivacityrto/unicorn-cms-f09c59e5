@@ -5,31 +5,39 @@
  *   - "mailgun"  → system relay (Mailgun EU)
  *   - "graph"    → from the requesting admin's own Outlook mailbox
  *
+ * Authorization: requireCaller(req, "admin.team_users.manage", "full").
+ * verify_jwt is not authorization.
+ *
+ * From address for Mailgun is Deno.env only. The Graph channel sends as
+ * the authenticated admin's mailbox (not a caller-supplied From). Body
+ * interpolations are HTML-escaped. CORS is APP_BASE_URL-derived.
+ *
  * Body: { to, subject, body, channel: "mailgun" | "graph", run_id?: number }
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeadersFor, requireCaller } from "../_shared/requireCaller.ts";
+import { escapeHtml } from "../_shared/escape-html.ts";
+import { envFromAddress } from "../_shared/email-merge.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MICROSOFT_CLIENT_ID = Deno.env.get("MICROSOFT_CLIENT_ID");
 const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET");
 
-function json(req: Request, s: number, b: unknown) {
-  return new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json", ...corsHeaders(req) } });
+function json(status: number, body: unknown, corsHeaders: Record<string, string>) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
 }
 
 async function sendMailgun(to: string, subject: string, html: string, text: string) {
   const apiKey = Deno.env.get("MAILGUN_API_KEY");
   const domain = Deno.env.get("MAILGUN_DOMAIN");
   const region = (Deno.env.get("MAILGUN_REGION") || "us").toLowerCase();
-  const fromEmail = Deno.env.get("MAILGUN_FROM_EMAIL") || "noreply@vivacity.com.au";
-  const fromName = Deno.env.get("MAILGUN_FROM_NAME") || "Vivacity";
   if (!apiKey || !domain) throw new Error("Mailgun not configured");
   const base = region === "eu" ? "https://api.eu.mailgun.net/v3" : "https://api.mailgun.net/v3";
   const form = new FormData();
-  form.append("from", `${fromName} <${fromEmail}>`);
+  form.append("from", envFromAddress());
   form.append("to", to);
   form.append("subject", subject);
   form.append("text", text);
@@ -43,8 +51,13 @@ async function sendMailgun(to: string, subject: string, html: string, text: stri
   return await res.json();
 }
 
-async function sendGraph(admin: any, userId: string, to: string, subject: string, html: string) {
-  // Lookup user's Outlook OAuth token
+async function sendGraph(
+  admin: { from: (t: string) => any },
+  userId: string,
+  to: string,
+  subject: string,
+  html: string,
+) {
   const { data: token } = await admin
     .from("oauth_tokens")
     .select("access_token, refresh_token, expires_at, scope, account_email")
@@ -53,7 +66,7 @@ async function sendGraph(admin: any, userId: string, to: string, subject: string
     .maybeSingle();
   if (!token) {
     const err = new Error("No Microsoft connection — connect Outlook in Integrations, or use 'Send via Mailgun'.");
-    (err as any).code = "no_microsoft_connection";
+    (err as { code?: string }).code = "no_microsoft_connection";
     throw err;
   }
 
@@ -98,34 +111,43 @@ async function sendGraph(admin: any, userId: string, to: string, subject: string
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
-  const auth = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!auth) return json(req, 401, { ok: false, error: "Missing Authorization" });
+  const corsHeaders = corsHeadersFor(req);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const caller = await requireCaller(req, "admin.team_users.manage", "full");
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+
   try {
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: { user }, error: aErr } = await admin.auth.getUser(auth);
-    if (aErr || !user) return json(req, 401, { ok: false, error: "Unauthorized" });
-
     const { to, subject, body, channel, run_id } = await req.json();
-    if (!to || !subject || !body || !channel) return json(req, 400, { ok: false, error: "to, subject, body, channel required" });
+    if (!to || !subject || !body || !channel) {
+      return json(400, { ok: false, error: "to, subject, body, channel required" }, corsHeaders);
+    }
 
-    const html = body.replace(/\n/g, "<br>");
+    const safeBody = escapeHtml(body);
+    const html = safeBody.replace(/\n/g, "<br>");
     if (channel === "mailgun") {
-      await sendMailgun(to, subject, html, body);
+      await sendMailgun(to, subject, html, String(body));
     } else if (channel === "graph") {
-      await sendGraph(admin, user.id, to, subject, html);
+      if (!userId) return json(401, { ok: false, error: "Unauthorized" }, corsHeaders);
+      await sendGraph(supabase, userId, to, subject, html);
     } else {
-      return json(req, 400, { ok: false, error: `Unknown channel: ${channel}` });
+      return json(400, { ok: false, error: `Unknown channel: ${channel}` }, corsHeaders);
     }
 
     if (run_id) {
-      await admin.from("staff_provisioning_runs").update({ updated_at: new Date().toISOString() }).eq("id", run_id);
+      await supabase.from("staff_provisioning_runs").update({ updated_at: new Date().toISOString() }).eq("id", run_id);
     }
-    return json(req, 200, { ok: true });
+    return json(200, { ok: true }, corsHeaders);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    const code = (e as any)?.code;
+    const code = (e as { code?: string })?.code;
     console.error("[send-staff-onboarding-email]", msg);
-    return json(req, code === "no_microsoft_connection" ? 412 : 500, { ok: false, error: msg, code });
+    return json(code === "no_microsoft_connection" ? 412 : 500, { ok: false, error: msg, code }, corsHeaders);
   }
 });

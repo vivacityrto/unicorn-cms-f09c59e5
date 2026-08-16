@@ -1,38 +1,58 @@
+/**
+ * send-notification-email
+ *
+ * Internal/system only (other functions + cron). Gateway verify_jwt is
+ * not authorization — the anon key satisfies it. Gated by
+ * requireInternalEmailSecret (constant-time shared-secret compare).
+ *
+ * From address comes from Deno.env. Link destinations are constructed
+ * server-side from APP_BASE_URL + validated ids. Merge fields are
+ * HTML-escaped before interpolation.
+ */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeadersFor, INTERNAL_EMAIL_EXTRA_HEADERS, requireInternalEmailSecret } from "../_shared/requireCaller.ts";
 import { EMAIL_LOGO_ALT, EMAIL_LOGO_URL } from "../_shared/app-base-url.ts";
+import { escapeHtml } from "../_shared/escape-html.ts";
+import { envFromAddress } from "../_shared/email-merge.ts";
+import { normalizeAppBaseUrl, resolveEmailUrl } from "../_shared/email-urls.ts";
 
 const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
 const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN") || "mg.unicorn-cms.au";
-const MAILGUN_FROM_EMAIL = Deno.env.get("MAILGUN_FROM_EMAIL") || "no-reply@mg.unicorn-cms.au";
-const MAILGUN_FROM_NAME = Deno.env.get("MAILGUN_FROM_NAME") || "Unicorn CMS";
 const MAILGUN_REGION = Deno.env.get("MAILGUN_REGION") || "EU";
-const MAILGUN_API_BASE = MAILGUN_REGION === "EU"
+const MAILGUN_API_BASE = MAILGUN_REGION.toUpperCase() === "EU"
   ? "https://api.eu.mailgun.net"
   : "https://api.mailgun.net";
 
 interface NotificationEmailRequest {
   to: string;
   type: "task_due_soon" | "task_overdue" | "meeting_reminder_24h" | "meeting_reminder_10m" | "daily_digest";
-  data: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders(req) });
-  }
+  const corsHeaders = corsHeadersFor(req, INTERNAL_EMAIL_EXTRA_HEADERS);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const caller = requireInternalEmailSecret(req);
+  if (caller instanceof Response) return caller;
 
   try {
     const { to, type, data }: NotificationEmailRequest = await req.json();
+    if (!to || !type) {
+      return new Response(JSON.stringify({ error: "to and type are required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
     if (!MAILGUN_API_KEY) {
       throw new Error("Mailgun API key not configured");
     }
 
-    const { subject, html } = generateEmailContent(type, data);
+    const { subject, html } = generateEmailContent(type, data ?? {});
 
     const formData = new FormData();
-    formData.append("from", `${MAILGUN_FROM_NAME} <${MAILGUN_FROM_EMAIL}>`);
+    formData.append("from", envFromAddress());
     formData.append("to", to);
     formData.append("subject", subject);
     formData.append("html", html);
@@ -51,36 +71,55 @@ const handler = async (req: Request): Promise<Response> => {
     if (!response.ok) {
       const error = await response.text();
       console.error("Mailgun error:", error);
-      throw new Error(`Failed to send email: ${error}`);
+      throw new Error("Failed to send email");
     }
 
     const result = await response.json();
-    console.log("Email sent successfully:", result);
-
     return new Response(
       JSON.stringify({ success: true, message_id: result.id }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-notification-email:", error);
+    const message = error instanceof Error ? error.message : "Failed to send email";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       },
     );
   }
 };
 
-function generateEmailContent(type: string, data: Record<string, any>): { subject: string; html: string } {
+function generateEmailContent(
+  type: string,
+  data: Record<string, unknown>,
+): { subject: string; html: string } {
+  const base = normalizeAppBaseUrl(Deno.env.get("APP_BASE_URL"));
+  const taskUrl = resolveEmailUrl("task_url", base, data);
+  const meetingUrl = resolveEmailUrl("meeting_url", base, data);
+  const dashboardUrl = resolveEmailUrl("dashboard_url", base, data);
+
+  const taskName = escapeHtml(data.task_name);
+  const dueDate = escapeHtml(data.due_date);
+  const description = data.description ? escapeHtml(data.description) : "";
+  const daysOverdue = escapeHtml(data.days_overdue);
+  const meetingTitle = escapeHtml(data.meeting_title);
+  const meetingDate = escapeHtml(data.meeting_date);
+  const meetingTime = escapeHtml(data.meeting_time);
+  const duration = escapeHtml(data.duration_minutes);
+  const meetingType = data.meeting_type ? escapeHtml(data.meeting_type) : "";
+  const participants = data.participants ? escapeHtml(data.participants) : "";
+  const digestDate = escapeHtml(data.date);
+
   switch (type) {
     case "task_due_soon":
       return {
-        subject: `📋 Task Due Soon: ${data.task_name}`,
+        subject: `Task Due Soon: ${String(data.task_name ?? "")}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -91,14 +130,14 @@ function generateEmailContent(type: string, data: Record<string, any>): { subjec
             <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
               <div style="background: linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
                 <img src="${EMAIL_LOGO_URL}" alt="${EMAIL_LOGO_ALT}" style="height: 40px; margin-bottom: 12px;" />
-                <h1 style="margin: 0;">📋 Task Due Soon</h1>
+                <h1 style="margin: 0;">Task Due Soon</h1>
               </div>
               <div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
-                <h2 style="color: #6109A1; margin-top: 0;">${data.task_name}</h2>
-                <p><strong>Due Date:</strong> ${data.due_date}</p>
-                ${data.description ? `<p>${data.description}</p>` : ""}
+                <h2 style="color: #6109A1; margin-top: 0;">${taskName}</h2>
+                <p><strong>Due Date:</strong> ${dueDate}</p>
+                ${description ? `<p>${description}</p>` : ""}
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${data.task_url}" style="display: inline-block; padding: 14px 28px; background: #23C0DD; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">View Task</a>
+                  <a href="${escapeHtml(taskUrl)}" style="display: inline-block; padding: 14px 28px; background: #23C0DD; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">View Task</a>
                 </div>
                 <p style="color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 20px;">
                   This is an automated reminder from Unicorn 2.0. To manage your notification preferences, visit your settings.
@@ -111,7 +150,7 @@ function generateEmailContent(type: string, data: Record<string, any>): { subjec
 
     case "task_overdue":
       return {
-        subject: `⚠️ Overdue Task: ${data.task_name}`,
+        subject: `Overdue Task: ${String(data.task_name ?? "")}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -122,15 +161,15 @@ function generateEmailContent(type: string, data: Record<string, any>): { subjec
             <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
               <div style="background: linear-gradient(135deg, #D51C49 0%, #8B0000 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
                 <img src="${EMAIL_LOGO_URL}" alt="${EMAIL_LOGO_ALT}" style="height: 40px; margin-bottom: 12px;" />
-                <h1 style="margin: 0;">⚠️ Task Overdue</h1>
+                <h1 style="margin: 0;">Task Overdue</h1>
               </div>
               <div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
-                <h2 style="color: #D51C49; margin-top: 0;">${data.task_name}</h2>
-                <p><strong>Was Due:</strong> ${data.due_date}</p>
-                <p><strong>Days Overdue:</strong> ${data.days_overdue}</p>
-                ${data.description ? `<p>${data.description}</p>` : ""}
+                <h2 style="color: #D51C49; margin-top: 0;">${taskName}</h2>
+                <p><strong>Was Due:</strong> ${dueDate}</p>
+                <p><strong>Days Overdue:</strong> ${daysOverdue}</p>
+                ${description ? `<p>${description}</p>` : ""}
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${data.task_url}" style="display: inline-block; padding: 14px 28px; background: #D51C49; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Complete Task</a>
+                  <a href="${escapeHtml(taskUrl)}" style="display: inline-block; padding: 14px 28px; background: #D51C49; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Complete Task</a>
                 </div>
                 <p style="color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 20px;">
                   This is an automated reminder from Unicorn 2.0. To manage your notification preferences, visit your settings.
@@ -142,8 +181,9 @@ function generateEmailContent(type: string, data: Record<string, any>): { subjec
       };
 
     case "meeting_reminder_24h":
+    case "meeting_reminder_10m":
       return {
-        subject: `🔔 Meeting Tomorrow: ${data.meeting_title}`,
+        subject: `Meeting Reminder: ${String(data.meeting_title ?? "")}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -154,16 +194,16 @@ function generateEmailContent(type: string, data: Record<string, any>): { subjec
             <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
               <div style="background: linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
                 <img src="${EMAIL_LOGO_URL}" alt="${EMAIL_LOGO_ALT}" style="height: 40px; margin-bottom: 12px;" />
-                <h1 style="margin: 0;">🔔 Meeting Reminder</h1>
+                <h1 style="margin: 0;">Meeting Reminder</h1>
               </div>
               <div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
-                <h2 style="color: #6109A1; margin-top: 0;">${data.meeting_title}</h2>
-                <p><strong>When:</strong> ${data.meeting_date} at ${data.meeting_time}</p>
-                <p><strong>Duration:</strong> ${data.duration_minutes} minutes</p>
-                ${data.meeting_type ? `<p><strong>Type:</strong> ${data.meeting_type}</p>` : ""}
-                ${data.participants ? `<p><strong>Participants:</strong> ${data.participants}</p>` : ""}
+                <h2 style="color: #6109A1; margin-top: 0;">${meetingTitle}</h2>
+                <p><strong>When:</strong> ${meetingDate} at ${meetingTime}</p>
+                <p><strong>Duration:</strong> ${duration} minutes</p>
+                ${meetingType ? `<p><strong>Type:</strong> ${meetingType}</p>` : ""}
+                ${participants ? `<p><strong>Participants:</strong> ${participants}</p>` : ""}
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${data.meeting_url}" style="display: inline-block; padding: 14px 28px; background: #23C0DD; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">View Meeting Details</a>
+                  <a href="${escapeHtml(meetingUrl)}" style="display: inline-block; padding: 14px 28px; background: #23C0DD; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">View Meeting Details</a>
                 </div>
                 <p style="color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 20px;">
                   This is an automated reminder from Unicorn 2.0. To manage your notification preferences, visit your settings.
@@ -174,9 +214,12 @@ function generateEmailContent(type: string, data: Record<string, any>): { subjec
         `,
       };
 
-    case "daily_digest":
+    case "daily_digest": {
+      const tasksDue = Array.isArray(data.tasks_due) ? data.tasks_due : [];
+      const tasksOverdue = Array.isArray(data.tasks_overdue) ? data.tasks_overdue : [];
+      const meetingsToday = Array.isArray(data.meetings_today) ? data.meetings_today : [];
       return {
-        subject: `📊 Your Daily Summary - ${data.date}`,
+        subject: `Your Daily Summary - ${String(data.date ?? "")}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -187,30 +230,30 @@ function generateEmailContent(type: string, data: Record<string, any>): { subjec
             <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
               <div style="background: linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
                 <img src="${EMAIL_LOGO_URL}" alt="${EMAIL_LOGO_ALT}" style="height: 40px; margin-bottom: 12px;" />
-                <h1 style="margin: 0;">📊 Daily Summary</h1>
-                <p style="margin: 10px 0 0 0;">${data.date}</p>
+                <h1 style="margin: 0;">Daily Summary</h1>
+                <p style="margin: 10px 0 0 0;">${digestDate}</p>
               </div>
               <div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
-                ${data.tasks_due?.length > 0 ? `
+                ${tasksDue.length > 0 ? `
                   <h3 style="color: #6109A1;">Tasks Due Today</h3>
                   <ul>
-                    ${data.tasks_due.map((task: any) => `<li>${task.name}</li>`).join("")}
+                    ${tasksDue.map((task: { name?: unknown }) => `<li>${escapeHtml(task?.name)}</li>`).join("")}
                   </ul>
                 ` : ""}
-                ${data.tasks_overdue?.length > 0 ? `
+                ${tasksOverdue.length > 0 ? `
                   <h3 style="color: #D51C49;">Overdue Tasks</h3>
                   <ul>
-                    ${data.tasks_overdue.map((task: any) => `<li>${task.name} (${task.days_overdue} days overdue)</li>`).join("")}
+                    ${tasksOverdue.map((task: { name?: unknown; days_overdue?: unknown }) => `<li>${escapeHtml(task?.name)} (${escapeHtml(task?.days_overdue)} days overdue)</li>`).join("")}
                   </ul>
                 ` : ""}
-                ${data.meetings_today?.length > 0 ? `
+                ${meetingsToday.length > 0 ? `
                   <h3 style="color: #23C0DD;">Meetings Today</h3>
                   <ul>
-                    ${data.meetings_today.map((meeting: any) => `<li>${meeting.title} at ${meeting.time}</li>`).join("")}
+                    ${meetingsToday.map((meeting: { title?: unknown; time?: unknown }) => `<li>${escapeHtml(meeting?.title)} at ${escapeHtml(meeting?.time)}</li>`).join("")}
                   </ul>
                 ` : ""}
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${data.dashboard_url}" style="display: inline-block; padding: 14px 28px; background: #23C0DD; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">View Dashboard</a>
+                  <a href="${escapeHtml(dashboardUrl)}" style="display: inline-block; padding: 14px 28px; background: #23C0DD; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">View Dashboard</a>
                 </div>
                 <p style="color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 20px;">
                   This is your daily digest from Unicorn 2.0. To manage your notification preferences, visit your settings.
@@ -220,6 +263,7 @@ function generateEmailContent(type: string, data: Record<string, any>): { subjec
           </html>
         `,
       };
+    }
 
     default:
       throw new Error(`Unknown notification type: ${type}`);
