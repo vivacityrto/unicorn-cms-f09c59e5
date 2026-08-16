@@ -72,21 +72,32 @@ serve(async (req: Request): Promise<Response> => {
 
     const userAgent = req.headers.get('user-agent') || 'unknown';
     const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    
-    const { error: updateError } = await supabase
+
+    // Conditional claim — only the first unused, unexpired caller wins.
+    const { data: claimed, error: updateError } = await supabase
       .from('auth_tokens')
       .update({
         used_at: new Date().toISOString(),
         ip_used: clientIp,
         ua_used: userAgent
       })
-      .eq('id', token_id);
+      .eq('id', token_id)
+      .eq('token_hash', tokenHash)
+      .is('used_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .select('id');
 
     if (updateError) {
       console.error('Failed to mark token as used:', updateError);
       return new Response(
         JSON.stringify({ error: 'Failed to mark token as used' }),
         { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!claimed || claimed.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Token already used', code: 'TOKEN_CONSUMED' }),
+        { status: 410, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 

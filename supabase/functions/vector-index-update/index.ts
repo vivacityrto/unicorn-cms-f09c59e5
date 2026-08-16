@@ -9,7 +9,7 @@
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
-import { extractToken, verifyAuth, checkSuperAdmin, checkVivacityTeam } from "../_shared/auth-helpers.ts";
+import { extractToken, verifyAuth } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
@@ -24,6 +24,7 @@ import {
   buildNamespaceKey,
 } from "../_shared/vector-helpers.ts";
 
+
 interface RequestPayload {
   tenant_id: number;
   source_type: string;
@@ -36,32 +37,27 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return jsonError(req, 405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
+    return jsonError(405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
   }
 
   try {
     // Authenticate
     const token = extractToken(req);
     if (!token) {
-      return jsonError(req, 401, "UNAUTHORIZED", "No authorization token provided");
+      return jsonError(401, "UNAUTHORIZED", "No authorization token provided");
     }
 
     const supabase = createServiceClient();
     const { user, profile, error: authError } = await verifyAuth(supabase, token);
     
     if (authError || !user || !profile) {
-      return jsonError(req, 401, "UNAUTHORIZED", authError || "Authentication failed");
+      return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
     }
 
     // Validate Ask Viv access - Vivacity internal only
     const accessCheck = await validateAskVivAccess(supabase, user.id, profile, "vector-index-update");
     if (!accessCheck.allowed) {
-      return askVivAccessDeniedResponse(req, accessCheck.reason);
-    }
-
-    // Only SuperAdmins and Vivacity Team can update indexes
-    if (!checkSuperAdmin(profile) && !checkVivacityTeam(profile)) {
-      return jsonError(req, 403, "FORBIDDEN", "Elevated access required");
+      return askVivAccessDeniedResponse(accessCheck.reason);
     }
 
     // Parse request
@@ -69,13 +65,13 @@ Deno.serve(async (req) => {
     try {
       payload = await req.json();
     } catch {
-      return jsonError(req, 400, "BAD_REQUEST", "Invalid JSON body");
+      return jsonError(400, "BAD_REQUEST", "Invalid JSON body");
     }
 
     const { tenant_id, source_type, record_id } = payload;
     
     if (!tenant_id || !source_type || !record_id) {
-      return jsonError(req, 400, "BAD_REQUEST", "tenant_id, source_type, and record_id are required");
+      return jsonError(400, "BAD_REQUEST", "tenant_id, source_type, and record_id are required");
     }
 
     console.log(`Updating index for ${source_type}:${record_id} in tenant ${tenant_id}`);
@@ -83,7 +79,7 @@ Deno.serve(async (req) => {
     // Get embedding API key
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
-      return jsonError(req, 500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
+      return jsonError(500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
     }
 
     // Fetch the record
@@ -109,7 +105,7 @@ Deno.serve(async (req) => {
         metadata: { reason: "record_not_found" },
       });
 
-      return jsonOk(req, {
+      return jsonOk({
         message: "Record not found, removed existing embeddings",
         removed: count || 0,
       });
@@ -166,14 +162,14 @@ Deno.serve(async (req) => {
       metadata: { chunks_created: chunks.length },
     });
 
-    return jsonOk(req, {
+    return jsonOk({
       message: `Updated index for ${source_type}:${record_id}`,
       chunksIndexed: indexedCount,
     });
 
   } catch (err) {
     console.error("Vector index update error:", err);
-    return jsonError(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
 

@@ -1,7 +1,9 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { checkPermission, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
 const TGA_ENV = Deno.env.get('TGA_ENV') || 'prod';
@@ -1722,13 +1724,11 @@ serve(async (req) => {
       });
     }
 
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('global_role')
-      .eq('user_uuid', user.id)
-      .single();
-
-    const isSuperAdmin = userProfile?.global_role === 'SuperAdmin';
+    const isSuperAdmin = await checkPermission(
+      supabase,
+      user.id,
+      FeatureKeys.adminSystemConfig,
+    );
 
     let requestBody: Record<string, unknown> = {};
     if (req.method === 'POST') {

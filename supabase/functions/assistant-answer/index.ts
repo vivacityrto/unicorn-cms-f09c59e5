@@ -1,9 +1,8 @@
 import { corsHeaders } from "../_shared/cors.ts";
  import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
  import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
- import { VIVACITY_STAFF_ROLES } from "../_shared/auth-helpers.ts";
+ import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 
- 
  // Report types and their required data sources
  const REPORT_TYPES = {
    'client_engagement_overview': {
@@ -76,46 +75,33 @@ import { corsHeaders } from "../_shared/cors.ts";
        );
      }
  
-     const userId = claimsData.claims.sub;
- 
-     // Verify SuperAdmin status
-     const { data: userData, error: userError } = await supabase
-       .from('users')
-       .select('unicorn_role, global_role')
-       .eq('user_uuid', userId)
-       .single();
- 
-     if (userError || !userData) {
+     const userId = claimsData.claims.sub as string;
+     const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+     const caller = await requireCallerByUserId(
+       serviceClient,
+       { id: userId },
+       {
+         featureKey: FeatureKeys.staffAi,
+         headers: corsHeaders(req),
+         forbiddenMessage: 'Ask Viv is restricted to Vivacity Team members.',
+       },
+     );
+     if (!caller.ok) {
+       await serviceClient.from('audit_ask_viv_access_denied').insert({
+         user_id: userId,
+         user_role: 'unknown',
+         endpoint: 'assistant-answer',
+         reason: 'not_vivacity_internal',
+       });
        return new Response(
-         JSON.stringify({ error: 'User not found' }),
+         JSON.stringify({
+           error: 'FORBIDDEN',
+           code: 'ASK_VIV_ACCESS_DENIED',
+           message: 'Ask Viv is restricted to Vivacity Team members.',
+         }),
          { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
        );
      }
- 
-      // Check for Vivacity internal access (canonical role list — keep in sync with
-      // _shared/auth-helpers.ts / src/lib/roles/vivacityRoles.ts, don't hand-roll here)
-      const isVivacityInternal = VIVACITY_STAFF_ROLES.includes(userData.unicorn_role || '')
-        || userData.global_role === 'SuperAdmin';
-      
-      if (!isVivacityInternal) {
-        // Log denied access
-        const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-        await serviceClient.from('audit_ask_viv_access_denied').insert({
-          user_id: userId,
-          user_role: userData.unicorn_role || userData.global_role || 'unknown',
-          endpoint: 'assistant-answer',
-          reason: 'not_vivacity_internal',
-        });
-        
-        return new Response(
-          JSON.stringify({ 
-            error: 'FORBIDDEN',
-            code: 'ASK_VIV_ACCESS_DENIED',
-            message: 'Ask Viv is restricted to Vivacity Team members.' 
-          }),
-          { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
-        );
-      }
  
      // Parse request body
      const body = await req.json();

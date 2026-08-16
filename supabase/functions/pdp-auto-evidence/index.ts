@@ -12,6 +12,7 @@
 
 import { corsHeaders } from "../_shared/cors.ts";
 import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
+import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 import { z } from "npm:zod";
 
 const BodySchema = z.object({
@@ -180,8 +181,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   // ---- Authorisation for direct user calls ----
-  if (mode === "user" && actorUserId !== enrollment.user_id && !callerIsVivacityStaff) {
-    return jsonResponse(req, 403, { error: "forbidden" });
+  // System-mode (trigger / service-role) is unchanged. The enrollment owner
+  // may always write their own evidence. Anyone else must pass
+  // admin.system_config.manage, or the previous Vivacity-staff allow-list.
+  if (mode === "user" && actorUserId && actorUserId !== enrollment.user_id) {
+    const caller = await requireCallerByUserId(
+      service,
+      { id: actorUserId },
+      {
+        featureKey: FeatureKeys.adminSystemConfig,
+        headers: corsHeaders(req),
+        forbiddenMessage: "forbidden",
+        orAllow: async () => callerIsVivacityStaff,
+      },
+    );
+    if (!caller.ok) return caller.response;
   }
 
   // System-mode actor = the learner (mirrors complete_academy_enrollment).

@@ -10,19 +10,18 @@
 //   'unconfigured'  no drive_id / item_id recorded yet
 //   'error'         Graph returned another non-200 status or the call threw
 //
-// Auth:        internal Vivacity staff only (RPC is_vivacity_internal_safe).
+// Auth:        internal Vivacity staff only (requireCaller / staff.sharepoint.use).
 // Concurrency: at most CONCURRENCY Graph calls in flight across the batch.
 // Cap:         at most MAX_TENANTS tenants per request.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { graphGet } from '../_shared/graph-app-client.ts';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 import { corsHeaders } from "../_shared/cors.ts";
-import { parseBearerToken } from '../_shared/requireCaller.ts';
 
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const CONCURRENCY = 8;
@@ -40,13 +39,6 @@ type TenantLiveness = {
   governance: FolderState;
   error: string | null;
 };
-
-function json(req: Request, body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-  });
-}
 
 
 /**
@@ -93,52 +85,39 @@ async function pMapLimit<T, R>(
 }
 
 Deno.serve(async (req: Request) => {
+  const json = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+    });
+
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(req) });
-  if (req.method !== 'POST') return json(req, { error: 'Method not allowed' }, 405);
-
-  const authHeader = req.headers.get('Authorization');
-  if (!parseBearerToken(authHeader)) {
-    return json(req, { error: 'Unauthorized', details: 'Missing bearer token' }, 401);
-
-  }
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   let parsed: z.infer<typeof BodySchema>;
   try {
     const raw = await req.json();
     const result = BodySchema.safeParse(raw);
     if (!result.success) {
-      return json(req, { error: 'Invalid body', details: result.error.flatten() }, 400);
+      return json({ error: 'Invalid body', details: result.error.flatten() }, 400);
     }
     parsed = result.data;
   } catch {
-    return json(req, { error: 'Invalid JSON body' }, 400);
+    return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  // Staff gate — is_vivacity_internal_safe under the caller's JWT.
-  const supabaseAsCaller = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
+  const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const caller = await requireCaller(req, supabaseService, {
+    featureKey: FeatureKeys.staffSharepoint,
+    headers: corsHeaders(req),
+    unauthorizedMessage: 'Unauthorized',
+    forbiddenMessage: 'Forbidden',
   });
-  const { data: userData, error: userErr } = await supabaseAsCaller.auth.getUser();
-  if (userErr || !userData?.user) {
-    return json(req, { error: 'Unauthorized', details: 'Invalid token' }, 401);
-  }
-  const { data: isStaff, error: gateErr } = await supabaseAsCaller.rpc(
-    'is_vivacity_internal_safe',
-    { p_user_id: userData.user.id },
-  );
-  if (gateErr) {
-    return json(req, { error: 'Permission check failed', details: gateErr.message }, 500);
-  }
-  if (!isStaff) {
-    return json(req, { error: 'Forbidden', details: 'Internal staff only' }, 403);
-  }
+  if (!caller.ok) return caller.response;
 
   if (parsed.tenant_ids.length === 0) {
-    return json(req, { results: [] });
+    return json({ results: [] });
   }
-
-  // Service-role read of tenant_sharepoint_settings — small, no side effects.
-  const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const { data: settingsRows, error: sErr } = await supabaseService
     .from('tenant_sharepoint_settings')
     .select(
@@ -147,7 +126,7 @@ Deno.serve(async (req: Request) => {
     .in('tenant_id', parsed.tenant_ids);
 
   if (sErr) {
-    return json(req, { error: 'Failed to read settings', details: sErr.message }, 500);
+    return json({ error: 'Failed to read settings', details: sErr.message }, 500);
   }
 
   type SRow = {
@@ -268,5 +247,5 @@ Deno.serve(async (req: Request) => {
     writeCache().catch(() => {});
   }
 
-  return json(req, { results });
+  return json({ results });
 });

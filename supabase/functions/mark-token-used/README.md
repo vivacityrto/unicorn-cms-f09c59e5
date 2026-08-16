@@ -10,6 +10,9 @@ Unicorn security audit follow-up:
 - Server re-hashes `token` (SHA-256) and requires it to match the row's
   `token_hash` before setting `used_at` — proves possession, not merely
   knowledge of the uuid primary key.
+- Claim is a conditional update (`used_at IS NULL` and `expires_at > now()`)
+  that acts on the returned row. A second caller gets HTTP 410
+  `TOKEN_CONSUMED` instead of a silent success.
 - Note: `auth_tokens.id` is `uuid` / `gen_random_uuid()` (not serial); the
   residual risk is leak-then-invalidate, not brute-force guessing.
 

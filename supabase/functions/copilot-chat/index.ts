@@ -12,7 +12,9 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 const MAX_MESSAGES_PER_SESSION = 20;
 
@@ -55,38 +57,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Auth check
-    const authHeader = req.headers.get("Authorization");
     const sb = createClient(supabaseUrl, serviceKey);
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") || serviceKey);
-
-    let userId: string | null = null;
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user } } = await anonClient.auth.getUser(token);
-      userId = user?.id ?? null;
-    }
-
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Authentication required" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
-    // Verify Vivacity internal
-    const { data: userData } = await sb
-      .from("users")
-      .select("is_vivacity_internal, unicorn_role")
-      .eq("user_uuid", userId)
-      .single();
-
-    if (!userData?.is_vivacity_internal) {
-      return new Response(
-        JSON.stringify({ error: "Copilot is restricted to Vivacity internal team" }),
-        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
+    const caller = await requireCaller(req, sb, {
+      featureKey: FeatureKeys.staffAi,
+      headers: corsHeaders(req),
+      unauthorizedMessage: "Authentication required",
+      forbiddenMessage: "Copilot is restricted to Vivacity internal team",
+    });
+    if (!caller.ok) return caller.response;
+    const userId = caller.user.id;
 
     const body = await req.json();
     const { action } = body;

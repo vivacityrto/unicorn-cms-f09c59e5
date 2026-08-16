@@ -9,7 +9,9 @@
 //   ?dry_run=true   read-only; returns the same plan without any UPDATEs.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -27,7 +29,7 @@ interface SweepDetail {
   message?: string;
 }
 
-function json(req: Request, status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders(req), "Content-Type": "application/json" },
@@ -40,38 +42,25 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ---- Authentication / authorization ----
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.toLowerCase().startsWith("bearer ")
-      ? authHeader.slice(7)
-      : null;
-
-    if (!token) {
-      return json(req, 401, { ok: false, code: "UNAUTHORIZED", detail: "Missing bearer token" });
-    }
-
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data: userResult, error: userErr } = await admin.auth.getUser(token);
-    if (userErr || !userResult?.user) {
-      return json(req, 401, { ok: false, code: "UNAUTHORIZED", detail: userErr?.message ?? "Invalid token" });
-    }
-    const callerId = userResult.user.id;
+    const caller = await requireCaller(req, admin, {
+      featureKey: FeatureKeys.adminSystemConfig,
+      headers: corsHeaders(req),
+      errorStyle: "ok-code",
+      unauthorizedMessage: "Missing bearer token",
+      forbiddenMessage: "Super Admin access required",
+    });
+    if (!caller.ok) return caller.response;
+    const callerId = caller.user.id;
 
-    const { data: callerProfile, error: profileErr } = await admin
+    const { data: callerProfile } = await admin
       .from("users")
-      .select("user_uuid, unicorn_role, email")
+      .select("email")
       .eq("user_uuid", callerId)
       .maybeSingle();
-
-    if (profileErr || !callerProfile) {
-      return json(req, 403, { ok: false, code: "FORBIDDEN", detail: "Caller profile not found" });
-    }
-    if (callerProfile.unicorn_role !== "Super Admin") {
-      return json(req, 403, { ok: false, code: "FORBIDDEN", detail: "Super Admin access required" });
-    }
 
     // ---- Mode ----
     const url = new URL(req.url);
@@ -229,7 +218,7 @@ Deno.serve(async (req) => {
     return json(req, 200, {
       ok: true,
       dry_run: dryRun,
-      ran_by: callerProfile.email,
+      ran_by: callerProfile?.email,
       ran_at: new Date().toISOString(),
       summary,
       details,

@@ -1,5 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 import * as zip from 'https://deno.land/x/zipjs@v2.7.34/index.js';
 import {
   graphGet,
@@ -28,45 +29,26 @@ Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Auth: Vivacity staff only
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('is_vivacity_internal')
-      .eq('user_uuid', user.id)
-      .single();
-
-    if (!profile?.is_vivacity_internal) {
-      return new Response(JSON.stringify({ error: 'Forbidden — Vivacity staff only' }), {
-        status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffSharepoint,
+      headers: corsHeaders(req),
+      unauthorizedMessage: 'Unauthorized',
+      forbiddenMessage: 'Forbidden — Vivacity staff only',
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const body = await req.json();
     const { action } = body as { action: string };
 
     if (action === 'browse') {
-      return await handleBrowse(req, supabase, body);
+      return await handleBrowse(supabase, body);
     } else if (action === 'import') {
-      return await handleImport(req, supabase, body, user.id);
+      return await handleImport(supabase, body, user.id);
     } else if (action === 'publish') {
-      return await handlePublish(req, supabase, body, user.id);
+      return await handlePublish(supabase, body, user.id);
     } else if (action === 'check_drift') {
-      return await handleCheckDrift(req, supabase, body);
+      return await handleCheckDrift(supabase, body);
     } else {
       return new Response(JSON.stringify({ error: `Unknown action: ${action}. Use "browse", "import", "publish" or "check_drift".` }), {
         status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
@@ -85,9 +67,11 @@ Deno.serve(async (req: Request) => {
 /**
  * Import a template file from the Master Documents SharePoint site.
  */
-async function handleImport(req: Request, supabase: ReturnType<typeof createClient>,
+async function handleImport(
+  supabase: ReturnType<typeof createClient>,
   body: Record<string, unknown>,
-  userId: string,): Promise<Response> {
+  userId: string,
+): Promise<Response> {
   const { document_id, source_drive_id, source_item_id, display_version } = body as {
     document_id: number;
     source_drive_id: string;
@@ -456,7 +440,7 @@ async function classifyAndSyncMergeFields(
  * Re-download a version's source file from SharePoint and compare its
  * checksum against what was recorded at import time. Shared by handlePublish
  * (which proceeds if the check can't be completed — a transient Graph API
- * failure shouldn't block publishing) and handleCheckDrift(req, the standalone
+ * failure shouldn't block publishing) and handleCheckDrift (the standalone
  * "Check for Drift" action, which surfaces failures directly since checking
  * is the entire point of that call).
  */
@@ -502,8 +486,10 @@ async function computeDrift(
  * or mutate anything, just reports whether the source file has changed
  * since this version was imported.
  */
-async function handleCheckDrift(req: Request, supabase: ReturnType<typeof createClient>,
-  body: Record<string, unknown>,): Promise<Response> {
+async function handleCheckDrift(
+  supabase: ReturnType<typeof createClient>,
+  body: Record<string, unknown>,
+): Promise<Response> {
   const { version_id } = body as { version_id: string };
 
   if (!version_id) {
@@ -534,9 +520,11 @@ async function handleCheckDrift(req: Request, supabase: ReturnType<typeof create
 /**
  * Publish a draft template version with drift detection.
  */
-async function handlePublish(req: Request, supabase: ReturnType<typeof createClient>,
+async function handlePublish(
+  supabase: ReturnType<typeof createClient>,
   body: Record<string, unknown>,
-  userId: string,): Promise<Response> {
+  userId: string,
+): Promise<Response> {
   const { version_id } = body as { version_id: string };
 
   if (!version_id) {
@@ -661,8 +649,10 @@ async function handlePublish(req: Request, supabase: ReturnType<typeof createCli
  *
  * body.folder_id — driveItem id to list children of (omit for root)
  */
-async function handleBrowse(req: Request, supabase: ReturnType<typeof createClient>,
-  body: Record<string, unknown>,): Promise<Response> {
+async function handleBrowse(
+  supabase: ReturnType<typeof createClient>,
+  body: Record<string, unknown>,
+): Promise<Response> {
   const { folder_id } = body as { folder_id?: string };
 
   // Look up the master documents site

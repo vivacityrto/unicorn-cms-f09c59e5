@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
-function jsonResponse(req: Request, status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json", ...corsHeaders(req) },
@@ -140,7 +140,7 @@ serve(async (req) => {
     }
 
     // 6. Check if invitation was already accepted
-    if (invitation.status === 'accepted' || invitation.accepted_at) {
+    if (invitation.status === 'accepted' || invitation.status === 'successful' || invitation.accepted_at || invitation.used_at) {
       return jsonResponse(req, 400, {
         ok: false,
         code: "INVITE_ALREADY_ACCEPTED",

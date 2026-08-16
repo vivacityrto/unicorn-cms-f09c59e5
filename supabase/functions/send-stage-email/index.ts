@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 interface SendEmailRequest {
   tenant_id: number;
@@ -70,40 +72,20 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Validate auth - must be SuperAdmin
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.adminEmailTemplates,
+      headers: corsHeaders(req),
+      unauthorizedMessage: "Missing authorization header",
+      forbiddenMessage: "Permission denied. SuperAdmin access required.",
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error("Auth error:", authError);
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check if user is SuperAdmin
-    const { data: userData, error: userError } = await supabase
+    const { data: userData } = await supabase
       .from("users")
-      .select("unicorn_role, email, first_name, last_name")
+      .select("email, first_name, last_name")
       .eq("user_uuid", user.id)
       .single();
-
-    if (userError || userData?.unicorn_role !== "Super Admin") {
-      console.error("Permission denied - not SuperAdmin:", userError);
-      return new Response(
-        JSON.stringify({ error: "Permission denied. SuperAdmin access required." }),
-        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
 
     const body: SendEmailRequest = await req.json();
     const { tenant_id, client_id, package_id, stage_id, email_template_id, recipient_type, to_override, dry_run, stage_release_id } = body;
@@ -302,7 +284,7 @@ const handler = async (req: Request): Promise<Response> => {
           recipients.push(mergeData["CSCEmail"]);
         } else {
           // Fallback to current user for internal
-          recipients.push(userData.email);
+          recipients.push(userData?.email || user.email || "");
         }
       }
     }

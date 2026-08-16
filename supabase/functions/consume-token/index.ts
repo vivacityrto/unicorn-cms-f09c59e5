@@ -175,6 +175,14 @@ serve(async (req: Request): Promise<Response> => {
           const isExpired = expiryDate < currentTime;
           console.log(`[consume-token] Token ${i + 1}: expires_at=${expiryDate.toISOString()}, used_at=${t.used_at}, expired=${isExpired}`);
         });
+
+        const alreadyUsed = allTokens.some((t) => t.used_at != null);
+        if (alreadyUsed) {
+          return new Response(
+            JSON.stringify({ error: 'Token already used', code: 'TOKEN_CONSUMED' }),
+            { status: 410, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+          );
+        }
       }
       
       return new Response(

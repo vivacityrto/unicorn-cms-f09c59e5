@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID')!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
@@ -256,42 +258,21 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
-        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffMeetings,
+      headers: corsHeaders(req),
+      unauthorizedMessage: 'Missing authorization',
+      forbiddenMessage: 'Vivacity team only',
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const { meeting_id, minutes_id } = await req.json();
     if (!meeting_id || !minutes_id) {
       return new Response(JSON.stringify({ error: 'meeting_id and minutes_id required' }), {
         status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // Auth
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Verify Vivacity team
-    const { data: userRecord } = await supabaseAdmin
-      .from('users')
-      .select('is_vivacity_internal')
-      .eq('user_uuid', user.id)
-      .single();
-
-    if (!userRecord?.is_vivacity_internal) {
-      return new Response(JSON.stringify({ error: 'Vivacity team only' }), {
-        status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 

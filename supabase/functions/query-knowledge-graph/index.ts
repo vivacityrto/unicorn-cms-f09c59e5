@@ -1,38 +1,25 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req) });
 
   try {
-    const authHeader = req.headers.get("Authorization") ?? "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify caller is vivacity staff
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
-    const { data: { user }, error: authErr } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: userRow } = await supabase
-      .from("users")
-      .select("is_vivacity_internal")
-      .eq("user_uuid", user.id)
-      .single();
-
-    if (!userRow?.is_vivacity_internal) {
-      return new Response(JSON.stringify({ error: "Access denied" }), {
-        status: 403,
-        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffResearch,
+      headers: corsHeaders(req),
+      unauthorizedMessage: "Unauthorized",
+      forbiddenMessage: "Access denied",
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const body = await req.json();
     const { action, filters } = body;

@@ -17,8 +17,8 @@
  * Auth: Vivacity Team only
  */
 import { corsHeaders } from "../_shared/cors.ts";
-import { extractToken, verifyAuth, checkVivacityTeam } from "../_shared/auth-helpers.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -90,29 +90,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const token = extractToken(req);
-    if (!token) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: "No token" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const { user, profile, error: authError } = await verifyAuth(supabase, token);
-    if (authError || !user || !profile) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: authError || "Auth failed" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!checkVivacityTeam(profile)) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Vivacity Team access required" }),
-        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffResearch,
+      headers: corsHeaders(req),
+      errorStyle: "ok-code",
+      unauthorizedMessage: "No token",
+      forbiddenMessage: "Vivacity Team access required",
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const {
       tenant_id,

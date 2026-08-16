@@ -33,13 +33,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { encode as encodeTokens } from 'npm:gpt-tokenizer@^2.5.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { generateEmbeddingsBatch, EMBEDDING_DIMENSIONS as EMBED_DIMS } from '../_shared/openai-embeddings.ts';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 
 const TARGET_TOKENS = 800;
 const OVERLAP_TOKENS = 150;
 const EMBED_BATCH = 100;
 const DEFAULT_LIMIT_PER_SOURCE = 150;
 
-function json(req: Request, body: unknown, status: number) {
+function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
@@ -437,11 +438,10 @@ Deno.serve(async (req) => {
 
   const t0 = Date.now();
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
   if (!OPENAI_API_KEY) {
-    return json(req, { error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
+    return json({ error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
   }
 
   let body: { tenant_id?: number; source?: string; limit_per_source?: number } = {};
@@ -450,34 +450,26 @@ Deno.serve(async (req) => {
       body = await req.json();
     }
   } catch {
-    return json(req, { error: 'Invalid JSON body' }, 400);
+    return json({ error: 'Invalid JSON body' }, 400);
   }
 
   const tenantIdFilter = typeof body.tenant_id === 'number' ? body.tenant_id : null;
+
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
   // Ad-hoc backfill/test calls (tenant_id and/or source set) require a real
   // Super Admin JWT — only the cursor-based steady-state path (empty body) is
   // trusted as a cron-only internal endpoint, matching the existing
   // send-action-item-due-reminders convention.
   if (tenantIdFilter !== null || body.source) {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return json(req, { error: 'Missing authorisation header' }, 401);
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
+    const caller = await requireCaller(req, admin, {
+      featureKey: FeatureKeys.adminVector,
+      headers: corsHeaders(req),
+      unauthorizedMessage: 'Missing authorisation header',
+      forbiddenMessage: 'Super Admin role required for ad-hoc backfill/test calls',
     });
-    const { data: userRes, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userRes?.user) return json(req, { error: 'Not authenticated' }, 401);
-    const { data: callerRow } = await userClient
-      .from('users')
-      .select('unicorn_role')
-      .eq('user_uuid', userRes.user.id)
-      .maybeSingle();
-    if (callerRow?.unicorn_role !== 'Super Admin') {
-      return json(req, { error: 'Super Admin role required for ad-hoc backfill/test calls' }, 403);
-    }
+    if (!caller.ok) return caller.response;
   }
-
-  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
   const limit = typeof body.limit_per_source === 'number' ? body.limit_per_source : DEFAULT_LIMIT_PER_SOURCE;
   const sources = body.source ? SOURCES.filter((s) => s.table === body.source) : SOURCES;
 
@@ -500,7 +492,7 @@ Deno.serve(async (req) => {
     allErrors.push(...r.errors);
   }
 
-  return json(req, 
+  return json(
     {
       ok: allErrors.length === 0,
       mode: tenantIdFilter !== null ? 'ad_hoc_tenant_backfill' : body.source ? 'ad_hoc_source' : 'incremental',

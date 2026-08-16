@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -9,37 +10,19 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader ?? "" } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-    if (claimsErr || !claims?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
-    const userId = claims.claims.sub as string;
-
-    // Verify Vivacity staff
-    const { data: staffCheck } = await supabase.rpc("is_vivacity_staff", { p_user: userId });
-    if (!staffCheck) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffAi,
+      headers: corsHeaders(req),
+      unauthorizedMessage: "Unauthorized",
+      forbiddenMessage: "Forbidden",
+    });
+    if (!caller.ok) return caller.response;
 
     const { tenant_id, question } = await req.json();
     if (!tenant_id || !question) {

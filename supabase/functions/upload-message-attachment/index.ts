@@ -1,5 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -23,7 +25,7 @@ function sanitiseFilename(name: string): string {
   return finalName.length > 150 ? finalName.slice(-150) : finalName;
 }
 
-function json(req: Request, status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders(req), "Content-Type": "application/json" },
@@ -41,21 +43,9 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.toLowerCase().startsWith("bearer ")) {
-    return json(req, 401, { error: "Missing Authorization header" });
-  }
-  const token = authHeader.slice(7).trim();
-
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-
-  const { data: userData, error: authErr } = await admin.auth.getUser(token);
-  if (authErr || !userData?.user) {
-    return json(req, 401, { error: "Invalid auth token" });
-  }
-  const uid = userData.user.id;
 
   let form: FormData;
   try {
@@ -83,32 +73,26 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Authorisation: Vivacity internal staff OR tenant member
-  const { data: staffRow } = await admin
-    .from("users")
-    .select("is_vivacity_internal, archived, disabled")
-    .eq("user_uuid", uid)
-    .maybeSingle();
-
-  const isStaff = !!staffRow
-    && staffRow.is_vivacity_internal === true
-    && staffRow.archived !== true
-    && staffRow.disabled !== true;
-
-  let authorised = isStaff;
-  if (!authorised) {
-    const tenantIdNum = Number(tenant_id);
-    const { data: memberRow } = await admin
-      .from("tenant_users")
-      .select("user_id")
-      .eq("user_id", uid)
-      .eq("tenant_id", Number.isFinite(tenantIdNum) ? tenantIdNum : tenant_id)
-      .maybeSingle();
-    authorised = !!memberRow;
-  }
-  if (!authorised) {
-    return json(req, 403, { error: "Not authorised to upload for this tenant" });
-  }
+  const tenantIdNum = Number(tenant_id);
+  const caller = await requireCaller(req, admin, {
+    featureKey: FeatureKeys.staffDocumentsGenerate,
+    headers: corsHeaders(req),
+    unauthorizedMessage: "Missing Authorization header",
+    forbiddenMessage: "Not authorised to upload for this tenant",
+    orAllow: async ({ userId, admin: svc }) => {
+      if (Number.isFinite(tenantIdNum)) {
+        return allowTenantMember(svc, userId, tenantIdNum);
+      }
+      const { data: memberRow } = await svc
+        .from("tenant_users")
+        .select("user_id")
+        .eq("user_id", userId)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+      return !!memberRow;
+    },
+  });
+  if (!caller.ok) return caller.response;
 
   const safeName = sanitiseFilename(file.name);
   const storage_path = `${tenant_id}/${conversation_id}/${message_id}/${safeName}`;

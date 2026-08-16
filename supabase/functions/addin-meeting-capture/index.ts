@@ -68,7 +68,7 @@ serve(async (req) => {
     const tokenPayload = authResult.payload;
 
     // RBAC: Enforce Vivacity Team role
-    const rbacResult = enforceVivacityTeamRole(tokenPayload);
+    const rbacResult = await enforceVivacityTeamRole(tokenPayload);
     if (!rbacResult.success) {
       await logFailedAction(FUNCTION_NAME, 'meeting_capture', tokenPayload.user_uuid, rbacResult.error!.code, rbacResult.error!.message);
       return errorResponse(req, rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});

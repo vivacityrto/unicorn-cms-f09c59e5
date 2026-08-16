@@ -5,11 +5,9 @@ import {
   verifyAddinToken, 
   createAdminClient 
 } from "../_shared/addin-auth.ts";
+import { checkPermission, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const FUNCTION_NAME = 'addin-diagnostics-usage';
-
-// Only Super Admin can access diagnostics
-const SUPER_ADMIN_ROLES = ['Super Admin', 'SuperAdmin'];
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -34,8 +32,9 @@ serve(async (req) => {
 
     const tokenPayload = authResult.payload!;
 
-    // Enforce SuperAdmin role
-    if (!SUPER_ADMIN_ROLES.includes(tokenPayload.role)) {
+    const admin = createAdminClient();
+    const allowed = await checkPermission(admin, tokenPayload.user_uuid, FeatureKeys.adminSystemConfig);
+    if (!allowed) {
       console.warn(`[${FUNCTION_NAME}] Access denied for role: ${tokenPayload.role}, user: ${tokenPayload.email}`);
       return errorResponse(req, 403, 'FORBIDDEN', 'Access restricted to SuperAdmins only.');
     }

@@ -17,12 +17,13 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { callAnthropicHaiku, extractText } from '../_shared/anthropic-client.ts';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 
 const MIN_TURNS_REQUIRED = 5;
 const MAX_TURNS_SAMPLED = 500;
 const TARGET_FAQ_COUNT = 8;
 
-function json(req: Request, body: unknown, status: number) {
+function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
@@ -54,7 +55,6 @@ Deno.serve(async (req) => {
   }
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
   let body: { force?: boolean } = {};
@@ -63,28 +63,20 @@ Deno.serve(async (req) => {
       body = await req.json();
     }
   } catch {
-    return json(req, { error: 'Invalid JSON body' }, 400);
-  }
-
-  if (body.force) {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return json(req, { error: 'Missing authorisation header' }, 401);
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userRes, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userRes?.user) return json(req, { error: 'Not authenticated' }, 401);
-    const { data: callerRow } = await userClient
-      .from('users')
-      .select('unicorn_role')
-      .eq('user_uuid', userRes.user.id)
-      .maybeSingle();
-    if (callerRow?.unicorn_role !== 'Super Admin') {
-      return json(req, { error: 'Super Admin role required for ad-hoc trigger' }, 403);
-    }
+    return json({ error: 'Invalid JSON body' }, 400);
   }
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+
+  if (body.force) {
+    const caller = await requireCaller(req, admin, {
+      featureKey: FeatureKeys.adminVector,
+      headers: corsHeaders(req),
+      unauthorizedMessage: 'Missing authorisation header',
+      forbiddenMessage: 'Super Admin role required for ad-hoc trigger',
+    });
+    if (!caller.ok) return caller.response;
+  }
 
   const { data: turns, error: turnsErr } = await admin
     .from('ask_viv_turns')
@@ -95,13 +87,13 @@ Deno.serve(async (req) => {
     .limit(MAX_TURNS_SAMPLED);
 
   if (turnsErr) {
-    return json(req, { error: `Failed to load ask_viv_turns: ${turnsErr.message}` }, 500);
+    return json({ error: `Failed to load ask_viv_turns: ${turnsErr.message}` }, 500);
   }
 
   const questions = (turns || []).map((t) => t.content.trim()).filter((c) => c.length > 0);
 
   if (questions.length < MIN_TURNS_REQUIRED) {
-    return json(req, 
+    return json(
       {
         ok: true,
         skipped: true,
@@ -134,11 +126,11 @@ Deno.serve(async (req) => {
     });
     faqs = parseFaqJson(extractText(resp));
   } catch (err) {
-    return json(req, { error: `FAQ clustering failed: ${err instanceof Error ? err.message : String(err)}` }, 500);
+    return json({ error: `FAQ clustering failed: ${err instanceof Error ? err.message : String(err)}` }, 500);
   }
 
   if (faqs.length === 0) {
-    return json(req, { ok: true, skipped: true, reason: 'Haiku returned no usable FAQ clusters' }, 200);
+    return json({ ok: true, skipped: true, reason: 'Haiku returned no usable FAQ clusters' }, 200);
   }
 
   const ranked = faqs
@@ -148,7 +140,7 @@ Deno.serve(async (req) => {
 
   const { error: delErr } = await admin.from('ask_viv_suggested_faqs').delete().gte('rank', 0);
   if (delErr) {
-    return json(req, { error: `Failed to clear old FAQs: ${delErr.message}` }, 500);
+    return json({ error: `Failed to clear old FAQs: ${delErr.message}` }, 500);
   }
 
   const { error: insErr } = await admin.from('ask_viv_suggested_faqs').insert(
@@ -160,8 +152,8 @@ Deno.serve(async (req) => {
     }))
   );
   if (insErr) {
-    return json(req, { error: `Failed to insert new FAQs: ${insErr.message}` }, 500);
+    return json({ error: `Failed to insert new FAQs: ${insErr.message}` }, 500);
   }
 
-  return json(req, { ok: true, questions_sampled: questions.length, faqs_generated: ranked.length }, 200);
+  return json({ ok: true, questions_sampled: questions.length, faqs_generated: ranked.length }, 200);
 });

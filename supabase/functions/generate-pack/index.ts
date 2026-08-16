@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { extractToken, verifyAuth, checkVivacityTeam, checkTenantAccess } from "../_shared/auth-helpers.ts";
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -24,37 +25,16 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // SECURITY: require a valid authenticated session
-    const token = extractToken(req);
-    if (!token) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
 
-    const { user, profile, error: authError } = await verifyAuth(supabase, token);
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
-    // SECURITY: only Vivacity staff or members of the target tenant may create packs
-    const isStaff = checkVivacityTeam(profile);
-    if (!isStaff) {
-      const hasAccess = await checkTenantAccess(supabase, user.id, Number(tenant_id));
-      if (!hasAccess) {
-        return new Response(
-          JSON.stringify({ error: "Forbidden: no access to this tenant" }),
-          { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    const userId: string = user.id;
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffDocumentsGenerate,
+      headers: corsHeaders(req),
+      unauthorizedMessage: "Unauthorized",
+      forbiddenMessage: "Forbidden: no access to this tenant",
+      orAllow: ({ userId, admin }) => allowTenantMember(admin, userId, Number(tenant_id)),
+    });
+    if (!caller.ok) return caller.response;
+    const userId: string = caller.user.id;
     
     // Get document details and their file paths
     const { data: documents, error: docsError } = await supabase

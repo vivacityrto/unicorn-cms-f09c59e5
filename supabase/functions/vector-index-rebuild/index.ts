@@ -9,8 +9,9 @@
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
-import { extractToken, verifyAuth, checkSuperAdmin, UserProfile } from "../_shared/auth-helpers.ts";
+import { extractToken, verifyAuth } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
+import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -24,6 +25,7 @@ import {
   buildNamespaceKey,
   IndexResult,
 } from "../_shared/vector-helpers.ts";
+
 
 const VALID_SOURCE_TYPES = [
   "client_summary",
@@ -44,46 +46,49 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return jsonError(req, 405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
+    return jsonError(405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
   }
 
   try {
     // Authenticate
     const token = extractToken(req);
     if (!token) {
-      return jsonError(req, 401, "UNAUTHORIZED", "No authorization token provided");
+      return jsonError(401, "UNAUTHORIZED", "No authorization token provided");
     }
 
     const supabase = createServiceClient();
     const { user, profile, error: authError } = await verifyAuth(supabase, token);
     
     if (authError || !user || !profile) {
-      return jsonError(req, 401, "UNAUTHORIZED", authError || "Authentication failed");
+      return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
     }
 
     // Validate Ask Viv access - Vivacity internal only
     const accessCheck = await validateAskVivAccess(supabase, user.id, profile, "vector-index-rebuild");
     if (!accessCheck.allowed) {
-      return askVivAccessDeniedResponse(req, accessCheck.reason);
+      return askVivAccessDeniedResponse(accessCheck.reason);
     }
 
-    // Only SuperAdmins can rebuild indexes
-    if (!checkSuperAdmin(profile)) {
-      return jsonError(req, 403, "FORBIDDEN", "Super Admin access required");
-    }
+    const caller = await requireCallerByUserId(supabase, user, {
+      featureKey: FeatureKeys.adminVector,
+      headers: corsHeaders(req),
+      errorStyle: "ok-code",
+      forbiddenMessage: "Super Admin access required",
+    });
+    if (!caller.ok) return caller.response;
 
     // Parse request
     let payload: RequestPayload;
     try {
       payload = await req.json();
     } catch {
-      return jsonError(req, 400, "BAD_REQUEST", "Invalid JSON body");
+      return jsonError(400, "BAD_REQUEST", "Invalid JSON body");
     }
 
     const { tenant_id, source_types } = payload;
     
     if (!tenant_id || typeof tenant_id !== "number") {
-      return jsonError(req, 400, "BAD_REQUEST", "tenant_id is required");
+      return jsonError(400, "BAD_REQUEST", "tenant_id is required");
     }
 
     const typesToIndex = source_types?.filter(t => VALID_SOURCE_TYPES.includes(t)) 
@@ -93,7 +98,7 @@ Deno.serve(async (req) => {
 
     // Embedding key check (OpenAI direct via shared helper)
     if (!Deno.env.get("OPENAI_API_KEY")) {
-      return jsonError(req, 500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
+      return jsonError(500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
     }
 
     const result: IndexResult = {
@@ -144,14 +149,14 @@ Deno.serve(async (req) => {
 
     result.success = result.errors.length === 0;
 
-    return jsonOk(req, {
+    return jsonOk({
       message: `Index rebuild complete for tenant ${tenant_id}`,
       ...result,
     });
 
   } catch (err) {
     console.error("Vector index rebuild error:", err);
-    return jsonError(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
 

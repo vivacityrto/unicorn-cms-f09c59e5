@@ -1,7 +1,9 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 // TGA API configuration
 const TGA_MODE = Deno.env.get('TGA_MODE') || 'REST';
@@ -195,31 +197,9 @@ serve(async (req) => {
   }
 
   try {
-    // Verify authorization
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Verify JWT and get user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('[TGA] Auth error:', authError);
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
 
     const url = new URL(req.url);
     const isProbe = url.searchParams.get('probe') === '1';
@@ -243,31 +223,23 @@ serve(async (req) => {
         });
       }
 
-      // Check user permissions
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('unicorn_role, is_vivacity_internal')
-        .eq('user_uuid', user.id)
-        .single();
-
-      const isVivacityStaff = userProfile?.is_vivacity_internal === true;
-
-      if (!isVivacityStaff) {
-        const { data: membership } = await supabase
-          .from('tenant_members')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('tenant_id', parseInt(tenantId))
-          .eq('status', 'active')
-          .single();
-
-        if (!membership || membership.role !== 'Admin') {
-          return new Response(JSON.stringify({ error: 'Access required: Vivacity staff or Tenant Admin' }), {
-            status: 403,
-            headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-          });
-        }
-      }
+      const caller = await requireCaller(req, supabase, {
+        featureKey: FeatureKeys.staffTga,
+        headers: corsHeaders(req),
+        unauthorizedMessage: 'Missing authorization header',
+        forbiddenMessage: 'Access required: Vivacity staff or Tenant Admin',
+        orAllow: async ({ userId, admin }) => {
+          const { data: membership } = await admin
+            .from('tenant_members')
+            .select('role')
+            .eq('user_id', userId)
+            .eq('tenant_id', parseInt(tenantId))
+            .eq('status', 'active')
+            .single();
+          return !!membership && membership.role === 'Admin';
+        },
+      });
+      if (!caller.ok) return caller.response;
 
       // Perform probe - no DB writes
       console.log(`[TGA] Probe mode for code: ${probeCode}`);
@@ -305,31 +277,25 @@ serve(async (req) => {
         });
       }
 
-      // Check user permissions
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('unicorn_role, is_vivacity_internal')
-        .eq('user_uuid', user.id)
-        .single();
+      const caller = await requireCaller(req, supabase, {
+        featureKey: FeatureKeys.staffTga,
+        headers: corsHeaders(req),
+        unauthorizedMessage: 'Missing authorization header',
+        forbiddenMessage: 'Access required: Vivacity staff or Tenant Admin',
+        orAllow: async ({ userId, admin }) => {
+          const { data: membership } = await admin
+            .from('tenant_members')
+            .select('role')
+            .eq('user_id', userId)
+            .eq('tenant_id', tenant_id)
+            .eq('status', 'active')
+            .single();
+          return !!membership && membership.role === 'Admin';
+        },
+      });
+      if (!caller.ok) return caller.response;
+      const user = caller.user;
 
-      const isVivacityStaff = userProfile?.is_vivacity_internal === true;
-
-      if (!isVivacityStaff) {
-        const { data: membership } = await supabase
-          .from('tenant_members')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('tenant_id', tenant_id)
-          .eq('status', 'active')
-          .single();
-
-        if (!membership || membership.role !== 'Admin') {
-          return new Response(JSON.stringify({ error: 'Access required: Vivacity staff or Tenant Admin' }), {
-            status: 403,
-            headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-          });
-        }
-      }
 
       console.log(`[TGA] Sync mode for ${codes.length} codes, tenant: ${tenant_id}`);
 

@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 // ── Section detection patterns ──────────────────────────────────────
 const SECTION_PATTERNS: Record<string, RegExp[]> = {
@@ -143,46 +145,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify caller
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
-
-    // Check role is SuperAdmin (Vivacity team)
-    const { data: userData } = await supabase
-      .from("users")
-      .select("role")
-      .eq("user_uuid", user.id)
-      .single();
-
-    if (!userData || userData.role !== "SuperAdmin") {
-      return new Response(JSON.stringify({ error: "Forbidden: Vivacity Team only" }), {
-        status: 403,
-        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.adminSystemConfig,
+      headers: corsHeaders(req),
+      unauthorizedMessage: "Unauthorized",
+      forbiddenMessage: "Forbidden: Vivacity Team only",
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const { meeting_id, pasted_text } = await req.json();
     if (!meeting_id || !pasted_text || typeof pasted_text !== "string") {

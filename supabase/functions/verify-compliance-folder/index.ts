@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
-import { corsHeadersFor, parseBearerToken } from '../_shared/requireCaller.ts';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   ensureFolder,
   graphGet,
@@ -11,7 +12,6 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req: Request) => {
-  const corsHeaders = corsHeadersFor(req);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders(req) });
   }
@@ -19,32 +19,14 @@ Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Auth: Vivacity staff only
-    const authHeader = req.headers.get('Authorization');
-    const token = parseBearerToken(authHeader);
-    if (!token) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('is_vivacity_internal')
-      .eq('user_uuid', user.id)
-      .single();
-
-    if (!profile?.is_vivacity_internal) {
-      return new Response(JSON.stringify({ error: 'Forbidden — Vivacity staff only' }), {
-        status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffSharepoint,
+      headers: corsHeaders(req),
+      unauthorizedMessage: 'Unauthorized',
+      forbiddenMessage: 'Forbidden — Vivacity staff only',
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const body = await req.json();
     const { tenant_id, create_category_subfolders } = body as {

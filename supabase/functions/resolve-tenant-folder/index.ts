@@ -1,5 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 import {
   getAppToken,
   graphGet,
@@ -27,36 +28,14 @@ Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Auth: Vivacity staff only
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('is_vivacity_internal')
-      .eq('user_uuid', user.id)
-      .single();
-
-    if (!profile?.is_vivacity_internal) {
-      return new Response(JSON.stringify({ error: 'Forbidden — Vivacity staff only' }), {
-        status: 403,
-        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffSharepoint,
+      headers: corsHeaders(req),
+      unauthorizedMessage: 'Unauthorized',
+      forbiddenMessage: 'Forbidden — Vivacity staff only',
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     const body = await req.json();
     const { tenant_id, action, folder_item_id, site_purpose } = body as {

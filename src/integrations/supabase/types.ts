@@ -58349,6 +58349,7 @@ export type Database = {
           token_hash: string | null
           unicorn_role: string
           updated_at: string | null
+          used_at: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -58376,6 +58377,7 @@ export type Database = {
           token_hash?: string | null
           unicorn_role: string
           updated_at?: string | null
+          used_at?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -58403,6 +58405,7 @@ export type Database = {
           token_hash?: string | null
           unicorn_role?: string
           updated_at?: string | null
+          used_at?: string | null
         }
         Relationships: [
           {
@@ -71695,9 +71698,7 @@ export type Database = {
       is_qc_signed: { Args: { _qc_id: string }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_stage_in_active_use: { Args: { p_stage_id: number }; Returns: boolean }
-      is_super_admin:
-        | { Args: never; Returns: boolean }
-        | { Args: { p_user_id: string }; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       is_super_admin_admin: { Args: never; Returns: boolean }
       is_super_admin_by_role: { Args: never; Returns: boolean }
       is_super_admin_member: { Args: never; Returns: boolean }

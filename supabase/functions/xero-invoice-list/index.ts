@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
 
 const XERO_CLIENT_ID = (Deno.env.get("XERO_CLIENT_ID") ?? "").trim();
 const XERO_CLIENT_SECRET = (Deno.env.get("XERO_CLIENT_SECRET") ?? "").trim();
@@ -75,23 +77,13 @@ Deno.serve(async (req) => {
     // confirmed to have every money field stripped (see redactInvoice),
     // leaving no more sensitive than the paid/unpaid pill everyone can
     // already see.
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return json(req, 401, { error: "Missing bearer token" });
-    }
-    const token = authHeader.replace(/^Bearer\s+/i, "");
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) {
-      return json(req, 401, { error: "Invalid or expired token" });
-    }
-    const { data: callerProfile } = await supabaseAdmin
-      .from("users")
-      .select("is_vivacity_internal")
-      .eq("user_uuid", user.id)
-      .maybeSingle();
-    if (!callerProfile?.is_vivacity_internal) {
-      return json(req, 403, { error: "Vivacity staff only" });
-    }
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffXeroView,
+      headers: corsHeaders(req),
+      unauthorizedMessage: "Missing bearer token",
+      forbiddenMessage: "Vivacity staff only",
+    });
+    if (!caller.ok) return caller.response;
 
     const body = await req.json().catch(() => ({}));
     const tenantId = body.tenant_id as number | undefined;
