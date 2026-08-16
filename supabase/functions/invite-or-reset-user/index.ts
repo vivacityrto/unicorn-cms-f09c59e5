@@ -12,6 +12,7 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.53.0";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -89,7 +90,6 @@ serve(async (req) => {
 
     const body: Payload = await req.json();
     const email = body?.email?.trim().toLowerCase();
-    const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
     const redirectTo = `${APP_BASE_URL}/reset-password`;
 
     if (!email) {
@@ -112,7 +112,7 @@ serve(async (req) => {
 
     // Try inviting the user first
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo,
+      redirectTo, // pinned to APP_BASE_URL /reset-password
     });
 
     if (inviteError) {

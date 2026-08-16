@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run lint:email-redirects && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "lint:email-redirects": "bash scripts/check-email-redirect-urls.sh",
     "preview": "vite preview"
   },
   "dependencies": {
