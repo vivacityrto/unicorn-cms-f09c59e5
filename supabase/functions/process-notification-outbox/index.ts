@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { appUrl } from "../_shared/app-base-url.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -82,10 +83,12 @@ function formatTeamsMessage(notification: NotificationOutbox): Record<string, un
     });
   }
 
-  // Build deep link URL
-  const baseUrl = payload.base_url || 'https://unicorn-cms.lovable.app';
-  const deepLink = payload.deep_link || `/${notification.record_type}/${notification.record_id}`;
-  const fullUrl = `${baseUrl}${deepLink}`;
+  // Deep link is always built from APP_BASE_URL — never from payload.base_url
+  // (callers used to send window.location.origin, which leaked preview domains).
+  const deepLink = typeof payload.deep_link === "string" && payload.deep_link
+    ? payload.deep_link
+    : `/${notification.record_type}/${notification.record_id}`;
+  const fullUrl = appUrl(deepLink);
 
   // Teams Adaptive Card format
   return {
