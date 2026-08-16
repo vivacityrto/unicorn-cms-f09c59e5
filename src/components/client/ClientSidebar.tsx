@@ -23,6 +23,7 @@ import {
   LifeBuoy,
   ScrollText,
   Award,
+  Globe,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +55,7 @@ const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
+  { icon: Globe, label: "Regulatory Updates", path: "/client/regulatory-updates" },
   { icon: LifeBuoy, label: "Support Tickets", path: "/client/support-tickets" },
   { icon: Users, label: "Users", path: "/client/users", adminOnly: true },
   { icon: GraduationCap, label: "Staff PDPs", path: "/client/staff-pdps", adminOnly: true },
