@@ -4,6 +4,7 @@ import { buildScopeString, type SurfaceFlags } from "../_shared/microsoft-scopes
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 import { oauthStateExpiresAt, resolveRedirectUri } from "../_shared/oauth-redirects.ts";
 import { consumeOAuthState } from "../_shared/oauth-states.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -87,6 +88,36 @@ serve(async (req) => {
         redirectUri,
         scopeString
       });
+
+      if (!redirectUri) {
+        return new Response(
+          JSON.stringify({ error: 'redirect_uri is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (tenantId != null) {
+        const tenantIdNum = Number(tenantId);
+        if (!Number.isFinite(tenantIdNum)) {
+          return new Response(
+            JSON.stringify({ error: 'tenant_id must be a number' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        const tenantAccess = await hasTenantAccessSafe(supabaseAdmin, user.id, tenantIdNum);
+        if (tenantAccess.lookupFailed) {
+          return new Response(
+            JSON.stringify({ error: 'Failed to verify tenant access' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        if (!tenantAccess.allowed) {
+          return new Response(
+            JSON.stringify({ error: 'Forbidden: no access to this tenant' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
 
       // Generate and store state for CSRF protection. user_id comes from the
       // verified JWT only — never from the request body.

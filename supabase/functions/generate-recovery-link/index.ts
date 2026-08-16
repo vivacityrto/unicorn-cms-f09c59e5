@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -112,8 +113,6 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au";
-
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: targetUser.email,
@@ -130,9 +129,9 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const actionLink = linkData.properties?.action_link;
+    const actionLink = linkData.properties?.action_link; // token only; redirectTo was APP_BASE_URL
     if (!actionLink) {
-      console.error("No action_link in response");
+      console.error("No action_link in response"); // token only; redirectTo was APP_BASE_URL
       return new Response(
         JSON.stringify({ ok: false, code: "NO_ACTION_LINK" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -156,7 +155,7 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({
         ok: true,
-        action_link: actionLink,
+        action_link: actionLink, // GoTrue link; redirectTo pinned to APP_BASE_URL
         email: targetUser.email,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
