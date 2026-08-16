@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -141,9 +142,6 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get the app base URL for redirect
-    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au";
-
     // Generate password reset link using Supabase Admin API
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
@@ -161,9 +159,9 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const resetLink = linkData.properties?.action_link;
+    const resetLink = linkData.properties?.action_link; // token only; URL rebuilt from APP_BASE_URL
     if (!resetLink) {
-      console.error("No action_link in response");
+      console.error("No action_link in response"); // token only; URL rebuilt from APP_BASE_URL
       return new Response(
         JSON.stringify({ ok: false, code: "NO_ACTION_LINK" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -174,7 +172,7 @@ serve(async (req: Request): Promise<Response> => {
     const actionUrl = new URL(resetLink);
     const rawToken = actionUrl.searchParams.get('token');
     if (!rawToken) {
-      console.error("Could not extract token from action_link");
+      console.error("Could not extract token from action_link"); // token only; URL rebuilt from APP_BASE_URL
       return new Response(
         JSON.stringify({ ok: false, code: "TOKEN_EXTRACT_FAILED" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

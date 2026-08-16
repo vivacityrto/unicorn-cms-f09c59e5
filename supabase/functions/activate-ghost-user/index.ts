@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 interface Body {
   user_uuid: string;
@@ -63,6 +64,14 @@ serve(async (req) => {
     }
     if (!body?.user_uuid || !UUID_RE.test(body.user_uuid) || typeof body.tenant_id !== "number") {
       return json(400, { ok: false, code: "INVALID_PAYLOAD", detail: "user_uuid (uuid) and tenant_id (number) required" });
+    }
+
+    const tenantAccess = await hasTenantAccessSafe(admin, caller.id, body.tenant_id);
+    if (tenantAccess.lookupFailed) {
+      return json(500, { ok: false, code: "TENANT_ACCESS_CHECK_FAILED", detail: "Failed to verify tenant access" });
+    }
+    if (!tenantAccess.allowed) {
+      return json(403, { ok: false, code: "FORBIDDEN", detail: "You do not have access to this tenant" });
     }
 
     // 4. Lookup ghost in public.users
@@ -187,6 +196,7 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'tenant_id,user_id' });
 
+    // Allowlisted write: server-computed role/type only. Never spread request body.
     await admin.from('users').update({
       unicorn_role: uRole,
       user_type: uType,

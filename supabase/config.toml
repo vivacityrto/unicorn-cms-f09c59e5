@@ -55,6 +55,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.xero-invoice-sync-all]
+# Cron-only. Auth is x-cron-invoke-secret (CRON_INVOKE_SECRET), not gateway JWT.
 verify_jwt = false
 
 [functions.xero-invoice-list]
@@ -67,6 +68,14 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.sync-outlook-calendar]
+verify_jwt = false
+
+[functions.sync-outlook-calendar-cron]
+# Cron-only. Auth is x-cron-invoke-secret (CRON_INVOKE_SECRET), not gateway JWT.
+verify_jwt = false
+
+[functions.reconcile-invite-delivery-status]
+# Cron-only. Auth is x-cron-invoke-secret (CRON_INVOKE_SECRET), not gateway JWT.
 verify_jwt = false
 
 [functions.outlook-time-draft-worker]
@@ -117,6 +126,20 @@ verify_jwt = false
 
 [functions.process-notification-outbox]
 verify_jwt = false
+
+# Vendored from production 2026-08-15. Cron/worker; JWT disabled to match live.
+[functions.process-notification-queue]
+verify_jwt = false
+
+[functions.send-notification-email]
+verify_jwt = false
+
+[functions.send-automated-email]
+verify_jwt = false
+
+# Historical / still-hosted orphan. Template renderer; verify_jwt matches production.
+[functions.send-enhanced-email]
+verify_jwt = true
 
 [functions.send-action-item-due-reminders]
 verify_jwt = false
@@ -315,6 +338,10 @@ verify_jwt = false
 [functions.deliver-governance-document]
 verify_jwt = false
 
+[functions.bulk-generate-documents-worker]
+# Caller JWT is verified in-function via auth.getUser / getClaims.
+verify_jwt = false
+
 [functions.send-email-graph]
 verify_jwt = false
 
@@ -376,6 +403,16 @@ verify_jwt = false
 # Auth handled in-function; gateway verify_jwt alone accepts the public anon key.
 [functions.send-magic-link]
 verify_jwt = false
+
+# Template dispatcher. mergeVars cannot override appBaseUrl / action_link /
+# redirect_to — those are pinned to APP_BASE_URL after stripping caller keys.
+[functions.mailgun-send]
+verify_jwt = true
+
+# Auth-hook + admin Mailgun sender. action_link / redirect_to / redirectTo
+# are never taken from the request body; verify links use APP_BASE_URL + token.
+[functions.send-email]
+verify_jwt = true
 
 # Retired orphaned admin password-reset sender (410 stub). verify_jwt false matches
 # project convention; neutralization is in-function (same as auth-send-magic-link / C1).
