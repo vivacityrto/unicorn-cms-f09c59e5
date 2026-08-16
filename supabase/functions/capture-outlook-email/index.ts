@@ -347,15 +347,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check for duplicate
-    const { data: existingEmail } = await supabase
+    // Duplicate / relink check via service role so a soft-unlinked row
+    // (hidden from ANON SELECT by unlinked_at IS NULL) is still visible.
+    const { data: existingEmail } = await serviceClient
       .from("email_messages")
-      .select("id")
+      .select("id, unlinked_at")
       .eq("user_uuid", userId)
       .eq("external_message_id", message_id)
-      .single();
+      .maybeSingle();
 
-    if (existingEmail) {
+    if (existingEmail && !existingEmail.unlinked_at) {
       return new Response(
         JSON.stringify({ error: "Email already linked", email_id: existingEmail.id }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -382,28 +383,41 @@ Deno.serve(async (req) => {
       console.warn("AI summary error (non-critical):", aiErr);
     }
 
-    // Insert email record
-    const { data: emailRecord, error: insertError } = await supabase
-      .from("email_messages")
-      .insert({
-        user_uuid: userId,
-        tenant_id: tenantIdNum,
-        provider: "microsoft",
-        external_message_id: message_id,
-        subject: emailData.subject,
-        sender_email: emailData.from?.emailAddress?.address,
-        sender_name: emailData.from?.emailAddress?.name,
-        received_at: emailData.receivedDateTime,
-        has_attachments: emailData.hasAttachments || false,
-        body_preview: previewText.substring(0, 900) || null,
-        body_html: emailData?.body?.content ?? null,
-        ai_summary: aiSummary,
-        client_id: client_id ? parseInt(client_id) : null,
-        package_id: package_id ? parseInt(package_id) : null,
-        task_id: task_id || null,
-      })
-      .select()
-      .single();
+    const emailFields = {
+      user_uuid: userId,
+      tenant_id: tenantIdNum,
+      provider: "microsoft",
+      external_message_id: message_id,
+      subject: emailData.subject,
+      sender_email: emailData.from?.emailAddress?.address,
+      sender_name: emailData.from?.emailAddress?.name,
+      received_at: emailData.receivedDateTime,
+      has_attachments: emailData.hasAttachments || false,
+      body_preview: previewText.substring(0, 900) || null,
+      body_html: emailData?.body?.content ?? null,
+      ai_summary: aiSummary,
+      client_id: client_id ? parseInt(client_id) : null,
+      package_id: package_id ? parseInt(package_id) : null,
+      task_id: task_id || null,
+      unlinked_at: null,
+      unlinked_by: null,
+      linked_at: new Date().toISOString(),
+    };
+
+    // Relink a soft-unlinked row (unique on user_uuid, external_message_id)
+    // rather than inserting a second copy.
+    const { data: emailRecord, error: insertError } = existingEmail
+      ? await serviceClient
+          .from("email_messages")
+          .update(emailFields)
+          .eq("id", existingEmail.id)
+          .select()
+          .single()
+      : await supabase
+          .from("email_messages")
+          .insert(emailFields)
+          .select()
+          .single();
 
     if (insertError) {
       console.error("Insert error:", insertError);
@@ -413,10 +427,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("Email record created:", emailRecord.id);
+    console.log(
+      existingEmail ? "Email record relinked:" : "Email record created:",
+      emailRecord.id,
+    );
 
-    // Handle attachments if present
-    if (emailData.hasAttachments) {
+    // Handle attachments if present (skip on relink — files and rows were kept)
+    if (emailData.hasAttachments && !existingEmail) {
       console.log("Fetching attachments...");
       const attachmentsResponse = await fetch(
         `https://graph.microsoft.com/v1.0/me/messages/${message_id}/attachments`,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,49 +20,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Require a valid Supabase JWT and confirm the caller is authorised
-    const authHeader = req.headers.get('Authorization') ?? '';
-    const token = authHeader.replace('Bearer ', '');
-    if (!token) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    const anonClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-    const { data: authData, error: authErr } = await anonClient.auth.getUser(token);
-    const callerId = authData?.user?.id;
-    if (authErr || !callerId) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Only Vivacity staff, or a caller that belongs to the target tenant, may dispatch
-    const { data: callerRow } = await supabaseClient
-      .from('users')
-      .select('is_vivacity_internal, superadmin_level')
-      .eq('user_uuid', callerId)
-      .maybeSingle();
-    const isStaff = !!callerRow?.is_vivacity_internal || !!callerRow?.superadmin_level;
-    if (!isStaff) {
-      const { data: membership } = await supabaseClient
-        .from('tenant_users')
-        .select('user_id')
-        .eq('user_id', callerId)
-        .eq('tenant_id', tenant_id)
-        .maybeSingle();
-      if (!membership) {
-        return new Response(
-          JSON.stringify({ error: 'Forbidden' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
+    const caller = await requireCaller(req, supabaseClient, {
+      featureKey: FeatureKeys.staffInternal,
+      headers: corsHeaders,
+      unauthorizedMessage: 'Unauthorized',
+      forbiddenMessage: 'Forbidden',
+      orAllow: ({ userId, admin }) => allowTenantMember(admin, userId, tenant_id),
+    });
+    if (!caller.ok) return caller.response;
 
     // Get user preferences
     const { data: prefs } = await supabaseClient

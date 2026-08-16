@@ -3,8 +3,7 @@
 In-function authorization for edge functions. Gateway `verify_jwt` is **not**
 authorization — the public anon key is a valid JWT and satisfies it.
 
-C1 API (PR #295). Returns `{ userId }` on success, or a `Response` to return
-immediately.
+Two call shapes (PR #295 convenience form + PR #304 options form):
 
 ```ts
 import {
@@ -13,14 +12,21 @@ import {
   requireSuperAdmin,
   requireInternalEmailSecret,
   requireSharedSecret,
+  FeatureKeys,
 } from "../_shared/requireCaller.ts";
 
 const corsHeaders = corsHeadersFor(req);
 if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-// Staff feature
+// Convenience form (builds the service-role client internally)
 const caller = await requireCaller(req, "admin.team_users.manage", "full");
 if (caller instanceof Response) return caller;
+
+// Options form (orAllow, custom messages, injected admin client)
+const staff = await requireCaller(req, admin, {
+  featureKey: FeatureKeys.staffEmailSend,
+});
+if (!staff.ok) return staff.response;
 
 // Super Admin only
 const adminCaller = await requireSuperAdmin(req);

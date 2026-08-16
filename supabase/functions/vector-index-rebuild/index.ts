@@ -9,8 +9,9 @@
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
-import { extractToken, verifyAuth, checkSuperAdmin, UserProfile } from "../_shared/auth-helpers.ts";
+import { extractToken, verifyAuth } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
+import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
 import {
@@ -75,10 +76,13 @@ Deno.serve(async (req) => {
       return askVivAccessDeniedResponse(accessCheck.reason);
     }
 
-    // Only SuperAdmins can rebuild indexes
-    if (!checkSuperAdmin(profile)) {
-      return jsonError(403, "FORBIDDEN", "Super Admin access required");
-    }
+    const caller = await requireCallerByUserId(supabase, user, {
+      featureKey: FeatureKeys.adminVector,
+      headers: corsHeaders,
+      errorStyle: "ok-code",
+      forbiddenMessage: "Super Admin access required",
+    });
+    if (!caller.ok) return caller.response;
 
     // Parse request
     let payload: RequestPayload;

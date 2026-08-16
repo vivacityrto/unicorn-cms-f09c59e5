@@ -1,5 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { requireCaller, FeatureKeys, allowTenantMember } from '../_shared/requireCaller.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
@@ -123,19 +124,6 @@ Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing authorization header');
-    }
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (userError || !user) {
-      throw new Error('Unauthorized');
-    }
-
     const body: ExcelGenerateRequest = await req.json();
     const { document_id, tenant_id, client_legacy_id, stage_id, package_id, mode = 'single' } = body;
 
@@ -179,31 +167,17 @@ Deno.serve(async (req: Request) => {
 
     console.log('Generate Excel request:', { document_id, tenant_id, stage_id, package_id, mode });
 
-    // SECURITY: Verify user has access to the target tenant
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('unicorn_role')
-      .eq('user_uuid', user.id)
-      .single();
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.adminSystemConfig,
+      headers: corsHeaders,
+      unauthorizedMessage: 'Missing authorization header',
+      forbiddenMessage: 'Access denied: You do not have permission to generate documents for this tenant',
+      orAllow: ({ userId, admin }) => allowTenantMember(admin, userId, tenant_id),
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
-    const isSuperAdmin = userProfile?.unicorn_role === 'Super Admin';
-    
-    if (!isSuperAdmin) {
-      // Check if user is a member of this tenant
-      const { data: tenantMember, error: memberError } = await supabase
-        .from('tenant_users')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('tenant_id', tenant_id)
-        .maybeSingle();
-
-      if (memberError || !tenantMember) {
-        console.error('Access denied: User not authorized for tenant', tenant_id);
-        throw new Error('Access denied: You do not have permission to generate documents for this tenant');
-      }
-    }
-
-    console.log('Authorization verified for user:', user.id, 'isSuperAdmin:', isSuperAdmin);
+    console.log('Authorization verified for user:', user.id);
 
     // 1. Fetch the source document
     const { data: document, error: docError } = await supabase

@@ -11,6 +11,7 @@
  */
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -23,25 +24,26 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Auth check for manual triggers
+    // Auth check for manual triggers. Cron / service-role / invalid JWT
+    // falls through with actorUserId unset — only a resolved user JWT is gated.
     const authHeader = req.headers.get("Authorization");
     let actorUserId: string | null = null;
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.replace("Bearer ", "");
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
       if (!authError && user) {
-        actorUserId = user.id;
-        const { data: profile } = await supabase
-          .from("users")
-          .select("unicorn_role")
-          .eq("user_uuid", user.id)
-          .single();
-        if (!profile || profile.unicorn_role !== "Super Admin") {
-          return new Response(
-            JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Super Admin access required" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+        const caller = await requireCallerByUserId(
+          supabase,
+          { id: user.id, email: user.email },
+          {
+            featureKey: FeatureKeys.adminSystemConfig,
+            headers: corsHeaders,
+            errorStyle: "ok-code",
+            forbiddenMessage: "Super Admin access required",
+          },
+        );
+        if (!caller.ok) return caller.response;
+        actorUserId = caller.user.id;
       }
     }
 

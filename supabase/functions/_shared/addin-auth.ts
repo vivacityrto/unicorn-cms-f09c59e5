@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jwtVerify } from "https://deno.land/x/jose@v5.2.2/index.ts";
+import { checkPermission, FeatureKeys } from "./requireCaller.ts";
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -89,10 +90,13 @@ export function isVivacityTeamRole(role: string): boolean {
 }
 
 /**
- * Enforce that user must be Vivacity Team member
+ * Enforce that the add-in caller has staff.addin.use (SA / Team Leader /
+ * Team Member — same allowed-set as the previous JWT role allowlist).
  */
-export function enforceVivacityTeamRole(tokenPayload: AddinTokenPayload): RBACResult {
-  if (!isVivacityTeamRole(tokenPayload.role)) {
+export async function enforceVivacityTeamRole(tokenPayload: AddinTokenPayload): Promise<RBACResult> {
+  const admin = createAdminClient();
+  const allowed = await checkPermission(admin, tokenPayload.user_uuid, FeatureKeys.staffAddin);
+  if (!allowed) {
     console.warn(`[RBAC] Access denied for role: ${tokenPayload.role}, user: ${tokenPayload.email}`);
     return {
       success: false,

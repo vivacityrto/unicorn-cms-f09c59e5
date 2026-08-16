@@ -10,12 +10,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeadersFor, INTERNAL_EMAIL_EXTRA_HEADERS, requireInternalEmailSecret } from "../_shared/requireCaller.ts";
+import { EMAIL_LOGO_ALT, EMAIL_LOGO_URL } from "../_shared/app-base-url.ts";
 import { escapeHtml } from "../_shared/escape-html.ts";
 import { envFromAddress } from "../_shared/email-merge.ts";
 import { normalizeAppBaseUrl, resolveEmailUrl, validatedId } from "../_shared/email-urls.ts";
-
-const EMAIL_LOGO_URL = "https://unicorncms.lovable.app/assets/brand/unicorn-cms-email-logo.png";
-const EMAIL_LOGO_ALT = "Unicorn CMS";
 const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
 const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN") || "mg.unicorn-cms.au";
 const MAILGUN_REGION = Deno.env.get("MAILGUN_REGION") || "EU";
