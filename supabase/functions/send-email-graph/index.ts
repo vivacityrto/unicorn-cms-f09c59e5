@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -89,29 +90,10 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Auth
-    const callerToken = req.headers
-      .get("Authorization")
-      ?.replace(/^Bearer\s+/i, "");
-    if (!callerToken) return jsonResponse(401, { error: "Missing Authorization" });
-
-    const {
-      data: { user },
-      error: authErr,
-    } = await supabaseAdmin.auth.getUser(callerToken);
-    if (authErr || !user) return jsonResponse(401, { error: "Unauthorized" });
-
-    const { data: profile } = await supabaseAdmin
-      .from("users")
-      .select(
-        "unicorn_role, email, first_name, last_name, global_role, job_title"
-      )
-      .eq("user_uuid", user.id)
-      .single();
-
-    if (!profile) return jsonResponse(403, { error: "Profile not found" });
-
-    // Parse body
+    // Parse body first — tenant_id feeds the staff-OR-member gate, matching
+    // send-composed-email. Previously this function only required a valid
+    // JWT (no role / tenant check); aligning the two senders is the
+    // intended tightening on the email surface.
     const body = await req.json();
     const {
       tenant_id,
@@ -131,6 +113,26 @@ serve(async (req) => {
         error: "to, subject, and body_html are required",
       });
     }
+
+    const caller = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffEmailSend,
+      headers: corsHeaders,
+      unauthorizedMessage: "Missing Authorization",
+      forbiddenMessage: "Access denied: not a member of this tenant",
+      orAllow: async ({ userId, admin }) =>
+        typeof tenant_id === "number" &&
+        (await allowTenantMember(admin, userId, tenant_id)),
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
+
+    const { data: profile } = await supabaseAdmin
+      .from("users")
+      .select("email, first_name, last_name, job_title, unicorn_role")
+      .eq("user_uuid", user.id)
+      .single();
+
+    if (!profile) return jsonResponse(403, { error: "Profile not found" });
 
     // Fetch Microsoft OAuth token
     const { data: tokenData, error: tokenError } = await supabaseAdmin

@@ -17,6 +17,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { callAnthropicHaiku, extractText } from '../_shared/anthropic-client.ts';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 
 const MIN_TURNS_REQUIRED = 5;
 const MAX_TURNS_SAMPLED = 500;
@@ -54,7 +55,6 @@ Deno.serve(async (req) => {
   }
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
   let body: { force?: boolean } = {};
@@ -66,25 +66,17 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  if (body.force) {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userRes, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userRes?.user) return json({ error: 'Not authenticated' }, 401);
-    const { data: callerRow } = await userClient
-      .from('users')
-      .select('unicorn_role')
-      .eq('user_uuid', userRes.user.id)
-      .maybeSingle();
-    if (callerRow?.unicorn_role !== 'Super Admin') {
-      return json({ error: 'Super Admin role required for ad-hoc trigger' }, 403);
-    }
-  }
-
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+
+  if (body.force) {
+    const caller = await requireCaller(req, admin, {
+      featureKey: FeatureKeys.adminVector,
+      headers: corsHeaders,
+      unauthorizedMessage: 'Missing authorisation header',
+      forbiddenMessage: 'Super Admin role required for ad-hoc trigger',
+    });
+    if (!caller.ok) return caller.response;
+  }
 
   const { data: turns, error: turnsErr } = await admin
     .from('ask_viv_turns')

@@ -24,6 +24,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { extractText, getDocumentProxy } from 'npm:unpdf@^0.12.0';
 import { encode as encodeTokens } from 'npm:gpt-tokenizer@^2.5.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 import {
   generateEmbedding,
   generateEmbeddingsBatch,
@@ -291,11 +292,7 @@ Deno.serve(async (req) => {
 
   const t0 = Date.now();
 
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
-
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
@@ -303,28 +300,17 @@ Deno.serve(async (req) => {
     return json({ error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
   }
 
-  // 1. Validate caller JWT and Super Admin role.
-  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
   });
 
-  const { data: userRes, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userRes?.user) {
-    return json({ error: 'Not authenticated' }, 401);
-  }
-
-  const { data: callerRow, error: roleErr } = await userClient
-    .from('users')
-    .select('unicorn_role')
-    .eq('user_uuid', userRes.user.id)
-    .maybeSingle();
-
-  if (roleErr) {
-    return json({ error: 'Failed to resolve caller role', detail: roleErr.message }, 500);
-  }
-  if (callerRow?.unicorn_role !== 'Super Admin') {
-    return json({ error: 'Super Admin role required' }, 403);
-  }
+  const caller = await requireCaller(req, admin, {
+    featureKey: FeatureKeys.adminVector,
+    headers: corsHeaders,
+    unauthorizedMessage: 'Missing authorisation header',
+    forbiddenMessage: 'Super Admin role required',
+  });
+  if (!caller.ok) return caller.response;
 
   // 1b. Health-check short-circuit.
   // Order is intentional: Authorization parsed -> user resolved -> Super Admin
@@ -417,11 +403,6 @@ Deno.serve(async (req) => {
   }
 
   const force = body.force_reembed === true;
-
-  // 3. Service-role client for storage + writes.
-  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
 
   // 4. List PDFs in the bucket (recurse through known folders).
   const folders: SrtoSourceType[] = body.source_type

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { oauthStateExpiresAt, resolveRedirectUri } from "../_shared/oauth-redirects.ts";
 import { consumeOAuthState } from "../_shared/oauth-states.ts";
 
@@ -55,51 +56,27 @@ Deno.serve(async (req) => {
     action = url.searchParams.get("action");
   }
 
-  const authHeader = req.headers.get("Authorization");
+  const getAdminCaller = (forbiddenMessage: string) =>
+    requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.adminXeroConnect,
+      headers: corsHeaders,
+      forbiddenMessage,
+    });
 
-  // Connecting/disconnecting Xero touches one shared org-level credential,
-  // so it's restricted to the same roles that already carry
-  // administration:access in useRBAC.tsx (Super Admin, Integrator) -
-  // not the "any authenticated user manages their own connection" rule
-  // that outlook-auth uses.
-  const ADMIN_ACCESS_ROLES = ["Super Admin", "Integrator"];
-  const getAdminCaller = async () => {
-    if (!authHeader) return null;
-    const token = authHeader.replace(/^Bearer\s+/i, "");
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    if (error || !user) return null;
-    const { data: profile } = await supabaseAdmin
-      .from("users")
-      .select("unicorn_role, is_vivacity_internal")
-      .eq("user_uuid", user.id)
-      .maybeSingle();
-    if (!ADMIN_ACCESS_ROLES.includes(profile?.unicorn_role ?? "") || !profile?.is_vivacity_internal) {
-      return null;
-    }
-    return user;
-  };
-
-  const getVivacityStaffCaller = async () => {
-    if (!authHeader) return null;
-    const token = authHeader.replace(/^Bearer\s+/i, "");
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    if (error || !user) return null;
-    const { data: profile } = await supabaseAdmin
-      .from("users")
-      .select("is_vivacity_internal")
-      .eq("user_uuid", user.id)
-      .maybeSingle();
-    if (!profile?.is_vivacity_internal) return null;
-    return user;
-  };
+  const getVivacityStaffCaller = () =>
+    requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffXeroView,
+      headers: corsHeaders,
+      forbiddenMessage: "Vivacity staff only",
+    });
 
   try {
     // Action: Get auth URL to redirect the caller to Xero's consent screen
     if (action === "get-auth-url") {
-      const caller = await getAdminCaller();
-      if (!caller) {
-        return json(403, { error: "Only Vivacity Super Admins or Integrators can connect Xero." });
-      }
+      const caller = await getAdminCaller(
+        "Only Vivacity Super Admins or Integrators can connect Xero.",
+      );
+      if (!caller.ok) return caller.response;
 
       const resolved = resolveRedirectUri("xero", body.redirect_uri);
       if (!resolved.ok) {
@@ -110,7 +87,7 @@ Deno.serve(async (req) => {
       const state = crypto.randomUUID();
       const { error: stateError } = await supabaseAdmin.from("oauth_states").upsert({
         state,
-        data: { user_id: caller.id, redirect_uri: redirectUri, provider: "xero" },
+        data: { user_id: caller.user.id, redirect_uri: redirectUri, provider: "xero" },
         expires_at: oauthStateExpiresAt(),
       });
 
@@ -131,10 +108,10 @@ Deno.serve(async (req) => {
 
     // Action: Exchange the authorization code for tokens
     if (action === "exchange-code") {
-      const caller = await getAdminCaller();
-      if (!caller) {
-        return json(403, { error: "Only Vivacity Super Admins or Integrators can connect Xero." });
-      }
+      const caller = await getAdminCaller(
+        "Only Vivacity Super Admins or Integrators can connect Xero.",
+      );
+      if (!caller.ok) return caller.response;
 
       const resolved = resolveRedirectUri("xero", body.redirect_uri);
       if (!resolved.ok) {
@@ -148,7 +125,7 @@ Deno.serve(async (req) => {
         return json(400, { error: "code and state are required" });
       }
 
-      const consumed = await consumeOAuthState(supabaseAdmin, state, caller.id);
+      const consumed = await consumeOAuthState(supabaseAdmin, state, caller.user.id);
       if (!consumed.ok) {
         return json(consumed.status, { error: consumed.error });
       }
@@ -247,9 +224,7 @@ Deno.serve(async (req) => {
     // Action: Check connection status (any Vivacity staff can view)
     if (action === "status") {
       const caller = await getVivacityStaffCaller();
-      if (!caller) {
-        return json(403, { error: "Vivacity staff only" });
-      }
+      if (!caller.ok) return caller.response;
 
       const { data: tokenRow } = await supabaseAdmin
         .from("oauth_tokens")
@@ -273,10 +248,10 @@ Deno.serve(async (req) => {
 
     // Action: Disconnect
     if (action === "disconnect") {
-      const caller = await getAdminCaller();
-      if (!caller) {
-        return json(403, { error: "Only Vivacity Super Admins or Integrators can disconnect Xero." });
-      }
+      const caller = await getAdminCaller(
+        "Only Vivacity Super Admins or Integrators can disconnect Xero.",
+      );
+      if (!caller.ok) return caller.response;
 
       await supabaseAdmin.from("oauth_tokens").delete().eq("provider", "xero");
 

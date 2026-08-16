@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,28 +22,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Verify user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
 
     const body: RequestBody = await req.json();
     const { tenant_id, client_id, client_name, from_date, to_date, event_types } = body;
@@ -51,28 +33,22 @@ Deno.serve(async (req) => {
     console.log(`Date range: ${from_date} to ${to_date}`);
     console.log(`Event types: ${event_types?.join(', ') || 'all'}`);
 
-    // Verify user has access to this tenant
-    const { data: userRecord, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id, role')
-      .eq('user_uuid', user.id)
-      .single();
-
-    if (userError || !userRecord) {
-      console.error('User record error:', userError);
-      return new Response(JSON.stringify({ error: 'User not found' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // SuperAdmin can access any tenant, others must match
-    if (userRecord.role !== 'SuperAdmin' && userRecord.tenant_id !== tenant_id) {
-      return new Response(JSON.stringify({ error: 'Access denied' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.adminSystemConfig,
+      headers: corsHeaders,
+      unauthorizedMessage: 'Unauthorized',
+      forbiddenMessage: 'Access denied',
+      orAllow: async ({ userId, admin }) => {
+        const { data: userRecord } = await admin
+          .from('users')
+          .select('tenant_id')
+          .eq('user_uuid', userId)
+          .maybeSingle();
+        return userRecord?.tenant_id === tenant_id;
+      },
+    });
+    if (!caller.ok) return caller.response;
+    const user = caller.user;
 
     // Fetch timeline data using the export RPC
     const { data: events, error: fetchError } = await supabase.rpc('rpc_export_client_timeline', {

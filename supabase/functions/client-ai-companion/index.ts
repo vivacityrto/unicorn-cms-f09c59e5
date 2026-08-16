@@ -7,6 +7,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -100,46 +101,20 @@ Deno.serve(async (req) => {
       action,
     } = await req.json();
 
-    // Require a valid Supabase JWT
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.replace("Bearer ", "");
-
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    if (!token || token === SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const anonClient = createClient(
-      SUPABASE_URL,
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
-    const { data: userData, error: authError } = await anonClient.auth.getUser(token);
-    const userId: string | null = userData?.user?.id ?? null;
-    if (authError || !userId) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Verify the caller belongs to the requested tenant (or is Vivacity staff)
-    if (tenant_id != null) {
-      const [{ data: staffRow }, { data: membershipRow }] = await Promise.all([
-        sb.from("users").select("is_vivacity_internal, superadmin_level").eq("user_uuid", userId).maybeSingle(),
-        sb.from("tenant_users").select("user_id").eq("user_id", userId).eq("tenant_id", tenant_id).maybeSingle(),
-      ]);
-      const isStaff = !!staffRow?.is_vivacity_internal || !!staffRow?.superadmin_level;
-      if (!isStaff && !membershipRow) {
-        return new Response(
-          JSON.stringify({ error: "Forbidden: no access to this tenant" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
+    const caller = await requireCaller(req, sb, {
+      featureKey: FeatureKeys.staffAi,
+      headers: corsHeaders,
+      unauthorizedMessage: "Unauthorized",
+      forbiddenMessage: "Forbidden: no access to this tenant",
+      orAllow: async ({ userId, admin }) => {
+        if (tenant_id == null) return true;
+        return allowTenantMember(admin, userId, tenant_id);
+      },
+    });
+    if (!caller.ok) return caller.response;
+    const userId = caller.user.id;
 
     const sessionMode = mode ?? "orientation";
 
