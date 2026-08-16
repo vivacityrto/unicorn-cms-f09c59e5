@@ -248,6 +248,8 @@ const ClientResourceHubWrapperNew = lazy(() => import("./pages/client/ClientReso
 const ClientCalendarWrapperNew = lazy(() => import("./pages/client/ClientCalendarWrapper"));
 // ClientNotificationsWrapperNew removed — consolidated into ClientInboxPage
 const ClientReportsWrapperNew = lazy(() => import("./pages/client/ClientReportsWrapper"));
+const RegulatoryUpdatesWrapper = lazy(() => import("./pages/client/RegulatoryUpdatesWrapper"));
+const RegulatoryUpdateDetailWrapper = lazy(() => import("./pages/client/RegulatoryUpdateDetailWrapper"));
 const ClientUsersWrapperNew = lazy(() => import("./pages/client/ClientUsersWrapper"));
 const ClientSettingsWrapperNew = lazy(() => import("./pages/client/ClientSettingsWrapper"));
 const ClientTeamWrapperNew = lazy(() => import("./pages/client/ClientTeamWrapper"));
@@ -1217,6 +1219,8 @@ const App = () => (
             <Route path="/client/calendar" element={<ProtectedRoute><ClientCalendarWrapperNew /></ProtectedRoute>} />
             <Route path="/client/notifications" element={<Navigate to="/client/inbox?tab=notifications" replace />} />
             <Route path="/client/reports" element={<ProtectedRoute><ClientReportsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/regulatory-updates" element={<ProtectedRoute><RegulatoryUpdatesWrapper /></ProtectedRoute>} />
+            <Route path="/client/regulatory-updates/:eventId" element={<ProtectedRoute><RegulatoryUpdateDetailWrapper /></ProtectedRoute>} />
             <Route path="/client/users" element={<ProtectedRoute><ClientUsersWrapperNew /></ProtectedRoute>} />
             <Route path="/client/staff-pdps" element={<ProtectedRoute><StaffPdpsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/team" element={<Navigate to="/client/users" replace />} />

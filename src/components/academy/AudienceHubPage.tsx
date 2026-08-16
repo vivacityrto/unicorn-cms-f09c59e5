@@ -555,7 +555,7 @@ export default function AudienceHubPage({
           {allBuckets.map((b, i) => (
             <button
               key={b.tag}
-              ref={itemRef(i)}
+              ref={itemRef(i) as React.Ref<HTMLButtonElement>}
               type="button"
               tabIndex={-1}
               className="px-3 py-2 text-sm font-medium whitespace-nowrap"
@@ -563,13 +563,13 @@ export default function AudienceHubPage({
               {bucketLabel(b)} ({b.count})
             </button>
           ))}
-          <button ref={moreMeasureRef} type="button" tabIndex={-1} className="px-3 py-2 text-sm font-medium flex items-center gap-1">
+          <button ref={moreMeasureRef as React.Ref<HTMLButtonElement>} type="button" tabIndex={-1} className="px-3 py-2 text-sm font-medium flex items-center gap-1">
             More <ChevronDown className="h-3.5 w-3.5" />
           </button>
           {allBuckets.map((b, i) => (
             <button
               key={`more-${b.tag}`}
-              ref={activeMoreMeasureRef(i)}
+              ref={activeMoreMeasureRef(i) as React.Ref<HTMLButtonElement>}
               type="button"
               tabIndex={-1}
               className="px-3 py-2 text-sm font-medium flex items-center gap-1"

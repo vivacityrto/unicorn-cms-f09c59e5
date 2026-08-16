@@ -7846,6 +7846,7 @@ export type Database = {
       }
       bulk_document_job_items: {
         Row: {
+          allow_incomplete: boolean
           attempt_count: number
           created_at: string
           document_id: number
@@ -7860,6 +7861,7 @@ export type Database = {
           leased_at: string | null
           outcome: Json
           package_instance_id: number
+          snapshot_id: string | null
           stageinstance_id: number
           started_at: string | null
           state: string
@@ -7868,6 +7870,7 @@ export type Database = {
           worker_id: string | null
         }
         Insert: {
+          allow_incomplete?: boolean
           attempt_count?: number
           created_at?: string
           document_id: number
@@ -7882,6 +7885,7 @@ export type Database = {
           leased_at?: string | null
           outcome?: Json
           package_instance_id: number
+          snapshot_id?: string | null
           stageinstance_id: number
           started_at?: string | null
           state?: string
@@ -7890,6 +7894,7 @@ export type Database = {
           worker_id?: string | null
         }
         Update: {
+          allow_incomplete?: boolean
           attempt_count?: number
           created_at?: string
           document_id?: number
@@ -7904,6 +7909,7 @@ export type Database = {
           leased_at?: string | null
           outcome?: Json
           package_instance_id?: number
+          snapshot_id?: string | null
           stageinstance_id?: number
           started_at?: string | null
           state?: string
@@ -8253,6 +8259,7 @@ export type Database = {
           finished_at: string | null
           generated_count: number
           id: string
+          origin: string
           package_ids: number[]
           provisioning_summary: Json
           scope: string
@@ -8274,6 +8281,7 @@ export type Database = {
           finished_at?: string | null
           generated_count?: number
           id?: string
+          origin?: string
           package_ids?: number[]
           provisioning_summary?: Json
           scope: string
@@ -8295,6 +8303,7 @@ export type Database = {
           finished_at?: string | null
           generated_count?: number
           id?: string
+          origin?: string
           package_ids?: number[]
           provisioning_summary?: Json
           scope?: string
@@ -24445,6 +24454,55 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_membership_usage"
             referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_messages_unlinked_by_fkey"
+            columns: ["unlinked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_messages_unlinked_by_fkey"
+            columns: ["unlinked_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_messages_unlinked_by_fkey"
+            columns: ["unlinked_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "email_messages_unlinked_by_fkey"
+            columns: ["unlinked_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_messages_unlinked_by_fkey"
+            columns: ["unlinked_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "email_messages_unlinked_by_fkey"
+            columns: ["unlinked_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_messages_unlinked_by_fkey"
+            columns: ["unlinked_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
           },
           {
             foreignKeyName: "email_messages_user_uuid_fkey"
@@ -70613,6 +70671,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_document_delivery_job: {
+        Args: {
+          p_allow_incomplete_tenant_ids?: number[]
+          p_document_id: number
+          p_document_version_id: string
+          p_snapshot_ids?: Json
+          p_tenant_ids: number[]
+        }
+        Returns: string
+      }
       create_issue:
         | {
             Args: {
@@ -70728,6 +70796,10 @@ export type Database = {
             Args: { p_issue_id: string; p_meeting_id?: string; p_todos: Json }
             Returns: string[]
           }
+      cron_presented_secret_matches: {
+        Args: { p_kind: string; p_presented: string }
+        Returns: boolean
+      }
       current_tenant: { Args: never; Returns: string }
       current_user_email: { Args: never; Returns: string }
       current_user_role: { Args: never; Returns: string }
@@ -71797,6 +71869,7 @@ export type Database = {
       lease_bulk_document_job_items: {
         Args: { p_job_id: string; p_limit?: number; p_worker_id: string }
         Returns: {
+          allow_incomplete: boolean
           attempt_count: number
           document_id: number
           document_instance_id: number
@@ -71804,6 +71877,7 @@ export type Database = {
           id: number
           job_id: string
           package_instance_id: number
+          snapshot_id: string
           stageinstance_id: number
           tenant_id: number
         }[]
@@ -72113,6 +72187,7 @@ export type Database = {
       }
       record_governance_delivery_and_mark_generated: {
         Args: {
+          p_batch_id?: string
           p_category_subfolder: string
           p_delivered_by: string
           p_delivered_file_name: string

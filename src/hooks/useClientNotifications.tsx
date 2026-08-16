@@ -25,6 +25,7 @@ const CLIENT_FACING_TYPES = [
   "task_due",
   "obligation_due",
   "capacity_alert",
+  "regulator_change",
   "events",
   "event",
 ];

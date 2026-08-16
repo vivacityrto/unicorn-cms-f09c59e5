@@ -679,11 +679,11 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
 
           <EditableReportField
             label="Risk Rating Rationale"
-            value={audit.risk_rationale || ''}
+            value={(audit as any).risk_rationale || ''}
             rows={5}
             placeholder="Explain the risk rating in language suitable for the client — avoid internal finding IDs and jargon."
             saving={updateAudit.isPending}
-            onSave={(text) => saveReportField('risk_rationale', text, 'Risk rationale updated.')}
+            onSave={(text) => saveReportField('risk_rationale' as any, text, 'Risk rationale updated.')}
           />
 
           <div>
