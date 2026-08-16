@@ -15,6 +15,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 // Env vars
@@ -40,10 +41,6 @@ const PRODUCT_NAME = "Welcome to Vivacity";
 const SUPPORT_EMAIL = "support@vivacity.com.au";
 const SUPPORT_PHONE = "1300 729 455";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-hook-secret",
-};
 
 type AuthLinkType = "recovery" | "signup" | "magiclink" | "email_change";
 
@@ -51,10 +48,10 @@ const isSafeRelative = (p: string) =>
   typeof p === "string" && p.startsWith("/") && !p.startsWith("//") &&
   !p.includes("://") && !p.includes("\\");
 
-function json(status: number, body: unknown): Response {
+function json(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
@@ -258,8 +255,8 @@ function stripRequestLinkKeys(obj: Record<string, any> | null | undefined): Reco
 
 serve(async (req: Request) => {
   // CORS preflight
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req) });
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: corsHeaders(req) });
 
   try {
     // Detect AUTH HOOK mode: presence of valid x-hook-secret only
@@ -272,7 +269,7 @@ serve(async (req: Request) => {
     const isHookMode = isHookHeader;
     if (!isHookMode && isLikelyHookPayload(body)) {
       // Reject payload-only hook attempts without the correct secret header
-      return new Response(JSON.stringify({ ok: false, error: "Forbidden" }), { status: 403, headers: corsHeaders });
+      return new Response(JSON.stringify({ ok: false, error: "Forbidden" }), { status: 403, headers: corsHeaders(req) });
     }
 
     if (isHookMode) {
@@ -283,12 +280,12 @@ serve(async (req: Request) => {
 
       if (!evtType || !email) {
         console.log("send-email: invalid hook payload", { evtType, email });
-        return new Response(JSON.stringify({ ok: false, error: "Invalid auth hook payload" }), { status: 400, headers: corsHeaders });
+        return new Response(JSON.stringify({ ok: false, error: "Invalid auth hook payload" }), { status: 400, headers: corsHeaders(req) });
       }
 
       const token = emailData?.token ?? emailData?.token_hash ?? emailData?.tokenHash ?? emailData?.token_hash_new ?? emailData?.token_new;
       if (!token) {
-        return json(400, { error: "MISSING_TOKEN" });
+        return json(req, 400, { error: "MISSING_TOKEN" });
       }
 
       const authType = mapHookTypeToAuthType(evtType);
@@ -296,7 +293,7 @@ serve(async (req: Request) => {
         body.redirect_path ?? emailData.redirect_path,
         defaultLandingPath(authType),
       );
-      if (!landing.ok) return json(400, { error: "INVALID_REDIRECT_PATH" });
+      if (!landing.ok) return json(req, 400, { error: "INVALID_REDIRECT_PATH" });
       const landingUrl = `${APP_BASE_URL}${landing.path}`;
 
       // Never use action_link / redirect_to / redirectTo from the hook body (APP_BASE_URL only).
@@ -330,7 +327,7 @@ serve(async (req: Request) => {
 
       return new Response(JSON.stringify(result), {
         status: result.ok ? 200 : (result.status || 500),
-        headers: corsHeaders,
+        headers: corsHeaders(req),
       });
     }
 
@@ -339,19 +336,19 @@ serve(async (req: Request) => {
     const role = user?.id ? await getUserRole(user.id) : null;
     const authorized = role === "Admin" || role === "Super Admin";
     if (!authorized) {
-      return new Response(JSON.stringify({ ok: false, error: "Forbidden" }), { status: 403, headers: corsHeaders });
+      return new Response(JSON.stringify({ ok: false, error: "Forbidden" }), { status: 403, headers: corsHeaders(req) });
     }
 
     const { to, template_name, variables, subject, type: explicitType, redirect_path } = body || {};
     if (!to || !template_name) {
-      return new Response(JSON.stringify({ ok: false, error: "Missing 'to' or 'template_name'" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ ok: false, error: "Missing 'to' or 'template_name'" }), { status: 400, headers: corsHeaders(req) });
     }
 
     const toEmail = Array.isArray(to) ? String(to[0] || "") : String(to);
     const mergeVars = stripRequestLinkKeys(variables);
     const linkType = inferAuthLinkType(String(template_name), explicitType);
     const landing = resolveLandingPath(redirect_path, defaultLandingPath(linkType));
-    if (!landing.ok) return json(400, { error: "INVALID_REDIRECT_PATH" });
+    if (!landing.ok) return json(req, 400, { error: "INVALID_REDIRECT_PATH" });
 
     let verify_link: string | undefined;
     if (linkType) {
@@ -364,7 +361,7 @@ serve(async (req: Request) => {
         options: { redirectTo: `${APP_BASE_URL}${landing.path}` },
       });
       if (linkError || !linkData?.properties?.action_link) { // token only; URL from APP_BASE_URL
-        return json(500, { error: "LINK_GENERATION_FAILED", detail: linkError?.message });
+        return json(req, 500, { error: "LINK_GENERATION_FAILED", detail: linkError?.message });
       }
       // Token from the Auth admin API; URL rebuilt from APP_BASE_URL (ignore GoTrue action_link host).
       const generatedLink = linkData.properties.action_link as string; // token only; URL from APP_BASE_URL
@@ -375,7 +372,7 @@ serve(async (req: Request) => {
         rawToken = null;
       }
       if (!rawToken) {
-        return json(500, { error: "TOKEN_EXTRACT_FAILED" });
+        return json(req, 500, { error: "TOKEN_EXTRACT_FAILED" });
       }
       verify_link = buildActivateLink(rawToken, linkType, toEmail);
     }
@@ -404,13 +401,13 @@ serve(async (req: Request) => {
 
     return new Response(JSON.stringify(result), {
       status: result.ok ? 200 : (result.status || 500),
-      headers: corsHeaders,
+      headers: corsHeaders(req),
     });
   } catch (err: any) {
     console.error("send-email: unexpected error", err);
     return new Response(JSON.stringify({ ok: false, error: err?.message || "Internal error" }), {
       status: 500,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
     });
   }
 });

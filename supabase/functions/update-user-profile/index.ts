@@ -4,25 +4,25 @@ import { applyUsersProfileUpdate } from "../_shared/users-write-allowlist.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonErr(401, "UNAUTHORIZED", "No authorization header");
+      return jsonErr(req, 401, "UNAUTHORIZED", "No authorization header");
     }
 
     let body: Record<string, unknown>;
     try {
       body = await req.json();
     } catch {
-      return jsonErr(400, "BAD_JSON", "Invalid JSON body");
+      return jsonErr(req, 400, "BAD_JSON", "Invalid JSON body");
     }
 
     const user_uuid = typeof body.user_uuid === "string" ? body.user_uuid : "";
     if (!user_uuid) {
-      return jsonErr(400, "MISSING_USER_ID", "User UUID is required");
+      return jsonErr(req, 400, "MISSING_USER_ID", "User UUID is required");
     }
 
     // JWT + anon key so the users UPDATE runs as `authenticated` and the
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 
     const { data: { user: currentUser }, error: userError } = await userClient.auth.getUser();
     if (userError || !currentUser) {
-      return jsonErr(401, "UNAUTHORIZED", "Invalid token");
+      return jsonErr(req, 401, "UNAUTHORIZED", "Invalid token");
     }
 
     const { data: vivacityAllowed } = await userClient.rpc("check_permission", {
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
     });
 
     if (!outcome.ok) {
-      return jsonErr(outcome.status, outcome.code, outcome.detail);
+      return jsonErr(req, outcome.status, outcome.code, outcome.detail);
     }
 
     await serviceClient.from("audit_eos_events").insert({
@@ -106,21 +106,21 @@ Deno.serve(async (req) => {
     console.log(`Profile updated successfully for ${user_uuid}`);
 
     return new Response(JSON.stringify({ ok: true }), {
-      headers: { "content-type": "application/json", ...corsHeaders },
+      headers: { "content-type": "application/json", ...corsHeaders(req) },
       status: 200,
     });
   } catch (e: any) {
     if (typeof e?.status === "number" && e?.code) {
-      return jsonErr(e.status, e.code, e.message);
+      return jsonErr(req, e.status, e.code, e.message);
     }
     console.error("Error updating profile:", e);
-    return jsonErr(500, "UNHANDLED", e?.message ?? String(e));
+    return jsonErr(req, 500, "UNHANDLED", e?.message ?? String(e));
   }
 });
 
-function jsonErr(status: number, code: string, detail?: string) {
+function jsonErr(req: Request, status: number, code: string, detail?: string) {
   return new Response(JSON.stringify({ ok: false, code, detail }), {
-    headers: { "content-type": "application/json", ...corsHeaders },
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
     status,
   });
 }

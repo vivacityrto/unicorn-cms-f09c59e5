@@ -4098,6 +4098,7 @@ export type Database = {
           addin_meetings_enabled: boolean
           addin_outlook_mail_enabled: boolean
           ai_doc_extract_enabled: boolean
+          ai_email_note_external_forward_enabled: boolean
           ai_meeting_summary_enabled: boolean
           ai_phase_check_enabled: boolean
           ai_risk_radar_enabled: boolean
@@ -4144,6 +4145,7 @@ export type Database = {
           addin_meetings_enabled?: boolean
           addin_outlook_mail_enabled?: boolean
           ai_doc_extract_enabled?: boolean
+          ai_email_note_external_forward_enabled?: boolean
           ai_meeting_summary_enabled?: boolean
           ai_phase_check_enabled?: boolean
           ai_risk_radar_enabled?: boolean
@@ -4190,6 +4192,7 @@ export type Database = {
           addin_meetings_enabled?: boolean
           addin_outlook_mail_enabled?: boolean
           ai_doc_extract_enabled?: boolean
+          ai_email_note_external_forward_enabled?: boolean
           ai_meeting_summary_enabled?: boolean
           ai_phase_check_enabled?: boolean
           ai_risk_radar_enabled?: boolean

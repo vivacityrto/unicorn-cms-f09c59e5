@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID')!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
@@ -257,7 +254,7 @@ async function generateMinutesFromTranscript(transcriptText: string): Promise<{ 
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -265,7 +262,7 @@ serve(async (req) => {
 
     const caller = await requireCaller(req, supabaseAdmin, {
       featureKey: FeatureKeys.staffMeetings,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: 'Missing authorization',
       forbiddenMessage: 'Vivacity team only',
     });
@@ -275,7 +272,7 @@ serve(async (req) => {
     const { meeting_id, minutes_id } = await req.json();
     if (!meeting_id || !minutes_id) {
       return new Response(JSON.stringify({ error: 'meeting_id and minutes_id required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -287,7 +284,7 @@ serve(async (req) => {
 
     if (!settings?.minutes_ai_enabled) {
       return new Response(JSON.stringify({ error: 'AI minutes generation is disabled' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -302,7 +299,7 @@ serve(async (req) => {
     const transcript = artifacts?.find(a => a.drive_id && a.item_id);
     if (!transcript) {
       return new Response(JSON.stringify({ error: 'No transcript artifact found for this meeting' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -315,7 +312,7 @@ serve(async (req) => {
 
     if (!meeting) {
       return new Response(JSON.stringify({ error: 'Meeting not found' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
 
@@ -407,7 +404,7 @@ serve(async (req) => {
         run_id: runId,
         proposed: result,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
 
     } catch (err) {
@@ -432,13 +429,13 @@ serve(async (req) => {
       console.error('[generate-minutes] AI run failed:', safeError);
 
       return new Response(JSON.stringify({ error: safeError }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
       });
     }
   } catch (error) {
     console.error('[generate-minutes] Error:', error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 });

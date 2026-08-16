@@ -33,20 +33,20 @@ interface ResultRow {
   reason?: string;
 }
 
-const json = (status: number, body: unknown) =>
+const json = (req: Request, status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   const authHeader = req.headers.get("Authorization");
   const token = authHeader?.replace(/^Bearer\s+/i, "");
-  if (!token) return json(401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
+  if (!token) return json(req, 401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -55,7 +55,7 @@ serve(async (req) => {
   // 1. Authenticate caller
   const { data: callerData, error: callerErr } = await admin.auth.getUser(token);
   if (callerErr || !callerData?.user) {
-    return json(401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message || "Invalid token" });
+    return json(req, 401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message || "Invalid token" });
   }
   const caller = callerData.user;
 
@@ -70,43 +70,43 @@ serve(async (req) => {
     p_min_level: "full",
   });
   if (!allowed) {
-    return json(403, { ok: false, code: "FORBIDDEN", detail: "You do not have permission to perform this action" });
+    return json(req, 403, { ok: false, code: "FORBIDDEN", detail: "You do not have permission to perform this action" });
   }
 
   // 3. Parse body
   let body: Body;
   try { body = await req.json(); } catch {
-    return json(400, { ok: false, code: "BAD_JSON", detail: "Invalid JSON" });
+    return json(req, 400, { ok: false, code: "BAD_JSON", detail: "Invalid JSON" });
   }
 
   // Recovery is per-row only — a recovery link is a live login-as credential.
   if ((body?.action as string) === "recovery") {
-    return json(400, {
+    return json(req, 400, {
       ok: false,
       code: "RECOVERY_NOT_ALLOWED_IN_BULK",
       detail: "Recovery links must be generated one-at-a-time from the per-row menu",
     });
   }
   if (!body || (body.action !== "activate" && body.action !== "reset")) {
-    return json(400, { ok: false, code: "INVALID_ACTION", detail: "action must be 'activate' or 'reset'" });
+    return json(req, 400, { ok: false, code: "INVALID_ACTION", detail: "action must be 'activate' or 'reset'" });
   }
   if (typeof body.tenant_id !== "number") {
-    return json(400, { ok: false, code: "INVALID_PAYLOAD", detail: "tenant_id (number) required" });
+    return json(req, 400, { ok: false, code: "INVALID_PAYLOAD", detail: "tenant_id (number) required" });
   }
 
   const tenantAccess = await hasTenantAccessSafe(admin, caller.id, body.tenant_id);
   if (tenantAccess.lookupFailed) {
-    return json(500, { ok: false, code: "TENANT_ACCESS_CHECK_FAILED", detail: "Failed to verify tenant access" });
+    return json(req, 500, { ok: false, code: "TENANT_ACCESS_CHECK_FAILED", detail: "Failed to verify tenant access" });
   }
   if (!tenantAccess.allowed) {
-    return json(403, { ok: false, code: "FORBIDDEN", detail: "You do not have access to this tenant" });
+    return json(req, 403, { ok: false, code: "FORBIDDEN", detail: "You do not have access to this tenant" });
   }
   if (!Array.isArray(body.user_uuids) || body.user_uuids.length === 0) {
-    return json(400, { ok: false, code: "INVALID_PAYLOAD", detail: "user_uuids must be a non-empty array" });
+    return json(req, 400, { ok: false, code: "INVALID_PAYLOAD", detail: "user_uuids must be a non-empty array" });
   }
   const uuids = Array.from(new Set(body.user_uuids.filter((u) => typeof u === "string" && UUID_RE.test(u))));
   if (uuids.length === 0) {
-    return json(400, { ok: false, code: "INVALID_PAYLOAD", detail: "no valid uuids supplied" });
+    return json(req, 400, { ok: false, code: "INVALID_PAYLOAD", detail: "no valid uuids supplied" });
   }
 
   // 4. Resolve emails up-front so every result row carries identifying info,
@@ -262,7 +262,7 @@ serve(async (req) => {
     console.warn("[bulk-account-actions] audit insert failed (non-fatal):", e);
   }
 
-  return json(200, {
+  return json(req, 200, {
     ok: true,
     action: body.action,
     summary,

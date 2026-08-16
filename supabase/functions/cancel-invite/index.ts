@@ -1,22 +1,18 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
 serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -27,7 +23,7 @@ serve(async (req: Request) => {
     // Authenticate caller
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse(401, { ok: false, detail: "Missing authorization header" });
+      return jsonResponse(req, 401, { ok: false, detail: "Missing authorization header" });
     }
 
     const token = authHeader.replace("Bearer ", "");
@@ -35,7 +31,7 @@ serve(async (req: Request) => {
     
     if (authError || !user) {
       console.error("Auth error:", authError);
-      return jsonResponse(401, { ok: false, detail: "Invalid token" });
+      return jsonResponse(req, 401, { ok: false, detail: "Invalid token" });
     }
 
     // Get caller's profile to check permissions
@@ -47,7 +43,7 @@ serve(async (req: Request) => {
 
     if (profileError || !callerProfile) {
       console.error("Profile error:", profileError);
-      return jsonResponse(403, { ok: false, detail: "Caller profile not found" });
+      return jsonResponse(req, 403, { ok: false, detail: "Caller profile not found" });
     }
 
     const { data: staffAllowed } = await supabase.rpc('check_permission', {
@@ -61,7 +57,7 @@ serve(async (req: Request) => {
     const { invitation_id, reason } = await req.json();
 
     if (!invitation_id) {
-      return jsonResponse(400, { ok: false, detail: "invitation_id is required" });
+      return jsonResponse(req, 400, { ok: false, detail: "invitation_id is required" });
     }
 
     // Fetch the invitation (need tenant_id for the admin permission check)
@@ -73,7 +69,7 @@ serve(async (req: Request) => {
 
     if (inviteError || !invitation) {
       console.error("Invitation fetch error:", inviteError);
-      return jsonResponse(404, { ok: false, detail: "Invitation not found" });
+      return jsonResponse(req, 404, { ok: false, detail: "Invitation not found" });
     }
 
     // Authorisation: SuperAdmin OR a tenant Admin who belongs to the invitation's tenant.
@@ -90,17 +86,17 @@ serve(async (req: Request) => {
       }
     }
     if (!isAuthorised) {
-      return jsonResponse(403, { ok: false, detail: "You don't have permission to cancel this invitation" });
+      return jsonResponse(req, 403, { ok: false, detail: "You don't have permission to cancel this invitation" });
     }
 
     // Check if already accepted
     if (invitation.accepted_at) {
-      return jsonResponse(400, { ok: false, detail: "Cannot cancel an accepted invitation" });
+      return jsonResponse(req, 400, { ok: false, detail: "Cannot cancel an accepted invitation" });
     }
 
     // Check if already revoked
     if (invitation.status === "revoked") {
-      return jsonResponse(400, { ok: false, detail: "Invitation has already been revoked" });
+      return jsonResponse(req, 400, { ok: false, detail: "Invitation has already been revoked" });
     }
 
     // Cancel the invitation
@@ -116,7 +112,7 @@ serve(async (req: Request) => {
 
     if (updateError) {
       console.error("Update error:", updateError);
-      return jsonResponse(500, { ok: false, detail: "Failed to cancel invitation" });
+      return jsonResponse(req, 500, { ok: false, detail: "Failed to cancel invitation" });
     }
 
     // Log to audit_invites
@@ -146,12 +142,12 @@ serve(async (req: Request) => {
 
     console.log(`Invitation ${invitation_id} cancelled by ${callerProfile.email}`);
 
-    return jsonResponse(200, {
+    return jsonResponse(req, 200, {
       ok: true,
       message: `Invitation for ${invitation.email} has been cancelled`,
     });
   } catch (error) {
     console.error("Unexpected error:", error);
-    return jsonResponse(500, { ok: false, detail: "Internal server error" });
+    return jsonResponse(req, 500, { ok: false, detail: "Internal server error" });
   }
 });

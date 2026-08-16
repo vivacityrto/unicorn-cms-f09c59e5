@@ -1,16 +1,12 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const DEFAULT_PAGE_SIZE = 500;
 const MAX_PAGE_SIZE = 1000;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -25,7 +21,7 @@ serve(async (req) => {
     if (!rto_id) {
       return new Response(
         JSON.stringify({ error: 'rto_id is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -33,7 +29,7 @@ serve(async (req) => {
     if (typeof rto_id !== 'string' || !/^\d{4,6}$/.test(rto_id)) {
       return new Response(
         JSON.stringify({ error: 'Invalid rto_id: must be a 4-6 digit number' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -41,7 +37,7 @@ serve(async (req) => {
     if (typeof offset !== 'number' || offset < 0 || !Number.isInteger(offset)) {
       return new Response(
         JSON.stringify({ error: 'Invalid offset: must be a non-negative integer' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -52,7 +48,7 @@ serve(async (req) => {
         JSON.stringify({ 
           error: `Invalid component_type. Must be one of: ${validTypes.join(', ')}` 
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -136,7 +132,7 @@ serve(async (req) => {
           pages_fetched: urlsUsed.length,
           urls_used: urlsUsed,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     } else {
       // Single page fetch
@@ -172,7 +168,7 @@ serve(async (req) => {
           hasMore: items.length === effectivePageSize,
           url_used: apiUrl,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
   } catch (error) {
@@ -182,7 +178,7 @@ serve(async (req) => {
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

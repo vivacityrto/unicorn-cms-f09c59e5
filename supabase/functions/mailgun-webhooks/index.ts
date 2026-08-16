@@ -3,6 +3,7 @@
 // Fail-closed: MAILGUN_WEBHOOK_SIGNING_KEY is required at module load.
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   isWebhookTimestampFresh,
   verifyMailgunSignature,
@@ -18,37 +19,31 @@ if (!SIGNING_KEY) {
   );
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-const json = (status: number, body: unknown) =>
+const json = (req: Request, status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", {
       status: 405,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
     });
   }
 
   if (!SIGNING_KEY) {
-    return json(500, { ok: false, error: "Webhook is not configured" });
+    return json(req, 500, { ok: false, error: "Webhook is not configured" });
   }
 
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return json(401, { ok: false, error: "Invalid signature" });
+      return json(req, 401, { ok: false, error: "Invalid signature" });
     }
 
     // Mailgun "JSON" webhooks shape: { signature: {...}, "event-data": {...} }
@@ -61,12 +56,12 @@ serve(async (req: Request) => {
         {};
 
     if (!signature.timestamp || !signature.token || !signature.signature) {
-      return json(401, { ok: false, error: "Invalid signature" });
+      return json(req, 401, { ok: false, error: "Invalid signature" });
     }
 
     if (!isWebhookTimestampFresh(signature.timestamp)) {
       console.log("mailgun-webhooks: stale timestamp, rejecting");
-      return json(401, { ok: false, error: "Stale timestamp" });
+      return json(req, 401, { ok: false, error: "Stale timestamp" });
     }
 
     const valid = await verifyMailgunSignature(
@@ -76,7 +71,7 @@ serve(async (req: Request) => {
       String(signature.signature),
     );
     if (!valid) {
-      return json(401, { ok: false, error: "Invalid signature" });
+      return json(req, 401, { ok: false, error: "Invalid signature" });
     }
 
     const supabaseSrv = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -110,9 +105,9 @@ serve(async (req: Request) => {
     // Note: Writing to audit_log requires an authenticated user per RLS, which we don't have in a public webhook.
     // We therefore record all webhook events in email_events and update email_sends; audit entries can be reviewed via these tables.
 
-    return json(200, { ok: true });
+    return json(req, 200, { ok: true });
   } catch (err: any) {
     console.error("mailgun-webhooks: unexpected error", err);
-    return json(500, { ok: false, error: err?.message || "Internal error" });
+    return json(req, 500, { ok: false, error: err?.message || "Internal error" });
   }
 });

@@ -1,12 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const STAFF_ROLES = ["Super Admin", "Team Leader", "Team Member"] as const;
 
@@ -16,19 +10,19 @@ const BodySchema = z.object({
   notify_user_ids: z.array(z.string().uuid()).min(1),
 });
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return json(405, { error: "Method not allowed" });
+    return json(req, 405, { error: "Method not allowed" });
   }
 
   try {
@@ -36,17 +30,17 @@ Deno.serve(async (req) => {
     try {
       raw = await req.json();
     } catch {
-      return json(400, { error: "Invalid JSON body" });
+      return json(req, 400, { error: "Invalid JSON body" });
     }
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
-      return json(400, { error: parsed.error.flatten().fieldErrors });
+      return json(req, 400, { error: parsed.error.flatten().fieldErrors });
     }
     const { tenant_id, action_title, notify_user_ids } = parsed.data;
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return json(401, { error: "Unauthorized" });
+      return json(req, 401, { error: "Unauthorized" });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -63,7 +57,7 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user?.id) {
-      return json(401, { error: "Unauthorized" });
+      return json(req, 401, { error: "Unauthorized" });
     }
     const callerId = userData.user.id;
 
@@ -76,10 +70,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (memErr) {
       console.error("caller tenant_users lookup error", memErr);
-      return json(500, { error: memErr.message });
+      return json(req, 500, { error: memErr.message });
     }
     if (!membership) {
-      return json(403, { error: "Forbidden" });
+      return json(req, 403, { error: "Forbidden" });
     }
 
     // Validate recipients: must be tenant members OR vivacity staff.
@@ -106,11 +100,11 @@ Deno.serve(async (req) => {
     ]);
     if (tenantMembersRes.error) {
       console.error("recipient tenant_users error", tenantMembersRes.error);
-      return json(500, { error: tenantMembersRes.error.message });
+      return json(req, 500, { error: tenantMembersRes.error.message });
     }
     if (staffRes.error) {
       console.error("recipient staff lookup error", staffRes.error);
-      return json(500, { error: staffRes.error.message });
+      return json(req, 500, { error: staffRes.error.message });
     }
 
     const allowed = new Set<string>([
@@ -121,7 +115,7 @@ Deno.serve(async (req) => {
     const dropped = uniqueRecipients.length - validRecipients.length;
 
     if (validRecipients.length === 0) {
-      return json(200, { notified: 0, dropped });
+      return json(req, 200, { notified: 0, dropped });
     }
 
     const author = authorRes.data;
@@ -152,13 +146,13 @@ Deno.serve(async (req) => {
       .upsert(rows, { onConflict: "dedupe_key", ignoreDuplicates: true });
     if (upsertErr) {
       console.error("user_notifications upsert error", upsertErr);
-      return json(500, { error: upsertErr.message });
+      return json(req, 500, { error: upsertErr.message });
     }
 
-    return json(200, { notified: rows.length, dropped });
+    return json(req, 200, { notified: rows.length, dropped });
   } catch (e) {
     console.error("notify-action-shared unexpected", e);
     const message = e instanceof Error ? e.message : "Unexpected error";
-    return json(500, { error: message });
+    return json(req, 500, { error: message });
   }
 });

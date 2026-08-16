@@ -135,11 +135,14 @@ describe("CORS allowlist", () => {
     assert.ok(!origins.includes("https://evil.example"));
   });
 
-  it("shared cors helper no longer documents * as the email path", () => {
+  it("shared cors helper allowlists APP_BASE_URL and never uses *", () => {
     const src = read("_shared/cors.ts");
-    assert.match(src, /allowedOriginsFromAppBaseUrl/);
-    assert.match(src, /corsHeadersForOrigin/);
+    assert.match(src, /export function buildAllowedOrigins/);
+    assert.match(src, /export function corsHeaders\(req: Request\)/);
     assert.match(src, /APP_BASE_URL/);
+    assert.match(src, /x-internal-email-secret/);
+    assert.match(src, /x-cron-secret/);
+    assert.doesNotMatch(src, /Access-Control-Allow-Origin['"]:\s*['"]\*/);
   });
 });
 

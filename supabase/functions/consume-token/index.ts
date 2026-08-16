@@ -12,12 +12,7 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.53.0";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 async function sha256(input: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -91,13 +86,13 @@ serve(async (req: Request): Promise<Response> => {
   console.log(`[consume-token] UTC time: ${now.toISOString()}`);
   
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 405, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -123,7 +118,7 @@ serve(async (req: Request): Promise<Response> => {
       console.log('Blocked scanner request:', userAgent);
       return new Response(
         JSON.stringify({ error: 'Access denied' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
     
@@ -131,7 +126,7 @@ serve(async (req: Request): Promise<Response> => {
       if (typeof csrf_token !== 'string' || csrf_token.length < 32) {
         return new Response(
           JSON.stringify({ error: 'Invalid CSRF token' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -139,7 +134,7 @@ serve(async (req: Request): Promise<Response> => {
     if (!token) {
       return new Response(
         JSON.stringify({ error: 'Token is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -185,14 +180,14 @@ serve(async (req: Request): Promise<Response> => {
         if (alreadyUsed) {
           return new Response(
             JSON.stringify({ error: 'Token already used', code: 'TOKEN_CONSUMED' }),
-            { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 410, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
       }
       
       return new Response(
         JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -207,14 +202,14 @@ serve(async (req: Request): Promise<Response> => {
         meta: tokenRecord.meta,
         token_id: tokenRecord.id
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
     console.error('Token consumption error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

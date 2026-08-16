@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SignJWT } from "https://deno.land/x/jose@v5.2.2/index.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -42,18 +38,16 @@ interface MicrosoftProfile {
   displayName?: string;
 }
 
-function errorResponse(
-  status: number,
+function errorResponse(req: Request, status: number,
   code: string,
   message: string,
-  details: Record<string, unknown> = {}
-): Response {
+  details: Record<string, unknown> = {}): Response {
   const body: ErrorResponse = {
     error: { code, message, details }
   };
   return new Response(
     JSON.stringify(body),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    { status, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
   );
 }
 
@@ -159,11 +153,11 @@ function formatRoleName(role: string): string {
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   if (req.method !== 'POST') {
-    return errorResponse(405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
+    return errorResponse(req, 405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
   }
 
   try {
@@ -178,16 +172,16 @@ serve(async (req) => {
 
     // Validate required fields
     if (!ms_proof_token) {
-      return errorResponse(400, ERROR_CODES.VALIDATION_ERROR, 'ms_proof_token is required');
+      return errorResponse(req, 400, ERROR_CODES.VALIDATION_ERROR, 'ms_proof_token is required');
     }
     if (!ms_user_email) {
-      return errorResponse(400, ERROR_CODES.VALIDATION_ERROR, 'ms_user_email is required');
+      return errorResponse(req, 400, ERROR_CODES.VALIDATION_ERROR, 'ms_user_email is required');
     }
 
     // Verify the Microsoft proof token
     const verified = await verifyProofToken(ms_proof_token);
     if (!verified) {
-      return errorResponse(401, ERROR_CODES.MICROSOFT_TOKEN_INVALID, 'Microsoft token validation failed.', {});
+      return errorResponse(req, 401, ERROR_CODES.MICROSOFT_TOKEN_INVALID, 'Microsoft token validation failed.', {});
     }
 
     // Validate email match
@@ -196,7 +190,7 @@ serve(async (req) => {
         verified: verified.email,
         provided: ms_user_email,
       });
-      return errorResponse(403, ERROR_CODES.IDENTITY_MISMATCH, 'Microsoft email does not match a Unicorn user.', {
+      return errorResponse(req, 403, ERROR_CODES.IDENTITY_MISMATCH, 'Microsoft email does not match a Unicorn user.', {
         ms_user_email: ms_user_email,
       });
     }
@@ -213,14 +207,14 @@ serve(async (req) => {
 
     if (userError || !unicornUser) {
       console.error('[addin-auth] Unicorn user not found:', verified.email);
-      return errorResponse(403, ERROR_CODES.IDENTITY_MISMATCH, 'Microsoft email does not match a Unicorn user.', {
+      return errorResponse(req, 403, ERROR_CODES.IDENTITY_MISMATCH, 'Microsoft email does not match a Unicorn user.', {
         ms_user_email: ms_user_email,
       });
     }
 
     if (unicornUser.status !== 'active') {
       console.error('[addin-auth] User account not active:', unicornUser.status);
-      return errorResponse(403, ERROR_CODES.USER_INACTIVE, 'Unicorn account is not active.', {
+      return errorResponse(req, 403, ERROR_CODES.USER_INACTIVE, 'Unicorn account is not active.', {
         status: unicornUser.status,
       });
     }
@@ -310,12 +304,12 @@ serve(async (req) => {
         },
         features,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('[addin-auth] Unhandled error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return errorResponse(500, ERROR_CODES.INTERNAL_ERROR, message, {});
+    return errorResponse(req, 500, ERROR_CODES.INTERNAL_ERROR, message, {});
   }
 });

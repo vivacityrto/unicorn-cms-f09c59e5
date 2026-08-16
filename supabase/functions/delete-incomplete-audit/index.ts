@@ -13,22 +13,22 @@ interface DeleteAuditRequest {
   reason?: string;
 }
 
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return json({ error: 'Missing authorisation header' }, 401);
+      return json(req, { error: 'Missing authorisation header' }, 401);
     }
 
     const supabase = createClient(
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData?.user) {
-      return json({ error: 'Not authenticated' }, 401);
+      return json(req, { error: 'Not authenticated' }, 401);
     }
     const user = userData.user;
 
@@ -47,28 +47,28 @@ Deno.serve(async (req) => {
     try {
       body = await req.json();
     } catch {
-      return json({ error: 'Invalid JSON body.' }, 400);
+      return json(req, { error: 'Invalid JSON body.' }, 400);
     }
 
     const auditId = body.audit_id?.trim();
     const reason = (body.reason ?? '').trim();
 
     if (!auditId) {
-      return json({ error: 'audit_id is required.' }, 400);
+      return json(req, { error: 'audit_id is required.' }, 400);
     }
     const uuidRe =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRe.test(auditId)) {
-      return json({ error: 'audit_id must be a valid UUID.' }, 400);
+      return json(req, { error: 'audit_id must be a valid UUID.' }, 400);
     }
     if (reason.length < 10) {
-      return json(
+      return json(req, 
         { error: 'A reason of at least 10 characters is required.' },
         400,
       );
     }
     if (reason.length > 1000) {
-      return json({ error: 'Reason must be 1000 characters or fewer.' }, 400);
+      return json(req, { error: 'Reason must be 1000 characters or fewer.' }, 400);
     }
 
     // 1. Gate: confirm caller can delete this audit.
@@ -77,13 +77,13 @@ Deno.serve(async (req) => {
       { p_audit_id: auditId },
     );
     if (gateErr) {
-      return json(
+      return json(req, 
         { error: 'Permission check failed.', detail: gateErr.message },
         500,
       );
     }
     if (gate !== true) {
-      return json(
+      return json(req, 
         {
           error:
             'This audit cannot be deleted. Only audits that are still in draft or in progress can be removed. Audits that have been closed or had a report generated must be retained.',
@@ -100,13 +100,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (snapErr) {
-      return json(
+      return json(req, 
         { error: 'Failed to read audit for snapshot.', detail: snapErr.message },
         500,
       );
     }
     if (!snapshot) {
-      return json({ error: 'Audit not found or not accessible.' }, 404);
+      return json(req, { error: 'Audit not found or not accessible.' }, 404);
     }
 
     // 3. Write the audit log BEFORE deletion so we have a permanent record.
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       });
 
     if (logErr) {
-      return json(
+      return json(req, 
         {
           error: 'Failed to record audit log; deletion aborted.',
           detail: logErr.message,
@@ -145,14 +145,14 @@ Deno.serve(async (req) => {
       .eq('id', auditId);
 
     if (delErr) {
-      return json({ error: 'Deletion failed.', detail: delErr.message }, 500);
+      return json(req, { error: 'Deletion failed.', detail: delErr.message }, 500);
     }
 
-    return json(
+    return json(req, 
       { ok: true, audit_id: auditId, message: 'Audit deleted successfully.' },
       200,
     );
   } catch (err) {
-    return json({ error: 'Unexpected error', detail: String(err) }, 500);
+    return json(req, { error: 'Unexpected error', detail: String(err) }, 500);
   }
 });

@@ -1,22 +1,18 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 const MICROSOFT_CLIENT_ID = Deno.env.get("MICROSOFT_CLIENT_ID")!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
@@ -84,7 +80,7 @@ async function refreshTokenIfNeeded(
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -109,22 +105,37 @@ serve(async (req) => {
     } = body;
 
     if (!to || !subject || !body_html) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         error: "to, subject, and body_html are required",
       });
     }
 
+    // Coerce before requireCaller so orAllow sees a numeric tenant id
+    // even when the client sent a string.
+    const tenantId =
+      typeof tenant_id === "string" ? Number(tenant_id) : tenant_id;
+    if (!tenantId || !Number.isFinite(tenantId)) {
+      return jsonResponse(req, 400, { error: "tenant_id is required" });
+    }
+
+    // staff.email.send lets any staff through without a tenant check.
+    // has_tenant_access_safe still required so staff cannot dry-run /
+    // merge-read another tenant's data (IDOR).
     const caller = await requireCaller(req, supabaseAdmin, {
       featureKey: FeatureKeys.staffEmailSend,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Missing Authorization",
       forbiddenMessage: "Access denied: not a member of this tenant",
-      orAllow: async ({ userId, admin }) =>
-        typeof tenant_id === "number" &&
-        (await allowTenantMember(admin, userId, tenant_id)),
+      orAllow: ({ userId, admin }) => allowTenantMember(admin, userId, tenantId),
     });
     if (!caller.ok) return caller.response;
     const user = caller.user;
+
+    const { data: ok } = await supabaseAdmin.rpc("has_tenant_access_safe", {
+      p_tenant_id: tenantId,
+      p_user_id: user.id,
+    });
+    if (!ok) return jsonResponse(req, 403, { code: "FORBIDDEN" });
 
     const { data: profile } = await supabaseAdmin
       .from("users")
@@ -132,7 +143,7 @@ serve(async (req) => {
       .eq("user_uuid", user.id)
       .single();
 
-    if (!profile) return jsonResponse(403, { error: "Profile not found" });
+    if (!profile) return jsonResponse(req, 403, { error: "Profile not found" });
 
     // Fetch Microsoft OAuth token
     const { data: tokenData, error: tokenError } = await supabaseAdmin
@@ -143,7 +154,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (tokenError || !tokenData) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         error: "no_microsoft_connection",
         message:
           "No Microsoft 365 connection found. Please connect your account in Settings.",
@@ -153,7 +164,7 @@ serve(async (req) => {
     // Check if Mail.Send scope is present
     const scopeStr = tokenData.scope || "";
     if (!scopeStr.toLowerCase().includes("mail.send")) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         error: "insufficient_scope",
         message:
           "Your Microsoft connection does not have email sending permission. Please disconnect and reconnect to grant the Mail.Send scope.",
@@ -172,7 +183,7 @@ serve(async (req) => {
     const { data: tenant } = await supabaseAdmin
       .from("tenants")
       .select("id, name, primary_email, abn, trading_name, legal_name")
-      .eq("id", tenant_id)
+      .eq("id", tenantId)
       .single();
 
     const mergeData: Record<string, string> = {};
@@ -188,7 +199,7 @@ serve(async (req) => {
     const { data: primaryContactTu } = await supabaseAdmin
       .from("tenant_users")
       .select("user_id")
-      .eq("tenant_id", tenant_id)
+      .eq("tenant_id", tenantId)
       .eq("relationship_role", "primary_contact")
       .order("created_at", { ascending: false })
       .limit(1)
@@ -212,7 +223,7 @@ serve(async (req) => {
       const { data: cp } = await supabaseAdmin
         .from("client_packages")
         .select("assigned_csc_user_id")
-        .eq("tenant_id", tenant_id)
+        .eq("tenant_id", tenantId)
         .eq("package_id", package_id)
         .maybeSingle();
       if (cp?.assigned_csc_user_id) {
@@ -302,7 +313,7 @@ serve(async (req) => {
       .trim();
 
     if (dry_run) {
-      return jsonResponse(200, {
+      return jsonResponse(req, 200, {
         success: true,
         dry_run: true,
         preview: {
@@ -399,8 +410,8 @@ serve(async (req) => {
       : [];
 
     await supabaseAdmin.from("email_send_log").insert({
-      tenant_id,
-      client_id: tenant_id,
+      tenant_id: tenantId,
+      client_id: tenantId,
       package_id: package_id || null,
       stage_id: stage_instance_id || null,
       to_email: renderedTo,
@@ -437,7 +448,7 @@ serve(async (req) => {
 
     // Audit log
     await supabaseAdmin.from("client_audit_log").insert({
-      tenant_id,
+      tenant_id: tenantId,
       action: "email.graph_sent",
       entity_type: "email_instance",
       entity_id: String(email_instance_id || "manual"),
@@ -453,14 +464,14 @@ serve(async (req) => {
     });
 
     if (!graphRes.ok) {
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         success: false,
         error: "Failed to send email via Microsoft Graph",
         details: errorMessage,
       });
     }
 
-    return jsonResponse(200, {
+    return jsonResponse(req, 200, {
       success: true,
       message: `Email sent to ${renderedTo} via Microsoft 365`,
       sending_as: tokenData.account_email || profile.email,
@@ -468,6 +479,6 @@ serve(async (req) => {
     });
   } catch (e: any) {
     console.error("[send-email-graph] Error:", e);
-    return jsonResponse(500, { error: e?.message || String(e) });
+    return jsonResponse(req, 500, { error: e?.message || String(e) });
   }
 });

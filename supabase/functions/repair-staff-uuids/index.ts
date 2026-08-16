@@ -10,13 +10,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-};
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -34,16 +29,16 @@ interface SweepDetail {
   message?: string;
 }
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -53,7 +48,7 @@ Deno.serve(async (req) => {
 
     const caller = await requireCaller(req, admin, {
       featureKey: FeatureKeys.adminSystemConfig,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       errorStyle: "ok-code",
       unauthorizedMessage: "Missing bearer token",
       forbiddenMessage: "Super Admin access required",
@@ -78,7 +73,7 @@ Deno.serve(async (req) => {
     while (true) {
       const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
       if (error) {
-        return json(500, { ok: false, code: "AUTH_LIST_FAILED", detail: error.message });
+        return json(req, 500, { ok: false, code: "AUTH_LIST_FAILED", detail: error.message });
       }
       const users = data?.users ?? [];
       for (const u of users) {
@@ -95,7 +90,7 @@ Deno.serve(async (req) => {
       .select("user_uuid, email, unicorn_role, disabled, archived");
 
     if (profilesErr) {
-      return json(500, { ok: false, code: "PROFILES_LOAD_FAILED", detail: profilesErr.message });
+      return json(req, 500, { ok: false, code: "PROFILES_LOAD_FAILED", detail: profilesErr.message });
     }
 
     // ---- Step 3: classify ----
@@ -220,7 +215,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return json(200, {
+    return json(req, 200, {
       ok: true,
       dry_run: dryRun,
       ran_by: callerProfile?.email,
@@ -231,6 +226,6 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[repair-staff-uuids] fatal:", message);
-    return json(500, { ok: false, code: "INTERNAL_ERROR", detail: message });
+    return json(req, 500, { ok: false, code: "INTERNAL_ERROR", detail: message });
   }
 });

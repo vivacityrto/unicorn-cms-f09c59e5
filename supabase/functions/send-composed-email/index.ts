@@ -16,16 +16,16 @@ interface SendComposedEmailRequest {
   dry_run?: boolean;
 }
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -44,18 +44,18 @@ serve(async (req) => {
     const { tenant_id, package_id, stage_instance_id, email_instance_id, to, cc, bcc, subject, body_html, dry_run } = body;
 
     if (!to || !subject || !body_html) {
-      return jsonResponse(400, { error: "to, subject, and body_html are required" });
+      return jsonResponse(req, 400, { error: "to, subject, and body_html are required" });
     }
 
     if (!tenant_id || typeof tenant_id !== "number") {
-      return jsonResponse(400, { error: "tenant_id is required" });
+      return jsonResponse(req, 400, { error: "tenant_id is required" });
     }
 
     // staff.email.send replaces the unicorn_role / global_role / is_vivacity_internal
     // / role_type split. Tenant members still pass via orAllow (unchanged).
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.staffEmailSend,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Missing Authorization",
       forbiddenMessage: "Access denied: not a member of this tenant",
       orAllow: ({ userId, admin }) => allowTenantMember(admin, userId, tenant_id),
@@ -69,7 +69,7 @@ serve(async (req) => {
       .eq("user_uuid", user.id)
       .single();
 
-    if (!profile) return jsonResponse(403, { error: "Profile not found" });
+    if (!profile) return jsonResponse(req, 403, { error: "Profile not found" });
 
 
     // Resolve merge fields from tenant data
@@ -196,7 +196,7 @@ serve(async (req) => {
       .trim();
 
     if (dry_run) {
-      return jsonResponse(200, {
+      return jsonResponse(req, 200, {
         success: true,
         dry_run: true,
         preview: {
@@ -213,7 +213,7 @@ serve(async (req) => {
 
     // Send via Mailgun
     if (!mailgunApiKey || !mailgunDomain) {
-      return jsonResponse(500, { error: "Email service not configured (MAILGUN_API_KEY / MAILGUN_DOMAIN)" });
+      return jsonResponse(req, 500, { error: "Email service not configured (MAILGUN_API_KEY / MAILGUN_DOMAIN)" });
     }
 
     const formData = new FormData();
@@ -290,15 +290,15 @@ serve(async (req) => {
     });
 
     if (!mgRes.ok) {
-      return jsonResponse(500, { success: false, error: "Failed to send email", details: mgResult });
+      return jsonResponse(req, 500, { success: false, error: "Failed to send email", details: mgResult });
     }
 
-    return jsonResponse(200, {
+    return jsonResponse(req, 200, {
       success: true,
       message: `Email sent to ${renderedTo}`,
     });
   } catch (e: any) {
     console.error("Error:", e);
-    return jsonResponse(500, { error: e?.message || String(e) });
+    return jsonResponse(req, 500, { error: e?.message || String(e) });
   }
 });

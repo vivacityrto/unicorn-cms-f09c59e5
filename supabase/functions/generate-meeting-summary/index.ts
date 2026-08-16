@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
 /**
  * Generate Meeting Summary Edge Function
@@ -12,12 +13,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  * Phase 1: Returns stub summary (no LLM yet).
  */
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
 interface GenerateSummaryRequest {
   meeting_id: string;
   tenant_id: number;
@@ -27,7 +22,7 @@ interface GenerateSummaryRequest {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -35,7 +30,7 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "Missing authorization" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -49,7 +44,7 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -65,14 +60,14 @@ Deno.serve(async (req) => {
     if (!meeting_id || !tenant_id || !source || !text?.trim()) {
       return new Response(
         JSON.stringify({ error: "meeting_id, tenant_id, source, and text are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     if (!["transcript", "notes"].includes(source)) {
       return new Response(
         JSON.stringify({ error: "source must be 'transcript' or 'notes'" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -86,7 +81,7 @@ Deno.serve(async (req) => {
     if (meetingError || !meeting) {
       return new Response(
         JSON.stringify({ error: "Meeting not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -116,7 +111,7 @@ Deno.serve(async (req) => {
     if (!orchestratorResponse.ok) {
       return new Response(
         JSON.stringify({ error: "AI orchestrator failed", detail: orchestratorResult }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -152,7 +147,7 @@ Deno.serve(async (req) => {
       console.error("Failed to insert meeting summary:", insertError);
       return new Response(
         JSON.stringify({ error: "Failed to save summary", detail: insertError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -162,14 +157,14 @@ Deno.serve(async (req) => {
         meeting_summary_id: summary.meeting_summary_id,
         summary,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
 
   } catch (err) {
     console.error("generate-meeting-summary error:", err);
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

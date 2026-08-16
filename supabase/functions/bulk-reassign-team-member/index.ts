@@ -12,11 +12,11 @@ interface Body {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -27,7 +27,7 @@ serve(async (req) => {
   if (!authHeader) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -37,7 +37,7 @@ serve(async (req) => {
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -46,25 +46,25 @@ serve(async (req) => {
   if (!from_user_id || !to_user_id || !UUID_RE.test(from_user_id) || !UUID_RE.test(to_user_id)) {
     return new Response(JSON.stringify({ error: "from_user_id and to_user_id must be valid UUIDs" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
   if (from_user_id === to_user_id) {
     return new Response(JSON.stringify({ error: "from_user_id and to_user_id must differ" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
   if (!Array.isArray(tenant_ids) || tenant_ids.length === 0 || !tenant_ids.every((t) => Number.isInteger(t) && t > 0)) {
     return new Response(JSON.stringify({ error: "tenant_ids must be a non-empty array of positive integers" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
   if (role_scope && role_scope !== "primary_csc") {
     return new Response(JSON.stringify({ error: "Only role_scope='primary_csc' is supported" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -84,12 +84,12 @@ serve(async (req) => {
     const isForbidden = /forbidden|not authenticated/i.test(error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: isForbidden ? 403 : 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
   return new Response(JSON.stringify(data ?? { reassigned: [], skipped: [] }), {
     status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 });

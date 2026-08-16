@@ -118,7 +118,7 @@ function qualityAreaForPracticeGuide(filename: string): string | null {
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -287,7 +287,7 @@ function documentKeyFromPath(path: string): string {
 // ----- Main ---------------------------------------------------------
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   const t0 = Date.now();
@@ -306,7 +306,7 @@ Deno.serve(async (req) => {
 
   const caller = await requireCaller(req, admin, {
     featureKey: FeatureKeys.adminVector,
-    headers: corsHeaders,
+    headers: corsHeaders(req),
     unauthorizedMessage: 'Missing authorisation header',
     forbiddenMessage: 'Super Admin role required',
   });

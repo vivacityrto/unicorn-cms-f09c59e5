@@ -10,12 +10,13 @@
  * their role grants live in permission_features / role_permissions;
  * see the "Edge-function authorisation" section of the repo README.
  *
- * Two call shapes (merged from the C1 helper on main and this PR):
+ * Two call shapes:
  *
  * ```ts
  * // Options form (orAllow, custom messages, injected admin client)
  * const caller = await requireCaller(req, admin, {
  *   featureKey: FeatureKeys.staffInternal,
+ *   headers: corsHeaders(req),
  * });
  * if (!caller.ok) return caller.response;
  *
@@ -27,11 +28,9 @@
  * Bearer tokens are accepted only as exactly `Bearer <token>` (two parts).
  * Never base64-decode a JWT to read claims.
  */
-
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders as defaultCorsHeaders } from "./cors.ts";
+import { corsHeaders } from "./cors.ts";
 import {
-  allowlistFromAppBaseUrl,
   constantTimeEqual,
   parseBearerToken,
 } from "./requireCaller-helpers.ts";
@@ -108,32 +107,19 @@ export type RequireCallerOptions = {
   }) => Promise<boolean>;
 };
 
-const DEFAULT_ALLOW_HEADERS = [
-  "authorization",
-  "x-client-info",
-  "apikey",
-  "content-type",
-  "x-supabase-client-platform",
-  "x-supabase-client-platform-version",
-  "x-supabase-client-runtime",
-  "x-supabase-client-runtime-version",
-];
-
 export function corsHeadersFor(
   req: Request,
   extraAllowHeaders: string[] = [],
 ): Record<string, string> {
-  const appBase = (Deno.env.get("APP_BASE_URL") ?? "").replace(/\/+$/, "");
-  const allowlist = allowlistFromAppBaseUrl(appBase);
-  const origin = req.headers.get("Origin");
-  const allowOrigin = origin && allowlist.has(origin) ? origin : (appBase || "null");
-  const allowHeaders = [...DEFAULT_ALLOW_HEADERS, ...extraAllowHeaders];
-  return {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Headers": allowHeaders.join(", "),
-    "Access-Control-Allow-Methods": "POST, OPTIONS, GET, PUT, PATCH, DELETE",
-    Vary: "Origin",
-  };
+  const headers = { ...corsHeaders(req) };
+  if (extraAllowHeaders.length > 0 && headers["Access-Control-Allow-Headers"]) {
+    const existing = headers["Access-Control-Allow-Headers"]
+      .split(",")
+      .map((h) => h.trim())
+      .filter(Boolean);
+    headers["Access-Control-Allow-Headers"] = [...new Set([...existing, ...extraAllowHeaders])].join(", ");
+  }
+  return headers;
 }
 
 function jsonBody(
@@ -237,7 +223,7 @@ export async function requireCallerByUserId(
   admin: SupabaseClient,
   user: { id: string; email?: string },
   options: RequireCallerOptions,
-  headers: Record<string, string> = defaultCorsHeaders,
+  headers: Record<string, string> = {},
   style: ErrorStyle = "error",
   minLevel: "full" | "limited" = "full",
 ): Promise<RequireCallerResult> {
@@ -279,8 +265,8 @@ async function requireCallerWithOptions(
   admin: SupabaseClient,
   options: RequireCallerOptions,
 ): Promise<RequireCallerResult> {
-  const headers = options.headers ?? defaultCorsHeaders;
   const style = options.errorStyle ?? "error";
+  const headers = options.headers ?? corsHeaders(req);
   const token = parseBearerToken(
     req.headers.get("Authorization") ?? req.headers.get("authorization"),
   );
@@ -311,21 +297,21 @@ async function requireCallerWithOptions(
     };
   }
 
-  const user = {
-    id: callerData.user.id,
-    email: callerData.user.email,
-  };
-  return requireCallerByUserId(admin, user, options, headers, style);
+  return requireCallerByUserId(
+    admin,
+    { id: callerData.user.id, email: callerData.user.email },
+    options,
+    headers,
+    style,
+    options.minLevel ?? "full",
+  );
 }
 
 async function requireCallerConvenience(
   req: Request,
-  featureKey: string,
+  featureKey: FeatureKey,
   minLevel: PermissionMinLevel = "full",
 ): Promise<{ userId: string } | Response> {
-  const token = parseBearerToken(req.headers.get("Authorization"));
-  if (!token) return convenienceJson(req, 401, { error: "Unauthorized" });
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceRoleKey) {
@@ -336,26 +322,19 @@ async function requireCallerConvenience(
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: callerData, error: callerErr } = await admin.auth.getUser(token);
-  if (callerErr || !callerData?.user) {
-    return convenienceJson(req, 401, { error: "Unauthorized" });
-  }
-
-  const { data: allowed } = await admin.rpc("check_permission", {
-    p_user_id: callerData.user.id,
-    p_feature_key: featureKey,
-    p_min_level: minLevel,
+  const gated = await requireCallerWithOptions(req, admin, {
+    featureKey,
+    minLevel: minLevel === "edit" || minLevel === "view" || minLevel === "limited"
+      ? "limited"
+      : "full",
   });
-  if (allowed !== true) {
-    return convenienceJson(req, 403, { error: "Forbidden" });
-  }
-
-  return { userId: callerData.user.id };
+  if (!gated.ok) return gated.response;
+  return { userId: gated.user.id };
 }
 
 export async function requireCaller(
   req: Request,
-  featureKey: string,
+  featureKey: FeatureKey,
   minLevel?: PermissionMinLevel,
 ): Promise<{ userId: string } | Response>;
 export async function requireCaller(
@@ -365,13 +344,15 @@ export async function requireCaller(
 ): Promise<RequireCallerResult>;
 export async function requireCaller(
   req: Request,
-  adminOrFeatureKey: SupabaseClient | string,
+  adminOrFeatureKey: SupabaseClient | FeatureKey,
   optionsOrMinLevel?: RequireCallerOptions | PermissionMinLevel,
 ): Promise<RequireCallerResult | { userId: string } | Response> {
   if (typeof adminOrFeatureKey === "string") {
-    const minLevel =
-      typeof optionsOrMinLevel === "string" ? optionsOrMinLevel : "full";
-    return requireCallerConvenience(req, adminOrFeatureKey, minLevel);
+    return requireCallerConvenience(
+      req,
+      adminOrFeatureKey,
+      typeof optionsOrMinLevel === "string" ? optionsOrMinLevel : "full",
+    );
   }
   return requireCallerWithOptions(
     req,
@@ -380,6 +361,11 @@ export async function requireCaller(
   );
 }
 
+/**
+ * Machine-to-machine gate: constant-time compare of a request header against
+ * a Deno.env secret. Rejects when the secret is unset or the header is missing
+ * or mismatched. Never logs the secret or the provided value.
+ */
 export function requireSharedSecret(
   req: Request,
   envKey: string,

@@ -39,17 +39,9 @@ import {
   type DataForFacts,
 } from "../_shared/ai-brain/index.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 // ============= CORS =============
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, " +
-    "x-supabase-client-platform, x-supabase-client-platform-version, " +
-    "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
 // ============= Constants =============
 const DAILY_QUERY_CAP = 20;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
@@ -172,17 +164,17 @@ interface ClientResponse {
 // ============= Handler =============
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return jsonError(405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
+    return jsonError(req, 405, "METHOD_NOT_ALLOWED", "Only POST requests are accepted");
   }
 
   try {
     // 1. Token
     const token = extractToken(req);
     if (!token) {
-      return jsonError(401, "UNAUTHORIZED", "No authorization token provided");
+      return jsonError(req, 401, "UNAUTHORIZED", "No authorization token provided");
     }
 
     // 2. Build the two clients
@@ -198,7 +190,7 @@ Deno.serve(async (req) => {
     // 3. Auth
     const { user, profile, error: authError } = await verifyAuth(supabase, token);
     if (authError || !user || !profile) {
-      return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
+      return jsonError(req, 401, "UNAUTHORIZED", authError || "Authentication failed");
     }
 
     // 4. Parse body — clients must NOT supply scope.
@@ -206,18 +198,18 @@ Deno.serve(async (req) => {
     try {
       body = await req.json();
     } catch {
-      return jsonError(400, "BAD_REQUEST", "Invalid JSON body");
+      return jsonError(req, 400, "BAD_REQUEST", "Invalid JSON body");
     }
     const question = typeof body.question === "string" ? body.question.trim() : "";
     if (!question) {
-      return jsonError(400, "BAD_REQUEST", "Question is required");
+      return jsonError(req, 400, "BAD_REQUEST", "Question is required");
     }
     const previewTenantId =
       typeof body.preview_tenant_id === "number" ? body.preview_tenant_id : undefined;
     const isSuperAdmin = isVivacityInternal(profile);
     for (const forbidden of ["tenant_id", "client_id", "package_id", "phase_id"]) {
       if (forbidden in body) {
-        return jsonError(
+        return jsonError(req, 
           400,
           "BAD_REQUEST",
           `Field '${forbidden}' is not allowed; scope is resolved server-side`,
@@ -225,7 +217,7 @@ Deno.serve(async (req) => {
       }
     }
     if (!isSuperAdmin && "preview_tenant_id" in body) {
-      return jsonError(400, "BAD_REQUEST", "Field 'preview_tenant_id' is not allowed");
+      return jsonError(req, 400, "BAD_REQUEST", "Field 'preview_tenant_id' is not allowed");
     }
 
     // 5. Access gate
@@ -237,7 +229,7 @@ Deno.serve(async (req) => {
       previewTenantId,
     );
     if (!access.allowed) {
-      return askVivAccessDeniedResponse(clientAskVivDenialMessage(access.reason));
+      return askVivAccessDeniedResponse(req, clientAskVivDenialMessage(access.reason));
     }
     const gateTenantId = access.tenant_id;
 
@@ -269,7 +261,7 @@ Deno.serve(async (req) => {
         {
           status: 429,
           headers: {
-            ...corsHeaders,
+            ...corsHeaders(req),
             "Content-Type": "application/json",
             "Retry-After": String(retryAfter),
             "Cache-Control": "no-store",
@@ -299,7 +291,7 @@ Deno.serve(async (req) => {
       });
     } catch (err) {
       console.error("Fact Builder error:", err);
-      return jsonError(500, "FACT_BUILDER_ERROR", "Failed to build facts for response");
+      return jsonError(req, 500, "FACT_BUILDER_ERROR", "Failed to build facts for response");
     }
 
     // 9. Deny-list filter
@@ -443,10 +435,10 @@ RULES:
       freshness,
       consultant_handoff_suggested: consultantHandoff,
     };
-    return jsonRaw(response);
+    return jsonRaw(req, response);
   } catch (err) {
     console.error("compliance-assistant-client error:", err);
-    return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonError(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
 
@@ -595,9 +587,6 @@ async function deriveFreshness(
       .limit(1)
       .maybeSingle();
     lastActivityAt = (auditRow?.created_at as string | undefined) ?? null;
-
-
-
 
     const days = lastActivityAt
       ? Math.floor((Date.now() - new Date(lastActivityAt).getTime()) / 86_400_000)

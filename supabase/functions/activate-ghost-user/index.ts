@@ -10,16 +10,16 @@ interface Body {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -39,11 +39,11 @@ serve(async (req) => {
     // 1. Caller auth
     const authHeader = req.headers.get("Authorization");
     const token = authHeader?.replace(/^Bearer\s+/i, "");
-    if (!token) return json(401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
+    if (!token) return json(req, 401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
 
     const { data: callerData, error: callerErr } = await admin.auth.getUser(token);
     if (callerErr || !callerData?.user) {
-      return json(401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message || "Invalid token" });
+      return json(req, 401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message || "Invalid token" });
     }
     const caller = callerData.user;
 
@@ -54,24 +54,24 @@ serve(async (req) => {
       p_min_level: "full",
     });
     if (!allowed) {
-      return json(403, { ok: false, code: "FORBIDDEN", detail: "You do not have permission to activate users" });
+      return json(req, 403, { ok: false, code: "FORBIDDEN", detail: "You do not have permission to activate users" });
     }
 
     // 3. Payload
     let body: Body;
     try { body = await req.json(); } catch {
-      return json(400, { ok: false, code: "BAD_JSON", detail: "Invalid JSON" });
+      return json(req, 400, { ok: false, code: "BAD_JSON", detail: "Invalid JSON" });
     }
     if (!body?.user_uuid || !UUID_RE.test(body.user_uuid) || typeof body.tenant_id !== "number") {
-      return json(400, { ok: false, code: "INVALID_PAYLOAD", detail: "user_uuid (uuid) and tenant_id (number) required" });
+      return json(req, 400, { ok: false, code: "INVALID_PAYLOAD", detail: "user_uuid (uuid) and tenant_id (number) required" });
     }
 
     const tenantAccess = await hasTenantAccessSafe(admin, caller.id, body.tenant_id);
     if (tenantAccess.lookupFailed) {
-      return json(500, { ok: false, code: "TENANT_ACCESS_CHECK_FAILED", detail: "Failed to verify tenant access" });
+      return json(req, 500, { ok: false, code: "TENANT_ACCESS_CHECK_FAILED", detail: "Failed to verify tenant access" });
     }
     if (!tenantAccess.allowed) {
-      return json(403, { ok: false, code: "FORBIDDEN", detail: "You do not have access to this tenant" });
+      return json(req, 403, { ok: false, code: "FORBIDDEN", detail: "You do not have access to this tenant" });
     }
 
     // 4. Lookup ghost in public.users
@@ -82,17 +82,17 @@ serve(async (req) => {
       .maybeSingle();
     if (ghostErr) {
       console.error("ghost lookup failed", ghostErr);
-      return json(500, { ok: false, code: "USER_LOOKUP_FAILED", detail: ghostErr.message });
+      return json(req, 500, { ok: false, code: "USER_LOOKUP_FAILED", detail: ghostErr.message });
     }
     if (!ghost || !ghost.email) {
-      return json(404, { ok: false, code: "USER_NOT_FOUND", detail: "No public.users row for that UUID (or missing email)" });
+      return json(req, 404, { ok: false, code: "USER_NOT_FOUND", detail: "No public.users row for that UUID (or missing email)" });
     }
     const ghostEmail = ghost.email.toLowerCase();
 
     // 5. Confirm ghost via auth.admin.getUserById
     const { data: existingById } = await admin.auth.admin.getUserById(body.user_uuid);
     if (existingById?.user) {
-      return json(409, { ok: false, code: "ALREADY_ACTIVATED", detail: "User already has an auth account" });
+      return json(req, 409, { ok: false, code: "ALREADY_ACTIVATED", detail: "User already has an auth account" });
     }
 
     // 6. Defensive email collision check (paginated)
@@ -105,7 +105,7 @@ serve(async (req) => {
       }
       const conflict = list?.users?.find((u) => u.email?.toLowerCase() === ghostEmail);
       if (conflict) {
-        return json(409, {
+        return json(req, 409, {
           ok: false,
           code: "EMAIL_TAKEN_BY_OTHER_AUTH_USER",
           detail: `Email ${ghostEmail} is already used by auth user ${conflict.id}`,
@@ -131,9 +131,9 @@ serve(async (req) => {
       console.error("createUser failed", createErr);
       const msg = createErr.message || "";
       if (/already|duplicate|exists/i.test(msg)) {
-        return json(409, { ok: false, code: "ALREADY_ACTIVATED", detail: msg });
+        return json(req, 409, { ok: false, code: "ALREADY_ACTIVATED", detail: msg });
       }
-      return json(500, { ok: false, code: "AUTH_CREATE_FAILED", detail: msg });
+      return json(req, 500, { ok: false, code: "AUTH_CREATE_FAILED", detail: msg });
     }
 
     // 8. Role correction — align tenant_users / tenant_members / users with relationship_role
@@ -275,7 +275,7 @@ serve(async (req) => {
       console.error("audit insert failed (non-fatal)", auditErr);
     }
 
-    return json(200, {
+    return json(req, 200, {
       ok: true,
       email: ghost.email,
       email_sent: emailSent,
@@ -286,6 +286,6 @@ serve(async (req) => {
     });
   } catch (err: any) {
     console.error("activate-ghost-user error", err);
-    return json(500, { ok: false, code: "UNEXPECTED", detail: err?.message || "Unexpected error" });
+    return json(req, 500, { ok: false, code: "UNEXPECTED", detail: err?.message || "Unexpected error" });
   }
 });

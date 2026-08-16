@@ -2,12 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Connection, Request as TdsRequest, TYPES } from "npm:tedious@18.6.1";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 function connectMssql(): Promise<Connection> {
   return new Promise((resolve, reject) => {
@@ -65,7 +61,7 @@ function execQuery(
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -75,7 +71,7 @@ serve(async (req) => {
     );
     const caller = await requireCaller(req, svcClient, {
       featureKey: FeatureKeys.adminUnicorn1,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Unauthorized",
       forbiddenMessage: "Forbidden – SuperAdmin only",
     });
@@ -85,7 +81,7 @@ serve(async (req) => {
     if (!search || typeof search !== "string" || search.trim().length < 2) {
       return new Response(
         JSON.stringify({ error: "Provide a search term (min 2 chars)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -139,7 +135,7 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ clients }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     } finally {
       conn.close();
@@ -148,7 +144,7 @@ serve(async (req) => {
     console.error("lookup-unicorn1-client error:", err);
     return new Response(
       JSON.stringify({ error: err.message || "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

@@ -12,10 +12,10 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -23,11 +23,11 @@ const VALID_DECISIONS = new Set(['accepted', 'edited', 'rejected']);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
+  if (!authHeader) return json(req, { error: 'Missing authorisation header' }, 401);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: userRes, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userRes?.user) return json({ error: 'Not authenticated' }, 401);
+  if (userErr || !userRes?.user) return json(req, { error: 'Not authenticated' }, 401);
   const callerUserId = userRes.user.id;
 
   let body: {
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+    return json(req, { error: 'Invalid JSON body' }, 400);
   }
 
   const draftLogId = typeof body.draft_log_id === 'string' ? body.draft_log_id : '';
@@ -59,10 +59,10 @@ Deno.serve(async (req) => {
   const decision = typeof body.decision === 'string' ? body.decision : '';
 
   if (!draftLogId || !responseId) {
-    return json({ error: 'draft_log_id and response_id are required' }, 400);
+    return json(req, { error: 'draft_log_id and response_id are required' }, 400);
   }
   if (!VALID_DECISIONS.has(decision)) {
-    return json({ error: 'decision must be accepted | edited | rejected' }, 400);
+    return json(req, { error: 'decision must be accepted | edited | rejected' }, 400);
   }
 
   const finalSummary =
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
   if (body.edit_distance_pct !== undefined && body.edit_distance_pct !== null) {
     const n = Number(body.edit_distance_pct);
     if (!Number.isFinite(n) || n < 0 || n > 100) {
-      return json({ error: 'edit_distance_pct must be 0..100' }, 400);
+      return json(req, { error: 'edit_distance_pct must be 0..100' }, 400);
     }
     editDistancePct = Math.round(n * 100) / 100;
   }
@@ -92,17 +92,17 @@ Deno.serve(async (req) => {
     .eq('id', draftLogId)
     .maybeSingle();
   if (draftErr || !draftRow) {
-    return json({ error: 'Draft log entry not found' }, 404);
+    return json(req, { error: 'Draft log entry not found' }, 404);
   }
   const d = draftRow as Record<string, any>;
   if (d.action !== 'ai.finding_drafted') {
-    return json({ error: 'Referenced log row is not an AI draft' }, 400);
+    return json(req, { error: 'Referenced log row is not an AI draft' }, 400);
   }
   if (d.actor_user_id !== callerUserId) {
-    return json({ error: 'Draft log belongs to a different user' }, 403);
+    return json(req, { error: 'Draft log belongs to a different user' }, 403);
   }
   if (d.entity_id !== responseId) {
-    return json({ error: 'Draft log does not match this response' }, 400);
+    return json(req, { error: 'Draft log does not match this response' }, 400);
   }
 
   const { error: insErr } = await admin.from('client_audit_log' as any).insert({
@@ -122,8 +122,8 @@ Deno.serve(async (req) => {
 
   if (insErr) {
     console.error('Decision log insert failed:', insErr.message);
-    return json({ error: 'Failed to record decision', detail: insErr.message }, 500);
+    return json(req, { error: 'Failed to record decision', detail: insErr.message }, 500);
   }
 
-  return json({ ok: true }, 200);
+  return json(req, { ok: true }, 200);
 });

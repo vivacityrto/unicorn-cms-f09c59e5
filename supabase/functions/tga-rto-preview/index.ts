@@ -1,9 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 // Compute SHA256 hash of a string using Web Crypto API
 async function computeSha256(text: string): Promise<string> {
@@ -16,7 +12,7 @@ async function computeSha256(text: string): Promise<string> {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   try {
@@ -28,7 +24,7 @@ serve(async (req) => {
           success: false, 
           error: 'Invalid RTO ID format. Must be 4-6 digits.' 
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -53,7 +49,7 @@ serve(async (req) => {
             source_url: apiUrl,
             http_status: 404
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
       throw new Error(`TGA API error: ${response.status}`);
@@ -108,14 +104,14 @@ serve(async (req) => {
         },
         raw_snapshot: rawData
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[TGA_PREVIEW] Error:', errorMessage);
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

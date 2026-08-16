@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   GENERIC_RESET_MESSAGE,
   checkPasswordResetRateLimit,
@@ -8,26 +9,21 @@ import {
 } from "../_shared/password-reset-rate-limit.ts";
 import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 interface SelfPasswordResetRequest {
   email: string;
 }
 
-function genericSuccess(): Response {
+function genericSuccess(req: Request): Response {
   return new Response(
     JSON.stringify({ ok: true, message: GENERIC_RESET_MESSAGE }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
   );
 }
 
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -42,7 +38,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Missing Mailgun configuration");
       return new Response(
         JSON.stringify({ ok: false, code: "MAILGUN_NOT_CONFIGURED" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -57,7 +53,7 @@ serve(async (req: Request): Promise<Response> => {
     if (!email) {
       return new Response(
         JSON.stringify({ ok: false, code: "MISSING_EMAIL" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -75,7 +71,7 @@ serve(async (req: Request): Promise<Response> => {
           code: "RATE_LIMIT_EXCEEDED",
           detail: "Too many password reset attempts. Please try again later.",
         }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 429, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -96,13 +92,13 @@ serve(async (req: Request): Promise<Response> => {
     // But only actually send email if user exists and is active
     if (targetError || !targetUser) {
       console.log(`Password reset requested for non-existent email: ${normalizedEmail}`, targetError ?? "");
-      return genericSuccess();
+      return genericSuccess(req, );
     }
 
     // Check if user is active (disabled flag)
     if (targetUser.disabled) {
       console.log(`Password reset requested for disabled user: ${normalizedEmail}`);
-      return genericSuccess();
+      return genericSuccess(req, );
     }
 
     console.log(`Generating self-service password reset link for ${targetUser.email}`);
@@ -120,7 +116,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Failed to generate reset link:", linkError);
       return new Response(
         JSON.stringify({ ok: false, code: "LINK_GENERATION_FAILED", detail: linkError?.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -129,7 +125,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("No action_link in response"); // token only; URL rebuilt from APP_BASE_URL
       return new Response(
         JSON.stringify({ ok: false, code: "NO_ACTION_LINK" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -140,7 +136,7 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Could not extract token from action_link"); // token only; URL rebuilt from APP_BASE_URL
       return new Response(
         JSON.stringify({ ok: false, code: "TOKEN_EXTRACT_FAILED" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     const safeResetLink = `${APP_BASE_URL}/activate?token=${encodeURIComponent(rawToken)}&type=recovery&email=${encodeURIComponent(targetUser.email)}`;
@@ -238,7 +234,7 @@ serve(async (req: Request): Promise<Response> => {
           code: "EMAIL_SEND_FAILED",
           detail: errorText,
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -258,13 +254,13 @@ serve(async (req: Request): Promise<Response> => {
       },
     });
 
-    return genericSuccess();
+    return genericSuccess(req, );
 
   } catch (error: any) {
     console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ ok: false, code: "UNEXPECTED_ERROR", detail: "An unexpected error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

@@ -14,6 +14,7 @@ import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   buildClientSummary,
   buildPhaseSummary,
@@ -25,14 +26,6 @@ import {
   IndexResult,
 } from "../_shared/vector-helpers.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": 
-    "authorization, x-client-info, apikey, content-type, " +
-    "x-supabase-client-platform, x-supabase-client-platform-version, " +
-    "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 const VALID_SOURCE_TYPES = [
   "client_summary",
@@ -49,7 +42,7 @@ interface RequestPayload {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   if (req.method !== "POST") {
@@ -78,7 +71,7 @@ Deno.serve(async (req) => {
 
     const caller = await requireCallerByUserId(supabase, user, {
       featureKey: FeatureKeys.adminVector,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       errorStyle: "ok-code",
       forbiddenMessage: "Super Admin access required",
     });

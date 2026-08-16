@@ -3,17 +3,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -28,7 +28,7 @@ serve(async (req) => {
     // 1. Validate caller's auth token
     const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
     if (!callerToken) {
-      return jsonResponse(401, {
+      return jsonResponse(req, 401, {
         ok: false,
         code: "NO_AUTH",
         detail: "Missing Authorization header",
@@ -38,7 +38,7 @@ serve(async (req) => {
     // 2. Get caller's user info
     const { data: callerUser, error: callerErr } = await supabase.auth.getUser(callerToken);
     if (callerErr || !callerUser?.user) {
-      return jsonResponse(401, {
+      return jsonResponse(req, 401, {
         ok: false,
         code: "AUTH_FAILED",
         detail: callerErr?.message || "Unable to authenticate caller",
@@ -53,7 +53,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (roleErr) {
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "ROLE_LOOKUP_FAILED",
         detail: roleErr.message,
@@ -61,7 +61,7 @@ serve(async (req) => {
     }
 
     if (!callerProfile) {
-      return jsonResponse(403, {
+      return jsonResponse(req, 403, {
         ok: false,
         code: "FORBIDDEN",
         detail: "User profile not found",
@@ -73,7 +73,7 @@ serve(async (req) => {
     try {
       payload = await req.json();
     } catch {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         ok: false,
         code: "BAD_JSON",
         detail: "Request body must be valid JSON",
@@ -81,7 +81,7 @@ serve(async (req) => {
     }
 
     if (!payload.invitation_id) {
-      return jsonResponse(422, {
+      return jsonResponse(req, 422, {
         ok: false,
         code: "INVALID_PAYLOAD",
         detail: "invitation_id is required",
@@ -96,7 +96,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (inviteErr) {
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "INVITE_LOOKUP_FAILED",
         detail: inviteErr.message,
@@ -104,7 +104,7 @@ serve(async (req) => {
     }
 
     if (!invitation) {
-      return jsonResponse(404, {
+      return jsonResponse(req, 404, {
         ok: false,
         code: "INVITE_NOT_FOUND",
         detail: "Invitation not found",
@@ -132,7 +132,7 @@ serve(async (req) => {
     }
 
     if (!isSuperAdmin && !isTenantAdmin) {
-      return jsonResponse(403, {
+      return jsonResponse(req, 403, {
         ok: false,
         code: "FORBIDDEN",
         detail: "You don't have permission to resend this invitation",
@@ -141,7 +141,7 @@ serve(async (req) => {
 
     // 6. Check if invitation was already accepted
     if (invitation.status === 'accepted' || invitation.status === 'successful' || invitation.accepted_at || invitation.used_at) {
-      return jsonResponse(400, {
+      return jsonResponse(req, 400, {
         ok: false,
         code: "INVITE_ALREADY_ACCEPTED",
         detail: "This invitation has already been accepted",
@@ -176,7 +176,7 @@ serve(async (req) => {
 
     if (updateErr) {
       console.error("Failed to update invitation:", updateErr);
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "UPDATE_FAILED",
         detail: updateErr.message,
@@ -215,7 +215,7 @@ serve(async (req) => {
 
       console.log(`Generated invite link without sending email for ${invitation.email}`);
 
-      return jsonResponse(200, {
+      return jsonResponse(req, 200, {
         ok: true,
         action_link: inviteUrl, // inviteUrl built from APP_BASE_URL
         detail: "Link generated without sending email",
@@ -277,7 +277,7 @@ serve(async (req) => {
         actor_user_id: callerUser.user.id,
         detail: `Resend failed: ${sendErrorCode || ''} ${sendErrorDetail}`.trim(),
       });
-      return jsonResponse(502, {
+      return jsonResponse(req, 502, {
         ok: false,
         code: sendErrorCode || "EMAIL_SEND_FAILED",
         detail: sendErrorDetail,
@@ -331,7 +331,7 @@ serve(async (req) => {
 
     console.log(`Successfully resent invitation to ${invitation.email} (attempt ${attemptCount})`);
 
-    return jsonResponse(200, {
+    return jsonResponse(req, 200, {
       ok: true,
       detail: "Invitation resent successfully",
       email: invitation.email,
@@ -339,7 +339,7 @@ serve(async (req) => {
 
   } catch (e: any) {
     console.error("Unhandled error:", e);
-    return jsonResponse(500, {
+    return jsonResponse(req, 500, {
       ok: false,
       code: "UNHANDLED_ERROR",
       detail: e?.message || String(e),

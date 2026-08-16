@@ -13,15 +13,8 @@ import { extractToken, verifyAuth } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": 
-    "authorization, x-client-info, apikey, content-type, " +
-    "x-supabase-client-platform, x-supabase-client-platform-version, " +
-    "x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
-};
 
 interface RequestPayload {
   tenant_id: number;
@@ -31,7 +24,7 @@ interface RequestPayload {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   // Accept both DELETE and POST for compatibility
@@ -61,7 +54,7 @@ Deno.serve(async (req) => {
 
     const caller = await requireCallerByUserId(supabase, user, {
       featureKey: FeatureKeys.adminVector,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       errorStyle: "ok-code",
       forbiddenMessage: "Super Admin access required",
     });

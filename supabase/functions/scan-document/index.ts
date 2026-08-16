@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 interface TokenInfo {
   token: string;
@@ -372,7 +369,7 @@ async function scanXlsx(fileContent: ArrayBuffer): Promise<ScanResult> {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
   
   try {
@@ -381,7 +378,7 @@ serve(async (req) => {
     if (!document_id) {
       return new Response(
         JSON.stringify({ error: "document_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -393,7 +390,7 @@ serve(async (req) => {
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.staffDocumentsGenerate,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Unauthorized",
       forbiddenMessage: "Forbidden: no access to this document",
       orAllow: async ({ userId, admin }) => {
@@ -420,7 +417,7 @@ serve(async (req) => {
       console.error("Document not found:", docError);
       return new Response(
         JSON.stringify({ error: "Document not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -430,7 +427,7 @@ serve(async (req) => {
     if (!filePath) {
       return new Response(
         JSON.stringify({ error: "Document has no file attached" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -446,7 +443,7 @@ serve(async (req) => {
       console.error("Error downloading file:", downloadError);
       return new Response(
         JSON.stringify({ error: "Failed to download document file" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -470,7 +467,7 @@ serve(async (req) => {
     } else {
       return new Response(
         JSON.stringify({ error: "Unsupported file type. Only .docx, .xlsx, and .pptx are supported." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -498,7 +495,7 @@ serve(async (req) => {
       console.error("Error updating document:", updateError);
       return new Response(
         JSON.stringify({ error: "Failed to update document with scan results" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     
@@ -533,7 +530,7 @@ serve(async (req) => {
         tokens: scanResult.tokens || [],
         dropdowns: scanResult.dropdowns || []
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
     
   } catch (error) {
@@ -541,7 +538,7 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

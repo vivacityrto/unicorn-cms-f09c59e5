@@ -30,10 +30,10 @@ type Outcome =
   | { tenant_id: number; outcome: "skipped"; reason: string; email?: string }
   | { tenant_id: number; outcome: "failed"; error: string; email?: string };
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
@@ -41,12 +41,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
   if (!callerToken) {
-    return jsonResponse(401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
+    return jsonResponse(req, 401, { ok: false, code: "NO_AUTH", detail: "Missing Authorization header" });
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -56,7 +56,7 @@ serve(async (req: Request) => {
   // 1. Authenticate caller and verify Super Admin
   const { data: callerUser, error: callerErr } = await supabase.auth.getUser(callerToken);
   if (callerErr || !callerUser?.user) {
-    return jsonResponse(401, {
+    return jsonResponse(req, 401, {
       ok: false,
       code: "AUTH_FAILED",
       detail: callerErr?.message || "Unable to authenticate",
@@ -70,7 +70,7 @@ serve(async (req: Request) => {
   });
 
   if (!allowed) {
-    return jsonResponse(403, {
+    return jsonResponse(req, 403, {
       ok: false,
       code: "FORBIDDEN",
       detail: "You do not have permission to run bulk invitations",
@@ -82,11 +82,11 @@ serve(async (req: Request) => {
   try {
     body = await req.json();
   } catch {
-    return jsonResponse(400, { ok: false, code: "BAD_JSON", detail: "Invalid JSON body" });
+    return jsonResponse(req, 400, { ok: false, code: "BAD_JSON", detail: "Invalid JSON body" });
   }
 
   if (!Array.isArray(body.tenant_ids) || body.tenant_ids.length === 0) {
-    return jsonResponse(422, {
+    return jsonResponse(req, 422, {
       ok: false,
       code: "INVALID_PAYLOAD",
       detail: "tenant_ids must be a non-empty array",
@@ -278,7 +278,7 @@ serve(async (req: Request) => {
     console.warn("[bulk-send] Audit log insert failed (non-fatal):", e);
   }
 
-  return jsonResponse(200, {
+  return jsonResponse(req, 200, {
     ok: true,
     summary,
     details,

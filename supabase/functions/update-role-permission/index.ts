@@ -12,20 +12,20 @@ interface Body {
   reason?: string;
 }
 
-function json(status: number, body: Record<string, unknown>): Response {
+function json(req: Request, status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 function err(status: number, code: string, detail?: string) {
-  return json(status, { ok: false, code, ...(detail ? { detail } : {}) });
+  return json(req, status, { ok: false, code, ...(detail ? { detail } : {}) });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.adminPermissions,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       errorStyle: "ok-code",
       unauthorizedMessage: "Missing bearer token",
       forbiddenMessage: "Super Admin (Vivacity internal) required",
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
       console.error("permission_change_log insert failed:", logErr);
     }
 
-    return json(200, {
+    return json(req, 200, {
       ok: true,
       feature_key,
       role,

@@ -1,12 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
+
 serve((req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req) });
   return new Response(
     JSON.stringify({ error: "Retired duplicate — use send-self-password-reset.", code: "FUNCTION_RETIRED" }),
-    { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    { status: 410, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
   );
 });

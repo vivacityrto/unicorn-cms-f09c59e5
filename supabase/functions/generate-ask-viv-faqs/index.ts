@@ -26,7 +26,7 @@ const TARGET_FAQ_COUNT = 8;
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -51,7 +51,7 @@ function parseFaqJson(text: string): RawFaq[] {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
   if (body.force) {
     const caller = await requireCaller(req, admin, {
       featureKey: FeatureKeys.adminVector,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: 'Missing authorisation header',
       forbiddenMessage: 'Super Admin role required for ad-hoc trigger',
     });

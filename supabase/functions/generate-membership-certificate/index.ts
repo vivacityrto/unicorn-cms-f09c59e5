@@ -3,14 +3,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const CENTER_X = 297.64;
 const FUCHSIA = rgb(0.929, 0.094, 0.471);
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
@@ -47,7 +48,7 @@ function tierFromCode(code: string | null | undefined): string | null {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -62,16 +63,16 @@ serve(async (req) => {
     try {
       body = await req.json();
     } catch {
-      return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "Invalid JSON body" });
+      return jsonResponse(req, 400, { ok: false, code: "BAD_REQUEST", detail: "Invalid JSON body" });
     }
     const tenantId = Number(body.tenant_id);
     if (!Number.isFinite(tenantId)) {
-      return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "tenant_id (number) required" });
+      return jsonResponse(req, 400, { ok: false, code: "BAD_REQUEST", detail: "tenant_id (number) required" });
     }
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.staffDocumentsGenerate,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       errorStyle: "ok-code",
       unauthorizedMessage: "Missing Authorization header",
       forbiddenMessage: "Not authorised for this tenant",
@@ -96,10 +97,10 @@ serve(async (req) => {
       .maybeSingle();
 
     if (piErr) {
-      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: piErr.message });
+      return jsonResponse(req, 500, { ok: false, code: "LOOKUP_FAILED", detail: piErr.message });
     }
     if (!piRow) {
-      return jsonResponse(404, { ok: false, code: "NO_MEMBERSHIP" });
+      return jsonResponse(req, 404, { ok: false, code: "NO_MEMBERSHIP" });
     }
 
     const { data: pkgRow, error: pkgErr } = await supabase
@@ -109,7 +110,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pkgErr) {
-      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: pkgErr.message });
+      return jsonResponse(req, 500, { ok: false, code: "LOOKUP_FAILED", detail: pkgErr.message });
     }
 
     const { data: tenantRow, error: tenantErr } = await supabase
@@ -119,7 +120,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (tenantErr) {
-      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: tenantErr.message });
+      return jsonResponse(req, 500, { ok: false, code: "LOOKUP_FAILED", detail: tenantErr.message });
     }
 
     const safeRtoName = ((tenantRow as any)?.rto_name || (tenantRow as any)?.name || "Vivacity")
@@ -133,7 +134,7 @@ serve(async (req) => {
     // 5. Tier mapping
     const tier = tierFromCode(packageCode);
     if (!tier) {
-      return jsonResponse(404, { ok: false, code: "NO_CERTIFICATE_FOR_TIER" });
+      return jsonResponse(req, 404, { ok: false, code: "NO_CERTIFICATE_FOR_TIER" });
     }
 
     // 6. Template
@@ -149,7 +150,7 @@ serve(async (req) => {
       .from("doc-templates")
       .download(templatePath);
     if (tplErr || !tplBlob) {
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "TEMPLATE_FETCH_FAILED",
         detail: tplErr?.message ?? "Template missing",
@@ -180,7 +181,7 @@ serve(async (req) => {
 
       pdfBytes = await pdfDoc.save();
     } catch (e) {
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "PDF_GENERATION_FAILED",
         detail: (e as Error).message,
@@ -193,10 +194,10 @@ serve(async (req) => {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${downloadFilename}"`,
         "Access-Control-Expose-Headers": "Content-Disposition",
-        ...corsHeaders,
+        ...corsHeaders(req),
       },
     });
   } catch (e) {
-    return jsonResponse(500, { ok: false, code: "PDF_GENERATION_FAILED", detail: (e as Error).message });
+    return jsonResponse(req, 500, { ok: false, code: "PDF_GENERATION_FAILED", detail: (e as Error).message });
   }
 });

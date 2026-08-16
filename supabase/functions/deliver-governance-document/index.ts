@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import * as zip from "https://deno.land/x/zipjs@v2.7.32/index.js";
-import { corsHeadersFor, requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   graphUploadSmall,
   graphUploadSession,
@@ -596,9 +597,8 @@ async function resolveMergeFields(
 // ── Main Handler ───────────────────────────────────────────────────────────
 
 serve(async (req) => {
-  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -609,7 +609,7 @@ serve(async (req) => {
     // claim/metadata fallback). Bearer parse is the C1 two-part rule.
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.staffDocumentsGenerate,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Missing authorization",
       forbiddenMessage: "Permission denied — Vivacity staff only",
     });
@@ -625,7 +625,7 @@ serve(async (req) => {
     if (!tenant_id || !document_version_id) {
       return new Response(
         JSON.stringify({ error: "tenant_id and document_version_id are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -643,7 +643,7 @@ serve(async (req) => {
     if (vErr || !version) {
       return new Response(JSON.stringify({ error: "Document version not found", detail: vErr?.message }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -651,7 +651,7 @@ serve(async (req) => {
     if (!doc) {
       return new Response(JSON.stringify({ error: "Parent document not found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -691,7 +691,7 @@ serve(async (req) => {
         console.log(`[deliver] Already delivered — returning existing record ${existing.id}`);
         return new Response(
           JSON.stringify({ success: true, skipped: true, delivery: existing }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
     } else {
@@ -745,13 +745,13 @@ serve(async (req) => {
         const msg = err instanceof Error ? err.message : String(err);
         return new Response(JSON.stringify({ error: `Failed to download template from SharePoint: ${msg}` }), {
           status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders(req), "Content-Type": "application/json" },
         });
       }
     } else {
       return new Response(JSON.stringify({ error: "No template source: neither Supabase storage_path nor documents.source_template_url is set" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
     void templateSource;
@@ -887,7 +887,7 @@ serve(async (req) => {
             risk_level: riskLevel,
           },
         }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 422, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -928,7 +928,7 @@ serve(async (req) => {
       });
       return new Response(
         JSON.stringify({ error: errorMsg, error_code: "SHARED_FOLDER_MISSING" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -1092,7 +1092,7 @@ serve(async (req) => {
         },
 
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("[deliver] Error:", error);
@@ -1138,7 +1138,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

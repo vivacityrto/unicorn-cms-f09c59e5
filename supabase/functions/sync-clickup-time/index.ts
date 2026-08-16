@@ -22,7 +22,7 @@ async function clickupGet(path: string, apiKey: string): Promise<any> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -47,14 +47,14 @@ Deno.serve(async (req) => {
       if (!filterTenantId) {
         return new Response(
           JSON.stringify({ error: "tenant_id required for sync_by_tenant mode" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
       query = query.eq("tenant_id", filterTenantId);
     } else if (mode !== "sync_all") {
       return new Response(
         JSON.stringify({ error: "Invalid mode. Use sync_all or sync_by_tenant" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
           next_offset: startOffset,
           total_tasks: 0,
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -150,13 +150,13 @@ Deno.serve(async (req) => {
         has_more: hasMore,
         next_offset: nextOffset,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("sync-clickup-time error:", err);
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

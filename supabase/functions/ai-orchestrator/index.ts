@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
 /**
  * AI Orchestrator Edge Function
@@ -16,12 +17,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  * Every request writes to ai_events + ai_event_payloads.
  * No client-side model calls. No ai_event_payloads exposed to clients.
  */
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 // ============= Task Type Registry =============
 
@@ -505,7 +500,7 @@ async function checkStaleData(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   const startMs = Date.now();
@@ -517,7 +512,7 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "Missing authorization" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -536,7 +531,7 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -568,7 +563,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ error: validation.error, request_id: requestId }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -578,7 +573,7 @@ Deno.serve(async (req) => {
     if (payload.actor_user_id !== user.id) {
       return new Response(
         JSON.stringify({ error: "actor_user_id must match authenticated user" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -607,7 +602,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ error: featureCheck.reason, request_id: requestId }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -642,7 +637,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ error: "Rate limit exceeded. Try again later.", request_id: requestId }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 429, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -651,7 +646,7 @@ Deno.serve(async (req) => {
     if (sizeError) {
       return new Response(
         JSON.stringify({ error: sizeError, request_id: requestId }),
-        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 413, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -696,7 +691,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ error: "Output schema validation failed", detail: outputError, request_id: requestId }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -740,7 +735,7 @@ Deno.serve(async (req) => {
         stale_warning: staleWarning,
         output,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
 
   } catch (err) {
@@ -777,7 +772,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : String(err), request_id: requestId }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

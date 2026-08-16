@@ -9,10 +9,10 @@ const PAGE_W = 841.89;
 const PAGE_H = 595.28;
 const CENTER_X = 510;
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ...corsHeaders(req) },
   });
 }
 
@@ -28,7 +28,7 @@ function formatIssuedDate(iso: string | null): string {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -43,16 +43,16 @@ serve(async (req) => {
     try {
       body = await req.json();
     } catch {
-      return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "Invalid JSON body" });
+      return jsonResponse(req, 400, { ok: false, code: "BAD_REQUEST", detail: "Invalid JSON body" });
     }
     const certificateId = Number(body.certificate_id);
     if (!Number.isFinite(certificateId)) {
-      return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "certificate_id (number) required" });
+      return jsonResponse(req, 400, { ok: false, code: "BAD_REQUEST", detail: "certificate_id (number) required" });
     }
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.staffInternal,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       errorStyle: "ok-code",
       unauthorizedMessage: "Missing Authorization header",
       forbiddenMessage: "Not authorised for this certificate",
@@ -76,10 +76,10 @@ serve(async (req) => {
       .maybeSingle();
 
     if (certErr) {
-      return jsonResponse(500, { ok: false, code: "NOT_FOUND", detail: certErr.message });
+      return jsonResponse(req, 500, { ok: false, code: "NOT_FOUND", detail: certErr.message });
     }
     if (!cert) {
-      return jsonResponse(404, { ok: false, code: "NOT_FOUND", detail: "Certificate not found" });
+      return jsonResponse(req, 404, { ok: false, code: "NOT_FOUND", detail: "Certificate not found" });
     }
 
     // 5. Fast path
@@ -88,13 +88,13 @@ serve(async (req) => {
         .from("academy-certificates")
         .createSignedUrl(cert.storage_path, SIGNED_URL_TTL);
       if (signErr || !signed?.signedUrl) {
-        return jsonResponse(500, { ok: false, code: "UPLOAD_FAILED", detail: signErr?.message ?? "Sign failed" });
+        return jsonResponse(req, 500, { ok: false, code: "UPLOAD_FAILED", detail: signErr?.message ?? "Sign failed" });
       }
       await supabase
         .from("academy_certificates")
         .update({ public_url: signed.signedUrl })
         .eq("id", certificateId);
-      return jsonResponse(200, { ok: true, data: { public_url: signed.signedUrl } });
+      return jsonResponse(req, 200, { ok: true, data: { public_url: signed.signedUrl } });
     }
 
     // 6a. Recipient name
@@ -129,7 +129,7 @@ serve(async (req) => {
       .from("doc-templates")
       .download("academy/certificate-template-a4.png");
     if (tplErr || !tplBlob) {
-      return jsonResponse(500, { ok: false, code: "TEMPLATE_FETCH_FAILED", detail: tplErr?.message ?? "Template missing" });
+      return jsonResponse(req, 500, { ok: false, code: "TEMPLATE_FETCH_FAILED", detail: tplErr?.message ?? "Template missing" });
     }
     const tplBytes = new Uint8Array(await tplBlob.arrayBuffer());
 
@@ -164,7 +164,7 @@ serve(async (req) => {
 
       pdfBytes = await pdfDoc.save();
     } catch (e) {
-      return jsonResponse(500, { ok: false, code: "PDF_GENERATION_FAILED", detail: (e as Error).message });
+      return jsonResponse(req, 500, { ok: false, code: "PDF_GENERATION_FAILED", detail: (e as Error).message });
     }
 
     // 6e. Upload
@@ -173,7 +173,7 @@ serve(async (req) => {
       .from("academy-certificates")
       .upload(storagePath, pdfBytes, { contentType: "application/pdf", upsert: true });
     if (upErr) {
-      return jsonResponse(500, { ok: false, code: "UPLOAD_FAILED", detail: upErr.message });
+      return jsonResponse(req, 500, { ok: false, code: "UPLOAD_FAILED", detail: upErr.message });
     }
 
     // 6f. Sign
@@ -181,7 +181,7 @@ serve(async (req) => {
       .from("academy-certificates")
       .createSignedUrl(storagePath, SIGNED_URL_TTL);
     if (signErr || !signed?.signedUrl) {
-      return jsonResponse(500, { ok: false, code: "UPLOAD_FAILED", detail: signErr?.message ?? "Sign failed" });
+      return jsonResponse(req, 500, { ok: false, code: "UPLOAD_FAILED", detail: signErr?.message ?? "Sign failed" });
     }
 
     // 6g. Persist
@@ -190,8 +190,8 @@ serve(async (req) => {
       .update({ storage_path: storagePath, public_url: signed.signedUrl })
       .eq("id", certificateId);
 
-    return jsonResponse(200, { ok: true, data: { public_url: signed.signedUrl } });
+    return jsonResponse(req, 200, { ok: true, data: { public_url: signed.signedUrl } });
   } catch (e) {
-    return jsonResponse(500, { ok: false, code: "PDF_GENERATION_FAILED", detail: (e as Error).message });
+    return jsonResponse(req, 500, { ok: false, code: "PDF_GENERATION_FAILED", detail: (e as Error).message });
   }
 });

@@ -1,31 +1,25 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const BodySchema = z.object({
   tenant_id: z.number().int().positive(),
   field_names: z.array(z.string()).min(1),
 });
 
-function json(status: number, body: unknown) {
+function json(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return json(405, { error: "Method not allowed" });
+    return json(req, 405, { error: "Method not allowed" });
   }
 
   try {
@@ -33,17 +27,17 @@ Deno.serve(async (req) => {
     try {
       raw = await req.json();
     } catch {
-      return json(400, { error: "Invalid JSON body" });
+      return json(req, 400, { error: "Invalid JSON body" });
     }
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
-      return json(400, { error: parsed.error.flatten().fieldErrors });
+      return json(req, 400, { error: parsed.error.flatten().fieldErrors });
     }
     const { tenant_id, field_names } = parsed.data;
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return json(401, { error: "Unauthorized" });
+      return json(req, 401, { error: "Unauthorized" });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -60,7 +54,7 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user?.id) {
-      return json(401, { error: "Unauthorized" });
+      return json(req, 401, { error: "Unauthorized" });
     }
     const callerId = userData.user.id;
 
@@ -73,10 +67,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (memErr) {
       console.error("tenant_users lookup error", memErr);
-      return json(500, { error: memErr.message });
+      return json(req, 500, { error: memErr.message });
     }
     if (!membership) {
-      return json(403, { error: "Forbidden" });
+      return json(req, 403, { error: "Forbidden" });
     }
 
     // Resolve CSC recipient via tenant_csc_assignments (authoritative source)
@@ -86,7 +80,7 @@ Deno.serve(async (req) => {
       .eq("tenant_id", tenant_id);
     if (cscErr) {
       console.error("tenant_csc_assignments lookup error", cscErr);
-      return json(500, { error: cscErr.message });
+      return json(req, 500, { error: cscErr.message });
     }
     const primary = (cscRows ?? []).find(
       (r: { user_id: string; is_primary: boolean | null }) => r.is_primary,
@@ -95,7 +89,7 @@ Deno.serve(async (req) => {
       primary?.user_id ?? (cscRows ?? [])[0]?.user_id ?? null;
 
     if (!cscUserId) {
-      return json(200, { notified: 0 });
+      return json(req, 200, { notified: 0 });
     }
 
     // Resolve tenant name for title (mirrors original)
@@ -124,13 +118,13 @@ Deno.serve(async (req) => {
       .upsert([row], { onConflict: "dedupe_key", ignoreDuplicates: true });
     if (upsertErr) {
       console.error("user_notifications upsert error", upsertErr);
-      return json(500, { error: upsertErr.message });
+      return json(req, 500, { error: upsertErr.message });
     }
 
-    return json(200, { notified: 1 });
+    return json(req, 200, { notified: 1 });
   } catch (e) {
     console.error("notify-merge-fields-updated unexpected", e);
     const message = e instanceof Error ? e.message : "Unexpected error";
-    return json(500, { error: message });
+    return json(req, 500, { error: message });
   }
 });

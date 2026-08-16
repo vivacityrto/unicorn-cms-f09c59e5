@@ -8,14 +8,14 @@ type ToggleStatusBody = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
     const { user_uuid, disabled } = (await req.json()) as ToggleStatusBody;
 
     if (!user_uuid) {
-      return jsonErr(400, "MISSING_USER_ID", "User UUID is required");
+      return jsonErr(req, 400, "MISSING_USER_ID", "User UUID is required");
     }
 
     const supabase = createClient(
@@ -27,14 +27,14 @@ Deno.serve(async (req) => {
     // Get current user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonErr(401, "UNAUTHORIZED", "No authorization header");
+      return jsonErr(req, 401, "UNAUTHORIZED", "No authorization header");
     }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !currentUser) {
-      return jsonErr(401, "UNAUTHORIZED", "Invalid token");
+      return jsonErr(req, 401, "UNAUTHORIZED", "Invalid token");
     }
 
     // Get current user's role (still needed for client-admin path)
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
                          targetUserData?.tenant_id === currentUserData?.tenant_id;
 
     if (!isSuperAdmin && !isClientAdmin) {
-      return jsonErr(403, "FORBIDDEN", "Only admins can change user status");
+      return jsonErr(req, 403, "FORBIDDEN", "Only admins can change user status");
     }
 
     // Route through central RPC — writes the disabled toggle AND the timeline event
@@ -76,14 +76,13 @@ Deno.serve(async (req) => {
     );
 
     if (rpcError) {
-      return jsonErr(400, "UPDATE_FAILED", rpcError.message);
+      return jsonErr(req, 400, "UPDATE_FAILED", rpcError.message);
     }
     const res = rpcResult as { success: boolean; error?: string; unchanged?: boolean } | null;
     if (res && !res.success) {
       const isForbidden = (res.error || '').toLowerCase().includes('forbidden');
-      return jsonErr(isForbidden ? 403 : 400, isForbidden ? "FORBIDDEN" : "UPDATE_FAILED", res.error || "RPC refused update");
+      return jsonErr(req, isForbidden ? 403 : 400, isForbidden ? "FORBIDDEN" : "UPDATE_FAILED", res.error || "RPC refused update");
     }
-
 
     // Audit log
     await supabase.from("audit_eos_events").insert({
@@ -98,18 +97,18 @@ Deno.serve(async (req) => {
     console.log(`User ${user_uuid} status changed to ${disabled ? "disabled" : "enabled"}`);
 
     return new Response(JSON.stringify({ ok: true }), {
-      headers: { "content-type": "application/json", ...corsHeaders },
+      headers: { "content-type": "application/json", ...corsHeaders(req) },
       status: 200,
     });
   } catch (e: any) {
     console.error("Error toggling user status:", e);
-    return jsonErr(500, "UNHANDLED", e?.message ?? String(e));
+    return jsonErr(req, 500, "UNHANDLED", e?.message ?? String(e));
   }
 });
 
-function jsonErr(status: number, code: string, detail?: string) {
+function jsonErr(req: Request, status: number, code: string, detail?: string) {
   return new Response(JSON.stringify({ ok: false, code, detail }), {
-    headers: { "content-type": "application/json", ...corsHeaders },
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
     status,
   });
 }

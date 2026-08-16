@@ -71,7 +71,7 @@ const MAX_TEXT_CHARS = 200_000; // matches analyse-evidence's cap
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -414,7 +414,7 @@ async function ingestSource(
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   const t0 = Date.now();
@@ -441,7 +441,7 @@ Deno.serve(async (req) => {
   if (tenantIdFilter !== null || body.source) {
     const caller = await requireCaller(req, admin, {
       featureKey: FeatureKeys.adminVector,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: 'Missing authorisation header',
       forbiddenMessage: 'Super Admin role required for ad-hoc backfill/test calls',
     });

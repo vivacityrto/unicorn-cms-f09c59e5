@@ -3,6 +3,7 @@
 // Invalid / stale signatures are rejected (401) and never processed.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 import {
   isWebhookTimestampFresh,
   verifyMailgunSignature,
@@ -18,20 +19,13 @@ if (!SIGNING_KEY) {
   );
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-const json = (status: number, body: unknown) =>
+const json = (req: Request, status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 
-const ok = () => json(200, { ok: true });
+const ok = (req: Request) => json(req, 200, { ok: true });
 
 function mapEvent(
   event: string,
@@ -48,30 +42,30 @@ function mapEvent(
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   if (!SIGNING_KEY) {
-    return json(500, { ok: false, error: "Webhook is not configured" });
+    return json(req, 500, { ok: false, error: "Webhook is not configured" });
   }
 
   try {
     const body = await req.json().catch(() => null) as any;
     if (!body || typeof body !== "object") {
       console.log("mailgun-webhook: invalid JSON body");
-      return json(401, { ok: false, error: "Invalid signature" });
+      return json(req, 401, { ok: false, error: "Invalid signature" });
     }
 
     const sigBlock = body.signature;
     if (!sigBlock?.timestamp || !sigBlock?.token || !sigBlock?.signature) {
       console.log("mailgun-webhook: missing signature fields");
-      return json(401, { ok: false, error: "Invalid signature" });
+      return json(req, 401, { ok: false, error: "Invalid signature" });
     }
 
     const timestamp = String(sigBlock.timestamp);
     if (!isWebhookTimestampFresh(timestamp)) {
       console.log("mailgun-webhook: stale timestamp, rejecting");
-      return json(401, { ok: false, error: "Stale timestamp" });
+      return json(req, 401, { ok: false, error: "Stale timestamp" });
     }
 
     const valid = await verifyMailgunSignature(
@@ -82,7 +76,7 @@ serve(async (req: Request) => {
     );
     if (!valid) {
       console.log("mailgun-webhook: invalid signature, rejecting");
-      return json(401, { ok: false, error: "Invalid signature" });
+      return json(req, 401, { ok: false, error: "Invalid signature" });
     }
 
     const ed = body["event-data"] ?? {};
@@ -96,7 +90,7 @@ serve(async (req: Request) => {
     let messageId: string | undefined = headers["message-id"];
     if (!messageId || !event) {
       console.log("mailgun-webhook: missing event or message-id", { event });
-      return ok();
+      return ok(req);
     }
 
     messageId = String(messageId).trim();
@@ -108,7 +102,7 @@ serve(async (req: Request) => {
     const isEngagement = event === "opened" || event === "clicked";
     if (!status && !isEngagement) {
       console.log("mailgun-webhook: ignored event", { event, severity });
-      return ok();
+      return ok(req);
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -124,11 +118,11 @@ serve(async (req: Request) => {
 
     if (lookupErr) {
       console.log("mailgun-webhook: lookup error", lookupErr.message);
-      return ok();
+      return ok(req);
     }
     if (!invite) {
       console.log("mailgun-webhook: no invitation for message-id", messageId);
-      return ok();
+      return ok(req);
     }
 
     const eventAtIso = Number.isFinite(eventTimestamp)
@@ -147,7 +141,7 @@ serve(async (req: Request) => {
 
       if (updateErr) {
         console.log("mailgun-webhook: update error", updateErr.message);
-        return ok();
+        return ok(req);
       }
 
       console.log("mailgun-webhook: updated invitation", {
@@ -156,7 +150,7 @@ serve(async (req: Request) => {
         event,
         severity,
       });
-      return ok();
+      return ok(req);
     }
 
     // Branch B — engagement (opened / clicked). Independent from delivery_status.
@@ -179,7 +173,7 @@ serve(async (req: Request) => {
         "mailgun-webhook: engagement update error",
         engagementErr.message,
       );
-      return ok();
+      return ok(req);
     }
 
     console.log("mailgun-webhook: engagement", {
@@ -188,9 +182,9 @@ serve(async (req: Request) => {
       open_count: patch.open_count,
       click_count: patch.click_count,
     });
-    return ok();
+    return ok(req);
   } catch (err) {
     console.log("mailgun-webhook: unexpected error", (err as Error).message);
-    return ok();
+    return ok(req);
   }
 });

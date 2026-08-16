@@ -1,12 +1,8 @@
+import { corsHeaders } from "../_shared/cors.ts";
  import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
  import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 
- const corsHeaders = {
-   'Access-Control-Allow-Origin': '*',
-   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
- };
- 
  // Report types and their required data sources
  const REPORT_TYPES = {
    'client_engagement_overview': {
@@ -49,7 +45,7 @@
  serve(async (req) => {
    // Handle CORS preflight
    if (req.method === 'OPTIONS') {
-     return new Response('ok', { headers: corsHeaders });
+     return new Response('ok', { headers: corsHeaders(req) });
    }
  
    try {
@@ -58,7 +54,7 @@
      if (!authHeader?.startsWith('Bearer ')) {
        return new Response(
          JSON.stringify({ error: 'Unauthorized' }),
-         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+         { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
        );
      }
  
@@ -75,7 +71,7 @@
      if (claimsError || !claimsData?.claims) {
        return new Response(
          JSON.stringify({ error: 'Unauthorized' }),
-         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+         { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
        );
      }
  
@@ -86,7 +82,7 @@
        { id: userId },
        {
          featureKey: FeatureKeys.staffAi,
-         headers: corsHeaders,
+         headers: corsHeaders(req),
          forbiddenMessage: 'Ask Viv is restricted to Vivacity Team members.',
        },
      );
@@ -103,7 +99,7 @@
            code: 'ASK_VIV_ACCESS_DENIED',
            message: 'Ask Viv is restricted to Vivacity Team members.',
          }),
-         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+         { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
        );
      }
  
@@ -132,14 +128,14 @@
        if (!reportType || !REPORT_TYPES[reportType as keyof typeof REPORT_TYPES]) {
          return new Response(
            JSON.stringify({ error: 'Invalid report type' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+           { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
          );
        }
  
        if (!clientTenantId) {
          return new Response(
            JSON.stringify({ error: 'Client tenant ID required for report generation' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+           { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
          );
        }
  
@@ -149,7 +145,7 @@
      } else {
        return new Response(
          JSON.stringify({ error: 'Invalid request type. Use "chat" or "report".' }),
-         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+         { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
        );
      }
  
@@ -168,14 +164,14 @@
  
      return new Response(
        JSON.stringify(response),
-       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+       { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
      );
  
    } catch (error) {
      console.error('Assistant error:', error);
      return new Response(
        JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+       { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
      );
    }
  });

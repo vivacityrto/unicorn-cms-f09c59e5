@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 interface SendEmailRequest {
   tenant_id: number;
@@ -62,7 +59,7 @@ interface UserRow {
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -77,7 +74,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const caller = await requireCaller(req, supabase, {
       featureKey: FeatureKeys.adminEmailTemplates,
-      headers: corsHeaders,
+      headers: corsHeaders(req),
       unauthorizedMessage: "Missing authorization header",
       forbiddenMessage: "Permission denied. SuperAdmin access required.",
     });
@@ -97,37 +94,37 @@ const handler = async (req: Request): Promise<Response> => {
     if (!tenant_id || typeof tenant_id !== 'number' || !Number.isInteger(tenant_id) || tenant_id <= 0) {
       return new Response(
         JSON.stringify({ error: "Invalid tenant_id: must be a positive integer" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     if (!email_template_id || typeof email_template_id !== 'string') {
       return new Response(
         JSON.stringify({ error: "Invalid email_template_id: must be a non-empty string" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     if (!recipient_type || !['tenant', 'internal', 'both'].includes(recipient_type)) {
       return new Response(
         JSON.stringify({ error: "Invalid recipient_type: must be 'tenant', 'internal', or 'both'" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     if (package_id !== undefined && (typeof package_id !== 'number' || !Number.isInteger(package_id) || package_id <= 0)) {
       return new Response(
         JSON.stringify({ error: "Invalid package_id: must be a positive integer" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     if (stage_id !== undefined && (typeof stage_id !== 'number' || !Number.isInteger(stage_id) || stage_id <= 0)) {
       return new Response(
         JSON.stringify({ error: "Invalid stage_id: must be a positive integer" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
     if (to_override !== undefined && (typeof to_override !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to_override))) {
       return new Response(
         JSON.stringify({ error: "Invalid to_override: must be a valid email address" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -144,7 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Template not found:", templateError);
       return new Response(
         JSON.stringify({ error: "Email template not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -154,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!dry_run && typedTemplate.status !== "active") {
       return new Response(
         JSON.stringify({ error: "Cannot send draft or archived template. Please activate the template first." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -173,7 +170,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Tenant not found:", tenantError);
       return new Response(
         JSON.stringify({ error: "Tenant not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -313,7 +310,7 @@ const handler = async (req: Request): Promise<Response> => {
             template_status: typedTemplate.status,
           },
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -321,7 +318,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (uniqueRecipients.length === 0) {
       return new Response(
         JSON.stringify({ error: "No recipients found. Please configure tenant email or specify a recipient." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -330,7 +327,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Mailgun not configured");
       return new Response(
         JSON.stringify({ error: "Email service not configured. Please add MAILGUN_API_KEY and MAILGUN_DOMAIN secrets." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -431,7 +428,7 @@ const handler = async (req: Request): Promise<Response> => {
           details: mailgunResult,
           log_id: logEntry?.id 
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -443,14 +440,14 @@ const handler = async (req: Request): Promise<Response> => {
         recipients: uniqueRecipients,
         warnings: warnings.length > 0 ? warnings : undefined,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
 
   } catch (error: any) {
     console.error("Error in send-stage-email:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 };

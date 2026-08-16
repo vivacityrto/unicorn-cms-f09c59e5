@@ -2,14 +2,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildScopeString, type SurfaceFlags } from "../_shared/microsoft-scopes.ts";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 import { oauthStateExpiresAt, resolveRedirectUri } from "../_shared/oauth-redirects.ts";
 import { consumeOAuthState } from "../_shared/oauth-states.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
 
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID')!;
 const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
@@ -19,7 +16,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -66,7 +63,7 @@ serve(async (req) => {
       if (!user) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -74,7 +71,7 @@ serve(async (req) => {
       if (!resolved.ok) {
         return new Response(
           JSON.stringify({ error: resolved.error }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
       const redirectUri = resolved.redirectUri;
@@ -94,20 +91,20 @@ serve(async (req) => {
         if (!Number.isFinite(tenantIdNum)) {
           return new Response(
             JSON.stringify({ error: 'tenant_id must be a number' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
         const tenantAccess = await hasTenantAccessSafe(supabaseAdmin, user.id, tenantIdNum);
         if (tenantAccess.lookupFailed) {
           return new Response(
             JSON.stringify({ error: 'Failed to verify tenant access' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
         if (!tenantAccess.allowed) {
           return new Response(
             JSON.stringify({ error: 'Forbidden: no access to this tenant' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
           );
         }
       }
@@ -134,7 +131,7 @@ serve(async (req) => {
         console.error('[outlook-auth] Failed to store state:', stateError);
         return new Response(
           JSON.stringify({ error: 'Failed to initialize OAuth' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -151,7 +148,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ auth_url: authUrl.toString(), state }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -161,7 +158,7 @@ serve(async (req) => {
       if (!caller) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -169,7 +166,7 @@ serve(async (req) => {
       if (!resolved.ok) {
         return new Response(
           JSON.stringify({ error: resolved.error }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -187,7 +184,7 @@ serve(async (req) => {
       if (!code || !state) {
         return new Response(
           JSON.stringify({ error: 'code and state are required' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -195,7 +192,7 @@ serve(async (req) => {
       if (!consumed.ok) {
         return new Response(
           JSON.stringify({ error: consumed.error }),
-          { status: consumed.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: consumed.status, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -247,7 +244,7 @@ serve(async (req) => {
         
         return new Response(
           JSON.stringify({ error: errorMessage }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -258,7 +255,7 @@ serve(async (req) => {
         console.error('[outlook-auth] Failed to parse token response');
         return new Response(
           JSON.stringify({ error: 'Invalid token response from Microsoft' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -305,7 +302,7 @@ serve(async (req) => {
         console.error('[outlook-auth] Failed to store tokens:', upsertError);
         return new Response(
           JSON.stringify({ error: 'Failed to store tokens' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -332,7 +329,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -342,7 +339,7 @@ serve(async (req) => {
       if (!user) {
         return new Response(
           JSON.stringify({ connected: false, error: 'Not authenticated' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -370,7 +367,7 @@ serve(async (req) => {
           last_error: token?.last_error,
           is_expired: isExpired
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -380,7 +377,7 @@ serve(async (req) => {
       if (!user) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -421,7 +418,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -429,7 +426,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ error: 'Invalid action' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -437,7 +434,7 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

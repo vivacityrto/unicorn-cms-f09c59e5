@@ -24,7 +24,7 @@ describe("mailgun-webhooks fail-closed shape", () => {
   });
 
   it("returns 500 when the signing key is missing", () => {
-    assert.match(src, /json\(\s*500/);
+    assert.match(src, /json\(\s*req,\s*500/);
     assert.match(src, /MAILGUN_WEBHOOK_SIGNING_KEY is not set/);
   });
 

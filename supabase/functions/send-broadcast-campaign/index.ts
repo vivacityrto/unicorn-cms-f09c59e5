@@ -1,10 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface RecipientRow {
   id: string;
@@ -15,13 +10,13 @@ interface RecipientRow {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return jsonError(401, "Missing authorization");
+      return jsonError(req, 401, "Missing authorization");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -36,7 +31,7 @@ Deno.serve(async (req) => {
     const { data: claimsData, error: claimsErr } =
       await userClient.auth.getClaims(token);
     if (claimsErr || !claimsData?.claims?.sub) {
-      return jsonError(401, "Unauthorized");
+      return jsonError(req, 401, "Unauthorized");
     }
     const callerId = claimsData.claims.sub;
 
@@ -52,14 +47,14 @@ Deno.serve(async (req) => {
       p_min_level: "full",
     });
     if (!allowed) {
-      return jsonError(403, "Insufficient permissions");
+      return jsonError(req, 403, "Insufficient permissions");
     }
 
     // 3. Parse + validate input
     const body = await req.json().catch(() => null);
     const campaignId: string | undefined = body?.campaign_id;
     if (!campaignId || typeof campaignId !== "string") {
-      return jsonError(400, "campaign_id required");
+      return jsonError(req, 400, "campaign_id required");
     }
     const categoryId: string | null =
       typeof body?.category_id === "string" && body.category_id.length > 0
@@ -79,10 +74,10 @@ Deno.serve(async (req) => {
       .eq("id", campaignId)
       .maybeSingle();
     if (cErr || !campaign) {
-      return jsonError(404, "Campaign not found");
+      return jsonError(req, 404, "Campaign not found");
     }
     if (campaign.status !== "queued") {
-      return jsonError(
+      return jsonError(req, 
         409,
         `Campaign status is '${campaign.status}', expected 'queued'`,
       );
@@ -95,7 +90,7 @@ Deno.serve(async (req) => {
       .eq("campaign_id", campaignId)
       .eq("delivery_status", "queued");
     if (rErr) {
-      return jsonError(500, `Failed to load recipients: ${rErr.message}`);
+      return jsonError(req, 500, `Failed to load recipients: ${rErr.message}`);
     }
 
     // 6. Group by tenant_id
@@ -251,18 +246,18 @@ Deno.serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       },
     );
   } catch (err) {
     console.error("send-broadcast-campaign error:", err);
-    return jsonError(500, err instanceof Error ? err.message : "Internal error");
+    return jsonError(req, 500, err instanceof Error ? err.message : "Internal error");
   }
 });
 
-function jsonError(status: number, message: string): Response {
+function jsonError(req: Request, status: number, message: string): Response {
   return new Response(JSON.stringify({ error: message }), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }

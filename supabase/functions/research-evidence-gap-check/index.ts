@@ -58,7 +58,7 @@ function classifyFile(fileName: string, tags: string[], folderPath: string): str
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   try {
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     if (!token) {
       return new Response(
         JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: "No token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     if (authError || !user || !profile) {
       return new Response(
         JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: authError || "Auth failed" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     if (!tenant_id || !stage_instance_id) {
       return new Response(
         JSON.stringify({ ok: false, code: "BAD_REQUEST", detail: "tenant_id and stage_instance_id required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       console.error("Job creation error:", jobError);
       return new Response(
         JSON.stringify({ ok: false, code: "DB_ERROR", detail: "Failed to create job" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -275,13 +275,13 @@ This check identifies missing evidence categories only. It does not assess docum
         missing_categories: missingCategories,
         detected_categories: detectedCategoryNames,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("research-evidence-gap-check error:", err);
     return new Response(
       JSON.stringify({ ok: false, code: "INTERNAL_ERROR", detail: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });
