@@ -67,8 +67,6 @@ serve(async (req) => {
       .from("user_invitations")
       .select("id, email, tenant_id, status, expires_at")
       .eq("token_hash", tokenHash)
-      .eq("status", "pending")
-      .gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
     if (inviteErr) {
@@ -77,6 +75,16 @@ serve(async (req) => {
     }
     if (!invitation) {
       return json(400, { ok: false, code: "INVALID_TOKEN" });
+    }
+    if (invitation.status === "successful" || invitation.status === "accepted") {
+      return json(410, {
+        ok: false,
+        code: "TOKEN_CONSUMED",
+        detail: "This invitation has already been used",
+      });
+    }
+    if (invitation.status !== "pending" || new Date(invitation.expires_at).getTime() <= Date.now()) {
+      return json(400, { ok: false, code: "INVALID_TOKEN", detail: "This invitation is not usable" });
     }
 
     const emailLc = email.toLowerCase();
@@ -126,6 +134,31 @@ serve(async (req) => {
         ok: false,
         code: "NOT_GHOST_ACCOUNT",
         detail: "Use your existing password or Forgot Password.",
+      });
+    }
+
+    // Claim first (conditional UPDATE). If another request already consumed
+    // the token, RETURNING is empty — 410 and do NOT set the password.
+    const { data: claimed, error: claimErr } = await admin
+      .from("user_invitations")
+      .update({
+        status: "successful",
+        used_at: new Date().toISOString(),
+      })
+      .eq("token_hash", tokenHash)
+      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
+      .select("id");
+
+    if (claimErr) {
+      console.error("invitation claim failed", claimErr);
+      return json(500, { ok: false, code: "CLAIM_FAILED", detail: claimErr.message });
+    }
+    if (!claimed || claimed.length === 0) {
+      return json(410, {
+        ok: false,
+        code: "TOKEN_CONSUMED",
+        detail: "This invitation has already been used",
       });
     }
 
