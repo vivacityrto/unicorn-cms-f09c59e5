@@ -447,3 +447,8 @@ verify_jwt = false
 # verify_jwt alone accepts the public anon key.
 [functions.academy-import-vimeo-showcase]
 verify_jwt = false
+
+# Linked Outlook email unlink. Auth is in-function (JWT + check_permission
+# clients.emails.manage); gateway verify_jwt accepts the public anon key.
+[functions.unlink-email]
+verify_jwt = false
