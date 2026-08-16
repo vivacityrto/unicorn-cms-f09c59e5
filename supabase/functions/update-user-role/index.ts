@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { authorizeRoleUpdateBody } from '../_shared/users-write-allowlist.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,9 +61,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse request body
+    // Parse request body — allowlist only; never spread the raw body into UPDATE.
     const body: UpdateUserRoleRequest = await req.json();
-    const { user_uuid, unicorn_role, user_type, tenant_id, staff_team, staff_teams, superadmin_level } = body;
+    const user_uuid = body.user_uuid;
 
     if (!user_uuid) {
       return new Response(
@@ -70,6 +71,17 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const allowlisted = authorizeRoleUpdateBody(body as unknown as Record<string, unknown>);
+    if (!allowlisted.ok) {
+      return new Response(
+        JSON.stringify({ ok: false, code: allowlisted.code, detail: allowlisted.detail }),
+        { status: allowlisted.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { unicorn_role, user_type, tenant_id, staff_team, staff_teams, superadmin_level } =
+      allowlisted.updates as UpdateUserRoleRequest;
 
     // Validate role/type combinations
     if (unicorn_role && user_type) {
@@ -104,8 +116,8 @@ Deno.serve(async (req) => {
       .eq('user_uuid', user_uuid)
       .single();
 
-    // Build update object
-    const updates: any = { updated_at: new Date().toISOString() };
+    // Build update object from the allowlisted columns only.
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (unicorn_role !== undefined) updates.unicorn_role = unicorn_role;
     if (user_type !== undefined) updates.user_type = user_type;
     if (tenant_id !== undefined) updates.tenant_id = tenant_id;
