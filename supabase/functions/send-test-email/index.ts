@@ -5,8 +5,10 @@
  * fields. Does not accept a caller-supplied From or destination URL.
  *
  * Three historical UUID-slug copies existed on the hosted project with
- * verify_jwt=false and no caller gate. Two are retired (410 stub). This
- * named slug is the keeper.
+ * verify_jwt=false and no caller gate. All three must be accounted for —
+ * a "two are retired" count is what previously left
+ * `64329f1f-48e1-4374-8ddf-6e66e42d33de` (digit-leading, MCP-undeployable)
+ * live as an unauthenticated SendGrid relay. This named slug is the keeper.
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
