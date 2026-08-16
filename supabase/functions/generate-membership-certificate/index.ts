@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import { corsHeaders } from "../_shared/cors.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const CENTER_X = 297.64;
 const FUCHSIA = rgb(0.929, 0.094, 0.471);
@@ -78,18 +79,12 @@ serve(async (req) => {
       return jsonResponse(400, { ok: false, code: "BAD_REQUEST", detail: "tenant_id (number) required" });
     }
 
-    // 3. Authorise — caller must belong to this tenant or be Vivacity internal
-    const { data: callerRow, error: callerRowErr } = await supabase
-      .from("users")
-      .select("tenant_id, is_vivacity_internal")
-      .eq("user_uuid", callerUser.user.id)
-      .maybeSingle();
-    if (callerRowErr) {
-      return jsonResponse(500, { ok: false, code: "AUTH_LOOKUP_FAILED", detail: callerRowErr.message });
+    // 3. Authorise — Super Admin, Vivacity Team, or active tenant_members
+    const tenantAccess = await hasTenantAccessSafe(supabase, callerUser.user.id, tenantId);
+    if (tenantAccess.lookupFailed) {
+      return jsonResponse(500, { ok: false, code: "TENANT_ACCESS_CHECK_FAILED", detail: "Failed to verify tenant access" });
     }
-    const isInternal = !!callerRow?.is_vivacity_internal;
-    const isMember = Number(callerRow?.tenant_id) === tenantId;
-    if (!isInternal && !isMember) {
+    if (!tenantAccess.allowed) {
       return jsonResponse(403, { ok: false, code: "FORBIDDEN", detail: "Not authorised for this tenant" });
     }
 

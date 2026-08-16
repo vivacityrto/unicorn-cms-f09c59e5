@@ -6,12 +6,11 @@
  * here. The keeper is the named slug `send-test-email` (super-admin gated).
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { handleCorsPreflight, corsForRequest } from "../../_shared/requireCaller.ts";
+import { corsHeadersFor } from "../../_shared/requireCaller.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return handleCorsPreflight(req);
-
-  const corsHeaders = corsForRequest(req);
+  const corsHeaders = corsHeadersFor(req);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   return new Response(
     JSON.stringify({
       error:

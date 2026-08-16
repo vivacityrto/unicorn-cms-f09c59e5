@@ -1,15 +1,15 @@
 /**
  * send-mailgun-template
  *
- * Sends a stored Mailgun template. Authorization: requireCaller
- * { kind: "permission", featureKey: "admin.team_users.manage" }.
+ * Sends a stored Mailgun template. Authorization:
+ * requireCaller(req, "admin.team_users.manage", "full").
  *
  * `fromOverride` is rejected. From / Reply-To come from Deno.env.
  * Known URL merge slots are constructed from APP_BASE_URL. Every merge
  * variable is HTML-escaped before it is handed to Mailgun.
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { corsForRequest, handleCorsPreflight, requireCaller } from "../_shared/requireCaller.ts";
+import { corsHeadersFor, requireCaller } from "../_shared/requireCaller.ts";
 import { envFromAddress, envReplyTo, sanitizeMergeVars } from "../_shared/email-merge.ts";
 import { normalizeAppBaseUrl } from "../_shared/email-urls.ts";
 
@@ -31,23 +31,18 @@ const authTemplates = [
 ];
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+  const corsHeaders = corsHeadersFor(req);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   if (req.method !== "POST") {
-    const corsHeaders = corsForRequest(req);
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  const caller = await requireCaller(req, {
-    kind: "permission",
-    featureKey: "admin.team_users.manage",
-    minLevel: "full",
-  });
-  if (!caller.ok) return caller.response;
-  const { corsHeaders } = caller;
+  const caller = await requireCaller(req, "admin.team_users.manage", "full");
+  if (caller instanceof Response) return caller;
 
   try {
     const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
@@ -132,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
       error: message,
     }), {
       status: 500,
-      headers: { ...corsForRequest(req), "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 };

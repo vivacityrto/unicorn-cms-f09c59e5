@@ -3,33 +3,44 @@
 In-function authorization for edge functions. Gateway `verify_jwt` is **not**
 authorization — the public anon key is a valid JWT and satisfies it.
 
-```ts
-import { requireCaller, handleCorsPreflight } from "../_shared/requireCaller.ts";
+C1 API (PR #295). Returns `{ userId }` on success, or a `Response` to return
+immediately.
 
-if (req.method === "OPTIONS") return handleCorsPreflight(req);
+```ts
+import {
+  corsHeadersFor,
+  requireCaller,
+  requireSuperAdmin,
+  requireInternalEmailSecret,
+  requireSharedSecret,
+} from "../_shared/requireCaller.ts";
+
+const corsHeaders = corsHeadersFor(req);
+if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
 // Staff feature
-const caller = await requireCaller(req, {
-  kind: "permission",
-  featureKey: "admin.team_users.manage",
-  minLevel: "full",
-});
+const caller = await requireCaller(req, "admin.team_users.manage", "full");
+if (caller instanceof Response) return caller;
 
 // Super Admin only
-const caller = await requireCaller(req, { kind: "super_admin" });
+const adminCaller = await requireSuperAdmin(req);
+if (adminCaller instanceof Response) return adminCaller;
 
-// Cron / function-to-function (constant-time secret compare)
-const caller = await requireCaller(req, { kind: "internal" });
+// Single-header machine-to-machine (workers)
+const secret = requireSharedSecret(req, "WORKER_SECRET", "x-worker-secret");
+if (secret instanceof Response) return secret;
 
-if (!caller.ok) return caller.response;
+// Outbound email cron / function-to-function (multi-secret)
+const internal = requireInternalEmailSecret(req);
+if (internal instanceof Response) return internal;
 ```
 
-Internal secrets (first match wins; all are compared):
+`requireInternalEmailSecret` accepts (constant-time, all compared):
 
 - `INTERNAL_EMAIL_SECRET`
 - `CRON_FUNCTION_JWT` (set this to `vault.cron_function_jwt` so existing
   `private.cron_function_jwt()` schedules keep working)
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Accepted on `Authorization: Bearer …`, `x-internal-email-secret`, or
+Presented on `Authorization: Bearer …`, `x-internal-email-secret`, or
 `x-cron-secret`.

@@ -1,233 +1,223 @@
 /**
- * requireCaller — in-function authorization for edge functions.
+ * Shared caller authentication for Edge Functions.
  *
- * Gateway `verify_jwt=true` is NOT authorization: the public anon key is a
- * valid JWT and satisfies the gateway. Every privileged function must call
- * this helper before doing work. Same lesson as security finding C1
- * (14 Jul 2026, unauthenticated create-session token mint).
+ * Modelled on cohort-access-sender-worker: service-role admin.auth.getUser(token)
+ * is the only acceptable way to establish caller identity. Never base64-decode a
+ * JWT to read claims, and never trust a `role` claim from an unverified token.
  *
- * Modes:
- *   - permission  — auth.getUser + check_permission(featureKey, minLevel)
- *   - super_admin — auth.getUser + users.unicorn_role === "Super Admin"
- *   - internal    — constant-time compare of a shared secret (cron / fn-to-fn)
+ * Bearer tokens are accepted only as exactly `Bearer <token>` (two parts).
+ * A prefix replace (`authHeader.replace(/^Bearer\s+/i, "")`) is not sufficient.
  */
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  allowlistFromAppBaseUrl,
+  constantTimeEqual,
+  parseBearerToken,
+} from "./requireCaller-helpers.ts";
 
-import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { allowedOriginsFromAppBaseUrl, corsHeadersForOrigin } from "./cors.ts";
+export {
+  allowlistFromAppBaseUrl,
+  constantTimeEqual,
+  parseBearerToken,
+} from "./requireCaller-helpers.ts";
 
-export type RequireCallerMode =
-  | { kind: "permission"; featureKey: string; minLevel?: "full" | "view" | "edit" }
-  | { kind: "super_admin" }
-  | { kind: "internal" };
+export type PermissionMinLevel = "full" | "edit" | "view";
 
-export type CallerOk = {
-  ok: true;
-  userId: string | null;
-  kind: RequireCallerMode["kind"];
-  corsHeaders: Record<string, string>;
-  supabase: SupabaseClient;
-};
+const DEFAULT_ALLOW_HEADERS = [
+  "authorization",
+  "x-client-info",
+  "apikey",
+  "content-type",
+  "x-supabase-client-platform",
+  "x-supabase-client-platform-version",
+  "x-supabase-client-runtime",
+  "x-supabase-client-runtime-version",
+];
 
-export type CallerDenied = {
-  ok: false;
-  response: Response;
-  corsHeaders: Record<string, string>;
-};
-
-export type CallerResult = CallerOk | CallerDenied;
-
-const SUPER_ADMIN_ROLE = "Super Admin";
-
-/** Constant-time string compare. Length mismatch still walks a padded buffer. */
-export function constantTimeEqual(a: string, b: string): boolean {
-  const enc = new TextEncoder();
-  const ab = enc.encode(a);
-  const bb = enc.encode(b);
-  const len = Math.max(ab.length, bb.length, 1);
-  const pa = new Uint8Array(len);
-  const pb = new Uint8Array(len);
-  pa.set(ab);
-  pb.set(bb);
-  let diff = ab.length ^ bb.length;
-  for (let i = 0; i < len; i++) diff |= pa[i] ^ pb[i];
-  return diff === 0;
+export function corsHeadersFor(
+  req: Request,
+  extraAllowHeaders: string[] = [],
+): Record<string, string> {
+  const appBase = (Deno.env.get("APP_BASE_URL") ?? "").replace(/\/+$/, "");
+  const allowlist = allowlistFromAppBaseUrl(appBase);
+  const origin = req.headers.get("Origin");
+  const allowOrigin = origin && allowlist.has(origin) ? origin : (appBase || "null");
+  const allowHeaders = [...DEFAULT_ALLOW_HEADERS, ...extraAllowHeaders];
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": allowHeaders.join(", "),
+    "Access-Control-Allow-Methods": "POST, OPTIONS, GET, PUT, PATCH, DELETE",
+    Vary: "Origin",
+  };
 }
 
-export function extractBearer(req: Request): string | null {
-  const header = req.headers.get("Authorization") ?? req.headers.get("authorization");
-  if (!header) return null;
-  const match = header.match(/^Bearer\s+(\S+)/i);
-  return match?.[1] ?? null;
-}
-
-function jsonError(
-  status: number,
-  body: Record<string, unknown>,
-  corsHeaders: Record<string, string>,
-): Response {
+function jsonResponse(req: Request, status: number, body: unknown, extraAllowHeaders?: string[]): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...corsHeaders },
+    headers: { ...corsHeadersFor(req, extraAllowHeaders), "Content-Type": "application/json" },
   });
 }
 
-function collectInternalSecrets(): string[] {
-  const names = [
-    "INTERNAL_EMAIL_SECRET",
-    "CRON_FUNCTION_JWT",
-    "SUPABASE_SERVICE_ROLE_KEY",
-  ];
-  const secrets: string[] = [];
-  for (const name of names) {
-    const value = Deno.env.get(name);
-    if (value && value.length > 0) secrets.push(value);
+/**
+ * Authenticate the caller and gate on check_permission.
+ * Returns `{ userId }` on success, or a 401/403 Response to return immediately.
+ */
+export async function requireCaller(
+  req: Request,
+  featureKey: string,
+  minLevel: PermissionMinLevel = "full",
+): Promise<{ userId: string } | Response> {
+  const token = parseBearerToken(req.headers.get("Authorization"));
+  if (!token) return jsonResponse(req, 401, { error: "Unauthorized" });
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    return jsonResponse(req, 500, { error: "Server misconfigured" });
   }
-  return secrets;
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data: callerData, error: callerErr } = await admin.auth.getUser(token);
+  if (callerErr || !callerData?.user) {
+    return jsonResponse(req, 401, { error: "Unauthorized" });
+  }
+
+  const { data: allowed } = await admin.rpc("check_permission", {
+    p_user_id: callerData.user.id,
+    p_feature_key: featureKey,
+    p_min_level: minLevel,
+  });
+  if (allowed !== true) {
+    return jsonResponse(req, 403, { error: "Forbidden" });
+  }
+
+  return { userId: callerData.user.id };
 }
 
 /**
- * Internal/system callers (other edge functions, pg_cron via pg_net).
- * Accepts the Authorization bearer or `x-internal-email-secret` when it
- * matches INTERNAL_EMAIL_SECRET, CRON_FUNCTION_JWT, or the service-role key.
- * Cron already sends `Authorization: Bearer <private.cron_function_jwt()>`;
- * set the Deno secret `CRON_FUNCTION_JWT` to that vault value (or set
- * INTERNAL_EMAIL_SECRET to the same string) so existing schedules keep working
- * without a database change.
+ * Machine-to-machine gate: constant-time compare of a request header against
+ * a Deno.env secret. Rejects when the secret is unset or the header is missing
+ * or mismatched. Never logs the secret or the provided value.
  */
-export function matchesInternalSecret(req: Request): boolean {
-  const secrets = collectInternalSecrets();
-  if (secrets.length === 0) return false;
+export function requireSharedSecret(
+  req: Request,
+  envKey: string,
+  headerName = "x-worker-secret",
+  extraAllowHeaders: string[] = [],
+): { ok: true } | Response {
+  const expected = Deno.env.get(envKey) ?? "";
+  const provided = req.headers.get(headerName) ?? "";
+  if (!expected || !constantTimeEqual(provided, expected)) {
+    return jsonResponse(req, 401, { error: "Unauthorized" }, extraAllowHeaders);
+  }
+  return { ok: true };
+}
+
+const SUPER_ADMIN_ROLE = "Super Admin";
+
+const INTERNAL_EMAIL_SECRET_ENVS = [
+  "INTERNAL_EMAIL_SECRET",
+  "CRON_FUNCTION_JWT",
+  "SUPABASE_SERVICE_ROLE_KEY",
+] as const;
+
+export const INTERNAL_EMAIL_EXTRA_HEADERS = [
+  "x-internal-email-secret",
+  "x-cron-secret",
+];
+
+/**
+ * Super Admin gate. Same getUser path as requireCaller; role is read from
+ * `users.unicorn_role`, never from an unverified JWT claim.
+ */
+export async function requireSuperAdmin(
+  req: Request,
+): Promise<{ userId: string } | Response> {
+  const token = parseBearerToken(req.headers.get("Authorization"));
+  if (!token) return jsonResponse(req, 401, { error: "Unauthorized" });
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    return jsonResponse(req, 500, { error: "Server misconfigured" });
+  }
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data: callerData, error: callerErr } = await admin.auth.getUser(token);
+  if (callerErr || !callerData?.user) {
+    return jsonResponse(req, 401, { error: "Unauthorized" });
+  }
+
+  const { data: profile, error: profileError } = await admin
+    .from("users")
+    .select("unicorn_role, state")
+    .eq("user_uuid", callerData.user.id)
+    .maybeSingle();
+
+  if (
+    profileError ||
+    !profile ||
+    profile.unicorn_role !== SUPER_ADMIN_ROLE ||
+    profile.state === "inactive" ||
+    profile.state === "suspended"
+  ) {
+    return jsonResponse(req, 403, { error: "Forbidden" });
+  }
+
+  return { userId: callerData.user.id };
+}
+
+/**
+ * Internal/system callers for outbound email (other edge functions, pg_cron
+ * via pg_net). Accepts Authorization bearer or `x-internal-email-secret` /
+ * `x-cron-secret` when it matches INTERNAL_EMAIL_SECRET, CRON_FUNCTION_JWT,
+ * or the service-role key.
+ *
+ * Cron already sends `Authorization: Bearer <private.cron_function_jwt()>`.
+ * Set Deno secret `CRON_FUNCTION_JWT` to that vault value (or set
+ * INTERNAL_EMAIL_SECRET to the same string) so existing schedules keep
+ * working without a database change. This is deliberately not
+ * `requireSharedSecret`: that helper checks one header against one env key,
+ * and would 401 when INTERNAL_EMAIL_SECRET is unset even if the bearer
+ * matches the cron JWT or service-role key.
+ */
+export function requireInternalEmailSecret(req: Request): { ok: true } | Response {
+  const secrets: string[] = [];
+  for (const name of INTERNAL_EMAIL_SECRET_ENVS) {
+    const value = Deno.env.get(name);
+    if (value && value.length > 0) secrets.push(value);
+  }
 
   const candidates = [
-    extractBearer(req),
+    parseBearerToken(req.headers.get("Authorization")),
     req.headers.get("x-internal-email-secret"),
     req.headers.get("x-cron-secret"),
   ].filter((v): v is string => typeof v === "string" && v.length > 0);
 
   let matched = false;
   // Always walk every candidate × every secret so timing does not leak which
-  // header or which secret matched.
+  // header or which secret matched. When nothing was presented, still walk
+  // the secrets against "" so an unset header is not a fast-path.
   if (candidates.length === 0) {
     for (const secret of secrets) constantTimeEqual("", secret);
-    return false;
+    return jsonResponse(req, 401, { error: "Unauthorized" }, INTERNAL_EMAIL_EXTRA_HEADERS);
+  }
+  if (secrets.length === 0) {
+    return jsonResponse(req, 401, { error: "Unauthorized" }, INTERNAL_EMAIL_EXTRA_HEADERS);
   }
   for (const candidate of candidates) {
     for (const secret of secrets) {
       if (constantTimeEqual(candidate, secret)) matched = true;
     }
   }
-  return matched;
-}
-
-function createServiceClient(): SupabaseClient {
-  const url = Deno.env.get("SUPABASE_URL") ?? "";
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  return createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-export function corsForRequest(req: Request): Record<string, string> {
-  const origin = req.headers.get("Origin") ?? req.headers.get("origin");
-  const allowed = allowedOriginsFromAppBaseUrl(Deno.env.get("APP_BASE_URL"));
-  return corsHeadersForOrigin(origin, allowed);
-}
-
-export async function requireCaller(
-  req: Request,
-  mode: RequireCallerMode,
-): Promise<CallerResult> {
-  const corsHeaders = corsForRequest(req);
-
-  if (mode.kind === "internal") {
-    if (!matchesInternalSecret(req)) {
-      return {
-        ok: false,
-        corsHeaders,
-        response: jsonError(401, { error: "Unauthorized" }, corsHeaders),
-      };
-    }
-    return {
-      ok: true,
-      userId: null,
-      kind: "internal",
-      corsHeaders,
-      supabase: createServiceClient(),
-    };
+  if (!matched) {
+    return jsonResponse(req, 401, { error: "Unauthorized" }, INTERNAL_EMAIL_EXTRA_HEADERS);
   }
-
-  const bearer = extractBearer(req);
-  if (!bearer) {
-    return {
-      ok: false,
-      corsHeaders,
-      response: jsonError(401, { error: "Unauthorized" }, corsHeaders),
-    };
-  }
-
-  // A service-role / shared-secret bearer is not a user session. User-gated
-  // email functions require a real user JWT + permission / Super Admin check.
-  if (matchesInternalSecret(req)) {
-    return {
-      ok: false,
-      corsHeaders,
-      response: jsonError(401, { error: "Unauthorized" }, corsHeaders),
-    };
-  }
-
-  const supabase = createServiceClient();
-  const { data: userData, error: userError } = await supabase.auth.getUser(bearer);
-  if (userError || !userData?.user) {
-    return {
-      ok: false,
-      corsHeaders,
-      response: jsonError(401, { error: "Unauthorized" }, corsHeaders),
-    };
-  }
-
-  const userId = userData.user.id;
-
-  if (mode.kind === "super_admin") {
-    const { data: profile, error: profileError } = await supabase
-      .from("users")
-      .select("unicorn_role, state")
-      .eq("user_uuid", userId)
-      .maybeSingle();
-
-    if (
-      profileError ||
-      !profile ||
-      profile.unicorn_role !== SUPER_ADMIN_ROLE ||
-      profile.state === "inactive" ||
-      profile.state === "suspended"
-    ) {
-      return {
-        ok: false,
-        corsHeaders,
-        response: jsonError(403, { error: "Forbidden" }, corsHeaders),
-      };
-    }
-
-    return { ok: true, userId, kind: "super_admin", corsHeaders, supabase };
-  }
-
-  const { data: allowed, error: permError } = await supabase.rpc("check_permission", {
-    p_user_id: userId,
-    p_feature_key: mode.featureKey,
-    p_min_level: mode.minLevel ?? "full",
-  });
-
-  if (permError || !allowed) {
-    return {
-      ok: false,
-      corsHeaders,
-      response: jsonError(403, { error: "Forbidden" }, corsHeaders),
-    };
-  }
-
-  return { ok: true, userId, kind: "permission", corsHeaders, supabase };
-}
-
-export function handleCorsPreflight(req: Request): Response {
-  return new Response("ok", { headers: corsForRequest(req) });
+  return { ok: true };
 }

@@ -1,14 +1,15 @@
 /**
  * send-automated-email
  *
- * Internal/system only (cron + other functions). Gated by requireCaller
- * { kind: "internal" }. From address is Deno.env only — auditor display
+ * Internal/system only (cron + other functions). Gated by
+ * requireInternalEmailSecret. From address is Deno.env only — auditor display
  * names are no longer used as the Mailgun From. Meeting / action links
  * are constructed from APP_BASE_URL + validated ids. Merge fields are
  * HTML-escaped before interpolation.
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { corsForRequest, handleCorsPreflight, requireCaller } from "../_shared/requireCaller.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeadersFor, INTERNAL_EMAIL_EXTRA_HEADERS, requireInternalEmailSecret } from "../_shared/requireCaller.ts";
 import { escapeHtml } from "../_shared/escape-html.ts";
 import { envFromAddress } from "../_shared/email-merge.ts";
 import { normalizeAppBaseUrl, resolveEmailUrl, validatedId } from "../_shared/email-urls.ts";
@@ -191,11 +192,16 @@ async function handleDocsReady(p: Record<string, unknown>, sb: any): Promise<Res
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+  const corsHeaders = corsHeadersFor(req, INTERNAL_EMAIL_EXTRA_HEADERS);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const caller = await requireCaller(req, { kind: "internal" });
-  if (!caller.ok) return caller.response;
-  const { corsHeaders, supabase } = caller;
+  const caller = requireInternalEmailSecret(req);
+  if (caller instanceof Response) return caller;
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
 
   const withCors = (res: Response) => {
     const headers = new Headers(res.headers);
@@ -342,7 +348,7 @@ const handler = async (req: Request): Promise<Response> => {
     const message = error instanceof Error ? error.message : "Failed to send email";
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsForRequest(req) },
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }
 };

@@ -3,15 +3,16 @@
  *
  * Renders a stored email_templates row and sends it via Mailgun.
  *
- * Authorization: requireCaller { kind: "permission", featureKey:
- * "admin.team_users.manage" }. verify_jwt is not authorization.
+ * Authorization: requireCaller(req, "admin.team_users.manage", "full").
+ * verify_jwt is not authorization.
  *
  * Sender identity is Deno.env only — `overrides.from` is rejected.
  * Known URL merge slots are constructed from APP_BASE_URL. Every merge
  * variable is HTML-escaped before it reaches the template.
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { corsForRequest, handleCorsPreflight, requireCaller } from "../_shared/requireCaller.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeadersFor, requireCaller } from "../_shared/requireCaller.ts";
 import { envFromAddress, envReplyTo, sanitizeMergeVars } from "../_shared/email-merge.ts";
 import { escapeHtml } from "../_shared/escape-html.ts";
 import { normalizeAppBaseUrl } from "../_shared/email-urls.ts";
@@ -27,15 +28,16 @@ interface SendEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+  const corsHeaders = corsHeadersFor(req);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const caller = await requireCaller(req, {
-    kind: "permission",
-    featureKey: "admin.team_users.manage",
-    minLevel: "full",
-  });
-  if (!caller.ok) return caller.response;
-  const { corsHeaders, supabase } = caller;
+  const caller = await requireCaller(req, "admin.team_users.manage", "full");
+  if (caller instanceof Response) return caller;
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
 
   try {
     const input: SendEmailRequest = await req.json();
@@ -200,7 +202,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ error: message }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsForRequest(req) },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       },
     );
   }

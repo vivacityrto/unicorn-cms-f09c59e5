@@ -173,20 +173,23 @@ const EMAIL_FNS = [
   },
 ];
 
-describe("requireCaller gates on every outbound email function", () => {
+describe("C1 requireCaller gates on every outbound email function", () => {
   for (const fn of EMAIL_FNS) {
-    it(`${fn.path} calls requireCaller`, () => {
+    it(`${fn.path} uses the C1 requireCaller helpers`, () => {
       const src = read(fn.path);
       assert.match(src, /from ["']\.\.\/_shared\/requireCaller\.ts["']/);
-      assert.match(src, /requireCaller\(/);
+      assert.match(src, /corsHeadersFor\(/);
       assert.doesNotMatch(src, /Access-Control-Allow-Origin["']:\s*["']\*/);
+      assert.doesNotMatch(src, /kind:\s*["']internal["']/);
+      assert.doesNotMatch(src, /kind:\s*["']super_admin["']/);
+      assert.doesNotMatch(src, /kind:\s*["']permission["']/);
       if (fn.mode === "internal") {
-        assert.match(src, /kind:\s*["']internal["']/);
+        assert.match(src, /requireInternalEmailSecret\(/);
       } else if (fn.mode === "super_admin") {
-        assert.match(src, /kind:\s*["']super_admin["']/);
+        assert.match(src, /requireSuperAdmin\(/);
       } else {
-        assert.match(src, /kind:\s*["']permission["']/);
-        assert.match(src, new RegExp(`featureKey:\\s*["']${fn.feature}["']`));
+        assert.match(src, /requireCaller\(/);
+        assert.match(src, new RegExp(`["']${fn.feature}["']`));
       }
     });
   }

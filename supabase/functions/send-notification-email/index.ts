@@ -2,15 +2,15 @@
  * send-notification-email
  *
  * Internal/system only (other functions + cron). Gateway verify_jwt is
- * not authorization — the anon key satisfies it. Gated by requireCaller
- * { kind: "internal" } (constant-time shared-secret compare).
+ * not authorization — the anon key satisfies it. Gated by
+ * requireInternalEmailSecret (constant-time shared-secret compare).
  *
  * From address comes from Deno.env. Link destinations are constructed
  * server-side from APP_BASE_URL + validated ids. Merge fields are
  * HTML-escaped before interpolation.
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { corsForRequest, handleCorsPreflight, requireCaller } from "../_shared/requireCaller.ts";
+import { corsHeadersFor, INTERNAL_EMAIL_EXTRA_HEADERS, requireInternalEmailSecret } from "../_shared/requireCaller.ts";
 import { escapeHtml } from "../_shared/escape-html.ts";
 import { envFromAddress } from "../_shared/email-merge.ts";
 import { normalizeAppBaseUrl, resolveEmailUrl } from "../_shared/email-urls.ts";
@@ -32,11 +32,11 @@ interface NotificationEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+  const corsHeaders = corsHeadersFor(req, INTERNAL_EMAIL_EXTRA_HEADERS);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const caller = await requireCaller(req, { kind: "internal" });
-  if (!caller.ok) return caller.response;
-  const { corsHeaders } = caller;
+  const caller = requireInternalEmailSecret(req);
+  if (caller instanceof Response) return caller;
 
   try {
     const { to, type, data }: NotificationEmailRequest = await req.json();
@@ -91,7 +91,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ error: message }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsForRequest(req) },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       },
     );
   }

@@ -9,7 +9,8 @@
  * named slug is the keeper.
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { corsForRequest, handleCorsPreflight, requireCaller } from "../_shared/requireCaller.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeadersFor, requireSuperAdmin } from "../_shared/requireCaller.ts";
 import { sanitizeMergeVars } from "../_shared/email-merge.ts";
 import { escapeHtml } from "../_shared/escape-html.ts";
 import { normalizeAppBaseUrl } from "../_shared/email-urls.ts";
@@ -19,11 +20,16 @@ function mergeTemplate(template: string, data: Record<string, string>): string {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+  const corsHeaders = corsHeadersFor(req);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const caller = await requireCaller(req, { kind: "super_admin" });
-  if (!caller.ok) return caller.response;
-  const { corsHeaders, supabase } = caller;
+  const caller = await requireSuperAdmin(req);
+  if (caller instanceof Response) return caller;
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
 
   try {
     const { emailId, recipientEmail } = await req.json();
@@ -82,7 +88,7 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : "Failed to preview email";
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsForRequest(req) } },
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   }
 });

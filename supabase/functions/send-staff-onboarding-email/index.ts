@@ -5,8 +5,8 @@
  *   - "mailgun"  → system relay (Mailgun EU)
  *   - "graph"    → from the requesting admin's own Outlook mailbox
  *
- * Authorization: requireCaller { kind: "permission",
- * featureKey: "admin.team_users.manage" }. verify_jwt is not authorization.
+ * Authorization: requireCaller(req, "admin.team_users.manage", "full").
+ * verify_jwt is not authorization.
  *
  * From address for Mailgun is Deno.env only. The Graph channel sends as
  * the authenticated admin's mailbox (not a caller-supplied From). Body
@@ -15,7 +15,8 @@
  * Body: { to, subject, body, channel: "mailgun" | "graph", run_id?: number }
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { corsForRequest, handleCorsPreflight, requireCaller } from "../_shared/requireCaller.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeadersFor, requireCaller } from "../_shared/requireCaller.ts";
 import { escapeHtml } from "../_shared/escape-html.ts";
 import { envFromAddress } from "../_shared/email-merge.ts";
 
@@ -110,15 +111,17 @@ async function sendGraph(
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+  const corsHeaders = corsHeadersFor(req);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const caller = await requireCaller(req, {
-    kind: "permission",
-    featureKey: "admin.team_users.manage",
-    minLevel: "full",
-  });
-  if (!caller.ok) return caller.response;
-  const { corsHeaders, supabase, userId } = caller;
+  const caller = await requireCaller(req, "admin.team_users.manage", "full");
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
 
   try {
     const { to, subject, body, channel, run_id } = await req.json();
@@ -145,6 +148,6 @@ serve(async (req) => {
     const msg = e instanceof Error ? e.message : String(e);
     const code = (e as { code?: string })?.code;
     console.error("[send-staff-onboarding-email]", msg);
-    return json(code === "no_microsoft_connection" ? 412 : 500, { ok: false, error: msg, code }, corsForRequest(req));
+    return json(code === "no_microsoft_connection" ? 412 : 500, { ok: false, error: msg, code }, corsHeaders);
   }
 });

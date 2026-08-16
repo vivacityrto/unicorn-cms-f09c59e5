@@ -43,9 +43,12 @@ or any Postgres function / cron job / vault secret.
 
 ## Code changes (if this entry accompanies one)
 
-- Shared `_shared/requireCaller.ts`, `_shared/escape-html.ts`,
-  `_shared/email-urls.ts`, `_shared/email-merge.ts`, and an APP_BASE_URL
-  CORS allowlist on `_shared/cors.ts`.
+- Shared `_shared/escape-html.ts`, `_shared/email-urls.ts`,
+  `_shared/email-merge.ts`, and an APP_BASE_URL CORS allowlist on
+  `_shared/cors.ts`. Auth uses the C1 `requireCaller` from PR #295
+  (`requireCaller(req, featureKey, minLevel)`, plus additive
+  `requireSuperAdmin` / `requireInternalEmailSecret` so cron JWT and
+  Super Admin gates do not invent a second helper API).
 - Vendored + hardened the six email functions into the repo; retired the
   UUID `send-test-email` copies with a 410 stub.
 
