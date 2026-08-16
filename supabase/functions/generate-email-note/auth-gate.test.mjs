@@ -28,7 +28,7 @@ describe("generate-email-note authorization and privacy gates", () => {
 
   it("returns 404 when the caller-scoped fetch is empty", () => {
     assert.match(src, /if\s*\(\s*emailErr\s*\|\|\s*!email\s*\)/);
-    assert.match(src, /json\(\s*404/);
+    assert.match(src, /json\(\s*(?:req,\s*)?404/);
   });
 
   it("does not use service role to fetch the email body", () => {

@@ -725,7 +725,7 @@ Deno.serve(async (req) => {
           ? Number(obligationIdRaw)
           : undefined;
 
-      // Scheduled: cron path, no JWT check (matches existing scopes).
+      // Scheduled: cron invoke secret (or Super Admin JWT fallback).
       // Preview/Broadcast: must be a super-admin.
       let actorUserId: string | undefined;
       if (isPreview || isBroadcast) {
