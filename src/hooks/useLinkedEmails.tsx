@@ -57,6 +57,7 @@ export function useLinkedEmails(options?: {
       let query = supabase
         .from("email_messages")
         .select("*")
+        .is("unlinked_at", null)
         .order("received_at", { ascending: false });
 
       if (options?.clientId) {
@@ -144,11 +145,9 @@ export function useLinkedEmails(options?: {
       toast.error("Failed to update email link");
     },
   });
-  // Unlink email: remove attachments (storage + rows), converted notes, and the email row
+  // Unlink email: soft-delete via unlink-email (unlinked_at / unlinked_by).
   const unlinkEmailMutation = useMutation({
     mutationFn: async (emailId: string) => {
-      // Delegate to edge function so cleanup runs with service role and bypasses
-      // Super-Admin-only RLS on email_messages / email_message_attachments / storage.
       const { data, error } = await supabase.functions.invoke("unlink-email", {
         body: { email_id: emailId },
       });
@@ -157,7 +156,7 @@ export function useLinkedEmails(options?: {
       return { emailId };
     },
     onSuccess: () => {
-      toast.success("Email unlinked and removed");
+      toast.success("Email unlinked");
       invalidateLinkedEmails();
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },

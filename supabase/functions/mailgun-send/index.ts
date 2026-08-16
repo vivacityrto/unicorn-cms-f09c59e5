@@ -10,6 +10,7 @@
  */
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -19,7 +20,6 @@ const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY") || "";
 const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN") || "";
 const MAIL_FROM = Deno.env.get("MAIL_FROM") || "Unicorn Notifications <no-reply@app.unicorn-cms.au>";
 const MAIL_REPLY_TO = Deno.env.get("MAIL_REPLY_TO") || "support@app.unicorn-cms.au";
-const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://app.unicorn-cms.au";
 const MAILGUN_REGION = (Deno.env.get("MAILGUN_REGION") || "EU").toUpperCase(); // Default EU
 
 const corsHeaders = {

@@ -127,6 +127,20 @@ verify_jwt = false
 [functions.process-notification-outbox]
 verify_jwt = false
 
+# Vendored from production 2026-08-15. Cron/worker; JWT disabled to match live.
+[functions.process-notification-queue]
+verify_jwt = false
+
+[functions.send-notification-email]
+verify_jwt = false
+
+[functions.send-automated-email]
+verify_jwt = false
+
+# Historical / still-hosted orphan. Template renderer; verify_jwt matches production.
+[functions.send-enhanced-email]
+verify_jwt = true
+
 [functions.send-action-item-due-reminders]
 verify_jwt = false
 
@@ -367,6 +381,10 @@ verify_jwt = false
 [functions.mailgun-webhook]
 verify_jwt = false
 
+[functions.mailgun-webhooks]
+# Mailgun POSTs with no Supabase JWT — auth is HMAC against MAILGUN_WEBHOOK_SIGNING_KEY.
+verify_jwt = false
+
 [functions.summarize-daily-notes]
 verify_jwt = false
 
@@ -428,4 +446,9 @@ verify_jwt = false
 # Auth handled in-function (check_permission academy.builder.edit); gateway
 # verify_jwt alone accepts the public anon key.
 [functions.academy-import-vimeo-showcase]
+verify_jwt = false
+
+# Linked Outlook email unlink. Auth is in-function (JWT + check_permission
+# clients.emails.manage); gateway verify_jwt accepts the public anon key.
+[functions.unlink-email]
 verify_jwt = false

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -183,7 +184,6 @@ serve(async (req) => {
     }
 
     // 9. Create invite URL
-    const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
     const inviteUrl = `${APP_BASE_URL}/accept-invitation?token=${newToken}`;
     console.log('Generated resend invite URL:', inviteUrl);
 
