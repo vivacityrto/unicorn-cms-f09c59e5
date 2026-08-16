@@ -37341,18 +37341,21 @@ export type Database = {
       }
       oauth_states: {
         Row: {
+          consumed_at: string | null
           created_at: string
           data: Json
           expires_at: string
           state: string
         }
         Insert: {
+          consumed_at?: string | null
           created_at?: string
           data: Json
           expires_at: string
           state: string
         }
         Update: {
+          consumed_at?: string | null
           created_at?: string
           data?: Json
           expires_at?: string

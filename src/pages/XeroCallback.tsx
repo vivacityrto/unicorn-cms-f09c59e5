@@ -20,8 +20,6 @@ export default function XeroCallback() {
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
 
-      const savedRedirectUri = localStorage.getItem('xero_oauth_redirect');
-
       if (error) {
         setStatus('error');
         setMessage(`Xero returned an error: ${errorDescription || error}`);
@@ -40,14 +38,26 @@ export default function XeroCallback() {
         return;
       }
 
+      let sessionAvailable = false;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        sessionAvailable = !!sessionData.session;
+      } catch {
+        // ignore
+      }
+
+      if (!sessionAvailable) {
+        setStatus('error');
+        setMessage('Please sign in on this site and try connecting Xero again.');
+        return;
+      }
+
       setStatus('exchanging');
       setMessage('Connecting to Xero...');
 
-      const redirectUri = savedRedirectUri || `${window.location.origin}/admin/integrations/xero-callback`;
-
       try {
         const { data, error: exchangeError } = await supabase.functions.invoke('xero-auth', {
-          body: { action: 'exchange-code', code, redirect_uri: redirectUri, state },
+          body: { action: 'exchange-code', code, state },
         });
 
         if (exchangeError) {
@@ -72,7 +82,7 @@ export default function XeroCallback() {
         }
 
         localStorage.removeItem('xero_oauth_state');
-        localStorage.removeItem('xero_oauth_redirect');
+        localStorage.removeItem('xero_oauth_redirect'); // leftover from pre-allowlist clients
 
         setStatus('success');
         setMessage(

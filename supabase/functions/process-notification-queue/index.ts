@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsHeaders } from "../_shared/cors.ts";
 import { appUrl } from "../_shared/app-base-url.ts";
-import { cronUnauthorizedResponse, isCronAuthorized } from "../_shared/cron-auth.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -10,10 +9,6 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
-  }
-
-  if (!await isCronAuthorized(req)) {
-    return cronUnauthorizedResponse(corsHeaders);
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);

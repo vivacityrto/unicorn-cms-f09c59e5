@@ -78,14 +78,11 @@ export function useOutlookConnectionStatus() {
       const VIVACITY_SYSTEM_TENANT_ID = 6372;
       const effectiveTenantId = profile?.tenant_id ?? VIVACITY_SYSTEM_TENANT_ID;
 
-      const redirectUri = `${window.location.origin}/calendar/outlook-callback`;
-      
       console.log('[useOutlookConnectionStatus] Starting OAuth for user:', user?.id);
       
       const { data, error } = await supabase.functions.invoke('outlook-auth', {
         body: { 
           action: 'get-auth-url',
-          redirect_uri: redirectUri,
           tenant_id: effectiveTenantId,
           surfaces: {
             mail: flags.addin_outlook_mail_enabled,
@@ -101,7 +98,6 @@ export function useOutlookConnectionStatus() {
 
       // Store state for callback validation
       localStorage.setItem('outlook_oauth_state', data.state);
-      localStorage.setItem('outlook_oauth_redirect', redirectUri);
 
       // Check if in iframe
       const isInIframe = window.self !== window.top;
