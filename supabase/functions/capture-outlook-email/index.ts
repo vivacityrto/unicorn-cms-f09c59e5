@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -234,6 +235,29 @@ Deno.serve(async (req) => {
       );
     }
 
+    const tenantIdNum = parseInt(String(tenant_id), 10);
+    if (!Number.isFinite(tenantIdNum)) {
+      return new Response(
+        JSON.stringify({ error: "tenant_id is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Tenant membership must be proven before any write (DB insert or storage upload).
+    const tenantAccess = await hasTenantAccessSafe(supabase, userId, tenantIdNum);
+    if (tenantAccess.lookupFailed) {
+      return new Response(
+        JSON.stringify({ error: "Failed to verify tenant access" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!tenantAccess.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: no access to this tenant" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get Microsoft access token for this user
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -363,7 +387,7 @@ Deno.serve(async (req) => {
       .from("email_messages")
       .insert({
         user_uuid: userId,
-        tenant_id: parseInt(tenant_id),
+        tenant_id: tenantIdNum,
         provider: "microsoft",
         external_message_id: message_id,
         subject: emailData.subject,
@@ -418,7 +442,7 @@ Deno.serve(async (req) => {
               }
 
               // Upload to storage
-              const storagePath = `emails/${tenant_id}/${userId}/${emailRecord.id}/${attachment.name}`;
+              const storagePath = `emails/${tenantIdNum}/${userId}/${emailRecord.id}/${attachment.name}`;
               
               const { error: uploadError } = await serviceClient.storage
                 .from("email-attachments")
@@ -468,10 +492,10 @@ Deno.serve(async (req) => {
     console.log("Audit log created");
 
     // Emit timeline event: email_linked
-    if (tenant_id && emailRecord) {
+    if (emailRecord) {
       await emitTimelineEvent(serviceClient, {
-        tenant_id: parseInt(tenant_id),
-        client_id: client_id || String(tenant_id),
+        tenant_id: tenantIdNum,
+        client_id: client_id || String(tenantIdNum),
         event_type: "email_linked",
         title: `Email linked: ${(emailData.subject || "").substring(0, 60)}`,
         source: "microsoft",

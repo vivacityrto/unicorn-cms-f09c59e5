@@ -24,13 +24,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://esm.sh/zod@3.23.8';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { corsHeadersFor, parseBearerToken } from '../_shared/requireCaller.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -61,33 +55,33 @@ const BodySchema = z.object({
 function kickoffWorker(jobId: string, authHeader: string) {
   // Fire-and-forget. Anon key satisfies the platform JWT verification;
   // x-caller-authorization carries the real staff JWT to the worker for its
-  // internal downstream calls (this is the pattern the simple-path 'create'
-  // action has always used successfully).
+  // internal downstream calls; x-worker-secret is the M2M gate.
   const workerUrl = `${SUPABASE_URL}/functions/v1/bulk-generate-documents-worker`;
   fetch(workerUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-caller-authorization': authHeader,
+      'x-worker-secret': Deno.env.get('BULK_DOCUMENT_WORKER_SECRET') ?? '',
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     },
     body: JSON.stringify({ job_id: jobId }),
   }).catch((e) => console.error('[launcher] worker fire-and-forget failed (job still created)', e));
 }
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
 Deno.serve(async (req: Request) => {
+  const corsHeaders = corsHeadersFor(req);
+  const json = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
+  if (!parseBearerToken(authHeader)) {
     return json({ error: 'Unauthorized', details: 'Missing bearer token' }, 401);
   }
 

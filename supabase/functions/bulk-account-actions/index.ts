@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -91,6 +92,14 @@ serve(async (req) => {
   }
   if (typeof body.tenant_id !== "number") {
     return json(400, { ok: false, code: "INVALID_PAYLOAD", detail: "tenant_id (number) required" });
+  }
+
+  const tenantAccess = await hasTenantAccessSafe(admin, caller.id, body.tenant_id);
+  if (tenantAccess.lookupFailed) {
+    return json(500, { ok: false, code: "TENANT_ACCESS_CHECK_FAILED", detail: "Failed to verify tenant access" });
+  }
+  if (!tenantAccess.allowed) {
+    return json(403, { ok: false, code: "FORBIDDEN", detail: "You do not have access to this tenant" });
   }
   if (!Array.isArray(body.user_uuids) || body.user_uuids.length === 0) {
     return json(400, { ok: false, code: "INVALID_PAYLOAD", detail: "user_uuids must be a non-empty array" });
