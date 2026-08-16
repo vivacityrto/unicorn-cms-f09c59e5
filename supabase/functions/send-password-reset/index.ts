@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { APP_BASE_URL } from "../_shared/app-base-url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -140,9 +141,6 @@ serve(async (req: Request): Promise<Response> => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Get the app base URL for redirect
-    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au";
 
     // Generate password reset link using Supabase Admin API
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
