@@ -55,6 +55,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.xero-invoice-sync-all]
+# Cron-only. Auth is x-cron-invoke-secret (CRON_INVOKE_SECRET), not gateway JWT.
 verify_jwt = false
 
 [functions.xero-invoice-list]
@@ -67,6 +68,14 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.sync-outlook-calendar]
+verify_jwt = false
+
+[functions.sync-outlook-calendar-cron]
+# Cron-only. Auth is x-cron-invoke-secret (CRON_INVOKE_SECRET), not gateway JWT.
+verify_jwt = false
+
+[functions.reconcile-invite-delivery-status]
+# Cron-only. Auth is x-cron-invoke-secret (CRON_INVOKE_SECRET), not gateway JWT.
 verify_jwt = false
 
 [functions.outlook-time-draft-worker]
@@ -313,6 +322,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.deliver-governance-document]
+verify_jwt = false
+
+[functions.bulk-generate-documents-worker]
+# Caller JWT is verified in-function via auth.getUser / getClaims.
 verify_jwt = false
 
 [functions.send-email-graph]
