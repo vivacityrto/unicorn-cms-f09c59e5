@@ -17,7 +17,9 @@
 
 - Make each JSON helper explicitly accept the originating `Request` and pass it at all call sites.
 - Add a Node regression test that rejects CORS-aware JSON helpers without request context.
-- Deployed the committed sources after PR #312 was opened: `embed-ask-viv-corpus` version 50 and `embed-ask-viv-documents` version 51, both `ACTIVE` with JWT verification enabled. The deployed source was retrieved and confirmed to declare `json(req: Request, ...)`.
+- An earlier deployment was not durable: production later served divergent sources that still declared `json(body, status)` and referenced an out-of-scope `req`. This was detected by the consequence audit, not assumed from deployment metadata.
+- Re-deployed the complete PR #312 bundle: `embed-ask-viv-corpus` version 52 and `embed-ask-viv-documents` version 53, both `ACTIVE` with JWT verification disabled for their cron-only invocation model. Retrieved production source confirms each declares `json(req: Request, ...)`.
+- A normal cron-equivalent invocation of each function returned HTTP 200 on its new version after the redeploy.
 
 ## Decisions
 
