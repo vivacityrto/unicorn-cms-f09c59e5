@@ -28,7 +28,7 @@ retirement checklist.
 | PR #325 — deployment-drift audit | Open; documentation only | Codex | Check/fix CI and request Carl's explicit merge approval. |
 | UUID stubs `e77f4567-…`, `dcd6c745-…`, `c22daa64-…` | HTTP 410, no credentials | None | Leave unchanged; already documented. |
 | PR #328 — A1 edge function source capture | Open; documentation + source capture only, no deploy | Claude Code | Do not merge until Carl reviews the flagged `schedule-task-reminders` open-write finding and the `_shared/cors.ts` drift note. |
-| PR pending — A2 edge function source capture | Open shortly; documentation + source capture only, no deploy | Claude Code | Do not merge until Carl reviews the flagged `validate-ai-assist` broad-role note. |
+| PR #329 — A2 edge function source capture | Open; documentation + source capture only, no deploy | Claude Code | Do not merge until Carl reviews the flagged `admin-authorization.ts` stale-comment note and the `validate-ai-assist` broad-role note. |
 
 ## Codex workstream — workflow safety and focused hardening
 
@@ -49,7 +49,7 @@ runtime/shared-helper dependencies.
 | ID | Deployed function(s) | Status | Acceptance criteria |
 |---|---|---|---|
 | A1 | `get-email-status`, `report-delivery-issue`, `invite-to-tenant`, `schedule-task-reminders` | Captured — Claude Code, PR #328 (`hotfix/edge-fn-a1-source-capture`), open, not merged. See "A1 capture notes" below. | Pull exact deployed source; add it under `supabase/functions`; identify caller/auth model; document source hash/version and any behavior difference. |
-| A2 | `import-vimeo-training`, `admin-change-password`, `record-completed-audit`, `validate-ai-assist` | Captured — Claude Code, branch `hotfix/edge-fn-a2-source-capture`, PR pending. `record-completed-audit` was already fully reconciled/hardened/merged before this task (PR #321) — no new work needed there, see notes below. | Same capture/compare process. Preserve explicit custom authentication where present. |
+| A2 | `import-vimeo-training`, `admin-change-password`, `record-completed-audit`, `validate-ai-assist` | Captured — Claude Code, PR #329 (`hotfix/edge-fn-a2-source-capture`), open, not merged. `record-completed-audit` was already fully reconciled/hardened/merged before this task (PR #321) — no new work needed there, see notes below. | Same capture/compare process. Preserve explicit custom authentication where present. |
 | A3 | `generate-audit-report`, `create-client-audit`, `export-pdp-audit-pack` | Pending | Capture exact source and map direct UI callers. Do **not** narrow `create-client-audit` until Carl decides which Vivacity roles may create cross-tenant audits. Flag CORS/auth remediation separately. |
 | A4 | `tmp-backfill-sharepoint-drive-ids`, `academy-fetch-vimeo-showcase` | Pending | Capture exact source and establish whether each is an active supported operation or an already-retired stub. Do not make lifecycle changes based only on repository absence. |
 
