@@ -67,6 +67,10 @@ Deno.serve(async (req) => {
     console.log("Target user data:", targetUserData);
     console.log("Target user error:", targetUserError);
 
+    if (currentUser.id === user_uuid) {
+      return jsonErr(req, 400, "SELF_DELETE_FORBIDDEN", "You cannot delete your own account");
+    }
+
     // Check permissions
     const isClientAdmin = currentUserData?.unicorn_role === "Admin" &&
                          currentUserData?.user_type === "Client Parent" &&
@@ -83,6 +87,52 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Do not remove the last active tenant administrator. Membership, rather
+    // than the legacy profile role, is the authoritative tenant-admin record.
+    if (targetUserData?.tenant_id) {
+      const { data: targetMembership, error: targetMembershipError } = await supabaseAdmin
+        .from("tenant_members")
+        .select("id")
+        .eq("tenant_id", targetUserData.tenant_id)
+        .eq("user_id", user_uuid)
+        .eq("status", "active")
+        .ilike("role", "admin")
+        .maybeSingle();
+
+      if (targetMembershipError) {
+        return jsonErr(req, 500, "MEMBERSHIP_CHECK_FAILED", "Unable to verify tenant administrator safeguards");
+      }
+
+      if (targetMembership) {
+        const { count, error: adminCountError } = await supabaseAdmin
+          .from("tenant_members")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", targetUserData.tenant_id)
+          .eq("status", "active")
+          .ilike("role", "admin");
+
+        if (adminCountError) {
+          return jsonErr(req, 500, "MEMBERSHIP_CHECK_FAILED", "Unable to verify tenant administrator safeguards");
+        }
+        if ((count ?? 0) <= 1) {
+          return jsonErr(req, 409, "LAST_ADMIN_FORBIDDEN", "Assign another active tenant administrator before deleting this user");
+        }
+      }
+    }
+
+    // Write the audit record before the irreversible Auth deletion.
+    const { error: auditError } = await supabaseAdmin.from("audit_eos_events").insert({
+      user_id: currentUser.id,
+      entity: "users",
+      entity_id: user_uuid,
+      action: "user_deleted",
+      reason: "User deleted by admin",
+      details: { deleted_user_uuid: user_uuid },
+    });
+    if (auditError) {
+      return jsonErr(req, 500, "AUDIT_WRITE_FAILED", "Unable to record the user removal");
+    }
 
     console.log(`Attempting to delete user: ${user_uuid}`);
     
@@ -113,16 +163,6 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Successfully deleted user ${user_uuid} from users table`);
-
-    // Audit log
-    await supabase.from("audit_eos_events").insert({
-      user_id: currentUser.id,
-      entity: "users",
-      entity_id: user_uuid,
-      action: "user_deleted",
-      reason: "User deleted by admin",
-      details: { deleted_user_uuid: user_uuid },
-    });
 
     // Client Timeline — account removed
     if (targetUserData?.tenant_id) {
