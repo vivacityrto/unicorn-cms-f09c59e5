@@ -14,6 +14,24 @@ Before any code or docs change in this repo:
 3. Make the change on that branch. Do **not** leave uncommitted work sitting on `main`.
 4. When the user wants it shipped: commit → `git push -u origin HEAD` → `gh pr create`. Do **not** push to `main` or merge unless the user explicitly asks in this session.
 
+## Production deployment parity — no repository drift
+
+For **every** production deployment through Supabase MCP (Edge Function or
+migration), the deployed change must have an immediate, reviewable repository
+record on the same hotfix/chore branch.
+
+1. Before deployment, add the code, focused regression test, and required
+   audit documentation; commit, push, and open the PR.
+2. Deploy the exact committed implementation through MCP — never an
+   uncommitted local variant.
+3. Record the deployed function version/migration verification in the audit
+   entry, commit, and push it to that same PR immediately afterward.
+4. Do not call the production fix complete, begin unrelated work, or end the
+   session while a deployment lacks a committed, pushed PR trail.
+
+This rule applies even to a small emergency hotfix. A direct deployment with
+only local edits is production/repository drift and is not acceptable.
+
 ```text
 ❌ BAD: edit files while on main, then ask "want a PR?"
 ✅ GOOD: git checkout -b hotfix/select-dark-hover → edit → commit → PR
