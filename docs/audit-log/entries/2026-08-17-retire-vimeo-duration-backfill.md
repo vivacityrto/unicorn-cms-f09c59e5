@@ -24,6 +24,10 @@ service-role read/write surface.
   requires an active `Super Admin`, bounds batches to 200 records, and returns
   the UI's `updated`, `skipped`, `errors`, and `remaining_null` response shape.
 - Its CORS response is origin-allowlisted rather than wildcard.
+- Deployed the corrected, source-matched secure handler as production version
+  25 and retrieved the hosted source after deployment. It validates the bearer
+  token via `auth.getUser`, enforces the active Super Admin check, preserves
+  the `batchSize` / result contract, and contains no wildcard CORS response.
 
 ## Consequence
 
