@@ -34,7 +34,7 @@ retirement checklist.
 |---|---|---|---|
 | C1 | Verify the lifecycle of `assign-package-to-tenant` | In progress | Confirm every real caller/replacement, including any operator or external caller. Record evidence. No merge or further production change without positive verification. |
 | C2 | Validate `backfill-vimeo-durations` | Complete — PR #324 | Academy Builder sends `batchSize: 200` and consumes `updated`, `skipped`, `errors`, and `remaining_null`; production v25 exactly matches PR source; active Super Admin gate and 1–200 bounded batch verified. PR checks are all passing (17 Aug). Await Carl's explicit merge approval. |
-| C3 | Capture and harden `test-mailgun` | Pending | First preserve exact live source in a focused PR. Then replace wildcard CORS with the shared request-aware helper without changing Super Admin diagnostic behavior or email request shape. |
+| C3 | Capture and harden `test-mailgun` | Complete — PR #326 | Captured exact production v55 source, replaced only wildcard CORS with shared `corsHeaders(req)`, and retained token validation, Super Admin gate, request shape, Mailgun send, and audit log. Deployed as v56; deployed `index.ts` and helper exactly match PR source. Await Carl's explicit merge approval. |
 | C4 | Verify `academy-backfill-course-thumbnails` workflow | Pending | Identify/use the real Super Admin workflow before lifecycle changes. If retained, capture source and propose bounded batch + scoped CORS as a separate, behavior-preserving PR. |
 | C5 | Platform advisor follow-up | Pending | Separate application fixes from console/provider tasks: Postgres security patch level, OTP expiry, and `pg_net` schema exposure. Document any item requiring Carl/Supabase dashboard action. |
 
