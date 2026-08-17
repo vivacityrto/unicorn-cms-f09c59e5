@@ -466,3 +466,17 @@ verify_jwt = false
 # clients.emails.manage); gateway verify_jwt accepts the public anon key.
 [functions.unlink-email]
 verify_jwt = false
+
+# Edge-function-drift-audit A2 capture (2026-08-17). Auth is in-function:
+# caller's Authorization header is forwarded to a user-scoped client, then
+# gated on canAdministerPasswords (Super Admin, Vivacity/Vivacity Team,
+# not disabled/archived) before the service-role password update.
+[functions.admin-change-password]
+verify_jwt = false
+
+# Already hardened and merged (see docs/audit-log/entries/
+# 2026-08-17-record-completed-audit-auth.md, PR #321) — this entry only
+# fills a config.toml gap left by that PR; verify_jwt was already false
+# in production. Auth is in-function via requireCaller(FeatureKeys.staffInternal).
+[functions.record-completed-audit]
+verify_jwt = false
