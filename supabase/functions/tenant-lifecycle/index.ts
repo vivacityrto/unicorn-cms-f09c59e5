@@ -18,7 +18,6 @@ import { extractToken, verifyAuth, checkSuperAdmin } from "../_shared/auth-helpe
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { jsonOk, jsonError, handleCors, CommonErrors } from "../_shared/response-helpers.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
-import { corsHeaders } from "../_shared/cors.ts";
 
 // Transition rules remain as business logic — only display values are externalised
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -36,8 +35,8 @@ const ACTION_TARGET: Record<string, string> = {
 };
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return handleCors();
-  if (req.method !== "POST") return CommonErrors.methodNotAllowed();
+  if (req.method === "OPTIONS") return handleCors(req);
+  if (req.method !== "POST") return CommonErrors.methodNotAllowed(req);
 
   const supabase = createServiceClient();
   const caller = await requireCaller(req, supabase, {
@@ -50,29 +49,29 @@ Deno.serve(async (req: Request) => {
 
   const token = extractToken(req);
   const { user, profile, error: authError } = await verifyAuth(supabase, token!);
-  if (authError || !user || !profile) return jsonError(401, "UNAUTHORIZED", authError || "Auth failed");
+  if (authError || !user || !profile) return jsonError(req, 401, "UNAUTHORIZED", authError || "Auth failed");
 
   let body: { tenant_id?: number; action?: string; reason?: string; force_override?: boolean };
   try {
     body = await req.json();
   } catch {
-    return CommonErrors.badRequest("Invalid JSON body");
+    return CommonErrors.badRequest(req, "Invalid JSON body");
   }
 
   const { tenant_id, action, reason, force_override } = body;
 
   if (!tenant_id || typeof tenant_id !== "number") {
-    return CommonErrors.badRequest("tenant_id (number) is required");
+    return CommonErrors.badRequest(req, "tenant_id (number) is required");
   }
   if (!action || !ACTION_TARGET[action]) {
-    return CommonErrors.badRequest(`action must be one of: ${Object.keys(ACTION_TARGET).join(", ")}`);
+    return CommonErrors.badRequest(req, `action must be one of: ${Object.keys(ACTION_TARGET).join(", ")}`);
   }
   if (action === "close" && (!reason || reason.trim().length === 0)) {
-    return CommonErrors.badRequest("reason is required for close action");
+    return CommonErrors.badRequest(req, "reason is required for close action");
   }
   // Phase 6: Reactivation requires reason
   if (action === "reactivate" && (!reason || reason.trim().length === 0)) {
-    return CommonErrors.badRequest("reason is required for reactivate action");
+    return CommonErrors.badRequest(req, "reason is required for reactivate action");
   }
 
   const targetStatus = ACTION_TARGET[action];
@@ -84,12 +83,12 @@ Deno.serve(async (req: Request) => {
 
   if (statusError) {
     console.error("Failed to fetch dd_lifecycle_status:", statusError);
-    return CommonErrors.internalError("Failed to validate lifecycle statuses");
+    return CommonErrors.internalError(req, "Failed to validate lifecycle statuses");
   }
 
   const validValues = (validStatuses || []).map((s: { value: string }) => s.value);
   if (!validValues.includes(targetStatus)) {
-    return jsonError(400, "INVALID_STATUS", `Target status '${targetStatus}' is not a valid lifecycle status in the code table.`);
+    return jsonError(req, 400, "INVALID_STATUS", `Target status '${targetStatus}' is not a valid lifecycle status in the code table.`);
   }
 
   // Fetch current tenant
@@ -99,33 +98,33 @@ Deno.serve(async (req: Request) => {
     .eq("id", tenant_id)
     .single();
 
-  if (tenantError || !tenant) return CommonErrors.notFound("Tenant");
+  if (tenantError || !tenant) return CommonErrors.notFound(req, "Tenant");
 
   const currentStatus = tenant.lifecycle_status;
 
   // Phase 6: Prevent duplicate close
   if (action === "close" && currentStatus === "closed") {
-    return jsonError(400, "ALREADY_CLOSED", "This tenant is already closed. No duplicate close permitted.");
+    return jsonError(req, 400, "ALREADY_CLOSED", "This tenant is already closed. No duplicate close permitted.");
   }
 
   // Validate transition
   const allowed = VALID_TRANSITIONS[currentStatus];
   if (!allowed || !allowed.includes(targetStatus)) {
-    return jsonError(400, "INVALID_TRANSITION",
+    return jsonError(req, 400, "INVALID_TRANSITION",
       `Cannot transition from '${currentStatus}' to '${targetStatus}'. Allowed: ${allowed?.join(", ") || "none"}`);
   }
 
   // Reactivate from archived requires SuperAdmin
   if (currentStatus === "archived" && targetStatus === "active") {
     if (!checkSuperAdmin(profile)) {
-      return jsonError(403, "FORBIDDEN", "Only SuperAdmin can reactivate archived tenants");
+      return jsonError(req, 403, "FORBIDDEN", "Only SuperAdmin can reactivate archived tenants");
     }
   }
 
   // Archive requires SuperAdmin
   if (action === "archive") {
     if (!checkSuperAdmin(profile)) {
-      return jsonError(403, "FORBIDDEN", "Only SuperAdmin can archive tenants");
+      return jsonError(req, 403, "FORBIDDEN", "Only SuperAdmin can archive tenants");
     }
 
     // Phase 6: Lock archive unless closed_at > 30 days (SuperAdmin can override)
@@ -133,7 +132,7 @@ Deno.serve(async (req: Request) => {
       const closedDate = new Date(tenant.closed_at);
       const daysSinceClosed = (Date.now() - closedDate.getTime()) / (1000 * 60 * 60 * 24);
       if (daysSinceClosed < 30 && !force_override) {
-        return jsonError(400, "ARCHIVE_TOO_EARLY",
+        return jsonError(req, 400, "ARCHIVE_TOO_EARLY",
           `Cannot archive: tenant was closed ${Math.floor(daysSinceClosed)} day(s) ago. Must wait 30 days, or use force_override=true (SuperAdmin only).`);
       }
     }
@@ -143,14 +142,14 @@ Deno.serve(async (req: Request) => {
   if (action === "close") {
     const safetyResult = await runCloseSafetyChecks(supabase, tenant_id, !!force_override);
     if (safetyResult.blocked) {
-      return jsonError(400, "CLOSE_BLOCKED", safetyResult.message);
+      return jsonError(req, 400, "CLOSE_BLOCKED", safetyResult.message);
     }
-    return await executeCloseTransaction(supabase, tenant_id, reason!.trim(), user.id, tenant);
+    return await executeCloseTransaction(req, supabase, tenant_id, reason!.trim(), user.id, tenant);
   }
 
   // === REACTIVATE-SPECIFIC LOGIC ===
   if (action === "reactivate") {
-    return await executeReactivation(supabase, tenant_id, reason!.trim(), user.id, tenant);
+    return await executeReactivation(req, supabase, tenant_id, reason!.trim(), user.id, tenant);
   }
 
   // Non-close, non-reactivate actions: simple update
@@ -173,12 +172,12 @@ Deno.serve(async (req: Request) => {
 
   if (updateError) {
     console.error("Tenant update error:", updateError);
-    return CommonErrors.internalError("Failed to update tenant lifecycle");
+    return CommonErrors.internalError(req, "Failed to update tenant lifecycle");
   }
 
   await writeAuditLog(supabase, tenant_id, user.id, action, reason, currentStatus, targetStatus, tenant.access_status, updatePayload.access_status ?? tenant.access_status);
 
-  return jsonOk({
+  return jsonOk(req, {
     tenant_id: updated.id,
     name: updated.name,
     lifecycle_status: updated.lifecycle_status,
@@ -264,6 +263,7 @@ async function runCloseSafetyChecks(
 // ──────────────────────────────────────────────
 
 async function executeCloseTransaction(
+  req: Request,
   supabase: ReturnType<typeof createServiceClient>,
   tenantId: number,
   reason: string,
@@ -281,7 +281,7 @@ async function executeCloseTransaction(
 
   if (stagesQueryErr) {
     console.error("Close: failed to query open stages:", stagesQueryErr);
-    return CommonErrors.internalError("Failed to query open stages");
+    return CommonErrors.internalError(req, "Failed to query open stages");
   }
 
   const stageIds = (openStages || []).map(s => s.id);
@@ -295,7 +295,7 @@ async function executeCloseTransaction(
 
     if (stagesUpdateErr) {
       console.error("Close: failed to close stages:", stagesUpdateErr);
-      return CommonErrors.internalError("Failed to close stage instances");
+      return CommonErrors.internalError(req, "Failed to close stage instances");
     }
     stagesClosed = count ?? stageIds.length;
   }
@@ -341,7 +341,7 @@ async function executeCloseTransaction(
 
   if (updateError) {
     console.error("Close: tenant update error:", updateError);
-    return CommonErrors.internalError("Failed to update tenant lifecycle");
+    return CommonErrors.internalError(req, "Failed to update tenant lifecycle");
   }
 
   await writeAuditLog(
@@ -351,7 +351,7 @@ async function executeCloseTransaction(
     { stages_closed: stagesClosed, tasks_cancelled: tasksCancelled },
   );
 
-  return jsonOk({
+  return jsonOk(req, {
     tenant_id: updated.id,
     name: updated.name,
     lifecycle_status: updated.lifecycle_status,
@@ -372,6 +372,7 @@ async function executeCloseTransaction(
 // ──────────────────────────────────────────────
 
 async function executeReactivation(
+  req: Request,
   supabase: ReturnType<typeof createServiceClient>,
   tenantId: number,
   reason: string,
@@ -399,7 +400,7 @@ async function executeReactivation(
 
   if (updateError) {
     console.error("Reactivate: tenant update error:", updateError);
-    return CommonErrors.internalError("Failed to reactivate tenant");
+    return CommonErrors.internalError(req, "Failed to reactivate tenant");
   }
 
   await writeAuditLog(
@@ -409,7 +410,7 @@ async function executeReactivation(
     { reactivation_reason: reason },
   );
 
-  return jsonOk({
+  return jsonOk(req, {
     tenant_id: updated.id,
     name: updated.name,
     lifecycle_status: updated.lifecycle_status,
