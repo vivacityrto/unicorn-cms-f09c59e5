@@ -466,3 +466,17 @@ verify_jwt = false
 # clients.emails.manage); gateway verify_jwt accepts the public anon key.
 [functions.unlink-email]
 verify_jwt = false
+
+# Edge-function-drift-audit A1 capture (2026-08-17). Auth is in-function: caller
+# bearer token is verified via supabase.auth.getUser(), then gated on
+# admin.invites.manage (full) or has_tenant_admin_safe for the target tenant.
+[functions.invite-to-tenant]
+verify_jwt = false
+
+# Edge-function-drift-audit A1 capture (2026-08-17). No in-function caller
+# identity check — the handler trusts task_id/tenant_id/assigned_to/due_date
+# from the request body and writes with the service-role key. Flagged in
+# docs/edge-function-remediation-handoff.md; not narrowed in this PR per the
+# no-lifecycle/no-auth-tightening constraint on this workstream.
+[functions.schedule-task-reminders]
+verify_jwt = false
