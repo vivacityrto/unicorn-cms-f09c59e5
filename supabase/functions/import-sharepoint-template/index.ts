@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     const { action } = body as { action: string };
 
     if (action === 'browse') {
-      return await handleBrowse(supabase, body);
+      return await handleBrowse(req, supabase, body);
     } else if (action === 'import') {
       return await handleImport(supabase, body, user.id);
     } else if (action === 'publish') {
@@ -650,6 +650,7 @@ async function handlePublish(
  * body.folder_id — driveItem id to list children of (omit for root)
  */
 async function handleBrowse(
+  req: Request,
   supabase: ReturnType<typeof createClient>,
   body: Record<string, unknown>,
 ): Promise<Response> {
