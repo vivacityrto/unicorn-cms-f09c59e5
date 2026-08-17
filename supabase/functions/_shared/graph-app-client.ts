@@ -421,6 +421,9 @@ export function sanitiseFolderName(name: string): string {
     .replace(SP_ILLEGAL_CHARS, '')
     .replace(/\s+/g, ' ')
     .trim()
+    // SharePoint rejects names ending in a period even though periods are
+    // otherwise legal in a folder name.
+    .replace(/\.+$/, '')
     .slice(0, 120);
 }
 
