@@ -473,11 +473,13 @@ verify_jwt = false
 [functions.invite-to-tenant]
 verify_jwt = false
 
-# Edge-function-drift-audit A1 capture (2026-08-17). No in-function caller
-# identity check — the handler trusts task_id/tenant_id/assigned_to/due_date
-# from the request body and writes with the service-role key. Flagged in
-# docs/edge-function-remediation-handoff.md; not narrowed in this PR per the
-# no-lifecycle/no-auth-tightening constraint on this workstream.
+# Retired 2026-08-18 (docs/audit-log/entries/2026-08-17-schedule-task-reminders-cron-auth.md):
+# no confirmed caller was ever found (repo, git history, cron, DB
+# triggers/functions, or docs) and its target table held 0 rows in
+# production. Task due-date reminders are handled by generate-notifications
+# (scope tasks_obligations) instead. Briefly gated on isCronAuthorized (v87)
+# before Carl confirmed retirement. Now a 410 stub; verify_jwt is
+# inconsequential but left unchanged.
 [functions.schedule-task-reminders]
 verify_jwt = false
 
