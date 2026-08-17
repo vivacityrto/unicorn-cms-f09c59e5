@@ -15,4 +15,6 @@
 
 ## Deployment verification
 
-- Pending PR creation, deployment of the exact committed bundle, and hosted-source verification.
+- PR #318 was created before deployment. The exact committed bundles were deployed to hosted `vector-index-rebuild`, `vector-index-remove`, and `vector-index-update`, all at version 527 on 2026-08-17. Their existing `verify_jwt: false` settings were preserved because each validates the caller in its handler.
+- Retrieved each hosted source after deployment. All shared JSON responses receive the inbound request; `vector-index-update` contains the `FeatureKeys.adminVector` permission gate.
+- Local verification passed: `node supabase/functions/vector-index-response-auth.test.mjs` and `npx tsc --noEmit`.
