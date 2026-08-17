@@ -31,7 +31,7 @@ retirement checklist.
 | PR #328 — A1 edge function source capture | Open; documentation + source capture only, no deploy | Claude Code | Do not merge until Carl reviews the flagged `schedule-task-reminders` open-write finding and the `_shared/cors.ts` drift note. |
 | PR #329 — A2 edge function source capture | Open; documentation + source capture only, no deploy | Claude Code | Do not merge until Carl reviews the flagged `admin-authorization.ts` stale-comment note and the `validate-ai-assist` broad-role note. |
 | PR #331 — A3 edge function source capture | Open; documentation + source capture only, no deploy | Claude Code | Do not merge until Carl decides U1 (`create-client-audit`) and reviews the `generate-audit-report` legacy-schema note. |
-| PR pending — A4 edge function source capture | Open shortly; documentation + source capture only, no deploy | Claude Code | Do not merge before Carl reviews. No lifecycle change proposed. |
+| PR #332 — A4 edge function source capture | Open; documentation + source capture only, no deploy | Claude Code | Do not merge before Carl reviews. No lifecycle change proposed. |
 
 ## Codex workstream — workflow safety and focused hardening
 
@@ -54,7 +54,7 @@ runtime/shared-helper dependencies.
 | A1 | `get-email-status`, `report-delivery-issue`, `invite-to-tenant`, `schedule-task-reminders` | Captured — Claude Code, PR #328 (`hotfix/edge-fn-a1-source-capture`), open, not merged. | Pull exact deployed source; add it under `supabase/functions`; identify caller/auth model; document source hash/version and any behavior difference. |
 | A2 | `import-vimeo-training`, `admin-change-password`, `record-completed-audit`, `validate-ai-assist` | Captured — Claude Code, PR #329 (`hotfix/edge-fn-a2-source-capture`), open, not merged. `record-completed-audit` was already reconciled/hardened/merged before this task (PR #321). | Same capture/compare process. Preserve explicit custom authentication where present. |
 | A3 | `generate-audit-report`, `create-client-audit`, `export-pdp-audit-pack` | Captured — Claude Code, PR #331 (`hotfix/edge-fn-a3-source-capture`), open, not merged. `create-client-audit` NOT narrowed — awaiting Carl's U1 decision. | Capture exact source and map direct UI callers. Do **not** narrow `create-client-audit` until Carl decides which Vivacity roles may create cross-tenant audits. Flag CORS/auth remediation separately. |
-| A4 | `tmp-backfill-sharepoint-drive-ids`, `academy-fetch-vimeo-showcase` | Captured — Claude Code, branch `hotfix/edge-fn-a4-source-capture`, PR pending. `tmp-backfill-sharepoint-drive-ids` turned out to already be a self-documented, neutralized 410 stub. See "A4 capture notes" below. | Capture exact source and establish whether each is an active supported operation or an already-retired stub. Do not make lifecycle changes based only on repository absence. |
+| A4 | `tmp-backfill-sharepoint-drive-ids`, `academy-fetch-vimeo-showcase` | Captured — Claude Code, PR #332 (`hotfix/edge-fn-a4-source-capture`), open, not merged. `tmp-backfill-sharepoint-drive-ids` turned out to already be a self-documented, neutralized 410 stub. See "A4 capture notes" below. **This closes out the Claude Code A1–A4 workstream.** | Capture exact source and establish whether each is an active supported operation or an already-retired stub. Do not make lifecycle changes based only on repository absence. |
 
 ## Carl decisions / workflow checks needed
 
