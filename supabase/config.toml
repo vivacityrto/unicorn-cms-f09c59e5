@@ -466,3 +466,28 @@ verify_jwt = false
 # clients.emails.manage); gateway verify_jwt accepts the public anon key.
 [functions.unlink-email]
 verify_jwt = false
+
+# Edge-function-drift-audit A3 capture (2026-08-17). Auth is in-function:
+# caller JWT verified via getUser(), then gated on internal staff (users.
+# global_role/is_vivacity_internal) or tenant match on the audit row. Reads
+# the legacy compliance_audits/compliance_templates schema, which currently
+# has zero rows in production — see handoff notes; not retired here.
+[functions.generate-audit-report]
+verify_jwt = false
+
+# Edge-function-drift-audit A3 capture (2026-08-17). Auth is in-function:
+# caller JWT verified via getUser(), then gated on ANY non-empty
+# users.unicorn_role (Vivacity staff) OR tenant_users membership in the
+# subject tenant. The broad staff check lets any non-empty internal role
+# create an audit for any tenant — flagged for Carl's RBAC decision (see
+# handoff U1), not narrowed in this PR per the no-auth-tightening guardrail.
+[functions.create-client-audit]
+verify_jwt = false
+
+# Edge-function-drift-audit A3 capture (2026-08-17). Auth is in-function:
+# caller JWT verified via getUser(), then gated on tenant_users full-access
+# primary/secondary contact for the target tenant, or internal Vivacity
+# admin/SuperAdmin. Has a confirmed tracked caller:
+# src/features/pdp/exportAuditPack.ts.
+[functions.export-pdp-audit-pack]
+verify_jwt = false
