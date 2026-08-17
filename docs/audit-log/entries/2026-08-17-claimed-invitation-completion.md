@@ -19,6 +19,7 @@
 - Add `complete_claimed_invitation`, a signed-in-user-only `SECURITY DEFINER` wrapper that locks a `successful` row, restores `pending` only inside the transaction, and immediately invokes the canonical acceptance function.
 - Route only the ghost password-activation branch to the wrapper; ordinary signup and normal sign-in invitation completion stay on `accept_invitation_v2`.
 - Add source-level regression coverage for the row lock, identity binding, canonical handoff, and UI routing.
+- Applied migration `complete_claimed_invitation` after PR #312 was updated. Production verification confirms the authenticated role has `EXECUTE`, the deployed function locks the invitation row and delegates to `accept_invitation_v2`, and no `successful` invitation rows were stranded at verification time.
 
 ## Decisions
 
