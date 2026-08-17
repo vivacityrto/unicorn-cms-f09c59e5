@@ -14,4 +14,6 @@
 
 ## Deployment verification
 
-- Pending PR creation, deployment of the exact committed bundle, and hosted-source verification.
+- PR #317 was created before deployment, and the exact committed bundle was deployed to hosted `tenant-lifecycle` version 437 on 2026-08-17. The existing `verify_jwt: false` setting was preserved because this function validates callers in its handler.
+- Retrieved the hosted source after deployment. It now passes `req` to the OPTIONS handler and every common-error and JSON response helper; no legacy request-less helper shapes remain.
+- Local verification passed: `node supabase/functions/tenant-lifecycle/response-context.test.mjs` and `npx tsc --noEmit`.
