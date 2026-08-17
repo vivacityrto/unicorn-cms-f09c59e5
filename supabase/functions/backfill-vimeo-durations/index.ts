@@ -29,7 +29,7 @@ function bearerToken(req: Request): string | null {
 }
 
 function vimeoId(url: string | null): string | null {
-  return url?.match(/vimeo\.com\/(?:video\/)?(\d+)/)?.[1] ?? null;
+  return url?.match(/vimeo[.]com[/](?:video[/])?([0-9]+)/)?.[1] ?? null;
 }
 
 Deno.serve(async (req) => {
