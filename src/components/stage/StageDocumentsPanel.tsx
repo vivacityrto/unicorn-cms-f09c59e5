@@ -375,6 +375,24 @@ export function StageDocumentsPanel({
     return true;
   });
 
+  const areAllFilteredLibraryDocsSelected =
+    filteredLibraryDocs.length > 0 &&
+    filteredLibraryDocs.every((doc) => selectedDocIds.has(doc.id));
+
+  const toggleFilteredLibraryDocsSelection = () => {
+    setSelectedDocIds((previous) => {
+      const next = new Set(previous);
+
+      if (areAllFilteredLibraryDocsSelected) {
+        filteredLibraryDocs.forEach((doc) => next.delete(doc.id));
+      } else {
+        filteredLibraryDocs.forEach((doc) => next.add(doc.id));
+      }
+
+      return next;
+    });
+  };
+
   // Wrap action if certified
   const safeAction = (fn: () => void) => {
     if (wrapCertifiedAction) {
@@ -809,17 +827,30 @@ export function StageDocumentsPanel({
               <p className="text-sm text-muted-foreground">
                 {filteredLibraryDocs.length} document{filteredLibraryDocs.length !== 1 ? 's' : ''} available
               </p>
-              {hasActiveLibraryFilters && (
+              <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   className="h-8 text-xs"
-                  onClick={clearLibraryFilters}
+                  disabled={filteredLibraryDocs.length === 0}
+                  onClick={toggleFilteredLibraryDocsSelection}
                 >
-                  <X className="h-3 w-3 mr-1" />
-                  Clear filters
+                  {areAllFilteredLibraryDocsSelected
+                    ? 'Deselect filtered'
+                    : `Select all (${filteredLibraryDocs.length})`}
                 </Button>
-              )}
+                {hasActiveLibraryFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={clearLibraryFilters}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear filters
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
