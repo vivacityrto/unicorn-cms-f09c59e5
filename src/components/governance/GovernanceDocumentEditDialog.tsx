@@ -144,7 +144,6 @@ export function GovernanceDocumentEditDialog({
     onSuccess: () => {
       toast.success('Document updated');
       queryClient.invalidateQueries({ queryKey: ['governance-doc-detail', documentId] });
-      queryClient.invalidateQueries({ queryKey: ['governance-documents'] });
       onSuccess();
       onOpenChange(false);
     },

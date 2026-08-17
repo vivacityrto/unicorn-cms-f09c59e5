@@ -39,7 +39,6 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const ManageStagesWrapper = lazy(() => import("./pages/ManageStagesWrapper"));
  const SharePointFolderMapping = lazy(() => import("./pages/admin/SharePointFolderMapping"));
  const SharePointSitesAdmin = lazy(() => import("./pages/admin/SharePointSitesAdmin"));
-  const GovernanceDocuments = lazy(() => import("./pages/admin/GovernanceDocuments"));
  const AiInsightsPage = lazy(() => import("./pages/admin/ai-insights"));
  
  const UserProfileWrapper = lazy(() => import("./pages/UserProfileWrapper"));
@@ -491,14 +490,9 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route 
-              path="/admin/governance-documents" 
-              element={
-                <ProtectedRoute>
-                  <GovernanceDocuments />
-                </ProtectedRoute>
-              } 
-            />
+            {/* Superseded by /manage-documents, which uses the same GovernanceDocumentDetail
+                drill-down but is the actively-maintained canonical documents page. */}
+            <Route path="/admin/governance-documents" element={<Navigate to="/manage-documents" replace />} />
             <Route
               path="/admin/ai-insights"
               element={

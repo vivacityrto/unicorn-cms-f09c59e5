@@ -54,12 +54,37 @@ const BodySchema = z.object({
   allow_incomplete_tenant_ids: z.array(z.number().int().positive()).optional().nullable(),
 });
 
-function kickoffWorker(jobId: string, authHeader: string) {
-  // Fire-and-forget. Anon key satisfies the platform JWT verification;
-  // x-caller-authorization carries the real staff JWT to the worker for its
-  // internal downstream calls; x-worker-secret is the M2M gate.
+// If the worker never actually starts draining a job (kickoff fetch throws,
+// or the worker responds with a non-2xx — e.g. the shared secret gate
+// rejecting it), the job would otherwise sit at status='running' with every
+// item stuck 'pending' forever: nothing re-invokes the worker, and the
+// frontend polls an unmoving 0% indefinitely with no error surfaced. Detect
+// that here and flip the job to 'stalled' (a status retry_bulk_document_job
+// already knows how to recover from) so the UI can show a clear message and
+// a Retry action instead of spinning silently.
+async function markKickoffFailed(
+  supabase: ReturnType<typeof createClient>,
+  jobId: string,
+  reason: string,
+) {
+  const { error } = await supabase.rpc('stall_bulk_document_job', {
+    p_job_id: jobId,
+    p_reason: reason,
+  });
+  if (error) {
+    console.error(`[launcher] stall_bulk_document_job failed for job=${jobId}`, error);
+  }
+}
+
+function kickoffWorker(jobId: string, authHeader: string, supabase: ReturnType<typeof createClient>) {
+  // Fire-and-forget from the HTTP response's perspective — the caller gets
+  // job_id back immediately, the worker drains in the background. But we
+  // still need to react once the kickoff fetch settles, so register the
+  // continuation with EdgeRuntime.waitUntil (falling back to a detached
+  // promise) to make sure it isn't torn down mid-flight when the response
+  // is dispatched.
   const workerUrl = `${SUPABASE_URL}/functions/v1/bulk-generate-documents-worker`;
-  fetch(workerUrl, {
+  const settle = fetch(workerUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -68,7 +93,24 @@ function kickoffWorker(jobId: string, authHeader: string) {
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     },
     body: JSON.stringify({ job_id: jobId }),
-  }).catch((e) => console.error('[launcher] worker fire-and-forget failed (job still created)', e));
+  })
+    .then(async (resp) => {
+      if (resp.ok) return;
+      const text = await resp.text().catch(() => '');
+      console.error(`[launcher] worker kickoff rejected job=${jobId} status=${resp.status}`, text);
+      await markKickoffFailed(supabase, jobId, `worker_kickoff_failed_${resp.status}`);
+    })
+    .catch(async (e) => {
+      console.error('[launcher] worker fire-and-forget failed (job still created)', e);
+      await markKickoffFailed(supabase, jobId, 'worker_kickoff_network_error');
+    });
+
+  const runtime = (globalThis as unknown as {
+    EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void };
+  }).EdgeRuntime;
+  if (runtime?.waitUntil) {
+    runtime.waitUntil(settle);
+  }
 }
 
 function json(req: Request, body: unknown, status = 200): Response {
@@ -122,7 +164,7 @@ Deno.serve(async (req: Request) => {
         return json(req, { error: 'create_failed', status: error.code, details: error.message }, 400);
       }
       const jobId = data as string;
-      kickoffWorker(jobId, authHeader);
+      kickoffWorker(jobId, authHeader, supabase);
       return json(req, { job_id: jobId });
     }
 
@@ -156,7 +198,7 @@ Deno.serve(async (req: Request) => {
         return json(req, { error: 'create_targeted_failed', status: error.code, details: error.message }, 400);
       }
       const jobId = data as string;
-      kickoffWorker(jobId, authHeader);
+      kickoffWorker(jobId, authHeader, supabase);
       return json(req, { job_id: jobId });
     }
 
@@ -178,7 +220,7 @@ Deno.serve(async (req: Request) => {
         return json(req, { error: 'create_delivery_failed', status: error.code, details: error.message }, 400);
       }
       const jobId = data as string;
-      kickoffWorker(jobId, authHeader);
+      kickoffWorker(jobId, authHeader, supabase);
       return json(req, { job_id: jobId });
     }
 
@@ -224,7 +266,7 @@ Deno.serve(async (req: Request) => {
         return json(req, { error: 'retry_failed', status: error.code, details: error.message }, 400);
       }
       // Fresh caller JWT — kick worker off immediately with the current token.
-      kickoffWorker(parsed.job_id, authHeader);
+      kickoffWorker(parsed.job_id, authHeader, supabase);
       return json(req, { ok: true, job_id: parsed.job_id });
     }
 
