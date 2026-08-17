@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag, Pencil, RefreshCw } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag, Pencil, RefreshCw, Blocks } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
+import { DocumentAdditionalStagesField } from '@/components/documents/DocumentAdditionalStagesField';
 import { GovernanceVersionHistory } from './GovernanceVersionHistory';
 import { GovernancePublishDialog } from './GovernancePublishDialog';
 import { GovernanceVersionImportDialog } from './GovernanceVersionImportDialog';
@@ -42,12 +44,20 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         .select(`
           id, title, description, format, category, document_status,
           source_template_url, updated_at, current_published_version_id,
-          framework_type, is_core, standard_set
+          framework_type, is_core, standard_set, stage
         `)
         .eq('id', documentId)
         .single();
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: stagesList } = useQuery({
+    queryKey: ['stages-list-for-manage-documents'],
+    queryFn: async () => {
+      const { data } = await supabase.from('stages').select('id, name').order('name');
+      return (data as { id: number; name: string }[]) || [];
     },
   });
 
@@ -92,6 +102,21 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       invalidateAll();
     },
     onError: () => toast.error('Failed to update category'),
+  });
+
+  const updateStage = useMutation({
+    mutationFn: async (newStage: number | null) => {
+      const { error } = await supabase
+        .from('documents')
+        .update({ stage: newStage })
+        .eq('id', documentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Stage updated');
+      invalidateAll();
+    },
+    onError: () => toast.error('Failed to update stage'),
   });
 
   // Find latest draft version for mapping editor
@@ -333,6 +358,42 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
 
       {/* Delivery History */}
       <GovernanceDeliveryHistory documentId={documentId} />
+
+      {/* Stage Assignment: the template-level document_stage_links + documents.stage
+          link that drives which stage instances this document gets seeded into.
+          Distinct from the read-only "Stage & Package Assignments" card below,
+          which shows where it has actually been provisioned to real tenants. */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Blocks className="h-4 w-4" /> Stage Assignment
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Primary Stage</Label>
+            <Select
+              value={doc.stage ? String(doc.stage) : '__none__'}
+              onValueChange={(v) => updateStage.mutate(v === '__none__' ? null : parseInt(v))}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {stagesList?.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DocumentAdditionalStagesField
+            documentId={documentId}
+            stages={stagesList}
+            primaryStageId={doc.stage ?? null}
+          />
+        </CardContent>
+      </Card>
 
       {/* Package Assignments */}
       <GovernancePackageAssignments documentId={documentId} />

@@ -68,7 +68,7 @@ const DEFAULT_LIMIT_PER_SOURCE = 10;
 const MAX_DOC_BYTES = 25 * 1024 * 1024; // 25 MB per file, matches analyse-evidence's cap
 const MAX_TEXT_CHARS = 200_000; // matches analyse-evidence's cap
 
-function json(body: unknown, status: number) {
+function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
@@ -422,7 +422,7 @@ Deno.serve(async (req) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
   if (!OPENAI_API_KEY) {
-    return json({ error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
+    return json(req, { error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
   }
 
   let body: { tenant_id?: number; source?: string; limit_per_source?: number } = {};
@@ -431,7 +431,7 @@ Deno.serve(async (req) => {
       body = await req.json();
     }
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+    return json(req, { error: 'Invalid JSON body' }, 400);
   }
 
   const tenantIdFilter = typeof body.tenant_id === 'number' ? body.tenant_id : null;
@@ -468,6 +468,7 @@ Deno.serve(async (req) => {
   }
 
   return json(
+    req,
     {
       ok: allErrors.length === 0,
       mode: tenantIdFilter !== null ? 'ad_hoc_tenant_backfill' : body.source ? 'ad_hoc_source' : 'incremental',

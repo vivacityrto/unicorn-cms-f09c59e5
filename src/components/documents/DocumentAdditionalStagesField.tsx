@@ -190,15 +190,22 @@ export function DocumentAdditionalStagesField({
                 availableStages.map((s) => {
                   const checked = selected.has(s.id);
                   return (
-                    <button
+                    <div
                       key={s.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => toggle(s.id)}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted text-left text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggle(s.id);
+                        }
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted text-left text-sm cursor-pointer"
                     >
                       <Checkbox checked={checked} className="pointer-events-none" />
                       <span className="flex-1 truncate">{s.name}</span>
-                    </button>
+                    </div>
                   );
                 })
               )}

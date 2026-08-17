@@ -79,6 +79,11 @@ beyond adding the new header to their job commands so they are ready.
 
 ## Open questions parked
 
+- **Resolved 2026-08-17:** `CRON_INVOKE_SECRET` and the Vault record
+  `cron_invoke_secret` were rotated to the same value. Cron-equivalent
+  requests to `reconcile-invite-delivery-status` and
+  `sync-outlook-calendar-cron` both returned HTTP 200 after the rotation.
+  The secret value is deliberately not committed.
 - Flip `ACCEPT_LEGACY_SERVICE_ROLE_JWT` to false (and redeploy) once
   `CRON_INVOKE_SECRET` is confirmed present on every affected function
   and all 15 jobs send `x-cron-invoke-secret`.
