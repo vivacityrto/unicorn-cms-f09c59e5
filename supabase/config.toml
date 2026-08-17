@@ -473,14 +473,13 @@ verify_jwt = false
 [functions.invite-to-tenant]
 verify_jwt = false
 
-# Hardened 2026-08-17 (docs/audit-log/entries/2026-08-17-schedule-task-reminders-cron-auth.md):
+# Retired 2026-08-18 (docs/audit-log/entries/2026-08-17-schedule-task-reminders-cron-auth.md):
 # no confirmed caller was ever found (repo, git history, cron, DB
-# triggers/functions, or docs), so gated on the same isCronAuthorized
-# pattern already used by process-notification-outbox,
-# process-notification-queue, generate-notifications, and
-# send-action-item-due-reminders. No cron job currently invokes this
-# function (same "deployed defensively, not scheduled" state
-# process-notification-queue was left in on 2026-08-15) — see handoff U6.
+# triggers/functions, or docs) and its target table held 0 rows in
+# production. Task due-date reminders are handled by generate-notifications
+# (scope tasks_obligations) instead. Briefly gated on isCronAuthorized (v87)
+# before Carl confirmed retirement. Now a 410 stub; verify_jwt is
+# inconsequential but left unchanged.
 [functions.schedule-task-reminders]
 verify_jwt = false
 

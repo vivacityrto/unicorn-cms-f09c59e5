@@ -103,15 +103,35 @@ are covered. Verified `node --test supabase/functions/_shared/cron-auth.test.mjs
 
 ## Deployment verification
 
-Deployed via Supabase MCP `deploy_edge_function` as **version 87**
-(2026-08-17, per Carl's explicit go-ahead — see U7). Retrieved the hosted
-source after deployment: `index.ts` and `_shared/cron-auth.ts` exactly match
-the committed PR source, `verify_jwt` remains `false`. Live-tested with an
-unauthenticated `POST` (no `Authorization` header, no `x-cron-invoke-secret`)
-against the production URL: previously this would have written
-`notification_schedule`/`package_workflow_logs` rows; it now returns
-`401 {"error":"Unauthorized"}` and touches no data. PR #337 still open, not
-merged.
+**v87 (2026-08-17, cron-auth gate)** — deployed via Supabase MCP
+`deploy_edge_function`, per Carl's explicit go-ahead (U7). Hosted source
+matched the committed PR source exactly, `verify_jwt` remained `false`.
+Live-tested with an unauthenticated `POST`: returned
+`401 {"error":"Unauthorized"}` and touched no data (previously would have
+written `notification_schedule`/`package_workflow_logs` rows).
+
+**v88 (2026-08-18, retirement)** — deployed the `410` stub after Carl
+resolved U6. Hosted source matches the committed stub exactly. Live-tested
+with the same request shape as before: now returns
+`410 {"error":"Gone — this function has been retired. Task due-date
+reminders are handled by generate-notifications."}`. PR #337 still open,
+not merged.
+
+## Retirement (2026-08-18, U6 resolved)
+
+Carl reviewed the U6 options (retire / DB trigger / leave gated-and-dormant)
+and chose **retire**: `generate-notifications` already covers task-due
+reminders in production, and maintaining two parallel, differently-shaped
+reminder systems for the same need has no upside. Replaced the auth-gated
+`index.ts` with an unconditional `410 Gone` stub, matching the pattern
+already used for `tmp-backfill-sharepoint-drive-ids` and the three UUID-slug
+stubs. Removed `schedule-task-reminders` from the `AFFECTED` list in
+`_shared/cron-auth.test.mjs` (a retired stub has no cron-auth dependency to
+assert) and updated its `config.toml` comment. Deployed the stub and
+verified (see updated "Deployment verification" below). This is a real
+lifecycle decision, made only after Carl's explicit instruction — not
+inferred from the absence-of-caller evidence alone, per this workstream's
+standing no-retirement-by-inference rule.
 
 ## KB changes shipped
 
@@ -119,15 +139,17 @@ merged.
 
 ## Code changes (this entry accompanies one)
 
-- `supabase/functions/schedule-task-reminders/index.ts` — added the
-  `isCronAuthorized` gate; replaced the shared-CORS import with an
-  equivalent local static object.
+- `supabase/functions/schedule-task-reminders/index.ts` — briefly gated on
+  `isCronAuthorized` (v87), then replaced entirely with a `410` retirement
+  stub (v88) once Carl decided U6.
 - `supabase/functions/_shared/cron-auth.test.mjs` — added
-  `schedule-task-reminders` to `AFFECTED`.
-- `supabase/config.toml` — updated the `[functions.schedule-task-reminders]`
-  comment to describe the new auth model.
-- `docs/edge-function-remediation-handoff.md` — status, evidence, and a new
-  Carl decision item (U6) recorded.
+  `schedule-task-reminders` to `AFFECTED`, then removed it again once
+  retired.
+- `supabase/config.toml` — `[functions.schedule-task-reminders]` comment
+  updated twice: first to describe the cron-auth gate, then to describe
+  the retirement.
+- `docs/edge-function-remediation-handoff.md` — status, evidence, and Carl
+  decision items (U6, U7, U8) recorded and resolved.
 
 ## Decisions
 
@@ -145,14 +167,7 @@ merged.
 
 ## Open questions parked
 
-- **U6 (still open).** Should `schedule-task-reminders` ever get a caller —
-  a `pg_cron` schedule, or (a better structural fit, since this function
-  takes a single `task_id` rather than batch-scanning) a DB trigger firing
-  on task due-date set/change — or should it be retired once Carl confirms
-  `generate-notifications` is the intended task-reminder mechanism? Not
-  decided here — this entry only closes the anonymous-write gap. The
-  deploy above doesn't presuppose either answer: it's a strict improvement
-  (closes an open write) regardless of which way U6 resolves.
+- **Resolved 2026-08-18 (U6).** Retire — see "Retirement" section above.
 - **Resolved 2026-08-17 (U7).** Deployed as version 87 on Carl's explicit
   go-ahead — see "Deployment verification" above.
 - **`get-email-status` / `report-delivery-issue` are non-functional for

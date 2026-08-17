@@ -28,11 +28,12 @@ retirement checklist.
 | PR #325 — deployment-drift audit | Merged | Codex | Complete. |
 | UUID stubs `e77f4567-…`, `dcd6c745-…`, `c22daa64-…` | HTTP 410, no credentials | None | Leave unchanged; already documented. |
 | `tmp-backfill-sharepoint-drive-ids` | HTTP 410, self-documented neutralized stub | None | Leave unchanged; now also captured to source under PR (A4) for reconciliation completeness. |
+| `schedule-task-reminders` | HTTP 410, retired 2026-08-18 (v88) per Carl's explicit U6 decision | None | Leave unchanged; `generate-notifications` covers task-due reminders. |
 | PR #328 — A1 edge function source capture | Merged | Claude Code | Complete. `schedule-task-reminders` open-write finding and `_shared/cors.ts` drift note remain open observations, not fixed. |
 | PR #329 — A2 edge function source capture | Merged | Claude Code | Complete. `admin-authorization.ts` stale-comment note and `validate-ai-assist` broad-role note remain open observations, not fixed. |
 | PR #331 — A3 edge function source capture | Merged | Claude Code | Complete. `create-client-audit` broad-role gap and `generate-audit-report` legacy-schema note remain open decision items (U1, U5), not fixed. |
 | PR #332 — A4 edge function source capture | Merged | Claude Code | Complete. |
-| PR #337 — `schedule-task-reminders` cron-invoke auth | Open; **deployed as v87** (source-verified, live-tested — see audit entry) | Claude Code | Do not merge until Carl decides U6 (give it a real caller — cron or DB trigger — or retire). |
+| PR #337 — `schedule-task-reminders` retired | Open; **deployed as v88, a 410 stub** (source-verified, live-tested — see audit entry). Briefly gated on cron-invoke auth as v87 before Carl resolved U6 as retire. | Claude Code | Awaiting Carl's merge approval; production already reflects the retirement. |
 | PR #338 — email-delivery caller-auth restore | **Merged**; deployed as v112 (`get-email-status`)/v109 (`report-delivery-issue`), source-verified | Codex (found/fixed independently); deploy+verify by Claude Code | Complete — resolves U8. |
 
 ## Codex workstream — workflow safety and focused hardening
@@ -113,8 +114,8 @@ before this capture) — this is genuine deployment drift, not a stale grep.
   notification/workflow-log rows for any tenant.** Flagging this for Carl's
   awareness per the "do not tighten auth in this workstream" guardrail — not
   narrowed in this PR. **Update:** this was picked up as the follow-up's
-  highest-priority item and remediated — see "schedule-task-reminders
-  cron-invoke auth" below.
+  highest-priority item, briefly auth-gated, then **retired outright**
+  (v88, a 410 stub) — see "schedule-task-reminders cron-invoke auth" below.
 
 **Shared-helper drift (flag, not fixed):** `invite-to-tenant` and
 `schedule-task-reminders` both `import { corsHeaders } from "../_shared/cors.ts"`
@@ -336,9 +337,17 @@ Summary:
   local static CORS object — avoids the bug without adopting the newer
   allowlist behaviour, so this PR changes auth only.
 - **Deployed as v87** on Carl's explicit go-ahead (U7, resolved); source
-  matches the PR exactly and a live unauthenticated `POST` now returns 401
-  instead of writing data. PR #337 itself is still open, not merged. U6
-  (give it a real caller, or retire) remains open.
+  matched the PR exactly and a live unauthenticated `POST` returned 401
+  instead of writing data.
+- **U6 resolved 2026-08-18: retire.** Carl chose retirement over a `pg_cron`
+  schedule or a DB trigger — `generate-notifications` already covers task-due
+  reminders, and running two parallel, differently-shaped reminder systems
+  for the same need had no upside. Replaced `index.ts` with a `410` stub
+  (matching `tmp-backfill-sharepoint-drive-ids` and the UUID stubs), removed
+  it from `_shared/cron-auth.test.mjs`'s `AFFECTED` list, and deployed as
+  **v88** — source-verified, and a live `POST` now returns
+  `410 {"error":"Gone — this function has been retired..."}`. PR #337 itself
+  is still open, not merged (production already reflects the retirement).
 - **Also confirmed, and fixed by a separate, concurrent PR:** `get-email-status`
   and `report-delivery-issue` were confirmed broken for every real caller,
   independent of `verify_jwt`. Both built their Supabase client from the
@@ -372,7 +381,7 @@ Summary:
 | U3 | Explicitly approve any PR merge after its checks and review are complete. | Repository rule: never merge to `main` without fresh in-session approval. |
 | U4 | Complete any Supabase dashboard/provider actions identified in C5. | These settings cannot be safely changed through repository code alone. |
 | U5 | Is `generate-audit-report` still a live workflow, or fully superseded by `generate-client-audit-report`/`generate-client-audit-report-docx`? | It reads `compliance_audits`/`compliance_templates`, which have **zero rows** in production (vs. 19 in `client_audits`, the schema the tracked report generators and `create-client-audit`/`record-completed-audit` all use). Looks legacy, but per the no-retirement rule this needs a workflow decision, not an inference from row counts. |
-| U6 | Should `schedule-task-reminders` get a `pg_cron` schedule (mirroring or replacing `generate-notifications`' `tasks_obligations` scope), or be retired? | No caller or schedule exists today; its target table has 0 rows. The auth fix closes the anonymous-write hole either way, but the function's actual future needs a decision, not an inference. |
+| U6 | **Resolved 2026-08-18.** Retired — deployed as v88 (410 stub); `generate-notifications` is the intended task-reminder mechanism. | n/a |
 | U7 | **Resolved 2026-08-17.** Deployed as v87 on Carl's explicit go-ahead; source-verified and live-tested (unauthenticated POST now returns 401, no data touched). | n/a |
 | U8 | **Resolved 2026-08-18.** Fixed by PR #338 (Codex, merged) — forwards the caller's `Authorization` header in both functions, same pattern `admin-change-password` already uses. Deployed as v112/v109 and source-verified by Claude Code. | n/a |
 
