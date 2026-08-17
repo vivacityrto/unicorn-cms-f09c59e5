@@ -32,7 +32,7 @@ retirement checklist.
 | PR #329 — A2 edge function source capture | Merged | Claude Code | Complete. `admin-authorization.ts` stale-comment note and `validate-ai-assist` broad-role note remain open observations, not fixed. |
 | PR #331 — A3 edge function source capture | Merged | Claude Code | Complete. `create-client-audit` broad-role gap and `generate-audit-report` legacy-schema note remain open decision items (U1, U5), not fixed. |
 | PR #332 — A4 edge function source capture | Merged | Claude Code | Complete. |
-| PR pending — `schedule-task-reminders` cron-invoke auth | Open shortly; auth fix + test + audit entry, **not deployed** | Claude Code | Do not merge or deploy until Carl decides U6 (cron schedule vs retire) and whether to deploy now or hold. |
+| PR #337 — `schedule-task-reminders` cron-invoke auth | Open; auth fix + test + audit entry, **not deployed** | Claude Code | Do not merge or deploy until Carl decides U6 (cron schedule vs retire) and U7 (deploy now or hold). |
 
 ## Codex workstream — workflow safety and focused hardening
 
