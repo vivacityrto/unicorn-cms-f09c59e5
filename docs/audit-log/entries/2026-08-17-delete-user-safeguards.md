@@ -16,3 +16,10 @@
 ## Decisions
 
 - A tenant must have another active `admin` member assigned before any current admin can be deleted.
+
+## Production deployment and verification
+
+- Deployed the exact committed PR bundle to the hosted `delete-user` Edge Function on 2026-08-17 (version 714; `verify_jwt: false`, preserved from the prior deployment).
+- Retrieved the hosted source after deployment and confirmed it contains `SELF_DELETE_FORBIDDEN`, `LAST_ADMIN_FORBIDDEN`, and `AUDIT_WRITE_FAILED` safeguards.
+- Confirmed the `audit_eos_events` insert is ordered before `auth.admin.deleteUser`, so an audit-write failure prevents the irreversible Auth deletion.
+- Verification commands passed: `node supabase/functions/delete-user/safeguards.test.mjs` and `npx tsc --noEmit`.
