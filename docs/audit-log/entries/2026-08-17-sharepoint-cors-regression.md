@@ -19,7 +19,7 @@
 
 - Pass `req` from the Edge Function handler to all four action helpers and declare it in each helper signature.
 - Add a Node regression test asserting that every action helper retains request context for CORS responses.
-- Deployed `import-sharepoint-template` as production Edge Function version 407 after the targeted test passed.
+- Deployed `import-sharepoint-template` as production Edge Function version 407 after the targeted browse test passed, then version 409 after the full action-handler sweep. Retrieved production source for version 409 confirms request context is forwarded to browse, import, publish, and drift-check handlers.
 
 ## Decisions
 
