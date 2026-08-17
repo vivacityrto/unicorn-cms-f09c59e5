@@ -29,21 +29,21 @@ Deno.serve(async (req) => {
 
   // Accept both DELETE and POST for compatibility
   if (req.method !== "DELETE" && req.method !== "POST") {
-    return jsonError(405, "METHOD_NOT_ALLOWED", "Only DELETE/POST requests are accepted");
+    return jsonError(req, 405, "METHOD_NOT_ALLOWED", "Only DELETE/POST requests are accepted");
   }
 
   try {
     // Authenticate
     const token = extractToken(req);
     if (!token) {
-      return jsonError(401, "UNAUTHORIZED", "No authorization token provided");
+      return jsonError(req, 401, "UNAUTHORIZED", "No authorization token provided");
     }
 
     const supabase = createServiceClient();
     const { user, profile, error: authError } = await verifyAuth(supabase, token);
     
     if (authError || !user || !profile) {
-      return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
+      return jsonError(req, 401, "UNAUTHORIZED", authError || "Authentication failed");
     }
 
     // Validate Ask Viv access - Vivacity internal only
@@ -65,13 +65,13 @@ Deno.serve(async (req) => {
     try {
       payload = await req.json();
     } catch {
-      return jsonError(400, "BAD_REQUEST", "Invalid JSON body");
+      return jsonError(req, 400, "BAD_REQUEST", "Invalid JSON body");
     }
 
     const { tenant_id, source_type, record_id } = payload;
     
     if (!tenant_id || typeof tenant_id !== "number") {
-      return jsonError(400, "BAD_REQUEST", "tenant_id is required");
+      return jsonError(req, 400, "BAD_REQUEST", "tenant_id is required");
     }
 
     let query = supabase
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
 
     if (deleteError) {
       console.error("Delete error:", deleteError);
-      return jsonError(500, "DELETE_ERROR", "Failed to remove embeddings");
+      return jsonError(req, 500, "DELETE_ERROR", "Failed to remove embeddings");
     }
 
     const removedCount = count || 0;
@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
       },
     });
 
-    return jsonOk({
+    return jsonOk(req, {
       message: `Removed ${removedCount} embeddings`,
       removed: removedCount,
       scope: {
@@ -122,6 +122,6 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error("Vector index remove error:", err);
-    return jsonError(500, "INTERNAL_ERROR", "An unexpected error occurred");
+    return jsonError(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
