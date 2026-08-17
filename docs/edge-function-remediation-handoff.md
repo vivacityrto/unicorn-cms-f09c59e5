@@ -33,6 +33,7 @@ retirement checklist.
 | PR #331 — A3 edge function source capture | Merged | Claude Code | Complete. `create-client-audit` broad-role gap and `generate-audit-report` legacy-schema note remain open decision items (U1, U5), not fixed. |
 | PR #332 — A4 edge function source capture | Merged | Claude Code | Complete. |
 | PR #337 — `schedule-task-reminders` cron-invoke auth | Open; **deployed as v87** (source-verified, live-tested — see audit entry) | Claude Code | Do not merge until Carl decides U6 (give it a real caller — cron or DB trigger — or retire). |
+| PR #338 — email-delivery caller-auth restore | **Merged**; deployed as v112 (`get-email-status`)/v109 (`report-delivery-issue`), source-verified | Codex (found/fixed independently); deploy+verify by Claude Code | Complete — resolves U8. |
 
 ## Codex workstream — workflow safety and focused hardening
 
@@ -88,10 +89,16 @@ before this capture) — this is genuine deployment drift, not a stale grep.
   effect: the underlying select is RLS-gated to super admins, and since the
   caller's identity is never forwarded, it likely evaluates as anonymous on
   every invocation — worth an operator smoke-test, not a fix, in this PR.
+  **Update:** confirmed genuinely broken for every real caller (see
+  "schedule-task-reminders cron-invoke auth" below) and fixed — PR #338
+  (Codex, merged) forwards the caller's `Authorization` header into the
+  anon client, the same pattern `admin-change-password` already used.
+  Deployed and verified (v112) as part of that follow-up.
 - `report-delivery-issue`: same anon-key-without-forwarding pattern, inserting
   into `email_delivery_issues`, which is also `FORCE ROW LEVEL SECURITY` /
   `is_super_admin()`-only. Likely has the same anonymous-write RLS interaction
-  as above.
+  as above. **Update:** same fix and verification as `get-email-status`
+  above — PR #338, deployed as v109.
 - `invite-to-tenant`: verify_jwt is off at the gateway, but the handler
   manually validates the `Authorization` bearer token via
   `supabase.auth.getUser()`, then requires `check_permission(..., "admin.invites.manage", "full")`
@@ -332,19 +339,29 @@ Summary:
   matches the PR exactly and a live unauthenticated `POST` now returns 401
   instead of writing data. PR #337 itself is still open, not merged. U6
   (give it a real caller, or retire) remains open.
-- **Also confirmed (not fixed here):** `get-email-status` and
-  `report-delivery-issue` are currently broken for every real caller,
-  independent of `verify_jwt`. Both build their Supabase client from the
+- **Also confirmed, and fixed by a separate, concurrent PR:** `get-email-status`
+  and `report-delivery-issue` were confirmed broken for every real caller,
+  independent of `verify_jwt`. Both built their Supabase client from the
   anon key only, never forwarding the caller's `Authorization` header.
   `email_sends`/`email_events`/`email_delivery_issues` all have `FORCE ROW
   LEVEL SECURITY` with an `is_super_admin()`-only policy, and
   `is_super_admin_safe(p_user_id)` filters on `user_uuid = p_user_id` — for
   an anon-key connection `auth.uid()` is `NULL`, and that comparison is never
-  true, so the policy evaluates false for every caller, including a real
-  super admin. `get-email-status` always gets 0 rows back and returns its
-  own 404; `report-delivery-issue`'s insert is always RLS-rejected and it
-  returns its own 500. This is out of scope for this task; recorded as a
-  follow-up decision item.
+  true, so the policy evaluated false for every caller, including a real
+  super admin. `get-email-status` always got 0 rows back and returned its
+  own 404; `report-delivery-issue`'s insert was always RLS-rejected and it
+  returned its own 500. While this analysis was in progress, Codex opened
+  and merged **PR #338** (`fix: restore email delivery caller auth context`)
+  forwarding the caller's `Authorization` header in both functions — exactly
+  the fix this analysis pointed to, found independently. Reviewed the diff
+  (correct, minimal, matches this analysis), then deployed and verified it:
+  `get-email-status` → **v112**, `report-delivery-issue` → **v109**, both
+  source-confirmed to match PR #338 exactly. Live-tested the anonymous path
+  (no `Authorization` header) — still safely 404s, no regression. Could not
+  test the authenticated-success path directly (no Super Admin session
+  credential available in this environment), but the fix mirrors the
+  identical, already-working pattern in `admin-change-password`. Resolves
+  U8.
 
 ## Carl decisions / workflow checks needed
 
@@ -357,7 +374,7 @@ Summary:
 | U5 | Is `generate-audit-report` still a live workflow, or fully superseded by `generate-client-audit-report`/`generate-client-audit-report-docx`? | It reads `compliance_audits`/`compliance_templates`, which have **zero rows** in production (vs. 19 in `client_audits`, the schema the tracked report generators and `create-client-audit`/`record-completed-audit` all use). Looks legacy, but per the no-retirement rule this needs a workflow decision, not an inference from row counts. |
 | U6 | Should `schedule-task-reminders` get a `pg_cron` schedule (mirroring or replacing `generate-notifications`' `tasks_obligations` scope), or be retired? | No caller or schedule exists today; its target table has 0 rows. The auth fix closes the anonymous-write hole either way, but the function's actual future needs a decision, not an inference. |
 | U7 | **Resolved 2026-08-17.** Deployed as v87 on Carl's explicit go-ahead; source-verified and live-tested (unauthenticated POST now returns 401, no data touched). | n/a |
-| U8 | Fix `get-email-status` and `report-delivery-issue` to forward the caller's `Authorization` header (the same pattern `admin-change-password`/`validate-ai-assist` already use)? | Both are currently non-functional for every real caller — `get-email-status` always 404s, `report-delivery-issue` always 500s — because their anon-key client never presents any identity to the `FORCE`d, super-admin-only RLS on their tables. Confirmed via the RLS policy and `is_super_admin_safe` definitions; not fixed as part of the `schedule-task-reminders` task. |
+| U8 | **Resolved 2026-08-18.** Fixed by PR #338 (Codex, merged) — forwards the caller's `Authorization` header in both functions, same pattern `admin-change-password` already uses. Deployed as v112/v109 and source-verified by Claude Code. | n/a |
 
 ## Definition of done
 
