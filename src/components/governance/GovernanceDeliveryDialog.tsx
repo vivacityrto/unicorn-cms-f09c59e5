@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/modals';
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Send, CheckCircle, XCircle, Loader2, SkipForward, AlertTriangle, ShieldCheck, ShieldAlert, Square, RotateCcw, Clock } from 'lucide-react';
@@ -63,6 +64,20 @@ function itemStatus(state: JobItemRow['state'], outcome: Record<string, unknown>
   // deliver-governance-document reported skipped:true (already delivered);
   // that distinction lives in outcome.skipped for display only.
   return outcome?.skipped ? 'skipped' : 'success';
+}
+
+function stalledReasonMessage(reason: string | undefined): string {
+  if (!reason) return 'The delivery worker could not be started.';
+  if (reason.startsWith('worker_kickoff_failed_')) {
+    return 'The delivery worker rejected the request to start (a server configuration issue).';
+  }
+  if (reason === 'worker_kickoff_network_error') {
+    return 'The delivery worker could not be reached.';
+  }
+  if (reason === 'jwt_near_expiry') {
+    return 'Your session was about to expire mid-delivery, so it was paused.';
+  }
+  return `The delivery worker reported: ${reason}`;
 }
 
 export function GovernanceDeliveryDialog({
@@ -340,12 +355,19 @@ export function GovernanceDeliveryDialog({
     queryFn: async () => {
       const { data } = await supabase
         .from('bulk_document_jobs')
-        .select('status')
+        .select('status, error_summary, created_at')
         .eq('id', jobId!)
         .maybeSingle();
-      return data as { status: string } | null;
+      return data as { status: string; error_summary: Record<string, unknown> | null; created_at: string } | null;
     },
   });
+
+  // The launcher's kickoff to bulk-generate-documents-worker is fire-and-forget;
+  // if that never lands (e.g. the worker rejects it), the job flips to
+  // 'stalled' server-side. Surface that plainly instead of leaving the bar
+  // frozen at 0% with no explanation.
+  const isStalled = jobRow?.status === 'stalled';
+  const stalledReason = (jobRow?.error_summary as { stalled_reason?: string } | null)?.stalled_reason;
 
   const { data: jobItems } = useQuery({
     queryKey: ['delivery-job-items', jobId],
@@ -366,11 +388,25 @@ export function GovernanceDeliveryDialog({
     return map;
   }, [jobItems]);
 
+  // Soft client-side watchdog: even a job that's genuinely still 'running'
+  // server-side can look identical to a silently-stuck one from the UI's
+  // point of view. Flag it after a generous delay so the user isn't left
+  // guessing while waiting for the (usually fast) server-side stall detection.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (jobRow?.status !== 'running') return;
+    const t = setInterval(() => setNow(Date.now()), 2000);
+    return () => clearInterval(t);
+  }, [jobRow?.status]);
+  const elapsedMs = jobRow?.created_at ? now - new Date(jobRow.created_at).getTime() : 0;
+  const looksStuck = jobRow?.status === 'running' && (jobItems || []).every((i) => i.state === 'pending') && elapsedMs > 20_000;
+
   const completedCount = (jobItems || []).filter((i) => i.state !== 'pending' && i.state !== 'leased').length;
   const totalCount = (jobItems || []).length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   const hasFailures = (jobItems || []).some((i) => i.state === 'failed');
   const isFinished = !!jobId && jobRow?.status !== undefined && jobRow.status !== 'running';
+  const canRetry = hasFailures || isStalled;
 
   const handleStop = async () => {
     if (!jobId) return;
@@ -510,7 +546,29 @@ export function GovernanceDeliveryDialog({
             <p className="text-sm text-muted-foreground">Loading tenants…</p>
           ) : jobId ? (
             <div className="space-y-4">
+              {isStalled && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Delivery didn't start</AlertTitle>
+                  <AlertDescription>
+                    {stalledReasonMessage(stalledReason)} Nothing was sent to clients yet — click Retry to try again.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {!isStalled && looksStuck && (
+                <Alert variant="warning">
+                  <Clock className="h-4 w-4" />
+                  <AlertTitle>Still waiting to start</AlertTitle>
+                  <AlertDescription>
+                    This delivery has been running for over {Math.round(elapsedMs / 1000)}s with no clients
+                    processed yet. It may still catch up — if it doesn't, stop it and try again.
+                  </AlertDescription>
+                </Alert>
+              )}
               <Progress value={progress} showValue label="Delivery progress" />
+              <p className="text-xs text-muted-foreground">
+                {completedCount} of {totalCount} client{totalCount !== 1 ? 's' : ''} processed
+              </p>
               <ScrollArea className="h-[320px]">
                 <div className="space-y-2">
                   {tenants
@@ -620,10 +678,10 @@ export function GovernanceDeliveryDialog({
         <AppModalFooter>
           {isFinished ? (
             <div className="flex items-center gap-2">
-              {hasFailures && (
+              {canRetry && (
                 <Button variant="outline" onClick={handleRetryFailed} disabled={retrying}>
                   {retrying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
-                  Retry Failed
+                  {isStalled && !hasFailures ? 'Retry' : 'Retry Failed'}
                 </Button>
               )}
               <Button onClick={handleClose}>Close</Button>

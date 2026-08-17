@@ -142,7 +142,6 @@ const systemConfigMenuItems = [
   { icon: ShieldCheck, label: "Role Permissions", path: "/administration/role-permissions" },
   { icon: ClipboardList, label: "Lifecycle Checklists", path: "/admin/lifecycle-checklists" },
   { icon: Tags, label: "Merge Field Tags", path: "/admin/merge-field-tags" },
-  { icon: FileCheck, label: "Governance Documents", path: "/admin/governance-documents" },
   { icon: Globe, label: "SharePoint Sites", path: "/admin/sharepoint-sites" },
   { icon: BellRing, label: "Reporting Obligations", path: "/admin/settings/reporting-obligations" },
   { icon: Activity, label: "Operations Dashboard", path: "/admin/operations" },

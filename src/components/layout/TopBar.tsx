@@ -113,7 +113,6 @@ const routeTitles: Record<string, string> = {
   "/administration/role-permissions": "Role Permissions",
   "/admin/lifecycle-checklists": "Lifecycle Checklists",
   "/admin/merge-field-tags": "Merge Field Tags",
-  "/admin/governance-documents": "Governance Documents",
   "/admin/sharepoint-sites": "SharePoint Sites",
   "/admin/settings/reporting-obligations": "Reporting Obligations",
   "/admin/operations": "Operations Dashboard",
