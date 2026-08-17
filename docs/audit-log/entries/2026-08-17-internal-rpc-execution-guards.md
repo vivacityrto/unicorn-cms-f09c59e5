@@ -10,7 +10,7 @@
 
 ## Remediation
 
-- Restore the worker helper's direct grant revocation.
+- Restore the worker helper's direct grant revocation, including the inherited `PUBLIC` grant.
 - Restrict validation-trigger resolution to verified Vivacity staff, derive the audit actor from `auth.uid()`, and revoke anonymous execution.
 
 ## Deployment verification
