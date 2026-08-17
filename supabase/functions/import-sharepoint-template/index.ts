@@ -44,11 +44,11 @@ Deno.serve(async (req: Request) => {
     if (action === 'browse') {
       return await handleBrowse(req, supabase, body);
     } else if (action === 'import') {
-      return await handleImport(supabase, body, user.id);
+      return await handleImport(req, supabase, body, user.id);
     } else if (action === 'publish') {
-      return await handlePublish(supabase, body, user.id);
+      return await handlePublish(req, supabase, body, user.id);
     } else if (action === 'check_drift') {
-      return await handleCheckDrift(supabase, body);
+      return await handleCheckDrift(req, supabase, body);
     } else {
       return new Response(JSON.stringify({ error: `Unknown action: ${action}. Use "browse", "import", "publish" or "check_drift".` }), {
         status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
@@ -68,6 +68,7 @@ Deno.serve(async (req: Request) => {
  * Import a template file from the Master Documents SharePoint site.
  */
 async function handleImport(
+  req: Request,
   supabase: ReturnType<typeof createClient>,
   body: Record<string, unknown>,
   userId: string,
@@ -487,6 +488,7 @@ async function computeDrift(
  * since this version was imported.
  */
 async function handleCheckDrift(
+  req: Request,
   supabase: ReturnType<typeof createClient>,
   body: Record<string, unknown>,
 ): Promise<Response> {
@@ -521,6 +523,7 @@ async function handleCheckDrift(
  * Publish a draft template version with drift detection.
  */
 async function handlePublish(
+  req: Request,
   supabase: ReturnType<typeof createClient>,
   body: Record<string, unknown>,
   userId: string,

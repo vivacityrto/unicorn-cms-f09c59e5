@@ -4,7 +4,17 @@ import test from "node:test";
 
 const source = readFileSync(new URL("./index.ts", import.meta.url), "utf8");
 
-test("browse handler receives the request needed for CORS responses", () => {
+for (const action of ["Import", "CheckDrift", "Publish", "Browse"]) {
+  test(`${action} handler receives the request needed for CORS responses`, () => {
+    assert.match(source, new RegExp(`handle${action}\\(req,`));
+    assert.match(
+      source,
+      new RegExp(`async function handle${action}\\(\\s*req: Request,`, "s"),
+    );
+  });
+}
+
+test("browse handler keeps the request context wiring", () => {
   assert.match(source, /handleBrowse\(req, supabase, body\)/);
   assert.match(
     source,
