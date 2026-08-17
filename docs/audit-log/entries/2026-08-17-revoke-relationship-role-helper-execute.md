@@ -15,4 +15,5 @@
 
 ## Deployment verification
 
-- Pending PR creation, production migration, and privilege verification.
+- PR #319 was created before the production migration.
+- Verified after applying the exact committed migration: `anon` and `authenticated` cannot execute the helper; `authenticated` retains execution on the authorized `set_relationship_role` RPC; `service_role` retains the helper grant for internal use.
