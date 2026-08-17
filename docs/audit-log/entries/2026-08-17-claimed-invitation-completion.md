@@ -21,6 +21,7 @@
 - Add source-level regression coverage for the row lock, identity binding, canonical handoff, and UI routing.
 - Applied migration `complete_claimed_invitation` after PR #312 was updated. Production verification confirms the authenticated role has `EXECUTE`, the deployed function locks the invitation row and delegates to `accept_invitation_v2`, and no `successful` invitation rows were stranded at verification time.
 - Supabase's function-default ACL also granted `anon` directly, despite revoking `PUBLIC`. The function's `auth.uid()` guard already rejected anonymous use, but a follow-up privilege migration explicitly revokes `anon` and retains only `authenticated` execution.
+- Applied `revoke_anon_complete_claimed_invitation` after the PR update. Production verification confirms `anon_can_execute = false` and `authenticated_can_execute = true`.
 
 ## Decisions
 
