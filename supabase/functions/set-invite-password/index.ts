@@ -77,14 +77,14 @@ serve(async (req) => {
       return json(req, 400, { ok: false, code: "INVALID_TOKEN" });
     }
     if (invitation.status === "successful" || invitation.status === "accepted") {
-      return json(410, {
+      return json(req, 410, {
         ok: false,
         code: "TOKEN_CONSUMED",
         detail: "This invitation has already been used",
       });
     }
     if (invitation.status !== "pending" || new Date(invitation.expires_at).getTime() <= Date.now()) {
-      return json(400, { ok: false, code: "INVALID_TOKEN", detail: "This invitation is not usable" });
+      return json(req, 400, { ok: false, code: "INVALID_TOKEN", detail: "This invitation is not usable" });
     }
 
     const emailLc = email.toLowerCase();
@@ -152,10 +152,10 @@ serve(async (req) => {
 
     if (claimErr) {
       console.error("invitation claim failed", claimErr);
-      return json(500, { ok: false, code: "CLAIM_FAILED", detail: claimErr.message });
+      return json(req, 500, { ok: false, code: "CLAIM_FAILED", detail: claimErr.message });
     }
     if (!claimed || claimed.length === 0) {
-      return json(410, {
+      return json(req, 410, {
         ok: false,
         code: "TOKEN_CONSUMED",
         detail: "This invitation has already been used",
