@@ -15,4 +15,6 @@
 
 ## Deployment verification
 
-- Pending PR creation, production migration, and privilege/body verification.
+- PR #320 was created before the migrations were applied.
+- Verified after the final migration: `lease_bulk_document_job_items` is executable by `service_role` only (not `anon` or `authenticated`); `rpc_resolve_validation_trigger` is not executable by `anon` and remains executable by `authenticated` only through its live Vivacity-staff guard.
+- Retrieved the live resolver definition and confirmed it derives `resolved_by` from `auth.uid()` rather than the caller-supplied parameter.
