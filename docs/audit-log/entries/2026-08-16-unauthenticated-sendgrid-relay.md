@@ -86,11 +86,25 @@ changed.
 - Keep enumerating bare-UUID slugs as a standing check — they are
   invisible to name-based greps.
 
-## Open questions parked
+## Remediation completed (17 Aug 2026)
 
-- `64329f1f` and `61429ee4` are still live until a Management API /
-  dashboard delete (or stub) lands. This session could not present a
-  `SUPABASE_ACCESS_TOKEN`.
-- SendGrid key rotation is a console action; not done here.
-- Function-log retention is 24h per `query_logs` window. A longer
-  abuse window needs the dashboard log explorer or SendGrid activity.
+- An authorised administrator deleted `64329f1f-48e1-4374-8ddf-6e66e42d33de`
+  (the live unauthenticated SendGrid relay) from the Supabase Edge Functions
+  dashboard. A direct function lookup after deletion returns `Function not
+  found`; the current named `send-test-email` function remains deployed.
+- The administrator also deleted `61429ee4-9d13-4b39-847e-3ead08b94f71`
+  (`unicorn-data-import`). A direct lookup likewise returns `Function not
+  found`.
+- The administrator confirmed that no SendGrid Edge Function secrets remain
+  in Supabase. The tracked active function source contains no SendGrid client
+  or credential use; remaining mentions are retirement documentation and
+  negative tests only.
+- The old endpoints are deleted rather than replaced with stubs, so their
+  prior URLs are no longer routable. This closes the live relay and legacy
+  mock exposure described above.
+
+## Residual follow-up
+
+- Function-log retention is 24h per `query_logs` window. A longer historical
+  abuse investigation, if required, needs the Supabase dashboard log explorer
+  or SendGrid activity history from before the credential was removed.
