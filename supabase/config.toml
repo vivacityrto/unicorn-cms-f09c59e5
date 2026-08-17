@@ -473,11 +473,14 @@ verify_jwt = false
 [functions.invite-to-tenant]
 verify_jwt = false
 
-# Edge-function-drift-audit A1 capture (2026-08-17). No in-function caller
-# identity check — the handler trusts task_id/tenant_id/assigned_to/due_date
-# from the request body and writes with the service-role key. Flagged in
-# docs/edge-function-remediation-handoff.md; not narrowed in this PR per the
-# no-lifecycle/no-auth-tightening constraint on this workstream.
+# Hardened 2026-08-17 (docs/audit-log/entries/2026-08-17-schedule-task-reminders-cron-auth.md):
+# no confirmed caller was ever found (repo, git history, cron, DB
+# triggers/functions, or docs), so gated on the same isCronAuthorized
+# pattern already used by process-notification-outbox,
+# process-notification-queue, generate-notifications, and
+# send-action-item-due-reminders. No cron job currently invokes this
+# function (same "deployed defensively, not scheduled" state
+# process-notification-queue was left in on 2026-08-15) — see handoff U6.
 [functions.schedule-task-reminders]
 verify_jwt = false
 

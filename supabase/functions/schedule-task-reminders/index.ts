@@ -1,6 +1,20 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders } from "../_shared/cors.ts";
+import { cronUnauthorizedResponse, isCronAuthorized } from "../_shared/cron-auth.ts";
+
+// Kept as a local static object rather than importing the shared
+// ../_shared/cors.ts function-style helper: this function's deployed bundle
+// currently ships with an older, wildcard-object snapshot of that shared
+// file, so switching to the import would be a second, unrelated behaviour
+// change (silently dropping all CORS headers, since spreading a function
+// value yields nothing — see docs/edge-function-remediation-handoff.md, A1).
+// This keeps CORS byte-for-byte identical to current production; only the
+// auth gate below is new.
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-invoke-secret",
+};
+const corsHeadersFor = (_req: Request) => corsHeaders;
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -15,6 +29,18 @@ interface ScheduleTaskRemindersRequest {
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // No caller-identity check existed here before (see the A1 finding in
+  // docs/edge-function-remediation-handoff.md): any request, authenticated
+  // or not, could create arbitrary notification_schedule/package_workflow_logs
+  // rows for any tenant via the service-role key below. Gated on the same
+  // shared cron-invoke pattern already used by process-notification-outbox,
+  // process-notification-queue, generate-notifications, and
+  // send-action-item-due-reminders, since no other caller (repo, git
+  // history, cron, DB trigger, or docs) was ever found for this function.
+  if (!await isCronAuthorized(req)) {
+    return cronUnauthorizedResponse(req, corsHeadersFor);
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);

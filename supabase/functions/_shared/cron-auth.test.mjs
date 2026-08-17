@@ -18,6 +18,7 @@ const AFFECTED = [
   "process-notification-queue",
   "generate-notifications",
   "send-action-item-due-reminders",
+  "schedule-task-reminders",
 ];
 
 function functionSrc(name) {
