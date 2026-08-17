@@ -31,7 +31,8 @@ retirement checklist.
 | PR #328 — A1 edge function source capture | Merged | Claude Code | Complete. `schedule-task-reminders` open-write finding and `_shared/cors.ts` drift note remain open observations, not fixed. |
 | PR #329 — A2 edge function source capture | Merged | Claude Code | Complete. `admin-authorization.ts` stale-comment note and `validate-ai-assist` broad-role note remain open observations, not fixed. |
 | PR #331 — A3 edge function source capture | Merged | Claude Code | Complete. `create-client-audit` broad-role gap and `generate-audit-report` legacy-schema note remain open decision items (U1, U5), not fixed. |
-| PR #332 — A4 edge function source capture | Open; documentation + source capture only, no deploy | Claude Code | Do not merge before Carl reviews. No lifecycle change proposed. |
+| PR #332 — A4 edge function source capture | Merged | Claude Code | Complete. |
+| PR pending — `schedule-task-reminders` cron-invoke auth | Open shortly; auth fix + test + audit entry, **not deployed** | Claude Code | Do not merge or deploy until Carl decides U6 (cron schedule vs retire) and whether to deploy now or hold. |
 
 ## Codex workstream — workflow safety and focused hardening
 
@@ -104,7 +105,9 @@ before this capture) — this is genuine deployment drift, not a stale grep.
   function URL, authenticated or not, can currently create arbitrary
   notification/workflow-log rows for any tenant.** Flagging this for Carl's
   awareness per the "do not tighten auth in this workstream" guardrail — not
-  narrowed in this PR.
+  narrowed in this PR. **Update:** this was picked up as the follow-up's
+  highest-priority item and remediated — see "schedule-task-reminders
+  cron-invoke auth" below.
 
 **Shared-helper drift (flag, not fixed):** `invite-to-tenant` and
 `schedule-task-reminders` both `import { corsHeaders } from "../_shared/cors.ts"`
@@ -120,7 +123,10 @@ shared `_shared/cors.ts` (it's relied on by many already-tracked functions) and
 does **not** update these two call sites — flagging only, per the no-CORS-change
 guardrail for this workstream. A follow-up, Carl-approved PR should update both
 call sites to `corsHeaders(req)` before either function is ever redeployed from
-source.
+source. **Update:** `schedule-task-reminders`' copy of this drift was resolved
+as a side effect of its auth fix (see below) — it now uses a local static CORS
+object instead of the shared import, avoiding the bug without adopting the
+newer allowlist behaviour. `invite-to-tenant` is unchanged and still affected.
 
 ### A2 — `import-vimeo-training`, `admin-change-password`, `record-completed-audit`, `validate-ai-assist`
 
@@ -296,6 +302,48 @@ with a recent Academy Builder addition whose frontend wiring may not have
 been captured in this checkout, not with an orphaned/dead function. Not
 flagged as a problem; recorded for completeness.
 
+### `schedule-task-reminders` cron-invoke auth (follow-up to A1)
+
+Full evidence in `docs/audit-log/entries/2026-08-17-schedule-task-reminders-cron-auth.md`.
+Summary:
+
+- **No caller found anywhere, exhaustively re-checked:** repo, full git
+  history, `pg_cron`, every Postgres trigger/function body, edge-function
+  logs (24h), and docs. `notification_schedule` (its target table) has **0
+  rows** in production. A prior, independent 2026-05-19 survey
+  (`docs/audit-log/entries/2026-05-19-notification-system-survey.md`)
+  already mapped every writer of `notification_schedule` and didn't include
+  this function; the equivalent task-reminder workflow runs via
+  `generate-notifications` (cron scope `tasks_obligations`) writing to a
+  different table (`user_notifications`) with different semantics.
+- **Remediation:** gated on the existing shared `isCronAuthorized` /
+  `cronUnauthorizedResponse` pattern (`_shared/cron-auth.ts`), the same one
+  already used by `process-notification-outbox`, `process-notification-queue`,
+  `generate-notifications`, and `send-action-item-due-reminders`. Chosen
+  specifically because it's an established pattern rather than a new
+  caller-identity assumption invented for this function. `verify_jwt` stays
+  `false`, matching the other four. Added to the `AFFECTED` list in
+  `_shared/cron-auth.test.mjs` (12/12 tests passing) instead of a new test
+  file, matching how those four are covered. Also dropped this function's
+  copy of the `_shared/cors.ts` drift (flagged in A1) by switching to a
+  local static CORS object — avoids the bug without adopting the newer
+  allowlist behaviour, so this PR changes auth only.
+- **Not deployed.** This is a PR-only change pending Carl's review; see U6
+  and the deploy-timing question below.
+- **Also confirmed (not fixed here):** `get-email-status` and
+  `report-delivery-issue` are currently broken for every real caller,
+  independent of `verify_jwt`. Both build their Supabase client from the
+  anon key only, never forwarding the caller's `Authorization` header.
+  `email_sends`/`email_events`/`email_delivery_issues` all have `FORCE ROW
+  LEVEL SECURITY` with an `is_super_admin()`-only policy, and
+  `is_super_admin_safe(p_user_id)` filters on `user_uuid = p_user_id` — for
+  an anon-key connection `auth.uid()` is `NULL`, and that comparison is never
+  true, so the policy evaluates false for every caller, including a real
+  super admin. `get-email-status` always gets 0 rows back and returns its
+  own 404; `report-delivery-issue`'s insert is always RLS-rejected and it
+  returns its own 500. This is out of scope for this task; recorded as a
+  follow-up decision item.
+
 ## Carl decisions / workflow checks needed
 
 | ID | Decision or check | Why it matters |
@@ -305,6 +353,9 @@ flagged as a problem; recorded for completeness.
 | U3 | Explicitly approve any PR merge after its checks and review are complete. | Repository rule: never merge to `main` without fresh in-session approval. |
 | U4 | Complete any Supabase dashboard/provider actions identified in C5. | These settings cannot be safely changed through repository code alone. |
 | U5 | Is `generate-audit-report` still a live workflow, or fully superseded by `generate-client-audit-report`/`generate-client-audit-report-docx`? | It reads `compliance_audits`/`compliance_templates`, which have **zero rows** in production (vs. 19 in `client_audits`, the schema the tracked report generators and `create-client-audit`/`record-completed-audit` all use). Looks legacy, but per the no-retirement rule this needs a workflow decision, not an inference from row counts. |
+| U6 | Should `schedule-task-reminders` get a `pg_cron` schedule (mirroring or replacing `generate-notifications`' `tasks_obligations` scope), or be retired? | No caller or schedule exists today; its target table has 0 rows. The auth fix closes the anonymous-write hole either way, but the function's actual future needs a decision, not an inference. |
+| U7 | Should the `schedule-task-reminders` auth-fix PR be deployed now (verifying production parity before merge, as the `test-mailgun`/`academy-backfill-course-thumbnails` hardening PRs did), or held until reviewed? | Deploying an edge function is a real production change; not assumed either way. |
+| U8 | Fix `get-email-status` and `report-delivery-issue` to forward the caller's `Authorization` header (the same pattern `admin-change-password`/`validate-ai-assist` already use)? | Both are currently non-functional for every real caller — `get-email-status` always 404s, `report-delivery-issue` always 500s — because their anon-key client never presents any identity to the `FORCE`d, super-admin-only RLS on their tables. Confirmed via the RLS policy and `is_super_admin_safe` definitions; not fixed as part of the `schedule-task-reminders` task. |
 
 ## Definition of done
 
