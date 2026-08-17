@@ -466,3 +466,58 @@ verify_jwt = false
 # clients.emails.manage); gateway verify_jwt accepts the public anon key.
 [functions.unlink-email]
 verify_jwt = false
+
+# Edge-function-drift-audit A1 capture (2026-08-17). Auth is in-function: caller
+# bearer token is verified via supabase.auth.getUser(), then gated on
+# admin.invites.manage (full) or has_tenant_admin_safe for the target tenant.
+[functions.invite-to-tenant]
+verify_jwt = false
+
+# Retired 2026-08-18 (docs/audit-log/entries/2026-08-17-schedule-task-reminders-cron-auth.md):
+# no confirmed caller was ever found (repo, git history, cron, DB
+# triggers/functions, or docs) and its target table held 0 rows in
+# production. Task due-date reminders are handled by generate-notifications
+# (scope tasks_obligations) instead. Briefly gated on isCronAuthorized (v87)
+# before Carl confirmed retirement. Now a 410 stub; verify_jwt is
+# inconsequential but left unchanged.
+[functions.schedule-task-reminders]
+verify_jwt = false
+
+# Edge-function-drift-audit A2 capture (2026-08-17). Auth is in-function:
+# caller's Authorization header is forwarded to a user-scoped client, then
+# gated on canAdministerPasswords (Super Admin, Vivacity/Vivacity Team,
+# not disabled/archived) before the service-role password update.
+[functions.admin-change-password]
+verify_jwt = false
+
+# Already hardened and merged (see docs/audit-log/entries/
+# 2026-08-17-record-completed-audit-auth.md, PR #321) — this entry only
+# fills a config.toml gap left by that PR; verify_jwt was already false
+# in production. Auth is in-function via requireCaller(FeatureKeys.staffInternal).
+[functions.record-completed-audit]
+verify_jwt = false
+
+# Edge-function-drift-audit A3 capture (2026-08-17). Auth is in-function:
+# caller JWT verified via getUser(), then gated on internal staff (users.
+# global_role/is_vivacity_internal) or tenant match on the audit row. Reads
+# the legacy compliance_audits/compliance_templates schema, which currently
+# has zero rows in production — see handoff notes; not retired here.
+[functions.generate-audit-report]
+verify_jwt = false
+
+# Edge-function-drift-audit A3 capture (2026-08-17). Auth is in-function:
+# caller JWT verified via getUser(), then gated on ANY non-empty
+# users.unicorn_role (Vivacity staff) OR tenant_users membership in the
+# subject tenant. The broad staff check lets any non-empty internal role
+# create an audit for any tenant — flagged for Carl's RBAC decision (see
+# handoff U1), not narrowed in this PR per the no-auth-tightening guardrail.
+[functions.create-client-audit]
+verify_jwt = false
+
+# Edge-function-drift-audit A3 capture (2026-08-17). Auth is in-function:
+# caller JWT verified via getUser(), then gated on tenant_users full-access
+# primary/secondary contact for the target tenant, or internal Vivacity
+# admin/SuperAdmin. Has a confirmed tracked caller:
+# src/features/pdp/exportAuditPack.ts.
+[functions.export-pdp-audit-pack]
+verify_jwt = false

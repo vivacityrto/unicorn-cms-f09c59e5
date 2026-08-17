@@ -19,6 +19,11 @@ const AFFECTED = [
   "generate-notifications",
   "send-action-item-due-reminders",
 ];
+// schedule-task-reminders was briefly added here (v87) then retired outright
+// (2026-08-18) — see docs/audit-log/entries/2026-08-17-schedule-task-reminders-cron-auth.md.
+// It's now a 410 stub with no cron-auth dependency, so it's removed from
+// this list rather than left asserting a pattern the retired function no
+// longer uses.
 
 function functionSrc(name) {
   return readFileSync(join(here, "..", name, "index.ts"), "utf8");
