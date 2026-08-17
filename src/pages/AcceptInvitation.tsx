@@ -139,10 +139,14 @@ setInvitationData({
 
   const finalizeInvitation = async (
     userId: string,
-    tokenHash: string
+    tokenHash: string,
+    options: { claimedPasswordActivation?: boolean } = {}
   ): Promise<{ ok: boolean; code: string; message?: string }> => {
     try {
-      const { data: acceptResult, error: rpcError } = await supabase.rpc('accept_invitation_v2', {
+      const rpcName = options.claimedPasswordActivation
+        ? 'complete_claimed_invitation'
+        : 'accept_invitation_v2';
+      const { data: acceptResult, error: rpcError } = await supabase.rpc(rpcName, {
         p_token_hash: tokenHash,
         p_user_id: userId,
       });
@@ -279,7 +283,9 @@ unicorn_role: invitationData!.unicornRole,
           }
 
           // Finalize invitation
-          const result = await finalizeInvitation(signInRetry.user.id, tokenHash);
+          const result = await finalizeInvitation(signInRetry.user.id, tokenHash, {
+            claimedPasswordActivation: true,
+          });
           if (!result.ok && result.code !== 'ALREADY_ACCEPTED') {
             toast({
               title: 'Setup incomplete',
