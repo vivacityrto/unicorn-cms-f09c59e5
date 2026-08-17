@@ -27,9 +27,11 @@ retirement checklist.
 | PR #324 — `backfill-vimeo-durations` | Open; secure UI-compatible version is deployed | Codex | Review contract against Academy Builder, check CI, then request Carl's explicit merge approval. |
 | PR #325 — deployment-drift audit | Merged | Codex | Complete. |
 | UUID stubs `e77f4567-…`, `dcd6c745-…`, `c22daa64-…` | HTTP 410, no credentials | None | Leave unchanged; already documented. |
+| `tmp-backfill-sharepoint-drive-ids` | HTTP 410, self-documented neutralized stub | None | Leave unchanged; now also captured to source under PR (A4) for reconciliation completeness. |
 | PR #328 — A1 edge function source capture | Merged | Claude Code | Complete. `schedule-task-reminders` open-write finding and `_shared/cors.ts` drift note remain open observations, not fixed. |
 | PR #329 — A2 edge function source capture | Merged | Claude Code | Complete. `admin-authorization.ts` stale-comment note and `validate-ai-assist` broad-role note remain open observations, not fixed. |
-| PR #331 — A3 edge function source capture | Open; documentation + source capture only, no deploy | Claude Code | Do not merge until Carl decides U1 (`create-client-audit`) and reviews the `generate-audit-report` legacy-schema note. |
+| PR #331 — A3 edge function source capture | Merged | Claude Code | Complete. `create-client-audit` broad-role gap and `generate-audit-report` legacy-schema note remain open decision items (U1, U5), not fixed. |
+| PR #332 — A4 edge function source capture | Open; documentation + source capture only, no deploy | Claude Code | Do not merge before Carl reviews. No lifecycle change proposed. |
 
 ## Codex workstream — workflow safety and focused hardening
 
@@ -51,8 +53,8 @@ runtime/shared-helper dependencies.
 |---|---|---|---|
 | A1 | `get-email-status`, `report-delivery-issue`, `invite-to-tenant`, `schedule-task-reminders` | Merged — PR #328. See "A1 capture notes" below. | Pull exact deployed source; add it under `supabase/functions`; identify caller/auth model; document source hash/version and any behavior difference. |
 | A2 | `import-vimeo-training`, `admin-change-password`, `record-completed-audit`, `validate-ai-assist` | Merged — PR #329. See "A2 capture notes" below. `record-completed-audit` was already fully reconciled/hardened/merged before this task (PR #321). | Same capture/compare process. Preserve explicit custom authentication where present. |
-| A3 | `generate-audit-report`, `create-client-audit`, `export-pdp-audit-pack` | Captured — Claude Code, PR #331 (`hotfix/edge-fn-a3-source-capture`), open, not merged. See "A3 capture notes" below. `create-client-audit` NOT narrowed — awaiting Carl's U1 decision. | Capture exact source and map direct UI callers. Do **not** narrow `create-client-audit` until Carl decides which Vivacity roles may create cross-tenant audits. Flag CORS/auth remediation separately. |
-| A4 | `tmp-backfill-sharepoint-drive-ids`, `academy-fetch-vimeo-showcase` | Pending | Capture exact source and establish whether each is an active supported operation or an already-retired stub. Do not make lifecycle changes based only on repository absence. |
+| A3 | `generate-audit-report`, `create-client-audit`, `export-pdp-audit-pack` | Merged — PR #331. See "A3 capture notes" below. `create-client-audit` NOT narrowed — awaiting Carl's U1 decision. | Capture exact source and map direct UI callers. Do **not** narrow `create-client-audit` until Carl decides which Vivacity roles may create cross-tenant audits. Flag CORS/auth remediation separately. |
+| A4 | `tmp-backfill-sharepoint-drive-ids`, `academy-fetch-vimeo-showcase` | Captured — Claude Code, PR #332 (`hotfix/edge-fn-a4-source-capture`), open, not merged. `tmp-backfill-sharepoint-drive-ids` turned out to already be a self-documented, neutralized 410 stub. See "A4 capture notes" below. **This closes out the Claude Code A1–A4 workstream.** | Capture exact source and establish whether each is an active supported operation or an already-retired stub. Do not make lifecycle changes based only on repository absence. |
 
 ## Claude Code capture notes
 
@@ -259,6 +261,40 @@ a schema migration to `client_audits`, superseded by the tracked
 rule, this is recorded as a flag for Carl/Codex's workflow verification
 (U5), not acted on — a zero-row table doesn't prove nothing could still call
 it with a stale/manual `audit_id`.
+
+### A4 — `tmp-backfill-sharepoint-drive-ids`, `academy-fetch-vimeo-showcase`
+
+Status: both captured verbatim from production and added under
+`supabase/functions/<slug>/index.ts`. No behaviour, auth, or CORS change.
+
+| Function | Deployed version | `verify_jwt` | SHA-256 of captured `index.ts` | Tracked frontend/RPC caller found? |
+|---|---|---|---|---|
+| `tmp-backfill-sharepoint-drive-ids` | 13 | true | `9bfbb6023bd9afde1b95fe199cd9f1e219b471dc1aa54a256cfde4da7316ca85` | N/A — already a 410 stub, see below. |
+| `academy-fetch-vimeo-showcase` | 4 | true | `06b95cd4b297ef06e0807fc6935e4a6ada7b1b44538aaa0f216833ac62f4362e` | None in `src/` or git history. |
+
+**`tmp-backfill-sharepoint-drive-ids` is already retired, self-documented in
+its own deployed source.** The live `index.ts` is a comment block explaining
+it was a one-off backfill (populated `document_versions.source_drive_item_id`/
+`source_site_id` for 26 legacy rows on 2026-07-20), ran successfully, was
+verified, and was then replaced with a stub that unconditionally returns
+`410` with no data access and no credentials used. This matches the shape of
+the three UUID-slug stubs already recorded in the baseline table above — it's
+now added here too, purely for source-control completeness (per this
+workstream's acceptance criteria), not because anything about its lifecycle
+needed deciding. No action taken beyond capturing the stub as-is.
+
+**`academy-fetch-vimeo-showcase` is active and structurally parallel to
+`import-vimeo-training` (A2):** same Super Admin gate pattern
+(`getUser()` → `users.unicorn_role === 'Super Admin'`), same wildcard inline
+`corsHeaders` object (no shared-helper import, so no drift risk here). It
+fetches a Vimeo Showcase/album's sections and video list — a read-only
+"preview a showcase before importing" step, distinct from the already-tracked
+`academy-import-vimeo-showcase` (which presumably performs the write). Created
+very recently (per its `created_at`/`updated_at` timestamps, within the last
+day or two of this audit) with no tracked caller in `src/` yet — consistent
+with a recent Academy Builder addition whose frontend wiring may not have
+been captured in this checkout, not with an orphaned/dead function. Not
+flagged as a problem; recorded for completeness.
 
 ## Carl decisions / workflow checks needed
 
