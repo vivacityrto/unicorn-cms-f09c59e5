@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off, ExternalLink, Settings2, Loader2, Sparkles } from "lucide-react";
+import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off, ExternalLink, Settings2, Loader2, Sparkles, Blocks } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { Combobox } from "@/components/ui/combobox";
@@ -2321,6 +2321,46 @@ export default function ManageDocuments() {
                               <Link2Off className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                             </Button>
                           )}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" title="Assign to stage(s)">
+                                <Blocks className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 space-y-3" align="end">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Primary Stage</Label>
+                                <Select
+                                  value={doc.stage ? String(doc.stage) : '__none__'}
+                                  onValueChange={async (v) => {
+                                    const newStage = v === '__none__' ? null : parseInt(v);
+                                    const { error } = await supabase.from('documents').update({ stage: newStage }).eq('id', doc.id);
+                                    if (error) {
+                                      sonnerToast.error(`Failed to update stage: ${error.message}`);
+                                      return;
+                                    }
+                                    sonnerToast.success('Stage updated');
+                                    fetchDocuments();
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8">
+                                    <SelectValue placeholder="None" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">None</SelectItem>
+                                    {stagesList?.map((s: any) => (
+                                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <DocumentAdditionalStagesField
+                                documentId={doc.id}
+                                stages={stagesList as any}
+                                primaryStageId={doc.stage ?? null}
+                              />
+                            </PopoverContent>
+                          </Popover>
                           <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => {
                     setEditingDocumentId(doc.id);
                     setIsCreateDialogOpen(true);
