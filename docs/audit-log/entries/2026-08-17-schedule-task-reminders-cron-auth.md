@@ -99,8 +99,19 @@ this fix doesn't also introduce that unrelated behaviour change. Added
 listed function imports and calls `isCronAuthorized`/`cronUnauthorizedResponse`
 — no new test file needed, matching how the other four cron-gated functions
 are covered. Verified `node --test supabase/functions/_shared/cron-auth.test.mjs`
-(12/12 passing) and `npx tsc --noEmit` (clean) locally. **Not deployed** —
-this entry accompanies a PR only; see "Open questions parked".
+(12/12 passing) and `npx tsc --noEmit` (clean) locally.
+
+## Deployment verification
+
+Deployed via Supabase MCP `deploy_edge_function` as **version 87**
+(2026-08-17, per Carl's explicit go-ahead — see U7). Retrieved the hosted
+source after deployment: `index.ts` and `_shared/cron-auth.ts` exactly match
+the committed PR source, `verify_jwt` remains `false`. Live-tested with an
+unauthenticated `POST` (no `Authorization` header, no `x-cron-invoke-secret`)
+against the production URL: previously this would have written
+`notification_schedule`/`package_workflow_logs` rows; it now returns
+`401 {"error":"Unauthorized"}` and touches no data. PR #337 still open, not
+merged.
 
 ## KB changes shipped
 
@@ -128,22 +139,22 @@ this entry accompanies a PR only; see "Open questions parked".
 - Do not touch `get-email-status` or `report-delivery-issue` in this entry —
   out of scope for the `schedule-task-reminders` task; recorded as a
   follow-up decision item instead of silently expanding scope.
-- Do not deploy the fix as part of this entry. Production deploy of an
-  auth-gate change is a real behaviour change (closes an open write, even if
-  currently unused) and wasn't explicitly authorised for this task the way
-  the investigation and PR-creation steps were.
+- Deployed after PR creation, on Carl's explicit go-ahead (U7) — not assumed
+  ahead of that instruction, since a production deploy of an auth-gate
+  change is a real behaviour change even though the target was unused.
 
 ## Open questions parked
 
-- **U6 (new).** Should `schedule-task-reminders` ever get a `pg_cron`
-  schedule (mirroring `generate-notifications`' `tasks_obligations` scope,
-  or replacing it), or should it be retired once Carl confirms
+- **U6 (still open).** Should `schedule-task-reminders` ever get a caller —
+  a `pg_cron` schedule, or (a better structural fit, since this function
+  takes a single `task_id` rather than batch-scanning) a DB trigger firing
+  on task due-date set/change — or should it be retired once Carl confirms
   `generate-notifications` is the intended task-reminder mechanism? Not
-  decided here — this entry only closes the anonymous-write gap.
-- Should this fix be deployed now (matching the precedent set by the
-  `test-mailgun` and `academy-backfill-course-thumbnails` hardening PRs,
-  which deployed and verified parity before merge), or held until Carl
-  reviews the PR first? Asked explicitly rather than assumed either way.
+  decided here — this entry only closes the anonymous-write gap. The
+  deploy above doesn't presuppose either answer: it's a strict improvement
+  (closes an open write) regardless of which way U6 resolves.
+- **Resolved 2026-08-17 (U7).** Deployed as version 87 on Carl's explicit
+  go-ahead — see "Deployment verification" above.
 - **`get-email-status` / `report-delivery-issue` are non-functional for
   every real caller today** (see Findings). Fixing them means forwarding the
   caller's `Authorization` header into their Supabase client (the same

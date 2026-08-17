@@ -32,7 +32,7 @@ retirement checklist.
 | PR #329 — A2 edge function source capture | Merged | Claude Code | Complete. `admin-authorization.ts` stale-comment note and `validate-ai-assist` broad-role note remain open observations, not fixed. |
 | PR #331 — A3 edge function source capture | Merged | Claude Code | Complete. `create-client-audit` broad-role gap and `generate-audit-report` legacy-schema note remain open decision items (U1, U5), not fixed. |
 | PR #332 — A4 edge function source capture | Merged | Claude Code | Complete. |
-| PR #337 — `schedule-task-reminders` cron-invoke auth | Open; auth fix + test + audit entry, **not deployed** | Claude Code | Do not merge or deploy until Carl decides U6 (cron schedule vs retire) and U7 (deploy now or hold). |
+| PR #337 — `schedule-task-reminders` cron-invoke auth | Open; **deployed as v87** (source-verified, live-tested — see audit entry) | Claude Code | Do not merge until Carl decides U6 (give it a real caller — cron or DB trigger — or retire). |
 
 ## Codex workstream — workflow safety and focused hardening
 
@@ -328,8 +328,10 @@ Summary:
   copy of the `_shared/cors.ts` drift (flagged in A1) by switching to a
   local static CORS object — avoids the bug without adopting the newer
   allowlist behaviour, so this PR changes auth only.
-- **Not deployed.** This is a PR-only change pending Carl's review; see U6
-  and the deploy-timing question below.
+- **Deployed as v87** on Carl's explicit go-ahead (U7, resolved); source
+  matches the PR exactly and a live unauthenticated `POST` now returns 401
+  instead of writing data. PR #337 itself is still open, not merged. U6
+  (give it a real caller, or retire) remains open.
 - **Also confirmed (not fixed here):** `get-email-status` and
   `report-delivery-issue` are currently broken for every real caller,
   independent of `verify_jwt`. Both build their Supabase client from the
@@ -354,7 +356,7 @@ Summary:
 | U4 | Complete any Supabase dashboard/provider actions identified in C5. | These settings cannot be safely changed through repository code alone. |
 | U5 | Is `generate-audit-report` still a live workflow, or fully superseded by `generate-client-audit-report`/`generate-client-audit-report-docx`? | It reads `compliance_audits`/`compliance_templates`, which have **zero rows** in production (vs. 19 in `client_audits`, the schema the tracked report generators and `create-client-audit`/`record-completed-audit` all use). Looks legacy, but per the no-retirement rule this needs a workflow decision, not an inference from row counts. |
 | U6 | Should `schedule-task-reminders` get a `pg_cron` schedule (mirroring or replacing `generate-notifications`' `tasks_obligations` scope), or be retired? | No caller or schedule exists today; its target table has 0 rows. The auth fix closes the anonymous-write hole either way, but the function's actual future needs a decision, not an inference. |
-| U7 | Should the `schedule-task-reminders` auth-fix PR be deployed now (verifying production parity before merge, as the `test-mailgun`/`academy-backfill-course-thumbnails` hardening PRs did), or held until reviewed? | Deploying an edge function is a real production change; not assumed either way. |
+| U7 | **Resolved 2026-08-17.** Deployed as v87 on Carl's explicit go-ahead; source-verified and live-tested (unauthenticated POST now returns 401, no data touched). | n/a |
 | U8 | Fix `get-email-status` and `report-delivery-issue` to forward the caller's `Authorization` header (the same pattern `admin-change-password`/`validate-ai-assist` already use)? | Both are currently non-functional for every real caller — `get-email-status` always 404s, `report-delivery-issue` always 500s — because their anon-key client never presents any identity to the `FORCE`d, super-admin-only RLS on their tables. Confirmed via the RLS policy and `is_super_admin_safe` definitions; not fixed as part of the `schedule-task-reminders` task. |
 
 ## Definition of done
