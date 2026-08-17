@@ -15,4 +15,6 @@
 
 ## Deployment verification
 
-- Pending PR creation, deployment, and hosted-source verification.
+- PR #321 was created before deployment. The exact committed bundle is active as hosted `record-completed-audit` version 12.
+- Retrieved the hosted source after deployment and confirmed it requires `FeatureKeys.staffInternal`, uses request-aware CORS, contains no wildcard origin, and builds the database insert from an allowlisted payload.
+- Local verification passed: `node supabase/functions/record-completed-audit/auth.test.mjs` and `npx tsc --noEmit`.
