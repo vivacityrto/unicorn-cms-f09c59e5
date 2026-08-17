@@ -26,9 +26,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const authHeader = req.headers.get('Authorization') ?? '';
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
     );
 
     // Get email send status
