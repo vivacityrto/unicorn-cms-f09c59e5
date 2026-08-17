@@ -6,7 +6,7 @@
  * client. There are no in-repository callers and no recent function-log hits.
  * Package assignment is now handled by the tracked package-instance flows.
  */
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
