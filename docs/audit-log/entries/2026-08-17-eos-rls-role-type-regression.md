@@ -17,6 +17,7 @@
 
 - `20260817093000_fix_eos_role_helper_text_comparison.sql` casts the enum parameter to `text` inside the canonical helper.
 - `20260817093100_revoke_anon_eos_role_helper.sql` removes a pre-existing direct `anon` EXECUTE grant; revoking `PUBLIC` alone does not remove direct grants.
+- Both migrations were applied after PR #315 was opened. Production verification confirmed that an enum-typed call now compiles, `anon` cannot execute the enum overload, and `authenticated` can execute it.
 
 ## Decisions
 
