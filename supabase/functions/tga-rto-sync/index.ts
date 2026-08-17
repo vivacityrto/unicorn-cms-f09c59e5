@@ -636,7 +636,8 @@ serve(async (req) => {
 
     // 5. Update tenants row with TGA status
     progress.stage = 'updating_tenant';
-    const { error: tenantUpdateError } = await supabaseAdmin.from('tenants').update({ rto_id: rtoId, tga_connected_at: force ? now : undefined, tga_last_synced_at: now, tga_status: 'connected', tga_legal_name: legalName, tga_snapshot: orgData }).eq('id', tenantIdNum);
+    const canonicalRtoName = tradingName || legalName;
+    const { error: tenantUpdateError } = await supabaseAdmin.from('tenants').update({ rto_id: rtoId, rto_name: canonicalRtoName, legal_name: legalName, tga_connected_at: force ? now : undefined, tga_last_synced_at: now, tga_status: 'connected', tga_legal_name: legalName, tga_snapshot: orgData }).eq('id', tenantIdNum);
     if (tenantUpdateError) log('warn', 'Could not update tenant TGA status', { error: tenantUpdateError.message });
 
     // Update tenant_profile
