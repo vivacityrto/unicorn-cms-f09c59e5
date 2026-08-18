@@ -10,7 +10,7 @@
 
 ## Code changes
 - Add the missing safe-team `tenant_users` SELECT policy.
-- Backfill tenant users as `client` participants only on staff/CSC conversations where they are currently absent.
+- Backfill valid, authenticated tenant users as `client` participants only on staff/CSC conversations where they are currently absent. Historical membership rows whose auth users have been deleted are intentionally excluded.
 - Surface recipient lookup and participant-write failures in the staff message composer instead of silently creating a staff-only thread.
 
 ## Decisions

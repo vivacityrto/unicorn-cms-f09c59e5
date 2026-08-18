@@ -17,6 +17,8 @@ SELECT conversation.id, tenant_user.user_id, 'client'
 FROM public.tenant_conversations AS conversation
 JOIN public.tenant_users AS tenant_user
   ON tenant_user.tenant_id = conversation.tenant_id
+JOIN auth.users AS auth_user
+  ON auth_user.id = tenant_user.user_id
 LEFT JOIN public.conversation_participants AS participant
   ON participant.conversation_id = conversation.id
  AND participant.user_id = tenant_user.user_id
