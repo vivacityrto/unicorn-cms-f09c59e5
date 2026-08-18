@@ -76,7 +76,7 @@ These changes are now merged or deployed and should be treated as completed, sub
 - `set-invite-password` (H6): make invitation tokens single-use/claimed and prevent replay.
 - `mailgun-webhook` (H5): fail closed when signing secret is absent, use safe signature comparison, and validate timestamp/replay protection.
 - `send-email-graph` and `generate-email-note` (H3): enforce tenant/object authorization before service-role reads; prevent cross-tenant dry-run/content disclosure to external AI services.
-- `outlook-auth` and `xero-auth` (H2): bind exchange-code branches to the initiating caller/state and enforce redirect URI allowlists; authorize branches alone are not enough.
+- ~~`outlook-auth` and `xero-auth` (H2)~~ **Verified resolved 2026-08-18** — independently re-checked `xero-auth` against the three properties the 2026-08-15 fix established: env-derived `resolveRedirectUri` allowlist, `exchange-code` binding via `consumeOAuthState(supabaseAdmin, state, caller.user.id)` (asserts `caller.id === oauth_states.user_id`), and atomic single-use `consumed_at` claim. Both functions share `_shared/oauth-redirects.ts` and `_shared/oauth-states.ts`, so this was one shared-helper fix, not per-function; live-deployed source (v64) matches repo. See `docs/audit-log/entries/2026-08-18-sharepoint-import-drive-scoping.md`. No further action.
 - `unlink-email` (H7): fix the broken import and authorization/tenant scoping together; do not repair only the import.
 
 ### Notification, cron, and CORS work
@@ -96,7 +96,7 @@ Remediate with membership/assignment checks, explicit permission keys, all-or-no
 - `dashboard-test-seed`: remove from production or scope cleanup to a dedicated seed tenant.
 - `upload-portal-document`: validate tenant membership before building storage paths.
 - `delete-user`: add self-deletion and last-admin protections plus an audit row.
-- SharePoint family (`upload-sharepoint-file`, `import-sharepoint-template`): verify cross-client folder/tenant scoping. The #330 governance-folder/name fix does not close these findings by itself.
+- SharePoint family (`upload-sharepoint-file`, `import-sharepoint-template`): **investigated and actioned 2026-08-18.** `upload-sharepoint-file` was verified already correctly scoped — tenant id comes from the caller's own `users.tenant_id` row (a non-Super-Admin's requested override is ignored), and the parent-folder target is verified within the tenant's root via `verifyWithinRoot`; no code change needed. `import-sharepoint-template`'s `import` action had a real, previously-unfixed gap: it trusted a caller-supplied `source_drive_id`/`source_item_id` for the Graph fetch with no check that the drive was the configured Master Documents site (unlike `handleBrowse`/`computeDrift`, which resolve it server-side) — fixed by adding that check via a new shared `resolveMasterDriveId` helper, with a regression test; not yet deployed. See `docs/audit-log/entries/2026-08-18-sharepoint-import-drive-scoping.md`.
 
 ### Governance/config/database maintenance
 
