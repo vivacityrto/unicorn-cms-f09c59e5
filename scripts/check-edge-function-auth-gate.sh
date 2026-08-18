@@ -29,7 +29,12 @@ if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
   exit 0
 fi
 
-changed_files="$(git diff --name-only --diff-filter=ACM "$BASE_REF"...HEAD -- 'supabase/functions/*/index.ts' \
+# --diff-filter=d (lowercase) EXCLUDES deletions and keeps everything else --
+# added, copied, modified, AND renamed. A file that is renamed and edited in
+# the same PR (e.g. moving a function directory while quietly dropping its
+# auth call) must still be checked; --diff-filter=ACM would classify a
+# rename as status R and silently skip it entirely (found in review).
+changed_files="$(git diff --name-only --diff-filter=d "$BASE_REF"...HEAD -- 'supabase/functions/*/index.ts' \
   | grep -v '^supabase/functions/_shared/' || true)"
 
 if [[ -z "$changed_files" ]]; then
@@ -49,7 +54,7 @@ while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   [[ -f "$file" ]] || continue # deleted file, nothing to check
 
-  if grep -qE "// *auth-gate: *none" "$file"; then
+  if grep -qE "// *auth-gate: *none\b" "$file"; then
     echo "SKIP (opted out): $file"
     continue
   fi
