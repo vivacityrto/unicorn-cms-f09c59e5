@@ -1087,7 +1087,7 @@ export default function ManageTenants() {
                           <Link
                             to={`/tenant/${tenant.id}`}
                             aria-label={`Open ${tenant.name}`}
-                            className="inline-flex max-w-full rounded-sm font-semibold text-foreground pb-[10px] whitespace-nowrap hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="inline-flex max-w-full rounded-sm font-semibold text-foreground pb-[10px] whitespace-nowrap hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             onClick={(event) => event.stopPropagation()}
                           >
                             {tenant.rto_id && <span className="text-primary font-bold mr-1.5">{tenant.rto_id}</span>}
