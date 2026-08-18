@@ -149,7 +149,8 @@ const systemConfigMenuItems = [
   { icon: AlertTriangle, label: "Zero-Progress Packages", path: "/admin/diagnostics/zero-progress-packages" },
 ];
 
-// 7b. STRATEGIC INTELLIGENCE Section - Super Admin Only
+// 7b. STRATEGIC INTELLIGENCE Section - Regulator Watch is available to all
+// internal staff; the remaining cross-tenant tools stay Super Admin only.
 // Cross-tenant analytics/orchestration tools surfaced as widgets on the Executive Dashboard
 const strategicIntelligenceMenuItems = [
   { icon: Globe, label: "Regulator Watch", path: "/admin/regulator-watch" },
@@ -603,12 +604,12 @@ export const DashboardLayout = ({
                   "systemConfig"
                 )}
 
-              {/* 8. STRATEGIC INTELLIGENCE Section - Super Admin Only */}
-              {isSuperAdmin &&
+              {/* 8. STRATEGIC INTELLIGENCE Section */}
+              {isVivacityTeam &&
                 renderSection(
                   "strategicIntelligence",
                   "Strategic Intelligence",
-                  strategicIntelligenceMenuItems,
+                  isSuperAdmin ? strategicIntelligenceMenuItems : [strategicIntelligenceMenuItems[0]],
                   "strategicIntelligence"
                 )}
             </>

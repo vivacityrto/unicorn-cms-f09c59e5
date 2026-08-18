@@ -15,6 +15,8 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, ArrowLeft, ExternalLink, AlertTriangle, CheckCircle2, ClipboardList, ShieldAlert } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const IMPACT_COLORS: Record<string, string> = {
   low: "bg-blue-100 text-blue-800",
@@ -193,8 +195,8 @@ export default function RegulatorChangeEventDetail() {
               <CardTitle className="text-sm">Change Analysis</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="prose prose-sm max-w-none text-xs leading-relaxed whitespace-pre-wrap">
-                {event.change_summary_md}
+              <div className="prose prose-sm max-w-none text-xs leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.change_summary_md}</ReactMarkdown>
               </div>
             </CardContent>
           </Card>

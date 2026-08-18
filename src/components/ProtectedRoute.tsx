@@ -14,9 +14,11 @@ interface ProtectedRouteProps {
   requireSuperAdmin?: boolean;
   /** Non-SuperAdmin unicorn_role values allowed through; SuperAdmin is always allowed. */
   allowedRoles?: string[];
+  /** Permit any Vivacity internal staff member on an otherwise admin-only route. */
+  allowVivacityTeam?: boolean;
 }
 
-export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRoles }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRoles, allowVivacityTeam = false }: ProtectedRouteProps) => {
   const { user, profile, loading } = useAuth();
   const { canAccessRoute, isSuperAdmin, canAccessEOS, isVivacityTeam } = useRBAC();
   const { hasAcademyOnly, hasFullAccess, isVivacityStaff, isLoading: accessLoading } = useUserAccess();
@@ -156,7 +158,7 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRol
   if (isAdminRoute && !canAccessRoute(currentPath)) {
     const isKpiAdminRoute = currentPath.startsWith('/admin/kpi-');
     const hasKpiReviewerAccess = profile?.kpi_role === 'reviewer';
-    if (!(isKpiAdminRoute && hasKpiReviewerAccess)) {
+    if (!(allowVivacityTeam && isVivacityTeam) && !(isKpiAdminRoute && hasKpiReviewerAccess)) {
       return <Navigate to="/dashboard" replace />;
     }
   }
