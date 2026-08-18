@@ -1,8 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient } from "../_shared/supabase-client.ts";
+import { extractToken, verifyAuth } from "../_shared/auth-helpers.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req) });
+
+  // Had no auth check at all until now -- any anonymous caller could spam
+  // the paid AI gateway indefinitely on the org's key. No tenant data is
+  // read or written here, so any active logged-in user is sufficient.
+  const token = extractToken(req);
+  if (!token) {
+    return new Response(JSON.stringify({ error: "Authentication required" }), {
+      status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
+  const { user } = await verifyAuth(createServiceClient(), token);
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Authentication required" }), {
+      status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const { content } = await req.json();

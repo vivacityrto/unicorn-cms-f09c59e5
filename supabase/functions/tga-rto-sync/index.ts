@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -386,6 +388,24 @@ serve(async (req) => {
     }
 
     const tenantIdNum = typeof tenantId === 'string' ? parseInt(tenantId, 10) : tenantId;
+
+    // Had no auth check at all until now: an unauthenticated caller could
+    // supply an arbitrary tenantId + rtoId and overwrite that tenant's live
+    // TGA scope/contacts/addresses with data fetched for a caller-chosen RTO.
+    // Allow Vivacity staff with the TGA integration permission, OR a caller
+    // who actually has access to the target tenant (this function is also
+    // invoked from tenant-facing TGA management views).
+    const gate = await requireCaller(req, supabaseAdmin, {
+      featureKey: FeatureKeys.staffTga,
+      unauthorizedMessage: "Authentication required",
+      forbiddenMessage: "You do not have access to sync this tenant's TGA scope",
+      orAllow: async ({ userId, admin }) => {
+        const access = await hasTenantAccessSafe(admin, userId, tenantIdNum);
+        return access.allowed;
+      },
+    });
+    if (!gate.ok) return gate.response;
+
     const syncRunId = crypto.randomUUID();
     progress.tenantId = tenantIdNum;
     progress.rtoId = rtoId;

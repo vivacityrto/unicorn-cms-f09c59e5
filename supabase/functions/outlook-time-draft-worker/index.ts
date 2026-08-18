@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from "../_shared/cors.ts";
+import { extractToken, verifyAuth, checkVivacityTeam } from "../_shared/auth-helpers.ts";
 
 interface WorkerResult {
   success: boolean
@@ -22,6 +23,23 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Had no auth check at all until now -- and worse, the frontend's own
+    // "Refresh" button calls this with no tenant_id, which triggers the
+    // "process every tenant" branch below. This is a Vivacity-internal
+    // consultant time-tracking tool, not a client-facing feature.
+    const authToken = extractToken(req)
+    if (!authToken) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+      })
+    }
+    const { user, profile } = await verifyAuth(supabase, authToken)
+    if (!user || !checkVivacityTeam(profile)) {
+      return new Response(JSON.stringify({ success: false, error: 'Vivacity staff access required' }), {
+        status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+      })
+    }
 
     // Parse optional tenant_id from body
     let targetTenantId: number | null = null
