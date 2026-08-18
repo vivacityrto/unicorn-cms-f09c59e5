@@ -29,7 +29,7 @@ Investigated each function's actual invocation model before designing a fix, rat
 
 - 10 files under `supabase/functions/**`, each a small (8-14 line) diff adding an import and a gate check immediately after the existing `OPTIONS` handling, before any DB access.
 - No frontend changes.
-- Not yet deployed to production — source-controlled PR pending review, per the standing "PR first, deploy on explicit ask" convention.
+- Merged (PR #361) and deployed to production 2026-08-18 with explicit authorization, after an independent adversarial review of the PR found no broken functionality across all 10 fixes: `run-retention-forecast` v459, `run-stage-health-monitor` v465, `run-tenant-risk-forecast` v461, `run-workload-forecast` v464, `run-strategic-signal-analysis` v460, `run-workflow-optimisation` v458, `calculate-predictive-risk` v487, `risk-command-engine` v455, `scorecard-refresh` v376, `strategic-orchestration` v453. Each verified live via `get_edge_function` post-deploy.
 
 ## Decisions
 
