@@ -151,6 +151,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<TenantMemberInfo | null>(null);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [updatingPositionType, setUpdatingPositionType] = useState<string | null>(null);
   const [ghostUserIds, setGhostUserIds] = useState<Set<string>>(new Set());
   const [activatingUserId, setActivatingUserId] = useState<string | null>(null);
 
@@ -659,6 +660,40 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     }
   };
 
+  const handlePositionTypeChange = async (
+    member: TenantMemberInfo,
+    positionType: string,
+  ) => {
+    if (!canManageUsers) return;
+    const nextPositionType = positionType === '__none__' ? null : positionType;
+    if ((member.position_type ?? null) === nextPositionType) return;
+
+    setUpdatingPositionType(member.user_id);
+    try {
+      const { error } = await supabase
+        .from('tenant_users')
+        .update({ position_type: nextPositionType })
+        .eq('tenant_id', tenantId)
+        .eq('user_id', member.user_id);
+
+      if (error) throw error;
+
+      setMembers((previous) =>
+        previous.map((item) =>
+          item.user_id === member.user_id
+            ? { ...item, position_type: nextPositionType }
+            : item,
+        ),
+      );
+      toast.success(nextPositionType ? 'Position type updated' : 'Position type cleared');
+    } catch (error) {
+      console.error('Error updating position type:', error);
+      toast.error('Failed to update position type');
+    } finally {
+      setUpdatingPositionType(null);
+    }
+  };
+
 
   const fetchMembers = async () => {
     try {
@@ -1107,6 +1142,31 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                     </div>
 
                     <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                      {/* Position Type Selector */}
+                      {canManageUsers ? (
+                        <Select
+                          value={member.position_type || '__none__'}
+                          onValueChange={(value) => handlePositionTypeChange(member, value)}
+                          disabled={updatingPositionType === member.user_id}
+                        >
+                          <SelectTrigger className="w-44" aria-label={`Position type for ${user.email}`}>
+                            <SelectValue>
+                              {member.position_type
+                                ? positionTypeLabel(member.position_type, positionTypeOptions)
+                                : 'Position type'}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">No position type</SelectItem>
+                            {positionTypeOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : null}
+
                       {/* Role Badge/Selector */}
                       {canChangeRoles && member.user_id !== profile?.user_uuid ? (
                         <Select
