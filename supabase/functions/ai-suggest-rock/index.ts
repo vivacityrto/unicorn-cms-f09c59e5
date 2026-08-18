@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { extractToken, verifyAuth, hasTenantAccessSafe, checkVivacityTeam } from "../_shared/auth-helpers.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -22,6 +23,31 @@ serve(async (req) => {
         JSON.stringify({ error: "rock_level and tenant_id are required" }),
         { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
+    }
+
+    // Had no auth check at all until now -- an anonymous caller could read
+    // any tenant's EOS VTO (10-year target, core values) and rock data via
+    // this service-role client, plus burn AI credits. Allow Vivacity staff,
+    // or a caller who actually has access to the requested tenant.
+    const token = extractToken(req);
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+    const { user, profile } = await verifyAuth(supabase, token);
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+    if (!checkVivacityTeam(profile)) {
+      const access = await hasTenantAccessSafe(supabase, user.id, Number(tenant_id));
+      if (!access.allowed) {
+        return new Response(JSON.stringify({ error: "You do not have access to this tenant" }), {
+          status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Build context based on rock level

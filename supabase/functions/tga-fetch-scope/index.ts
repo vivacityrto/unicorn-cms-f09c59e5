@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient } from "../_shared/supabase-client.ts";
+import { extractToken, verifyAuth } from "../_shared/auth-helpers.ts";
 
 const DEFAULT_PAGE_SIZE = 500;
 const MAX_PAGE_SIZE = 1000;
@@ -7,6 +9,23 @@ const MAX_PAGE_SIZE = 1000;
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders(req) });
+  }
+
+  // Had no auth check at all until now -- an anonymous caller could trigger
+  // unbounded, repeated pagination (fetch_all can hit up to ~100 pages) of
+  // the public training.gov.au API through this proxy. No tenant data is
+  // touched, so any active logged-in user is sufficient.
+  const token = extractToken(req);
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), {
+      status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+    });
+  }
+  const { user } = await verifyAuth(createServiceClient(), token);
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), {
+      status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+    });
   }
 
   try {

@@ -1,5 +1,6 @@
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { extractToken, verifyAuth, checkVivacityTeam } from "../_shared/auth-helpers.ts";
 
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 const RATE_LIMIT_MS = 650;
@@ -29,6 +30,22 @@ Deno.serve(async (req) => {
     const CLICKUP_API_KEY = Deno.env.get("CLICKUP_API_KEY");
     if (!CLICKUP_API_KEY) {
       throw new Error("CLICKUP_API_KEY secret is not configured");
+    }
+
+    // Had no auth check at all until now -- ClickUp is a Vivacity-internal
+    // integration (not client-facing); sync_all mode meant an anonymous
+    // caller could trigger unbounded cross-tenant ClickUp API pulls.
+    const token = extractToken(req);
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+    const { user, profile } = await verifyAuth(createServiceClient(), token);
+    if (!user || !checkVivacityTeam(profile)) {
+      return new Response(JSON.stringify({ error: "Vivacity staff access required" }), {
+        status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+      });
     }
 
     const body = await req.json();

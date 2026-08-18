@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { corsHeaders } from "../_shared/cors.ts";
+import { extractToken, verifyAuth, hasTenantAccessSafe, checkVivacityTeam } from "../_shared/auth-helpers.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -15,7 +16,7 @@ serve(async (req) => {
 
   try {
     const { tenantId, productCode } = await req.json();
-    
+
     if (!tenantId || !productCode) {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing tenantId or productCode' }),
@@ -24,7 +25,32 @@ serve(async (req) => {
     }
 
     const tenantIdNum = typeof tenantId === 'string' ? parseInt(tenantId, 10) : tenantId;
-    
+
+    // Had no auth check at all until now -- an anonymous caller could write
+    // arbitrary tga_cache rows for any tenantId and trigger unbounded TGA
+    // API lookups. Allow Vivacity staff, or a caller who actually has
+    // access to the requested tenant.
+    const token = extractToken(req);
+    if (!token) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+      });
+    }
+    const { user, profile } = await verifyAuth(supabaseAdmin, token);
+    if (!user) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+      });
+    }
+    if (!checkVivacityTeam(profile)) {
+      const access = await hasTenantAccessSafe(supabaseAdmin, user.id, tenantIdNum);
+      if (!access.allowed) {
+        return new Response(JSON.stringify({ success: false, error: 'You do not have access to this tenant' }), {
+          status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Check cache first
     const { data: cached } = await supabaseAdmin
       .from('tga_cache')
