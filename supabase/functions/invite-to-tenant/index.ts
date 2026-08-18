@@ -1,9 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders as buildCorsHeaders } from "../_shared/cors.ts";
 
 const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") || "https://unicorn-cms.au").replace(/\/+$/, "");
 
+// Tenant-scoped invites (this function has no VIVACITY invite_as branch, unlike
+// invite-user) may only assign client-safe roles. Inviting Vivacity staff with
+// an elevated role (Super Admin, Team Leader, etc.) must go through invite-user,
+// which enforces admin.team_users.manage for that path.
+const CLIENT_ROLES = ["Admin", "User"];
+
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -47,6 +54,13 @@ Deno.serve(async (req) => {
     if (!email || !tenantId || !role) {
       return new Response(JSON.stringify({ ok: false, code: "MISSING_FIELDS", detail: "email, tenantId, and role are required" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!CLIENT_ROLES.includes(role)) {
+      return new Response(JSON.stringify({ ok: false, code: "ROLE_NOT_ALLOWED", detail: `Role '${role}' is not allowed for a tenant invite. Use invite-user for Vivacity staff roles.` }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -104,7 +118,7 @@ Deno.serve(async (req) => {
     }
 
     const inviteLink = `${APP_BASE_URL}/accept-invitation?token=${inviteToken}`;
-    console.log("Generated invite link:", inviteLink);
+    console.log(`Generated invite link for ${email} (tenant ${tenantId})`);
 
     // Best-effort: send invitation email
     try {
