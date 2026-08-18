@@ -36,7 +36,8 @@ The same two agents also confirmed several other candidates from the flagged lis
 ## Code changes
 
 - Migration `20260818060000_revoke_unauth_maintenance_rpc_grants` (applied directly to production via Supabase MCP; committed to `supabase/migrations/` in this PR).
-- 9 files under `supabase/functions/**`: `tga-rto-sync`, `outlook-time-draft-worker`, `ai-suggest-rock`, `fetch-clickup-comments`, `sync-clickup-time`, `extract-note-title`, `extract-suggest-title`, `tga-fetch-scope`, `tga-product-lookup`. [Deployment status: see PR/deploy note below.]
+- 9 files under `supabase/functions/**`: `tga-rto-sync`, `outlook-time-draft-worker`, `ai-suggest-rock`, `fetch-clickup-comments`, `sync-clickup-time`, `extract-note-title`, `extract-suggest-title`, `tga-fetch-scope`, `tga-product-lookup`.
+- Merged (PR #363) and deployed to production 2026-08-18 with explicit authorization, after an independent adversarial review found no broken functionality across all 11 fixes (2 SQL + 9 edge functions): `tga-rto-sync` v620, `outlook-time-draft-worker` v623, `ai-suggest-rock` v489, `tga-product-lookup` v592, `fetch-clickup-comments` v442, `sync-clickup-time` v433, `extract-note-title` v446, `extract-suggest-title` v374, `tga-fetch-scope` v593.
 
 ## Decisions
 
