@@ -194,14 +194,18 @@ export function TargetedMode({ tenants }: Props) {
     [documentIds, availableDocIds],
   );
 
-  // Docs grouped by stage_id, for itemized preview
+  // Docs grouped by every stage that scopes them. Documents shared with a
+  // stage live in document_stage_links rather than documents.stage, so using
+  // only the latter silently dropped them from the itemized preview and the
+  // tailoring guard.
   const docsByStage = useMemo(() => {
     const map = new Map<number, { id: number; title: string }[]>();
     for (const d of docs.data ?? []) {
-      if (d.stage == null) continue;
-      const arr = map.get(d.stage) ?? [];
-      arr.push({ id: d.id, title: d.title });
-      map.set(d.stage, arr);
+      for (const stageId of d.stageIds) {
+        const arr = map.get(stageId) ?? [];
+        arr.push({ id: d.id, title: d.title });
+        map.set(stageId, arr);
+      }
     }
     return map;
   }, [docs.data]);
@@ -314,6 +318,30 @@ export function TargetedMode({ tenants }: Props) {
     });
   };
 
+  const selectAllFilteredTenants = () => {
+    setPreviewStale(true);
+    setSelectedTenants((previous) => {
+      const next = new Set(previous);
+      for (const tenant of filteredTenants) next.add(tenant.id);
+      return next;
+    });
+    setSelectedTriples((previous) => {
+      const next = new Set(previous);
+      for (const tenant of filteredTenants) {
+        for (const row of byTenant.get(tenant.id) ?? []) {
+          next.add(tripleKey(tenant.id, row.package_instance_id, row.stage_id));
+        }
+      }
+      return next;
+    });
+  };
+
+  const clearSelectedTenants = () => {
+    setPreviewStale(true);
+    setSelectedTenants(new Set());
+    setSelectedTriples(new Set());
+  };
+
   const toggleTriple = (
     tenantId: number,
     pkgInstanceId: number,
@@ -391,6 +419,16 @@ export function TargetedMode({ tenants }: Props) {
     setPreviewLoading(true);
     setPreviewError(null);
     try {
+      // "Refresh" must re-read the sources that drive both the document list
+      // and tailoring summary, not merely repeat the previous preview call.
+      if (preview) {
+        await Promise.all([
+          tree.refetch(),
+          docs.refetch(),
+          liveness.refetch(),
+          guards.refetch(),
+        ]);
+      }
       const selections = buildSelectionsJson();
       const row = await launcherPreviewTargeted(
         selections,
@@ -489,6 +527,27 @@ export function TargetedMode({ tenants }: Props) {
               ))}
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={selectAllFilteredTenants}
+              disabled={filteredTenants.length === 0}
+            >
+              Select all eligible ({filteredTenants.length})
+            </Button>
+            {selectedTenants.size > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                onClick={clearSelectedTenants}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
         <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
 

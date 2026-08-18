@@ -45,7 +45,7 @@ export function useDocumentDeliveryGuards(pairs: DeliveryGuardPair[], enabled = 
   );
   const active = enabled && pairs.length > 0;
 
-  const { data: requiredTagsByDoc } = useQuery({
+  const requiredTagsQuery = useQuery({
     queryKey: ['delivery-guards-required-tags', documentIds],
     enabled: active && documentIds.length > 0,
     queryFn: async () => {
@@ -65,7 +65,7 @@ export function useDocumentDeliveryGuards(pairs: DeliveryGuardPair[], enabled = 
     },
   });
 
-  const { data: tenantMergeData } = useQuery({
+  const tenantMergeDataQuery = useQuery({
     queryKey: ['delivery-guards-merge-data', tenantIds],
     enabled: active && tenantIds.length > 0,
     queryFn: async () => {
@@ -82,7 +82,7 @@ export function useDocumentDeliveryGuards(pairs: DeliveryGuardPair[], enabled = 
     },
   });
 
-  const { data: snapshotByTenant } = useQuery({
+  const snapshotByTenantQuery = useQuery({
     queryKey: ['delivery-guards-snapshots', tenantIds],
     enabled: active && tenantIds.length > 0,
     queryFn: async () => {
@@ -98,6 +98,10 @@ export function useDocumentDeliveryGuards(pairs: DeliveryGuardPair[], enabled = 
       return map;
     },
   });
+
+  const requiredTagsByDoc = requiredTagsQuery.data;
+  const tenantMergeData = tenantMergeDataQuery.data;
+  const snapshotByTenant = snapshotByTenantQuery.data;
 
   const pairStatuses = useMemo<DeliveryGuardPairStatus[]>(() => {
     if (!active || !requiredTagsByDoc) return [];
@@ -155,5 +159,13 @@ export function useDocumentDeliveryGuards(pairs: DeliveryGuardPair[], enabled = 
     return out;
   }, [active, isLoading, tenantIds, pairStatuses, snapshotByTenant]);
 
-  return { active, isLoading, pairStatuses, summary, hasBlockingIssues, tenantIssues };
+  const refetch = async () => {
+    await Promise.all([
+      requiredTagsQuery.refetch(),
+      tenantMergeDataQuery.refetch(),
+      snapshotByTenantQuery.refetch(),
+    ]);
+  };
+
+  return { active, isLoading, pairStatuses, summary, hasBlockingIssues, tenantIssues, refetch };
 }
