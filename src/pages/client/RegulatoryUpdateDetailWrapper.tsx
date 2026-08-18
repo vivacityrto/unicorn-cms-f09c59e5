@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, ExternalLink, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const IMPACT_COLORS: Record<string, string> = {
   low: "bg-blue-100 text-blue-800",
@@ -133,8 +135,8 @@ export default function RegulatoryUpdateDetailWrapper() {
               <CardTitle className="text-sm">Change Analysis</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="prose prose-sm max-w-none text-xs leading-relaxed whitespace-pre-wrap">
-                {event.change_summary_md}
+              <div className="prose prose-sm max-w-none text-xs leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.change_summary_md}</ReactMarkdown>
               </div>
             </CardContent>
           </Card>
