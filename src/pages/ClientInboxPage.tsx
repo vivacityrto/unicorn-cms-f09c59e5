@@ -379,24 +379,24 @@ function MessagesTab() {
         </div>
       ) : (
         <div
-          className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+          className="grid grid-cols-1 xl:grid-cols-3 gap-4"
           style={{ minHeight: "60vh" }}
         >
           {/* Thread list */}
-          <div className="lg:col-span-1 border rounded-lg overflow-hidden border-border">
+          <div className="xl:col-span-1 min-w-0 max-w-full border rounded-lg overflow-x-hidden border-border">
             {filtered.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground">
                 <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
                 <p className="text-sm">No conversations yet.</p>
               </div>
             ) : (
-              <ScrollArea className="h-[60vh]">
+              <div className="h-[60vh] overflow-x-hidden overflow-y-auto">
                 <div className="divide-y divide-border">
                   {filtered.map((conv) => (
                     <button
                       key={conv.id}
                       onClick={() => handleSelect(conv)}
-                      className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex items-center gap-3 ${
+                      className={`w-full max-w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex items-center gap-3 ${
                         selectedId === conv.id
                           ? "bg-muted/70"
                           : conv.isUnread
@@ -410,13 +410,13 @@ function MessagesTab() {
                         <MailOpen className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 mb-0.5">
+                        <div className="flex min-w-0 items-center gap-1.5 mb-0.5">
                           <p className={`text-sm truncate ${conv.isUnread ? "font-semibold text-foreground" : "font-medium text-muted-foreground"}`}>
                             {conv.subject || conv.topic || "General"}
                           </p>
                           <Badge
                             variant="outline"
-                            className={`text-[10px] px-1.5 py-0 capitalize ${
+                            className={`shrink-0 text-[10px] px-1.5 py-0 capitalize ${
                               TYPE_COLORS[conv.type] || ""
                             }`}
                           >
@@ -435,12 +435,12 @@ function MessagesTab() {
                     </button>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             )}
           </div>
 
           {/* Message detail + composer */}
-          <div className="lg:col-span-2 border rounded-lg border-border flex flex-col">
+          <div className="xl:col-span-2 min-w-0 border rounded-lg border-border flex flex-col">
             {selected ? (
               <>
                 <div className="px-4 py-3 border-b border-border flex items-center gap-2">

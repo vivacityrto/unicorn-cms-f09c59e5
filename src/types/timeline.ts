@@ -54,8 +54,9 @@ export const TIMELINE_EVENT_TYPES = [
   'account_removed',
   // Client portal activity (internal-only)
   'client_login',
-  // Messaging (client-visible)
+  // Messaging (client-visible send activity, internal read activity)
   'message_sent',
+  'message_read',
   // Vivacity Academy activity (internal-only)
   'academy_enrolled',
   'academy_lesson_completed',
