@@ -4,18 +4,20 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from "../_shared/cors.ts";
+import { isCronAuthorized, cronUnauthorizedResponse } from "../_shared/cron-auth.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders(req) });
   }
 
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-    });
+  // The previous check only verified an Authorization header was present --
+  // any non-empty string satisfied it, so it authenticated nothing. No
+  // pg_cron job or edge-function caller was found for this function
+  // (2026-08-18 audit); gated on the standing cron-invoke pattern rather
+  // than inventing a caller identity, same as schedule-task-reminders.
+  if (!(await isCronAuthorized(req))) {
+    return cronUnauthorizedResponse(req, corsHeaders);
   }
 
   const supabase = createClient(

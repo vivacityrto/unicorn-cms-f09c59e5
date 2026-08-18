@@ -8,10 +8,18 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { isCronAuthorized, cronUnauthorizedResponse } from "../_shared/cron-auth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
+  }
+
+  // Nightly cron-only job (see cron.job "run-stage-health-monitor-nightly"),
+  // writes health snapshots for every active stage -- had no auth check at
+  // all until now, despite the cron job already sending x-cron-invoke-secret.
+  if (!(await isCronAuthorized(req))) {
+    return cronUnauthorizedResponse(req, corsHeaders);
   }
 
   try {

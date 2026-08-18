@@ -10,6 +10,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireSuperAdmin } from "../_shared/requireCaller.ts";
 
 interface Priority {
   priority_type: string;
@@ -35,6 +36,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
   }
+
+  // Frontend route /admin/strategic-orchestration is already
+  // ProtectedRoute-gated with requireSuperAdmin -- this had no server-side
+  // check at all until now, so anyone who found the URL (not just the
+  // SuperAdmin-only UI) could trigger a full-portfolio orchestration run.
+  const gate = await requireSuperAdmin(req);
+  if (gate instanceof Response) return gate;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

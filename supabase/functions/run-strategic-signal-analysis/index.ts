@@ -7,10 +7,21 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { isCronAuthorized, cronUnauthorizedResponse } from "../_shared/cron-auth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
+  }
+
+  // Documented as "nightly" in its own header comment, but no pg_cron job,
+  // trigger, or edge-function caller was found anywhere for this function
+  // (2026-08-18 audit) -- same "no caller ever found" situation as
+  // schedule-task-reminders. Gated on the standing cron-invoke pattern
+  // rather than inventing a caller identity; had no auth check at all
+  // until now.
+  if (!(await isCronAuthorized(req))) {
+    return cronUnauthorizedResponse(req, corsHeaders);
   }
 
   try {
