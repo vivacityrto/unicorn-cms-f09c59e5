@@ -133,19 +133,19 @@ export function BulkMessageHistory() {
   if (isLoading) return <div className="space-y-3">{[...Array(4)].map((_, index) => <Skeleton key={index} className="h-20 w-full rounded-lg" />)}</div>;
   if (campaigns.length === 0) return <div className="rounded-lg border border-border p-12 text-center text-muted-foreground"><Megaphone className="mx-auto mb-2 h-8 w-8 opacity-40" /><p className="text-sm">No bulk messages have been sent yet.</p></div>;
 
-  return <div className="space-y-2">
+  return <div className="space-y-2 pb-16">
     {campaigns.map((campaign) => {
       const isExpanded = expandedCampaignId === campaign.id;
       return <Collapsible key={campaign.id} open={isExpanded} onOpenChange={(open) => setExpandedCampaignId(open ? campaign.id : null)} className="overflow-hidden rounded-lg border border-border bg-card">
-        <CollapsibleTrigger className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/30">
+        <CollapsibleTrigger className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 sm:grid-cols-[auto_minmax(0,1fr)_15rem_4rem]">
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-90" />
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">{campaign.title}</p><p className="mt-0.5 text-xs text-muted-foreground">{describeAudience(campaign.target_mode, campaign.package_type)} · {campaign.sent_at ? format(new Date(campaign.sent_at), "d MMM yyyy, h:mm a") : "Not sent"}</p></div>
-          <div className="hidden min-w-[15rem] grid-cols-3 divide-x divide-border overflow-hidden rounded-md border border-border bg-muted/20 sm:grid">
+          <div className="hidden grid-cols-3 divide-x divide-border overflow-hidden rounded-md border border-border bg-muted/20 sm:grid">
             <CampaignMetric value={campaign.total_sent ?? 0} label="sent" />
             <CampaignMetric value={campaign.total_recipients ?? 0} label="recipients" />
             <CampaignReadMetric campaignId={campaign.id} />
           </div>
-          <Badge variant="outline" className={STATUS_STYLES[campaign.status] || ""}>{campaign.status}</Badge>
+          <Badge variant="outline" className={`justify-self-end sm:justify-self-center ${STATUS_STYLES[campaign.status] || ""}`}>{campaign.status}</Badge>
         </CollapsibleTrigger>
         <CollapsibleContent><div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">Sent by {personName(campaign.created_by ? userMap.get(campaign.created_by) : undefined)}{campaign.total_failed ? ` · ${campaign.total_failed} failed` : ""}</div><CampaignRecipients campaignId={campaign.id} /></CollapsibleContent>
       </Collapsible>;
