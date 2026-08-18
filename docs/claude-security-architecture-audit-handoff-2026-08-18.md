@@ -76,7 +76,7 @@ These changes are now merged or deployed and should be treated as completed, sub
 - `set-invite-password` (H6): re-verified live 2026-08-18 — `used_at` claim-on-row-count pattern present, matches the 2026-08-15 entry. No changes needed.
 - `mailgun-webhook` (H5): re-verified live 2026-08-18 — fails closed when `MAILGUN_WEBHOOK_SIGNING_KEY` is unset, verifies signature and timestamp freshness before processing. No changes needed.
 - `send-email-graph` and `generate-email-note` (H3): re-verified live 2026-08-18 — `has_tenant_access_safe` gate present in `send-email-graph`; `generate-email-note` reads `email_messages` via the ANON-key/caller-JWT client before any service-role use. No changes needed.
-- `outlook-auth` and `xero-auth` (H2): re-verified `outlook-auth` live 2026-08-18 — `resolveRedirectUri` allowlist in place, no caller-supplied `redirect_uri` accepted directly. `xero-auth` not independently re-checked this pass (same audit entry covers both; spot-check was `outlook-auth` only).
+- ~~`outlook-auth` and `xero-auth` (H2)~~ **Verified resolved 2026-08-18** — independently re-checked `xero-auth` against the three properties the 2026-08-15 fix established: env-derived `resolveRedirectUri` allowlist, `exchange-code` binding via `consumeOAuthState(supabaseAdmin, state, caller.user.id)` (asserts `caller.id === oauth_states.user_id`), and atomic single-use `consumed_at` claim. Both functions share `_shared/oauth-redirects.ts` and `_shared/oauth-states.ts`, so this was one shared-helper fix, not per-function; live-deployed source (v64) matches repo. See `docs/audit-log/entries/2026-08-18-sharepoint-import-drive-scoping.md`. No further action.
 - `unlink-email` (H7): re-verified live 2026-08-18 — `clients.emails.manage` feature key, `unlinked_at` soft-delete pattern present. No changes needed.
 
 ### Notification, cron, and CORS work
@@ -96,7 +96,7 @@ Remediate with membership/assignment checks, explicit permission keys, all-or-no
 - `dashboard-test-seed`: remove from production or scope cleanup to a dedicated seed tenant.
 - `upload-portal-document`: validate tenant membership before building storage paths.
 - `delete-user`: add self-deletion and last-admin protections plus an audit row.
-- SharePoint family (`upload-sharepoint-file`, `import-sharepoint-template`): verify cross-client folder/tenant scoping. The #330 governance-folder/name fix does not close these findings by itself.
+- SharePoint family (`upload-sharepoint-file`, `import-sharepoint-template`): **investigated and actioned 2026-08-18.** `upload-sharepoint-file` was verified already correctly scoped — tenant id comes from the caller's own `users.tenant_id` row (a non-Super-Admin's requested override is ignored), and the parent-folder target is verified within the tenant's root via `verifyWithinRoot`; no code change needed. `import-sharepoint-template`'s `import` action had a real, previously-unfixed gap: it trusted a caller-supplied `source_drive_id`/`source_item_id` for the Graph fetch with no check that the drive was the configured Master Documents site (unlike `handleBrowse`/`computeDrift`, which resolve it server-side) — fixed by adding that check via a new shared `resolveMasterDriveId` helper, with a regression test; not yet deployed. See `docs/audit-log/entries/2026-08-18-sharepoint-import-drive-scoping.md`.
 
 ### Governance/config/database maintenance
 

@@ -65,6 +65,70 @@ Deno.serve(async (req: Request) => {
 });
 
 /**
+ * Resolve the Master Documents SharePoint site's drive id, caching the
+ * resolved graph_site_id / drive_id back onto the `sharepoint_sites` row.
+ * Shared by `handleBrowse` (to list its contents) and `handleImport` (to
+ * verify a caller-supplied source_drive_id actually is this drive, rather
+ * than trusting the client — see the SharePoint cross-tenant scoping
+ * finding in docs/audit-log/entries/2026-08-18-sharepoint-import-drive-scoping.md).
+ */
+async function resolveMasterDriveId(
+  supabase: ReturnType<typeof createClient>,
+): Promise<{ ok: true; driveId: string } | { ok: false; error: string }> {
+  const { data: masterSite } = await supabase
+    .from('sharepoint_sites')
+    .select('graph_site_id, drive_id, site_url')
+    .eq('purpose', 'master_documents')
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!masterSite) {
+    return { ok: false, error: 'Master Documents site not configured' };
+  }
+
+  let graphSiteId = masterSite.graph_site_id;
+  let driveId = masterSite.drive_id;
+
+  if (!graphSiteId && masterSite.site_url) {
+    const url = new URL(masterSite.site_url);
+    const sitePath = url.pathname.replace(/\/$/, '');
+    const siteResp = await graphGet<{ id: string }>(`/sites/${url.hostname}:${sitePath}`);
+    if (!siteResp.ok) {
+      return { ok: false, error: 'Could not resolve SharePoint site from Graph API' };
+    }
+    graphSiteId = siteResp.data.id;
+
+    await supabase
+      .from('sharepoint_sites')
+      .update({ graph_site_id: graphSiteId })
+      .eq('purpose', 'master_documents')
+      .eq('is_active', true);
+  }
+
+  if (!driveId) {
+    const drivesResp = await graphGet<{ value: Array<{ id: string; name: string }> }>(
+      `/sites/${graphSiteId}/drives`
+    );
+    if (!drivesResp.ok || !drivesResp.data.value?.length) {
+      return { ok: false, error: 'Could not find document library drives' };
+    }
+    const docDrive = drivesResp.data.value.find(d =>
+      d.name === 'Documents' || d.name === 'Shared Documents'
+    ) || drivesResp.data.value[0];
+    driveId = docDrive.id;
+
+    await supabase
+      .from('sharepoint_sites')
+      .update({ drive_id: driveId })
+      .eq('purpose', 'master_documents')
+      .eq('is_active', true);
+  }
+
+  return { ok: true, driveId };
+}
+
+/**
  * Import a template file from the Master Documents SharePoint site.
  */
 async function handleImport(
@@ -90,6 +154,25 @@ async function handleImport(
   if (!display_version || !displayVersionFormat.test(display_version)) {
     return new Response(JSON.stringify({ error: 'display_version is required and must match YYYY.MM.NN (e.g. 2026.03.00)' }), {
       status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Cross-tenant/cross-site scoping: source_drive_id is caller-supplied and
+  // must be verified against the actual Master Documents drive rather than
+  // trusted blindly — otherwise any caller who clears the staffSharepoint
+  // gate could import from (and thereby exfiltrate content out of) an
+  // arbitrary drive the app registration has access to, e.g. a client
+  // tenant's provisioned SharePoint folder.
+  const masterDrive = await resolveMasterDriveId(supabase);
+  if (!masterDrive.ok) {
+    return new Response(JSON.stringify({ error: masterDrive.error }), {
+      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+    });
+  }
+  if (source_drive_id !== masterDrive.driveId) {
+    console.warn(`[import-sharepoint-template] Rejected import from non-master drive: ${source_drive_id}`);
+    return new Response(JSON.stringify({ error: 'source_drive_id must reference the Master Documents SharePoint site' }), {
+      status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -659,67 +742,13 @@ async function handleBrowse(
 ): Promise<Response> {
   const { folder_id } = body as { folder_id?: string };
 
-  // Look up the master documents site
-  const { data: masterSite } = await supabase
-    .from('sharepoint_sites')
-    .select('graph_site_id, drive_id, site_url')
-    .eq('purpose', 'master_documents')
-    .eq('is_active', true)
-    .limit(1)
-    .maybeSingle();
-
-  if (!masterSite) {
-    return new Response(JSON.stringify({ error: 'Master Documents site not configured' }), {
+  const masterDrive = await resolveMasterDriveId(supabase);
+  if (!masterDrive.ok) {
+    return new Response(JSON.stringify({ error: masterDrive.error }), {
       status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
-
-  // If we don't have the graph_site_id yet, resolve it from the site URL
-  let graphSiteId = masterSite.graph_site_id;
-  let driveId = masterSite.drive_id;
-
-  if (!graphSiteId && masterSite.site_url) {
-    // Extract hostname and path from URL
-    const url = new URL(masterSite.site_url);
-    const sitePath = url.pathname.replace(/\/$/, '');
-    const siteResp = await graphGet<{ id: string }>(`/sites/${url.hostname}:${sitePath}`);
-    if (!siteResp.ok) {
-      return new Response(JSON.stringify({ error: 'Could not resolve SharePoint site from Graph API' }), {
-        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-    graphSiteId = siteResp.data.id;
-
-    // Persist for future calls
-    await supabase
-      .from('sharepoint_sites')
-      .update({ graph_site_id: graphSiteId })
-      .eq('purpose', 'master_documents')
-      .eq('is_active', true);
-  }
-
-  if (!driveId) {
-    // Get the default document library drive
-    const drivesResp = await graphGet<{ value: Array<{ id: string; name: string }> }>(
-      `/sites/${graphSiteId}/drives`
-    );
-    if (!drivesResp.ok || !drivesResp.data.value?.length) {
-      return new Response(JSON.stringify({ error: 'Could not find document library drives' }), {
-        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-      });
-    }
-    // Prefer "Documents" or "Shared Documents", else first
-    const docDrive = drivesResp.data.value.find(d =>
-      d.name === 'Documents' || d.name === 'Shared Documents'
-    ) || drivesResp.data.value[0];
-    driveId = docDrive.id;
-
-    await supabase
-      .from('sharepoint_sites')
-      .update({ drive_id: driveId })
-      .eq('purpose', 'master_documents')
-      .eq('is_active', true);
-  }
+  const driveId = masterDrive.driveId;
 
   // List children of the specified folder (or root)
   const listPath = folder_id
