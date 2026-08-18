@@ -904,22 +904,22 @@ export default function ManageDocuments() {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Derive a friendly Format label from a filename or mimeType.
+  // `documents.format` drives the delivery pipeline, so keep it as a file
+  // extension rather than a presentation label (for example, `xlsx`, not
+  // `Excel`). Friendly labels belong in the rendering layer.
   const deriveFormatFromFile = (fileName: string, mimeType: string | null): string => {
     const ext = (fileName.match(/\.([^./\\]+)$/)?.[1] || '').toLowerCase();
-    const map: Record<string, string> = {
-      docx: 'Word', doc: 'Word',
-      xlsx: 'Excel', xls: 'Excel',
-      pptx: 'PowerPoint', ppt: 'PowerPoint',
-      pdf: 'PDF',
-      txt: 'Text', csv: 'CSV',
-      png: 'Image', jpg: 'Image', jpeg: 'Image', gif: 'Image',
-    };
-    if (ext && map[ext]) return map[ext];
-    if (ext) return ext.toUpperCase();
-    if (mimeType?.includes('word')) return 'Word';
-    if (mimeType?.includes('sheet') || mimeType?.includes('excel')) return 'Excel';
-    if (mimeType?.includes('pdf')) return 'PDF';
+    if (ext) return ext;
+
+    const mimeTypeMap: Array<[string, string]> = [
+      ['wordprocessingml', 'docx'], ['msword', 'doc'],
+      ['spreadsheetml', 'xlsx'], ['ms-excel', 'xls'],
+      ['presentationml', 'pptx'], ['powerpoint', 'ppt'],
+      ['pdf', 'pdf'], ['csv', 'csv'], ['plain', 'txt'],
+    ];
+    const mimeTypeMatch = mimeTypeMap.find(([needle]) => mimeType?.includes(needle));
+    if (mimeTypeMatch) return mimeTypeMatch[1];
+
     return '';
   };
 
