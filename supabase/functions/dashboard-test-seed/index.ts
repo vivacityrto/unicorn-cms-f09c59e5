@@ -3,6 +3,24 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
+// Scope guard: this endpoint injects fake critical/high-severity risk
+// events, alerts, and notes into whichever tenants it selects. Previously
+// it picked "the first 3 active tenants" system-wide with no dedicated
+// seed tenant concept, so it could write fabricated compliance-risk data
+// into real client tenants and corrupt their live dashboards. There is no
+// dedicated seed-tenant column in `tenants` yet (confirmed via schema
+// inspection), so until one exists this requires an explicit, operator-set
+// allowlist of tenant IDs known to be non-production/test tenants.
+// Retiring this function outright is a parked decision — see the
+// accompanying audit-log entry — not something this change makes alone.
+function seedTenantAllowlist(): Set<number> {
+  const raw = Deno.env.get("TEST_SEED_TENANT_IDS") ?? "";
+  const ids = raw
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+  return new Set(ids);
+}
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -26,16 +44,31 @@ serve(async (req: Request) => {
     const { action } = await req.json();
 
     if (action === "seed_test_states") {
-      // Get first 3 active tenants to apply test states
+      const allowlist = seedTenantAllowlist();
+      if (allowlist.size < 3) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "TEST_SEED_TENANT_IDS is not configured with at least 3 dedicated seed tenant IDs. " +
+              "This endpoint fabricates critical/high-severity risk data and will not run against " +
+              "arbitrary production tenants; set the env var to designated non-production tenant IDs.",
+          }),
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        );
+      }
+
+      // Restricted to the operator-configured seed tenant allowlist — never
+      // an arbitrary "first N active tenants" query against production data.
       const { data: tenants } = await supabase
         .from("tenants")
         .select("id, name")
         .eq("status", "active")
+        .in("id", [...allowlist])
         .limit(3);
 
       if (!tenants || tenants.length < 3) {
         return new Response(
-          JSON.stringify({ error: "Need at least 3 active tenants to seed test states" }),
+          JSON.stringify({ error: "Need at least 3 active allowlisted seed tenants to seed test states" }),
           { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
         );
       }
