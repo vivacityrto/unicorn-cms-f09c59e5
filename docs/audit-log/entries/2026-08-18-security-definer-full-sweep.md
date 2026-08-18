@@ -127,7 +127,11 @@ no signature or return-type change, so `DROP FUNCTION` first was not required.
   no argument-list/return-type changes anywhere (so `DROP FUNCTION` genuinely wasn't required); no
   HTML-entity-encoded SQL. That review caught the `fn_package_used_minutes` issue described above,
   which was fixed by excluding it from this migration.
-- [Deployment status to be added once applied to production.]
+- Applied directly to production via Supabase MCP (`apply_migration`, migration name
+  `security_definer_full_sweep_fixes`) and merged as PR #366 (squash commit `489c904`) with
+  explicit authorization. Post-apply, confirmed via `information_schema.routine_privileges` that
+  all 15 revoked functions now show only `{postgres,service_role}`, and confirmed
+  `fn_package_used_minutes` was untouched and still shows `authenticated` as before.
 
 ## Decisions
 
@@ -141,13 +145,14 @@ no signature or return-type change, so `DROP FUNCTION` first was not required.
   `supabase/functions/**` for an actual `.rpc('<name>', ...)` call site — not taken on the
   investigating agents' word alone.
 
-## Open questions parked
+## Follow-up (resolved same day)
 
-- **`fn_package_used_minutes(bigint)`** — carried forward unresolved from 2026-08-17: does any
-  authenticated external integration still call this RPC? If not, a follow-up can revoke
-  `authenticated` (matching this batch's other REVOKEs) or add a `has_tenant_access_safe`-style
-  guard instead. Needs Carl's confirmation, not a repo grep, since an external caller wouldn't
-  appear in this codebase either way.
+- **`fn_package_used_minutes(bigint)`** — Carl confirmed no external integration depends on this
+  RPC. `authenticated` revoked via migration `20260818100000_revoke_authenticated_fn_package_used_minutes`
+  (PR #367), matching the other 15 no-caller functions in this entry. Only `postgres`/`service_role`
+  remain, confirmed via `information_schema.routine_privileges`.
+
+## Open questions parked
 - **Pre-existing bug surfaced during review, out of scope for this PR:**
   `compute_consultant_current_load`/`compute_consultant_weekly_capacity` are called from
   `src/pages/admin/TeamReassignmentPage.tsx:127-128` and
