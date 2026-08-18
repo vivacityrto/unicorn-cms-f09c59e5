@@ -1,5 +1,15 @@
 import { createServiceClient } from "../_shared/supabase-client.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeadersFor, requireCaller } from "../_shared/requireCaller.ts";
+
+/**
+ * Authorization: requireCaller(req, "admin.team_users.manage", "full")
+ * (Version A, same rationale as import-clickup-csv — no ClickUp-specific
+ * permission_features key exists; admin.team_users.manage is Super Admin
+ * only and matches the /admin/clickup-import route gate). Previously this
+ * function had no authorization at all: any bearer/anon request could
+ * trigger a full ClickUp workspace sync or write arbitrary tenant_id
+ * associations via sync_by_tenant.
+ */
 
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 const RATE_LIMIT_MS = 650;
@@ -247,8 +257,11 @@ async function resolveTenantId(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders(req) });
+    return new Response(null, { headers: corsHeadersFor(req) });
   }
+
+  const caller = await requireCaller(req, "admin.team_users.manage", "full");
+  if (caller instanceof Response) return caller;
 
   try {
     const CLICKUP_API_KEY = Deno.env.get("CLICKUP_API_KEY");
@@ -318,7 +331,7 @@ Deno.serve(async (req) => {
           tenants_resolved: tenantResolved,
           errors,
         }),
-        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeadersFor(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -327,7 +340,7 @@ Deno.serve(async (req) => {
       if (!singleTaskId) {
         return new Response(
           JSON.stringify({ error: "task_id required for sync_task mode" }),
-          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeadersFor(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -343,7 +356,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, task_id: singleTaskId, tenant_id: row.tenant_id }),
-        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeadersFor(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -352,7 +365,7 @@ Deno.serve(async (req) => {
       if (!filterTenantId) {
         return new Response(
           JSON.stringify({ error: "tenant_id required for sync_by_tenant mode" }),
-          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeadersFor(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -365,7 +378,7 @@ Deno.serve(async (req) => {
       if (!existing || existing.length === 0) {
         return new Response(
           JSON.stringify({ message: "No tasks found for tenant", tasks_synced: 0 }),
-          { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+          { status: 200, headers: { ...corsHeadersFor(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -393,19 +406,19 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ tasks_synced: synced, errors }),
-        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeadersFor(req), "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
       JSON.stringify({ error: "Invalid mode. Use sync_all, sync_task, or sync_by_tenant" }),
-      { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+      { status: 400, headers: { ...corsHeadersFor(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("sync-clickup-tasks error:", err);
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
-      { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeadersFor(req), "Content-Type": "application/json" } }
     );
   }
 });

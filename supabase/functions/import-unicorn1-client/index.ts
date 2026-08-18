@@ -283,26 +283,42 @@ serve(async (req) => {
     const piIdMap = new Map<number, number>();
 
     try {
-      // ---- 0. Cleanup ----
+      // ---- 0. Validate the Unicorn 1 client exists BEFORE any destructive action.
+      // This must run unconditionally (not gated on opts.tenant) — clearTenantInstanceData
+      // is a destructive, tenant-wide delete, and client_id is caller-supplied. Validating
+      // only inside the opts.tenant branch (the old ordering) meant an arbitrary/invalid
+      // client_id still wiped a tenant's instance data before the 404 was ever reached.
+      const clients = await execQuery(
+        conn,
+        `SELECT [Id], [CompanyName] FROM [dbo].[Users] WHERE [Discriminator] = 'Client' AND [Id] = @cid`,
+        [{ name: "cid", type: TYPES.Int, value: client_id }]
+      );
+      if (clients.length === 0) {
+        return new Response(
+          JSON.stringify({ error: `Client ${client_id} not found in Unicorn 1` }),
+          { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        );
+      }
+      const c = clients[0];
+      const companyName = c.CompanyName ?? c.company_name ?? c.companyname ?? `Client ${client_id}`;
+
+      // ---- 1. Cleanup ----
+      // Safe now: client_id has been confirmed to reference a real Unicorn 1 client above.
       const cleared = await clearTenantInstanceData(svcClient, client_id);
       results.cleared = cleared;
 
-      // ---- 1. Tenant ----
-      if (opts.tenant) {
-        const clients = await execQuery(
-          conn,
-          `SELECT [Id], [CompanyName] FROM [dbo].[Users] WHERE [Discriminator] = 'Client' AND [Id] = @cid`,
-          [{ name: "cid", type: TYPES.Int, value: client_id }]
-        );
-        if (clients.length === 0) {
-          return new Response(
-            JSON.stringify({ error: `Client ${client_id} not found in Unicorn 1` }),
-            { status: 404, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-          );
-        }
-        const c = clients[0];
-        const companyName = c.CompanyName ?? c.company_name ?? c.companyname ?? `Client ${client_id}`;
+      const { error: auditError } = await svcClient.from("client_audit_log").insert({
+        tenant_id: client_id,
+        actor_user_id: caller.user.id,
+        action: "unicorn1_import_cleared",
+        entity_type: "tenant",
+        entity_id: String(client_id),
+        details: { import_options: opts, cleared },
+      });
+      if (auditError) console.error("import-unicorn1-client audit log error:", auditError.message);
 
+      // ---- 2. Tenant ----
+      if (opts.tenant) {
         let rtoId: string | null = null;
         try {
           const fields = await execQuery(
@@ -348,7 +364,7 @@ serve(async (req) => {
         }
       }
 
-      // ---- 2. Package Instances ----
+      // ---- 3. Package Instances ----
       if (opts.package_instances) {
         const pkgs = await execQuery(
           conn,
@@ -414,7 +430,7 @@ serve(async (req) => {
         }
       }
 
-      // ---- 3. Stage Instances ----
+      // ---- 4. Stage Instances ----
       let stageBackfill = { created: 0, skipped: 0 };
       if (opts.stage_instances) {
         let created = 0, skipped = 0, total = 0;
@@ -551,7 +567,7 @@ serve(async (req) => {
         results.imported.stage_instances_backfill = stageBackfill;
       }
 
-      // ---- 4-7. Seed child instances from Unicorn 2 templates ----
+      // ---- 5-8. Seed child instances from Unicorn 2 templates ----
       const needsSeed = opts.staff_task_instances || opts.client_task_instances || opts.email_instances || opts.document_instances;
       if (needsSeed) {
         const { data: piRows } = await svcClient
