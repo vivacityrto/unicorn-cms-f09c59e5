@@ -868,6 +868,44 @@ export function useResolvedStageContent(packageId: number | null, stageId: numbe
         setEmails(emailsResult.data || []);
         setDocuments(docsResult.data || []);
       } else {
+        // Fetch from base tables. A document can belong to a stage either as
+        // its primary stage or through document_stage_links. Both sources are
+        // part of the stage template and must be shown in the package view.
+        const fetchTemplateDocuments = async () => {
+          const [{ data: directDocuments, error: directError }, { data: linkRows, error: linksError }] = await Promise.all([
+            supabase
+              .from('documents')
+              .select('*')
+              .eq('stage', stageId),
+            supabase
+              .from('document_stage_links')
+              .select('document_id')
+              .eq('stage_id', stageId),
+          ]);
+
+          if (directError) throw directError;
+          if (linksError) throw linksError;
+
+          const linkedDocumentIds = [...new Set((linkRows || []).map((row: any) => row.document_id))];
+          const linkedDocuments = [] as any[];
+
+          // Keep each request comfortably below PostgREST URL limits for
+          // stages with large shared document libraries.
+          for (let index = 0; index < linkedDocumentIds.length; index += 200) {
+            const { data, error } = await supabase
+              .from('documents')
+              .select('*')
+              .in('id', linkedDocumentIds.slice(index, index + 200));
+            if (error) throw error;
+            linkedDocuments.push(...(data || []));
+          }
+
+          return [...new Map([...(directDocuments || []), ...linkedDocuments]
+            .map((document: any) => [document.id, document]))
+            .values()]
+            .sort((left: any, right: any) => (left.title || '').localeCompare(right.title || ''));
+        };
+
         // Fetch from base tables
         const [teamResult, clientResult, emailsResult, docsResult] = await Promise.all([
           supabase
@@ -885,17 +923,17 @@ export function useResolvedStageContent(packageId: number | null, stageId: numbe
             .select('*')
             .eq('stage_id', stageId)
             .order('order_number', { ascending: true }),
-          supabase
-            .from('documents')
-            .select('*')
-            .eq('stage', stageId)
-            .order('title', { ascending: true })
+          fetchTemplateDocuments()
         ]);
+
+        if (teamResult.error) throw teamResult.error;
+        if (clientResult.error) throw clientResult.error;
+        if (emailsResult.error) throw emailsResult.error;
 
         setTeamTasks(teamResult.data || []);
         setClientTasks(clientResult.data || []);
         setEmails(emailsResult.data || []);
-        setDocuments(docsResult.data || []);
+        setDocuments(docsResult);
       }
     } catch (error: any) {
       console.error('Failed to fetch resolved content:', error);
