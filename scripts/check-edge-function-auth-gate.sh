@@ -42,7 +42,7 @@ fi
 # by side (the shared requireCaller() helper, a function's own inline
 # auth.getUser()+check_permission() pair, cron-secret gating, webhook
 # signature verification), not just one canonical helper.
-AUTH_PATTERN='requireCaller\(|requireSharedSecret\(|requireInternalEmailSecret\(|requireSuperAdmin\(|isCronAuthorized\(|checkSuperAdmin\(|check_permission|auth\.getUser\(|verifyAuth\(|MAILGUN_WEBHOOK_SIGNING_KEY|constantTimeEqual\('
+AUTH_PATTERN='requireCaller\(|requireSharedSecret\(|requireInternalEmailSecret\(|requireSuperAdmin\(|isCronAuthorized\(|checkSuperAdmin\(|check_permission|auth\.getUser\(|auth\.getClaims\(|verifyAuth\(|MAILGUN_WEBHOOK_SIGNING_KEY|constantTimeEqual\('
 
 failed=0
 while IFS= read -r file; do
