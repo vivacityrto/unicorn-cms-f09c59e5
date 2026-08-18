@@ -23,6 +23,23 @@ function cap(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
 function personName(user: UserMini | undefined) { return user ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email || "Unknown recipient" : "Unknown recipient"; }
 const STATUS_STYLES: Record<string, string> = { draft: "bg-muted text-muted-foreground border-border", queued: "bg-blue-100 text-blue-700 border-blue-200", sent: "bg-emerald-100 text-emerald-700 border-emerald-200", failed: "bg-rose-100 text-rose-700 border-rose-200" };
 
+function CampaignMetric({ value, label }: { value: number | string; label: string }) {
+  return <div className="px-3 py-1.5 text-center text-xs text-muted-foreground"><strong className="block text-sm text-foreground tabular-nums">{value}</strong>{label}</div>;
+}
+
+function CampaignReadMetric({ campaignId }: { campaignId: string }) {
+  const { data: recipients = [], isLoading } = useQuery({
+    queryKey: ["broadcast-recipient-read-count", campaignId],
+    queryFn: async (): Promise<RecipientRow[]> => {
+      const { data, error } = await (supabase as any).from("broadcast_recipients").select("read_at").eq("campaign_id", campaignId);
+      if (error) throw error;
+      return (data ?? []) as RecipientRow[];
+    },
+    staleTime: 30_000,
+  });
+  return <CampaignMetric value={isLoading ? "—" : recipients.filter((recipient) => recipient.read_at).length} label="read" />;
+}
+
 function CampaignRecipients({ campaignId }: { campaignId: string }) {
   const [expandedTenantIds, setExpandedTenantIds] = useState<Set<number>>(new Set());
   const { data: recipients = [], isLoading } = useQuery({
@@ -66,7 +83,7 @@ function CampaignRecipients({ campaignId }: { campaignId: string }) {
       <div><p className="text-sm font-medium text-foreground">Recipient activity</p><p className="text-xs text-muted-foreground">Expand a client to see each recipient.</p></div>
       <Badge variant="outline" className="gap-1 bg-background tabular-nums"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />{readCount} read of {recipients.length}</Badge>
     </div>
-    <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+    <div className="max-h-[45dvh] space-y-2 overflow-y-auto overscroll-contain pb-3 pr-1">
       {recipientsByTenant.map(([tenantId, tenantRecipients]) => {
         const isOpen = expandedTenantIds.has(tenantId);
         const tenantReadCount = tenantRecipients.filter((recipient) => recipient.read_at).length;
@@ -84,6 +101,11 @@ function CampaignRecipients({ campaignId }: { campaignId: string }) {
           </div></CollapsibleContent>
         </Collapsible>;
       })}
+    </div>
+    <div className="mt-2 grid grid-cols-3 divide-x divide-border overflow-hidden rounded-md border border-border bg-background text-center text-xs text-muted-foreground">
+      <CampaignMetric value={recipientsByTenant.length} label="clients" />
+      <CampaignMetric value={recipients.length} label="recipients" />
+      <CampaignMetric value={readCount} label="read" />
     </div>
   </div>;
 }
@@ -111,15 +133,19 @@ export function BulkMessageHistory() {
   if (isLoading) return <div className="space-y-3">{[...Array(4)].map((_, index) => <Skeleton key={index} className="h-20 w-full rounded-lg" />)}</div>;
   if (campaigns.length === 0) return <div className="rounded-lg border border-border p-12 text-center text-muted-foreground"><Megaphone className="mx-auto mb-2 h-8 w-8 opacity-40" /><p className="text-sm">No bulk messages have been sent yet.</p></div>;
 
-  return <div className="space-y-2">
+  return <div className="space-y-2 pb-16">
     {campaigns.map((campaign) => {
       const isExpanded = expandedCampaignId === campaign.id;
       return <Collapsible key={campaign.id} open={isExpanded} onOpenChange={(open) => setExpandedCampaignId(open ? campaign.id : null)} className="overflow-hidden rounded-lg border border-border bg-card">
-        <CollapsibleTrigger className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/30">
+        <CollapsibleTrigger className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 sm:grid-cols-[auto_minmax(0,1fr)_15rem_4rem]">
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-90" />
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">{campaign.title}</p><p className="mt-0.5 text-xs text-muted-foreground">{describeAudience(campaign.target_mode, campaign.package_type)} · {campaign.sent_at ? format(new Date(campaign.sent_at), "d MMM yyyy, h:mm a") : "Not sent"}</p></div>
-          <div className="hidden items-center gap-5 text-right text-xs text-muted-foreground sm:flex"><span><strong className="block text-sm text-foreground tabular-nums">{campaign.total_sent ?? 0}</strong>sent</span><span><strong className="block text-sm text-foreground tabular-nums">{campaign.total_recipients ?? 0}</strong>recipients</span></div>
-          <Badge variant="outline" className={STATUS_STYLES[campaign.status] || ""}>{campaign.status}</Badge>
+          <div className="hidden grid-cols-3 divide-x divide-border overflow-hidden rounded-md border border-border bg-muted/20 sm:grid">
+            <CampaignMetric value={campaign.total_sent ?? 0} label="sent" />
+            <CampaignMetric value={campaign.total_recipients ?? 0} label="recipients" />
+            <CampaignReadMetric campaignId={campaign.id} />
+          </div>
+          <Badge variant="outline" className={`justify-self-end sm:justify-self-center ${STATUS_STYLES[campaign.status] || ""}`}>{campaign.status}</Badge>
         </CollapsibleTrigger>
         <CollapsibleContent><div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">Sent by {personName(campaign.created_by ? userMap.get(campaign.created_by) : undefined)}{campaign.total_failed ? ` · ${campaign.total_failed} failed` : ""}</div><CampaignRecipients campaignId={campaign.id} /></CollapsibleContent>
       </Collapsible>;
