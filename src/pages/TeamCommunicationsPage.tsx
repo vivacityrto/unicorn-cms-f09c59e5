@@ -569,7 +569,7 @@ export default function TeamCommunicationsPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100dvh-9rem)] min-w-0 max-w-full flex-col gap-4 pb-16">
+    <div className="flex h-[calc(100dvh-9rem)] min-h-[30rem] min-w-0 max-w-full flex-col gap-4 overflow-hidden">
       <div className="flex min-w-0 flex-shrink-0 items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground">Team Communications</h1>
@@ -605,7 +605,9 @@ export default function TeamCommunicationsPage() {
       )}
 
       {canSendBulk && activeTab === "history" ? (
-        <BulkMessageHistory />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-16 pr-1">
+          <BulkMessageHistory />
+        </div>
       ) : (
         <>
 
