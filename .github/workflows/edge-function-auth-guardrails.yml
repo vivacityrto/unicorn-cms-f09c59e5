@@ -1,0 +1,24 @@
+name: Edge function auth guardrails
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-duplicate-auth-helpers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail on a second requireCaller*/auth-helpers* implementation
+        run: bash scripts/check-duplicate-auth-helpers.sh
+
+  check-edge-function-auth-gate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fail if a new/modified edge function has no auth gate
+        run: bash scripts/check-edge-function-auth-gate.sh "origin/${{ github.base_ref }}"

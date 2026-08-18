@@ -605,7 +605,9 @@ export default function TeamCommunicationsPage() {
       )}
 
       {canSendBulk && activeTab === "history" ? (
-        <BulkMessageHistory />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-16 pr-1">
+          <BulkMessageHistory />
+        </div>
       ) : (
         <>
 
