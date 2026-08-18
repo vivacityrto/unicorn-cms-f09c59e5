@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, AlertTriangle } from "lucide-react";
 import { isXeroInvoiceOverdue } from "@/lib/xeroInvoiceStatus";
@@ -1084,13 +1084,18 @@ export default function ManageTenants() {
                     )}>
                       <div>
                         <div>
-                          <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
+                          <Link
+                            to={`/tenant/${tenant.id}`}
+                            aria-label={`Open ${tenant.name}`}
+                            className="inline-flex max-w-full rounded-sm font-semibold text-foreground pb-[10px] whitespace-nowrap hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            onClick={(event) => event.stopPropagation()}
+                          >
                             {tenant.rto_id && <span className="text-primary font-bold mr-1.5">{tenant.rto_id}</span>}
                             {!tenant.rto_id && hasKickStart && (
                               <span className="text-primary font-bold mr-1.5">KS</span>
                             )}
                             {tenant.name}
-                          </div>
+                          </Link>
                           <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
                             <span className="flex items-center gap-1">
                               <User className="w-3 h-3" />
