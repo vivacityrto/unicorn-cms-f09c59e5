@@ -124,8 +124,8 @@ export default function TeamReassignmentPage() {
     (async () => {
       setLoadingCapacity(true);
       const [loadRes, capRes] = await Promise.all([
-        (supabase as any).rpc("compute_consultant_current_load", { p_consultant_id: toId }),
-        (supabase as any).rpc("compute_consultant_weekly_capacity", { p_consultant_id: toId }),
+        (supabase as any).rpc("compute_consultant_current_load", { p_user_uuid: toId }),
+        (supabase as any).rpc("compute_consultant_weekly_capacity", { p_user_uuid: toId }),
       ]);
       if (cancelled) return;
       setToLoad(typeof loadRes.data === "number" ? loadRes.data : null);
