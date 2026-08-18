@@ -12,11 +12,12 @@
 - No changes.
 
 ## Code changes
-- Pending commit: add the internal `message_read` timeline event type and project a newly read conversation through the existing participant-scoped RPC.
-- Pending commit: replace the wide broadcast recipient table with Campaign → Client → Recipient expansion and prevent the client inbox from switching to a two-pane layout before enough horizontal room is available.
+- Added the internal `message_read` timeline event type and project a newly read conversation through the existing participant-scoped RPC; deployed to production after explicit approval.
+- The event body now identifies the client user who read the message. Existing `message_read` timeline rows are enriched with that reader name.
+- Replaced the wide broadcast recipient table with Campaign → Client → Recipient expansion, with an internal recipient-list scrollbar, and contained the client inbox thread-list overflow.
 
 ## Decisions
 - Use a single internal `message_read` timeline event, titled `Broadcast message read` when the conversation is a broadcast, rather than emitting duplicate generic and broadcast timeline rows.
 
 ## Open questions parked
-- Production deployment requires explicit approval because it replaces a live `SECURITY DEFINER` RPC and changes the shared timeline event-type constraint.
+- None.
