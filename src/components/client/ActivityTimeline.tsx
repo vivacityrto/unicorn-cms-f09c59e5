@@ -13,6 +13,8 @@ function iconForAction(action: string) {
 }
 
 function formatAction(entry: TimelineEntry) {
+  if (entry.action === "message:read") return "Message read";
+  if (entry.action === "broadcast:read") return "Broadcast message read";
   const action = entry.action.replace(/_/g, " ");
   const entity = entry.entity_type?.replace(/_/g, " ") ?? "";
   return `${action}${entity ? ` · ${entity}` : ""}`;
