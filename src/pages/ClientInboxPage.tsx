@@ -379,11 +379,11 @@ function MessagesTab() {
         </div>
       ) : (
         <div
-          className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+          className="grid grid-cols-1 xl:grid-cols-3 gap-4"
           style={{ minHeight: "60vh" }}
         >
           {/* Thread list */}
-          <div className="lg:col-span-1 border rounded-lg overflow-hidden border-border">
+          <div className="xl:col-span-1 min-w-0 border rounded-lg overflow-hidden border-border">
             {filtered.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground">
                 <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -440,7 +440,7 @@ function MessagesTab() {
           </div>
 
           {/* Message detail + composer */}
-          <div className="lg:col-span-2 border rounded-lg border-border flex flex-col">
+          <div className="xl:col-span-2 min-w-0 border rounded-lg border-border flex flex-col">
             {selected ? (
               <>
                 <div className="px-4 py-3 border-b border-border flex items-center gap-2">
