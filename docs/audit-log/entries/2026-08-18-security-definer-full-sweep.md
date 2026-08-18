@@ -1,4 +1,4 @@
-# Audit: 2026-08-18 — Full SECURITY DEFINER sweep (35 functions)
+# Audit: 2026-08-18 — Full SECURITY DEFINER sweep (34 functions)
 
 **Trigger:** drift-surfaced — full follow-up sweep authorized after the 2026-08-18 spot-check
 (`2026-08-18-security-definer-grant-spotcheck-and-tga-sync.md`) found 2 real gaps in a 24-function
@@ -44,7 +44,16 @@ already confirmed safe (`stage_instance_tenant_id`, `validate_invitation_token` 
   generated, SHA-256 hashed at rest, single-use, and expiring (per the 2026-08-15
   single-use-invitation-tokens audit entry); the token itself is the credential.
 
-**REAL GAP — 16 functions with no legitimate authenticated/anon caller found (fixed via REVOKE):**
+**Excluded from this batch:** `fn_package_used_minutes(bigint)` — this session's own grep found no
+caller either, but `docs/audit-log/entries/2026-08-17-anon-package-hours-rpc.md` already looked at
+this exact function one day earlier, revoked `PUBLIC`/`anon`, and *deliberately* kept
+`authenticated` granted pending confirmation of a possible external authenticated integration — a
+repo-only grep cannot rule that out. An independent adversarial review of this PR caught that the
+first draft of this migration silently revoked `authenticated` anyway, overriding that prior
+caution without addressing it. Pulled out of this migration; the open question carries forward
+unresolved (see "Open questions parked" below) rather than being silently closed.
+
+**REAL GAP — 15 functions with no legitimate authenticated/anon caller found (fixed via REVOKE):**
 
 | Function | Exposure |
 |---|---|
@@ -57,7 +66,6 @@ already confirmed safe (`stage_instance_tenant_id`, `validate_invitation_token` 
 | `tga_get_sync_progress(uuid)` | Only reached via `tga-sync`'s service-role client. |
 | `fn_check_phase_gate(uuid)` | No caller found anywhere — dead code, same category as prior `schedule-task-reminders` finds. |
 | `fn_match_client_for_event(bigint,text,text[])` | No caller found; cross-tenant email/client-matching probe. |
-| `fn_package_used_minutes(bigint)` | No caller found; cross-tenant billable-minutes disclosure. |
 | `rpc_get_client_time_rollup(bigint,integer)` | No caller found anywhere. |
 | `rpc_get_package_time_rollup(bigint,bigint,integer)` | No caller found anywhere. |
 | `search_vector_embeddings(...)` | Only reached via `vector-search`'s service-role client (already Ask-Viv-gated). |
@@ -107,9 +115,19 @@ no signature or return-type change, so `DROP FUNCTION` first was not required.
 
 ## Fix
 
-- Migration `20260818090000_security_definer_full_sweep_fixes` — 16 `REVOKE EXECUTE` statements
+- Migration `20260818090000_security_definer_full_sweep_fixes` — 15 `REVOKE EXECUTE` statements
   plus 19 `CREATE OR REPLACE FUNCTION` bodies (guard added, logic otherwise unchanged).
-- [Deployment status and PR link to be added once merged — see below.]
+- PR #366. Independent adversarial review (an agent with no memory of authoring this PR,
+  re-deriving every claim from `pg_get_functiondef()` and real caller source rather than trusting
+  this entry) verified: no missed caller for any of the 15 REVOKE functions (including a
+  repo-wide search for dynamic `.rpc(variable, ...)` call sites, not just literal-string greps);
+  every patched function's body is byte-for-byte identical to production except for the inserted
+  guard; every guard's tenant/user parameter matches the real semantics re-derived independently
+  from caller source; all 5 `LANGUAGE sql → plpgsql` conversions preserve identical query logic;
+  no argument-list/return-type changes anywhere (so `DROP FUNCTION` genuinely wasn't required); no
+  HTML-entity-encoded SQL. That review caught the `fn_package_used_minutes` issue described above,
+  which was fixed by excluding it from this migration.
+- [Deployment status to be added once applied to production.]
 
 ## Decisions
 
@@ -125,7 +143,20 @@ no signature or return-type change, so `DROP FUNCTION` first was not required.
 
 ## Open questions parked
 
-- The remaining ~33 of the ~68 candidates (beyond this entry's 35 fixed + the prior session's 24
+- **`fn_package_used_minutes(bigint)`** — carried forward unresolved from 2026-08-17: does any
+  authenticated external integration still call this RPC? If not, a follow-up can revoke
+  `authenticated` (matching this batch's other REVOKEs) or add a `has_tenant_access_safe`-style
+  guard instead. Needs Carl's confirmation, not a repo grep, since an external caller wouldn't
+  appear in this codebase either way.
+- **Pre-existing bug surfaced during review, out of scope for this PR:**
+  `compute_consultant_current_load`/`compute_consultant_weekly_capacity` are called from
+  `src/pages/admin/TeamReassignmentPage.tsx:127-128` and
+  `src/components/client/BulkReassignCscDialog.tsx:96-97` with the JSON key `p_consultant_id`, but
+  both the current production function and this PR's guarded replacement declare the parameter as
+  `p_user_uuid`. Supabase RPC matches JSON keys to named Postgres parameters, so these calls appear
+  to already fail silently in production today (undefined result, rendered as blank capacity) --
+  independent of this PR, which doesn't touch the argument list. Worth its own follow-up ticket.
+- The remaining ~32 of the ~68 candidates (beyond this entry's 34 fixed + the prior session's 24
   sampled + the 2 confirmed-safe) were reviewed by the same two investigation agents and found to
   already have a correct internal check the original text-filter didn't recognize (e.g. an
   `app.user_can_access_tenant(...)` check inside a CTE), or return only non-sensitive/aggregate

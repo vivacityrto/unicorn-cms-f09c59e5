@@ -1,4 +1,4 @@
--- Full SECURITY DEFINER sweep (2026-08-18): 35 functions found via a
+-- Full SECURITY DEFINER sweep (2026-08-18): 34 functions found via a
 -- refined classification query (SECURITY DEFINER, non-trigger, non-boolean,
 -- no recognizable internal auth check pattern) narrowed from ~450 advisor
 -- flags to ~68 live candidates, then confirmed via two independent
@@ -65,8 +65,12 @@ REVOKE EXECUTE ON FUNCTION public.fn_check_phase_gate(uuid) FROM authenticated, 
 -- No caller found anywhere: cross-tenant client/email-matching probe.
 REVOKE EXECUTE ON FUNCTION public.fn_match_client_for_event(bigint, text, text[]) FROM authenticated, anon;
 
--- No caller found anywhere: cross-tenant billable-minutes disclosure.
-REVOKE EXECUTE ON FUNCTION public.fn_package_used_minutes(bigint) FROM authenticated, anon;
+-- fn_package_used_minutes intentionally excluded from this batch: the
+-- 2026-08-17 entry (docs/audit-log/entries/2026-08-17-anon-package-hours-rpc.md)
+-- already revoked PUBLIC/anon from it but explicitly kept `authenticated`
+-- pending confirmation of a possible external authenticated integration --
+-- a repo grep cannot rule that out. Not silently overriding that open
+-- question here; see this entry's "Open questions parked".
 
 -- No caller found anywhere.
 REVOKE EXECUTE ON FUNCTION public.rpc_get_client_time_rollup(bigint, integer) FROM authenticated, anon;
