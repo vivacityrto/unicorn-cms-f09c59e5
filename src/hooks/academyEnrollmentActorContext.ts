@@ -23,12 +23,11 @@ export interface EnrollmentCourseContext {
 }
 
 /**
- * The academy_enrolled trigger stamps created_by as enrolled_by, falling
- * back to the enrolled user's own id when no admin is recorded (true for a
- * whole-course auto-enrollment) — so it can't be trusted as "who did this".
- * The course's own published_by/created_by is the reliable actor for that
- * case, so grouped/reworded enrollment titles resolve the actor from here
- * instead. Shared by the portfolio-wide feed and the per-tenant Timeline.
+ * For `auto_all_clients` rows, the academy_enrolled trigger falls back to the
+ * learner's id when no explicit enroller is recorded. The course's own
+ * published_by/created_by is therefore the reliable actor for that one
+ * course-wide enrollment source. Other sources preserve the trigger's actor.
+ * Shared by the portfolio-wide feed and the per-tenant Timeline.
  */
 export async function fetchEnrollmentCourseContext(rows: TimelineEvent[]): Promise<EnrollmentCourseContext> {
   const courseIds = [
@@ -55,16 +54,15 @@ export async function fetchEnrollmentCourseContext(rows: TimelineEvent[]): Promi
     ])
   );
 
-  // Two distinct actor sources: the course's own published_by/created_by
-  // (for auto/bulk rows, whose own created_by can't be trusted — see the
-  // module docstring), and the row's own created_by for 'manual'-source
-  // rows, which IS reliable there (e.g. useBulkEnroll sets enrolled_by).
+  // Two distinct actor sources: the course's own published_by/created_by for
+  // `auto_all_clients` rows, and the row's own created_by for manual rows
+  // (useBulkEnroll sets enrolled_by) and individual enrollment sources.
   const courseActorUuids = [...courseInfoByCourseId.values()].map((c) => c.actorUuid).filter(Boolean) as string[];
   const rowActorUuids = rows
     .filter((r) => {
       if (r.event_type !== 'academy_enrolled') return false;
       const source = (r.metadata as Record<string, unknown> | null)?.source;
-      return !(typeof source === 'string' && source !== 'manual');
+      return source !== 'auto_all_clients';
     })
     .map((r) => r.created_by)
     .filter((id): id is string => !!id);

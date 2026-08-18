@@ -53,7 +53,7 @@ export function useStageEmails({ stageInstanceId }: UseStageEmailsOptions) {
         : { data: [] };
       const senderMap = new Map((senderUsers || []).map((u: any) => [u.user_uuid, `${u.first_name || ''} ${u.last_name || ''}`.trim()]));
 
-      const result: StageEmail[] = (data || []).slice(0, 10).map((e: any) => {
+      const result: StageEmail[] = (data || []).map((e: any) => {
         const meta = metaMap.get(e.email_id);
         return {
           id: e.id,

@@ -10,9 +10,10 @@ import type { TimelineEvent } from './useClientManagementData';
  * course published with available_to_all_clients) or a broadcast campaign
  * fanned out to many tenants each fire a DB trigger once per inserted row,
  * so the raw feed shows one near-identical row per user/tenant. This
- * collapses those into one summary row for display, and — even for a
- * lone row — rewords a clearly-automated enrollment (metadata.source is
- * set and isn't 'manual') so it doesn't read as the user's own action.
+ * collapses those into one summary row for display. Only the explicit
+ * `auto_all_clients` source is reworded as an automated enrollment; a
+ * non-manual source can also represent a learner self-enrolling or a staff
+ * impersonation, both of which must retain their recorded actor.
  */
 
 export interface PortfolioTimelineEvent extends TimelineEvent {
@@ -73,13 +74,23 @@ interface GroupKeyInfo {
 
 function groupKeyFor(e: PortfolioTimelineEvent, groupBroadcasts: boolean): GroupKeyInfo | null {
   if (e.event_type === 'academy_enrolled') {
-    const courseId = (e.metadata as Record<string, unknown> | null)?.course_id;
+    const metadata = e.metadata as Record<string, unknown> | null;
+    const courseId = metadata?.course_id;
     if (courseId == null) return null;
+    const source = metadata?.source;
+
+    // A learner's self-enrolment and an impersonated enrolment are individual
+    // actions, not a course-wide operation. Keeping them out of the grouping
+    // path preserves the timeline trigger's actor/title unchanged.
+    if (source !== 'auto_all_clients' && source !== 'manual') return null;
+
     // Bucketed by course only (not tenant) so one platform-wide action — e.g.
     // publishing a course with available_to_all_clients — collapses into a
-    // single cross-tenant row instead of one row per tenant.
+    // single cross-tenant row instead of one row per tenant. The source is
+    // part of the key so an unrelated manual enrolment cannot be attributed
+    // to a coincident automatic enrolment for the same course.
     return {
-      bucketKey: `enrollment:${String(courseId)}`,
+      bucketKey: `enrollment:${source}:${String(courseId)}`,
       windowMs: ENROLLMENT_GROUP_WINDOW_MS,
       kind: 'enrollment',
     };
@@ -125,18 +136,14 @@ function buildGroupedEvent(
 
   if (kind === 'enrollment') {
     const metadata = newest.metadata as Record<string, unknown> | null;
-    // Classify off the whole cluster, not just the newest row: a cluster is
-    // sorted newest-first, so a single coincidental 'manual' enrollment
-    // landing just after a large auto_all_clients burst (same course, same
-    // 10-minute window) would otherwise flip the entire burst's wording and
-    // attribution onto the manual path. Any auto/bulk row is proof enough.
-    const isAutoOrBulk = cluster.some((e) => {
+    const isCourseWideAutoEnrollment = cluster.some((e) => {
       const s = (e.metadata as Record<string, unknown> | null)?.source;
-      return typeof s === 'string' && s !== 'manual';
+      return s === 'auto_all_clients';
     });
-    // A lone row with no bulk/auto signal is a genuine, ambiguous-actor
-    // single enrollment — leave it exactly as the trigger wrote it.
-    if (count === 1 && !isAutoOrBulk) return newest;
+    // A lone manual row is a genuine single enrollment — leave it exactly as
+    // the trigger wrote it. Self-enrolments and impersonations never enter
+    // this grouping path (see groupKeyFor).
+    if (count === 1 && !isCourseWideAutoEnrollment) return newest;
 
     const courseId = String(metadata?.course_id ?? '');
     const courseInfo = courseInfoByCourseId.get(courseId);
@@ -146,7 +153,7 @@ function buildGroupedEvent(
     let verb: string;
     let actorOverride: Partial<PortfolioTimelineEvent> = {};
 
-    if (isAutoOrBulk) {
+    if (isCourseWideAutoEnrollment) {
       // The trigger stamps created_by as enrolled_by, falling back to the
       // enrolled user's own id when no admin is recorded — true for this
       // source, so the row's own created_by can't be trusted. Resolve the

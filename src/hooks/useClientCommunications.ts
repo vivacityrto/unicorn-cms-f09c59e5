@@ -186,26 +186,6 @@ export function useClientCommunications() {
           };
         });
 
-        // Fire-and-forget application-layer read audit.
-        if (mapped.length > 0 && currentUserId) {
-          void (supabase
-            .from("audit_events")
-            .insert({
-              entity: "tenant_message_read",
-              entity_id: conversationId,
-              action: "messages_read",
-              user_id: currentUserId,
-              details: {
-                conversation_id: conversationId,
-                tenant_id: activeTenantId,
-                message_count: mapped.length,
-              },
-            } as any) as any).then(
-            () => {},
-            () => {}
-          );
-        }
-
         return mapped;
       },
       enabled: !!conversationId && !isAcademyOnly,
@@ -339,11 +319,9 @@ export function useClientCommunications() {
     mutationFn: async (conversationId: string) => {
       if (isAcademyOnly) return;
       if (!currentUserId) return;
-      const { error } = await (supabase
-        .from("conversation_participants" as any)
-        .update({ last_read_at: new Date().toISOString() } as any)
-        .eq("conversation_id", conversationId)
-        .eq("user_id", currentUserId)) as any;
+      const { error } = await (supabase as any).rpc("fn_mark_conversation_read", {
+        p_conversation_id: conversationId,
+      });
       if (error) throw error;
 
       try {

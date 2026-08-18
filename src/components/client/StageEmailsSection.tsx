@@ -20,6 +20,11 @@ export function StageEmailsSection({ stageInstanceId, tenantId, packageId }: Sta
   const { emails, loading, totalCount, refetch } = useStageEmails({ stageInstanceId });
   const [composeEmail, setComposeEmail] = useState<typeof emails[0] | null>(null);
   const [primaryContactEmail, setPrimaryContactEmail] = useState('');
+  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    setShowAll(false);
+  }, [stageInstanceId]);
 
   // Fetch primary contact email for this tenant
   useEffect(() => {
@@ -64,6 +69,7 @@ export function StageEmailsSection({ stageInstanceId, tenantId, packageId }: Sta
   const resolveDefaultTo = () => {
     return primaryContactEmail;
   };
+  const visibleEmails = showAll ? emails : emails.slice(0, 10);
 
   return (
     <>
@@ -76,7 +82,7 @@ export function StageEmailsSection({ stageInstanceId, tenantId, packageId }: Sta
           <Badge variant="outline" className="text-xs">{totalCount} total</Badge>
         </div>
         <div className="divide-y">
-          {emails.map((email) => (
+          {visibleEmails.map((email) => (
             <div key={email.id} className="flex items-center gap-3 px-4 py-2">
               {email.is_sent ? (
                 <Send className="h-4 w-4 shrink-0 text-green-600" />
@@ -113,8 +119,12 @@ export function StageEmailsSection({ stageInstanceId, tenantId, packageId }: Sta
         </div>
         {totalCount > 10 && (
           <div className="px-4 py-2 border-t text-center">
-            <button className="text-xs text-primary hover:underline">
-              View all {totalCount} emails
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => setShowAll((expanded) => !expanded)}
+            >
+              {showAll ? 'Show fewer emails' : `View all ${totalCount} emails`}
             </button>
           </div>
         )}

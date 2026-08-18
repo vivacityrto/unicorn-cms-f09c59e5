@@ -121,6 +121,18 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // Suspend and close cut off a client's production access and are as
+  // consequential as archive/reactivate below. `staff.internal` is held by
+  // every internal role (Team Member, CSC, BGT, CET, Integrator, Team
+  // Leader), so gating on it alone let any Vivacity staff member suspend or
+  // close any tenant. Require the same SuperAdmin tier already enforced for
+  // archive/reactivate-from-archived.
+  if (action === "suspend" || action === "close") {
+    if (!checkSuperAdmin(profile)) {
+      return jsonError(req, 403, "FORBIDDEN", `Only SuperAdmin can ${action} tenants`);
+    }
+  }
+
   // Archive requires SuperAdmin
   if (action === "archive") {
     if (!checkSuperAdmin(profile)) {

@@ -344,7 +344,9 @@ function ClientActivityPanel({ className, limit = 8 }: { className?: string; lim
                         {formatDistanceToNow(new Date(e.occurred_at || e.created_at), { addSuffix: true })}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground truncate mt-0.5">{e.title}</div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">
+                      {e.event_type === "message_read" && e.body ? e.body : e.title}
+                    </div>
                   </div>
                 </button>
               </li>
