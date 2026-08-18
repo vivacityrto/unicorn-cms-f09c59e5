@@ -5,6 +5,8 @@ export type TemplatedDocumentRow = {
   id: number;
   title: string;
   stage: number | null;
+  /** Every selected stage that scopes this document, including shared links. */
+  stageIds: number[];
 };
 
 /**
@@ -27,15 +29,20 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
       // 1. Pull documents scoped by stage filter (if any) — union-aware with
       //    document_stage_links so shared documents are included.
       let additionalIds: number[] = [];
+      const linkedStageIdsByDocument = new Map<number, Set<number>>();
       if (stageKey.length > 0) {
         const { data: linkRows, error: linkErr } = await supabase
           .from("document_stage_links")
-          .select("document_id")
+          .select("document_id, stage_id")
           .in("stage_id", stageKey);
         if (linkErr) throw linkErr;
-        additionalIds = Array.from(
-          new Set(((linkRows ?? []) as { document_id: number }[]).map((r) => r.document_id)),
-        );
+        for (const row of (linkRows ?? []) as { document_id: number; stage_id: number }[]) {
+          additionalIds.push(row.document_id);
+          const stages = linkedStageIdsByDocument.get(row.document_id) ?? new Set<number>();
+          stages.add(row.stage_id);
+          linkedStageIdsByDocument.set(row.document_id, stages);
+        }
+        additionalIds = Array.from(new Set(additionalIds));
       }
       let docQuery = supabase
         .from("documents")
@@ -77,7 +84,12 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
         storage_path: string | null;
         frozen_storage_path: string | null;
       }[]) {
-        if (v.storage_path || v.frozen_storage_path) {
+        // Keep the picker in lockstep with the server-side job eligibility:
+        // only Office templates can be bulk-generated.
+        const hasSupportedTemplate = [v.storage_path, v.frozen_storage_path].some(
+          (path) => !!path && /\.(docx|xlsx|xls|xlsm|pptx)$/i.test(path),
+        );
+        if (hasSupportedTemplate) {
           hasVersionTemplate.add(v.document_id);
         }
       }
@@ -93,6 +105,12 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
           id: d.id,
           title: d.title ?? `Document #${d.id}`,
           stage: d.stage ?? null,
+          stageIds: Array.from(
+            new Set([
+              ...(stageKey.includes(d.stage ?? -1) ? [d.stage as number] : []),
+              ...(linkedStageIdsByDocument.get(d.id) ?? []),
+            ]),
+          ),
         }));
     },
   });
