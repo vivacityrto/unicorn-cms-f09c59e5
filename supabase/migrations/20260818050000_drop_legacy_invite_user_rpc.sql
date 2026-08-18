@@ -1,0 +1,17 @@
+-- Drop the legacy public.invite_user(uuid, text, text) RPC.
+--
+-- Flagged as a parked follow-up during the 2026-08-18 invitation-role-ceiling
+-- audit (docs/audit-log/entries/2026-08-18-invitation-role-ceiling-service-role-bypass.md).
+--
+-- This function inserts into public.user_invitations using columns (role,
+-- token) that do not exist on the current table (unicorn_role, token_hash),
+-- and reads/writes public.tenant_members with a shape that predates the
+-- current tenant_users/tenant_members split. It would raise a Postgres error
+-- on every real invocation -- confirmed dead, not merely unused: no caller
+-- exists anywhere in src/ or supabase/functions/**.
+--
+-- It remained EXECUTE-granted to `authenticated`, meaning any signed-in user
+-- could invoke supabase.rpc('invite_user', ...) directly and hit this dead,
+-- schema-mismatched code path. Dropping outright rather than leaving broken
+-- code reachable by every authenticated session.
+DROP FUNCTION IF EXISTS public.invite_user(uuid, text, text);
