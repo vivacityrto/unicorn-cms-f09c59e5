@@ -358,6 +358,15 @@ export default function AcademyBuilderCourse() {
     staleTime: 60_000,
   });
 
+  const { data: historicalFacilitators = [] } = useQuery({
+    queryKey: ["academy-historical-facilitators"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("academy_historical_facilitators" as any).select("id, display_name").eq("is_selectable", true).order("display_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   // Auto-calculated lesson minutes total (from v_academy_course_total_minutes)
   const { data: courseTotals } = useQuery({
     queryKey: ["academy-course-total-minutes", courseId],
@@ -403,6 +412,7 @@ export default function AcademyBuilderCourse() {
     certificate_enabled: boolean;
     pass_score: number;
     facilitator_id: string | null;
+    facilitator_display_name: string | null;
     delivery_date: string | null;
     thumbnail_url: string | null;
     webinar_series: string | null;
@@ -425,6 +435,7 @@ export default function AcademyBuilderCourse() {
       certificate_enabled: c?.certificate_enabled ?? false,
       pass_score: c?.pass_score ?? 80,
       facilitator_id: c?.facilitator_id ?? null,
+      facilitator_display_name: (c as any)?.facilitator_display_name ?? null,
       // Default delivery date to today only for never-published courses still missing one
       delivery_date: existingDelivery ?? (neverPublished ? todayLocalISODate() : null),
       thumbnail_url: c?.thumbnail_url ?? null,
@@ -484,7 +495,7 @@ export default function AcademyBuilderCourse() {
   const handleSaveSettings = () => {
     if (!isDirty || saveCourseSettings.isPending) return;
     if (requiresFacilitatorFields) {
-      if (!formState.facilitator_id) {
+      if (!formState.facilitator_id && !formState.facilitator_display_name) {
         toast.error("Select a facilitator before saving");
         return;
       }
@@ -710,21 +721,24 @@ export default function AcademyBuilderCourse() {
               <div className="grid grid-cols-1 gap-3">
                 <Field label={requiresFacilitatorFields ? "Facilitator *" : "Facilitator"}>
                   <Select
-                    value={formState.facilitator_id ?? undefined}
-                    onValueChange={(v) => setFormState((p) => ({ ...p, facilitator_id: v }))}
+                    value={formState.facilitator_id ? `staff:${formState.facilitator_id}` : formState.facilitator_display_name ? `historical:${formState.facilitator_display_name}` : undefined}
+                    onValueChange={(v) => setFormState((p) => v.startsWith("staff:") ? ({ ...p, facilitator_id: v.slice(6), facilitator_display_name: null }) : ({ ...p, facilitator_id: null, facilitator_display_name: v.slice(11) }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a facilitator" />
                     </SelectTrigger>
                     <SelectContent>
                       {facilitators.map((u) => (
-                        <SelectItem key={u.user_uuid} value={u.user_uuid}>
+                          <SelectItem key={u.user_uuid} value={`staff:${u.user_uuid}`}>
                           {u.full_name?.trim() || u.user_uuid}
                         </SelectItem>
                       ))}
+                      {historicalFacilitators.map((f: any) => (
+                        <SelectItem key={f.id} value={`historical:${f.display_name}`}>{f.display_name} (former/external)</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  {!requiresFacilitatorFields && !formState.facilitator_id && (
+                  {!requiresFacilitatorFields && !formState.facilitator_id && !formState.facilitator_display_name && (
                     <p className="text-[11px] text-muted-foreground mt-1">Not set</p>
                   )}
                 </Field>

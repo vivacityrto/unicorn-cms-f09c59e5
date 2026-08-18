@@ -409,9 +409,8 @@ export default function AcademyBuilderLibrary() {
                                 <User className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                 <span>
                                   Facilitator:{" "}
-                                  {course.facilitator_id
-                                    ? (facilitatorNameById[course.facilitator_id] ?? "Not set")
-                                    : "Not set"}
+                                  {(course as any).facilitator_display_name?.trim()
+                                    || (course.facilitator_id ? (facilitatorNameById[course.facilitator_id] ?? "Not set") : "Not set")}
                                 </span>
                               </p>
                               <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
