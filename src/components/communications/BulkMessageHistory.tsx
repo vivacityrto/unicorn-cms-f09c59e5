@@ -66,7 +66,7 @@ function CampaignRecipients({ campaignId }: { campaignId: string }) {
       <div><p className="text-sm font-medium text-foreground">Recipient activity</p><p className="text-xs text-muted-foreground">Expand a client to see each recipient.</p></div>
       <Badge variant="outline" className="gap-1 bg-background tabular-nums"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />{readCount} read of {recipients.length}</Badge>
     </div>
-    <div className="space-y-2">
+    <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
       {recipientsByTenant.map(([tenantId, tenantRecipients]) => {
         const isOpen = expandedTenantIds.has(tenantId);
         const tenantReadCount = tenantRecipients.filter((recipient) => recipient.read_at).length;
