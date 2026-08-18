@@ -510,6 +510,31 @@ function sanitiseFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_\-. ]/g, "").replace(/\s+/g, "_");
 }
 
+const FORMAT_ALIASES: Record<string, string> = {
+  word: "docx",
+  excel: "xlsx",
+  powerpoint: "pptx",
+};
+
+function extensionFromFileName(fileName: string | null | undefined): string | null {
+  const match = fileName?.trim().match(/\.([a-z0-9]+)$/i);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+// A version's stored filename is the authoritative representation of the
+// uploaded bytes. Prefer it to the document metadata so a historic friendly
+// label (for example "Excel") can never result in a `.excel` delivery.
+function resolveDocumentFormat(
+  format: string | null | undefined,
+  versionFileName: string | null | undefined,
+): string {
+  const versionExtension = extensionFromFileName(versionFileName);
+  if (versionExtension) return versionExtension;
+
+  const normalized = format?.trim().toLowerCase() ?? "";
+  return (FORMAT_ALIASES[normalized] ?? normalized) || "docx";
+}
+
 type MergeFieldRow = {
   field_tag: string;
   field_type: string;
@@ -823,7 +848,7 @@ serve(async (req) => {
     const knownTags = new Set((allDdFields || []).map((f) => f.tag));
 
     // ── Process template based on format ──────────────────────────────────
-    const docFormat = ((doc.format as string) || '').toLowerCase();
+    const docFormat = resolveDocumentFormat(doc.format as string | null, version.file_name as string | null);
     let processedBytes: Uint8Array;
     let detectedTags: string[];
 
