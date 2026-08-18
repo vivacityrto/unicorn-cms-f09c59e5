@@ -865,13 +865,14 @@ function NewTeamMessageDialog({
       if (staffPartError) throw staffPartError;
 
       // Add all tenant users as participants so every client user can read/write.
-      const { data: tenantUsers } = await supabase
+      const { data: tenantUsers, error: tenantUsersError } = await supabase
         .from("tenant_users")
         .select("user_id")
         .eq("tenant_id", tid);
+      if (tenantUsersError) throw tenantUsersError;
 
       if (tenantUsers?.length) {
-        await (supabase
+        const { error: clientPartError } = await (supabase
           .from("conversation_participants" as any)
           .upsert(
             tenantUsers.map((u: any) => ({
@@ -881,6 +882,7 @@ function NewTeamMessageDialog({
             })),
             { onConflict: "conversation_id,user_id", ignoreDuplicates: true }
           )) as any;
+        if (clientPartError) throw clientPartError;
       }
 
       // Send first message
