@@ -88,15 +88,46 @@ These changes are now merged or deployed and should be treated as completed, sub
 
 ### Tenant/user mutation and data-scope work
 
-Remediate with membership/assignment checks, explicit permission keys, all-or-nothing validation, and audit rows:
+**Update 2026-08-18 (Claude Code session, see
+`docs/audit-log/entries/2026-08-18-tenant-user-mutation-hardening.md`):** every item below except
+the SharePoint family was re-verified against live deployed source before any change. Three items
+in this list were already stale — see strikethrough/annotations.
 
-- `tenant-lifecycle`: restrict suspend/close; caller-supplied tenant IDs need membership checks.
-- `bulk-user-action`: validate role against an allowlist and every target user before applying a batch.
-- `repair-staff-uuids`: super-admin/dry-run/audit, or remove from deployed callable functions and run as a controlled one-off migration.
-- `dashboard-test-seed`: remove from production or scope cleanup to a dedicated seed tenant.
-- `upload-portal-document`: validate tenant membership before building storage paths.
-- `delete-user`: add self-deletion and last-admin protections plus an audit row.
-- SharePoint family (`upload-sharepoint-file`, `import-sharepoint-template`): verify cross-client folder/tenant scoping. The #330 governance-folder/name fix does not close these findings by itself.
+- ~~`tenant-lifecycle`: restrict suspend/close; caller-supplied tenant IDs need membership
+  checks.~~ **Fixed.** Suspend/close now require `checkSuperAdmin`, matching the archive/
+  reactivate-from-archived gate already present in the same file. The "membership checks" framing
+  did not apply as literally written — Vivacity staff intentionally manage tenants they are not
+  members of; the real gap was that `staff.internal` (held by every internal staff role, not just
+  Super Admin) was sufficient to suspend/close any tenant.
+- ~~`bulk-user-action`: validate role against an allowlist and every target user before applying a
+  batch.~~ **Fixed.** Added a runtime `ALLOWED_ROLES` check (the previous allowlist existed only
+  as a TypeScript type, not enforced against the actual request body) and an all-or-nothing check
+  that every `user_uuids` entry resolves to a real user before any batch action runs.
+- ~~`repair-staff-uuids`: super-admin/dry-run/audit, or remove from deployed callable functions and
+  run as a controlled one-off migration.~~ **Already resolved — stale finding.** Live source
+  (version 289) already gates on Super-Admin-only `admin.system_config.manage`, already supports
+  `?dry_run=true` as a read-only path, and already writes `user_uuid_history` before each update.
+  No code change was needed.
+- `dashboard-test-seed`: **partially fixed.** Was seeding fabricated critical/high-severity risk
+  data into "the first 3 active tenants" system-wide with no dedicated seed-tenant concept (no
+  such column exists on `tenants`). Now requires an operator-configured `TEST_SEED_TENANT_IDS`
+  allowlist and refuses to run without one. Per the standing guardrail against retiring functions
+  without owner confirmation, it was hardened rather than removed; whether to retire it outright is
+  parked as an open decision for Carl.
+- ~~`upload-portal-document`: validate tenant membership before building storage paths.~~ **Already
+  resolved — stale finding.** Live source (version 143) already runs `requireCaller` with
+  `allowTenantMember` as the tenant-membership fallback before `storage_path` is constructed from
+  the caller-supplied `tenant_id`. No code change was needed.
+- ~~`delete-user`: add self-deletion and last-admin protections plus an audit row.~~ **Already
+  resolved — stale finding, consistent with
+  `docs/audit-log/entries/2026-08-17-delete-user-safeguards.md`.** Live source (version 728)
+  already rejects self-deletion, rejects removing the last active tenant admin via
+  `tenant_members`, and writes the audit row before the irreversible Auth deletion. No code change
+  was needed.
+- SharePoint family (`upload-sharepoint-file`, `import-sharepoint-template`): **not investigated
+  this pass** — out of scope for the 2026-08-18 session. Still needs cross-client folder/tenant
+  scoping verification; the #330 governance-folder/name fix does not close these findings by
+  itself.
 
 ### Governance/config/database maintenance
 

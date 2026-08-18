@@ -8,6 +8,14 @@ type BulkActionBody = {
   role?: 'Admin' | 'General User';
 };
 
+// Runtime allowlist — the TypeScript union above only constrains the
+// compiler, not the JSON body an attacker (or a buggy caller) can send.
+// bulk-user-action manages CLIENT tenant users; without this check a
+// caller could set role to any value accepted by the users.unicorn_role
+// FK (e.g. "Super Admin", "Team Leader") and grant a client user internal
+// Vivacity staff privileges across every tenant.
+const ALLOWED_ROLES = new Set(['Admin', 'General User']);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders(req) });
@@ -28,6 +36,10 @@ Deno.serve(async (req) => {
 
     if (action === 'change_role' && !role) {
       return jsonErr(req, 400, "MISSING_ROLE", "Role is required for change_role action");
+    }
+
+    if (action === 'change_role' && role && !ALLOWED_ROLES.has(role)) {
+      return jsonErr(req, 400, "INVALID_ROLE", `Role must be one of: ${[...ALLOWED_ROLES].join(", ")}`);
     }
 
     const supabase = createClient(
@@ -76,6 +88,21 @@ Deno.serve(async (req) => {
     const targetByUuid = new Map(
       (targetUsers || []).map((u: any) => [u.user_uuid, u]),
     );
+
+    // All-or-nothing: every requested UUID must resolve to a real user
+    // before any mutation runs. Without this, a batch containing typos or
+    // stale/already-deleted UUIDs would silently apply to the subset that
+    // matched and report partial success without the caller knowing which
+    // targets were skipped.
+    const missingUuids = user_uuids.filter((uuid) => !targetByUuid.has(uuid));
+    if (missingUuids.length > 0) {
+      return jsonErr(
+        req,
+        400,
+        "UNKNOWN_TARGET_USERS",
+        `${missingUuids.length} target user(s) not found: ${missingUuids.join(", ")}`,
+      );
+    }
 
     let successUuids: string[] = [];
 
