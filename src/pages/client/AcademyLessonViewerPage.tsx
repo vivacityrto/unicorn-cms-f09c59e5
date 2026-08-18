@@ -68,7 +68,7 @@ export default function AcademyLessonViewerPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, estimated_minutes, status, segment_start_seconds, segment_end_seconds, facilitator_id, delivery_date, webinar_series")
+        .select("id, title, slug, description, short_description, estimated_minutes, status, segment_start_seconds, segment_end_seconds, facilitator_id, facilitator_display_name, delivery_date, webinar_series")
         .eq("slug", slug!)
         .single();
       if (error) throw error;
@@ -82,7 +82,7 @@ export default function AcademyLessonViewerPage() {
     [course?.facilitator_id],
   );
   const { data: facilitatorNameById = {} } = useFacilitatorNames(facilitatorLookupIds);
-  const facilitatorName = course?.facilitator_id ? facilitatorNameById[course.facilitator_id] : undefined;
+  const facilitatorName = (course as any)?.facilitator_display_name?.trim() || (course?.facilitator_id ? facilitatorNameById[course.facilitator_id] : undefined);
 
   // Fetch current lesson
   const { data: lesson, isLoading: lessonLoading } = useQuery({

@@ -21,6 +21,7 @@ export interface AcademyCourse {
   certificate_enabled: boolean | null;
   delivery_date: string | null;
   facilitator_id: string | null;
+  facilitator_display_name: string | null;
   // Resolved client-side from facilitator_id, see useFacilitatorNames
   facilitator_name: string | null;
   // Joined from progress view / enrollment
@@ -46,7 +47,7 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
       // Fetch published courses for this audience
       const { data: courses, error: coursesErr } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, thumbnail_url, target_audience, estimated_minutes, difficulty_level, status, tags, webinar_series, sort_order, certificate_enabled, delivery_date, facilitator_id")
+        .select("id, title, slug, description, short_description, thumbnail_url, target_audience, estimated_minutes, difficulty_level, status, tags, webinar_series, sort_order, certificate_enabled, delivery_date, facilitator_id, facilitator_display_name")
         .eq("status", "published")
         .contains("target_audience", [audienceKey])
         .order("sort_order", { ascending: true, nullsFirst: false })
@@ -124,7 +125,7 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
     () =>
       (coursesQuery.data ?? []).map((c) => ({
         ...c,
-        facilitator_name: c.facilitator_id ? facilitatorNameById[c.facilitator_id] ?? null : null,
+        facilitator_name: (c as any).facilitator_display_name?.trim() || (c.facilitator_id ? facilitatorNameById[c.facilitator_id] ?? null : null),
       })),
     [coursesQuery.data, facilitatorNameById],
   );
