@@ -232,6 +232,70 @@ the replace outright with `cannot change return type of existing function`
 if the output column set changed, so the drop-first step is required there
 too, not just recommended.
 
+## Edge Function security guardrails (from the 2026-08-18 audit)
+
+The 2026-08-18 architecture/security remediation session (see
+`docs/claude-security-architecture-audit-handoff-2026-08-18.md` and the
+`docs/audit-log/entries/2026-08-18-*` entries) found a recurring family of
+gaps across `supabase/functions/**`. These rules exist to stop the same class
+of bug reappearing in a new function, not just to document what was fixed.
+
+**New edge function checklist — before merging any new function that reads
+`Authorization` or touches a DB table:**
+- It imports and calls `requireCaller` (or `requireSharedSecret` /
+  `requireInternalEmailSecret` / cron-secret gating for machine-to-machine
+  calls) before any DB read/write branch — not just before the "risky"
+  branch. (`import-unicorn1-client` ran its destructive clear before an
+  existence check that lived deeper in the function; `sync-clickup-tasks` had
+  no gate at all on some modes.)
+- Every mode/branch of a multi-action function (`action: "x" | "y" | "z"`
+  style bodies) is covered by the same gate — auditing only the default
+  branch and assuming the others "inherit" the check is how a gate gets
+  half-applied.
+- Any TypeScript union type used to constrain a request body field
+  (`role: 'Admin' | 'General User'`) has a matching **runtime** `Set`/allowlist
+  check. The compiler only constrains code that already assumes a valid
+  shape; it does not validate an attacker-controlled JSON body. See
+  `bulk-user-action`'s `ALLOWED_ROLES` and `dashboard-test-seed`'s
+  `TEST_SEED_TENANT_IDS` allowlist for the pattern.
+- Destructive or state-mutating operations run their validation/existence
+  checks **before**, not after, the mutation — ordering bugs here are easy to
+  introduce when a function grows an `if (opts.x)` branch around a
+  pre-existing validation step.
+- Any action gated only by a broad role check (e.g. `staff.internal`, held
+  by every internal role) that is meaningfully more consequential than
+  other actions behind the same gate (suspend/close vs. read-only staff
+  actions) gets its own `checkSuperAdmin`-tier check, matching whatever
+  precedent already exists in that function for its most sensitive actions.
+  (`tenant-lifecycle` gated archive/reactivate-from-archived on SuperAdmin
+  but originally left suspend/close on the broader `staff.internal` gate.)
+- Any caller-supplied identifier used to fetch or act on an external
+  resource (a SharePoint drive/item ID, an external file path) is validated
+  against a server-resolved value, never trusted as-is — a caller passing an
+  arbitrary `source_drive_id` must not be able to make the function read
+  from a drive/tenant that isn't the intended one.
+- Any URL-building helper that joins a caller- or config-supplied path onto
+  a base URL anchors unconditionally to that base's origin (`joinAppUrl`)
+  rather than passing through a path that already looks like an absolute
+  URL — that passthrough is an open-redirect vector.
+
+**CI/lint follow-up (not yet implemented, worth adding):** a check that
+flags any new or modified file under `supabase/functions/*/index.ts` with no
+`requireCaller`/`requireSharedSecret`/`requireInternalEmailSecret`/cron-auth
+import, and a check that rejects a second `_shared/requireCaller*.ts` or
+`_shared/auth-helpers*.ts`-named file (duplicate implementations of the same
+auth gate are how a fix lands in one copy and not the other).
+
+**Trigger-based authorization caveat:** a Postgres trigger that checks
+`current_setting('request.jwt.claim.role', true)` to distinguish "browser
+call" from "trusted service call" provides **no protection** against an
+edge-function-originated write, because every edge function authenticates to
+Postgres as `service_role`. Treat such a trigger as covering only direct
+PostgREST/browser writes; the edge function's own `requireCaller` gate and
+app-layer allowlist are the actual defense for anything invoked from
+`supabase/functions/**`. (Found in `enforce_invitation_role_ceiling` on
+`user_invitations` — parked as a follow-up, not fixed in this session.)
+
 ## Supabase deployment workflow
 
 Deploy hosted Supabase migrations and Edge Functions through the configured
