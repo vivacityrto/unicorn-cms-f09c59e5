@@ -1153,8 +1153,8 @@ const App = () => (
             {/* Research Jobs */}
             <Route path="/admin/research-jobs" element={<ProtectedRoute><ResearchJobs /></ProtectedRoute>} />
             <Route path="/admin/research-jobs/:jobId" element={<ProtectedRoute><ResearchJobDetail /></ProtectedRoute>} />
-            <Route path="/admin/regulator-watch" element={<ProtectedRoute requireSuperAdmin><RegulatorWatchDashboard /></ProtectedRoute>} />
-            <Route path="/admin/regulator-watch/:eventId" element={<ProtectedRoute requireSuperAdmin><RegulatorChangeEventDetail /></ProtectedRoute>} />
+            <Route path="/admin/regulator-watch" element={<ProtectedRoute allowVivacityTeam><RegulatorWatchDashboard /></ProtectedRoute>} />
+            <Route path="/admin/regulator-watch/:eventId" element={<ProtectedRoute allowVivacityTeam><RegulatorChangeEventDetail /></ProtectedRoute>} />
             <Route path="/admin/risk-radar" element={<ProtectedRoute requireSuperAdmin><CrossTenantRiskRadar /></ProtectedRoute>} />
             <Route path="/admin/template-gap-analysis" element={<ProtectedRoute requireSuperAdmin><TemplateGapAnalysis /></ProtectedRoute>} />
             <Route path="/admin/knowledge-explorer" element={<ProtectedRoute requireSuperAdmin><KnowledgeExplorer /></ProtectedRoute>} />
