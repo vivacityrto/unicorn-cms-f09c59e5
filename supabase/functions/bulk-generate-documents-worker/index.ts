@@ -783,7 +783,17 @@ Deno.serve(async (req: Request) => {
       .in('state', ['pending', 'leased']);
     remaining = count ?? 0;
     if (remaining > 0) {
-      fetch(selfUrl, {
+      // Fire-and-forget from this invocation's response perspective, but the
+      // fetch itself must be registered with EdgeRuntime.waitUntil (falling
+      // back to a detached promise) — otherwise the edge runtime can tear
+      // down this isolate right after the response is returned, killing the
+      // outbound request before it's sent and silently ending the whole
+      // re-invoke chain with items left 'pending' and no error ever logged.
+      // Confirmed live 2026-08-19 on job 85e00e30: the chain processed items
+      // steadily for ~23 minutes then just stopped after a 503 on this exact
+      // fetch, with nothing else able to detect or resume it. Mirrors
+      // kickoffWorker's identical pattern in bulk-generate-documents-launcher.
+      const reinvoke = fetch(selfUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -792,7 +802,20 @@ Deno.serve(async (req: Request) => {
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         },
         body: JSON.stringify({ job_id: jobId }),
-      }).catch((e) => console.error('[worker] self re-invoke failed', e));
+      })
+        .then(async (resp) => {
+          if (resp.ok) return;
+          const text = await resp.text().catch(() => '');
+          console.error(`[worker] self re-invoke rejected job=${jobId} status=${resp.status}`, text);
+        })
+        .catch((e) => console.error('[worker] self re-invoke failed', e));
+
+      const runtime = (globalThis as unknown as {
+        EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void };
+      }).EdgeRuntime;
+      if (runtime?.waitUntil) {
+        runtime.waitUntil(reinvoke);
+      }
     }
   }
 
