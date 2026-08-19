@@ -7,6 +7,12 @@ export type TemplatedDocumentRow = {
   stage: number | null;
   /** Every selected stage that scopes this document, including shared links. */
   stageIds: number[];
+  /** Comma-separated dd_document_categories.value list, as stored on documents.category. */
+  categories: string[];
+  /** dd_governance_framework.value, or null if unset. */
+  frameworkType: string | null;
+  /** Set iff the document's CURRENT version (highest version_number) has status 'published'. */
+  isPublished: boolean;
 };
 
 /**
@@ -46,7 +52,7 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
       }
       let docQuery = supabase
         .from("documents")
-        .select("id, title, stage, source_template_url")
+        .select("id, title, stage, source_template_url, category, framework_type")
         .order("title", { ascending: true });
       if (stageKey.length > 0) {
         if (additionalIds.length > 0) {
@@ -65,6 +71,8 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
           title: string | null;
           stage: number | null;
           source_template_url: string | null;
+          category: string | null;
+          framework_type: string | null;
         }[];
 
       if (docRows.length === 0) return [];
@@ -74,15 +82,23 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
       const docIds = docRows.map((d) => d.id);
       const { data: versions, error: vErr } = await supabase
         .from("document_versions")
-        .select("document_id, storage_path, frozen_storage_path")
+        .select("document_id, storage_path, frozen_storage_path, version_number, status")
         .in("document_id", docIds);
       if (vErr) throw vErr;
 
       const hasVersionTemplate = new Set<number>();
+      // Published state must reflect the CURRENT version (highest
+      // version_number) — not documents.current_published_version_id, which
+      // can still point at an older published version while a freshly
+      // imported draft is now the latest. Mirrors ManageDocuments'
+      // getCurrentVersion.
+      const currentVersionByDoc = new Map<number, { version_number: number; status: string | null }>();
       for (const v of (versions ?? []) as {
         document_id: number;
         storage_path: string | null;
         frozen_storage_path: string | null;
+        version_number: number;
+        status: string | null;
       }[]) {
         // Keep the picker in lockstep with the server-side job eligibility:
         // only Office templates can be bulk-generated.
@@ -91,6 +107,11 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
         );
         if (hasSupportedTemplate) {
           hasVersionTemplate.add(v.document_id);
+        }
+
+        const current = currentVersionByDoc.get(v.document_id);
+        if (!current || v.version_number > current.version_number) {
+          currentVersionByDoc.set(v.document_id, { version_number: v.version_number, status: v.status });
         }
       }
 
@@ -111,6 +132,9 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
               ...(linkedStageIdsByDocument.get(d.id) ?? []),
             ]),
           ),
+          categories: d.category ? d.category.split(",").map((c) => c.trim()).filter(Boolean) : [],
+          frameworkType: d.framework_type ?? null,
+          isPublished: currentVersionByDoc.get(d.id)?.status === "published",
         }));
     },
   });
