@@ -312,6 +312,7 @@ export default function ManageDocuments() {
   // Governance features state
   const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
   const [sharepointFilter, setSharepointFilter] = useState<string>("all");
+  const [publishStatusFilter, setPublishStatusFilter] = useState<string>("all");
   const [fileStatusFilter, setFileStatusFilter] = useState<'all' | 'needs_upload' | 'ready' | 'no_package'>('all');
   const [uploadingDocId, setUploadingDocId] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -539,7 +540,7 @@ export default function ManageDocuments() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1); // Reset to first page when filters change
-  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter, fileStatusFilter]);
+  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter, publishStatusFilter, fileStatusFilter]);
   useEffect(() => {
     if (bulkSendSearchQuery) {
       const filtered = bulkSendUsers.filter(user => user.email.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()) || `${user.first_name} ${user.last_name}`.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()));
@@ -784,6 +785,14 @@ export default function ManageDocuments() {
       filtered = filtered.filter(doc => !!doc.source_template_url);
     } else if (sharepointFilter === "no_url") {
       filtered = filtered.filter(doc => !doc.source_template_url);
+    }
+
+    // Publish status filter — current_published_version_id is the same
+    // pointer GovernanceDocumentDetail uses to decide which version is live.
+    if (publishStatusFilter === "published") {
+      filtered = filtered.filter(doc => !!doc.current_published_version_id);
+    } else if (publishStatusFilter === "unpublished") {
+      filtered = filtered.filter(doc => !doc.current_published_version_id);
     }
 
     return filtered;
@@ -2049,6 +2058,20 @@ export default function ManageDocuments() {
                 <SelectItem value="all">All SP Status</SelectItem>
                 <SelectItem value="has_url">Has SP URL</SelectItem>
                 <SelectItem value="no_url">No SP URL</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Publish Status Filter */}
+          {showAdminView && (
+            <Select value={publishStatusFilter} onValueChange={setPublishStatusFilter}>
+              <SelectTrigger className="flex-1 min-w-[170px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+                <SelectValue placeholder="Publish Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Publish Status</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="unpublished">Unpublished</SelectItem>
               </SelectContent>
             </Select>
           )}
