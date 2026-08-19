@@ -23,15 +23,23 @@
 //   its own fire-and-forget re-invoke), not by a browser. The gate is a
 //   shared secret (BULK_DOCUMENT_WORKER_SECRET) compared in constant time
 //   against x-worker-secret. Requests lacking that secret are rejected.
-//   The staff JWT is still forwarded via x-caller-authorization; the
-//   worker verifies it with admin.auth.getUser and reads exp via
-//   getClaims (never by decoding an unverified payload) so it can stall
-//   before the token expires. The same JWT is reused for downstream
-//   edge-function fetches and staff-gated RPCs. Known limitation:
-//   Supabase access tokens expire ~1 hour; downstream 401s after expiry
-//   are recorded with error_code='auth_expired'. On a genuine stall
-//   transition the job's creator gets an in-app notification (user_notifications)
-//   and an email so a stalled job doesn't sit unnoticed — see notifyJobStalled.
+//   x-caller-authorization (the launching staff member's browser JWT) is
+//   only required to be structurally present — it is NOT validated against
+//   Supabase Auth and is NOT used to authenticate any downstream call.
+//   Every staff-gated downstream call (repair_package_instance_stages,
+//   deliver-governance-document, provision-tenant-sharepoint-folder,
+//   verify-compliance-folder, check-tenant-sharepoint-liveness) instead
+//   authenticates as a dedicated system account
+//   (bulk-generate-automation@vivacity.com.au, unicorn_role='Team Member'),
+//   whose session is minted/refreshed on demand via
+//   get_bulk_generate_system_session / set_bulk_generate_system_session
+//   (Vault-backed, service_role-only) — see getSystemAuthHeader. This means
+//   a job's duration is no longer bounded by the launching staff member's
+//   own ~1hr browser session. If the system account's own session can't be
+//   obtained or refreshed (e.g. its refresh token was revoked), the job
+//   stalls with reason 'system_account_auth_failed' and the job's creator
+//   gets an in-app notification (user_notifications) and an email — see
+//   notifyJobStalled — rather than silently failing every remaining item.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from "../_shared/cors.ts";
@@ -50,17 +58,8 @@ const TIME_BUDGET_MS = 50_000;
 const LEASE_BATCH = 5;
 const SUPPORTED_FORMATS = new Set(['docx', 'xlsx', 'xls', 'xlsm', 'pptx']);
 
-// Stop leasing/processing when the forwarded caller JWT is within this window
-// of expiring, so we don't burn through remaining items with an unauthorised
-// token. `exp` is only read from a signature-verified claims set
-// (auth.getClaims after auth.getUser). Fail-safe: if verified `exp` is
-// missing we keep going (token is valid right now).
-const JWT_SAFETY_MARGIN_MS = 90_000;
-
-function jwtNearExpiry(expMs: number | null): boolean {
-  if (expMs === null) return false;
-  return Date.now() >= expMs - JWT_SAFETY_MARGIN_MS;
-}
+// Refresh the system account's session this far ahead of its actual expiry.
+const SYSTEM_SESSION_SAFETY_MARGIN_MS = 120_000;
 
 // ── Stalled-job alert (in-app notification + email to the job creator) ────
 const MAILGUN_API_KEY = Deno.env.get('MAILGUN_API_KEY');
@@ -81,6 +80,7 @@ function escapeHtml(str: string): string {
 
 function stallReasonLabel(reason: string): string {
   if (reason === 'jwt_near_expiry') return 'your session token expired mid-run';
+  if (reason === 'system_account_auth_failed') return 'the system account used to run this job lost its authentication and needs staff attention';
   return reason;
 }
 
@@ -185,29 +185,75 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: callerUser, error: callerErr } = await supabaseService.auth.getUser(
-    callerToken,
-  );
-  if (callerErr || !callerUser?.user) {
-    return json(req, { error: 'Invalid or expired caller token' }, 401);
+  // Mints (and, near expiry, refreshes) the bulk-generate-documents-worker
+  // system account's own session — see get/set_bulk_generate_system_session
+  // in the DB and the bootstrap-bulk-generate-system-account provisioning
+  // function. Session is shared across every concurrent invocation of this
+  // worker (any job), so a refresh is only attempted when genuinely near
+  // expiry; if that refresh loses a race to another concurrent invocation
+  // already refreshing (Supabase rotates refresh tokens on use), we re-read
+  // once and use whatever that concurrent winner just stored instead of
+  // failing the whole run.
+  type SystemSession = { access_token: string; refresh_token: string; expires_at: string };
+
+  function sessionNearExpiry(s: SystemSession | null): boolean {
+    if (!s) return true;
+    return new Date(s.expires_at).getTime() - Date.now() < SYSTEM_SESSION_SAFETY_MARGIN_MS;
   }
 
-  // Read exp only from a verified claims set. Do not decode the JWT
-  // payload locally — a forged exp would skip the near-expiry stall.
-  let callerExpMs: number | null = null;
-  const { data: claimsData } = await supabaseService.auth.getClaims(callerToken);
-  if (typeof claimsData?.claims?.exp === 'number') {
-    callerExpMs = claimsData.claims.exp * 1000;
+  async function readSystemSession(): Promise<SystemSession | null> {
+    const { data: raw, error } = await supabaseService.rpc('get_bulk_generate_system_session');
+    if (error) throw new Error(`get_bulk_generate_system_session failed: ${error.message}`);
+    if (!raw) return null;
+    return JSON.parse(raw as string) as SystemSession;
   }
 
-  // Anon-key client with the caller's Authorization forwarded, used for
-  // staff-gated RPCs (repair_package_instance_stages) where auth.uid() must
-  // resolve to the real staff user. Service role is unsafe here — the
-  // repair RPC raises insufficient_privilege under service_role.
-  const supabaseCaller = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: callerAuth } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  async function getSystemAuthHeader(): Promise<string> {
+    let session = await readSystemSession();
+    if (sessionNearExpiry(session)) {
+      if (!session?.refresh_token) {
+        throw new Error('bulk-generate system account session not provisioned');
+      }
+      const refreshClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: refreshed, error: refreshErr } = await refreshClient.auth.refreshSession({
+        refresh_token: session.refresh_token,
+      });
+      if (refreshErr || !refreshed?.session) {
+        // Likely lost a refresh race to a concurrent invocation. Re-read
+        // once — if the concurrent winner already refreshed it, use that.
+        const retrySession = await readSystemSession();
+        if (sessionNearExpiry(retrySession)) {
+          throw new Error(`system account session refresh failed: ${refreshErr?.message ?? 'unknown'}`);
+        }
+        session = retrySession;
+      } else {
+        session = {
+          access_token: refreshed.session.access_token,
+          refresh_token: refreshed.session.refresh_token,
+          expires_at: new Date(refreshed.session.expires_at! * 1000).toISOString(),
+        };
+        const { error: setErr } = await supabaseService.rpc('set_bulk_generate_system_session', {
+          p_session: JSON.stringify(session),
+        });
+        if (setErr) console.error('[worker] set_bulk_generate_system_session failed', setErr);
+      }
+    }
+    return `Bearer ${session!.access_token}`;
+  }
+
+  // callerToken is intentionally not validated against Supabase Auth (no
+  // getUser call) — see the Auth model header comment. Everything below
+  // authenticates as the system account instead.
+  let systemAuthHeader: string;
+  try {
+    systemAuthHeader = await getSystemAuthHeader();
+  } catch (e) {
+    console.error('[worker] system account auth unavailable', e);
+    await stallAndRelease('system_account_auth_failed');
+    return json(req, { worker_id: WORKER_ID, processed: 0, stalled: true });
+  }
 
   const bootstrapCache = new Map<number, BootstrapCacheEntry>();
   const repairCache = new Map<number, RepairCacheEntry>();
@@ -257,7 +303,7 @@ Deno.serve(async (req: Request) => {
     if (cached) return cached;
 
     // 1. Live liveness probe — replaces the previous DB-flag-only check.
-    //    Uses the caller's forwarded JWT (staff-gated, same as provision/verify).
+    //    Uses the system account's auth (staff-gated, same as provision/verify).
     let shared: 'ok' | 'missing' | 'unconfigured' | 'error';
     let governance: 'ok' | 'missing' | 'unconfigured' | 'error';
     let livenessError: string | null = null;
@@ -266,7 +312,7 @@ Deno.serve(async (req: Request) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: callerAuth!,
+          Authorization: systemAuthHeader,
         },
         body: JSON.stringify({ tenant_ids: [tenantId] }),
       });
@@ -324,7 +370,7 @@ Deno.serve(async (req: Request) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: callerAuth!,
+          Authorization: systemAuthHeader,
         },
         body: JSON.stringify(body),
       });
@@ -356,7 +402,7 @@ Deno.serve(async (req: Request) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: callerAuth!,
+          Authorization: systemAuthHeader,
         },
         body: JSON.stringify({ tenant_id: tenantId }),
       });
@@ -395,8 +441,16 @@ Deno.serve(async (req: Request) => {
       return entry;
     }
 
+    // Anon-key client authenticated as the system account, so auth.uid()
+    // resolves to a real staff-equivalent user — the RPC raises
+    // insufficient_privilege under service_role (auth.uid() IS NULL).
+    const supabaseSystem = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: systemAuthHeader } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
     for (const pi of instances ?? []) {
-      const { error: rErr } = await supabaseCaller.rpc('repair_package_instance_stages', {
+      const { error: rErr } = await supabaseSystem.rpc('repair_package_instance_stages', {
         p_package_instance_id: pi.id,
         p_dry_run: false,
       });
@@ -520,7 +574,7 @@ Deno.serve(async (req: Request) => {
   }
 
   async function stallAndRelease(reason: string): Promise<void> {
-    console.warn(`[worker] JWT near expiry — stalling job=${jobId} reason=${reason}`);
+    console.warn(`[worker] stalling job=${jobId} reason=${reason}`);
     const { error: relErr } = await supabaseService
       .from('bulk_document_job_items')
       .update({
@@ -550,10 +604,6 @@ Deno.serve(async (req: Request) => {
   let timedOut = false;
 
   while (Date.now() - startedAt < TIME_BUDGET_MS) {
-    if (jwtNearExpiry(callerExpMs)) {
-      await stallAndRelease('jwt_near_expiry');
-      return json(req, { worker_id: WORKER_ID, processed, stalled: true });
-    }
     const { data: job, error: jobErr } = await supabaseService
       .from('bulk_document_jobs')
       .select('status, origin')
@@ -597,10 +647,6 @@ Deno.serve(async (req: Request) => {
       if (Date.now() - startedAt >= TIME_BUDGET_MS) {
         timedOut = true;
         break;
-      }
-      if (jwtNearExpiry(callerExpMs)) {
-        await stallAndRelease('jwt_near_expiry');
-        return json(req, { worker_id: WORKER_ID, processed, stalled: true });
       }
       try {
         const bootstrap = await ensureSharepoint(item.tenant_id);
@@ -656,7 +702,7 @@ Deno.serve(async (req: Request) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: callerAuth!,
+            Authorization: systemAuthHeader,
           },
           body: JSON.stringify({
             tenant_id: item.tenant_id,
@@ -670,7 +716,7 @@ Deno.serve(async (req: Request) => {
 
         if (resp.status === 401) {
           const t = (await resp.text()).slice(0, 2000);
-          await record(item.id, 'failed', 'auth_expired', { http_status: 401 }, t || 'Caller JWT expired mid-job', 'auth_expired');
+          await record(item.id, 'failed', 'auth_expired', { http_status: 401 }, t || 'System account session invalid or expired', 'auth_expired');
         } else if (resp.ok) {
           let body: unknown = null;
           try {
