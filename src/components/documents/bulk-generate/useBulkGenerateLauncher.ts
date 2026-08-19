@@ -121,6 +121,16 @@ export async function launcherCreateTargeted(
   });
 }
 
+export async function launcherRequeueSkipped(
+  item_ids: number[],
+): Promise<{ job_id: string }> {
+  await refreshSessionBestEffort();
+  return invokeLauncher<{ job_id: string }>({
+    action: "requeue_skipped",
+    item_ids,
+  });
+}
+
 export async function launcherCreateDelivery(params: {
   document_id: number;
   document_version_id: string;
