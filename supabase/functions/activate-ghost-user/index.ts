@@ -215,6 +215,25 @@ serve(async (req) => {
     let emailError: string | null = null;
     let invitationId: string | null = null;
 
+    // idx_user_invitations_unique_pending allows only one 'pending' row per
+    // (email, tenant_id). A stale invite from an earlier, never-accepted
+    // invite/activate attempt blocks the insert below with a silent 500 that
+    // only surfaces via email_error — invite-user already clears this same
+    // condition before inserting; mirror that here.
+    const { data: staleInvite } = await admin
+      .from('user_invitations')
+      .select('id, expires_at')
+      .eq('email', ghostEmail)
+      .eq('tenant_id', body.tenant_id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (staleInvite && new Date(staleInvite.expires_at) < new Date()) {
+      await admin.from('user_invitations').delete().eq('id', staleInvite.id);
+    }
+
     const { data: insertedInvite, error: inviteInsertErr } = await admin
       .from('user_invitations')
       .insert({
