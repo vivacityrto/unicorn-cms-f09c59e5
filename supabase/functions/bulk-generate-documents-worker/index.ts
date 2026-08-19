@@ -746,6 +746,27 @@ Deno.serve(async (req: Request) => {
     if (timedOut) break;
   }
 
+  // lease_bulk_document_job_items leases up to LEASE_BATCH items (one per
+  // tenant) per call, but the ~50s time budget above only gets through a
+  // few of them before timing out — the rest are left 'leased' by this
+  // invocation. Previously those sat idle until their 2-minute lease
+  // expired AND the next 5-minute reclaim_stale_bulk_document_locks cron
+  // tick ran, then had to be re-leased and lose the same race again next
+  // time — 5 such cycles (~20-40 min of real time) and a perfectly fine
+  // item got permanently marked failed, purely from batch-timing bad luck,
+  // not any actual problem with it (found 2026-08-19 investigating job
+  // 85e00e30 — 25 items failed this way). Releasing them back to 'pending'
+  // immediately means the very next self re-invoke (moments away, not
+  // minutes) can pick them up, without touching attempt_count — this isn't
+  // a "new attempt", it's returning an unattempted lease.
+  const { error: releaseErr } = await supabaseService
+    .from('bulk_document_job_items')
+    .update({ state: 'pending', worker_id: null, leased_at: null, lease_expires_at: null })
+    .eq('job_id', jobId)
+    .eq('worker_id', WORKER_ID)
+    .eq('state', 'leased');
+  if (releaseErr) console.error('[worker] release-unfinished-leases error', releaseErr);
+
   // Re-invoke if still work + still running
   const { data: postJob } = await supabaseService
     .from('bulk_document_jobs')
