@@ -374,11 +374,24 @@ export function GovernanceDeliveryDialog({
     enabled: !!jobId,
     refetchInterval: jobRow?.status === 'running' ? 2000 : false,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('bulk_document_job_items')
-        .select('id, tenant_id, state, last_error, outcome')
-        .eq('job_id', jobId!);
-      return (data || []) as JobItemRow[];
+      // See BulkDocumentJobProgress.tsx: PostgREST caps rows per request, so
+      // page through in case a delivery ever spans more tenants than that cap.
+      const PAGE_SIZE = 1000;
+      const all: JobItemRow[] = [];
+      let from = 0;
+      while (true) {
+        const { data } = await supabase
+          .from('bulk_document_job_items')
+          .select('id, tenant_id, state, last_error, outcome')
+          .eq('job_id', jobId!)
+          .order('id', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+        const page = (data || []) as JobItemRow[];
+        all.push(...page);
+        if (page.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return all;
     },
   });
 

@@ -1,12 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserAccess } from "@/hooks/useUserAccess";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -21,9 +23,25 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ArrowLeft, FileStack } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle, ArrowLeft, FileStack, RefreshCcw, X } from "lucide-react";
 import { JobStatusPill } from "@/components/documents/bulk-generate/jobStatusPill";
 import { scopeSummary } from "@/components/documents/bulk-generate/scopeSummary";
+import { stalledReasonLabel } from "@/components/documents/bulk-generate/errorCodeLabel";
+import {
+  launcherCancel,
+  launcherRetry,
+} from "@/components/documents/bulk-generate/useBulkGenerateLauncher";
 
 type JobRow = {
   id: string;
@@ -41,6 +59,7 @@ type JobRow = {
   started_at: string | null;
   finished_at: string | null;
   created_at: string;
+  error_summary: Record<string, unknown> | null;
 };
 
 function formatDuration(startIso: string | null, endIso: string | null): string {
@@ -59,17 +78,22 @@ function formatDuration(startIso: string | null, endIso: string | null): string 
 
 export default function BulkDocumentJobsList() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { toast } = useToast();
   const { isVivacityStaff, isLoading: accessLoading } = useUserAccess();
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ["bulk-document-jobs", "list"],
     enabled: isVivacityStaff,
     refetchOnWindowFocus: true,
+    refetchInterval: 15000,
     queryFn: async (): Promise<JobRow[]> => {
       const { data, error } = await supabase
         .from("bulk_document_jobs")
         .select(
-          "id, created_by, scope, tenant_ids, package_ids, stage_ids, document_ids, status, total_items, generated_count, skipped_count, failed_count, started_at, finished_at, created_at",
+          "id, created_by, scope, tenant_ids, package_ids, stage_ids, document_ids, status, total_items, generated_count, skipped_count, failed_count, started_at, finished_at, created_at, error_summary",
         )
         .order("created_at", { ascending: false })
         .limit(100);
@@ -77,6 +101,45 @@ export default function BulkDocumentJobsList() {
       return (data ?? []) as JobRow[];
     },
   });
+
+  const stalledJobs = useMemo(
+    () => jobs.filter((j) => j.status === "stalled"),
+    [jobs],
+  );
+
+  const onQuickRetry = async (jobId: string) => {
+    setRetryingId(jobId);
+    try {
+      await launcherRetry(jobId);
+      toast({ title: "Retry queued" });
+      qc.invalidateQueries({ queryKey: ["bulk-document-jobs", "list"] });
+    } catch (e) {
+      toast({
+        title: "Retry failed",
+        description: (e as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const onQuickCancel = async (jobId: string) => {
+    setCancellingId(jobId);
+    try {
+      await launcherCancel(jobId, "Stalled — cancelled from jobs list, not retried");
+      toast({ title: "Job cancelled" });
+      qc.invalidateQueries({ queryKey: ["bulk-document-jobs", "list"] });
+    } catch (e) {
+      toast({
+        title: "Cancel failed",
+        description: (e as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   const creatorIds = useMemo(
     () => Array.from(new Set(jobs.map((j) => j.created_by).filter(Boolean))),
@@ -153,6 +216,17 @@ export default function BulkDocumentJobsList() {
         </div>
       </div>
 
+      {stalledJobs.length > 0 && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-400 bg-amber-100 px-4 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            {stalledJobs.length} job{stalledJobs.length === 1 ? "" : "s"} stalled
+            and waiting on a manual retry — usually a session token expired
+            mid-run. Retry below or open the job for details.
+          </span>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
@@ -178,13 +252,22 @@ export default function BulkDocumentJobsList() {
                 <TableHead>Status</TableHead>
                 <TableHead>Progress</TableHead>
                 <TableHead>Duration</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {jobs.map((j) => (
+              {jobs.map((j) => {
+                const isStalled = j.status === "stalled";
+                const stalledReason = (
+                  j.error_summary as { stalled_reason?: string } | null
+                )?.stalled_reason;
+                return (
                 <TableRow
                   key={j.id}
-                  className="cursor-pointer hover:bg-muted/50"
+                  className={cn(
+                    "cursor-pointer hover:bg-muted/50",
+                    isStalled && "bg-amber-50 dark:bg-amber-950/20",
+                  )}
                   onClick={() =>
                     navigate(`/manage-documents/bulk-jobs/${j.id}`)
                   }
@@ -219,13 +302,18 @@ export default function BulkDocumentJobsList() {
                   </TableCell>
                   <TableCell>
                     <JobStatusPill status={j.status} />
+                    {isStalled && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {stalledReasonLabel(stalledReason)}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm whitespace-nowrap">
-                    <span className="text-emerald-700">{j.generated_count}</span>
+                    <span className="text-emerald-700 dark:text-emerald-400">{j.generated_count}</span>
                     {" / "}
-                    <span className="text-slate-600">{j.skipped_count}</span>
+                    <span className="text-slate-600 dark:text-slate-400">{j.skipped_count}</span>
                     {" / "}
-                    <span className="text-red-700">{j.failed_count}</span>
+                    <span className="text-red-700 dark:text-red-400">{j.failed_count}</span>
                     <span className="text-muted-foreground">
                       {" "}
                       of {j.total_items}
@@ -234,8 +322,62 @@ export default function BulkDocumentJobsList() {
                   <TableCell className="text-sm whitespace-nowrap">
                     {formatDuration(j.started_at, j.finished_at)}
                   </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {isStalled && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={retryingId === j.id || cancellingId === j.id}
+                          className="gap-1 border-amber-400 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/60"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onQuickRetry(j.id);
+                          }}
+                        >
+                          <RefreshCcw className="h-3.5 w-3.5" />
+                          {retryingId === j.id ? "Retrying…" : "Retry"}
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={retryingId === j.id || cancellingId === j.id}
+                              className="gap-1 text-muted-foreground hover:text-foreground"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              {cancellingId === j.id ? "Cancelling…" : "Don't retry"}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Cancel this stalled job?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This marks the job as cancelled and moves its
+                                remaining pending items to cancelled — they
+                                won't be generated. This can't be undone; you'd
+                                need to start a new bulk generation job to
+                                cover the same clients/documents again.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep stalled</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => onQuickCancel(j.id)}
+                              >
+                                Cancel job
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    )}
+                  </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>

@@ -29,11 +29,14 @@
 //   before the token expires. The same JWT is reused for downstream
 //   edge-function fetches and staff-gated RPCs. Known limitation:
 //   Supabase access tokens expire ~1 hour; downstream 401s after expiry
-//   are recorded with error_code='auth_expired'.
+//   are recorded with error_code='auth_expired'. On a genuine stall
+//   transition the job's creator gets an in-app notification (user_notifications)
+//   and an email so a stalled job doesn't sit unnoticed — see notifyJobStalled.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from "../_shared/cors.ts";
 import { parseBearerToken, requireSharedSecret } from '../_shared/requireCaller.ts';
+import { appUrl } from "../_shared/app-base-url.ts";
 
 const WORKER_CORS_EXTRA = ['x-caller-authorization', 'x-worker-secret'];
 const WORKER_SECRET_ENV = 'BULK_DOCUMENT_WORKER_SECRET';
@@ -57,6 +60,79 @@ const JWT_SAFETY_MARGIN_MS = 90_000;
 function jwtNearExpiry(expMs: number | null): boolean {
   if (expMs === null) return false;
   return Date.now() >= expMs - JWT_SAFETY_MARGIN_MS;
+}
+
+// ── Stalled-job alert (in-app notification + email to the job creator) ────
+const MAILGUN_API_KEY = Deno.env.get('MAILGUN_API_KEY');
+const MAILGUN_DOMAIN = Deno.env.get('MAILGUN_DOMAIN');
+const MAILGUN_REGION = (Deno.env.get('MAILGUN_REGION') || 'us').toLowerCase();
+const MAILGUN_FROM_EMAIL = Deno.env.get('MAILGUN_FROM_EMAIL') || 'noreply@vivacity.com.au';
+const MAILGUN_FROM_NAME = Deno.env.get('MAILGUN_FROM_NAME') || 'Vivacity Unicorn';
+const MAILGUN_BASE_URL =
+  MAILGUN_REGION === 'eu' ? 'https://api.eu.mailgun.net/v3' : 'https://api.mailgun.net/v3';
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function stallReasonLabel(reason: string): string {
+  if (reason === 'jwt_near_expiry') return 'your session token expired mid-run';
+  return reason;
+}
+
+function buildStalledJobEmailHtml(opts: {
+  recipientName: string;
+  reasonLabel: string;
+  jobUrl: string;
+}): string {
+  const { recipientName, reasonLabel, jobUrl } = opts;
+  return `
+<div style="font-family:Calibri,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;">
+  <div style="background:linear-gradient(135deg,#7130A0,#ED1878);padding:20px 28px;border-radius:8px 8px 0 0;">
+    <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:0.5px;">Unicorn</span>
+  </div>
+  <div style="border:1px solid #DFD8E8;border-top:none;border-radius:0 0 8px 8px;padding:28px;">
+    <p style="margin:0 0 4px;color:#44235F;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">
+      Bulk generation job stalled
+    </p>
+    <h2 style="margin:0 0 16px;color:#1a1a1a;font-size:19px;">Needs a manual retry</h2>
+    <p style="margin:0 0 20px;color:#333;font-size:14px;">
+      Hi ${escapeHtml(recipientName)}, a bulk document generation job you started
+      has stalled — ${escapeHtml(reasonLabel)} — and won't continue on its own.
+    </p>
+    <a href="${jobUrl}" style="display:inline-block;background:#7130A0;color:#ffffff;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:14px;font-weight:600;">View job in Unicorn</a>
+    <p style="margin:28px 0 0;color:#888;font-size:11px;">This is an automated alert from Unicorn 2.0 by Vivacity Coaching &amp; Consulting.</p>
+  </div>
+</div>`;
+}
+
+async function sendMailgun(to: string, subject: string, html: string): Promise<string | null> {
+  if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+    console.error('[worker] Missing Mailgun configuration; skipping stall-alert email');
+    return null;
+  }
+  const formData = new FormData();
+  formData.append('from', `${MAILGUN_FROM_NAME} <${MAILGUN_FROM_EMAIL}>`);
+  formData.append('to', to);
+  formData.append('subject', subject);
+  formData.append('html', html);
+
+  const res = await fetch(`${MAILGUN_BASE_URL}/${MAILGUN_DOMAIN}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}` },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    console.error('[worker] Mailgun send failed', res.status, await res.text());
+    return null;
+  }
+  const result = await res.json();
+  return result?.id ?? null;
 }
 
 function json(req: Request, body: unknown, status = 200): Response {
@@ -394,10 +470,55 @@ Deno.serve(async (req: Request) => {
     return (data as { format: string | null; source_template_url: string | null } | null) ?? null;
   }
 
-  // Release this worker's still-leased items back to pending (fenced on
-  // worker_id + state='leased') and stall the job. Called when the forwarded
-  // caller JWT is about to expire so we don't waste the remaining budget
-  // hammering deliver-governance-document with a soon-to-be-401 token.
+  // Alert the job's creator (in-app notification + email) that their job
+  // stalled and needs a manual retry. Called only on a genuine
+  // running→stalled transition — see stallAndRelease below.
+  async function notifyJobStalled(reason: string): Promise<void> {
+    try {
+      const { data: jobRow } = await supabaseService
+        .from('bulk_document_jobs')
+        .select('created_by')
+        .eq('id', jobId)
+        .maybeSingle();
+      const creatorId = jobRow?.created_by as string | undefined;
+      if (!creatorId) return;
+
+      const { data: creator } = await supabaseService
+        .from('users')
+        .select('email, first_name')
+        .eq('user_uuid', creatorId)
+        .maybeSingle();
+
+      const reasonLabel = stallReasonLabel(reason);
+      const jobUrl = appUrl(`/manage-documents/bulk-jobs/${jobId}`);
+
+      const { error: notifErr } = await supabaseService.from('user_notifications').insert({
+        user_id: creatorId,
+        type: 'bulk_job_stalled',
+        title: 'Bulk generation job stalled',
+        message: `Your bulk document generation job stalled (${reasonLabel}) and needs a manual retry.`,
+        link: `/manage-documents/bulk-jobs/${jobId}`,
+        source_id: jobId,
+      });
+      if (notifErr) console.error('[worker] notifyJobStalled insert error', notifErr);
+
+      if (creator?.email) {
+        const html = buildStalledJobEmailHtml({
+          recipientName: creator.first_name || 'there',
+          reasonLabel,
+          jobUrl,
+        });
+        await sendMailgun(
+          creator.email,
+          'Your bulk generation job stalled and needs a retry',
+          html,
+        );
+      }
+    } catch (e) {
+      console.error('[worker] notifyJobStalled error', e);
+    }
+  }
+
   async function stallAndRelease(reason: string): Promise<void> {
     console.warn(`[worker] JWT near expiry — stalling job=${jobId} reason=${reason}`);
     const { error: relErr } = await supabaseService
@@ -413,11 +534,15 @@ Deno.serve(async (req: Request) => {
       .eq('worker_id', WORKER_ID)
       .eq('state', 'leased');
     if (relErr) console.error('[worker] stallAndRelease lease-release error', relErr);
-    const { error: stallErr } = await supabaseService.rpc('stall_bulk_document_job', {
-      p_job_id: jobId,
-      p_reason: reason,
-    });
+    const { data: stallData, error: stallErr } = await supabaseService.rpc(
+      'stall_bulk_document_job',
+      { p_job_id: jobId, p_reason: reason },
+    );
     if (stallErr) console.error('[worker] stall_bulk_document_job error', stallErr);
+    // Only alert on a genuine running→stalled transition (RPC returns false
+    // for a no-op, e.g. the job was already stalled) so a retried job that
+    // stalls again correctly re-notifies, but redundant calls don't spam.
+    if (stallData === true) await notifyJobStalled(reason);
   }
 
   // ── Main loop ──────────────────────────────────────────────────────────
