@@ -23,6 +23,8 @@ const SERIES = [
   "8 Critical Drivers to RTO Success",
   "Superhero Tools Unleashed",
   "The Compliance Lab",
+  "CRICOS",
+  "Courses",
 ];
 
 const PACKAGE_OPTIONS = [

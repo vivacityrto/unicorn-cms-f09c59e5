@@ -45,6 +45,8 @@ const FIXED_SERIES_ORDER = [
   "8 Critical Drivers to RTO Success",
   "Superhero Tools Unleashed",
   "The Compliance Lab",
+  "CRICOS",
+  "Courses",
 ] as const;
 
 const STANDALONE_KEY = "__standalone__";

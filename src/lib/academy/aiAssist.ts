@@ -15,6 +15,8 @@ export const ACADEMY_WEBINAR_SERIES = [
   { value: "8 Critical Drivers to RTO Success", session_type: "webinar" as const },
   { value: "Superhero Tools Unleashed", session_type: "webinar" as const },
   { value: "The Compliance Lab", session_type: "workshop" as const },
+  { value: "CRICOS", session_type: "webinar" as const },
+  { value: "Courses", session_type: "webinar" as const },
 ];
 
 /** Returns an error message when the pasted Vimeo URL cannot be resolved, else null. */
