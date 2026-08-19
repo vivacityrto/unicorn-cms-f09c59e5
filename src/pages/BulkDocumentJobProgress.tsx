@@ -48,6 +48,7 @@ import {
   launcherCancel,
   launcherRetry,
   launcherSkipItems,
+  launcherRequeueSkipped,
 } from "@/components/documents/bulk-generate/useBulkGenerateLauncher";
 import {
   Dialog,
@@ -58,6 +59,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 
 type Job = {
   id: string;
@@ -93,6 +95,7 @@ type Item = {
   finished_at: string | null;
   leased_at: string | null;
   lease_expires_at: string | null;
+  requeued_to_job_id: string | null;
 };
 
 const TERMINAL = new Set(["completed", "cancelled", "failed"]);
@@ -121,6 +124,7 @@ export default function BulkDocumentJobProgress() {
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryDialogOpen, setRetryDialogOpen] = useState(false);
+  const [skippedDialogOpen, setSkippedDialogOpen] = useState(false);
   const [openTenants, setOpenTenants] = useState<Record<number, boolean>>({});
 
   const { data: job, isLoading: jobLoading } = useQuery({
@@ -158,7 +162,7 @@ export default function BulkDocumentJobProgress() {
         const { data, error } = await supabase
           .from("bulk_document_job_items")
           .select(
-            "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at, leased_at, lease_expires_at",
+            "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at, leased_at, lease_expires_at, requeued_to_job_id",
           )
           .eq("job_id", jobId!)
           .order("id", { ascending: true })
@@ -263,6 +267,14 @@ export default function BulkDocumentJobProgress() {
           new Date(i.lease_expires_at).getTime() < now),
     );
   }, [items]);
+
+  // Skipped items (typically no_published_version) — no automatic retry
+  // path exists for these (retry_bulk_document_job deliberately excludes
+  // 'skipped'), so they're surfaced separately for review/requeue.
+  const skippedItems = useMemo(
+    () => items.filter((i) => i.state === "skipped"),
+    [items],
+  );
 
   const onCancel = async () => {
     if (!jobId) return;
@@ -457,6 +469,16 @@ export default function BulkDocumentJobProgress() {
               )}
               Retry Failed &amp; Pending
               {remainingWork > 0 ? ` (${remainingWork})` : ""}
+            </Button>
+          )}
+          {skippedItems.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setSkippedDialogOpen(true)}
+              className="gap-2"
+            >
+              <SkipForward className="h-4 w-4" />
+              Review Skipped ({skippedItems.length})
             </Button>
           )}
         </div>
@@ -674,6 +696,14 @@ export default function BulkDocumentJobProgress() {
         documentTitles={documentTitles}
         submitting={retrying}
         onConfirm={onRetryConfirm}
+      />
+
+      <SkippedDocumentsDialog
+        open={skippedDialogOpen}
+        onOpenChange={setSkippedDialogOpen}
+        items={skippedItems}
+        documentTitles={documentTitles}
+        onRequeued={(newJobId) => navigate(`/manage-documents/bulk-jobs/${newJobId}`)}
       />
     </div>
     </DashboardLayout>
@@ -978,6 +1008,278 @@ function RetryDialog({
               <RefreshCcw className="h-4 w-4" />
             )}
             {confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Skipped items (typically outcome.reason='no_published_version') have no
+// automatic retry path — retry_bulk_document_job deliberately excludes
+// 'skipped' state. This dialog groups them by document (not tenant, since
+// the fix is per-document: publish it), shows each document's live publish
+// status, and lets staff create a follow-up job cloning exactly the skipped
+// (tenant, document) tuples — via requeue_skipped_bulk_document_items — so
+// the same client list gets the document generated, nothing more.
+function SkippedDocumentsDialog({
+  open,
+  onOpenChange,
+  items,
+  documentTitles,
+  onRequeued,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  items: Item[];
+  documentTitles: Map<number, string> | undefined;
+  onRequeued: (jobId: string) => void;
+}) {
+  const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+  const [checked, setChecked] = useState<Record<number, boolean>>({});
+
+  const documentIds = useMemo(
+    () => Array.from(new Set(items.map((i) => i.document_id))),
+    [items],
+  );
+
+  const { data: publishedDocIds } = useQuery({
+    queryKey: ["bulk-document-job", "skipped-doc-publish-status", documentIds],
+    enabled: open && documentIds.length > 0,
+    staleTime: 30_000,
+    queryFn: async (): Promise<Set<number>> => {
+      const { data, error } = await supabase
+        .from("document_versions")
+        .select("document_id")
+        .in("document_id", documentIds)
+        .eq("status", "published");
+      if (error) throw error;
+      return new Set((data ?? []).map((d) => d.document_id as number));
+    },
+  });
+
+  const grouped = useMemo(() => {
+    const map = new Map<number, Item[]>();
+    for (const it of items) {
+      const arr = map.get(it.document_id) ?? [];
+      arr.push(it);
+      map.set(it.document_id, arr);
+    }
+    return Array.from(map.entries()).sort((a, b) => {
+      const ta = documentTitles?.get(a[0]) ?? "";
+      const tb = documentTitles?.get(b[0]) ?? "";
+      return ta.localeCompare(tb);
+    });
+  }, [items, documentTitles]);
+
+  // Per-document requeue status, so staff can see at a glance whether some
+  // (or all) of a document's skipped items were already cloned into an
+  // earlier follow-up job — the exact "did someone already handle this"
+  // signal that was missing before, and the reason a second follow-up job
+  // could get created for the same items without anyone noticing.
+  const requeueInfo = useMemo(() => {
+    const map = new Map<
+      number,
+      { requeuedCount: number; totalCount: number; jobIds: string[] }
+    >();
+    for (const [docId, its] of grouped) {
+      const jobIds = Array.from(
+        new Set(
+          its
+            .map((i) => i.requeued_to_job_id)
+            .filter((id): id is string => !!id),
+        ),
+      );
+      map.set(docId, {
+        requeuedCount: its.filter((i) => i.requeued_to_job_id).length,
+        totalCount: its.length,
+        jobIds,
+      });
+    }
+    return map;
+  }, [grouped]);
+
+  // Default-check documents that are already published AND not already
+  // fully requeued (nothing to lose by including them); leave unpublished
+  // or fully-handled ones unchecked by default — staff can still check one
+  // manually if they know it's about to be published, or if a prior
+  // follow-up job genuinely needs a second attempt.
+  useEffect(() => {
+    if (!open || !publishedDocIds) return;
+    setChecked((prev) => {
+      const next = { ...prev };
+      for (const [docId] of grouped) {
+        if (next[docId] === undefined) {
+          const info = requeueInfo.get(docId);
+          const fullyRequeued = !!info && info.requeuedCount >= info.totalCount;
+          next[docId] = publishedDocIds.has(docId) && !fullyRequeued;
+        }
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, publishedDocIds, grouped.length]);
+
+  // Exclude items already claimed by an earlier follow-up job even if their
+  // document group is checked — checking a document should never silently
+  // re-requeue items someone already actioned. Staff who genuinely want a
+  // second attempt on an already-requeued item can't get that from this
+  // dialog; that's an accepted trade-off to keep "check the box" safe by
+  // default.
+  const selectedItemIds = useMemo(
+    () =>
+      grouped
+        .filter(([docId]) => checked[docId])
+        .flatMap(([, its]) => its.filter((i) => !i.requeued_to_job_id).map((i) => i.id)),
+    [grouped, checked],
+  );
+
+  const handleCreateFollowUp = async () => {
+    if (selectedItemIds.length === 0) return;
+    setSubmitting(true);
+    try {
+      const { job_id } = await launcherRequeueSkipped(selectedItemIds);
+      toast({
+        title: "Follow-up job created",
+        description: `${selectedItemIds.length} item${selectedItemIds.length === 1 ? "" : "s"} queued.`,
+      });
+      onOpenChange(false);
+      onRequeued(job_id);
+    } catch (e) {
+      toast({
+        title: "Requeue failed",
+        description: (e as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Review skipped documents</DialogTitle>
+          <DialogDescription>
+            These documents had no published version when this job ran, so
+            they were skipped rather than generated. Publish a document, then
+            check it below and create a follow-up job — it generates exactly
+            this same client list for the documents you select, not the
+            document's full eligible scope.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[50vh] overflow-y-auto rounded-md border divide-y">
+          {grouped.length === 0 ? (
+            <div className="p-4 text-sm text-muted-foreground">
+              No skipped documents.
+            </div>
+          ) : (
+            grouped.map(([docId, its]) => {
+              const isPublished = publishedDocIds?.has(docId) ?? false;
+              const info = requeueInfo.get(docId);
+              const fullyRequeued = !!info && info.requeuedCount >= info.totalCount;
+              const partiallyRequeued =
+                !!info && info.requeuedCount > 0 && !fullyRequeued;
+              return (
+                <div key={docId} className="flex items-start gap-3 px-3 py-3">
+                  <Checkbox
+                    checked={!!checked[docId]}
+                    onCheckedChange={(v) =>
+                      setChecked((prev) => ({ ...prev, [docId]: v === true }))
+                    }
+                    disabled={fullyRequeued}
+                    aria-label="Include this document in the follow-up job"
+                    className="mt-0.5"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium truncate">
+                      {documentTitles?.get(docId) ?? `Document #${docId}`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Skipped for {its.length} item{its.length === 1 ? "" : "s"}
+                    </div>
+                    {info && info.requeuedCount > 0 && (
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {fullyRequeued
+                          ? "Already requeued"
+                          : `${info.requeuedCount} of ${info.totalCount} already requeued`}
+                        {info.jobIds.length === 1 ? (
+                          <>
+                            {" — "}
+                            <a
+                              href={`/manage-documents/bulk-jobs/${info.jobIds[0]}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline underline-offset-2"
+                            >
+                              view job
+                            </a>
+                          </>
+                        ) : info.jobIds.length > 1 ? (
+                          " across multiple follow-up jobs"
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isPublished ? (
+                      <Badge
+                        variant="outline"
+                        className="border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      >
+                        Published
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                      >
+                        Not published
+                      </Badge>
+                    )}
+                    {(fullyRequeued || partiallyRequeued) && (
+                      <Badge
+                        variant="outline"
+                        className="border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
+                      >
+                        {fullyRequeued ? "Requeued" : "Partly requeued"}
+                      </Badge>
+                    )}
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={`/manage-documents?doc=${docId}`} target="_blank" rel="noreferrer">
+                        Open document
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateFollowUp}
+            disabled={submitting || selectedItemIds.length === 0}
+            className="gap-2"
+          >
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCcw className="h-4 w-4" />
+            )}
+            Create follow-up job
+            {selectedItemIds.length > 0 ? ` (${selectedItemIds.length} items)` : ""}
           </Button>
         </DialogFooter>
       </DialogContent>

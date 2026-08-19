@@ -38,7 +38,7 @@ const SelectionSchema = z.object({
 });
 
 const BodySchema = z.object({
-  action: z.enum(['create', 'preview', 'cancel', 'create_targeted', 'preview_targeted', 'retry', 'skip_items', 'create_delivery']),
+  action: z.enum(['create', 'preview', 'cancel', 'create_targeted', 'preview_targeted', 'retry', 'skip_items', 'create_delivery', 'requeue_skipped']),
   scope: z.enum(['all', 'selected']).optional(),
   tenant_ids: z.array(z.number().int().positive()).optional().nullable(),
   package_ids: z.array(z.number().int().positive()).optional().nullable(),
@@ -285,6 +285,23 @@ Deno.serve(async (req: Request) => {
         return json(req, { error: 'skip_items_failed', status: error.code, details: error.message }, 400);
       }
       return json(req, { ok: true, moved: (data as number) ?? 0 });
+    }
+
+    if (parsed.action === 'requeue_skipped') {
+      if (!parsed.item_ids || parsed.item_ids.length === 0) {
+        return json(req, { error: 'item_ids is required for requeue_skipped' }, 400);
+      }
+      // requeue_skipped_bulk_document_items's gate reads auth.uid(); must run under caller JWT.
+      const { data, error } = await supabase.rpc('requeue_skipped_bulk_document_items', {
+        p_item_ids: parsed.item_ids,
+      });
+      if (error) {
+        console.error('[launcher] requeue_skipped_bulk_document_items error', error);
+        return json(req, { error: 'requeue_skipped_failed', status: error.code, details: error.message }, 400);
+      }
+      const jobId = data as string;
+      kickoffWorker(jobId, authHeader, supabase);
+      return json(req, { job_id: jobId });
     }
 
     return json(req, { error: 'unknown action' }, 400);
