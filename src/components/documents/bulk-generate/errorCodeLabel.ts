@@ -46,6 +46,8 @@ export function stalledReasonLabel(reason: string | null | undefined): string {
   switch (reason) {
     case "jwt_near_expiry":
       return "Stalled — session token expired mid-run";
+    case "system_account_auth_failed":
+      return "Stalled — system account authentication failed, needs staff attention";
     default:
       return `Stalled — ${reason}`;
   }
