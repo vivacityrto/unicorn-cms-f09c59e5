@@ -105,10 +105,10 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
           const typeBadgeClasses = getTaskTypeBadgeClasses(taskType);
 
           return (
-            <div 
+            <div
               key={task.id}
               className={cn(
-                "flex items-center gap-3 px-4 py-2.5",
+                "flex items-center gap-3 px-4 py-2.5 flex-wrap",
                 task.status_id === 2 && "bg-accent/50",
                 task.status_id === 3 && "opacity-60"
               )}
@@ -189,82 +189,88 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
                 </div>
               </div>
 
-              <TaskAssigneeButton
-                assigneeId={task.assignee_id}
-                assigneeName={task.assignee_name}
-                assigneeAvatar={task.assignee_avatar}
-                disabled={task.status_id === 3 || (stageStatusId === 2 || stageStatusId === 4)}
-                updating={isUpdating}
-                onAssign={(userId) => updateTaskAssignee(task.id, userId)}
-              />
+              {/* Grouped so these wrap together onto a second line as a
+                  unit on narrow viewports, instead of each control either
+                  overflowing the row or (with only flex-wrap on the parent)
+                  breaking one-per-line with large gaps. */}
+              <div className="flex items-center gap-2 flex-wrap shrink-0 ml-auto">
+                <TaskAssigneeButton
+                  assigneeId={task.assignee_id}
+                  assigneeName={task.assignee_name}
+                  assigneeAvatar={task.assignee_avatar}
+                  disabled={task.status_id === 3 || (stageStatusId === 2 || stageStatusId === 4)}
+                  updating={isUpdating}
+                  onAssign={(userId) => updateTaskAssignee(task.id, userId)}
+                />
 
-              <TaskNotesPopover
-                taskId={task.id}
-                notes={task.notes}
-                tenantId={tenantId}
-                packageId={packageId}
-                packageInstanceId={packageInstanceId}
-                stageInstanceId={stageInstanceId}
-                stageName={stageName}
-                taskName={cleanName}
-                onSaved={refetch}
-              />
+                <TaskNotesPopover
+                  taskId={task.id}
+                  notes={task.notes}
+                  tenantId={tenantId}
+                  packageId={packageId}
+                  packageInstanceId={packageInstanceId}
+                  stageInstanceId={stageInstanceId}
+                  stageName={stageName}
+                  taskName={cleanName}
+                  onSaved={refetch}
+                />
 
-              <StaffTaskActionMenu
-                taskName={task.task_name}
-                taskId={task.id}
-                tenantId={tenantId}
-                packageId={packageId}
-                stageInstanceId={stageInstanceId}
-                statusId={task.status_id}
-                stageStatusId={stageStatusId}
-                stageEmails={stageEmails}
-                onMarkComplete={() => updateTaskStatus(task.id, 2)}
-                taskDescription={task.task_description}
-                stageName={stageName}
-              />
+                <StaffTaskActionMenu
+                  taskName={task.task_name}
+                  taskId={task.id}
+                  tenantId={tenantId}
+                  packageId={packageId}
+                  stageInstanceId={stageInstanceId}
+                  statusId={task.status_id}
+                  stageStatusId={stageStatusId}
+                  stageEmails={stageEmails}
+                  onMarkComplete={() => updateTaskStatus(task.id, 2)}
+                  taskDescription={task.task_description}
+                  stageName={stageName}
+                />
 
-              <Select
-                value={task.status_id.toString()}
-                onValueChange={(value) => updateTaskStatus(task.id, parseInt(value))}
-                disabled={isUpdating}
-              >
-                <SelectTrigger className="w-[120px] h-8 text-xs">
-                  {isUpdating ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <SelectValue />
-                  )}
-                </SelectTrigger>
-                <SelectContent>
-                  {statuses.map((option) => {
-                    const Icon = getStatusIcon(option.code);
-                    const color = getStatusColor(option.code);
-                    return (
-                      <SelectItem key={option.code} value={option.code.toString()}>
-                        <div className="flex items-center gap-2">
-                          <Icon className={cn("h-3 w-3", color)} />
-                          <span>{option.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+                <Select
+                  value={task.status_id.toString()}
+                  onValueChange={(value) => updateTaskStatus(task.id, parseInt(value))}
+                  disabled={isUpdating}
+                >
+                  <SelectTrigger className="w-[120px] h-8 text-xs">
+                    {isUpdating ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <SelectValue />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuses.map((option) => {
+                      const Icon = getStatusIcon(option.code);
+                      const color = getStatusColor(option.code);
+                      return (
+                        <SelectItem key={option.code} value={option.code.toString()}>
+                          <div className="flex items-center gap-2">
+                            <Icon className={cn("h-3 w-3", color)} />
+                            <span>{option.label}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
 
-              {/* Core Task Radio - right of status */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div onClick={() => updateTaskCore(task.id, !task.is_core)} className="cursor-pointer">
-                    <RadioGroup value={task.is_core ? 'core' : 'not-core'}>
-                      <RadioGroupItem value="core" className="h-4 w-4 shrink-0" />
-                    </RadioGroup>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  Core Task
-                </TooltipContent>
-              </Tooltip>
+                {/* Core Task Radio - right of status */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div onClick={() => updateTaskCore(task.id, !task.is_core)} className="cursor-pointer">
+                      <RadioGroup value={task.is_core ? 'core' : 'not-core'}>
+                        <RadioGroupItem value="core" className="h-4 w-4 shrink-0" />
+                      </RadioGroup>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Core Task
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
           );
         })}

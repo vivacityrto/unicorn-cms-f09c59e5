@@ -7,6 +7,7 @@ export interface StageDocument {
   title: string;
   description: string | null;
   category: string | null;
+  framework_type: string | null;
   status: string;
   isgenerated: boolean;
   created_at: string;
@@ -16,6 +17,9 @@ export interface StageDocument {
   last_error: string | null;
   is_manual_allocation: boolean;
   has_sharepoint_link: boolean;
+  /** Current (highest version_number) template version — same definition as ManageDocuments' getCurrentVersion. */
+  current_version_display: string | null;
+  current_version_status: string | null;
 }
 
 interface UseStageDocumentsOptions {
@@ -64,26 +68,46 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
 
       // Get document titles from documents table
       const docIds = [...new Set(instances.map(i => i.document_id))];
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('id, title, description, category, source_template_url, uploaded_files')
-        .in('id', docIds);
+      const [{ data: docs }, { data: versions }] = await Promise.all([
+        supabase
+          .from('documents')
+          .select('id, title, description, category, framework_type, source_template_url, uploaded_files')
+          .in('id', docIds),
+        supabase
+          .from('document_versions')
+          .select('document_id, version_number, display_version, status')
+          .in('document_id', docIds),
+      ]);
 
       const docMap = new Map(docs?.map(d => [d.id, {
         title: d.title,
         description: d.description,
         category: d.category,
+        framework_type: (d as any).framework_type ?? null,
         has_sharepoint_link: !!(d.source_template_url || (d.uploaded_files && d.uploaded_files.length > 0)),
       }]) || []);
 
+      // Current version = highest version_number per document, matching
+      // ManageDocuments' getCurrentVersion — not current_published_version_id,
+      // which can lag behind a freshly-imported draft (see 2026-08-19 fix).
+      const currentVersionByDoc = new Map<number, { display_version: string | null; status: string | null; version_number: number }>();
+      for (const v of (versions ?? []) as { document_id: number; version_number: number; display_version: string | null; status: string | null }[]) {
+        const current = currentVersionByDoc.get(v.document_id);
+        if (!current || v.version_number > current.version_number) {
+          currentVersionByDoc.set(v.document_id, { display_version: v.display_version, status: v.status, version_number: v.version_number });
+        }
+      }
+
       const result: StageDocument[] = instances.map(inst => {
         const meta = docMap.get(inst.document_id);
+        const currentVersion = currentVersionByDoc.get(inst.document_id);
         return {
           id: inst.id,
           document_id: inst.document_id,
           title: meta?.title || (inst as any).document_title || `Document #${inst.document_id}`,
           description: meta?.description || null,
           category: meta?.category || null,
+          framework_type: meta?.framework_type ?? null,
           status: inst.status || 'pending',
           isgenerated: inst.isgenerated ?? false,
           created_at: inst.created_at || '',
@@ -93,6 +117,8 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
           last_error: (inst as any).last_error || null,
           is_manual_allocation: (inst as any).is_manual_allocation ?? false,
           has_sharepoint_link: meta?.has_sharepoint_link ?? false,
+          current_version_display: currentVersion?.display_version ?? (currentVersion ? `v${currentVersion.version_number}` : null),
+          current_version_status: currentVersion?.status ?? null,
         };
       });
 

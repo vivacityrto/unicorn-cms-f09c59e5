@@ -315,6 +315,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
             <TabsContent value="documents" className="mt-0">
               <StageDocumentsSection
                 stageInstanceId={stage.id}
+                stageId={stage.stage_id}
                 tenantId={tenantId}
                 packageId={packageId}
                 debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
