@@ -32,6 +32,7 @@ import {
   ChevronRight,
   Maximize2,
   Eye,
+  FileText,
 } from "lucide-react";
 import {
   Dialog,
@@ -51,7 +52,7 @@ import { useBulkGenerateClientTree, type ClientTreeRow } from "../useBulkGenerat
 import { useTenantSharepointLiveness, type TenantLiveness } from "../useTenantSharepointLiveness";
 import { useTemplatedDocuments } from "../useTemplatedDocuments";
 import { useCscAssignments } from "@/hooks/useCscAssignments";
-import { MultiSelect } from "../MultiSelect";
+import { DocumentFilterDialog } from "../DocumentFilterDialog";
 import { PreviewPanel } from "../PreviewPanel";
 import { DeliveryGuardPanel } from "../DeliveryGuardPanel";
 import { useDocumentDeliveryGuards, type DeliveryGuardPair } from "@/hooks/useDocumentDeliveryGuards";
@@ -95,6 +96,7 @@ export function TargetedMode({ tenants }: Props) {
   // triple key = tenant|pkgInstance|stage
   const [selectedTriples, setSelectedTriples] = useState<Set<string>>(new Set());
   const [documentIds, setDocumentIds] = useState<number[]>([]);
+  const [documentFilterDialogOpen, setDocumentFilterDialogOpen] = useState(false);
   const [remediateTenantId, setRemediateTenantId] = useState<number | null>(null);
   const [viewConfigTenantId, setViewConfigTenantId] = useState<number | null>(null);
   const [showItemized, setShowItemized] = useState(false);
@@ -696,31 +698,41 @@ export function TargetedMode({ tenants }: Props) {
               <div className="text-xs font-medium mb-1">
                 Document filter (optional)
               </div>
-              <MultiSelect
-                options={(docs.data ?? []).map((d) => ({
-                  value: String(d.id),
-                  label: d.title,
-                }))}
-                values={validDocumentIds.map(String)}
-                onChange={(ids) => {
-                  setDocumentIds(ids.map(Number));
-                  setPreviewStale(true);
-                }}
-                placeholder={
-                  selectedStageIds.length === 0
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDocumentFilterDialogOpen(true)}
+                disabled={selectedStageIds.length === 0 || docs.isLoading}
+                className={cn(
+                  "w-full justify-between font-normal min-h-10 h-auto py-2",
+                  validDocumentIds.length === 0 && "text-muted-foreground",
+                )}
+              >
+                <span className="truncate">
+                  {selectedStageIds.length === 0
                     ? "Select stages first…"
                     : docs.isLoading
                       ? "Loading documents…"
-                      : "All templated documents in the selected stages"
-                }
-                searchPlaceholder="Search documents…"
-                emptyText="No templated documents."
-                disabled={selectedStageIds.length === 0 || docs.isLoading}
-              />
+                      : validDocumentIds.length === 0
+                        ? "All templated documents in the selected stages"
+                        : `${validDocumentIds.length} document${validDocumentIds.length === 1 ? "" : "s"} selected`}
+                </span>
+                <FileText className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+              </Button>
               <p className="text-[11px] text-muted-foreground mt-1">
                 Leave empty to include every templated document in the selected
                 stages.
               </p>
+              <DocumentFilterDialog
+                open={documentFilterDialogOpen}
+                onOpenChange={setDocumentFilterDialogOpen}
+                documents={docs.data ?? []}
+                selected={validDocumentIds.map(String)}
+                onApply={(ids) => {
+                  setDocumentIds(ids.map(Number));
+                  setPreviewStale(true);
+                }}
+              />
             </div>
 
             <Separator />

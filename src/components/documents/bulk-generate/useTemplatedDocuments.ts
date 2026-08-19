@@ -7,6 +7,12 @@ export type TemplatedDocumentRow = {
   stage: number | null;
   /** Every selected stage that scopes this document, including shared links. */
   stageIds: number[];
+  /** Comma-separated dd_document_categories.value list, as stored on documents.category. */
+  categories: string[];
+  /** dd_governance_framework.value, or null if unset. */
+  frameworkType: string | null;
+  /** Set iff the document has a live published version. */
+  isPublished: boolean;
 };
 
 /**
@@ -46,7 +52,7 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
       }
       let docQuery = supabase
         .from("documents")
-        .select("id, title, stage, source_template_url")
+        .select("id, title, stage, source_template_url, category, framework_type, current_published_version_id")
         .order("title", { ascending: true });
       if (stageKey.length > 0) {
         if (additionalIds.length > 0) {
@@ -65,6 +71,9 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
           title: string | null;
           stage: number | null;
           source_template_url: string | null;
+          category: string | null;
+          framework_type: string | null;
+          current_published_version_id: string | null;
         }[];
 
       if (docRows.length === 0) return [];
@@ -111,6 +120,9 @@ export function useTemplatedDocuments(stageIds: number[] = []) {
               ...(linkedStageIdsByDocument.get(d.id) ?? []),
             ]),
           ),
+          categories: d.category ? d.category.split(",").map((c) => c.trim()).filter(Boolean) : [],
+          frameworkType: d.framework_type ?? null,
+          isPublished: !!d.current_published_version_id,
         }));
     },
   });
