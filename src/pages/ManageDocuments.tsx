@@ -743,6 +743,17 @@ export default function ManageDocuments() {
   })();
   const duplicateDocCount = documents.filter(doc => duplicateTitleCounts[duplicateKey(doc)] > 1).length;
 
+  // Get current version from document_versions join. Declared above
+  // applyNonFileStatusFilters (which is called eagerly during render at
+  // fileStatusEligible, not just from an effect) since it references this —
+  // a plain `const` defined later in the same component body would still be
+  // in its temporal dead zone at that call site.
+  const getCurrentVersion = (doc: Document) => {
+    if (!doc.document_versions || doc.document_versions.length === 0) return null;
+    const sorted = [...doc.document_versions].sort((a, b) => b.version_number - a.version_number);
+    return sorted[0];
+  };
+
   // Every filter except file status — shared between the main filter chain
   // and the file-status tab counts, so the tabs reflect whatever else is
   // currently filtered (search/format/category/etc.) instead of always
@@ -787,12 +798,16 @@ export default function ManageDocuments() {
       filtered = filtered.filter(doc => !doc.source_template_url);
     }
 
-    // Publish status filter — current_published_version_id is the same
-    // pointer GovernanceDocumentDetail uses to decide which version is live.
+    // Publish status filter — checks the CURRENT version (highest
+    // version_number, same row the "Version #" column shows via
+    // getCurrentVersion), not current_published_version_id. A document can
+    // have an older published version live while its current version is a
+    // freshly-imported draft; current_published_version_id being set doesn't
+    // mean the latest content is actually published.
     if (publishStatusFilter === "published") {
-      filtered = filtered.filter(doc => !!doc.current_published_version_id);
+      filtered = filtered.filter(doc => getCurrentVersion(doc)?.status === "published");
     } else if (publishStatusFilter === "unpublished") {
-      filtered = filtered.filter(doc => !doc.current_published_version_id);
+      filtered = filtered.filter(doc => getCurrentVersion(doc)?.status !== "published");
     }
 
     return filtered;
@@ -1476,13 +1491,6 @@ export default function ManageDocuments() {
 
   // Filtered categories based on search
   const filteredCategoriesForDropdown = categories.filter(cat => cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase()));
-
-  // Get current version from document_versions join
-  const getCurrentVersion = (doc: Document) => {
-    if (!doc.document_versions || doc.document_versions.length === 0) return null;
-    const sorted = [...doc.document_versions].sort((a, b) => b.version_number - a.version_number);
-    return sorted[0];
-  };
 
   if (loading) {
     return <div className="space-y-4 p-6">
