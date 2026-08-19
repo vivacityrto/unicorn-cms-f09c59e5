@@ -137,6 +137,9 @@ interface Document {
   source_template_url?: string | null;
   updated_at?: string | null;
   current_published_version_id?: string | null;
+  /** Distinct tenants this document has been successfully delivered to (governance_document_deliveries). */
+  delivered_tenant_count?: number;
+  last_delivered_at?: string | null;
   document_versions?: Array<{
     id: string;
     version_number: number;
@@ -629,13 +632,19 @@ export default function ManageDocuments() {
         // equally valid evidence rather than trusting the master table alone.
         let stagesWithPackages = new Set<number>();
         let additionalStagesByDoc = new Map<number, number[]>();
+        const deliveryByDoc = new Map<number, { count: number; lastAt: string | null }>();
         if (docIds.length > 0) {
-          const [{ data: filesData }, { data: versionsData }, { data: packageStagesData }, { data: docStageLinksData }, { data: stageInstancesData }] = await Promise.all([
+          const [{ data: filesData }, { data: versionsData }, { data: packageStagesData }, { data: docStageLinksData }, { data: stageInstancesData }, { data: deliverySummaryData }] = await Promise.all([
             supabase.from('document_files').select('document_id').in('document_id', docIds),
             supabase.from('document_versions').select('document_id, storage_path').in('document_id', docIds),
             supabase.from('package_stages').select('stage_id'),
             supabase.from('document_stage_links').select('document_id, stage_id').in('document_id', docIds),
             supabase.from('stage_instances').select('stage_id'),
+            // Aggregated server-side (count distinct tenants, not raw rows) —
+            // this table can hold far more than PostgREST's default 1000-row
+            // cap, and a naive per-row select silently drops results past
+            // that cap as it grows. See get_document_delivery_summary.
+            supabase.rpc('get_document_delivery_summary', { p_document_ids: docIds }),
           ]);
           readySet = new Set((filesData || []).map(f => f.document_id as number));
           versionsSet = new Set(
@@ -652,6 +661,9 @@ export default function ManageDocuments() {
             const list = additionalStagesByDoc.get(link.document_id as number) || [];
             list.push(link.stage_id as number);
             additionalStagesByDoc.set(link.document_id as number, list);
+          }
+          for (const d of (deliverySummaryData || []) as { document_id: number; delivered_tenant_count: number; last_delivered_at: string | null }[]) {
+            deliveryByDoc.set(d.document_id, { count: d.delivered_tenant_count, lastAt: d.last_delivered_at });
           }
         }
 
@@ -679,10 +691,13 @@ export default function ManageDocuments() {
               : (doc.uploaded_files && Array.isArray(doc.uploaded_files) && doc.uploaded_files.length > 0)
                 ? 'legacy_only'
                 : 'needs_upload';
+          const delivery = deliveryByDoc.get(doc.id);
           return {
             ...doc,
             creator: doc.created_by ? creatorsMap[doc.created_by] || null : null,
             file_status: fileStatus,
+            delivered_tenant_count: delivery?.count ?? 0,
+            last_delivered_at: delivery?.lastAt ?? null,
           };
         });
 
@@ -1483,7 +1498,6 @@ export default function ManageDocuments() {
     }
   };
   const totalDocuments = documents.length;
-  const clientDocs = documents.filter(d => d.isclientdoc).length;
   const watermarkedDocs = documents.filter(d => d.watermark).length;
 
   // Get unique formats for filter
@@ -2164,7 +2178,7 @@ export default function ManageDocuments() {
                   Version Date
                 </TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Version #</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Client Doc</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-36 h-14 whitespace-nowrap border-r">Status</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap text-center">Actions</TableHead>
               </TableRow>
@@ -2310,15 +2324,43 @@ export default function ManageDocuments() {
                           </Badge>
                         ) : '—'}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
-                        <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px]" style={doc.isclientdoc ? {
-                  borderColor: "#3B82F6",
-                  color: "#3B82F6",
-                  backgroundColor: "#3B82F610",
-                  borderWidth: "1.5px"
-                } : {}}>
-                          {doc.isclientdoc ? "Yes" : "No"}
-                        </Badge>
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
+                        <div className="flex flex-col gap-1 items-start">
+                          {currentVersion?.status === "published" ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-medium py-[3px] rounded-[9px] border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                            >
+                              Published
+                            </Badge>
+                          ) : currentVersion?.status === "draft" ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-medium py-[3px] rounded-[9px] border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                            >
+                              Draft
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px] text-muted-foreground">
+                              No version
+                            </Badge>
+                          )}
+                          {doc.delivered_tenant_count && doc.delivered_tenant_count > 0 ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-[11px] text-muted-foreground cursor-default">
+                                  Delivered &times;{doc.delivered_tenant_count}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Delivered to {doc.delivered_tenant_count} tenant{doc.delivered_tenant_count === 1 ? "" : "s"}
+                                {doc.last_delivered_at ? ` — last on ${format(new Date(doc.last_delivered_at), "dd MMM yyyy")}` : ""}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">Not delivered</span>
+                          )}
+                        </div>
                       </TableCell>
                       {/* Updated */}
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
