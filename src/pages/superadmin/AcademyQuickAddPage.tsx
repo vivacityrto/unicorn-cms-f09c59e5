@@ -42,6 +42,8 @@ const SERIES = [
   { value: "8 Critical Drivers to RTO Success", session_type: "webinar", access: "all" as AccessDefault },
   { value: "Superhero Tools Unleashed", session_type: "webinar", access: "superhero" as AccessDefault },
   { value: "The Compliance Lab", session_type: "workshop", access: "all" as AccessDefault },
+  { value: "CRICOS", session_type: "webinar", access: "all" as AccessDefault },
+  { value: "Courses", session_type: "webinar", access: "all" as AccessDefault },
 ];
 
 const PACKAGE_OPTIONS = [
