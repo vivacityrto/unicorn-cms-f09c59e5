@@ -11,6 +11,11 @@
 // Member, is_vivacity_internal), signed in once, and stored the resulting
 // session via set_bulk_generate_system_session (gated by requireSuperAdmin,
 // idempotent on re-invocation).
+//
+// auth-gate: none -- unconditionally returns 410 for every caller regardless
+// of identity; there is no per-request action left to authenticate. The
+// real requireSuperAdmin gate lived here while the function was live (see
+// the audit entry above) and is no longer needed now that it does nothing.
 
 import { corsHeaders } from "../_shared/cors.ts";
 
