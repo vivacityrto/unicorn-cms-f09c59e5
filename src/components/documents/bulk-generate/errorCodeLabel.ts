@@ -40,6 +40,17 @@ export function errorCodeLabel(code: string | null | undefined): string {
   return LABELS[code] ?? humaniseCode(code);
 }
 
+/** Human label for bulk_document_jobs.error_summary.stalled_reason. */
+export function stalledReasonLabel(reason: string | null | undefined): string {
+  if (!reason) return "Stalled";
+  switch (reason) {
+    case "jwt_near_expiry":
+      return "Stalled — session token expired mid-run";
+    default:
+      return `Stalled — ${reason}`;
+  }
+}
+
 /**
  * Summary line for state='generated' items.
  *

@@ -42,6 +42,7 @@ import { scopeSummary } from "@/components/documents/bulk-generate/scopeSummary"
 import {
   errorCodeLabel,
   outcomeSummary,
+  stalledReasonLabel,
 } from "@/components/documents/bulk-generate/errorCodeLabel";
 import {
   launcherCancel,
@@ -57,15 +58,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-
-function stalledReasonLabel(reason: string): string {
-  switch (reason) {
-    case "jwt_near_expiry":
-      return "Stalled — session token expired mid-run";
-    default:
-      return `Stalled — ${reason}`;
-  }
-}
 
 type Job = {
   id: string;
@@ -155,15 +147,29 @@ export default function BulkDocumentJobProgress() {
     enabled: !!jobId && isVivacityStaff,
     refetchInterval: () => (job && TERMINAL.has(job.status) ? false : 3000),
     queryFn: async (): Promise<Item[]> => {
-      const { data, error } = await supabase
-        .from("bulk_document_job_items")
-        .select(
-          "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at, leased_at, lease_expires_at",
-        )
-        .eq("job_id", jobId!)
-        .order("id", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Item[];
+      // PostgREST caps rows per request (commonly 1000) regardless of an
+      // explicit .limit() — jobs with more items than that cap were silently
+      // truncated, undercounting both the per-tenant list and retry-eligible
+      // items. Page through with .range() until a page comes back short.
+      const PAGE_SIZE = 1000;
+      const all: Item[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("bulk_document_job_items")
+          .select(
+            "id, tenant_id, package_instance_id, stageinstance_id, document_id, state, last_error, last_error_code, outcome, started_at, finished_at, leased_at, lease_expires_at",
+          )
+          .eq("job_id", jobId!)
+          .order("id", { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        const page = (data ?? []) as Item[];
+        all.push(...page);
+        if (page.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return all;
     },
   });
 
@@ -423,7 +429,7 @@ export default function BulkDocumentJobProgress() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isRunning && (
+          {(isRunning || isStalled) && (
             <Button
               variant="outline"
               onClick={onCancel}
@@ -435,7 +441,7 @@ export default function BulkDocumentJobProgress() {
               ) : (
                 <X className="h-4 w-4" />
               )}
-              Cancel
+              {isStalled ? "Don't retry (cancel job)" : "Cancel"}
             </Button>
           )}
           {canRetry && (
@@ -477,14 +483,14 @@ export default function BulkDocumentJobProgress() {
 
       {/* Currently generating */}
       {showActive && (
-        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 flex items-center gap-3 animate-fade-in">
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 flex items-center gap-3 animate-fade-in dark:border-blue-800 dark:bg-blue-950/40">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inset-0 rounded-full bg-blue-500 opacity-75 animate-ping" />
             <span className="relative rounded-full bg-blue-500 h-2.5 w-2.5" />
           </span>
-          <Loader2 className="h-4 w-4 animate-spin text-blue-700" />
+          <Loader2 className="h-4 w-4 animate-spin text-blue-700 dark:text-blue-300" />
           <div className="text-sm min-w-0 flex-1">
-            <div className="text-blue-900 truncate">
+            <div className="text-blue-900 dark:text-blue-200 truncate">
               <span className="font-medium">Generating:</span>{" "}
               {tenantNames?.get(activeItem.tenant_id) ??
                 `Tenant #${activeItem.tenant_id}`}{" "}
@@ -493,7 +499,7 @@ export default function BulkDocumentJobProgress() {
                 `Document #${activeItem.document_id}`}
             </div>
             {leasedNow.length > 1 && (
-              <div className="text-xs text-blue-700/80">
+              <div className="text-xs text-blue-700/80 dark:text-blue-300/80">
                 + {leasedNow.length - 1} more in this batch
               </div>
             )}
@@ -663,6 +669,7 @@ export default function BulkDocumentJobProgress() {
         open={retryDialogOpen}
         onOpenChange={setRetryDialogOpen}
         items={retryEligibleItems}
+        pendingCount={items.filter((i) => i.state === "pending").length}
         tenantNames={tenantNames}
         documentTitles={documentTitles}
         submitting={retrying}
@@ -690,19 +697,19 @@ function SummaryTile({
 }) {
   const toneText =
     tone === "emerald"
-      ? "text-emerald-700"
+      ? "text-emerald-700 dark:text-emerald-400"
       : tone === "red"
-        ? "text-red-700"
+        ? "text-red-700 dark:text-red-400"
         : tone === "slate"
-          ? "text-slate-700"
+          ? "text-slate-700 dark:text-slate-300"
           : "";
   const toneBg =
     tone === "emerald"
-      ? "bg-emerald-50 border-emerald-200"
+      ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800"
       : tone === "red"
-        ? "bg-red-50 border-red-200"
+        ? "bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800"
         : tone === "slate"
-          ? "bg-slate-50 border-slate-200"
+          ? "bg-slate-50 border-slate-200 dark:bg-slate-800/60 dark:border-slate-600"
           : "";
   return (
     <div className={`rounded-md border p-3 ${toneBg}`}>
@@ -752,7 +759,7 @@ function ItemResult({ item }: { item: Item }) {
     const s = outcomeSummary(item.outcome);
     return (
       <div>
-        <div className="text-emerald-700">{s.label}</div>
+        <div className="text-emerald-700 dark:text-emerald-400">{s.label}</div>
         {s.detail && (
           <div className="text-xs text-muted-foreground">{s.detail}</div>
         )}
@@ -765,7 +772,13 @@ function ItemResult({ item }: { item: Item }) {
       (item.state === "cancelled" ? "Cancelled" : "");
     return (
       <div>
-        <div className={item.state === "failed" ? "text-red-700" : "text-slate-700"}>
+        <div
+          className={
+            item.state === "failed"
+              ? "text-red-700 dark:text-red-400"
+              : "text-slate-700 dark:text-slate-400"
+          }
+        >
           {label || "—"}
         </div>
         {item.last_error && (
@@ -783,6 +796,7 @@ function RetryDialog({
   open,
   onOpenChange,
   items,
+  pendingCount,
   tenantNames,
   documentTitles,
   submitting,
@@ -791,6 +805,7 @@ function RetryDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   items: Item[];
+  pendingCount: number;
   tenantNames: Map<number, string> | undefined;
   documentTitles: Map<number, string> | undefined;
   submitting: boolean;
@@ -857,12 +872,21 @@ function RetryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Retry failed & pending items</DialogTitle>
+          <DialogTitle>Retry failed items</DialogTitle>
           <DialogDescription>
             Uncheck any items you don't want to retry — for example docs with no
             template file, or items that keep failing for the same tenant.
             Unchecked items will be marked as <strong>skipped</strong> on this
             job and won't run again.
+            {pendingCount > 0 && (
+              <>
+                {" "}This job also has{" "}
+                <strong>{pendingCount.toLocaleString()} pending item{pendingCount === 1 ? "" : "s"}</strong>{" "}
+                that were never attempted — those aren't shown here (nothing to
+                decide on them) but will resume automatically once the job is
+                un-stalled.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
