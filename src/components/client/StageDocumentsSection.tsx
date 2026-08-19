@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useStageDocuments } from '@/hooks/useStageDocuments';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
-import { useBulkGeneration } from '@/hooks/useBulkGeneration';
-import { BulkGenerationProgressDialog } from './BulkGenerationProgressDialog';
+import { launcherCreateTargeted } from '@/components/documents/bulk-generate/useBulkGenerateLauncher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FileText, CheckCircle2, Clock, Sparkles, Loader2, AlertTriangle, ExternalLink, RefreshCw, UserCheck, XCircle, Search, Link2, Copy, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,11 +29,16 @@ import { useToast } from '@/hooks/use-toast';
 
 interface StageDocumentsSectionProps {
   stageInstanceId: number;
+  /** Master stage id (stage_instances.stage_id) — needed to target the bulk-generate engine. */
+  stageId: number;
   tenantId: number;
   packageId?: number;
   debug?: boolean;
   isVivacityStaff?: boolean;
 }
+
+/** Job statuses that mean "still doing something, keep the banner + polling alive". */
+const ACTIVE_JOB_STATUSES = ['queued', 'running', 'stalled'];
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
   generated: { label: 'Generated', variant: 'default' },
@@ -62,21 +66,18 @@ function categoriseError(error: string | null): { label: string; description: st
   return { label: 'System error', description: 'An unexpected error occurred. This has been logged and the Vivacity team has been notified.' };
 }
 
-export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, debug, isVivacityStaff }: StageDocumentsSectionProps) {
+export function StageDocumentsSection({ stageInstanceId, stageId, tenantId, packageId, debug, isVivacityStaff }: StageDocumentsSectionProps) {
   const { documents, loading, totalCount, refetch } = useStageDocuments({ stageInstanceId, tenantId, debug });
-  const { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, planSize, cancelGeneration } = useBulkGeneration();
-
-  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
-  const [progressMinimised, setProgressMinimised] = useState(false);
-
 
   const { toast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [overwriteChecked, setOverwriteChecked] = useState(false);
-  const [overwritePrompt, setOverwritePrompt] = useState<{ alreadyCount: number; total: number } | null>(null);
-  const [overwriteRunning, setOverwriteRunning] = useState(false);
+  const [startingJob, setStartingJob] = useState(false);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [nameFilter, setNameFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [frameworkFilter, setFrameworkFilter] = useState('all');
+  const [publishStatusFilter, setPublishStatusFilter] = useState('all');
   const [generatingSingleId, setGeneratingSingleId] = useState<number | null>(null);
   const [singleGenConfirm, setSingleGenConfirm] = useState<{ id: number; documentId: number; title: string; category: string | null } | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
@@ -89,6 +90,72 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
     });
   }, [tenantId]);
 
+  // Resume the progress banner across reloads/tab switches — look for any
+  // job still in flight whose items include this exact stage instance, so
+  // staff who navigated away and back (or a colleague working the same
+  // client) sees "generation is already running" instead of a blank button
+  // that invites a duplicate job.
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from('bulk_document_job_items')
+      .select('job_id, bulk_document_jobs!inner(status)')
+      .eq('stageinstance_id', stageInstanceId)
+      .in('bulk_document_jobs.status', ACTIVE_JOB_STATUSES)
+      .limit(1)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const row = (data ?? [])[0] as { job_id: string } | undefined;
+        if (row?.job_id) setActiveJobId(row.job_id);
+      });
+    return () => { cancelled = true; };
+  }, [stageInstanceId]);
+
+  const { data: frameworks } = useQuery({
+    queryKey: ['dd_governance_framework'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('dd_governance_framework')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      return data || [];
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  // Poll the active job's row directly (not the item-level BulkDocumentJobProgress
+  // page) so staff get inline counts without leaving this tab. 4s matches the
+  // cost of an admin dashboard poll, not a hot loop.
+  const { data: activeJob } = useQuery({
+    queryKey: ['bulk-document-job-inline', activeJobId],
+    enabled: !!activeJobId,
+    refetchInterval: (q) => {
+      const row = q.state.data as { status: string } | undefined;
+      if (!row) return 4000;
+      return ACTIVE_JOB_STATUSES.includes(row.status) ? 4000 : false;
+    },
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bulk_document_jobs')
+        .select('id, status, total_items, generated_count, skipped_count, failed_count')
+        .eq('id', activeJobId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Once the job lands on a terminal status, refresh this stage's own
+  // document list (so per-row Generated/Pending badges reflect the result)
+  // — but keep the banner itself visible until staff dismisses it, since
+  // "it just finished" is exactly the moment they want to see the summary.
+  const jobJustFinished = activeJob && !ACTIVE_JOB_STATUSES.includes(activeJob.status);
+  useEffect(() => {
+    if (jobJustFinished) refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobJustFinished]);
+
   const categories = useMemo(() => {
     const cats = new Set(documents.map(d => d.category).filter(Boolean) as string[]);
     return Array.from(cats).sort();
@@ -98,60 +165,60 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
     return documents.filter(doc => {
       const matchesName = !nameFilter || doc.title.toLowerCase().includes(nameFilter.toLowerCase());
       const matchesCategory = categoryFilter === 'all' || doc.category === categoryFilter;
-      return matchesName && matchesCategory;
+      const matchesFramework = frameworkFilter === 'all' || doc.framework_type === frameworkFilter;
+      const matchesPublish =
+        publishStatusFilter === 'all' ||
+        (publishStatusFilter === 'published' && doc.current_version_status === 'published') ||
+        (publishStatusFilter === 'unpublished' && doc.current_version_status !== 'published');
+      return matchesName && matchesCategory && matchesFramework && matchesPublish;
     });
-  }, [documents, nameFilter, categoryFilter]);
+  }, [documents, nameFilter, categoryFilter, frameworkFilter, publishStatusFilter]);
 
+  // Generate All / Overwrite All now hand off to the async bulk-generate
+  // engine (the same create_targeted_bulk_document_job + worker pipeline
+  // used by /manage-documents/bulk-generate) instead of looping per-document
+  // synchronously in the browser tab — a large stage used to mean staff had
+  // to keep this page open and watch a live per-doc list scroll by for
+  // several minutes. The job now runs server-side; this component just
+  // shows an inline summary (polled) and a link to the full job page.
   const handleBulkGenerate = async () => {
     setConfirmOpen(false);
     const useOverwrite = overwriteChecked;
     setOverwriteChecked(false);
-    setProgressDialogOpen(true);
 
-    try {
-      const res = await bulkGenerate({
-        tenantId,
-        stageInstanceId,
-        packageId,
-        mode: useOverwrite ? 'overwrite_all' : 'pending_only',
-        // If we're already overwriting we want the honest toast; otherwise suppress
-        // the empty toast so we can prompt for overwrite instead.
-        silentEmpty: !useOverwrite,
-      });
-      refetch();
-
-      // Detect "all skipped because already_generated" → offer overwrite.
-      if (res && !useOverwrite) {
-        const { summary, results: rs } = res;
-        const alreadyCount = rs.filter(r => r.reason === 'already_generated').length;
-        const anyFailed = rs.some(r => r.status === 'failed');
-        if (summary.generated === 0 && alreadyCount > 0 && !anyFailed) {
-          setOverwritePrompt({ alreadyCount, total: summary.total });
-        }
-      }
-    } catch {
-      // Error handled by hook toast
+    if (!packageId) {
+      toast({ title: 'Missing package', description: 'This stage has no package_id — cannot start a bulk-generate job.', variant: 'destructive' });
+      return;
     }
-  };
 
-  const handleOverwriteConfirm = async () => {
-    if (!overwritePrompt) return;
-    setOverwriteRunning(true);
-    setProgressDialogOpen(true);
+    setStartingJob(true);
     try {
+      // Unchecked = only documents not yet generated (mirrors the old
+      // 'pending_only' mode); checked = every document_instance for this
+      // stage, regenerating anything already generated too.
+      const documentIds = useOverwrite
+        ? undefined
+        : documents.filter(d => d.generation_status !== 'generated').map(d => d.document_id);
 
-      await bulkGenerate({
-        tenantId,
-        stageInstanceId,
-        packageId,
-        mode: 'overwrite_all',
+      if (!useOverwrite && documentIds && documentIds.length === 0) {
+        toast({ title: 'Nothing to generate', description: 'Every document in this stage is already generated. Tick Overwrite to regenerate anyway.' });
+        return;
+      }
+
+      const { job_id } = await launcherCreateTargeted(
+        [{ tenant_id: tenantId, package_id: packageId, stage_ids: [stageId] }],
+        documentIds,
+      );
+      setActiveJobId(job_id);
+      toast({
+        title: 'Bulk generation started',
+        description: `Queued ${useOverwrite ? totalCount : (documentIds?.length ?? totalCount)} document(s) — see the progress banner below, or open the job for full detail.`,
       });
-      refetch();
-    } catch {
-      // toast handled by hook
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast({ title: 'Failed to start bulk generation', description: msg, variant: 'destructive' });
     } finally {
-      setOverwriteRunning(false);
-      setOverwritePrompt(null);
+      setStartingJob(false);
     }
   };
 
@@ -315,9 +382,9 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs gap-1"
-                  disabled={generating}
+                  disabled={startingJob || !!activeJobId}
                 >
-                  {generating ? (
+                  {startingJob ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
                     <Sparkles className="h-3 w-3" />
@@ -329,8 +396,9 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                 <AlertDialogHeader>
                   <AlertDialogTitle>Generate All Documents</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Up to {totalCount} documents will be processed. Already-generated documents
-                    are skipped unless you tick Overwrite.
+                    Up to {totalCount} documents will be queued into a bulk-generate job.
+                    Already-generated documents are skipped unless you tick Overwrite. The job
+                    runs in the background — you don't need to keep this page open.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="flex items-start gap-2 rounded-md border p-3 bg-muted/30">
@@ -356,28 +424,53 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
               </AlertDialogContent>
             </AlertDialog>
           )}
-
-          <ConfirmDialog
-            open={!!overwritePrompt}
-            onOpenChange={(o) => { if (!o) setOverwritePrompt(null); }}
-            variant="warning"
-            title="Overwrite previously generated documents?"
-            description={
-              overwritePrompt
-                ? `${overwritePrompt.alreadyCount} of ${overwritePrompt.total} documents are already marked generated, so nothing was produced this run. Overwriting will regenerate every eligible template and replace the existing files in Client Governance.`
-                : ''
-            }
-            confirmText="Overwrite All"
-            cancelText="Keep Existing"
-            isLoading={overwriteRunning}
-            onConfirm={handleOverwriteConfirm}
-          />
         </div>
       </div>
 
+      {/* Active bulk-generate job — inline summary + link to the full job page */}
+      {activeJobId && activeJob && (
+        <div className="px-4 py-2 border-b bg-primary/5 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            {ACTIVE_JOB_STATUSES.includes(activeJob.status) ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+            ) : activeJob.status === 'completed' ? (
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+            )}
+            <span className="font-medium capitalize">{activeJob.status}</span>
+            <span className="text-muted-foreground">
+              {activeJob.generated_count} generated, {activeJob.skipped_count} skipped, {activeJob.failed_count} failed
+              {' '}of {activeJob.total_items}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <a
+              href={`/manage-documents/bulk-jobs/${activeJobId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:underline flex items-center gap-1"
+            >
+              <ExternalLink className="h-3 w-3" />
+              View job
+            </a>
+            {!ACTIVE_JOB_STATUSES.includes(activeJob.status) && (
+              <button
+                type="button"
+                onClick={() => setActiveJobId(null)}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Dismiss"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       {documents.length > 0 && (
-        <div className="px-4 py-2 border-b bg-muted/10 flex items-center gap-2">
+        <div className="px-4 py-2 border-b bg-muted/10 flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
@@ -400,28 +493,32 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
               </SelectContent>
             </Select>
           )}
-          {(nameFilter || categoryFilter !== 'all') && (
+          <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
+            <SelectTrigger className="h-7 text-xs w-[140px]">
+              <SelectValue placeholder="All frameworks" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All frameworks</SelectItem>
+              {frameworks?.map(f => (
+                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={publishStatusFilter} onValueChange={setPublishStatusFilter}>
+            <SelectTrigger className="h-7 text-xs w-[150px]">
+              <SelectValue placeholder="Publish status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All publish status</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="unpublished">Unpublished</SelectItem>
+            </SelectContent>
+          </Select>
+          {(nameFilter || categoryFilter !== 'all' || frameworkFilter !== 'all' || publishStatusFilter !== 'all') && (
             <span className="text-xs text-muted-foreground">{filteredDocuments.length} of {documents.length}</span>
           )}
         </div>
       )}
-
-      <BulkGenerationProgressDialog
-
-        open={progressDialogOpen && (generating || liveResults.length > 0)}
-        generating={generating}
-        liveResults={liveResults}
-        currentDoc={currentDoc}
-        completedCount={completedCount}
-        planSize={planSize}
-        minimised={progressMinimised}
-        onMinimise={() => setProgressMinimised(true)}
-        onExpand={() => setProgressMinimised(false)}
-        onCancel={cancelGeneration}
-        onClose={() => { setProgressDialogOpen(false); setProgressMinimised(false); }}
-      />
-
-
 
 
       {/* Merge field warnings dialog */}
@@ -570,11 +667,23 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {doc.created_at && (
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(doc.created_at), 'dd MMM yyyy')}
-                    </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {doc.current_version_display && (
+                    <span className="text-xs font-mono text-muted-foreground">{doc.current_version_display}</span>
+                  )}
+                  {doc.current_version_status === 'published' ? (
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      Published
+                    </Badge>
+                  ) : doc.current_version_status === 'draft' ? (
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                      Draft
+                    </Badge>
+                  ) : null}
+                  {doc.generationdate && (
+                    <span className="text-xs text-muted-foreground">
+                      Generated {format(new Date(doc.generationdate), 'dd MMM yyyy')}
+                    </span>
                   )}
                   {doc.generated_file_url && (
                     <a
