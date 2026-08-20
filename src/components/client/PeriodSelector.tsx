@@ -34,7 +34,7 @@ interface PeriodSelectorProps {
   hideAllTimeOption?: boolean;
 }
 
-const DEFAULT_TRIGGER_CLASSNAME = 'h-8 text-xs min-w-[220px] rounded-full border-primary text-primary bg-background hover:bg-primary/10';
+const DEFAULT_TRIGGER_CLASSNAME = 'h-8 text-xs min-w-[220px] rounded-md border-primary text-primary bg-background hover:bg-primary/10';
 
 export const ALL_TIME_VALUE = 'all-time';
 
