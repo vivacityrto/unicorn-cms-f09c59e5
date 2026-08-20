@@ -738,7 +738,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                                   .from('stage_instances')
                                   .select('id')
                                   .eq('packageinstance_id', parseInt(pkg.id, 10))
-                                  .is('status_id', null);
+                                  .is('status', null);
                                 if (incomplete && incomplete.length > 0) {
                                   const count = incomplete.length;
                                   toast.error(`There ${count === 1 ? 'is' : 'are'} ${count} Stage${count === 1 ? '' : 's'} with no status selected. All stages must have a status selected.`);

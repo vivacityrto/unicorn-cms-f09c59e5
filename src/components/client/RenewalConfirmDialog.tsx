@@ -77,7 +77,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
             .from('stage_instances')
             .select('id')
             .eq('packageinstance_id', instanceId)
-            .is('status_id', null),
+            .is('status', null),
         ]);
 
         const remaining = burndownResult.data?.remaining_minutes ?? 0;
@@ -182,15 +182,35 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         if (timeError) throw timeError;
       }
 
-      // 3. Reset recurring staff tasks
+      // 3. Reset recurring stages and recurring staff tasks
       // Fetch stage_instances for this package instance
       const { data: stageInstances } = await (supabase as any)
         .from('stage_instances')
-        .select('id')
+        .select('id, is_recurring, status')
         .eq('packageinstance_id', instanceId);
 
       if (stageInstances && stageInstances.length > 0) {
         const stageInstanceIds = stageInstances.map((si: any) => si.id);
+
+        // 3a. Reset recurring stages (e.g. annual Compliance Health Check,
+        // Assessment Validation) back to a fresh cycle - stage_instances.is_recurring
+        // is set directly on each row (denormalized from stages.is_recurring via
+        // cascade_stage_recurring()), so no extra join is needed here.
+        // Excludes 'na' (Not Applicable): that's a client/package designation
+        // ("this client doesn't need this stage"), not a per-cycle state - a
+        // renewal must never resurrect a stage that was deliberately marked
+        // irrelevant. Also excludes stages already 'not_started' (nothing to reset).
+        const recurringStageInstanceIds = stageInstances
+          .filter((si: any) => si.is_recurring && si.status !== 'na' && si.status !== 'not_started')
+          .map((si: any) => si.id);
+
+        if (recurringStageInstanceIds.length > 0) {
+          const { error: stageResetError } = await (supabase as any)
+            .from('stage_instances')
+            .update({ status: 'not_started', completion_date: null, status_date: null, event_conducted_date: null })
+            .in('id', recurringStageInstanceIds);
+          if (stageResetError) throw stageResetError;
+        }
 
         // Fetch task instances with their staff_task is_recurring flag
         const { data: taskInstances } = await (supabase as any)
