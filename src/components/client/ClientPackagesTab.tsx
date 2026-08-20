@@ -568,10 +568,22 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
 
                     {/* Stats Row: State badge first, then date+hours pushed right */}
                     <div className="flex items-center gap-6 text-sm">
+                      {pkg.next_renewal_date && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <CalendarIcon className="h-4 w-4" />
+                          <span>Anniversary {format(parseISO(pkg.next_renewal_date), 'd MMM yyyy')}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <CalendarIcon className="h-4 w-4" />
                         <span>Started {format(new Date(pkg.membership_started_at), 'd MMM yyyy')}</span>
                       </div>
+                      {pkg.start_renewal_date && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <CalendarIcon className="h-4 w-4" />
+                          <span>Start Renewal Date {format(parseISO(pkg.start_renewal_date), 'd MMM yyyy')}</span>
+                        </div>
+                      )}
                       {pkg.last_renewed_date && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <RefreshCw className="h-3.5 w-3.5" />
@@ -744,11 +756,6 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                               Finalise
                             </Button>
                           </div>
-                          {pkg.next_renewal_date && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Anniversary {format(parseISO(pkg.next_renewal_date), 'd MMM yyyy')}
-                            </div>
-                          )}
                         </div>
                         );
                       })()}
