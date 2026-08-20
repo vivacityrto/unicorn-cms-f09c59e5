@@ -270,7 +270,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
         {/* Package Usage Card */}
         <Card>
           <CardHeader className="pb-2">
-              <div className="flex items-center gap-2 w-full">
+              <div className="flex items-center gap-2 w-full min-w-0">
                 <CardTitle className="text-base flex items-center gap-2 shrink-0 whitespace-nowrap">
                   <TrendingDown className="h-4 w-4" />
                   Package Burn-down
@@ -278,7 +278,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                 {selectedPackage && packages.length > 1 ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button type="button" className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-normal cursor-pointer hover:bg-muted transition-colors max-w-[130px]">
+                      <button type="button" className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-normal cursor-pointer hover:bg-muted transition-colors min-w-0 max-w-[130px]">
                         <span className="truncate">{selectedPackage.package_name}</span>
                         <ChevronDown className="h-3 w-3 shrink-0" />
                       </button>
@@ -296,7 +296,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : selectedPackage ? (
-                  <Badge variant="outline" className="ml-auto text-xs font-normal max-w-[130px] truncate">
+                  <Badge variant="outline" className="ml-auto text-xs font-normal min-w-0 max-w-[130px] truncate">
                     {selectedPackage.package_name}
                   </Badge>
                 ) : null}
@@ -323,14 +323,12 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                   </ToggleGroupItem>
                   </ToggleGroup>
                   {selectedPackage && (
-                    <div className="shrink-0 w-[140px]">
-                      <PeriodSelector
-                        packageInstanceId={selectedPackage.id}
-                        value={periodSelectorValue}
-                        onChange={handlePeriodChange}
-                        triggerClassName="h-7 text-xs px-2.5 gap-1 rounded-full border-primary text-primary bg-background hover:bg-primary/10"
-                      />
-                    </div>
+                    <PeriodSelector
+                      packageInstanceId={selectedPackage.id}
+                      value={periodSelectorValue}
+                      onChange={handlePeriodChange}
+                      triggerClassName="h-7 w-auto text-xs px-2.5 gap-1 rounded-full border-primary text-primary bg-background hover:bg-primary/10 ml-auto"
+                    />
                   )}
                 </div>
 

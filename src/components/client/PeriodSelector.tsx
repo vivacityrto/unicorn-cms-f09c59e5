@@ -43,7 +43,10 @@ export function PeriodSelector({ packageInstanceId, value, onChange, triggerClas
     staleTime: 60_000,
   });
 
-  if (isLoading || periods.length === 0) return null;
+  // Nothing to choose between until there's been at least one renewal -
+  // a single period with an "All time" option that means the same thing
+  // is a pointless control, not a real filter.
+  if (isLoading || periods.length <= 1) return null;
 
   const options: PeriodOption[] = periods.map(p => ({
     id: String(p.period_number),
