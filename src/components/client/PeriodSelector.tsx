@@ -59,7 +59,7 @@ export function PeriodSelector({ packageInstanceId, value, onChange }: PeriodSel
 
   return (
     <Select value={value} onValueChange={handleChange}>
-      <SelectTrigger className="h-8 text-xs min-w-[220px]">
+      <SelectTrigger className="h-8 text-xs min-w-[220px] border-primary text-primary bg-background hover:bg-primary/10">
         <SelectValue placeholder="Select period" />
       </SelectTrigger>
       <SelectContent>
