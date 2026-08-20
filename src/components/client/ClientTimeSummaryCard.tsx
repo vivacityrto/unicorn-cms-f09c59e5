@@ -16,7 +16,6 @@ import { ReRegistrationBadge } from '@/components/shared/ReRegistrationBadge';
 import { useQuery } from '@tanstack/react-query';
 import { getReRegistrationDueDate, formatDaysRemaining } from '@/lib/reRegistrationDate';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { PeriodSelector, ALL_TIME_VALUE } from './PeriodSelector';
 import { PackageUsageBar } from './PackageUsageBar';
 
 interface ClientTimeSummaryCardProps {
@@ -31,8 +30,6 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
     alerts,
     selectedPackage,
     setSelectedPackageId,
-    selectedPeriodId,
-    setSelectedPeriodId,
     dismissAlert,
     loading: usageLoading
   } = usePackageUsageQuery(clientId);
@@ -40,26 +37,6 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
   const [logOpen, setLogOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
   const [keyEvents, setKeyEvents] = useState<{ stageName: string; eventDate: string | null }[]>([]);
-  // PeriodSelector's own value is a period_number string (or ALL_TIME_VALUE);
-  // resolved to the actual package_renewal_periods.id the usage RPC needs.
-  const [periodSelectorValue, setPeriodSelectorValue] = useState<string>(ALL_TIME_VALUE);
-  const handlePeriodChange = async (id: string) => {
-    setPeriodSelectorValue(id);
-    if (id === ALL_TIME_VALUE || !selectedPackage) {
-      setSelectedPeriodId(null);
-      return;
-    }
-    const { data } = await (supabase as any)
-      .from('package_renewal_periods')
-      .select('id')
-      .eq('package_instance_id', selectedPackage.id)
-      .eq('period_number', parseInt(id, 10))
-      .maybeSingle();
-    setSelectedPeriodId(data?.id ?? null);
-  };
-  useEffect(() => {
-    setPeriodSelectorValue(ALL_TIME_VALUE);
-  }, [selectedPackage?.id]);
 
   // Fetch key event dates (event_conducted_date) for recurring stages
   useEffect(() => {
@@ -305,10 +282,9 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
           <CardContent>
             {usage ? (
               <div className="space-y-4">
-                {/* Source filter toggle + period selector, same row */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  <ToggleGroup type="single" value={sourceFilter} onValueChange={(v) => v && setSourceFilter(v as typeof sourceFilter)} className="justify-start">
-                    <ToggleGroupItem value="all" size="sm" className="text-xs h-7 px-2">All</ToggleGroupItem>
+                {/* Source filter toggle */}
+                <ToggleGroup type="single" value={sourceFilter} onValueChange={(v) => v && setSourceFilter(v as typeof sourceFilter)} className="justify-start">
+                  <ToggleGroupItem value="all" size="sm" className="text-xs h-7 px-2">All</ToggleGroupItem>
                   <ToggleGroupItem value="calendar" size="sm" className="text-xs h-7 px-2 gap-1">
                     <Calendar className="h-3 w-3" />
                     Calendar
@@ -321,18 +297,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                     <PenLine className="h-3 w-3" />
                     Manual
                   </ToggleGroupItem>
-                  </ToggleGroup>
-                  {selectedPackage && (
-                    <PeriodSelector
-                      packageInstanceId={selectedPackage.id}
-                      value={periodSelectorValue}
-                      onChange={handlePeriodChange}
-                      compact
-                      hideAllTimeOption
-                      triggerClassName="h-7 w-[132px] text-xs px-2.5 gap-1 rounded-md border-primary text-primary bg-background hover:bg-primary/10 ml-auto"
-                    />
-                  )}
-                </div>
+                </ToggleGroup>
 
                 {/* Progress bar */}
                 {(() => {
