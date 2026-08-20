@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 export interface PeriodOption {
   id: string;
@@ -14,7 +15,10 @@ interface PeriodSelectorProps {
   packageInstanceId: number;
   value: string;
   onChange: (value: string, range: { dateFrom: Date | undefined; dateTo: Date | undefined }) => void;
+  triggerClassName?: string;
 }
+
+const DEFAULT_TRIGGER_CLASSNAME = 'h-8 text-xs min-w-[220px] rounded-full border-primary text-primary bg-background hover:bg-primary/10';
 
 export const ALL_TIME_VALUE = 'all-time';
 
@@ -23,7 +27,7 @@ export const ALL_TIME_VALUE = 'all-time';
  *  package selection. Answers "which period am I looking at" explicitly,
  *  replacing the old vague derived-date-range "Current period / Show all"
  *  toggle. */
-export function PeriodSelector({ packageInstanceId, value, onChange }: PeriodSelectorProps) {
+export function PeriodSelector({ packageInstanceId, value, onChange, triggerClassName }: PeriodSelectorProps) {
   const { data: periods = [], isLoading } = useQuery({
     queryKey: ['package-renewal-periods', packageInstanceId],
     queryFn: async () => {
@@ -59,7 +63,7 @@ export function PeriodSelector({ packageInstanceId, value, onChange }: PeriodSel
 
   return (
     <Select value={value} onValueChange={handleChange}>
-      <SelectTrigger className="h-8 text-xs min-w-[220px] rounded-full border-primary text-primary bg-background hover:bg-primary/10">
+      <SelectTrigger className={cn(triggerClassName ?? DEFAULT_TRIGGER_CLASSNAME)}>
         <SelectValue placeholder="Select period" />
       </SelectTrigger>
       <SelectContent>

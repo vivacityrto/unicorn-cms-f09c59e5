@@ -306,7 +306,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
             {usage ? (
               <div className="space-y-4">
                 {/* Source filter toggle + period selector, same row */}
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
                   <ToggleGroup type="single" value={sourceFilter} onValueChange={(v) => v && setSourceFilter(v as typeof sourceFilter)} className="justify-start">
                     <ToggleGroupItem value="all" size="sm" className="text-xs h-7 px-2">All</ToggleGroupItem>
                   <ToggleGroupItem value="calendar" size="sm" className="text-xs h-7 px-2 gap-1">
@@ -323,11 +323,12 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                   </ToggleGroupItem>
                   </ToggleGroup>
                   {selectedPackage && (
-                    <div className="shrink-0 w-[168px]">
+                    <div className="shrink-0 w-[140px]">
                       <PeriodSelector
                         packageInstanceId={selectedPackage.id}
                         value={periodSelectorValue}
                         onChange={handlePeriodChange}
+                        triggerClassName="h-7 text-xs px-2.5 gap-1 rounded-full border-primary text-primary bg-background hover:bg-primary/10"
                       />
                     </div>
                   )}
