@@ -17,6 +17,7 @@ import { ReRegistrationBadge } from '@/components/shared/ReRegistrationBadge';
 import { useQuery } from '@tanstack/react-query';
 import { getReRegistrationDueDate, formatDaysRemaining } from '@/lib/reRegistrationDate';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { PeriodSelector, ALL_TIME_VALUE } from './PeriodSelector';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
@@ -24,19 +25,41 @@ interface ClientTimeSummaryCardProps {
 
 export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) {
   const { summary, loading: timeLoading } = useTimeTrackingQuery(clientId);
-  const { 
+  const {
     packages,
-    usage, 
-    alerts, 
+    usage,
+    alerts,
     selectedPackage,
     setSelectedPackageId,
-    dismissAlert, 
-    loading: usageLoading 
+    selectedPeriodId,
+    setSelectedPeriodId,
+    dismissAlert,
+    loading: usageLoading
   } = usePackageUsageQuery(clientId);
   const { data: membershipUsage } = useMembershipUsage(clientId);
   const [logOpen, setLogOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
   const [keyEvents, setKeyEvents] = useState<{ stageName: string; eventDate: string | null }[]>([]);
+  // PeriodSelector's own value is a period_number string (or ALL_TIME_VALUE);
+  // resolved to the actual package_renewal_periods.id the usage RPC needs.
+  const [periodSelectorValue, setPeriodSelectorValue] = useState<string>(ALL_TIME_VALUE);
+  const handlePeriodChange = async (id: string) => {
+    setPeriodSelectorValue(id);
+    if (id === ALL_TIME_VALUE || !selectedPackage) {
+      setSelectedPeriodId(null);
+      return;
+    }
+    const { data } = await (supabase as any)
+      .from('package_renewal_periods')
+      .select('id')
+      .eq('package_instance_id', selectedPackage.id)
+      .eq('period_number', parseInt(id, 10))
+      .maybeSingle();
+    setSelectedPeriodId(data?.id ?? null);
+  };
+  useEffect(() => {
+    setPeriodSelectorValue(ALL_TIME_VALUE);
+  }, [selectedPackage?.id]);
 
   // Fetch key event dates (event_conducted_date) for recurring stages
   useEffect(() => {
@@ -248,16 +271,16 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
         <Card>
           <CardHeader className="pb-2">
               <div className="flex items-center gap-2 w-full">
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="text-base flex items-center gap-2 shrink-0 whitespace-nowrap">
                   <TrendingDown className="h-4 w-4" />
                   Package Burn-down
                 </CardTitle>
                 {selectedPackage && packages.length > 1 ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button type="button" className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-normal cursor-pointer hover:bg-muted transition-colors">
-                        {selectedPackage.package_name}
-                        <ChevronDown className="h-3 w-3" />
+                      <button type="button" className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-normal cursor-pointer hover:bg-muted transition-colors max-w-[130px]">
+                        <span className="truncate">{selectedPackage.package_name}</span>
+                        <ChevronDown className="h-3 w-3 shrink-0" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -273,10 +296,19 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : selectedPackage ? (
-                  <Badge variant="outline" className="ml-auto text-xs font-normal">
+                  <Badge variant="outline" className="ml-auto text-xs font-normal max-w-[130px] truncate">
                     {selectedPackage.package_name}
                   </Badge>
                 ) : null}
+                {selectedPackage && (
+                  <div className="shrink-0 w-[168px]">
+                    <PeriodSelector
+                      packageInstanceId={selectedPackage.id}
+                      value={periodSelectorValue}
+                      onChange={handlePeriodChange}
+                    />
+                  </div>
+                )}
               </div>
           </CardHeader>
           <CardContent>

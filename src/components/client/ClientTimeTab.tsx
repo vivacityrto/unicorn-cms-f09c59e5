@@ -303,7 +303,9 @@ function CheckboxMultiFilter({
 }
 
 // ── Combined Burndown + Monthly Summary per package ─────────────────
-function PackageBurndownCards({ tenantId }: { tenantId: number }) {
+interface SelectedPeriodRow { id: string; period_start: string; period_end: string; included_minutes: number; carried_in_minutes: number }
+
+function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPeriodRow }: { tenantId: number; singleSelectedPackageId?: number | null; selectedPeriodRow?: SelectedPeriodRow | null }) {
   const { data: combined, isLoading } = useQuery({
     queryKey: ['package-burndown-combined', tenantId],
     queryFn: async () => {
@@ -381,6 +383,15 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
       (burndownData || []).forEach((r: any) => { if (r.package_instance_id) burndownMap[r.package_instance_id] = r; });
 
       const { fullTextMap, lifecycleMap } = await resolvePackageNames(instanceIds);
+
+      // Current (open) period's carry-in, for the segmented usage bar.
+      const { data: openPeriods } = await (supabase as any)
+        .from('package_renewal_periods')
+        .select('package_instance_id, carried_in_minutes')
+        .in('package_instance_id', instanceIds)
+        .is('closed_at', null);
+      const carriedInMap: Record<number, number> = {};
+      (openPeriods || []).forEach((p: any) => { carriedInMap[p.package_instance_id] = p.carried_in_minutes || 0; });
 
       // 3. Fetch per-month breakdown from time_entries + allocations.
       // Burndown gauge (v_package_burndown) is allocation-aware; attribute
@@ -467,6 +478,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
           monthly: monthlyMap[instId] || [],
           totals: instanceTotals[instId] || { billable: 0, nonBillable: 0, total: 0, lastEntry: null },
           addons: childrenByParent[instId] || [],
+          carriedInMinutes: carriedInMap[instId] || 0,
         };
       });
     },
@@ -494,7 +506,11 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   return (
     <div className="space-y-3">
       {combined.map(row => (
-        <BurndownCard key={row.package_instance_id} row={row} />
+        <BurndownCard
+          key={row.package_instance_id}
+          row={row}
+          selectedPeriodOverride={row.package_instance_id === singleSelectedPackageId ? (selectedPeriodRow ?? null) : null}
+        />
       ))}
     </div>
   );
@@ -680,29 +696,36 @@ function RenewalHistorySection({ instanceId }: { instanceId: number | null }) {
   );
 }
 
-function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; renewalWindow: { start: string; end: string } | null; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null }; addons: { name: string; hours: number }[] } }) {
+function BurndownCard({ row, selectedPeriodOverride }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; renewalWindow: { start: string; end: string } | null; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null }; addons: { name: string; hours: number }[]; carriedInMinutes?: number }; selectedPeriodOverride?: { period_start: string; period_end: string; included_minutes: number; carried_in_minutes: number } | null }) {
   const [monthLimit, setMonthLimit] = useState(3);
   const [showAll, setShowAll] = useState(false);
-  const pct = row.percent_used;
-  const isOver = pct > 100;
   const sorted = [...row.monthly].sort((a, b) => b.month.localeCompare(a.month));
 
+  // A specific historical/current period was explicitly picked via
+  // PeriodSelector above the table: use its own window/allowance instead of
+  // the always-current-year renewalWindow, and bypass the "Show all" toggle
+  // (an explicit period selection already says which window to show).
+  const effectiveWindow = selectedPeriodOverride
+    ? { start: selectedPeriodOverride.period_start, end: selectedPeriodOverride.period_end }
+    : row.renewalWindow;
+  const effectiveShowAll = selectedPeriodOverride ? false : showAll;
+
   // Filter to current membership period unless "Show All"
-  const hasRenewalWindow = !!row.renewalWindow;
+  const hasRenewalWindow = !!effectiveWindow;
   const periodFiltered = useMemo(() => {
-    if (showAll || !row.renewalWindow) return sorted;
-    const windowStart = row.renewalWindow.start;
-    const windowEnd = row.renewalWindow.end;
+    if (effectiveShowAll || !effectiveWindow) return sorted;
+    const windowStart = effectiveWindow.start;
+    const windowEnd = effectiveWindow.end;
     return sorted.filter(m => {
       // Month key is yyyy-MM, compare as start of month
       const monthStart = m.month + '-01T00:00:00.000Z';
       return monthStart >= windowStart.slice(0, 10) && monthStart <= windowEnd.slice(0, 10);
     });
-  }, [sorted, showAll, row.renewalWindow]);
+  }, [sorted, effectiveShowAll, effectiveWindow]);
 
   // Recalculate totals for the visible period
   const displayTotals = useMemo(() => {
-    if (showAll || !row.renewalWindow) return row.totals;
+    if (effectiveShowAll || !effectiveWindow) return row.totals;
     return periodFiltered.reduce(
       (acc, m) => ({
         billable: acc.billable + m.billable,
@@ -712,7 +735,18 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
       }),
       { billable: 0, nonBillable: 0, total: 0, lastEntry: row.totals.lastEntry }
     );
-  }, [periodFiltered, showAll, row.renewalWindow, row.totals]);
+  }, [periodFiltered, effectiveShowAll, effectiveWindow, row.totals]);
+
+  // Gauge numbers: a selected period overrides the always-current-year
+  // used/included minutes with that period's own totals (recomputed from
+  // the same allocation-aware monthly data used above) and allowance.
+  const gaugeUsedMinutes = selectedPeriodOverride ? displayTotals.total : row.used_minutes;
+  const gaugeIncludedMinutes = selectedPeriodOverride
+    ? selectedPeriodOverride.included_minutes + selectedPeriodOverride.carried_in_minutes
+    : row.included_minutes;
+  const gaugeRemainingMinutes = gaugeIncludedMinutes - gaugeUsedMinutes;
+  const pct = gaugeIncludedMinutes > 0 ? Math.round((gaugeUsedMinutes / gaugeIncludedMinutes) * 100) : 0;
+  const isOver = pct > 100;
 
   const visible = periodFiltered.slice(0, monthLimit);
   const hasMore = periodFiltered.length > monthLimit;
@@ -730,14 +764,14 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
           {/* Left: Burndown gauge */}
           <div className="space-y-1.5 w-1/2 shrink-0">
             <div className="flex items-baseline justify-between">
-              <span className="text-xl font-bold">{formatDuration(row.used_minutes)}</span>
-              <span className="text-xs text-muted-foreground">/ {formatDuration(row.included_minutes)}</span>
+              <span className="text-xl font-bold">{formatDuration(gaugeUsedMinutes)}</span>
+              <span className="text-xs text-muted-foreground">/ {formatDuration(gaugeIncludedMinutes)}</span>
             </div>
             <Progress value={Math.min(pct, 100)} className={cn('h-1.5', isOver && '[&>div]:bg-destructive')} />
             <div className="flex justify-between text-[11px] text-muted-foreground">
               <span>{Math.round(pct)}% used</span>
               <span className={cn(isOver ? 'text-destructive font-medium' : 'text-primary')}>
-                {isOver ? `${formatDuration(Math.abs(row.remaining_minutes))} over` : `${formatDuration(row.remaining_minutes)} remaining`}
+                {isOver ? `${formatDuration(Math.abs(gaugeRemainingMinutes))} over` : `${formatDuration(gaugeRemainingMinutes)} remaining`}
               </span>
             </div>
             {row.totals.lastEntry && (
@@ -751,7 +785,7 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
               <div className="flex justify-between text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
                 <div className="flex items-center gap-1.5">
                   <span>Monthly</span>
-                  {hasRenewalWindow && (
+                  {hasRenewalWindow && !selectedPeriodOverride && (
                     <button
                       onClick={() => setShowAll(prev => !prev)}
                       className="text-[10px] text-primary hover:underline normal-case tracking-normal font-normal"
@@ -1273,6 +1307,26 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   // cleanly applies to - periods belong to one package instance each.
   const singleSelectedPackageId = packageFilterIds.length === 1 ? packageFilterIds[0] : null;
 
+  // Full period row (id/window/allowance/carry-in) for whatever period is
+  // selected above, feeding the burndown gauge for that one card - separate
+  // from PeriodSelector's own dateFrom/dateTo output, which only feeds the
+  // Time Entries table filter below.
+  const { data: selectedPeriodRow } = useQuery({
+    queryKey: ['selected-renewal-period-row', singleSelectedPackageId, selectedPeriodId],
+    queryFn: async () => {
+      if (!singleSelectedPackageId || selectedPeriodId === ALL_TIME_VALUE) return null;
+      const { data, error } = await (supabase as any)
+        .from('package_renewal_periods')
+        .select('id, period_start, period_end, included_minutes, carried_in_minutes')
+        .eq('package_instance_id', singleSelectedPackageId)
+        .eq('period_number', parseInt(selectedPeriodId, 10))
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; period_start: string; period_end: string; included_minutes: number; carried_in_minutes: number } | null;
+    },
+    enabled: !!singleSelectedPackageId && selectedPeriodId !== ALL_TIME_VALUE,
+  });
+
   const timeEntriesFilters = useMemo(() => ({
     tenantId,
     packageInstanceIds: packageFilterIds.length > 0 ? packageFilterIds : undefined,
@@ -1564,7 +1618,11 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Package Burndown
           </h3>
-          <PackageBurndownCards tenantId={tenantId} />
+          <PackageBurndownCards
+            tenantId={tenantId}
+            singleSelectedPackageId={singleSelectedPackageId}
+            selectedPeriodRow={selectedPeriodRow ?? null}
+          />
           <ClosedPackageSummaries tenantId={tenantId} />
         </div>
         <MembershipWeightsPanel tenantId={tenantId} />

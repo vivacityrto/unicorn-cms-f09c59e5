@@ -21,6 +21,7 @@ export interface PackageUsage {
   calendar_minutes_30d: number;
   billable_minutes_total: number;
   non_billable_minutes_total: number;
+  carried_in_minutes: number;
 }
 
 export interface ClientAlert {
@@ -54,7 +55,7 @@ export interface ClientPackageInfo {
 export const packageUsageKeys = {
   all: ['package-usage'] as const,
   packages: (clientId: number) => [...packageUsageKeys.all, 'packages', clientId] as const,
-  usage: (clientId: number, packageId: number) => [...packageUsageKeys.all, 'usage', clientId, packageId] as const,
+  usage: (clientId: number, packageId: number, periodId?: string | null) => [...packageUsageKeys.all, 'usage', clientId, packageId, periodId ?? 'current'] as const,
   alerts: (clientId: number) => [...packageUsageKeys.all, 'alerts', clientId] as const,
 };
 
@@ -105,15 +106,16 @@ export function useClientPackagesQuery(clientId: number | null) {
   });
 }
 
-export function usePackageUsageDataQuery(clientId: number | null, packageId: number | null) {
+export function usePackageUsageDataQuery(clientId: number | null, packageId: number | null, periodId?: string | null) {
   return useQuery({
-    queryKey: clientId && packageId ? packageUsageKeys.usage(clientId, packageId) : ['package-usage', 'usage', 'none'],
+    queryKey: clientId && packageId ? packageUsageKeys.usage(clientId, packageId, periodId) : ['package-usage', 'usage', 'none'],
     queryFn: async (): Promise<PackageUsage | null> => {
       if (!clientId || !packageId) return null;
 
       const { data, error } = await supabase.rpc('rpc_get_package_usage', {
         p_client_id: clientId,
-        p_client_package_id: packageId
+        p_client_package_id: packageId,
+        p_renewal_period_id: periodId ?? null
       });
 
       if (error) throw error;
@@ -189,13 +191,21 @@ export function usePackageUsageQuery(clientId: number | null) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
-  
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
+
   const { data: packages = [], isLoading: packagesLoading } = useClientPackagesQuery(clientId);
-  
+
   // Auto-select first package if none selected
   const effectivePackageId = selectedPackageId || (packages.length > 0 ? packages[0].id : null);
-  
-  const { data: usage = null, isLoading: usageLoading } = usePackageUsageDataQuery(clientId, effectivePackageId);
+
+  // A period selected for a different package doesn't make sense - clear it
+  // whenever the effective package changes.
+  const handleSetSelectedPackageId = useCallback((packageId: number | null) => {
+    setSelectedPackageId(packageId);
+    setSelectedPeriodId(null);
+  }, []);
+
+  const { data: usage = null, isLoading: usageLoading } = usePackageUsageDataQuery(clientId, effectivePackageId, selectedPeriodId);
   const { data: alerts = [], isLoading: alertsLoading } = useClientAlertsQuery(clientId);
 
   const loading = packagesLoading || usageLoading || alertsLoading;
@@ -253,7 +263,18 @@ export function usePackageUsageQuery(clientId: number | null) {
     if (clientId) {
       queryClient.invalidateQueries({ queryKey: packageUsageKeys.packages(clientId) });
       if (effectivePackageId) {
-        queryClient.invalidateQueries({ queryKey: packageUsageKeys.usage(clientId, effectivePackageId) });
+        // Invalidate every period variant for this package, not just the
+        // currently-selected one's exact key.
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey;
+            return Array.isArray(key) &&
+                   key[0] === 'package-usage' &&
+                   key[1] === 'usage' &&
+                   key[2] === clientId &&
+                   key[3] === effectivePackageId;
+          }
+        });
       }
       queryClient.invalidateQueries({ queryKey: packageUsageKeys.alerts(clientId) });
     }
@@ -262,7 +283,9 @@ export function usePackageUsageQuery(clientId: number | null) {
   return {
     packages,
     selectedPackageId: effectivePackageId,
-    setSelectedPackageId,
+    setSelectedPackageId: handleSetSelectedPackageId,
+    selectedPeriodId,
+    setSelectedPeriodId,
     selectedPackage,
     usage,
     alerts,
