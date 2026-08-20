@@ -21,11 +21,17 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   ArrowLeft,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock,
+  History,
   Loader2,
   RefreshCcw,
   SkipForward,
@@ -112,6 +118,38 @@ function formatDuration(startIso: string | null, endIso: string | null): string 
   const hrs = Math.floor(mins / 60);
   const rm = mins % 60;
   return `${hrs}h ${rm}m`;
+}
+
+// "Duration" above is raw wall-clock since started_at — for a job that has
+// stalled and been retried more than once, that number conflates real
+// processing time with idle/stalled gaps (e.g. a job open 39h47m might have
+// had only a few hours of actual worker activity). "Last activity" answers
+// the question that number can't: how stale is this job's chain right now.
+function formatAgo(iso: string | null): string {
+  if (!iso) return "—";
+  const ms = Math.max(0, Date.now() - new Date(iso).getTime());
+  const secs = Math.round(ms / 1000);
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 48) return `${hrs}h ${mins % 60}m ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+type StallHistoryEntry = { reason: string; at: string; source: "worker" | "watchdog" | string };
+
+// error_summary.stall_history is additive (see stall_bulk_document_job and
+// reclaim_stale_bulk_document_locks) — every stall event appended, never
+// cleared, unlike stalled_reason/stalled_at which are overwritten on each
+// stall and only ever reflect the MOST RECENT event.
+function getStallHistory(errorSummary: Record<string, unknown> | null): StallHistoryEntry[] {
+  const raw = errorSummary?.stall_history;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (e): e is StallHistoryEntry =>
+      !!e && typeof e === "object" && typeof (e as StallHistoryEntry).reason === "string",
+  );
 }
 
 export default function BulkDocumentJobProgress() {
@@ -239,6 +277,20 @@ export default function BulkDocumentJobProgress() {
       return na.localeCompare(nb);
     });
   }, [items, tenantNames]);
+
+  // Most recent item-level activity across the whole job — distinct from
+  // job.started_at/"Duration" (raw wall-clock since creation, which conflates
+  // real processing time with any idle/stalled gaps). Falls back to
+  // started_at for a job with no item activity yet.
+  const lastActivityAt = useMemo(() => {
+    let latest: string | null = null;
+    for (const it of items) {
+      for (const ts of [it.finished_at, it.leased_at, it.started_at]) {
+        if (ts && (!latest || ts > latest)) latest = ts;
+      }
+    }
+    return latest ?? job?.started_at ?? null;
+  }, [items, job?.started_at]);
 
   // Currently-generating banner data (client-side; no new query).
   // Must be declared before any early returns to keep hook order stable.
@@ -384,6 +436,7 @@ export default function BulkDocumentJobProgress() {
         new Date(i.lease_expires_at).getTime() < nowMs),
   ).length;
   const canRetry = (eligibleRetry > 0 || isStalled) && job.status !== "running";
+  const stallHistory = getStallHistory(job.error_summary);
 
   // Currently-generating banner data (client-side; no new query).
   const activeItem = leasedNow[0];
@@ -428,6 +481,33 @@ export default function BulkDocumentJobProgress() {
                   )}
                 </span>
               ) : null}
+              {stallHistory.length > 1 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground border rounded-full px-2 py-0.5"
+                    >
+                      <History className="h-3 w-3" />
+                      Stalled {stallHistory.length}×
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-96" align="start">
+                    <div className="text-xs font-medium mb-2">Stall history</div>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {[...stallHistory].reverse().map((h, idx) => (
+                        <div key={idx} className="text-xs border-l-2 border-muted pl-2">
+                          <div className="text-muted-foreground">
+                            {format(new Date(h.at), "dd MMM yyyy HH:mm:ss")} ·{" "}
+                            {h.source === "watchdog" ? "watchdog" : "worker"}
+                          </div>
+                          <div className="mt-0.5">{stalledReasonLabel(h.reason).replace(/^Stalled — /, "")}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
               {isPolling && (
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               )}
@@ -530,7 +610,7 @@ export default function BulkDocumentJobProgress() {
       )}
 
       {/* Summary strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <SummaryTile label="Total" value={job.total_items} />
         <SummaryTile
           label="Generated"
@@ -558,6 +638,22 @@ export default function BulkDocumentJobProgress() {
           value={formatDuration(job.started_at, job.finished_at)}
           isString
           icon={Clock}
+        />
+        <SummaryTile
+          label="Last Activity"
+          value={formatAgo(lastActivityAt)}
+          isString
+          icon={History}
+          // isRunning but no item activity in 3+ min is exactly what the
+          // resume-stalled backstop cron treats as idle — flag it the same
+          // way here so staff don't have to do the math themselves.
+          tone={
+            isRunning &&
+            lastActivityAt &&
+            Date.now() - new Date(lastActivityAt).getTime() > 3 * 60 * 1000
+              ? "red"
+              : undefined
+          }
         />
       </div>
 

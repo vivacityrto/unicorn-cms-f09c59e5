@@ -793,22 +793,56 @@ Deno.serve(async (req: Request) => {
       // steadily for ~23 minutes then just stopped after a 503 on this exact
       // fetch, with nothing else able to detect or resume it. Mirrors
       // kickoffWorker's identical pattern in bulk-generate-documents-launcher.
-      const reinvoke = fetch(selfUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-caller-authorization': callerAuth!,
-          'x-worker-secret': Deno.env.get(WORKER_SECRET_ENV) ?? '',
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-        body: JSON.stringify({ job_id: jobId }),
-      })
-        .then(async (resp) => {
-          if (resp.ok) return;
-          const text = await resp.text().catch(() => '');
-          console.error(`[worker] self re-invoke rejected job=${jobId} status=${resp.status}`, text);
-        })
-        .catch((e) => console.error('[worker] self re-invoke failed', e));
+      //
+      // A single rejected re-invoke used to be terminal even after the
+      // waitUntil fix above (it just made the death observable, not
+      // survivable) — confirmed live 2026-08-19: job 85e00e30's chain died
+      // a SECOND time, hours after that fix was deployed, on the exact same
+      // 503 SUPABASE_EDGE_RUNTIME_SERVICE_DEGRADED response, proving this is
+      // a recurring transient condition on this Supabase project rather than
+      // a one-off. Retry a few times with backoff before giving up; if every
+      // attempt fails, stall the job immediately (with an accurate reason)
+      // instead of leaving it looking 'running' for up to 120 minutes until
+      // reclaim_stale_bulk_document_locks notices. The separate
+      // bulk-generate-documents-resume-stalled cron (every 2 min) is a
+      // further backstop for anything that falls through even this — e.g.
+      // this whole waitUntil-tracked continuation never running at all.
+      const REINVOKE_MAX_ATTEMPTS = 4;
+      const REINVOKE_BACKOFF_MS = [1_000, 3_000, 6_000];
+
+      const reinvoke = (async () => {
+        for (let attempt = 1; attempt <= REINVOKE_MAX_ATTEMPTS; attempt++) {
+          try {
+            const resp = await fetch(selfUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-caller-authorization': callerAuth!,
+                'x-worker-secret': Deno.env.get(WORKER_SECRET_ENV) ?? '',
+                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              },
+              body: JSON.stringify({ job_id: jobId }),
+            });
+            if (resp.ok) return;
+            const text = await resp.text().catch(() => '');
+            console.error(
+              `[worker] self re-invoke rejected job=${jobId} attempt=${attempt}/${REINVOKE_MAX_ATTEMPTS} status=${resp.status}`,
+              text,
+            );
+          } catch (e) {
+            console.error(
+              `[worker] self re-invoke failed job=${jobId} attempt=${attempt}/${REINVOKE_MAX_ATTEMPTS}`,
+              e,
+            );
+          }
+          if (attempt < REINVOKE_MAX_ATTEMPTS) {
+            await new Promise((r) => setTimeout(r, REINVOKE_BACKOFF_MS[attempt - 1]));
+          }
+        }
+        await stallAndRelease(
+          `self_reinvoke_exhausted: self re-invoke failed ${REINVOKE_MAX_ATTEMPTS} times in a row`,
+        );
+      })();
 
       const runtime = (globalThis as unknown as {
         EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void };
