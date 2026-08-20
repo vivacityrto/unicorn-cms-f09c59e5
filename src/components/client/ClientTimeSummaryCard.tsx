@@ -327,7 +327,8 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                       packageInstanceId={selectedPackage.id}
                       value={periodSelectorValue}
                       onChange={handlePeriodChange}
-                      triggerClassName="h-7 w-auto text-xs px-2.5 gap-1 rounded-full border-primary text-primary bg-background hover:bg-primary/10 ml-auto"
+                      compact
+                      triggerClassName="h-7 w-[132px] text-xs px-2.5 gap-1 rounded-full border-primary text-primary bg-background hover:bg-primary/10 ml-auto"
                     />
                   )}
                 </div>

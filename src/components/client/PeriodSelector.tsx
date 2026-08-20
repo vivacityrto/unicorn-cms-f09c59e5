@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 export interface PeriodOption {
   id: string;
   label: string;
+  shortLabel: string;
   dateFrom: Date;
   dateTo: Date | undefined;
 }
@@ -16,6 +17,13 @@ interface PeriodSelectorProps {
   value: string;
   onChange: (value: string, range: { dateFrom: Date | undefined; dateTo: Date | undefined }) => void;
   triggerClassName?: string;
+  /** Show a short "Period 1" / "Current period 2" / "All time" label in the
+   *  closed trigger instead of the full date range, so the trigger's width
+   *  stays constant regardless of which period is selected - the full range
+   *  is still shown in each dropdown option. Use where the trigger sits
+   *  tightly among other same-height controls (e.g. a toggle group) and
+   *  can't be allowed to grow/wrap when a period is picked. */
+  compact?: boolean;
 }
 
 const DEFAULT_TRIGGER_CLASSNAME = 'h-8 text-xs min-w-[220px] rounded-full border-primary text-primary bg-background hover:bg-primary/10';
@@ -27,7 +35,7 @@ export const ALL_TIME_VALUE = 'all-time';
  *  package selection. Answers "which period am I looking at" explicitly,
  *  replacing the old vague derived-date-range "Current period / Show all"
  *  toggle. */
-export function PeriodSelector({ packageInstanceId, value, onChange, triggerClassName }: PeriodSelectorProps) {
+export function PeriodSelector({ packageInstanceId, value, onChange, triggerClassName, compact }: PeriodSelectorProps) {
   const { data: periods = [], isLoading } = useQuery({
     queryKey: ['package-renewal-periods', packageInstanceId],
     queryFn: async () => {
@@ -51,9 +59,14 @@ export function PeriodSelector({ packageInstanceId, value, onChange, triggerClas
   const options: PeriodOption[] = periods.map(p => ({
     id: String(p.period_number),
     label: `${p.closed_at ? 'Period' : 'Current period'} ${p.period_number}: ${format(new Date(p.period_start), 'd MMM yyyy')} – ${format(new Date(p.period_end), 'd MMM yyyy')}`,
+    shortLabel: `${p.closed_at ? 'Period' : 'Current period'} ${p.period_number}`,
     dateFrom: new Date(p.period_start),
     dateTo: new Date(p.period_end),
   }));
+
+  const selectedShortLabel = value === ALL_TIME_VALUE
+    ? 'All time'
+    : options.find(o => o.id === value)?.shortLabel ?? 'Select period';
 
   const handleChange = (id: string) => {
     if (id === ALL_TIME_VALUE) {
@@ -67,7 +80,11 @@ export function PeriodSelector({ packageInstanceId, value, onChange, triggerClas
   return (
     <Select value={value} onValueChange={handleChange}>
       <SelectTrigger className={cn(triggerClassName ?? DEFAULT_TRIGGER_CLASSNAME)}>
-        <SelectValue placeholder="Select period" />
+        {compact ? (
+          <span className="truncate">{selectedShortLabel}</span>
+        ) : (
+          <SelectValue placeholder="Select period" />
+        )}
       </SelectTrigger>
       <SelectContent>
         {options.map(o => (
