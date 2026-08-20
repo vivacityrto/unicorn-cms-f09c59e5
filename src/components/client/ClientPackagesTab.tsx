@@ -578,7 +578,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                         <CalendarIcon className="h-4 w-4" />
                         <span>Started {format(new Date(pkg.membership_started_at), 'd MMM yyyy')}</span>
                       </div>
-                      {pkg.start_renewal_date && (
+                      {pkg.start_renewal_date && pkg.last_renewed_date && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <CalendarIcon className="h-4 w-4" />
                           <span>Start Renewal Date {format(parseISO(pkg.start_renewal_date), 'd MMM yyyy')}</span>
