@@ -28,6 +28,7 @@ export interface ClientPackage {
   completed_at?: string | null;
   next_renewal_date?: string | null;
   last_renewed_date?: string | null;
+  start_renewal_date?: string | null;
   parent_instance_id?: number | null;
   parent_package_name?: string | null;
   comments?: string | null;
@@ -626,7 +627,7 @@ export function useClientPackages(tenantId: number | null) {
       // Fetch ALL package instances (active + completed) for history support
       const { data: instances, error } = await supabase
         .from('package_instances')
-        .select('id, tenant_id, package_id, start_date, is_complete, included_minutes, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date, last_renewed_date, parent_instance_id, comments')
+        .select('id, tenant_id, package_id, start_date, is_complete, included_minutes, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date, last_renewed_date, start_renewal_date, parent_instance_id, comments')
         .eq('tenant_id', tenantId)
         .order('start_date', { ascending: false }) as { data: any[] | null; error: any };
 
@@ -716,6 +717,7 @@ export function useClientPackages(tenantId: number | null) {
           completed_at: inst.end_date || null,
           next_renewal_date: inst.next_renewal_date || null,
           last_renewed_date: inst.last_renewed_date || null,
+          start_renewal_date: inst.start_renewal_date || null,
           parent_instance_id: inst.parent_instance_id || null,
           parent_package_name: null, // resolved below
           comments: inst.comments || null
