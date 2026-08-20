@@ -105,7 +105,7 @@ export const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   messages: ['message_sent', 'message_read'],
   academy: ['academy_enrolled', 'academy_lesson_completed', 'academy_certificate_issued', 'academy_course_published'],
   stages: ['stage_status_changed'],
-  packages: ['package_status_changed'],
+  packages: ['package_status_changed', 'package_renewed'],
   portal_activity: ['portal_activity_summary'],
   tenant_status: ['tenant_status_changed'],
   invoices: ['xero_invoice_paid', 'xero_invoice_issued'],

@@ -29,6 +29,8 @@ export interface ClientPackage {
   next_renewal_date?: string | null;
   last_renewed_date?: string | null;
   start_renewal_date?: string | null;
+  /** Hours carried in from the previous renewal period, already folded into hours_included. */
+  carried_in_hours?: number;
   parent_instance_id?: number | null;
   parent_package_name?: string | null;
   comments?: string | null;
@@ -636,14 +638,17 @@ export function useClientPackages(tenantId: number | null) {
       // Get unique package IDs to fetch package details
       const packageIds = [...new Set((instances || []).map(i => i.package_id))];
 
-      // Fetch package details and stage instances in parallel
+      // Fetch package details, stage instances, and current renewal period in parallel
       const instanceIds = (instances || []).map(i => i.id);
-      const [packagesResult, stageInstancesResult] = await Promise.all([
+      const [packagesResult, stageInstancesResult, openPeriodsResult] = await Promise.all([
         packageIds.length > 0
           ? supabase.from('packages').select('id, name, slug, full_text').in('id', packageIds)
           : Promise.resolve({ data: [] }),
         instanceIds.length > 0
           ? supabase.from('stage_instances').select('id, packageinstance_id, stage_id, status, stage_sortorder, completion_date').in('packageinstance_id', instanceIds).order('stage_sortorder')
+          : Promise.resolve({ data: [] }),
+        instanceIds.length > 0
+          ? (supabase as any).from('package_renewal_periods').select('package_instance_id, carried_in_minutes').in('package_instance_id', instanceIds).is('closed_at', null)
           : Promise.resolve({ data: [] })
       ]);
 
@@ -653,6 +658,11 @@ export function useClientPackages(tenantId: number | null) {
       }, {} as Record<number, any>);
 
       const stageInstances = (stageInstancesResult as any).data || [];
+
+      const carriedInMinutesMap: Record<number, number> = {};
+      ((openPeriodsResult as any).data || []).forEach((p: any) => {
+        carriedInMinutesMap[p.package_instance_id] = p.carried_in_minutes || 0;
+      });
 
       // Fetch stage names from stages for current stage display
       const stageIdSet = new Set<number>();
@@ -692,9 +702,10 @@ export function useClientPackages(tenantId: number | null) {
           !isDoneStatus(s.status) && s.status !== 'na' && s.status !== 'not_started'
         ) || pkgStages.find((s: any) => s.status === 'not_started');
 
-        // Total hours = included_minutes (canonical) fallback to hours_included (deprecated) + added
+        // Total hours = included_minutes (canonical) fallback to hours_included (deprecated) + added + carried in from the last renewal
         const baseMinutes = inst.included_minutes ?? (inst.hours_included ? inst.hours_included * 60 : 0);
-        const totalHours = (baseMinutes / 60) + (inst.hours_added || 0);
+        const carriedInMinutes = carriedInMinutesMap[inst.id] || 0;
+        const totalHours = (baseMinutes / 60) + (inst.hours_added || 0) + (carriedInMinutes / 60);
 
         return {
           id: inst.id,
@@ -704,6 +715,7 @@ export function useClientPackages(tenantId: number | null) {
           package_full_text: pkg?.full_text || null,
           membership_state: inst.membership_state || (inst.is_complete ? 'exiting' : 'active'),
           hours_included: totalHours,
+          carried_in_hours: carriedInMinutes / 60,
           hours_used: inst.hours_used || 0,
           current_stage_name: activeStage ? stageMetaMap[activeStage.stage_id]?.name || null : null,
           completed_stages: completedStages,

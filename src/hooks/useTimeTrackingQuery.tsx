@@ -79,7 +79,8 @@ export function useTimeSummaryQuery(clientId: number | null, packageId?: number 
       let query = supabase
         .from('time_entries')
         .select('duration_minutes, is_billable, start_at')
-        .eq('client_id', clientId);
+        .eq('client_id', clientId)
+        .neq('work_type', 'carry_over');
       
       // Filter by package if specified
       if (packageId) {

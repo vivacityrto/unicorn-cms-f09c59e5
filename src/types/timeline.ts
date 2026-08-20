@@ -67,6 +67,8 @@ export const TIMELINE_EVENT_TYPES = [
   'stage_status_changed',
   // Package membership state changes (internal-only)
   'package_status_changed',
+  // Package renewal (carry-over/forfeit outcome, internal-only)
+  'package_renewed',
   // Client portal page-view digest (internal-only)
   'portal_activity_summary',
   // Tenant lifecycle status (internal-only)
