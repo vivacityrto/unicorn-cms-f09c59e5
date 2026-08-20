@@ -70,7 +70,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
             .maybeSingle(),
           (supabase as any)
             .from('package_instances')
-            .select('included_minutes')
+            .select('included_minutes, start_renewal_date')
             .eq('id', instanceId)
             .single(),
           (supabase as any)
@@ -111,13 +111,56 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
 
     try {
       const instanceId = parseInt(pkg.id, 10);
+      const carryMinutes = carryOverChoice === 'carry' ? cappedCarryOver : 0;
 
-      // 1. Update next_renewal_date
+      // 1. Update next_renewal_date / start_renewal_date
+      // start_renewal_date is set explicitly to the renewal date just actioned
+      // (currentRenewal), never derived by adding an interval to its own
+      // previous value - avoids the compounding date drift that previously
+      // corrupted a renewal window after a double-renewal-click (see
+      // docs/audit-log/entries/2026-07-06-farsta-package-burndown-renewal-date.md).
       const { error: renewError } = await (supabase as any)
         .from('package_instances')
-        .update({ next_renewal_date: format(newRenewalDate, 'yyyy-MM-dd'), last_renewed_date: format(new Date(), 'yyyy-MM-dd') })
+        .update({
+          next_renewal_date: format(newRenewalDate, 'yyyy-MM-dd'),
+          last_renewed_date: format(new Date(), 'yyyy-MM-dd'),
+          start_renewal_date: format(currentRenewal, 'yyyy-MM-dd'),
+        })
         .eq('id', instanceId);
       if (renewError) throw renewError;
+
+      // 1b. Close the current renewal period (if one exists yet - packages
+      // renewed for the first time since this table was added won't have one)
+      // and open the next. carried_in_minutes is what actually makes "Carry
+      // Over" credit the new period's allowance (previously it only inserted
+      // a time entry that every usage calculation deliberately excludes).
+      const { data: openPeriod } = await (supabase as any)
+        .from('package_renewal_periods')
+        .select('id, period_number')
+        .eq('package_instance_id', instanceId)
+        .is('closed_at', null)
+        .maybeSingle();
+
+      if (openPeriod) {
+        const { error: closeError } = await (supabase as any)
+          .from('package_renewal_periods')
+          .update({ closed_at: new Date().toISOString(), hours_used_at_close: pkg.hours_used ?? null })
+          .eq('id', openPeriod.id);
+        if (closeError) throw closeError;
+      }
+
+      const { error: periodError } = await (supabase as any)
+        .from('package_renewal_periods')
+        .insert({
+          tenant_id: tenantId,
+          package_instance_id: instanceId,
+          period_number: (openPeriod?.period_number ?? 0) + 1,
+          period_start: format(currentRenewal, 'yyyy-MM-dd'),
+          period_end: format(newRenewalDate, 'yyyy-MM-dd'),
+          included_minutes: includedMinutes,
+          carried_in_minutes: carryMinutes,
+        });
+      if (periodError) throw periodError;
 
       // 2. Optionally insert carry-over negative time entry
       if (carryOverChoice === 'carry' && cappedCarryOver > 0) {
