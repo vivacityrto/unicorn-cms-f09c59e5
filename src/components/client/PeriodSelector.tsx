@@ -24,6 +24,14 @@ interface PeriodSelectorProps {
    *  tightly among other same-height controls (e.g. a toggle group) and
    *  can't be allowed to grow/wrap when a period is picked. */
   compact?: boolean;
+  /** Hide the separate "All time" option and fold its value into whichever
+   *  period is currently open. Use where "all time" isn't actually a
+   *  distinct thing from "current period" for the caller (e.g. a usage
+   *  RPC whose default/no-period-given behaviour already IS the current
+   *  period's own window, not a true unbounded sum) - offering a second,
+   *  identically-behaving option under a different, misleading label is
+   *  worse than not offering it at all. */
+  hideAllTimeOption?: boolean;
 }
 
 const DEFAULT_TRIGGER_CLASSNAME = 'h-8 text-xs min-w-[220px] rounded-full border-primary text-primary bg-background hover:bg-primary/10';
@@ -35,7 +43,7 @@ export const ALL_TIME_VALUE = 'all-time';
  *  package selection. Answers "which period am I looking at" explicitly,
  *  replacing the old vague derived-date-range "Current period / Show all"
  *  toggle. */
-export function PeriodSelector({ packageInstanceId, value, onChange, triggerClassName, compact }: PeriodSelectorProps) {
+export function PeriodSelector({ packageInstanceId, value, onChange, triggerClassName, compact, hideAllTimeOption }: PeriodSelectorProps) {
   const { data: periods = [], isLoading } = useQuery({
     queryKey: ['package-renewal-periods', packageInstanceId],
     queryFn: async () => {
@@ -64,9 +72,17 @@ export function PeriodSelector({ packageInstanceId, value, onChange, triggerClas
     dateTo: new Date(p.period_end),
   }));
 
-  const selectedShortLabel = value === ALL_TIME_VALUE
+  // When "All time" is hidden, fold its value into whichever period is
+  // currently open for both the controlled Select value and the label -
+  // they mean the same thing here, so there's nothing to distinguish.
+  const currentPeriodId = periods.find(p => !p.closed_at)?.period_number;
+  const effectiveValue = hideAllTimeOption && value === ALL_TIME_VALUE && currentPeriodId != null
+    ? String(currentPeriodId)
+    : value;
+
+  const selectedShortLabel = effectiveValue === ALL_TIME_VALUE
     ? 'All time'
-    : options.find(o => o.id === value)?.shortLabel ?? 'Select period';
+    : options.find(o => o.id === effectiveValue)?.shortLabel ?? 'Select period';
 
   const handleChange = (id: string) => {
     if (id === ALL_TIME_VALUE) {
@@ -78,7 +94,7 @@ export function PeriodSelector({ packageInstanceId, value, onChange, triggerClas
   };
 
   return (
-    <Select value={value} onValueChange={handleChange}>
+    <Select value={effectiveValue} onValueChange={handleChange}>
       <SelectTrigger className={cn(triggerClassName ?? DEFAULT_TRIGGER_CLASSNAME)}>
         {compact ? (
           <span className="truncate">{selectedShortLabel}</span>
@@ -92,9 +108,11 @@ export function PeriodSelector({ packageInstanceId, value, onChange, triggerClas
             {o.label}
           </SelectItem>
         ))}
-        <SelectItem value={ALL_TIME_VALUE} className="text-xs">
-          All time
-        </SelectItem>
+        {!hideAllTimeOption && (
+          <SelectItem value={ALL_TIME_VALUE} className="text-xs">
+            All time
+          </SelectItem>
+        )}
       </SelectContent>
     </Select>
   );
