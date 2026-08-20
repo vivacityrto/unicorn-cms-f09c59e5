@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -22,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/app-modal';
 import { ScopeSelectorBadge, SCOPE_SHORT } from './ScopeSelectorBadge';
 import { MembershipWeightsPanel } from './MembershipWeightsPanel';
+import { PackageUsageBar } from './PackageUsageBar';
 import { useTenantMemberships, type ScopeTag } from '@/hooks/useTenantMemberships';
 import {
   Clock,
@@ -747,6 +747,7 @@ function BurndownCard({ row, selectedPeriodOverride }: { row: { package_instance
   const gaugeRemainingMinutes = gaugeIncludedMinutes - gaugeUsedMinutes;
   const pct = gaugeIncludedMinutes > 0 ? Math.round((gaugeUsedMinutes / gaugeIncludedMinutes) * 100) : 0;
   const isOver = pct > 100;
+  const gaugeCarriedInMinutes = selectedPeriodOverride ? selectedPeriodOverride.carried_in_minutes : (row.carriedInMinutes ?? 0);
 
   const visible = periodFiltered.slice(0, monthLimit);
   const hasMore = periodFiltered.length > monthLimit;
@@ -767,9 +768,12 @@ function BurndownCard({ row, selectedPeriodOverride }: { row: { package_instance
               <span className="text-xl font-bold">{formatDuration(gaugeUsedMinutes)}</span>
               <span className="text-xs text-muted-foreground">/ {formatDuration(gaugeIncludedMinutes)}</span>
             </div>
-            <Progress value={Math.min(pct, 100)} className={cn('h-1.5', isOver && '[&>div]:bg-destructive')} />
+            <PackageUsageBar usedMinutes={gaugeUsedMinutes} includedMinutes={gaugeIncludedMinutes} carriedInMinutes={gaugeCarriedInMinutes} isOverBudget={isOver} />
             <div className="flex justify-between text-[11px] text-muted-foreground">
-              <span>{Math.round(pct)}% used</span>
+              <span>
+                {Math.round(pct)}% used
+                {gaugeCarriedInMinutes > 0 && <span className="ml-1 text-muted-foreground/70">(+{formatDuration(gaugeCarriedInMinutes)} carried over)</span>}
+              </span>
               <span className={cn(isOver ? 'text-destructive font-medium' : 'text-primary')}>
                 {isOver ? `${formatDuration(Math.abs(gaugeRemainingMinutes))} over` : `${formatDuration(gaugeRemainingMinutes)} remaining`}
               </span>

@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine, ChevronDown, KeyRound } from 'lucide-react';
 import { useTimeTrackingQuery, formatDuration } from '@/hooks/useTimeTrackingQuery';
 import { usePackageUsageQuery, formatHours, formatForecast } from '@/hooks/usePackageUsageQuery';
@@ -18,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getReRegistrationDueDate, formatDaysRemaining } from '@/lib/reRegistrationDate';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { PeriodSelector, ALL_TIME_VALUE } from './PeriodSelector';
+import { PackageUsageBar } from './PackageUsageBar';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
@@ -359,9 +359,13 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                         </span>
                       </div>
                       {hasIncluded && (
-                        <Progress 
-                          value={Math.min(displayPercent, 100)} 
-                          className={`h-2 ${isOverBudget && sourceFilter === 'all' ? '[&>div]:bg-destructive' : isNearLimit && sourceFilter === 'all' ? '[&>div]:bg-yellow-500' : ''}`}
+                        <PackageUsageBar
+                          usedMinutes={displayMinutes}
+                          includedMinutes={usage.included_minutes}
+                          carriedInMinutes={usage.carried_in_minutes || 0}
+                          isOverBudget={isOverBudget && sourceFilter === 'all'}
+                          isNearLimit={isNearLimit && sourceFilter === 'all'}
+                          className="h-2"
                         />
                       )}
                       {sourceFilter === 'all' && (
