@@ -300,23 +300,15 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                     {selectedPackage.package_name}
                   </Badge>
                 ) : null}
-                {selectedPackage && (
-                  <div className="shrink-0 w-[168px]">
-                    <PeriodSelector
-                      packageInstanceId={selectedPackage.id}
-                      value={periodSelectorValue}
-                      onChange={handlePeriodChange}
-                    />
-                  </div>
-                )}
               </div>
           </CardHeader>
           <CardContent>
             {usage ? (
               <div className="space-y-4">
-                {/* Source filter toggle */}
-                <ToggleGroup type="single" value={sourceFilter} onValueChange={(v) => v && setSourceFilter(v as typeof sourceFilter)} className="justify-start">
-                  <ToggleGroupItem value="all" size="sm" className="text-xs h-7 px-2">All</ToggleGroupItem>
+                {/* Source filter toggle + period selector, same row */}
+                <div className="flex items-center justify-between gap-2">
+                  <ToggleGroup type="single" value={sourceFilter} onValueChange={(v) => v && setSourceFilter(v as typeof sourceFilter)} className="justify-start">
+                    <ToggleGroupItem value="all" size="sm" className="text-xs h-7 px-2">All</ToggleGroupItem>
                   <ToggleGroupItem value="calendar" size="sm" className="text-xs h-7 px-2 gap-1">
                     <Calendar className="h-3 w-3" />
                     Calendar
@@ -329,7 +321,17 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                     <PenLine className="h-3 w-3" />
                     Manual
                   </ToggleGroupItem>
-                </ToggleGroup>
+                  </ToggleGroup>
+                  {selectedPackage && (
+                    <div className="shrink-0 w-[168px]">
+                      <PeriodSelector
+                        packageInstanceId={selectedPackage.id}
+                        value={periodSelectorValue}
+                        onChange={handlePeriodChange}
+                      />
+                    </div>
+                  )}
+                </div>
 
                 {/* Progress bar */}
                 {(() => {
