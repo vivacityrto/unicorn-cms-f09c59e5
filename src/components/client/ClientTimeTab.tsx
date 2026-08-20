@@ -3,7 +3,10 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTimeTracking, formatDuration, TimeEntry } from '@/hooks/useTimeTracking';
+import { formatDuration, TimeEntry } from '@/hooks/useTimeTracking';
+import { useTimeEntriesPaginated, fetchAllMatchingTimeEntries, TIME_ENTRIES_PAGE_SIZE } from '@/hooks/useTimeEntriesPaginated';
+import { PeriodSelector, ALL_TIME_VALUE } from './PeriodSelector';
+import { exportToCSV } from '@/lib/exportCsv';
 import { useAuth } from '@/hooks/useAuth';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { useToast } from '@/hooks/use-toast';
@@ -55,8 +58,6 @@ interface ClientTimeTabProps {
   tenantId: number;
   tenantName: string;
 }
-
-const PAGE_SIZE = 20;
 
 // ── Helper: resolve package names via two-step fetch ────────────────
 async function resolvePackageNames(instanceIds: number[]) {
@@ -156,12 +157,6 @@ function TenantTimeSummaryStrip({ tenantId }: { tenantId: number }) {
       </div>
     </div>
   );
-}
-
-/** Resolve which package instance a time entry is attributed to. */
-function entryInstanceId(entry: { package_instance_id?: number | null; package_id?: number | null }): number | null {
-  const id = entry.package_instance_id ?? entry.package_id;
-  return id != null ? Number(id) : null;
 }
 
 type PackageFilterOption = {
@@ -1261,7 +1256,6 @@ function PaginationBar({
 // ── Main Tab Component ──────────────────────────────────────────────
 export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const navigate = useNavigate();
-  const { entries, loading, refresh: refreshTimeTracking } = useTimeTracking(tenantId);
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1272,38 +1266,24 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const [workTypeFilterIds, setWorkTypeFilterIds] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
-  const [showAllEntries, setShowAllEntries] = useState(false);
-
-  // Fetch renewal window to default entries to current period
-  const { data: renewalWindow } = useQuery({
-    queryKey: ['renewal-window', tenantId],
-    queryFn: async () => {
-      const { data: instances } = await (supabase as any)
-        .from('package_instances')
-        .select('start_date, next_renewal_date')
-        .eq('tenant_id', tenantId)
-        .eq('is_complete', false);
-      if (!instances || instances.length === 0) return null;
-      // Find earliest renewal start across all active instances
-      let earliestStart: Date | null = null;
-      (instances as any[]).forEach((inst: any) => {
-        const renewalEnd = inst.next_renewal_date
-          ? new Date(inst.next_renewal_date)
-          : inst.start_date
-            ? new Date(new Date(inst.start_date).getFullYear() + 1, new Date(inst.start_date).getMonth(), new Date(inst.start_date).getDate())
-            : null;
-        if (renewalEnd) {
-          const renewalStart = new Date(renewalEnd);
-          renewalStart.setFullYear(renewalStart.getFullYear() - 1);
-          if (!earliestStart || renewalStart < earliestStart) earliestStart = renewalStart;
-        }
-      });
-      return earliestStart;
-    },
-    enabled: !!tenantId,
-    staleTime: 60_000,
-  });
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>(ALL_TIME_VALUE);
   const [page, setPage] = useState(1);
+
+  // Single-package selection is the only case a renewal period concept
+  // cleanly applies to - periods belong to one package instance each.
+  const singleSelectedPackageId = packageFilterIds.length === 1 ? packageFilterIds[0] : null;
+
+  const timeEntriesFilters = useMemo(() => ({
+    tenantId,
+    packageInstanceIds: packageFilterIds.length > 0 ? packageFilterIds : undefined,
+    workTypeIds: workTypeFilterIds.length > 0 ? workTypeFilterIds : undefined,
+    dateFrom,
+    dateTo,
+  }), [tenantId, packageFilterIds, workTypeFilterIds, dateFrom, dateTo]);
+
+  const { data: entriesPage, isLoading: loading } = useTimeEntriesPaginated(timeEntriesFilters, page);
+  const pageEntries = entriesPage?.rows ?? [];
+  const totalCount = entriesPage?.count ?? 0;
   const [moveEntry, setMoveEntry] = useState<TimeEntry | null>(null);
   const [splitEntry, setSplitEntry] = useState<TimeEntry | null>(null);
   const [reallocateEntry, setReallocateEntry] = useState<TimeEntry | null>(null);
@@ -1312,7 +1292,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
-  const userIds = useMemo(() => [...new Set(entries.map(e => e.user_id).filter(Boolean))], [entries]);
+  const userIds = useMemo(() => [...new Set(pageEntries.map(e => e.user_id).filter(Boolean))], [pageEntries]);
   const { data: userMap = {} } = useQuery({
     queryKey: ['entry-user-names', userIds],
     queryFn: async () => {
@@ -1397,20 +1377,10 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     },
   });
 
-  const selectedPackageIdSet = useMemo(() => new Set(packageFilterIds), [packageFilterIds]);
-  const selectedPackageBaseIds = useMemo(() => {
-    if (packageFilterIds.length === 0) return null;
-    const bases = new Set<number>();
-    allPackageOptions.forEach(p => {
-      if (selectedPackageIdSet.has(p.instanceId)) bases.add(p.packageId);
-    });
-    return bases;
-  }, [packageFilterIds, allPackageOptions, selectedPackageIdSet]);
-
   // Fetch ALL package instances (including inactive/complete) for display in time entries
   // Uses two-step fetch since there's no FK between package_instances and packages
   const { data: packageInstanceMap = {} } = useQuery({
-    queryKey: ['all-package-instances', tenantId, entries.length],
+    queryKey: ['all-package-instances', tenantId, pageEntries.length],
     queryFn: async () => {
       const { data: instances } = await (supabase as any)
         .from('package_instances')
@@ -1436,7 +1406,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
 
       // Collect any entry package_ids not found in the instance map (legacy base package IDs)
       const unmatchedPkgIds = [...new Set(
-        entries
+        pageEntries
           .map(e => e.package_id)
           .filter((pid): pid is number => pid != null && !map[Number(pid)])
       )];
@@ -1455,11 +1425,11 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
 
       return map;
     },
-    enabled: entries.length > 0,
+    enabled: pageEntries.length > 0,
   });
 
   // Fetch notes linked to time entries
-  const timeEntryIds = useMemo(() => entries.map(e => e.id).filter(Boolean), [entries]);
+  const timeEntryIds = useMemo(() => pageEntries.map(e => e.id).filter(Boolean), [pageEntries]);
   const { data: linkedNoteMap = {} } = useQuery({
     queryKey: ['linked-notes-by-timeentry', tenantId, timeEntryIds.length],
     queryFn: async () => {
@@ -1479,67 +1449,69 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
 
   const hasMultiplePackages = (activePackages?.length ?? 0) > 1;
 
-  const filteredEntries = useMemo(() => {
-    let result = [...entries];
-    if (packageFilterIds.length > 0) {
-      result = result.filter(e => {
-        const instId = entryInstanceId(e);
-        if (instId != null && selectedPackageIdSet.has(instId)) return true;
-        // Legacy rows with no package_instance_id that stored packages.id in package_id
-        if (e.package_instance_id == null && e.package_id != null && selectedPackageBaseIds?.has(Number(e.package_id))) {
-          return true;
-        }
-        return false;
-      });
-    }
-    if (workTypeFilterIds.length > 0) {
-      const workTypeSet = new Set(workTypeFilterIds);
-      result = result.filter(e => workTypeSet.has(e.work_type));
-    }
-    // Apply explicit date filters
-    if (dateFrom) {
-      const fromStart = new Date(dateFrom);
-      fromStart.setHours(0, 0, 0, 0);
-      result = result.filter(e => e.start_at && new Date(e.start_at) >= fromStart);
-    } else if (!showAllEntries && renewalWindow) {
-      // Default to current renewal period
-      result = result.filter(e => e.start_at && new Date(e.start_at) >= renewalWindow);
-    }
-    if (dateTo) {
-      const toEnd = new Date(dateTo);
-      toEnd.setHours(23, 59, 59, 999);
-      result = result.filter(e => e.start_at && new Date(e.start_at) <= toEnd);
-    }
-    return result.sort((a, b) => {
-      const da = a.start_at ? new Date(a.start_at).getTime() : 0;
-      const db = b.start_at ? new Date(b.start_at).getTime() : 0;
-      return db - da;
-    });
-  }, [entries, packageFilterIds, workTypeFilterIds, dateFrom, dateTo, showAllEntries, renewalWindow, selectedPackageIdSet, selectedPackageBaseIds]);
+  // Pagination - driven by the server-side count, not a client-side slice
+  const totalPages = Math.max(1, Math.ceil(totalCount / TIME_ENTRIES_PAGE_SIZE));
 
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
-  const paginatedEntries = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredEntries.slice(start, start + PAGE_SIZE);
-  }, [filteredEntries, page]);
-
-  // Reset page when filters change
-  const handlePackageFilter = (ids: number[]) => { setPackageFilterIds(ids); setPage(1); };
+  // Reset page (and, where relevant, period selection) when filters change
+  const handlePackageFilter = (ids: number[]) => {
+    setPackageFilterIds(ids);
+    setPage(1);
+    // A period only means something for exactly one package - drop any
+    // period-derived date range when the selection changes away from that.
+    if (ids.length !== 1) {
+      setSelectedPeriodId(ALL_TIME_VALUE);
+      setDateFrom(undefined);
+      setDateTo(undefined);
+    }
+  };
   const handleWorkTypeFilter = (ids: string[]) => { setWorkTypeFilterIds(ids); setPage(1); };
-  const handleDateFrom = (d: Date | undefined) => { setDateFrom(d); setPage(1); };
-  const handleDateTo = (d: Date | undefined) => { setDateTo(d); setPage(1); };
+  const handlePeriodChange = (id: string, range: { dateFrom: Date | undefined; dateTo: Date | undefined }) => {
+    setSelectedPeriodId(id);
+    setDateFrom(range.dateFrom);
+    setDateTo(range.dateTo);
+    setPage(1);
+  };
+  // Manually editing the date range no longer corresponds to a specific
+  // period label, so drop back to showing it as a plain custom range.
+  const handleDateFrom = (d: Date | undefined) => { setDateFrom(d); setSelectedPeriodId(ALL_TIME_VALUE); setPage(1); };
+  const handleDateTo = (d: Date | undefined) => { setDateTo(d); setSelectedPeriodId(ALL_TIME_VALUE); setPage(1); };
   const hasDateFilter = !!dateFrom || !!dateTo;
-  const isRenewalFiltered = !showAllEntries && !!renewalWindow && !dateFrom && !dateTo;
-  const clearDateFilter = () => { setDateFrom(undefined); setDateTo(undefined); setShowAllEntries(false); setPage(1); };
+  const clearDateFilter = () => { setDateFrom(undefined); setDateTo(undefined); setSelectedPeriodId(ALL_TIME_VALUE); setPage(1); };
 
   const handleRefresh = useCallback(() => {
-    refreshTimeTracking();
+    queryClient.invalidateQueries({ queryKey: ['time-entries-paginated'] });
     queryClient.invalidateQueries({ queryKey: ['package-burndown', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['package-time-summary', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['stale-drafts', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['membership-combined-usage', tenantId] });
-  }, [refreshTimeTracking, queryClient, tenantId]);
+  }, [queryClient, tenantId]);
+
+  // Shared by the Email and Export CSV buttons: fetch every row currently
+  // matching the filters (not just the visible page) and resolve their user
+  // names, since userMap above only covers the current page's rows.
+  const [isExporting, setIsExporting] = useState(false);
+  const getExportRows = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const { rows, truncated } = await fetchAllMatchingTimeEntries(timeEntriesFilters);
+      const exportUserIds = [...new Set(rows.map(e => e.user_id).filter(Boolean))];
+      let exportUserMap: Record<string, string> = {};
+      if (exportUserIds.length > 0) {
+        const { data } = await (supabase as any)
+          .from('users')
+          .select('user_uuid, first_name, last_name, archived, disabled')
+          .in('user_uuid', exportUserIds);
+        (data || []).forEach((u: any) => {
+          const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown';
+          const suffix = (u.archived || u.disabled) ? ' (Inactive)' : '';
+          exportUserMap[u.user_uuid] = name + suffix;
+        });
+      }
+      return { rows, userMap: exportUserMap, truncated };
+    } finally {
+      setIsExporting(false);
+    }
+  }, [timeEntriesFilters]);
 
   // Listen for time-entry-changed events from other components (e.g. TenantTimeTrackerBar)
   useEffect(() => {
@@ -1608,11 +1580,12 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                 variant="outline"
                 size="sm"
                 className="h-8 gap-1 text-xs"
-                onClick={() => {
-                  // Build padded text table
-                  const rows = filteredEntries.map(e => ({
+                disabled={isExporting}
+                onClick={async () => {
+                  const { rows: entriesRows, userMap: exportUserMap, truncated } = await getExportRows();
+                  const rows = entriesRows.map(e => ({
                     date: e.start_at ? format(new Date(e.start_at), 'd MMM yyyy') : 'N/A',
-                    user: userMap[e.user_id] || 'Unknown',
+                    user: exportUserMap[e.user_id] || 'Unknown',
                     dur: formatDuration(e.duration_minutes),
                     type: e.work_type.replace('_', ' '),
                     billable: e.is_billable ? 'Yes' : 'No',
@@ -1632,15 +1605,41 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                     `| ${r.date.padEnd(w.date)} | ${r.user.padEnd(w.user)} | ${r.dur.padEnd(w.dur)} | ${r.type.padEnd(w.type)} | ${r.billable.padEnd(w.billable)} | ${r.notes.padEnd(w.notes)} |`;
                   const sep = `|${'-'.repeat(w.date + 2)}|${'-'.repeat(w.user + 2)}|${'-'.repeat(w.dur + 2)}|${'-'.repeat(w.type + 2)}|${'-'.repeat(w.billable + 2)}|${'-'.repeat(w.notes + 2)}|`;
                   const table = [fmt(header), sep, ...rows.map(fmt)].join('\n');
-                  const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
-                  const billableMins = filteredEntries.filter(e => e.is_billable).reduce((s, e) => s + e.duration_minutes, 0);
+                  const totalMins = entriesRows.reduce((s, e) => s + e.duration_minutes, 0);
+                  const billableMins = entriesRows.filter(e => e.is_billable).reduce((s, e) => s + e.duration_minutes, 0);
                   const nonBillableMins = totalMins - billableMins;
-                  const body = `Time Entries for ${tenantName}\nTotal: ${formatDuration(totalMins)} | Billable: ${formatDuration(billableMins)} | Non-billable: ${formatDuration(nonBillableMins)}\n\n${table}`;
+                  const truncatedNote = truncated ? `\n(Truncated to the most recent ${entriesRows.length} entries - narrow the filters to see the rest.)` : '';
+                  const body = `Time Entries for ${tenantName}\nTotal: ${formatDuration(totalMins)} | Billable: ${formatDuration(billableMins)} | Non-billable: ${formatDuration(nonBillableMins)}${truncatedNote}\n\n${table}`;
                   const subject = encodeURIComponent(`Time Entries - ${tenantName}`);
                   window.open(`mailto:?subject=${subject}&body=${encodeURIComponent(body)}`, '_self');
                 }}
               >
                 <Mail className="h-3.5 w-3.5" /> Email
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 text-xs"
+                disabled={isExporting}
+                onClick={async () => {
+                  const { rows: entriesRows, userMap: exportUserMap, truncated } = await getExportRows();
+                  if (truncated) {
+                    toast({ title: `Export capped at ${entriesRows.length} rows`, description: 'Narrow the filters to export the rest.' });
+                  }
+                  exportToCSV(
+                    entriesRows.map(e => ({
+                      Date: e.start_at ? format(new Date(e.start_at), 'd MMM yyyy') : '',
+                      User: exportUserMap[e.user_id] || 'Unknown',
+                      DurationMinutes: e.duration_minutes,
+                      Type: e.work_type,
+                      Billable: e.is_billable ? 'Yes' : 'No',
+                      Description: e.notes || '',
+                    })),
+                    `time-entries-${tenantName.replace(/\s+/g, '-').toLowerCase()}`
+                  );
+                }}
+              >
+                <FileText className="h-3.5 w-3.5" /> Export CSV
               </Button>
               <PackageMultiFilter
                 selectedIds={packageFilterIds}
@@ -1659,16 +1658,14 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                 contentWidthClass="w-56"
               />
 
-              {/* Period toggle */}
-              {renewalWindow && (
-                <Button
-                  variant={showAllEntries ? 'outline' : 'secondary'}
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => { setShowAllEntries(prev => !prev); setDateFrom(undefined); setDateTo(undefined); setPage(1); }}
-                >
-                  {showAllEntries ? 'Current period' : 'Show all'}
-                </Button>
+              {/* Period selector - only meaningful once exactly one package is selected,
+                  since renewal periods belong to a single package instance each. */}
+              {singleSelectedPackageId && (
+                <PeriodSelector
+                  packageInstanceId={singleSelectedPackageId}
+                  value={selectedPeriodId}
+                  onChange={handlePeriodChange}
+                />
               )}
 
               {/* Date range filter */}
@@ -1686,9 +1683,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                         ? `From ${format(dateFrom, 'd MMM yyyy')}`
                         : dateTo
                           ? `To ${format(dateTo, 'd MMM yyyy')}`
-                          : isRenewalFiltered
-                            ? `From ${format(renewalWindow!, 'd MMM yyyy')}`
-                            : 'Date range'}
+                          : 'Date range'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-4" align="end">
@@ -1725,7 +1720,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {filteredEntries.length === 0 ? (
+          {pageEntries.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p>No time entries found</p>
@@ -1747,7 +1742,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedEntries.map(entry => (
+                  {pageEntries.map(entry => (
                     <TableRow key={entry.id}>
                       <TableCell className="whitespace-nowrap">
                         {entry.start_at
@@ -1894,7 +1889,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
               <PaginationBar
                 page={page}
                 totalPages={totalPages}
-                totalItems={filteredEntries.length}
+                totalItems={totalCount}
                 onPageChange={setPage}
               />
             </>
