@@ -1,5 +1,19 @@
 # Audit: 2026-08-20 — Phase B: period-aware burn-down widgets
 
+**Post-merge update (same day, PR #392):** the Overview tab's `PeriodSelector`
+described below was reverted after several rounds of layout iteration with
+Carl — badge text clipping, pill alignment/roundness/height mismatches
+against the app's other toolbar controls, and finally the discovery that
+"All time" and "Current period" showed identical numbers on this card
+specifically (since this RPC's no-period default *is* the current window,
+not a true unbounded sum) — not worth the friction for one card. The Time
+tab's `PeriodSelector`/`BurndownCard` period-awareness, the
+`rpc_get_package_usage()` migration, and the `PeriodSelector` colour fix all
+shipped as described below and are unaffected. `rpc_get_package_usage()`'s
+`p_renewal_period_id` param remains in place, unused by any caller for now,
+available for a future Overview-tab UI that wants it without another
+migration.
+
 **Trigger:** planned follow-up (deferred Phase B from
 `2026-08-20-package-renewal-period-windowing.md`), actioned same day at
 Carl's request once Phase 1 and Phase 2 (entry-level tagging) had shipped.
