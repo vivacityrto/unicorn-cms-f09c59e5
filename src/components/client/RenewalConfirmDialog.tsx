@@ -170,6 +170,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
             tenant_id: tenantId,
             client_id: tenantId,
             package_id: instanceId,
+            package_instance_id: instanceId,
             user_id: profile?.user_uuid,
             duration_minutes: -cappedCarryOver,
             work_type: 'carry_over',

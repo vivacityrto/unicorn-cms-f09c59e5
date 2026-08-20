@@ -566,40 +566,47 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                       )}
                     </div>
 
-                    {/* Stats Row: State badge first, then date+hours pushed right */}
-                    <div className="flex items-center gap-6 text-sm">
-                      {pkg.next_renewal_date && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <CalendarIcon className="h-4 w-4" />
+                    {/* Dates row: lifecycle facts, compact and wrap-safe */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                      <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap">
+                        <CalendarIcon className="h-4 w-4 shrink-0" />
+                        <span>Started {format(new Date(pkg.membership_started_at), 'd MMM yyyy')}</span>
+                      </div>
+                      {pkg.start_renewal_date && pkg.last_renewed_date ? (
+                        <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap">
+                          <CalendarIcon className="h-4 w-4 shrink-0" />
+                          <span>
+                            Current period {format(parseISO(pkg.start_renewal_date), 'd MMM yyyy')}
+                            {pkg.next_renewal_date && ` – ${format(parseISO(pkg.next_renewal_date), 'd MMM yyyy')}`}
+                          </span>
+                        </div>
+                      ) : pkg.next_renewal_date && (
+                        <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap">
+                          <CalendarIcon className="h-4 w-4 shrink-0" />
                           <span>Anniversary {format(parseISO(pkg.next_renewal_date), 'd MMM yyyy')}</span>
                         </div>
                       )}
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <CalendarIcon className="h-4 w-4" />
-                        <span>Started {format(new Date(pkg.membership_started_at), 'd MMM yyyy')}</span>
-                      </div>
-                      {pkg.start_renewal_date && pkg.last_renewed_date && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <CalendarIcon className="h-4 w-4" />
-                          <span>Start Renewal Date {format(parseISO(pkg.start_renewal_date), 'd MMM yyyy')}</span>
-                        </div>
-                      )}
                       {pkg.last_renewed_date && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <RefreshCw className="h-3.5 w-3.5" />
+                        <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap">
+                          <RefreshCw className="h-3.5 w-3.5 shrink-0" />
                           <span>Renewed {format(new Date(pkg.last_renewed_date), 'd MMM yyyy')}</span>
                         </div>
                       )}
                       {pkg.is_complete && pkg.completed_at && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <CheckCircle2 className="h-4 w-4" />
+                        <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap">
+                          <CheckCircle2 className="h-4 w-4 shrink-0" />
                           <span>Completed {format(new Date(pkg.completed_at), 'd MMM yyyy')}</span>
                         </div>
                       )}
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        <span>{pkg.hours_used.toFixed(2)}/{pkg.hours_included} hrs used</span>
-                      </div>
+                    </div>
+
+                    {/* Usage row: hours used is the headline stat, carry-over folds in as context */}
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="font-medium">{pkg.hours_used.toFixed(2)}/{pkg.hours_included.toFixed(2)} hrs used</span>
+                      {!!pkg.carried_in_hours && pkg.carried_in_hours > 0 && (
+                        <span className="text-primary whitespace-nowrap">(+{pkg.carried_in_hours.toFixed(2)}h carried over)</span>
+                      )}
                     </div>
 
                     {/* Stage Progress – excludes offboarding/monitor/finalise stages */}

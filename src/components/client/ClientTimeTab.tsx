@@ -119,7 +119,8 @@ function TenantTimeSummaryStrip({ tenantId }: { tenantId: number }) {
       const { data: rows, error } = await (supabase as any)
         .from('time_entries')
         .select('duration_minutes, is_billable')
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .neq('work_type', 'carry_over');
       if (error) throw error;
       let billable = 0;
       let nonBillable = 0;
@@ -392,7 +393,8 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
       const { data: monthlyRows } = await (supabase as any)
         .from('time_entries')
         .select('id, package_id, package_instance_id, start_at, duration_minutes, is_billable')
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .neq('work_type', 'carry_over');
 
       const entryIds = (monthlyRows || []).map((r: any) => r.id).filter(Boolean);
       const allocByEntry = new Map<string, { package_instance_id: number; allocated_minutes: number }[]>();
@@ -526,7 +528,8 @@ function ClosedPackageSummaries({ tenantId }: { tenantId: number }) {
       const { data: timeRows } = await (supabase as any)
         .from('time_entries')
         .select('id, package_instance_id, duration_minutes, is_billable')
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .neq('work_type', 'carry_over');
 
       const entryIds = (timeRows || []).map((r: any) => r.id).filter(Boolean);
       const allocByEntry = new Map<string, { package_instance_id: number; allocated_minutes: number }[]>();
@@ -608,6 +611,70 @@ function ClosedPackageSummaries({ tenantId }: { tenantId: number }) {
                   <span className="font-medium">
                     Total: {formatDuration(pkg.total)}
                   </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Renewal History (closed package_renewal_periods rows) ──────────
+function RenewalHistorySection({ instanceId }: { instanceId: number | null }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data, isLoading } = useQuery({
+    queryKey: ['renewal-history', instanceId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('package_renewal_periods')
+        .select('period_number, period_start, period_end, included_minutes, carried_in_minutes, hours_used_at_close, closed_at')
+        .eq('package_instance_id', instanceId)
+        .not('closed_at', 'is', null)
+        .order('period_number', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!instanceId,
+    staleTime: 60_000,
+  });
+
+  if (isLoading || !data || data.length === 0) return null;
+
+  return (
+    <div className="mt-2 pt-2 border-t border-border/50">
+      <button
+        onClick={() => setExpanded(prev => !prev)}
+        className="text-[11px] text-primary hover:underline flex items-center gap-1"
+      >
+        {expanded ? 'Hide' : 'Show'} renewal history ({data.length})
+      </button>
+      {expanded && (
+        <div className="mt-1.5 space-y-1">
+          {data.map((period: any) => {
+            const usedMinutes = (period.hours_used_at_close ?? 0) * 60;
+            const totalIncluded = (period.included_minutes || 0) + (period.carried_in_minutes || 0);
+            return (
+              <div
+                key={period.period_number}
+                className="flex items-center justify-between gap-3 px-3 py-1.5 bg-muted/50 rounded-md text-[11px]"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-medium whitespace-nowrap">Period {period.period_number}</span>
+                  <span className="text-muted-foreground whitespace-nowrap">
+                    {format(new Date(period.period_start), 'd MMM yyyy')} – {format(new Date(period.period_end), 'd MMM yyyy')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="font-medium">
+                    {formatDuration(usedMinutes)} / {formatDuration(totalIncluded)} used
+                  </span>
+                  {period.carried_in_minutes > 0 && (
+                    <span className="text-muted-foreground">
+                      (+{formatDuration(period.carried_in_minutes)} carried in)
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -747,6 +814,7 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
             ))}
           </div>
         )}
+        <RenewalHistorySection instanceId={row.package_instance_id} />
       </CardContent>
     </Card>
   );
