@@ -87,7 +87,11 @@ export const NotificationDropdown = () => {
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[480px] p-0" align="end">
+        <PopoverContent
+          className="w-[min(640px,calc(100vw-1rem))] max-h-[calc(100vh-1rem)] overflow-hidden p-0"
+          align="end"
+          collisionPadding={8}
+        >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="font-semibold text-base">Notifications</h3>
@@ -157,7 +161,7 @@ export const NotificationDropdown = () => {
           )}
 
           {/* Notification list */}
-          <ScrollArea className="h-[520px]">
+          <ScrollArea className="h-[min(560px,calc(100vh-12rem))] min-h-[180px]">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <p className="text-sm text-muted-foreground">Loading...</p>
@@ -172,9 +176,9 @@ export const NotificationDropdown = () => {
             ) : (
               <div className="divide-y">
                 {filteredNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-3 px-4 hover:bg-accent/50 transition-colors cursor-pointer group ${
+                    <div
+                      key={notification.id}
+                    className={`p-4 px-5 hover:bg-accent/50 transition-colors cursor-pointer group ${
                       !notification.is_read ? 'bg-accent/20' : ''
                     }`}
                     onClick={() => handleNotifClick(notification)}
@@ -182,14 +186,14 @@ export const NotificationDropdown = () => {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 space-y-0.5 min-w-0">
                         {notification.tenant_name && (
-                          <p className="text-xs font-medium text-primary truncate">
+                          <p className="text-sm font-medium text-primary truncate">
                             {notification.tenant_name}
                           </p>
                         )}
-                        <p className="text-sm font-medium leading-tight">
+                        <p className="text-base font-medium leading-snug">
                           {notification.title || formatType(notification.type)}
                         </p>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
+                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
                           {stripHtml(notification.message)}
                         </p>
                         <p className="text-xs text-muted-foreground/70">
