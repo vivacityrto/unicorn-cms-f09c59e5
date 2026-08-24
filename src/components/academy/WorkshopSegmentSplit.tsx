@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle, ArrowDownUp, Loader2, Plus, Scissors, Trash2, Wand2,
 } from "lucide-react";
+import VimeoPlayer from "@/components/academy/VimeoPlayer";
 
 export interface WorkshopSegment {
   key: string;
@@ -59,6 +61,7 @@ interface Props {
   onChange: (next: WorkshopSegment[]) => void;
   usedFallback: boolean;
   durationSeconds: number | null;
+  vimeoUrl: string;
   onConfirm: () => void;
   confirming: boolean;
   confirmProgress?: string | null;
@@ -70,6 +73,7 @@ export default function WorkshopSegmentSplit({
   onChange,
   usedFallback,
   durationSeconds,
+  vimeoUrl,
   onConfirm,
   confirming,
   confirmProgress,
@@ -77,6 +81,7 @@ export default function WorkshopSegmentSplit({
 }: Props) {
   const disabled = confirming || confirmed;
   const error = validateSegments(segments);
+  const [previewKey, setPreviewKey] = useState<string | null>(null);
 
   const patch = (key: string, p: Partial<WorkshopSegment>) =>
     onChange(segments.map((s) => (s.key === key ? { ...s, ...p } : s)));
@@ -219,6 +224,14 @@ export default function WorkshopSegmentSplit({
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setPreviewKey(previewKey === s.key ? null : s.key)}
+                  aria-label={`${previewKey === s.key ? "Hide" : "Preview"} segment ${i + 1}`}
+                >
+                  {previewKey === s.key ? "Hide preview" : "Preview"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={disabled}
                   onClick={() => splitRow(i)}
                 >
@@ -236,6 +249,17 @@ export default function WorkshopSegmentSplit({
                   {formatTimecode(Math.max(0, s.end_seconds - s.start_seconds))} long
                 </span>
               </div>
+              {previewKey === s.key && (
+                <div className="pl-8 max-w-2xl">
+                  <VimeoPlayer
+                    vimeoUrl={vimeoUrl}
+                    title={s.suggested_title}
+                    segmentStartSeconds={s.start_seconds}
+                    segmentEndSeconds={s.end_seconds}
+                    completionThreshold={90}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

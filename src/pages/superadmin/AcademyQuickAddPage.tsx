@@ -80,8 +80,6 @@ function sliceTimestampedTranscript(timed: string, start: number, end: number): 
   return kept.join("\n").trim();
 }
 
-const WORKSHOP_SERIES = "The Compliance Lab";
-
 const DIFFICULTY_OPTIONS = ["beginner", "intermediate", "advanced"];
 
 interface QuizOption { value: string; label: string; is_correct: boolean }
@@ -197,6 +195,7 @@ export default function AcademyQuickAddPage() {
   const [series, setSeries] = useState<string>("");
   const [episodeTitle, setEpisodeTitle] = useState("");
   const [facilitatorId, setFacilitatorId] = useState("");
+  const [splitIntoLessons, setSplitIntoLessons] = useState(true);
   const [deliveryDate, setDeliveryDate] = useState(todayLocalISODate);
 
   const { data: facilitators = [] } = useQuery({
@@ -208,8 +207,9 @@ export default function AcademyQuickAddPage() {
         .eq("is_vivacity_internal", true)
         .order("full_name");
       if (error) throw error;
-      // Match SQL: coalesce(archived/disabled, false) = false
-      return (data ?? []).filter((u) => !u.archived && !u.disabled);
+      // Inactive internal users can still be the historical facilitator of a
+      // draft recording, so keep them selectable and label them in the UI.
+      return data ?? [];
     },
     staleTime: 60_000,
   });
@@ -273,8 +273,7 @@ export default function AcademyQuickAddPage() {
 
   const seriesCfg = useMemo(() => SERIES.find((s) => s.value === series), [series]);
   const sessionType = seriesCfg?.session_type ?? "webinar";
-  const isWorkshop = sessionType === "workshop";
-  const workshopActive = isWorkshop && drafts.length > 0;
+  const workshopActive = splitIntoLessons && drafts.length > 0;
   const draftIndex = Math.min(selectedDraft, Math.max(0, drafts.length - 1));
   const cur = workshopActive ? drafts[draftIndex] : null;
 
@@ -373,7 +372,7 @@ export default function AcademyQuickAddPage() {
       setTranscriptTimestamped(timestamped);
 
       // Workshops split into topic segments; each becomes a lesson in one course.
-      if (isWorkshop) {
+      if (splitIntoLessons) {
         setDrafts([]);
         setSplitConfirmed(false);
         const { data: seg, error: sErr } = await supabase.functions.invoke("academy-ai-generate", {
@@ -387,12 +386,13 @@ export default function AcademyQuickAddPage() {
         if (sErr) throw new Error(await extractEdgeError(sErr, "AI segment detection failed"));
         const rawSegments: any[] = Array.isArray(seg?.segments) ? seg.segments : [];
         if (rawSegments.length === 0) throw new Error("AI returned no workshop segments");
+        const total = Number(vimeo?.duration_seconds) > 0 ? Math.floor(Number(vimeo.duration_seconds)) : null;
         setSegments(
           rawSegments.map((r, i) => ({
             key: `seg-${Date.now()}-${i}`,
             suggested_title: String(r?.suggested_title ?? `Segment ${i + 1}`),
-            start_seconds: Math.max(0, Math.floor(Number(r?.start_seconds ?? 0))),
-            end_seconds: Math.max(1, Math.floor(Number(r?.end_seconds ?? 0))),
+            start_seconds: Math.max(0, Math.min(total ?? Number.MAX_SAFE_INTEGER, Math.floor(Number(r?.start_seconds ?? 0)))),
+            end_seconds: Math.max(1, Math.min(total ?? Number.MAX_SAFE_INTEGER, Math.floor(Number(r?.end_seconds ?? 0)))),
             summary: String(r?.summary ?? ""),
           })),
         );
@@ -471,7 +471,7 @@ export default function AcademyQuickAddPage() {
             action: "generate_classification",
             title: seg.suggested_title,
             transcript: segTranscript,
-            webinar_series: WORKSHOP_SERIES,
+            webinar_series: series || null,
             existing_tags: Array.from(sessionTags),
           },
         });
@@ -694,7 +694,7 @@ export default function AcademyQuickAddPage() {
         tags: spec.tags.length ? spec.tags : null,
         status: "draft",
         session_type: sessionType,
-        webinar_series: isWorkshop ? WORKSHOP_SERIES : (series || null),
+        webinar_series: series || null,
         source_video_id: videoId,
         segment_start_seconds: spec.segmentStart,
         segment_end_seconds: spec.segmentEnd,
@@ -766,7 +766,7 @@ export default function AcademyQuickAddPage() {
         tags: tagsUnion.length ? tagsUnion : null,
         status: "draft",
         session_type: sessionType,
-        webinar_series: WORKSHOP_SERIES,
+        webinar_series: series || null,
         source_video_id: videoId,
         segment_start_seconds: null,
         segment_end_seconds: null,
@@ -1013,6 +1013,13 @@ export default function AcademyQuickAddPage() {
                   placeholder="Inclusive Practice & Reasonable Adjustment Plans"
                 />
               </div>
+              <div className="flex items-center gap-3 md:col-span-2 rounded-lg border p-3">
+                <Checkbox checked={splitIntoLessons} onCheckedChange={(checked) => setSplitIntoLessons(checked === true)} />
+                <div>
+                  <Label className="cursor-pointer">Split into topic lessons</Label>
+                  <p className="text-xs text-muted-foreground">AI will detect topic boundaries for any series. Turn this off for one continuous lesson.</p>
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label>Facilitator *</Label>
                 <Select value={facilitatorId} onValueChange={setFacilitatorId}>
@@ -1020,7 +1027,7 @@ export default function AcademyQuickAddPage() {
                   <SelectContent>
                     {facilitators.map((u) => (
                       <SelectItem key={u.user_uuid} value={u.user_uuid}>
-                        {u.full_name?.trim() || u.user_uuid}
+                        {(u.full_name?.trim() || u.user_uuid) + (u.archived || u.disabled ? " (inactive)" : "")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1117,12 +1124,13 @@ export default function AcademyQuickAddPage() {
         </Card>
 
         {/* Step 2b — Workshop split */}
-        {isWorkshop && segments.length > 0 && (
+        {splitIntoLessons && segments.length > 0 && (
           <WorkshopSegmentSplit
             segments={segments}
             onChange={setSegments}
             usedFallback={segmentsFallback}
             durationSeconds={durationSeconds}
+            vimeoUrl={vimeoUrl}
             onConfirm={handleConfirmSplit}
             confirming={splitConfirming}
             confirmProgress={splitProgress}
@@ -1131,7 +1139,7 @@ export default function AcademyQuickAddPage() {
         )}
 
         {/* Step 3 */}
-        {isWorkshop && !workshopActive ? (
+        {splitIntoLessons && !workshopActive ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">3. Review and adjust</CardTitle>
@@ -1382,7 +1390,7 @@ export default function AcademyQuickAddPage() {
               !vimeoUrl.trim() ||
               !facilitatorId ||
               !deliveryDate ||
-              (isWorkshop ? !workshopActive || !(episodeTitle.trim() || title.trim()) : !title.trim())
+              (splitIntoLessons ? !workshopActive || !(episodeTitle.trim() || title.trim()) : !title.trim())
             }
             className="text-white hover:opacity-90"
             style={{ backgroundColor: "#23c0dd" }}
