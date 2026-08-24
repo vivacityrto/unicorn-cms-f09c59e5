@@ -23,9 +23,11 @@ interface Props {
   onFitChange: (fit: "cover" | "contain") => void;
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  onUpload: (file: File) => Promise<void>;
+  isUploading?: boolean;
 }
 
-export default function ThumbnailPositionEditor({ imageUrl, value, onChange, fit, onFitChange, zoom, onZoomChange }: Props) {
+export default function ThumbnailPositionEditor({ imageUrl, value, onChange, fit, onFitChange, zoom, onZoomChange, onUpload, isUploading = false }: Props) {
   const [x, y] = useMemo(() => parsePosition(value), [value]);
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
   const setPosition = (nextX: number, nextY: number) => {
@@ -68,6 +70,26 @@ export default function ThumbnailPositionEditor({ imageUrl, value, onChange, fit
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant={fit === "cover" ? "default" : "outline"} onClick={() => onFitChange("cover")}>Fill (crop)</Button>
         <Button type="button" size="sm" variant={fit === "contain" ? "default" : "outline"} onClick={() => onFitChange("contain")}>Show full image</Button>
+      </div>
+      <div className="rounded-md border border-dashed p-3 space-y-2">
+        <div>
+          <p className="text-sm font-medium">Custom thumbnail</p>
+          <p className="text-xs text-muted-foreground">Use your own JPG, PNG, or WebP image instead of the Vimeo thumbnail.</p>
+        </div>
+        <label className="inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50">
+          {isUploading ? "Uploading…" : imageUrl ? "Replace image" : "Upload custom image"}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            disabled={isUploading}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.currentTarget.value = "";
+              if (file) void onUpload(file);
+            }}
+          />
+        </label>
       </div>
       <div className="flex flex-wrap gap-2">
         {PRESETS.map((preset) => (
