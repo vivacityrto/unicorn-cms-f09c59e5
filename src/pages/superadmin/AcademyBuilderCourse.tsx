@@ -50,6 +50,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermission } from "@/hooks/usePermission";
 import { cn } from "@/lib/utils";
 import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
+import ThumbnailPositionEditor from "@/components/academy/builder/ThumbnailPositionEditor";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -417,6 +418,7 @@ export default function AcademyBuilderCourse() {
     facilitator_display_name: string | null;
     delivery_date: string | null;
     thumbnail_url: string | null;
+    thumbnail_position: string;
     webinar_series: string | null;
     transcript: string;
   };
@@ -441,6 +443,7 @@ export default function AcademyBuilderCourse() {
       // Default delivery date to today only for never-published courses still missing one
       delivery_date: existingDelivery ?? (neverPublished ? todayLocalISODate() : null),
       thumbnail_url: c?.thumbnail_url ?? null,
+      thumbnail_position: c?.thumbnail_position ?? "50% 50%",
       webinar_series: c?.webinar_series ?? null,
       transcript: c?.transcript ?? "",
     };
@@ -719,6 +722,12 @@ export default function AcademyBuilderCourse() {
               <Field label="Title">
                 <Input value={formState.title} onChange={(e) => setFormState((p) => ({ ...p, title: e.target.value }))} />
               </Field>
+
+              <ThumbnailPositionEditor
+                imageUrl={formState.thumbnail_url}
+                value={formState.thumbnail_position}
+                onChange={(thumbnail_position) => setFormState((p) => ({ ...p, thumbnail_position }))}
+              />
 
               <div className="grid grid-cols-1 gap-3">
                 <Field label={requiresFacilitatorFields ? "Facilitator *" : "Facilitator"}>

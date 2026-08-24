@@ -22,6 +22,7 @@ export interface CourseCardProps {
   totalLessons?: number;
   accentColour?: string;
   thumbnailUrl?: string | null;
+  thumbnailPosition?: string | null;
   /** Already-formatted delivery date label (e.g. "13 July 2026"), or null/undefined to omit the line. */
   deliveryDateLabel?: string | null;
   facilitatorName?: string | null;
@@ -63,6 +64,7 @@ export default function CourseCard({
   totalLessons,
   accentColour = "#23c0dd",
   thumbnailUrl,
+  thumbnailPosition = "50% 50%",
   deliveryDateLabel,
   facilitatorName,
   webinarSeries,
@@ -107,7 +109,7 @@ export default function CourseCard({
             src={thumbnailUrl}
             alt={title}
             className="absolute inset-0 h-full w-full object-cover"
-            style={{ objectPosition: "center" }}
+            style={{ objectPosition: thumbnailPosition || "50% 50%" }}
           />
         ) : null}
 
