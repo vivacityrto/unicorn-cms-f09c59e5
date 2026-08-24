@@ -21,6 +21,7 @@ export interface PackageUsage {
   calendar_minutes_30d: number;
   billable_minutes_total: number;
   non_billable_minutes_total: number;
+  carried_in_minutes: number;
 }
 
 export interface ClientAlert {
@@ -189,12 +190,12 @@ export function usePackageUsageQuery(clientId: number | null) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
-  
+
   const { data: packages = [], isLoading: packagesLoading } = useClientPackagesQuery(clientId);
-  
+
   // Auto-select first package if none selected
   const effectivePackageId = selectedPackageId || (packages.length > 0 ? packages[0].id : null);
-  
+
   const { data: usage = null, isLoading: usageLoading } = usePackageUsageDataQuery(clientId, effectivePackageId);
   const { data: alerts = [], isLoading: alertsLoading } = useClientAlertsQuery(clientId);
 

@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine, ChevronDown, KeyRound } from 'lucide-react';
 import { useTimeTrackingQuery, formatDuration } from '@/hooks/useTimeTrackingQuery';
 import { usePackageUsageQuery, formatHours, formatForecast } from '@/hooks/usePackageUsageQuery';
@@ -17,6 +16,7 @@ import { ReRegistrationBadge } from '@/components/shared/ReRegistrationBadge';
 import { useQuery } from '@tanstack/react-query';
 import { getReRegistrationDueDate, formatDaysRemaining } from '@/lib/reRegistrationDate';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { PackageUsageBar } from './PackageUsageBar';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
@@ -24,14 +24,14 @@ interface ClientTimeSummaryCardProps {
 
 export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) {
   const { summary, loading: timeLoading } = useTimeTrackingQuery(clientId);
-  const { 
+  const {
     packages,
-    usage, 
-    alerts, 
+    usage,
+    alerts,
     selectedPackage,
     setSelectedPackageId,
-    dismissAlert, 
-    loading: usageLoading 
+    dismissAlert,
+    loading: usageLoading
   } = usePackageUsageQuery(clientId);
   const { data: membershipUsage } = useMembershipUsage(clientId);
   const [logOpen, setLogOpen] = useState(false);
@@ -247,17 +247,17 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
         {/* Package Usage Card */}
         <Card>
           <CardHeader className="pb-2">
-              <div className="flex items-center gap-2 w-full">
-                <CardTitle className="text-base flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full min-w-0 flex-wrap">
+                <CardTitle className="text-base flex items-center gap-2 shrink-0 whitespace-nowrap">
                   <TrendingDown className="h-4 w-4" />
                   Package Burn-down
                 </CardTitle>
                 {selectedPackage && packages.length > 1 ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button type="button" className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-normal cursor-pointer hover:bg-muted transition-colors">
-                        {selectedPackage.package_name}
-                        <ChevronDown className="h-3 w-3" />
+                      <button type="button" className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-normal cursor-pointer hover:bg-muted transition-colors min-w-0 max-w-[280px]">
+                        <span className="truncate">{selectedPackage.package_name}</span>
+                        <ChevronDown className="h-3 w-3 shrink-0" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -273,7 +273,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : selectedPackage ? (
-                  <Badge variant="outline" className="ml-auto text-xs font-normal">
+                  <Badge variant="outline" className="ml-auto text-xs font-normal min-w-0 max-w-[280px] truncate">
                     {selectedPackage.package_name}
                   </Badge>
                 ) : null}
@@ -327,9 +327,13 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                         </span>
                       </div>
                       {hasIncluded && (
-                        <Progress 
-                          value={Math.min(displayPercent, 100)} 
-                          className={`h-2 ${isOverBudget && sourceFilter === 'all' ? '[&>div]:bg-destructive' : isNearLimit && sourceFilter === 'all' ? '[&>div]:bg-yellow-500' : ''}`}
+                        <PackageUsageBar
+                          usedMinutes={displayMinutes}
+                          includedMinutes={usage.included_minutes}
+                          carriedInMinutes={usage.carried_in_minutes || 0}
+                          isOverBudget={isOverBudget && sourceFilter === 'all'}
+                          isNearLimit={isNearLimit && sourceFilter === 'all'}
+                          className="h-2"
                         />
                       )}
                       {sourceFilter === 'all' && (
