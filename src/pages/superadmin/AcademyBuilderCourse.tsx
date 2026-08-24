@@ -50,6 +50,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermission } from "@/hooks/usePermission";
 import { cn } from "@/lib/utils";
 import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
+import ThumbnailPositionEditor from "@/components/academy/builder/ThumbnailPositionEditor";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -417,6 +418,9 @@ export default function AcademyBuilderCourse() {
     facilitator_display_name: string | null;
     delivery_date: string | null;
     thumbnail_url: string | null;
+    thumbnail_position: string;
+    thumbnail_fit: "cover" | "contain";
+    thumbnail_zoom: number;
     webinar_series: string | null;
     transcript: string;
   };
@@ -441,12 +445,16 @@ export default function AcademyBuilderCourse() {
       // Default delivery date to today only for never-published courses still missing one
       delivery_date: existingDelivery ?? (neverPublished ? todayLocalISODate() : null),
       thumbnail_url: c?.thumbnail_url ?? null,
+      thumbnail_position: c?.thumbnail_position ?? "50% 50%",
+      thumbnail_fit: c?.thumbnail_fit === "contain" ? "contain" : "cover",
+      thumbnail_zoom: Number(c?.thumbnail_zoom) >= 1 ? Number(c.thumbnail_zoom) : 1,
       webinar_series: c?.webinar_series ?? null,
       transcript: c?.transcript ?? "",
     };
   }, []);
 
   const [formState, setFormState] = useState<SettingsForm>(() => buildForm(course));
+  const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const baselineRef = useRef<SettingsForm>(formState);
 
   useEffect(() => {
@@ -522,6 +530,37 @@ export default function AcademyBuilderCourse() {
       webinar_series: result.webinar_series,
       transcript: result.transcript || p.transcript,
     }));
+  };
+
+  const handleThumbnailUpload = async (file: File) => {
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    if (!allowedTypes.has(file.type)) {
+      toast.error("Choose a JPG, PNG, or WebP image");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Thumbnail images must be 5 MB or smaller");
+      return;
+    }
+    if (!courseId) return;
+
+    setIsThumbnailUploading(true);
+    try {
+      const extension = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
+      const path = `courses/${courseId}/${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("academy-thumbnails")
+        .upload(path, file, { contentType: file.type, upsert: false, cacheControl: "3600" });
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from("academy-thumbnails").getPublicUrl(path);
+      setFormState((p) => ({ ...p, thumbnail_url: data.publicUrl }));
+      toast.success("Custom thumbnail added — click Save Changes to apply it");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to upload thumbnail");
+    } finally {
+      setIsThumbnailUploading(false);
+    }
   };
 
   // Note: in-app navigation guard via useBlocker requires a data router; this app uses BrowserRouter.
@@ -719,6 +758,18 @@ export default function AcademyBuilderCourse() {
               <Field label="Title">
                 <Input value={formState.title} onChange={(e) => setFormState((p) => ({ ...p, title: e.target.value }))} />
               </Field>
+
+              <ThumbnailPositionEditor
+                imageUrl={formState.thumbnail_url}
+                value={formState.thumbnail_position}
+                onChange={(thumbnail_position) => setFormState((p) => ({ ...p, thumbnail_position }))}
+                fit={formState.thumbnail_fit}
+                onFitChange={(thumbnail_fit) => setFormState((p) => ({ ...p, thumbnail_fit }))}
+                zoom={formState.thumbnail_zoom}
+                onZoomChange={(thumbnail_zoom) => setFormState((p) => ({ ...p, thumbnail_zoom }))}
+                onUpload={handleThumbnailUpload}
+                isUploading={isThumbnailUploading}
+              />
 
               <div className="grid grid-cols-1 gap-3">
                 <Field label={requiresFacilitatorFields ? "Facilitator *" : "Facilitator"}>
