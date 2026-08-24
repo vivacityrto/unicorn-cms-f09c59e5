@@ -644,6 +644,8 @@ export default function AudienceHubPage({
                   accentColour={accentColour}
                   thumbnailUrl={course.thumbnail_url}
                   thumbnailPosition={course.thumbnail_position}
+                  thumbnailFit={course.thumbnail_fit}
+                  thumbnailZoom={course.thumbnail_zoom}
                   deliveryDateLabel={formatDeliveryDate(course.delivery_date)}
                   facilitatorName={course.facilitator_name}
                   webinarSeries={course.webinar_series}

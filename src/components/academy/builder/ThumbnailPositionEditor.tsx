@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, type PointerEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -19,30 +19,65 @@ interface Props {
   imageUrl: string | null;
   value: string;
   onChange: (value: string) => void;
+  fit: "cover" | "contain";
+  onFitChange: (fit: "cover" | "contain") => void;
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
 }
 
-export default function ThumbnailPositionEditor({ imageUrl, value, onChange }: Props) {
+export default function ThumbnailPositionEditor({ imageUrl, value, onChange, fit, onFitChange, zoom, onZoomChange }: Props) {
   const [x, y] = useMemo(() => parsePosition(value), [value]);
-  const setPosition = (nextX: number, nextY: number) => onChange(`${Math.round(nextX)}% ${Math.round(nextY)}%`);
+  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const setPosition = (nextX: number, nextY: number) => {
+    const clampedX = Math.max(0, Math.min(100, nextX));
+    const clampedY = Math.max(0, Math.min(100, nextY));
+    onChange(`${Math.round(clampedX)}% ${Math.round(clampedY)}%`);
+  };
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!imageUrl) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: x, originY: y };
+  };
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    setPosition(drag.originX - (event.clientX - drag.startX) / 2, drag.originY - (event.clientY - drag.startY) / 2);
+  };
+  const clearDrag = () => { dragRef.current = null; };
 
   return (
     <div className="space-y-3 rounded-lg border p-3">
       <div>
         <Label>Thumbnail framing</Label>
-        <p className="text-xs text-muted-foreground mt-1">Keep the square card design and move the Vimeo image to keep the important subject in frame.</p>
+        <p className="text-xs text-muted-foreground mt-1">Drag the image to reposition it. Choose Fill to crop or Show full image to zoom out.</p>
       </div>
-      <div className="aspect-square max-w-[220px] overflow-hidden rounded-lg bg-muted border">
+      <div
+        className="aspect-square max-w-[260px] overflow-hidden rounded-lg bg-muted border cursor-move touch-none"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={clearDrag}
+        onPointerCancel={clearDrag}
+        title={imageUrl ? "Drag to reposition thumbnail" : undefined}
+      >
         {imageUrl ? (
-          <img src={imageUrl} alt="Thumbnail preview" className="h-full w-full object-cover" style={{ objectPosition: value || "50% 50%" }} />
+          <img src={imageUrl} alt="Thumbnail preview" className="h-full w-full" style={{ objectFit: fit, objectPosition: value || "50% 50%", transform: `scale(${zoom})`, transformOrigin: value || "50% 50%" }} draggable={false} />
         ) : (
           <div className="h-full flex items-center justify-center text-xs text-muted-foreground text-center p-4">Generate or add a thumbnail to preview framing.</div>
         )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant={fit === "cover" ? "default" : "outline"} onClick={() => onFitChange("cover")}>Fill (crop)</Button>
+        <Button type="button" size="sm" variant={fit === "contain" ? "default" : "outline"} onClick={() => onFitChange("contain")}>Show full image</Button>
       </div>
       <div className="flex flex-wrap gap-2">
         {PRESETS.map((preset) => (
           <Button key={preset.value} type="button" size="sm" variant={value === preset.value ? "default" : "outline"} onClick={() => onChange(preset.value)}>{preset.label}</Button>
         ))}
       </div>
+      <label className="text-xs text-muted-foreground space-y-1 block">
+        Zoom: {Math.round(zoom * 100)}%
+        <Slider value={[zoom * 100]} min={100} max={160} step={1} onValueChange={([next]) => onZoomChange(next / 100)} aria-label="Thumbnail zoom" />
+      </label>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs text-muted-foreground space-y-1">
           Horizontal: {Math.round(x)}%

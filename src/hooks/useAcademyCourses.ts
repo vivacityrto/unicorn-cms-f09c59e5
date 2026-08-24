@@ -12,6 +12,8 @@ export interface AcademyCourse {
   short_description: string | null;
   thumbnail_url: string | null;
   thumbnail_position: string | null;
+  thumbnail_fit: "cover" | "contain" | null;
+  thumbnail_zoom: number | null;
   target_audience: string[] | null;
   estimated_minutes: number | null;
   difficulty_level: string | null;
@@ -48,7 +50,7 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
       // Fetch published courses for this audience
       const { data: courses, error: coursesErr } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, thumbnail_url, thumbnail_position, target_audience, estimated_minutes, difficulty_level, status, tags, webinar_series, sort_order, certificate_enabled, delivery_date, facilitator_id, facilitator_display_name")
+        .select("id, title, slug, description, short_description, thumbnail_url, thumbnail_position, thumbnail_fit, thumbnail_zoom, target_audience, estimated_minutes, difficulty_level, status, tags, webinar_series, sort_order, certificate_enabled, delivery_date, facilitator_id, facilitator_display_name")
         .eq("status", "published")
         .contains("target_audience", [audienceKey])
         .order("sort_order", { ascending: true, nullsFirst: false })

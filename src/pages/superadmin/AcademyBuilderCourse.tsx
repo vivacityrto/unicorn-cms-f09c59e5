@@ -419,6 +419,8 @@ export default function AcademyBuilderCourse() {
     delivery_date: string | null;
     thumbnail_url: string | null;
     thumbnail_position: string;
+    thumbnail_fit: "cover" | "contain";
+    thumbnail_zoom: number;
     webinar_series: string | null;
     transcript: string;
   };
@@ -444,6 +446,8 @@ export default function AcademyBuilderCourse() {
       delivery_date: existingDelivery ?? (neverPublished ? todayLocalISODate() : null),
       thumbnail_url: c?.thumbnail_url ?? null,
       thumbnail_position: c?.thumbnail_position ?? "50% 50%",
+      thumbnail_fit: c?.thumbnail_fit === "contain" ? "contain" : "cover",
+      thumbnail_zoom: Number(c?.thumbnail_zoom) >= 1 ? Number(c.thumbnail_zoom) : 1,
       webinar_series: c?.webinar_series ?? null,
       transcript: c?.transcript ?? "",
     };
@@ -727,6 +731,10 @@ export default function AcademyBuilderCourse() {
                 imageUrl={formState.thumbnail_url}
                 value={formState.thumbnail_position}
                 onChange={(thumbnail_position) => setFormState((p) => ({ ...p, thumbnail_position }))}
+                fit={formState.thumbnail_fit}
+                onFitChange={(thumbnail_fit) => setFormState((p) => ({ ...p, thumbnail_fit }))}
+                zoom={formState.thumbnail_zoom}
+                onZoomChange={(thumbnail_zoom) => setFormState((p) => ({ ...p, thumbnail_zoom }))}
               />
 
               <div className="grid grid-cols-1 gap-3">
