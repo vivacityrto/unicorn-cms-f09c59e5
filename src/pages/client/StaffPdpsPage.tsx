@@ -39,19 +39,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ChevronDown, Download, Loader2, MoreHorizontal, Sparkles } from "lucide-react";
+import { ChevronDown, Download, Loader2, MoreHorizontal, Sparkles, AlertTriangle, CheckCircle2, Clock3 } from "lucide-react";
 import { CurrencyStatusPill } from "@/components/academy/pdp/CurrencyStatusPill";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useWorkforcePdp } from "@/features/pdp/useWorkforcePdp";
-import {
-  useTenantAcademyStaffStats,
-  type TenantAcademyStaffStatsRow,
-} from "@/features/pdp/useTenantAcademyStaffStats";
 import { useCycleSummary } from "@/features/pdp/hooks";
 import { getCurrentCycle } from "@/features/pdp/api";
 import { exportPdpAuditPack, resolveTenantName } from "@/features/pdp/exportAuditPack";
 import type { WorkforcePdpRow } from "@/features/pdp/workforce";
 import type { CurrencyStatus } from "@/features/pdp/types";
+import { AcademyActivityDashboard } from "@/components/client/AcademyActivityDashboard";
 
 const ALL_STATUSES: CurrencyStatus[] = ["overdue", "at_risk", "on_track", "current"];
 const STATUS_LABEL: Record<CurrencyStatus, string> = {
@@ -92,81 +89,32 @@ function fmtRelative(iso: string | null, whenNull: string): string {
   }
 }
 
-function formatCourseBreakdown(row: TenantAcademyStaffStatsRow): string {
-  const completed = Number(row.enrollments_completed ?? 0);
-  const active = Number(row.enrollments_active ?? 0);
-  const total = Number(row.enrollments_total ?? 0);
-  const notStarted = Math.max(0, total - completed - active);
-  return `${completed} completed / ${active} in progress / ${notStarted} not started`;
-}
-
 interface DrawerState {
   row: WorkforcePdpRow | null;
 }
 
-function AcademyStaffActivityTable({ tenantId }: { tenantId: number }) {
-  const { data, isLoading, error } = useTenantAcademyStaffStats(tenantId);
+function StaffPdpOverview({ rows }: { rows: WorkforcePdpRow[] }) {
+  const current = rows.filter((row) => row.currency_status === "current" || row.currency_status === "on_track").length;
+  const atRisk = rows.filter((row) => row.currency_status === "at_risk").length;
+  const overdue = rows.filter((row) => row.currency_status === "overdue").length;
+  const needsAction = rows
+    .filter((row) => row.currency_status === "overdue" || row.currency_status === "at_risk")
+    .sort((a, b) => (a.cycle_end_date ?? "9999-12-31").localeCompare(b.cycle_end_date ?? "9999-12-31"));
+  const percentage = rows.length ? Math.round((current / rows.length) * 100) : 0;
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        {isLoading ? (
-          <div className="p-6 space-y-2">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="p-6 text-sm text-destructive">
-            Failed to load Academy activity.
-          </div>
-        ) : !data || data.length === 0 ? (
-          <div className="p-6 text-sm text-muted-foreground">
-            No staff Academy activity yet.
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name / email</TableHead>
-                <TableHead>Last login</TableHead>
-                <TableHead className="text-right">Logins (90d)</TableHead>
-                <TableHead>Courses</TableHead>
-                <TableHead className="text-right">PD hours completed</TableHead>
-                <TableHead className="text-right">Certificates earned</TableHead>
-                <TableHead>Last activity</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((r) => (
-                <TableRow key={r.user_id}>
-                  <TableCell>
-                    <div className="font-medium">{r.full_name || "—"}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {r.email || "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell>{fmtRelative(r.last_login_at, "Never")}</TableCell>
-                  <TableCell className="text-right">
-                    {Number(r.login_count_90d ?? 0)}
-                  </TableCell>
-                  <TableCell className="text-sm">{formatCourseBreakdown(r)}</TableCell>
-                  <TableCell className="text-right">
-                    {numberAU.format(Number(r.pd_hours_completed ?? 0))}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {Number(r.certificates_earned ?? 0)}
-                  </TableCell>
-                  <TableCell>
-                    {fmtRelative(r.last_activity_at, "No activity yet")}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Staff with a PDP</p><p className="mt-2 text-2xl font-semibold">{rows.length}</p><p className="mt-1 text-xs text-muted-foreground">Across the current cycle</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current / on track</p><p className="mt-2 text-2xl font-semibold text-emerald-700">{percentage}%</p><p className="mt-1 text-xs text-muted-foreground">{current} staff in good standing</p></CardContent></Card>
+        <Card className={atRisk ? "border-amber-300" : undefined}><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Needs attention</p><p className="mt-2 text-2xl font-semibold text-amber-700">{atRisk}</p><p className="mt-1 text-xs text-muted-foreground">At-risk cycles</p></CardContent></Card>
+        <Card className={overdue ? "border-destructive/30" : undefined}><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Overdue</p><p className="mt-2 text-2xl font-semibold text-destructive">{overdue}</p><p className="mt-1 text-xs text-muted-foreground">Cycles needing follow-up</p></CardContent></Card>
+      </div>
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card><CardContent className="p-5"><div className="flex items-center justify-between gap-3"><div><h2 className="text-base font-semibold">PDP health</h2><p className="text-sm text-muted-foreground">A quick view of development progress across your team.</p></div><CheckCircle2 className="h-5 w-5 text-primary" /></div><div className="mt-5"><div className="mb-2 flex justify-between text-sm"><span className="text-muted-foreground">Current or on track</span><span className="font-medium">{current} of {rows.length}</span></div><Progress value={percentage} className="h-2" /></div></CardContent></Card>
+        <Card className={needsAction.length ? "border-amber-300" : undefined}><CardContent className="p-5"><div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-600" /><h2 className="text-base font-semibold">Action queue</h2></div>{needsAction.length ? <div className="mt-4 space-y-3">{needsAction.slice(0, 3).map((row) => <Link key={`${row.user_id}-${row.tenant_id}`} to="/client/staff-pdps" className="block rounded-lg border bg-amber-50/50 p-3 transition-colors hover:bg-amber-50"><div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">{row.staff_name}</span><span className="text-xs font-medium text-amber-700">{row.currency_status === "overdue" ? "Overdue" : "At risk"}</span></div><p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock3 className="h-3 w-3" />{Math.round(Number(row.percent_complete ?? 0))}% complete · cycle ends {fmtDate(row.cycle_end_date)}</p></Link>)}</div> : <p className="mt-3 text-sm text-muted-foreground">No PDP actions need attention right now.</p>}</CardContent></Card>
+      </div>
+    </div>
   );
 }
 
@@ -409,10 +357,10 @@ export default function StaffPdpsPage() {
       <div className="container mx-auto p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Staff PDPs</h1>
-          <p className="text-sm text-muted-foreground">
-            PDP cycles and Vivacity Academy activity for your team.
-          </p>
+          <p className="text-sm text-muted-foreground">A decision-ready view of your team&apos;s development progress.</p>
         </div>
+
+        {!isLoading && !error && tenantRows.length > 0 && <StaffPdpOverview rows={tenantRows} />}
 
         <Tabs defaultValue="pdp-cycles">
           <TabsList>
@@ -685,7 +633,7 @@ export default function StaffPdpsPage() {
           </TabsContent>
 
           <TabsContent value="academy-activity" className="mt-6">
-            <AcademyStaffActivityTable tenantId={activeTenantId} />
+            <AcademyActivityDashboard tenantId={activeTenantId} />
           </TabsContent>
         </Tabs>
       </div>

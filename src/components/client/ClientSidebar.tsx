@@ -24,6 +24,7 @@ import {
   ScrollText,
   Award,
   Globe,
+  Activity,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +60,7 @@ const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: LifeBuoy, label: "Support Tickets", path: "/client/support-tickets" },
   { icon: Users, label: "Users", path: "/client/users", adminOnly: true },
   { icon: GraduationCap, label: "Staff PDPs", path: "/client/staff-pdps", adminOnly: true },
+  { icon: Activity, label: "Academy Activity", path: "/client/academy-activity", adminOnly: true },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },
   { icon: Award, label: "Membership Certificate", path: "/client/certificate" },
 ];

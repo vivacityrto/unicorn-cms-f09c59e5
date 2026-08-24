@@ -263,6 +263,7 @@ const SupportTicketPortalDetailWrapper = lazy(() => import("./pages/client/Suppo
 const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
 const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
 const StaffPdpsWrapperNew = lazy(() => import("./pages/client/StaffPdpsWrapper"));
+const AcademyActivityWrapperNew = lazy(() => import("./pages/client/AcademyActivityWrapper"));
 const TeamInboxWrapper = lazy(() => import("./pages/TeamInboxWrapper"));
 const EmailTriageWrapper = lazy(() => import("./pages/EmailTriageWrapper"));
 const queryClient = new QueryClient({
@@ -1217,6 +1218,7 @@ const App = () => (
             <Route path="/client/regulatory-updates/:eventId" element={<ProtectedRoute><RegulatoryUpdateDetailWrapper /></ProtectedRoute>} />
             <Route path="/client/users" element={<ProtectedRoute><ClientUsersWrapperNew /></ProtectedRoute>} />
             <Route path="/client/staff-pdps" element={<ProtectedRoute><StaffPdpsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/academy-activity" element={<ProtectedRoute><AcademyActivityWrapperNew /></ProtectedRoute>} />
             <Route path="/client/team" element={<Navigate to="/client/users" replace />} />
             <Route path="/client/settings" element={<ProtectedRoute><ClientSettingsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/profile" element={<ProtectedRoute><ClientProfileWrapperNew /></ProtectedRoute>} />
