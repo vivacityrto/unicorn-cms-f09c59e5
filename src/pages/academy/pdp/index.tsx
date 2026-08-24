@@ -23,6 +23,7 @@ import { StartCycleEmptyState } from "@/components/academy/pdp/StartCycleEmptySt
 import { AddEvidenceSheet } from "@/components/academy/pdp/AddEvidenceSheet";
 import { AddGoalSheet } from "@/components/academy/pdp/AddGoalSheet";
 import { AddReflectionDrawer } from "@/components/academy/pdp/AddReflectionDrawer";
+import { ActionablePdpInsights } from "@/components/academy/pdp/ActionablePdpInsights";
 
 export default function AcademyPdpPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -85,6 +86,14 @@ export default function AcademyPdpPage() {
                 summary={summary ?? null}
                 currency={currency ?? null}
                 isLoading={summaryLoading}
+              />
+
+              <ActionablePdpInsights
+                cycleId={cycle.id}
+                summary={summary ?? null}
+                currency={currency ?? null}
+                onLogEvidence={() => setEvidenceOpen(true)}
+                onAddGoal={() => setGoalOpen(true)}
               />
 
               <PdpActionRow
