@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowLeft, MessageSquare, Plus, Send, Loader2, ChevronDown, UserPlus, UserCircle2 } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Plus, Send, Loader2, ChevronDown, UserPlus, UserCircle2, Paperclip } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
+import {
+  uploadMessageAttachment,
+  validateAttachment,
+  MAX_FILES_PER_MESSAGE,
+  type MessageAttachmentRow,
+} from '@/lib/messageAttachments';
+import { MessageAttachments } from '@/components/messaging/MessageAttachments';
+import { AttachmentChips } from '@/components/messaging/AttachmentChips';
 
 interface ClientMessagesTabProps {
   tenantId: number;
@@ -46,7 +54,7 @@ interface Message {
   body: string;
   created_at: string;
   sender_name?: string;
-  attachments?: Array<{ id: string; filename: string; storage_path: string; mime_type: string | null }>;
+  attachments?: MessageAttachmentRow[];
 }
 
 type FilterValue = 'all' | 'unread' | 'from-client' | 'resolved' | 'mine';
@@ -105,6 +113,8 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [reply, setReply] = useState('');
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const replyFileInputRef = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -247,6 +257,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
   const openConversation = async (c: Conversation) => {
     setSelected(c);
     setReply('');
+    setReplyFiles([]);
     await loadMessages(c.id);
     // Mark conversation as read for this staff user
     if (currentUserId) {
@@ -326,34 +337,68 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
   };
 
   const sendReply = async () => {
-    if (!selected || !reply.trim() || !currentUserId) return;
+    if (!selected || (!reply.trim() && replyFiles.length === 0) || !currentUserId) return;
     setSending(true);
     const body = reply.trim();
-    const { error } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from('tenant_messages')
       .insert({
         conversation_id: selected.id,
         tenant_id: tenantId,
         sender_type: 'staff',
         sender_user_uuid: currentUserId,
-        body,
-      });
+        body: body || 'Attachment',
+      })
+      .select('id')
+      .single();
     if (error) {
       toast({ title: 'Failed to send', description: error.message, variant: 'destructive' });
       setSending(false);
       return;
     }
+    for (const file of replyFiles) {
+      try {
+        await uploadMessageAttachment(supabase, file, tenantId, selected.id, data.id);
+      } catch (uploadError: any) {
+        toast({
+          title: `Attachment failed: ${file.name}`,
+          description: uploadError?.message || 'The message was sent without this attachment.',
+          variant: 'destructive',
+        });
+      }
+    }
     await (supabase as any)
       .from('tenant_conversations')
       .update({
         last_message_at: new Date().toISOString(),
-        last_message_preview: body.slice(0, 100),
+        last_message_preview: (body || 'Attachment').slice(0, 100),
       })
       .eq('id', selected.id);
     setReply('');
+    setReplyFiles([]);
+    if (replyFileInputRef.current) replyFileInputRef.current.value = '';
     setSending(false);
     await loadMessages(selected.id);
     await loadConversations();
+  };
+
+  const addReplyFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(event.target.files ?? []);
+    const accepted: File[] = [];
+    for (const file of picked) {
+      if (replyFiles.length + accepted.length >= MAX_FILES_PER_MESSAGE) {
+        toast({ title: `You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`, variant: 'destructive' });
+        break;
+      }
+      try {
+        validateAttachment(file);
+        accepted.push(file);
+      } catch (error: any) {
+        toast({ title: error?.message || `Could not attach ${file.name}`, variant: 'destructive' });
+      }
+    }
+    if (accepted.length) setReplyFiles((prev) => [...prev, ...accepted]);
+    event.currentTarget.value = '';
   };
 
   const changeStatus = async (newStatus: 'open' | 'resolved' | 'closed') => {
@@ -385,6 +430,10 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
         onReplyChange={setReply}
         onSend={sendReply}
         sending={sending}
+        queuedFiles={replyFiles}
+        onFilesPicked={addReplyFiles}
+        onRemoveFile={(index) => setReplyFiles((prev) => prev.filter((_, i) => i !== index))}
+        fileInputRef={replyFileInputRef}
         clientName={clientName}
         canChangeStatus={canChangeStatus}
         onChangeStatus={changeStatus}
@@ -550,6 +599,10 @@ function ConversationThread({
   staffList,
   assignee,
   onAssign,
+  queuedFiles,
+  onFilesPicked,
+  onRemoveFile,
+  fileInputRef,
 }: {
   conversation: Conversation;
   messages: Message[];
@@ -565,6 +618,10 @@ function ConversationThread({
   staffList: StaffMember[];
   assignee: StaffMember | null;
   onAssign: (assigneeUuid: string | null) => void | Promise<void>;
+  queuedFiles: File[];
+  onFilesPicked: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemoveFile: (index: number) => void;
+  fileInputRef: React.RefObject<HTMLInputElement>;
 }) {
   const status = (conversation.status || 'open') as 'open' | 'resolved' | 'closed';
   const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
@@ -673,13 +730,7 @@ function ConversationThread({
                           </span>
                         </div>
                         <p className="text-sm whitespace-pre-wrap">{m.body}</p>
-                        {m.attachments && m.attachments.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            {m.attachments.map((a) => (
-                              <AttachmentLink key={a.id} filename={a.filename} path={a.storage_path} isStaff={isStaff} />
-                            ))}
-                          </div>
-                        )}
+                        {m.attachments && m.attachments.length > 0 && <MessageAttachments attachments={m.attachments} />}
                       </div>
                     </div>
                   );
@@ -689,16 +740,37 @@ function ConversationThread({
           </ScrollArea>
 
           <div className="mt-4 border-t pt-3 space-y-2">
+            <AttachmentChips files={queuedFiles} onRemove={onRemoveFile} />
             <Textarea
               value={reply}
               onChange={(e) => onReplyChange(e.target.value)}
               placeholder="Write a reply…"
               rows={3}
             />
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  hidden
+                  accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+                  onChange={onFilesPicked}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE || sending}
+                >
+                  <Paperclip className="h-4 w-4 mr-1.5" />
+                  Attach file
+                </Button>
+              </>
               <Button
                 onClick={onSend}
-                disabled={!reply.trim() || sending}
+                disabled={(!reply.trim() && queuedFiles.length === 0) || sending}
                 className="bg-[#7130A0] hover:bg-[#7130A0]/90"
               >
                 {sending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
@@ -840,13 +912,34 @@ function ComposePanel({
   const [type, setType] = useState<'csc' | 'general' | 'task' | 'package'>('general');
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onFilesPicked = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(event.target.files ?? []);
+    const accepted: File[] = [];
+    for (const file of picked) {
+      if (queuedFiles.length + accepted.length >= MAX_FILES_PER_MESSAGE) {
+        toast({ title: `You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`, variant: 'destructive' });
+        break;
+      }
+      try {
+        validateAttachment(file);
+        accepted.push(file);
+      } catch (error: any) {
+        toast({ title: error?.message || `Could not attach ${file.name}`, variant: 'destructive' });
+      }
+    }
+    if (accepted.length) setQueuedFiles((prev) => [...prev, ...accepted]);
+    event.currentTarget.value = '';
+  };
 
   const submit = async () => {
     if (!currentUserId) {
       toast({ title: 'Not authenticated', variant: 'destructive' });
       return;
     }
-    if (!subject.trim() || !body.trim()) {
+    if (!subject.trim() || (!body.trim() && queuedFiles.length === 0)) {
       toast({ title: 'Subject and message are required', variant: 'destructive' });
       return;
     }
@@ -862,7 +955,7 @@ function ComposePanel({
         status: 'open',
         created_by_user_uuid: currentUserId,
         last_message_at: now,
-        last_message_preview: body.trim().slice(0, 100),
+        last_message_preview: (body.trim() || 'Attachment').slice(0, 100),
       })
       .select('id')
       .single();
@@ -886,20 +979,33 @@ function ComposePanel({
         { onConflict: 'conversation_id,user_id' },
       );
 
-    const { error: msgErr } = await (supabase as any).from('tenant_messages').insert({
+    const { data: newMessage, error: msgErr } = await (supabase as any).from('tenant_messages').insert({
       conversation_id: conversationId,
       tenant_id: tenantId,
       sender_type: 'staff',
       sender_user_uuid: currentUserId,
-      body: body.trim(),
-    });
+      body: body.trim() || 'Attachment',
+    }).select('id').single();
     if (msgErr) {
       toast({ title: 'Conversation created but message failed', description: msgErr.message, variant: 'destructive' });
       setSubmitting(false);
       return;
     }
+    for (const file of queuedFiles) {
+      try {
+        await uploadMessageAttachment(supabase, file, tenantId, conversationId, newMessage.id);
+      } catch (uploadError: any) {
+        toast({
+          title: `Attachment failed: ${file.name}`,
+          description: uploadError?.message || 'The message was sent without this attachment.',
+          variant: 'destructive',
+        });
+      }
+    }
     toast({ title: 'Message sent' });
     setSubmitting(false);
+    setQueuedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     await onCreated(conversationId);
   };
 
@@ -930,6 +1036,30 @@ function ComposePanel({
         <div>
           <label className="text-sm font-medium">Message</label>
           <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} placeholder="Write your message…" />
+          </div>
+        <AttachmentChips
+          files={queuedFiles}
+          onRemove={(index) => setQueuedFiles((prev) => prev.filter((_, i) => i !== index))}
+        />
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+            onChange={onFilesPicked}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE || submitting}
+          >
+            <Paperclip className="h-4 w-4 mr-1.5" />
+            Attach files
+          </Button>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
