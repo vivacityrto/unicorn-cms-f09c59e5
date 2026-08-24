@@ -15,6 +15,8 @@ import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { DocumentRequestModal } from "@/components/client/DocumentRequestModal";
 import { CompliancePulseBanner } from "@/components/client/CompliancePulseBanner";
 import { ClientAskVivPanel } from "@/components/ask-viv/ClientAskVivPanel";
+import { ClientNotificationReview } from "@/components/client/ClientNotificationReview";
+import { LiveNotificationBanner } from "@/components/client/LiveNotificationBanner";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -144,6 +146,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           {/* Compliance Pulse Banner */}
           <div className="px-4 md:px-6 pt-3">
             <CompliancePulseBanner />
+            <LiveNotificationBanner isPreview={isPreview} />
           </div>
 
           {/* Page Content */}
@@ -197,6 +200,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         onClose={() => setIsAskVivOpen(false)}
         previewTenantId={isPreview ? activeTenantId ?? undefined : undefined}
       />
+
+      <ClientNotificationReview isPreview={isPreview} />
     </div>
   );
 }

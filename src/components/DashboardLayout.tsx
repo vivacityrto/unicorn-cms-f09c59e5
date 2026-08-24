@@ -22,6 +22,8 @@ import { useTeamUnreadCount } from "@/hooks/useTeamUnreadCount";
 import { useMyAssignedConversationsCount } from "@/hooks/useMyAssignedConversationsCount";
 import { useSupportTicketsBadge } from "@/hooks/useSupportTicketsBadge";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
+import { StaffLiveNotificationBanner } from "@/components/notifications/StaffLiveNotificationBanner";
+import { StaffNotificationReview } from "@/components/notifications/StaffNotificationReview";
 
 // ============================================================
 // VIVACITY TEAM SIDEBAR - FINAL AUTHORITY MODEL
@@ -699,6 +701,8 @@ export const DashboardLayout = ({
         {/* Time Inbox Banner */}
         <TimeInboxBanner />
 
+        {showVivacityMenu && <StaffLiveNotificationBanner />}
+
         {/* Page Content - w-full min-w-0 prevents content collapse */}
         <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">{children}</main>
 
@@ -726,6 +730,8 @@ export const DashboardLayout = ({
         onGoToSettings={logSettingsOpened}
         bestTab={getBestTab()}
       />
+
+      {showVivacityMenu && <StaffNotificationReview />}
     </div>
     </HelpCenterProvider>
   );
