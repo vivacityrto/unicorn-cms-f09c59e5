@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-08-24 — Staff PDP and Academy analytics — added a tenant-scoped Academy funnel/trend RPC with explicit calculation definitions, a separate client Academy Activity dashboard, and explainable My PDP next actions for hours, evidence, reflections, and reviews.](entries/2026-08-24-staff-pdp-academy-analytics.md)
+
 ## 2026
 
 ### August

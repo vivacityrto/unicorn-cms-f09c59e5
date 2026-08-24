@@ -14,18 +14,18 @@ Give client-portal organisation contacts a decision-ready view of staff developm
 - Reuse the existing PDP summary and `get_tenant_academy_staff_stats` data contracts.
 - Add navigation from the client sidebar and clear links between the two dashboards.
 
-### PR 2 — richer Academy analytics data contract
+### PR 2 — richer Academy analytics data contract — implemented
 
-- Add a tenant-scoped analytics RPC/view for course-level funnel and time-series metrics.
-- Track enrolled, started, in-progress, completed, certified, median completion time, and recent activity.
+- Added `get_tenant_academy_analytics(bigint)` for course-level funnel and 12-week activity metrics.
+- Tracks enrolled, started, in-progress, completed, certified, median completion time, and recent activity.
 - Audit every database function/RLS/trigger change before implementation.
-- Add transparent “last updated” and “how this is calculated” metadata.
+- Returns transparent `last_updated_at` and calculation definitions with the metrics.
 
-### PR 3 — actionable insights and My PDP connection
+### PR 3 — actionable insights and My PDP connection — implemented
 
-- Add explicit, explainable attention rules: inactive, stalled, overdue, review due, and missing evidence.
-- Add course-to-PDP evidence suggestions with user confirmation.
-- Add My PDP “next best action”, progress pacing, evidence gaps, and review prompts.
+- Added explicit, explainable attention rules for inactive staff, missing goal evidence, hours remaining, and review due.
+- Existing Academy completion triggers continue to create PDP evidence; My PDP now points users to confirm and reflect on that evidence.
+- Added My PDP “next best action”, progress pacing, evidence gaps, and review prompts.
 - Record interventions so staff can see why an action was suggested and what happened next.
 
 ## Dashboard design

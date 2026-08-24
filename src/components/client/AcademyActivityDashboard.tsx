@@ -1,8 +1,12 @@
 import { useMemo } from "react";
 import { differenceInDays, formatDistanceToNow, parseISO } from "date-fns";
-import { Activity, AlertTriangle, Award, BookOpen, Clock3, Users, type LucideIcon } from "lucide-react";
+import { Activity, AlertTriangle, Award, BarChart3, BookOpen, Clock3, Users, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useTenantAcademyStaffStats, type TenantAcademyStaffStatsRow } from "@/features/pdp/useTenantAcademyStaffStats";
+import {
+  useTenantAcademyAnalytics,
+  useTenantAcademyStaffStats,
+  type TenantAcademyStaffStatsRow,
+} from "@/features/pdp/useTenantAcademyStaffStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -59,6 +63,7 @@ function StaffActivityTable({ rows }: { rows: TenantAcademyStaffStatsRow[] }) {
 
 export function AcademyActivityDashboard({ tenantId }: { tenantId: number }) {
   const { data = [], isLoading, error } = useTenantAcademyStaffStats(tenantId);
+  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useTenantAcademyAnalytics(tenantId);
   const summary = useMemo(() => {
     const totalEnrollments = data.reduce((sum, row) => sum + Number(row.enrollments_total ?? 0), 0);
     const completed = data.reduce((sum, row) => sum + Number(row.enrollments_completed ?? 0), 0);
@@ -97,6 +102,39 @@ export function AcademyActivityDashboard({ tenantId }: { tenantId: number }) {
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><BarChart3 className="h-4 w-4 text-primary" />Learning funnel</CardTitle></CardHeader>
+          <CardContent>
+            {analyticsLoading ? <Skeleton className="h-40 w-full" /> : analyticsError ? <p className="text-sm text-muted-foreground">Course funnel data is temporarily unavailable.</p> : (
+              <div className="space-y-4">
+                {[
+                  ["Enrolled", analytics?.courses.reduce((sum, course) => sum + course.enrolled, 0) ?? 0],
+                  ["Started", analytics?.courses.reduce((sum, course) => sum + course.started, 0) ?? 0],
+                  ["In progress", analytics?.courses.reduce((sum, course) => sum + course.in_progress, 0) ?? 0],
+                  ["Completed", analytics?.courses.reduce((sum, course) => sum + course.completed, 0) ?? 0],
+                  ["Certified", analytics?.courses.reduce((sum, course) => sum + course.certified, 0) ?? 0],
+                ].map(([label, value]) => {
+                  const count = Number(value);
+                  const enrolled = analytics?.courses.reduce((sum, course) => sum + course.enrolled, 0) ?? 0;
+                  return <div key={String(label)}><div className="mb-1 flex justify-between text-sm"><span>{label}</span><span className="font-medium">{count}</span></div><Progress value={enrolled ? (count / enrolled) * 100 : 0} className="h-2" /></div>;
+                })}
+                <p className="text-xs text-muted-foreground">Based on current tenant enrolments. Started includes any recorded lesson progress.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-base">Weekly activity</CardTitle></CardHeader>
+          <CardContent>
+            {analyticsLoading ? <Skeleton className="h-40 w-full" /> : analyticsError ? <p className="text-sm text-muted-foreground">Weekly activity data is temporarily unavailable.</p> : analytics?.trend.length ? <div className="space-y-3">{analytics.trend.slice(-6).map((week) => <div key={week.week_start} className="flex items-center gap-3"><span className="w-20 text-xs text-muted-foreground">{week.week_start}</span><div className="flex-1"><Progress value={Math.min(100, week.active_learners * 10)} className="h-2" /></div><span className="w-20 text-right text-xs font-medium">{week.active_learners} active</span></div>)}</div> : <p className="text-sm text-muted-foreground">No weekly activity recorded yet.</p>}
+            {analytics?.last_updated_at && <p className="mt-4 text-xs text-muted-foreground">Updated {relativeDate(analytics.last_updated_at)}.</p>}
+          </CardContent>
+        </Card>
+      </div>
+
+      {analytics?.courses.length ? <Card><CardHeader><CardTitle className="text-base">Course performance</CardTitle></CardHeader><CardContent className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><thead><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="pb-3">Course</th><th className="pb-3 text-right">Enrolled</th><th className="pb-3 text-right">Started</th><th className="pb-3 text-right">Completed</th><th className="pb-3 text-right">Certified</th><th className="pb-3 text-right">Median days</th></tr></thead><tbody>{analytics.courses.slice(0, 8).map((course) => <tr key={course.course_id} className="border-b last:border-0"><td className="py-3 font-medium">{course.course_title}</td><td className="py-3 text-right">{course.enrolled}</td><td className="py-3 text-right">{course.started}</td><td className="py-3 text-right">{course.completed}</td><td className="py-3 text-right">{course.certified}</td><td className="py-3 text-right">{course.median_completion_days ?? "—"}</td></tr>)}</tbody></table></CardContent></Card> : null}
     </div>
   );
 }
