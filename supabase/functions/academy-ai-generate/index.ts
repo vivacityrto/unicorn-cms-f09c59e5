@@ -192,7 +192,31 @@ Deno.serve(async (req) => {
         .filter((sg) => sg.suggested_title && sg.end_seconds > sg.start_seconds)
         .sort((a, b) => a.start_seconds - b.start_seconds);
 
-      if (segments.length === 0) {
+      // AI occasionally returns a rounded boundary just past Vimeo's actual
+      // duration. Clamp and repair the ordered boundaries before the client
+      // persists them, so a lesson can never claim time outside the recording.
+      const bounded = total
+        ? segments
+            .map((sg) => ({
+              ...sg,
+              start_seconds: Math.min(total, Math.max(0, sg.start_seconds)),
+              end_seconds: Math.min(total, Math.max(0, sg.end_seconds)),
+            }))
+            .reduce<typeof segments>((acc, sg) => {
+              const previousEnd = acc.length ? acc[acc.length - 1].end_seconds : 0;
+              const start = Math.max(previousEnd, sg.start_seconds);
+              const end = Math.max(start, sg.end_seconds);
+              if (end > start) acc.push({ ...sg, start_seconds: start, end_seconds: end });
+              return acc;
+            }, [])
+        : segments;
+
+      if (bounded.length > 0 && total) {
+        // The final lesson owns the tail, including any rounding gap.
+        bounded[bounded.length - 1].end_seconds = total;
+      }
+
+      if (bounded.length === 0) {
         const fb = evenSplit();
         if (!fb) {
           return new Response(JSON.stringify({ error: "AI could not segment this recording" }), {
@@ -204,7 +228,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      return new Response(JSON.stringify({ segments, used_fallback: false }), {
+      return new Response(JSON.stringify({ segments: bounded, used_fallback: false }), {
         headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }

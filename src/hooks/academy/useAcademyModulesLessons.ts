@@ -45,7 +45,7 @@ export function useModulesWithLessons(courseId: number | null, opts?: { admin?: 
       const lessonsQuery = admin
         ? supabase
             .from("academy_lessons")
-            .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown")
+            .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown, segment_start_seconds, segment_end_seconds")
             .eq("course_id", courseId)
             .order("sort_order")
         : supabase

@@ -353,7 +353,9 @@ export default function AcademyBuilderCourse() {
         .eq("is_vivacity_internal", true)
         .order("full_name");
       if (error) throw error;
-      return (data ?? []).filter((u) => !u.archived && !u.disabled);
+      // Historical drafts may intentionally retain an inactive facilitator.
+      // Keep all internal users selectable and make the state visible below.
+      return data ?? [];
     },
     staleTime: 60_000,
   });
@@ -730,7 +732,7 @@ export default function AcademyBuilderCourse() {
                     <SelectContent>
                       {facilitators.map((u) => (
                           <SelectItem key={u.user_uuid} value={`staff:${u.user_uuid}`}>
-                          {u.full_name?.trim() || u.user_uuid}
+                          {(u.full_name?.trim() || u.user_uuid) + (u.archived || u.disabled ? " (inactive)" : "")}
                         </SelectItem>
                       ))}
                       {historicalFacilitators.map((f: any) => (

@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useVideoLibraryPicker, useResourceLibraryPicker } from "@/hooks/academy/useAcademyBuilderPickers";
 import { useCreateLesson, useUpdateLesson, type AcademyLesson } from "@/hooks/academy/useAcademyModulesLessons";
+import VimeoPlayer from "@/components/academy/VimeoPlayer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,17 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
   const [videoSource, setVideoSource] = useState<"link" | "library">(lesson?.video_id ? "library" : "link");
   const [vimeoUrl, setVimeoUrl] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const { data: lessonVideo } = useQuery({
+    queryKey: ["academy-lesson-video", videoId],
+    enabled: !!videoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("training_videos").select("vimeo_url, video_name").eq("id", videoId!).single();
+      if (error) throw error;
+      return data;
+    },
+  });
 
 
   const { data: videos = [], isLoading: videosLoading } = useVideoLibraryPicker(videoSearch || undefined);
@@ -266,6 +278,21 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
           {lessonType === "video" && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Video</label>
+              {lessonVideo?.vimeo_url && (
+                <div className="space-y-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview((v) => !v)}>
+                    <Play className="h-3.5 w-3.5 mr-1" /> {showPreview ? "Hide video preview" : "Preview this lesson"}
+                  </Button>
+                  {showPreview && (
+                    <VimeoPlayer
+                      vimeoUrl={lessonVideo.vimeo_url}
+                      title={title || lessonVideo.video_name || "Lesson preview"}
+                      segmentStartSeconds={lesson?.segment_start_seconds ?? null}
+                      segmentEndSeconds={lesson?.segment_end_seconds ?? null}
+                    />
+                  )}
+                </div>
+              )}
 
               <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: "hsl(var(--border))" }}>
                 {([
