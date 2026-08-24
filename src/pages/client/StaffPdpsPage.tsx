@@ -31,7 +31,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +47,6 @@ import { getCurrentCycle } from "@/features/pdp/api";
 import { exportPdpAuditPack, resolveTenantName } from "@/features/pdp/exportAuditPack";
 import type { WorkforcePdpRow } from "@/features/pdp/workforce";
 import type { CurrencyStatus } from "@/features/pdp/types";
-import { AcademyActivityDashboard } from "@/components/client/AcademyActivityDashboard";
 
 const ALL_STATUSES: CurrencyStatus[] = ["overdue", "at_risk", "on_track", "current"];
 const STATUS_LABEL: Record<CurrencyStatus, string> = {
@@ -362,13 +360,7 @@ export default function StaffPdpsPage() {
 
         {!isLoading && !error && tenantRows.length > 0 && <StaffPdpOverview rows={tenantRows} />}
 
-        <Tabs defaultValue="pdp-cycles">
-          <TabsList>
-            <TabsTrigger value="pdp-cycles">PDP cycles</TabsTrigger>
-            <TabsTrigger value="academy-activity">Academy activity</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="pdp-cycles" className="space-y-6 mt-6">
+        <div className="space-y-6">
             {/* Filter bar */}
             <Card>
               <CardContent className="p-4 flex flex-wrap items-center gap-3">
@@ -630,12 +622,7 @@ export default function StaffPdpsPage() {
                 Export audit pack
               </Button>
             </div>
-          </TabsContent>
-
-          <TabsContent value="academy-activity" className="mt-6">
-            <AcademyActivityDashboard tenantId={activeTenantId} />
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
 
       <StaffDrawer
