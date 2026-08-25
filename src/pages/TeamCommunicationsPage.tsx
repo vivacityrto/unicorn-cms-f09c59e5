@@ -874,17 +874,28 @@ function NewTeamMessageDialog({
       if (tenantUsersError) throw tenantUsersError;
 
       if (tenantUsers?.length) {
+        const clientRows = tenantUsers.map((u: any) => ({
+          conversation_id: conv.id,
+          user_id: u.user_id,
+          role: "client",
+        }));
         const { error: clientPartError } = await (supabase
           .from("conversation_participants" as any)
-          .upsert(
-            tenantUsers.map((u: any) => ({
-              conversation_id: conv.id,
-              user_id: u.user_id,
-              role: "client",
-            })),
-            { onConflict: "conversation_id,user_id", ignoreDuplicates: true }
-          )) as any;
-        if (clientPartError) throw clientPartError;
+          .upsert(clientRows, { onConflict: "conversation_id,user_id", ignoreDuplicates: true })) as any;
+        if (clientPartError) {
+          // conversation_participants.user_id FKs to auth.users, not public.users — a
+          // stale public.users row with no matching auth account (seeded/fixture
+          // profiles) fails the WHOLE batch upsert, which would otherwise block
+          // starting a conversation with that tenant at all. Retry row-by-row so one
+          // bad participant only costs that one participant, not the whole tenant.
+          console.error(`Batch client-participant upsert failed (${clientPartError.message}), retrying row-by-row`);
+          for (const row of clientRows) {
+            const { error: rowErr } = await (supabase
+              .from("conversation_participants" as any)
+              .upsert(row, { onConflict: "conversation_id,user_id", ignoreDuplicates: true })) as any;
+            if (rowErr) console.error(`Skipping participant ${row.user_id} — ${rowErr.message}`);
+          }
+        }
       }
 
       // Send first message
