@@ -1259,7 +1259,7 @@ export default function ManageDocuments() {
       const result = data as any;
       toast({
         title: "Document deleted",
-        description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s), and ${result.tenant_docs_deleted} tenant link(s).`
+        description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s), ${result.client_stage_docs_deleted} client stage assignment(s), and ${result.tenant_docs_deleted} tenant link(s).`
       });
       fetchDocuments();
     } catch (error: any) {
