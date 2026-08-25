@@ -218,7 +218,19 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // FunctionsHttpError for a non-2xx response — the edge function's JSON
+        // body (with the real reason) is on error.context, not `data`.
+        let detail = 'Could not promote this contact — the seat may be at capacity.';
+        try {
+          const body = await (error as { context?: Response }).context?.clone().json();
+          if (body?.detail) detail = body.detail;
+        } catch {
+          // no JSON body available — fall back to the generic message
+        }
+        toast.error(detail);
+        return;
+      }
       if (!data?.ok) {
         toast.error(data?.detail || 'Could not promote this contact — the seat may be at capacity.');
         return;
@@ -226,7 +238,7 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
 
       const { error: markError } = await supabase.rpc('mark_tenant_contact_promoted', {
         p_contact_id: promotingContact.id,
-        p_user_id: data.user_id,
+        p_user_id: data.user_uuid,
       });
       if (markError) {
         console.error('mark_tenant_contact_promoted error:', markError);

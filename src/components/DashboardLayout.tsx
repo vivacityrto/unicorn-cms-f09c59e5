@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronUp, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download, Gauge, Activity, AlertTriangle, Radar, Compass, Network, UserPlus } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronUp, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download, Gauge, Activity, AlertTriangle, Radar, Compass, Network, UserPlus, UsersRound } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -105,6 +105,7 @@ const resourceManagementMenuItems = [
 const administrationMenuItems = [
   { icon: Shield, label: "Team Users", path: "/admin/team-users" },
   { icon: Building2, label: "Tenant Users", path: "/admin/tenant-users" },
+  { icon: UsersRound, label: "Contact Directory", path: "/administration/contacts", superAdminOnly: true },
   { icon: Users, label: "People", path: "/admin/staff-engagements", saOrIntegratorOnly: true },
   
   { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
