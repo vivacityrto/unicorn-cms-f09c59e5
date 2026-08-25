@@ -74,6 +74,21 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Nested git worktrees under this repo (.claude/worktrees/, .worktrees/,
+    // worktrees/) each carry a full copy of index.html + node_modules. Vite's
+    // watcher must not walk them — see optimizeDeps.entries below for why.
+    watch: {
+      ignored: ["**/worktrees/**", "**/.worktrees/**", "**/.claude/worktrees/**"],
+    },
+  },
+  // Without an explicit entry, Vite's dependency scanner globs **/*.html from
+  // the project root to find crawl entries. Nested worktrees (see above) each
+  // contain their own index.html and node_modules, so the scanner ends up
+  // crawling every worktree's full dependency tree too — this is what hangs
+  // `npm run dev` forever at "[optimizer] scanning dependencies...". Pinning
+  // the real entry point avoids the runaway glob entirely.
+  optimizeDeps: {
+    entries: ["index.html"],
   },
   define: {
     "import.meta.env.VITE_BUILD_ID": JSON.stringify(BUILD_ID),

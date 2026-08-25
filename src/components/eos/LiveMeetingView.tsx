@@ -11,10 +11,12 @@ import { useEosSegueShares } from '@/hooks/useEosSegueShares';
 import { useMeetingIssues } from '@/hooks/useMeetingIssues';
 import { useMeetingTodos } from '@/hooks/useMeetingTodos';
 import { useMeetingOutcomes } from '@/hooks/useMeetingOutcomes';
+import { useOnePhraseCloses } from '@/hooks/useOnePhraseCloses';
 import { useMeetingAttendance } from '@/hooks/useMeetingAttendance';
+import { clientAvatarColor, clientInitials } from '@/lib/clientAvatarColor';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -73,7 +75,7 @@ export const LiveMeetingView = () => {
   const [editingRock, setEditingRock] = useState<any>(null);
   const [rockFormOpen, setRockFormOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
-  const [cascadingMessages, setCascadingMessages] = useState('');
+  const [myPhraseDraft, setMyPhraseDraft] = useState('');
   const isNavigatingRef = useRef(false);
   const [isNavigatingUI, setIsNavigatingUI] = useState(false);
 
@@ -98,7 +100,17 @@ export const LiveMeetingView = () => {
   const { segueShares, createSegueShare, deleteSegueShare } = useEosSegueShares(meetingId);
   const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
   const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
-  const { saveRating, getUserRating } = useMeetingOutcomes(meetingId);
+  const { ratings, saveRating, getUserRating } = useMeetingOutcomes(meetingId);
+  const { closes: onePhraseCloses, saveOnePhraseClose, getUserPhrase } = useOnePhraseCloses(meetingId);
+  const myExistingPhrase = profile?.user_uuid ? getUserPhrase(profile.user_uuid) : undefined;
+
+  // Seed the draft input once from an already-saved phrase (e.g. rejoining
+  // the meeting) without clobbering what the user is actively typing.
+  useEffect(() => {
+    if (myExistingPhrase && !myPhraseDraft) {
+      setMyPhraseDraft(myExistingPhrase);
+    }
+  }, [myExistingPhrase]);
   const { rocks } = useEosRocks();
   const { metrics } = useEosScorecardMetrics();
 
@@ -224,6 +236,9 @@ export const LiveMeetingView = () => {
     onIssueChange: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-issues', meetingId] });
     },
+    onOnePhraseCloseChange: () => {
+      queryClient.invalidateQueries({ queryKey: ['meeting-one-phrase-closes', meetingId] });
+    },
   });
 
   // Attendance hook for auto-attendance
@@ -338,13 +353,6 @@ export const LiveMeetingView = () => {
     });
   }, [segments]);
 
-  // Hydrate cascading messages from meeting.notes on load
-  useEffect(() => {
-    if (meeting?.notes && !cascadingMessages) {
-      setCascadingMessages(meeting.notes);
-    }
-  }, [meeting?.notes]);
-
   // Save segment notes on blur
   const handleSegmentNoteBlur = (segmentId: string) => {
     const note = segmentNotes[segmentId];
@@ -353,16 +361,20 @@ export const LiveMeetingView = () => {
     }
   };
 
-  // Save cascading messages on blur
-  const saveCascadingMessages = async () => {
-    if (!meetingId) return;
-    const { error } = await supabase
-      .from('eos_meetings')
-      .update({ notes: cascadingMessages })
-      .eq('id', meetingId);
-    if (error) {
-      toast({ title: 'Error saving cascading messages', description: error.message, variant: 'destructive' });
-    }
+  // Share my one phrase close - broadcasts so other attendees see it land
+  // without waiting on the still-unregistered postgres_changes path (see
+  // useMeetingRealtime's broadcast-fallback comment).
+  const handleShareMyPhrase = () => {
+    const phrase = myPhraseDraft.trim();
+    if (!phrase) return;
+    saveOnePhraseClose.mutate(phrase, {
+      onSuccess: (result) => {
+        if (result.success) {
+          setMyPhraseDraft('');
+          broadcastChange('one_phrase_close_change');
+        }
+      },
+    });
   };
 
   // Facilitator = current Leader, full stop. No zero-participants bootstrap
@@ -979,7 +991,13 @@ export const LiveMeetingView = () => {
             <div className="space-y-4">
               <MeetingRatingPrompt />
               <div>
-                <p className="font-medium text-sm mb-2">Rate this meeting (1-10):</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-medium text-sm">Rate this meeting (1-10):</p>
+                  <span className="flex items-center gap-1.5 text-xs font-semibold bg-muted rounded-full px-3 py-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    {ratings?.length ?? 0} of {attendees?.length ?? 0} rated
+                  </span>
+                </div>
                 <div className="flex gap-1 flex-wrap">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                     <Button
@@ -1016,14 +1034,90 @@ export const LiveMeetingView = () => {
                 </div>
               </div>
               <div>
-                <p className="font-medium text-sm mb-2">Cascading Messages:</p>
-                <Textarea 
-                  placeholder="Key messages to cascade to the organization..."
-                  value={cascadingMessages}
-                  onChange={(e) => setCascadingMessages(e.target.value)}
-                  onBlur={saveCascadingMessages}
-                  rows={3}
-                />
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-medium text-sm">One Phrase Close:</p>
+                  <span className="flex items-center gap-1.5 text-xs font-semibold bg-muted rounded-full px-3 py-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    {onePhraseCloses?.length ?? 0} of {attendees?.length ?? 0} shared
+                  </span>
+                </div>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-x-4 gap-y-6 items-end">
+                  {attendees?.map((attendee) => {
+                    const name = attendee.users
+                      ? `${attendee.users.first_name || ''} ${attendee.users.last_name || ''}`.trim() || 'Unknown'
+                      : 'Unknown';
+                    const phrase = getUserPhrase(attendee.user_id);
+                    const isOnline = onlineUsers.some((u) => u.user_id === attendee.user_id);
+                    const color = clientAvatarColor(attendee.user_id);
+                    return (
+                      <div key={attendee.user_id} className="flex flex-col items-center gap-2">
+                        {phrase ? (
+                          <div className="relative w-full rounded-2xl bg-primary/10 px-3 py-2.5 shadow-sm animate-in fade-in-0 zoom-in-90 duration-300">
+                            <p className="text-sm font-medium text-foreground text-center break-words">&ldquo;{phrase}&rdquo;</p>
+                            <div className="absolute left-1/2 -bottom-1.5 -translate-x-1/2 rotate-45 h-3 w-3 bg-primary/10" />
+                          </div>
+                        ) : isOnline ? (
+                          <div className="relative w-full rounded-2xl bg-muted px-3 py-3.5 flex items-center justify-center">
+                            <span className="flex gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0ms]" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:150ms]" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:300ms]" />
+                            </span>
+                            <div className="absolute left-1/2 -bottom-1.5 -translate-x-1/2 rotate-45 h-3 w-3 bg-muted" />
+                          </div>
+                        ) : (
+                          <div className="w-full rounded-2xl border border-dashed border-border px-3 py-3.5 flex items-center justify-center">
+                            <p className="text-xs italic text-muted-foreground">waiting to join&hellip;</p>
+                          </div>
+                        )}
+                        <div className="relative">
+                          <Avatar className="h-11 w-11 border-2 border-background">
+                            {attendee.users?.avatar_url && (
+                              <AvatarImage src={attendee.users.avatar_url} alt={name} />
+                            )}
+                            <AvatarFallback className={`${color.solid} text-xs font-bold`}>
+                              {clientInitials(name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {isOnline && (
+                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+                          )}
+                        </div>
+                        <span className="text-xs font-medium text-center truncate w-full">{name}</span>
+                      </div>
+                    );
+                  })}
+                  {(!attendees || attendees.length === 0) && (
+                    <p className="text-sm text-muted-foreground">No attendees yet</p>
+                  )}
+                </div>
+
+                <div className="mt-4 flex items-center gap-3 rounded-xl border bg-muted/40 px-3 py-2">
+                  <Avatar className="h-9 w-9 flex-shrink-0">
+                    {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={userName} />}
+                    <AvatarFallback className={`${clientAvatarColor(profile?.user_uuid).solid} text-xs font-bold`}>
+                      {clientInitials(userName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Input
+                    placeholder="Your one phrase close&hellip;"
+                    value={myPhraseDraft}
+                    onChange={(e) => setMyPhraseDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleShareMyPhrase();
+                    }}
+                    maxLength={140}
+                    className="flex-1 border-none bg-transparent shadow-none focus-visible:ring-0"
+                  />
+                  <Button
+                    size="sm"
+                    className="rounded-full flex-shrink-0"
+                    onClick={handleShareMyPhrase}
+                    disabled={saveOnePhraseClose.isPending || !myPhraseDraft.trim()}
+                  >
+                    Share
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
@@ -1401,10 +1495,16 @@ export const LiveMeetingView = () => {
 
                 {/* Per-attendee meeting rating (visible to everyone, not just facilitator) */}
                 <Card className="p-6">
-                  <h3 className="font-semibold flex items-center gap-2 mb-1">
-                    <Star className="h-4 w-4 text-primary" />
-                    Rate this meeting (1-10)
-                  </h3>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Star className="h-4 w-4 text-primary" />
+                      Rate this meeting (1-10)
+                    </h3>
+                    <span className="flex items-center gap-1.5 text-xs font-semibold bg-muted rounded-full px-3 py-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      {ratings?.length ?? 0} of {attendees?.length ?? 0} rated
+                    </span>
+                  </div>
                   <p className="text-sm text-muted-foreground mb-4">
                     Every attendee is encouraged to rate the meeting.
                   </p>

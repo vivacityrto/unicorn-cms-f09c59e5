@@ -75,6 +75,7 @@ export default function AcademyCourseCleanupPage() {
         .from("users")
         .select("user_uuid, full_name, archived, disabled")
         .eq("is_vivacity_internal", true)
+        .eq("is_system_account", false)
         .order("full_name");
       if (error) throw error;
       return (data ?? []).filter((u) => !u.archived && !u.disabled);

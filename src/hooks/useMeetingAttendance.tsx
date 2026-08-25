@@ -21,6 +21,7 @@ export interface MeetingAttendee {
     first_name: string | null;
     last_name: string | null;
     email?: string;
+    avatar_url?: string | null;
   };
 }
 
@@ -56,7 +57,7 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
         .from('eos_meeting_attendees')
         .select(`
           *,
-          users!eos_meeting_attendees_user_id_fkey (first_name, last_name)
+          users!eos_meeting_attendees_user_id_fkey (first_name, last_name, avatar_url)
         `)
         .eq('meeting_id', meetingId!);
       
