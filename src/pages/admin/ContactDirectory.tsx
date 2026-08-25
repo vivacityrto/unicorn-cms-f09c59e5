@@ -94,6 +94,7 @@ export default function ContactDirectory() {
   const [newGroupName, setNewGroupName] = useState('');
   const [savingGroup, setSavingGroup] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<ContactGroup | null>(null);
+  const [updatingPositionType, setUpdatingPositionType] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDirectory();
@@ -111,6 +112,30 @@ export default function ContactDirectory() {
       setRows((data || []) as DirectoryRow[]);
     }
     setLoading(false);
+  };
+
+  const handlePositionTypeChange = async (row: DirectoryRow, value: string) => {
+    const nextPositionType = value === '__none__' ? null : value;
+    if ((row.position_type ?? null) === nextPositionType) return;
+
+    const [source, idStr] = row.row_key.split(':');
+    const id = Number(idStr);
+    const table = source === 'user' ? 'tenant_users' : 'tenant_contacts';
+
+    setUpdatingPositionType(row.row_key);
+    const { error } = await supabase.from(table).update({ position_type: nextPositionType }).eq('id', id);
+    setUpdatingPositionType(null);
+
+    if (error) {
+      console.error(`${table} position_type update error:`, error);
+      toast.error('Failed to update position type');
+      return;
+    }
+
+    setRows((previous) =>
+      previous.map((r) => (r.row_key === row.row_key ? { ...r, position_type: nextPositionType } : r))
+    );
+    toast.success(nextPositionType ? 'Position type updated' : 'Position type cleared');
   };
 
   const fetchPositionTypeOptions = async () => {
@@ -376,7 +401,31 @@ export default function ContactDirectory() {
                         status={<Badge variant={r.source === 'user' ? 'default' : 'outline'}>{r.source}</Badge>}
                         fields={[
                           { label: 'Client', value: r.tenant_name, priority: 'primary' },
-                          { label: 'Position', value: positionTypeLabel(r.position_type, positionTypeOptions), priority: 'secondary' },
+                          {
+                            label: 'Position',
+                            value: (
+                              <Select
+                                value={r.position_type || '__none__'}
+                                onValueChange={(value) => handlePositionTypeChange(r, value)}
+                                disabled={updatingPositionType === r.row_key}
+                              >
+                                <SelectTrigger className="w-40 h-8 text-sm" aria-label={`Position type for ${r.email}`}>
+                                  <SelectValue>
+                                    {r.position_type ? positionTypeLabel(r.position_type, positionTypeOptions) : 'Position type'}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">No position type</SelectItem>
+                                  {positionTypeOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ),
+                            priority: 'secondary',
+                          },
                           { label: 'Status', value: r.status, priority: 'secondary' },
                         ]}
                       />
@@ -421,8 +470,26 @@ export default function ContactDirectory() {
                             </TableCell>
                             <TableCell className={cn('text-sm text-muted-foreground', columnVisibility.lg)}>{r.email}</TableCell>
                             <TableCell className="text-sm">{r.tenant_name}</TableCell>
-                            <TableCell className={cn('text-sm', columnVisibility.xl)}>
-                              {positionTypeLabel(r.position_type, positionTypeOptions)}
+                            <TableCell className={columnVisibility.xl} onClick={(e) => e.stopPropagation()}>
+                              <Select
+                                value={r.position_type || '__none__'}
+                                onValueChange={(value) => handlePositionTypeChange(r, value)}
+                                disabled={updatingPositionType === r.row_key}
+                              >
+                                <SelectTrigger className="w-40 h-8 text-sm" aria-label={`Position type for ${r.email}`}>
+                                  <SelectValue>
+                                    {r.position_type ? positionTypeLabel(r.position_type, positionTypeOptions) : 'Position type'}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">No position type</SelectItem>
+                                  {positionTypeOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </TableCell>
                             <TableCell>
                               <Badge variant={r.source === 'user' ? 'default' : 'outline'}>{r.source}</Badge>
