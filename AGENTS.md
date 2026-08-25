@@ -54,44 +54,60 @@ former `unicorn-kb` and `unicorn-audit` repos — see
 
 ## Local dev server troubleshooting (Windows)
 
-Two distinct, unrelated failure modes have shown up repeatedly when driving
-`npm run dev` from an agent session on a Windows dev machine (2026-08-25).
-Neither is a code bug — don't waste time editing `vite.config.ts`,
-`optimizeDeps`, or chasing recently-changed plugins (e.g. the Lovable
-`mcpPlugin()`, the edge-function CORS allowlist work) as the cause of either.
+**`npm run dev` hangs forever at `[optimizer] scanning dependencies...`**
+(never reaches `optimized dependencies:`, never errors), and a real browser
+(or Playwright/browser-automation) times out waiting for `domcontentloaded`
+against `http://localhost:PORT` — even though `curl http://localhost:PORT`
+returns 200 instantly (curl only hits the raw `index.html` transform, which
+doesn't block on dependency pre-bundling; a real browser's module-script
+requests do, and they never resolve while the scan is stuck).
 
-**1. `npm run dev` hangs forever at `[optimizer] scanning dependencies...`**
-(never reaches `optimized dependencies:`, never errors) — even though
-`curl http://localhost:8080` returns 200 instantly (curl only hits the raw
-`index.html` transform, which doesn't block on dependency pre-bundling; a
-real browser's module-script requests do).
-- **Root cause:** zombie `node.exe` processes piling up across repeated
-  crashed/killed sessions and dev-server restarts, contending for file locks
-  that stall esbuild's dependency scan. This is *not* a stale-cache or
-  config issue by itself — clearing `node_modules/.vite` alone did not fix
-  it; killing the stray processes did.
-- **Fix:** `taskkill /IM node.exe /F` (kills ALL node processes system-wide —
-  confirm with the user first if other node work might be running), then
-  delete `node_modules/.vite` for a clean cache, then `npm run dev` fresh.
-- **Diagnosis tip:** `tasklist /FI "IMAGENAME eq node.exe"` — if you see more
-  than 2-3 entries with no obvious owner, that's the smell.
+- **Confirmed root cause (2026-08-25):** without an explicit
+  `optimizeDeps.entries`, Vite's dependency scanner globs `**/*.html` from
+  the project root to find crawl entries. This repo routinely has **nested
+  git worktrees checked out inside the repo itself**
+  (`.claude/worktrees/<name>/`, `.worktrees/<name>/`, `worktrees/<name>/` —
+  created by agent sessions via `git worktree add`), and each one carries its
+  own full `index.html` **and its own full `node_modules`**. The scanner
+  glob-matches every one of those nested `index.html` files as an additional
+  entry point and crawls each worktree's entire dependency tree too — with
+  enough worktrees accumulated (a few dozen is normal after months of agent
+  sessions), this either takes minutes or hangs outright. Verified with
+  `DEBUG=vite:deps npm run dev`: the crawl's entry list included paths like
+  `worktrees/pdp-workforce-rls/index.html`, and pinning the entry list fixed
+  it immediately (crawl went from hanging indefinitely to completing in
+  under 10s).
+- **Fix (already applied in `vite.config.ts`):** `optimizeDeps.entries:
+  ["index.html"]` (skip the runaway glob, scan only the real entry) plus
+  `server.watch.ignored` excluding `**/worktrees/**`, `**/.worktrees/**`,
+  `**/.claude/worktrees/**` (stop the dev-server file watcher from tracking
+  them too). If this regresses, check `git worktree list` for how many
+  worktrees have accumulated under the repo root — cleaning up stale ones
+  (`git worktree remove <path>`, never `git branch -d` without asking) also
+  shrinks the scan surface.
 
-**2. A browser-automation tool (Playwright MCP, etc.) times out waiting for
-`domcontentloaded` navigating to `http://localhost:PORT` or
-`http://127.0.0.1:PORT`, with ZERO corresponding request in the dev server's
-log** — while the same tool loads an external HTTPS site (e.g.
-`https://example.com`) instantly, and `curl` from the same machine to the
-same local URL works fine.
-- **Root cause:** this machine has endpoint-security/TLS-inspection software
-  (observed: an `SSLKEYLOGFILE` env var pointing at a named pipe
-  `\\.\nllMonFltProxy\...`, backed by a service `nllToolsSvc.exe`) that
-  intercepts IPv4 loopback traffic (`127.0.0.1`/`localhost`) at the network
-  layer and silently black-holes it for at least some client processes. This
-  is IT-managed endpoint software, not something fixable from the repo.
-- **Fix:** use the **IPv6 loopback address** instead —
-  `http://[::1]:PORT` — which bypasses the interception entirely and loads
-  normally. Confirmed working against this repo's dev server. If a tool
-  defaults to `localhost`, explicitly override it to `[::1]`.
+**False leads investigated first — don't waste time rediscovering these:**
+- **Not the Lovable `mcpPlugin()`** — removing it entirely did not change
+  the hang.
+- **Not the edge-function CORS allowlist work** — that's server-side
+  Supabase Edge Function code, with zero interaction with the local Vite
+  dev server or its dependency scanner.
+- **Not solely stray `node.exe` processes** — killing zombie node processes
+  from crashed sessions (`taskkill /IM node.exe /F`, confirm with the user
+  first since it's system-wide) sometimes *appeared* to fix it, because a
+  fresh process coincidentally raced past the scan once or was retried
+  differently — but the hang reliably reproduced again on a genuinely clean
+  process/cache state until the `optimizeDeps.entries` fix above was
+  applied. Still worth doing as basic hygiene after a crashed session, just
+  don't stop investigating if it doesn't resolve the hang.
+- **Not IPv4-loopback interception by endpoint-security software** — an
+  `SSLKEYLOGFILE` env var pointing at a named pipe (`\\.\nllMonFltProxy\...`,
+  backed by `nllToolsSvc.exe`) was observed and briefly looked causal because
+  `http://[::1]:PORT` (IPv6 loopback) loaded while `localhost`/`127.0.0.1`
+  timed out — but after the real fix, plain `localhost` worked fine too.
+  The `[::1]` "fix" was actually just a request timed to land after a
+  previous scan happened to finish. Plain `localhost`/`127.0.0.1` work fine
+  once the real fix above is in place — no loopback workaround needed.
 
 ## Auth / testing gotcha
 
