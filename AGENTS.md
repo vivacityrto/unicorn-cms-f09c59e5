@@ -52,6 +52,47 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   gap and an RBAC public-route expectation) — these are pre-existing, not
   environment issues.
 
+## Local dev server troubleshooting (Windows)
+
+Two distinct, unrelated failure modes have shown up repeatedly when driving
+`npm run dev` from an agent session on a Windows dev machine (2026-08-25).
+Neither is a code bug — don't waste time editing `vite.config.ts`,
+`optimizeDeps`, or chasing recently-changed plugins (e.g. the Lovable
+`mcpPlugin()`, the edge-function CORS allowlist work) as the cause of either.
+
+**1. `npm run dev` hangs forever at `[optimizer] scanning dependencies...`**
+(never reaches `optimized dependencies:`, never errors) — even though
+`curl http://localhost:8080` returns 200 instantly (curl only hits the raw
+`index.html` transform, which doesn't block on dependency pre-bundling; a
+real browser's module-script requests do).
+- **Root cause:** zombie `node.exe` processes piling up across repeated
+  crashed/killed sessions and dev-server restarts, contending for file locks
+  that stall esbuild's dependency scan. This is *not* a stale-cache or
+  config issue by itself — clearing `node_modules/.vite` alone did not fix
+  it; killing the stray processes did.
+- **Fix:** `taskkill /IM node.exe /F` (kills ALL node processes system-wide —
+  confirm with the user first if other node work might be running), then
+  delete `node_modules/.vite` for a clean cache, then `npm run dev` fresh.
+- **Diagnosis tip:** `tasklist /FI "IMAGENAME eq node.exe"` — if you see more
+  than 2-3 entries with no obvious owner, that's the smell.
+
+**2. A browser-automation tool (Playwright MCP, etc.) times out waiting for
+`domcontentloaded` navigating to `http://localhost:PORT` or
+`http://127.0.0.1:PORT`, with ZERO corresponding request in the dev server's
+log** — while the same tool loads an external HTTPS site (e.g.
+`https://example.com`) instantly, and `curl` from the same machine to the
+same local URL works fine.
+- **Root cause:** this machine has endpoint-security/TLS-inspection software
+  (observed: an `SSLKEYLOGFILE` env var pointing at a named pipe
+  `\\.\nllMonFltProxy\...`, backed by a service `nllToolsSvc.exe`) that
+  intercepts IPv4 loopback traffic (`127.0.0.1`/`localhost`) at the network
+  layer and silently black-holes it for at least some client processes. This
+  is IT-managed endpoint software, not something fixable from the repo.
+- **Fix:** use the **IPv6 loopback address** instead —
+  `http://[::1]:PORT` — which bypasses the interception entirely and loads
+  normally. Confirmed working against this repo's dev server. If a tool
+  defaults to `localhost`, explicitly override it to `[::1]`.
+
 ## Auth / testing gotcha
 
 - The landing route `/` is the **Login** page. All app routes beyond it are

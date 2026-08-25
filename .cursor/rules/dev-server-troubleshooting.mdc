@@ -1,0 +1,24 @@
+---
+description: Local dev server hangs / Playwright localhost timeouts — known causes, not code bugs
+alwaysApply: true
+---
+
+# Dev server troubleshooting (Windows) — don't chase these as code bugs
+
+Full detail lives in `AGENTS.md → "Local dev server troubleshooting (Windows)"`.
+Read that section before spending time editing `vite.config.ts` or blaming a
+recent change (e.g. the Lovable `mcpPlugin()`, edge-function CORS work) when
+you hit either of these:
+
+1. **`npm run dev` hangs at `[optimizer] scanning dependencies...` forever.**
+   Cause: zombie `node.exe` processes from prior crashed/killed sessions
+   contending for file locks. Fix: `taskkill /IM node.exe /F`, delete
+   `node_modules/.vite`, restart. (Confirm with the user before killing all
+   node processes system-wide.)
+
+2. **A browser-automation tool times out navigating to `localhost`/
+   `127.0.0.1`, with no request ever reaching the dev server log, even
+   though external HTTPS sites load fine and `curl` to the same local URL
+   works.** Cause: endpoint-security software on this machine intercepts
+   IPv4 loopback traffic. Fix: use `http://[::1]:PORT` (IPv6 loopback)
+   instead — it bypasses the interception.
