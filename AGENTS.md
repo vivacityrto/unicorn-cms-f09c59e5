@@ -289,6 +289,28 @@ the replace outright with `cannot change return type of existing function`
 if the output column set changed, so the drop-first step is required there
 too, not just recommended.
 
+**Guardrail: a new column on a per-column-grant table needs an explicit
+`GRANT SELECT` for every role that queries it — adding the column is not
+enough.** `public.users` uses per-column grants rather than a table-wide
+`GRANT SELECT`, so PostgREST returns 403 for *any* query that references an
+ungranted column — even just in a `.eq()`/`.filter()` clause, not only in
+`.select()`. A real incident (2026-08-25, see
+`docs/audit-log/entries/2026-08-25-grant-authenticated-select-is-system-account.md`):
+the same-day `hide_system_accounts_from_staff_lists` migration added
+`public.users.is_system_account` and patched 9 frontend call sites to filter
+on it, but granted `SELECT` only implicitly (`anon`/`service_role`/`postgres`
+picked it up, `authenticated` did not) — every one of those 9 call sites
+403'd for every logged-in user until a follow-up grant. Before shipping a
+migration that adds a column to `public.users` (or any other table using
+per-column grants — check with `select grantee, privilege_type from
+information_schema.column_privileges where table_name = '<table>'` before
+assuming table-wide grants apply), include `GRANT SELECT (<new_column>) ON
+public.<table> TO authenticated;` (and any other role — `anon`,
+`service_role` — that legitimately queries it) in the same migration, and
+verify with `select grantee, privilege_type from
+information_schema.column_privileges where table_name = '<table>' and
+column_name = '<new_column>'` before considering the migration done.
+
 ## Edge Function security guardrails (from the 2026-08-18 audit)
 
 The 2026-08-18 architecture/security remediation session (see
