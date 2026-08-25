@@ -82,6 +82,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { TenantInviteDialog } from './TenantInviteDialog';
+import { TenantContactsSection } from './TenantContactsSection';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useUserCapacity, useInvalidateUserCapacity } from '@/hooks/useUserCapacity';
 import { CapacityPill } from './users/CapacityPill';
@@ -1301,6 +1302,13 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           )}
         </CardContent>
       </Card>
+
+      <TenantContactsSection
+        tenantId={tenantId}
+        tenantName={tenantName}
+        canManage={canManageUsers}
+        positionTypeOptions={positionTypeOptions}
+      />
 
       {/* Edit User Drawer */}
       <Sheet open={!!editingMember} onOpenChange={(open) => !open && setEditingMember(null)}>

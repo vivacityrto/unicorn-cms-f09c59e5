@@ -215,6 +215,7 @@ const AcademyCourseCleanupPage = lazy(() => import("./pages/superadmin/AcademyCo
 const AcademyTagManagementPage = lazy(() => import("./pages/superadmin/AcademyTagManagementPage"));
 const AcademyPackageCourseRulesPage = lazy(() => import("./pages/superadmin/AcademyPackageCourseRulesPage"));
 const RolePermissionsEditor = lazy(() => import("./pages/admin/RolePermissionsEditor"));
+const ContactDirectory = lazy(() => import("./pages/admin/ContactDirectory"));
 
 
 // Compliance Auditor pages
@@ -1129,6 +1130,7 @@ const App = () => (
             <Route path="/admin/stage-analytics" element={<ProtectedRoute requireSuperAdmin><AdminStageAnalytics /></ProtectedRoute>} />
             <Route path="/admin/operations" element={<ProtectedRoute requireSuperAdmin><AdminOperations /></ProtectedRoute>} />
             <Route path="/administration/role-permissions" element={<ProtectedRoute requireSuperAdmin><RolePermissionsEditor /></ProtectedRoute>} />
+            <Route path="/administration/contacts" element={<ProtectedRoute requireSuperAdmin><ContactDirectory /></ProtectedRoute>} />
             
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
