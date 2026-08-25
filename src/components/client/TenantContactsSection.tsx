@@ -84,6 +84,7 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
 
   const [contactToDelete, setContactToDelete] = useState<TenantContact | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [updatingPositionType, setUpdatingPositionType] = useState<number | null>(null);
 
   const [promotingContact, setPromotingContact] = useState<TenantContact | null>(null);
   const [promoteRole, setPromoteRole] = useState<RelationshipRole>('user');
@@ -164,6 +165,30 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
     toast.success(editingContact ? 'Contact updated' : 'Contact added');
     closeDialogs();
     fetchContacts();
+  };
+
+  const handlePositionTypeChange = async (contact: TenantContact, value: string) => {
+    if (!canManage) return;
+    const nextPositionType = value === '__none__' ? null : value;
+    if ((contact.position_type ?? null) === nextPositionType) return;
+
+    setUpdatingPositionType(contact.id);
+    const { error } = await supabase
+      .from('tenant_contacts')
+      .update({ position_type: nextPositionType })
+      .eq('id', contact.id);
+    setUpdatingPositionType(null);
+
+    if (error) {
+      console.error('tenant_contacts position_type update error:', error);
+      toast.error('Failed to update position type');
+      return;
+    }
+
+    setContacts((previous) =>
+      previous.map((c) => (c.id === contact.id ? { ...c, position_type: nextPositionType } : c))
+    );
+    toast.success(nextPositionType ? 'Position type updated' : 'Position type cleared');
   };
 
   const toggleArchive = async (contact: TenantContact) => {
@@ -297,9 +322,33 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
                   <p className="text-sm text-muted-foreground truncate">{contact.email}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm text-muted-foreground hidden sm:inline">
-                    {positionTypeLabel(contact.position_type, positionTypeOptions)}
-                  </span>
+                  {canManage ? (
+                    <Select
+                      value={contact.position_type || '__none__'}
+                      onValueChange={(value) => handlePositionTypeChange(contact, value)}
+                      disabled={updatingPositionType === contact.id}
+                    >
+                      <SelectTrigger className="w-40 h-8 text-sm" aria-label={`Position type for ${contact.email}`}>
+                        <SelectValue>
+                          {contact.position_type
+                            ? positionTypeLabel(contact.position_type, positionTypeOptions)
+                            : 'Position type'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">No position type</SelectItem>
+                        {positionTypeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-sm text-muted-foreground hidden sm:inline">
+                      {positionTypeLabel(contact.position_type, positionTypeOptions)}
+                    </span>
+                  )}
                   {canManage && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
