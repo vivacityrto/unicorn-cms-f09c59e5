@@ -7,6 +7,7 @@ Newest first.
 
 ---
 
+- [2026-08-25 — `delete_document_cascade` hardened for client-stage and delivery-history FKs — deleting a document assigned to a client's stage now cleans up `client_stage_documents` and unlinks `generated_documents` instead of throwing a raw FK error; deletion is blocked with a friendly message (not silently deleted) when the document has `governance_document_deliveries` history.](entries/2026-08-25-delete-document-cascade-client-stage-and-delivery.md) · author: Claude Code
 - [2026-08-25 — Tenant contact list + reusable contact groups — new `tenant_contacts`/`tenant_contact_groups`/`tenant_contact_group_members` tables + RLS, a `mark_tenant_contact_promoted` RPC that pairs with the existing `invite-user` edge function to swap a contact into a seat, and a staff-only cross-tenant Administration directory for building named groups toward future bulk Teams event registration.](entries/2026-08-25-tenant-contact-list.md)
 - [2026-08-24 — Staff PDP and Academy analytics — added a tenant-scoped Academy funnel/trend RPC with explicit calculation definitions, a separate client Academy Activity dashboard, and explainable My PDP next actions for hours, evidence, reflections, and reviews.](entries/2026-08-24-staff-pdp-academy-analytics.md)
 
