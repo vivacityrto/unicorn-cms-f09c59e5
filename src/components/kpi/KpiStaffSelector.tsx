@@ -35,6 +35,7 @@ export function KpiStaffSelector({ value, onChange, filterRole, label = "Viewing
         .from("users")
         .select("user_uuid, first_name, last_name, email, unicorn_role, is_vivacity_internal, kpi_role, kpi_pod")
         .eq("is_vivacity_internal", true)
+        .eq("is_system_account", false)
         .order("first_name", { ascending: true });
       if (filterRole) {
         query = query.eq("kpi_role", ROLE_TO_KPI_ROLE[filterRole]);

@@ -36,6 +36,7 @@ export function ReassignConsultantDialog({
         .eq('is_vivacity_internal', true)
         .eq('disabled', false)
         .eq('archived', false)
+        .eq('is_system_account', false)
         .or('kpi_pod.is.null,kpi_pod.neq.qa')
         .order('first_name');
 

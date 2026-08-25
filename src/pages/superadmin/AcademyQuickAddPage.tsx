@@ -205,6 +205,7 @@ export default function AcademyQuickAddPage() {
         .from("users")
         .select("user_uuid, full_name, archived, disabled")
         .eq("is_vivacity_internal", true)
+        .eq("is_system_account", false)
         .order("full_name");
       if (error) throw error;
       // Inactive internal users can still be the historical facilitator of a

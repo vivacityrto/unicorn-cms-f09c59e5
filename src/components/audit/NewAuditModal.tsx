@@ -300,7 +300,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       setTenantsLoading(false);
     };
     fetchTenants();
-    supabase.from('users').select('user_uuid, first_name, last_name').eq('is_vivacity_internal', true).or('kpi_pod.is.null,kpi_pod.neq.qa').then(({ data }) => {
+    supabase.from('users').select('user_uuid, first_name, last_name').eq('is_vivacity_internal', true).eq('is_system_account', false).or('kpi_pod.is.null,kpi_pod.neq.qa').then(({ data }) => {
       setAuditors(((data as any[]) || []).map(u => ({ user_uuid: u.user_uuid, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() })));
     });
   }, [open]);

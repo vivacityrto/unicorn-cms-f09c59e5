@@ -7,6 +7,7 @@ Newest first.
 
 ---
 
+- [2026-08-25 — Hide system accounts from staff lists — added `users.is_system_account`, excluded it from the team directory RPCs and L10 meeting attendee auto-seeding after the bulk-generate-automation service account was found showing up as an attendee; patched 9 frontend staff pickers with the same gap and flagged the underlying duplicated-predicate pattern in the RBAC v6 doc.](entries/2026-08-25-hide-system-accounts-from-staff-lists.md)
 - [2026-08-25 — Tenant contact list + reusable contact groups — new `tenant_contacts`/`tenant_contact_groups`/`tenant_contact_group_members` tables + RLS, a `mark_tenant_contact_promoted` RPC that pairs with the existing `invite-user` edge function to swap a contact into a seat, and a staff-only cross-tenant Administration directory for building named groups toward future bulk Teams event registration.](entries/2026-08-25-tenant-contact-list.md)
 - [2026-08-24 — Staff PDP and Academy analytics — added a tenant-scoped Academy funnel/trend RPC with explicit calculation definitions, a separate client Academy Activity dashboard, and explainable My PDP next actions for hours, evidence, reflections, and reviews.](entries/2026-08-24-staff-pdp-academy-analytics.md)
 

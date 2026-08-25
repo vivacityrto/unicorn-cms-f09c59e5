@@ -755,6 +755,7 @@ export type Database = {
           description: string | null
           difficulty_level: string | null
           estimated_minutes: number | null
+          facilitator_display_name: string | null
           facilitator_id: string | null
           id: number
           is_free: boolean | null
@@ -771,7 +772,10 @@ export type Database = {
           status: string | null
           tags: string[] | null
           target_audience: string[] | null
+          thumbnail_fit: string
+          thumbnail_position: string
           thumbnail_url: string | null
+          thumbnail_zoom: number
           title: string
           trailer_video_id: string | null
           transcript: string | null
@@ -792,6 +796,7 @@ export type Database = {
           description?: string | null
           difficulty_level?: string | null
           estimated_minutes?: number | null
+          facilitator_display_name?: string | null
           facilitator_id?: string | null
           id?: never
           is_free?: boolean | null
@@ -808,7 +813,10 @@ export type Database = {
           status?: string | null
           tags?: string[] | null
           target_audience?: string[] | null
+          thumbnail_fit?: string
+          thumbnail_position?: string
           thumbnail_url?: string | null
+          thumbnail_zoom?: number
           title: string
           trailer_video_id?: string | null
           transcript?: string | null
@@ -829,6 +837,7 @@ export type Database = {
           description?: string | null
           difficulty_level?: string | null
           estimated_minutes?: number | null
+          facilitator_display_name?: string | null
           facilitator_id?: string | null
           id?: never
           is_free?: boolean | null
@@ -845,7 +854,10 @@ export type Database = {
           status?: string | null
           tags?: string[] | null
           target_audience?: string[] | null
+          thumbnail_fit?: string
+          thumbnail_position?: string
           thumbnail_url?: string | null
+          thumbnail_zoom?: number
           title?: string
           trailer_video_id?: string | null
           transcript?: string | null
@@ -1073,6 +1085,27 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      academy_historical_facilitators: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          is_selectable: boolean
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          is_selectable?: boolean
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_selectable?: boolean
+        }
+        Relationships: []
       }
       academy_lesson_progress: {
         Row: {
@@ -7810,6 +7843,7 @@ export type Database = {
           delivery_status: string
           failure_reason: string | null
           id: string
+          read_at: string | null
           sent_at: string | null
           tenant_id: number
           user_id: string
@@ -7820,6 +7854,7 @@ export type Database = {
           delivery_status?: string
           failure_reason?: string | null
           id?: string
+          read_at?: string | null
           sent_at?: string | null
           tenant_id: number
           user_id: string
@@ -7830,6 +7865,7 @@ export type Database = {
           delivery_status?: string
           failure_reason?: string | null
           id?: string
+          read_at?: string | null
           sent_at?: string | null
           tenant_id?: number
           user_id?: string
@@ -7861,6 +7897,7 @@ export type Database = {
           leased_at: string | null
           outcome: Json
           package_instance_id: number
+          requeued_to_job_id: string | null
           snapshot_id: string | null
           stageinstance_id: number
           started_at: string | null
@@ -7885,6 +7922,7 @@ export type Database = {
           leased_at?: string | null
           outcome?: Json
           package_instance_id: number
+          requeued_to_job_id?: string | null
           snapshot_id?: string | null
           stageinstance_id: number
           started_at?: string | null
@@ -7909,6 +7947,7 @@ export type Database = {
           leased_at?: string | null
           outcome?: Json
           package_instance_id?: number
+          requeued_to_job_id?: string | null
           snapshot_id?: string | null
           stageinstance_id?: number
           started_at?: string | null
@@ -8092,6 +8131,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_tenant_stage_instances"
             referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_requeued_to_job_id_fkey"
+            columns: ["requeued_to_job_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_document_jobs"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bulk_document_job_items_stageinstance_id_fkey"
@@ -38320,6 +38366,7 @@ export type Database = {
           release_documents_office: boolean
           release_documents_pdf: boolean
           start_date: string
+          start_renewal_date: string | null
           tenant_id: number
           u1_packageid: number | null
           u2tid: number | null
@@ -38350,6 +38397,7 @@ export type Database = {
           release_documents_office?: boolean
           release_documents_pdf?: boolean
           start_date: string
+          start_renewal_date?: string | null
           tenant_id: number
           u1_packageid?: number | null
           u2tid?: number | null
@@ -38380,6 +38428,7 @@ export type Database = {
           release_documents_office?: boolean
           release_documents_pdf?: boolean
           start_date?: string
+          start_renewal_date?: string | null
           tenant_id?: number
           u1_packageid?: number | null
           u2tid?: number | null
@@ -38720,6 +38769,182 @@ export type Database = {
           weight?: number
         }
         Relationships: []
+      }
+      package_renewal_periods: {
+        Row: {
+          carried_in_minutes: number
+          closed_at: string | null
+          created_at: string
+          hours_used_at_close: number | null
+          id: string
+          included_minutes: number
+          package_instance_id: number
+          period_end: string
+          period_number: number
+          period_start: string
+          tenant_id: number
+        }
+        Insert: {
+          carried_in_minutes?: number
+          closed_at?: string | null
+          created_at?: string
+          hours_used_at_close?: number | null
+          id?: string
+          included_minutes?: number
+          package_instance_id: number
+          period_end: string
+          period_number: number
+          period_start: string
+          tenant_id: number
+        }
+        Update: {
+          carried_in_minutes?: number
+          closed_at?: string | null
+          created_at?: string
+          hours_used_at_close?: number | null
+          id?: string
+          included_minutes?: number
+          package_instance_id?: number
+          period_end?: string
+          period_number?: number
+          period_start?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_zero_progress_packages"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_dashboard_progress"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_dashboard"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_stages"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_renewal_periods_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_stage_instances"
+            referencedColumns: ["package_instance_id"]
+          },
+        ]
       }
       package_staff_tasks: {
         Row: {
@@ -50980,6 +51205,390 @@ export type Database = {
           },
         ]
       }
+      tenant_contact_group_members: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          group_id: number
+          id: number
+          member_id: string
+          member_type: string
+          tenant_id: number
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          group_id: number
+          id?: never
+          member_id: string
+          member_type: string
+          tenant_id: number
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          group_id?: number
+          id?: never
+          member_id?: string
+          member_type?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_contact_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_contact_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tenant_contact_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: never
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: never
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tenant_contacts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          first_name: string
+          id: number
+          last_name: string | null
+          position_type: string | null
+          promoted_at: string | null
+          promoted_to_user_id: string | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          first_name: string
+          id?: never
+          last_name?: string | null
+          position_type?: string | null
+          promoted_at?: string | null
+          promoted_to_user_id?: string | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          first_name?: string
+          id?: never
+          last_name?: string | null
+          position_type?: string | null
+          promoted_at?: string | null
+          promoted_to_user_id?: string | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_contacts_position_type_fkey"
+            columns: ["position_type"]
+            isOneToOne: false
+            referencedRelation: "dd_position_type"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_conversations: {
         Row: {
           assigned_to_user_uuid: string | null
@@ -55234,390 +55843,6 @@ export type Database = {
           },
         ]
       }
-      tenant_contact_group_members: {
-        Row: {
-          added_at: string
-          added_by: string | null
-          group_id: number
-          id: number
-          member_id: string
-          member_type: string
-          tenant_id: number
-        }
-        Insert: {
-          added_at?: string
-          added_by?: string | null
-          group_id: number
-          id?: never
-          member_id: string
-          member_type: string
-          tenant_id: number
-        }
-        Update: {
-          added_at?: string
-          added_by?: string | null
-          group_id?: number
-          id?: never
-          member_id?: string
-          member_type?: string
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_contact_group_members_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "tenant_contact_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_audit_schedule"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_engagement_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_eos_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_home_hero"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_reporting_reminders"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_attention_ranked"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_portfolio"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_recent_comms"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_academy_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_compliance_entitlements"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_compliance_task_metrics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_last_activity"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tga_audit_snapshot"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      tenant_contact_groups: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: number
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: never
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: never
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      tenant_contacts: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          email: string
-          first_name: string
-          id: number
-          last_name: string | null
-          position_type: string | null
-          promoted_at: string | null
-          promoted_to_user_id: string | null
-          status: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          email: string
-          first_name: string
-          id?: never
-          last_name?: string | null
-          position_type?: string | null
-          promoted_at?: string | null
-          promoted_to_user_id?: string | null
-          status?: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          email?: string
-          first_name?: string
-          id?: never
-          last_name?: string | null
-          position_type?: string | null
-          promoted_at?: string | null
-          promoted_to_user_id?: string | null
-          status?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_contacts_position_type_fkey"
-            columns: ["position_type"]
-            isOneToOne: false
-            referencedRelation: "dd_position_type"
-            referencedColumns: ["value"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_audit_schedule"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_engagement_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_eos_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_home_hero"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_reporting_reminders"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_attention_ranked"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_portfolio"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_recent_comms"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_academy_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_compliance_entitlements"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_compliance_task_metrics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_last_activity"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tga_audit_snapshot"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "tenant_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
       tenant_users: {
         Row: {
           access_scope: string
@@ -58127,6 +58352,7 @@ export type Database = {
           created_at: string
           id: string
           package_instance_id: number
+          renewal_period_id: string | null
           tenant_id: number
           time_entry_id: string
         }
@@ -58136,6 +58362,7 @@ export type Database = {
           created_at?: string
           id?: string
           package_instance_id: number
+          renewal_period_id?: string | null
           tenant_id: number
           time_entry_id: string
         }
@@ -58145,10 +58372,18 @@ export type Database = {
           created_at?: string
           id?: string
           package_instance_id?: number
+          renewal_period_id?: string | null
           tenant_id?: number
           time_entry_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "time_entry_allocations_renewal_period_id_fkey"
+            columns: ["renewal_period_id"]
+            isOneToOne: false
+            referencedRelation: "package_renewal_periods"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "time_entry_allocations_time_entry_id_fkey"
             columns: ["time_entry_id"]
@@ -59582,6 +59817,7 @@ export type Database = {
           global_role: string | null
           head_office_address: string | null
           is_csc: boolean | null
+          is_system_account: boolean
           is_team: boolean | null
           is_vivacity_internal: boolean
           job_title: string | null
@@ -59670,6 +59906,7 @@ export type Database = {
           global_role?: string | null
           head_office_address?: string | null
           is_csc?: boolean | null
+          is_system_account?: boolean
           is_team?: boolean | null
           is_vivacity_internal?: boolean
           job_title?: string | null
@@ -59758,6 +59995,7 @@ export type Database = {
           global_role?: string | null
           head_office_address?: string | null
           is_csc?: boolean | null
+          is_system_account?: boolean
           is_team?: boolean | null
           is_vivacity_internal?: boolean
           job_title?: string | null
@@ -65089,141 +65327,7 @@ export type Database = {
           work_sub_type: string | null
           work_type: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "package_instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_admin_zero_progress_packages"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_dashboard_progress"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_package_dashboard"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_package_stages"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_package_usage_summary"
-            referencedColumns: ["instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_completion_eligibility"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_consult_hours_remaining"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_consultant_momentum"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_documents_pending"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_executive_client_health"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_momentum_state"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_package_burndown"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_package_instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_phase_actions_remaining"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_predictive_signal_inputs"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_progress_anchor_inputs"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_score_consult"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_stage_instances"
-            referencedColumns: ["package_instance_id"]
-          },
-        ]
+        Relationships: []
       }
       v_client_package_hours_recent: {
         Row: {
@@ -65384,141 +65488,7 @@ export type Database = {
           point_rank: number | null
           tenant_id: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "package_instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_admin_zero_progress_packages"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_dashboard_progress"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_package_dashboard"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_package_stages"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_package_usage_summary"
-            referencedColumns: ["instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_completion_eligibility"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_consult_hours_remaining"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_consultant_momentum"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_documents_pending"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_executive_client_health"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_momentum_state"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_package_burndown"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_package_instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_phase_actions_remaining"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_predictive_signal_inputs"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_progress_anchor_inputs"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_score_consult"
-            referencedColumns: ["package_instance_id"]
-          },
-          {
-            foreignKeyName: "time_entries_package_instance_id_fkey"
-            columns: ["package_instance_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_stage_instances"
-            referencedColumns: ["package_instance_id"]
-          },
-        ]
+        Relationships: []
       }
       v_client_package_stages: {
         Row: {
@@ -70966,6 +70936,10 @@ export type Database = {
         Args: { p_audit_id: string; p_milestone: string }
         Returns: number
       }
+      complete_claimed_invitation: {
+        Args: { p_token_hash: string; p_user_id: string }
+        Returns: Json
+      }
       complete_enrollment_as_impersonator: {
         Args: { p_enrollment_id: number; p_target_user_id: string }
         Returns: {
@@ -71393,6 +71367,10 @@ export type Database = {
         Args: { p_package_instance_id: number }
         Returns: undefined
       }
+      fn_mark_conversation_read: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
       fn_match_client_for_event: {
         Args: {
           p_attendee_emails: string[]
@@ -71425,6 +71403,10 @@ export type Database = {
       fn_queue_broadcast_campaign: {
         Args: { p_campaign_id: string }
         Returns: undefined
+      }
+      fn_resolve_renewal_period_id: {
+        Args: { p_entry_date: string; p_package_instance_id: number }
+        Returns: string
       }
       fn_truncate_preview: {
         Args: { input: string; max_len?: number }
@@ -71478,6 +71460,21 @@ export type Database = {
         }[]
       }
       get_active_tenant_count: { Args: never; Returns: number }
+      get_admin_contact_directory: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          first_name: string
+          last_name: string
+          position_type: string
+          row_key: string
+          source: string
+          status: string
+          tenant_id: number
+          tenant_name: string
+        }[]
+      }
       get_all_resources: {
         Args: never
         Returns: {
@@ -71524,6 +71521,7 @@ export type Database = {
           tenant_id: number
         }[]
       }
+      get_bulk_generate_system_session: { Args: never; Returns: string }
       get_client_eos_overview: { Args: { p_client_id: string }; Returns: Json }
       get_client_package_dashboard: {
         Args: { p_package_instance_id?: number; p_tenant_id: number }
@@ -71557,25 +71555,6 @@ export type Database = {
           status_pill: string
           tenant_id: number
         }[]
-      }
-      get_admin_contact_directory: {
-        Args: never
-        Returns: {
-          created_at: string
-          email: string
-          first_name: string
-          last_name: string
-          position_type: string
-          row_key: string
-          source: string
-          status: string
-          tenant_id: number
-          tenant_name: string
-        }[]
-      }
-      mark_tenant_contact_promoted: {
-        Args: { p_contact_id: number; p_user_id: string }
-        Returns: Json
       }
       get_client_tenant_users: {
         Args: { p_tenant_id: number }
@@ -71631,6 +71610,14 @@ export type Database = {
       get_current_user_tenant: { Args: never; Returns: number }
       get_current_user_tenant_id: { Args: never; Returns: number }
       get_current_user_type: { Args: never; Returns: string }
+      get_document_delivery_summary: {
+        Args: { p_document_ids: number[] }
+        Returns: {
+          delivered_tenant_count: number
+          document_id: number
+          last_delivered_at: string
+        }[]
+      }
       get_document_stage_usage: {
         Args: { p_document_id: number }
         Returns: {
@@ -71916,6 +71903,10 @@ export type Database = {
           user_uuid: string
         }[]
       }
+      get_tenant_academy_analytics: {
+        Args: { p_tenant_id: number }
+        Returns: Json
+      }
       get_tenant_academy_staff_stats: {
         Args: { p_tenant_id: number }
         Returns: {
@@ -72151,10 +72142,6 @@ export type Database = {
         }
         Returns: string
       }
-      invite_user: {
-        Args: { p_email: string; p_role?: string; p_tenant_id: string }
-        Returns: string
-      }
       is_admin_or_team_leader: { Args: never; Returns: boolean }
       is_any_team_member: { Args: { p_user_id: string }; Returns: boolean }
       is_client_user: { Args: never; Returns: boolean }
@@ -72321,6 +72308,12 @@ export type Database = {
           table_name: string
         }[]
       }
+      list_idle_running_bulk_document_jobs: {
+        Args: { p_idle_minutes?: number }
+        Returns: {
+          job_id: string
+        }[]
+      }
       list_meeting_summaries_for_client: {
         Args: { p_client_id: string; p_limit?: number; p_offset?: number }
         Returns: {
@@ -72349,6 +72342,10 @@ export type Database = {
         Returns: string
       }
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
+      mark_tenant_contact_promoted: {
+        Args: { p_contact_id: number; p_user_id: string }
+        Returns: Json
+      }
       match_ask_viv_corpus: {
         Args: {
           filter_source_type?: string
@@ -72656,6 +72653,10 @@ export type Database = {
         Args: { p_reviewer_user_id: string; p_stage_release_id: string }
         Returns: Json
       }
+      requeue_skipped_bulk_document_items: {
+        Args: { p_item_ids: number[] }
+        Returns: string
+      }
       resolve_billing_tenant_id: {
         Args: { _tenant_id: number }
         Returns: number
@@ -72879,7 +72880,11 @@ export type Database = {
         Returns: Json
       }
       rpc_get_package_usage: {
-        Args: { p_client_id: number; p_client_package_id: number }
+        Args: {
+          p_client_id: number
+          p_client_package_id: number
+          p_renewal_period_id?: string
+        }
         Returns: Json
       }
       rpc_get_time_inbox_stats: { Args: never; Returns: Json }
@@ -73186,6 +73191,10 @@ export type Database = {
         Returns: number
       }
       set_active_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
+      set_bulk_generate_system_session: {
+        Args: { p_session: string }
+        Returns: undefined
+      }
       set_cohort_job_status: {
         Args: { p_caller_id?: string; p_job_id: string; p_status: string }
         Returns: undefined
