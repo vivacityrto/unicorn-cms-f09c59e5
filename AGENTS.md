@@ -311,6 +311,32 @@ verify with `select grantee, privilege_type from
 information_schema.column_privileges where table_name = '<table>' and
 column_name = '<new_column>'` before considering the migration done.
 
+**Guardrail: a batch upsert/insert into a table whose FK targets `auth.users`
+fails entirely if any one row references a `public.users` profile with no
+matching auth account — always check the error and fall back to per-row.**
+`conversation_participants.user_id` FKs to `auth.users(id)`, not
+`public.users`. A real incident (2026-08-25, see
+`docs/audit-log/entries/2026-08-25-broadcast-notification-silent-participant-failure.md`):
+`send-broadcast-campaign`'s client-participant upsert (sourced from
+`tenant_users`, which can drift out of sync with `auth.users` — e.g. seeded
+fixture profiles, or a real client's auth account that was never provisioned
+or was later deleted) had no error check at all. When one tenant_users row in
+the batch had no matching `auth.users` row, the FK violation failed the
+*whole* batch upsert — silently dropping every legitimately reachable
+participant for that tenant, not just the bad one. The broadcast still
+reported "sent," the message still existed, but zero client participants
+(and therefore zero `user_notifications` rows, since those come from an
+INSERT trigger on `tenant_messages` scoped to actual participants) were
+created for two tenants, including one still-active real client. The
+identical unguarded pattern existed a second time in
+`src/pages/TeamCommunicationsPage.tsx`'s "start new conversation" flow (it
+threw instead of silently swallowing, but had the same all-or-nothing
+exposure — one bad row meant staff could never message that tenant at all).
+Any code upserting a batch of rows into a table with an FK to `auth.users`
+must check the upsert's error and, on failure, retry row-by-row so one bad
+row only costs that one row — and log (never silently swallow) whichever
+rows get skipped.
+
 ## Edge Function security guardrails (from the 2026-08-18 audit)
 
 The 2026-08-18 architecture/security remediation session (see

@@ -138,22 +138,40 @@ Deno.serve(async (req) => {
           );
         if (staffPartErr) throw new Error(staffPartErr.message);
 
-        // Upsert all tenant_users as client participants (full mirror of single-message flow)
+        // Upsert all tenant_users as client participants (full mirror of single-message flow).
+        // conversation_participants.user_id FKs to auth.users, not public.users — a stale
+        // public.users row with no matching auth account (seen with seeded/fixture profiles,
+        // e.g. tenant 7547's demo placeholders) makes the WHOLE batch upsert fail with a
+        // foreign-key violation, silently dropping every real participant for that tenant
+        // along with it (2026-08-25 incident: Demo RTO's own account got no notification for
+        // a broadcast it was correctly queued for). Falling back to a per-row upsert when the
+        // batch fails means one bad row only costs that one participant, not the whole tenant.
         const { data: tenantUsers } = await svc
           .from("tenant_users")
           .select("user_id")
           .eq("tenant_id", tenantId);
         if (tenantUsers?.length) {
-          await svc
+          const clientRows = tenantUsers.map((u: { user_id: string }) => ({
+            conversation_id: conv.id,
+            user_id: u.user_id,
+            role: "client",
+          }));
+          const { error: clientPartErr } = await svc
             .from("conversation_participants")
-            .upsert(
-              tenantUsers.map((u: { user_id: string }) => ({
-                conversation_id: conv.id,
-                user_id: u.user_id,
-                role: "client",
-              })),
-              { onConflict: "conversation_id,user_id", ignoreDuplicates: true },
+            .upsert(clientRows, { onConflict: "conversation_id,user_id", ignoreDuplicates: true });
+          if (clientPartErr) {
+            console.error(
+              `Tenant ${tenantId}: batch client-participant upsert failed (${clientPartErr.message}), retrying row-by-row`,
             );
+            for (const row of clientRows) {
+              const { error: rowErr } = await svc
+                .from("conversation_participants")
+                .upsert(row, { onConflict: "conversation_id,user_id", ignoreDuplicates: true });
+              if (rowErr) {
+                console.error(`Tenant ${tenantId}: skipping participant ${row.user_id} — ${rowErr.message}`);
+              }
+            }
+          }
         }
 
         // Insert the broadcast message
