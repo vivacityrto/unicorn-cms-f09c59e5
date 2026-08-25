@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, AlertTriangle } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, AlertTriangle, DollarSign, X } from "lucide-react";
 import { isXeroInvoiceOverdue } from "@/lib/xeroInvoiceStatus";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -80,8 +80,13 @@ interface Tenant {
 // inactive/active/on_hold/disabled/terminated/cancelled/archived); these
 // group the real values so the stat cards' counts and their click-through
 // filters stay in sync.
-const SUSPENDED_STATUSES = ["inactive", "on_hold", "disabled"];
-const CLOSED_STATUSES = ["terminated", "cancelled", "archived"];
+// The "still a live relationship" statuses — as opposed to the huge
+// 'inactive' dormant/prospect bucket and the closed/cancelled/terminated
+// bucket, these need daily CSC attention. 'In Arears' is stored in the DB
+// with that exact typo/casing (see dd_status code 106) — matched verbatim
+// rather than normalised, consistent with the literal comparisons already
+// used in TenantDetail.tsx.
+const LIVE_STATUSES = ["active", "on_hold", "In Arears", "warning"];
 
 interface CSCFilterOption {
   user_uuid: string;
@@ -94,7 +99,8 @@ export default function ManageTenants() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("active");
+  const [statusFilter, setStatusFilter] = useState<string>("live");
+  const [moneyAtRiskOnly, setMoneyAtRiskOnly] = useState(false);
   const [packageFilter, setPackageFilter] = useState<string>("all");
   const [cscFilter, setCscFilter] = useState<string>("all");
   const [cscFilterOptions, setCscFilterOptions] = useState<CSCFilterOption[]>([]);
@@ -205,13 +211,51 @@ export default function ManageTenants() {
     setTenants(merged);
   }, [accumulated, packagesQuery.data, contactsQuery.data, cscQuery.data, notesQuery.data]);
 
+  // Actionable insight panels, scoped to the live cohort (LIVE_STATUSES, not
+  // archived) rather than the whole book — a dormant/closed client isn't
+  // something a CSC needs to act on today. "Due within 1 month" naturally
+  // includes anything already overdue (a past date is still <= a future
+  // cutoff), matching the existing renewalFilter="1" semantics reused below.
   const stats = useMemo(() => {
-    const totalMembers = tenants.reduce((sum, t) => sum + (t.member_count || 0), 0);
-    const active = tenants.filter(t => t.status === "active").length;
-    const suspended = tenants.filter(t => SUSPENDED_STATUSES.includes(t.status)).length;
-    const closed = tenants.filter(t => CLOSED_STATUSES.includes(t.status)).length;
-    return { total: tenants.length, active, suspended, closed, totalMembers };
+    const now = new Date();
+    const liveTenants = tenants.filter(t => LIVE_STATUSES.includes(t.status) && !t.archived_at);
+    const totalMembers = liveTenants.reduce((sum, t) => sum + (t.member_count || 0), 0);
+
+    const renewalCutoff1mo = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    const renewalsOverdue = liveTenants.filter(t => t.next_renewal_date && new Date(t.next_renewal_date) < now).length;
+    const renewalsNeedingAction = liveTenants.filter(t => t.next_renewal_date && new Date(t.next_renewal_date) <= renewalCutoff1mo).length;
+
+    const moneyAtRisk = liveTenants.filter(t =>
+      t.status === "In Arears" || (t.xero_invoice_paid === false && isXeroInvoiceOverdue(t.xero_invoice_due_date))
+    ).length;
+
+    const regCutoff12mo = new Date(now.getFullYear(), now.getMonth() + 12, now.getDate());
+    const regCutoff6mo = new Date(now.getFullYear(), now.getMonth() + 6, now.getDate());
+    const regExpiring = liveTenants.filter(t => t.registration_end_date && new Date(t.registration_end_date) <= regCutoff12mo).length;
+    const regExpiringSoon = liveTenants.filter(t => t.registration_end_date && new Date(t.registration_end_date) <= regCutoff6mo).length;
+
+    return {
+      total: tenants.length,
+      live: liveTenants.length,
+      renewalsNeedingAction,
+      renewalsOverdue,
+      moneyAtRisk,
+      regExpiring,
+      regExpiringSoon,
+      totalMembers,
+    };
   }, [tenants]);
+
+  // Clears the other quick-filter panels before applying one, so clicking a
+  // stat card shows exactly that panel's cohort instead of an ANDed
+  // combination of whichever panel was clicked last.
+  const applyQuickFilter = (opts: { renewal?: string; regEnd?: string; moneyAtRisk?: boolean }) => {
+    setSearchQuery("");
+    setStatusFilter("live");
+    setRenewalFilter(opts.renewal ?? "all");
+    setRegEndFilter(opts.regEnd ?? "all");
+    setMoneyAtRiskOnly(opts.moneyAtRisk ?? false);
+  };
 
   useEffect(() => {
     fetchPackages();
@@ -275,7 +319,7 @@ export default function ManageTenants() {
 
   useEffect(() => {
     applyFiltersAndSort();
-  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter]);
+  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
 
   const fetchPackages = async () => {
     try {
@@ -361,7 +405,7 @@ export default function ManageTenants() {
   // Clear selection whenever the underlying filtered set or filter changes
   useEffect(() => {
     setSelectedTenantIds(new Set());
-  }, [searchQuery, statusFilter, packageFilter, cscFilter, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter]);
+  }, [searchQuery, statusFilter, packageFilter, cscFilter, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
 
   const toggleRowSelected = (id: number, checked: boolean) => {
     setSelectedTenantIds(prev => {
@@ -417,14 +461,21 @@ export default function ManageTenants() {
 
       // Status filter — options come from dd_status (raw status column), so
       // always compare against tenant.status, not the derived lifecycle_status.
-      // "suspended"/"closed" (set by the summary stat cards) are aggregate
-      // groupings, not real dd_status values — see SUSPENDED_STATUSES/CLOSED_STATUSES.
-      if (statusFilter === "suspended") {
-        filtered = filtered.filter(tenant => SUSPENDED_STATUSES.includes(tenant.status));
-      } else if (statusFilter === "closed") {
-        filtered = filtered.filter(tenant => CLOSED_STATUSES.includes(tenant.status));
+      // "live" is an aggregate grouping, not a real dd_status value — see
+      // LIVE_STATUSES.
+      if (statusFilter === "live") {
+        filtered = filtered.filter(tenant => LIVE_STATUSES.includes(tenant.status));
       } else if (statusFilter !== "all") {
         filtered = filtered.filter(tenant => tenant.status === statusFilter);
+      }
+
+      // Money-at-risk quick filter (set by its stat card) — an unpaid,
+      // overdue Xero invoice or a status the accounts team has already
+      // flagged as in arrears.
+      if (moneyAtRiskOnly) {
+        filtered = filtered.filter(tenant =>
+          tenant.status === "In Arears" || (tenant.xero_invoice_paid === false && isXeroInvoiceOverdue(tenant.xero_invoice_due_date))
+        );
       }
 
       // Package filter
@@ -705,67 +756,92 @@ export default function ManageTenants() {
         )}
       </div>
 
-      {/* Stats Cards */}
+      {/* Actionable insight panels — scoped to the live cohort (Active + On
+          Hold + Arrears + Warning), not a raw count of every status bucket.
+          Each click narrows the table to exactly that cohort, replacing
+          whichever quick filter was active before (see applyQuickFilter). */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div
-          onClick={() => { setStatusFilter("all"); setSearchQuery(""); }}
+          onClick={() => applyQuickFilter({})}
           className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-muted-foreground">Total Clients</span>
+            <span className="text-sm font-medium text-muted-foreground">Live Clients</span>
             <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
               <Building2 className="h-5 w-5 text-blue-500" />
             </div>
           </div>
-          <p className="text-2xl font-bold mb-1">{stats.total}</p>
-          <p className="text-xs text-muted-foreground">Organizations registered</p>
+          <p className="text-2xl font-bold mb-1">{stats.live}</p>
+          <p className="text-xs text-muted-foreground">of {stats.total} total — active relationships needing attention</p>
         </div>
 
         <div
-          onClick={() => { setStatusFilter("active"); setSearchQuery(""); }}
+          onClick={() => applyQuickFilter({ renewal: "1" })}
           className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
           style={{ animationDelay: "50ms" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-muted-foreground">Active</span>
-            <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            <span className="text-sm font-medium text-muted-foreground">Renewals Needing Action</span>
+            <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
+              <Clock className="h-5 w-5 text-amber-500" />
             </div>
           </div>
-          <p className="text-2xl font-bold mb-1">{stats.active}</p>
-          <p className="text-xs text-muted-foreground">Currently active clients</p>
+          <p className="text-2xl font-bold mb-1">{stats.renewalsNeedingAction}</p>
+          <p className="text-xs text-muted-foreground">
+            {stats.renewalsOverdue > 0 ? `${stats.renewalsOverdue} overdue, ` : ""}
+            due within 30 days
+          </p>
         </div>
 
         <div
-          onClick={() => { setStatusFilter("suspended"); setSearchQuery(""); }}
+          onClick={() => applyQuickFilter({ moneyAtRisk: true })}
           className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
           style={{ animationDelay: "100ms" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-muted-foreground">Suspended</span>
-            <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
-              <Pause className="h-5 w-5 text-amber-500" />
+            <span className="text-sm font-medium text-muted-foreground">Money at Risk</span>
+            <div className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+              <DollarSign className="h-5 w-5 text-red-500" />
             </div>
           </div>
-          <p className="text-2xl font-bold mb-1">{stats.suspended}</p>
-          <p className="text-xs text-muted-foreground">Temporarily suspended</p>
+          <p className="text-2xl font-bold mb-1">{stats.moneyAtRisk}</p>
+          <p className="text-xs text-muted-foreground">overdue invoices + accounts in arrears</p>
         </div>
 
         <div
-          onClick={() => { setStatusFilter("closed"); setSearchQuery(""); }}
+          onClick={() => applyQuickFilter({ regEnd: "12" })}
           className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
           style={{ animationDelay: "150ms" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-muted-foreground">Closed / Archived</span>
-            <div className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
-              <XCircle className="h-5 w-5 text-red-500" />
+            <span className="text-sm font-medium text-muted-foreground">Registration Expiring</span>
+            <div className="p-2 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
+              <Calendar className="h-5 w-5 text-orange-500" />
             </div>
           </div>
-          <p className="text-2xl font-bold mb-1">{stats.closed}</p>
-          <p className="text-xs text-muted-foreground">Closed or archived clients</p>
+          <p className="text-2xl font-bold mb-1">{stats.regExpiring}</p>
+          <p className="text-xs text-muted-foreground">
+            {stats.regExpiringSoon > 0 ? `${stats.regExpiringSoon} within 6 months, ` : ""}
+            within 12 months
+          </p>
         </div>
       </div>
+
+      {moneyAtRiskOnly && (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1.5 pl-2.5 pr-1.5 py-1 border-red-600/40 text-red-600 bg-red-500/10">
+            Money at risk only
+            <button
+              type="button"
+              aria-label="Clear money-at-risk filter"
+              className="rounded-full hover:bg-red-500/20 p-0.5"
+              onClick={() => setMoneyAtRiskOnly(false)}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        </div>
+      )}
 
       {/* CSC Client Distribution */}
       {(() => {
@@ -904,6 +980,7 @@ export default function ManageTenants() {
         <Combobox
           options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
+            { value: "live", label: "Live", icon: Activity, iconColor: "text-primary" },
             ...statusOptions.map(s => {
               const iconMap: Record<string, typeof CheckCircle2> = { active: CheckCircle2, disabled: XCircle, on_hold: Pause, overrun: AlertCircle, terminated: XCircle, cancelled: Archive };
               const colorMap: Record<string, string> = { active: "text-green-600", disabled: "text-red-600", on_hold: "text-amber-600", overrun: "text-orange-600", terminated: "text-red-600", cancelled: "text-muted-foreground" };
