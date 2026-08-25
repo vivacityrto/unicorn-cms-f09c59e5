@@ -571,7 +571,8 @@ export function useInternalUsers() {
       const { data, error } = await supabase
         .from('users' as any)
         .select('user_uuid, first_name, last_name, avatar_url')
-        .eq('is_vivacity_internal', true);
+        .eq('is_vivacity_internal', true)
+        .eq('is_system_account', false);
       if (error) throw error;
       return (data || []) as unknown as Array<{
         user_uuid: string;
