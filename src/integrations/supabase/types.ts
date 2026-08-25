@@ -55234,6 +55234,390 @@ export type Database = {
           },
         ]
       }
+      tenant_contact_group_members: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          group_id: number
+          id: number
+          member_id: string
+          member_type: string
+          tenant_id: number
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          group_id: number
+          id?: never
+          member_id: string
+          member_type: string
+          tenant_id: number
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          group_id?: number
+          id?: never
+          member_id?: string
+          member_type?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_contact_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_contact_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_contact_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tenant_contact_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: never
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: never
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tenant_contacts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          first_name: string
+          id: number
+          last_name: string | null
+          position_type: string | null
+          promoted_at: string | null
+          promoted_to_user_id: string | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          first_name: string
+          id?: never
+          last_name?: string | null
+          position_type?: string | null
+          promoted_at?: string | null
+          promoted_to_user_id?: string | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          first_name?: string
+          id?: never
+          last_name?: string | null
+          position_type?: string | null
+          promoted_at?: string | null
+          promoted_to_user_id?: string | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_contacts_position_type_fkey"
+            columns: ["position_type"]
+            isOneToOne: false
+            referencedRelation: "dd_position_type"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_users: {
         Row: {
           access_scope: string
@@ -71173,6 +71557,25 @@ export type Database = {
           status_pill: string
           tenant_id: number
         }[]
+      }
+      get_admin_contact_directory: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          first_name: string
+          last_name: string
+          position_type: string
+          row_key: string
+          source: string
+          status: string
+          tenant_id: number
+          tenant_name: string
+        }[]
+      }
+      mark_tenant_contact_promoted: {
+        Args: { p_contact_id: number; p_user_id: string }
+        Returns: Json
       }
       get_client_tenant_users: {
         Args: { p_tenant_id: number }
