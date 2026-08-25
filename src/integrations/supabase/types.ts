@@ -27366,6 +27366,72 @@ export type Database = {
           },
         ]
       }
+      eos_meeting_one_phrase_closes: {
+        Row: {
+          created_at: string
+          id: string
+          meeting_id: string
+          phrase: string
+          tenant_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meeting_id: string
+          phrase: string
+          tenant_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          phrase?: string
+          tenant_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_meeting_one_phrase_closes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_attendance_summary"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_one_phrase_closes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_one_phrase_closes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_one_phrase_closes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_one_phrase_closes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_decisions_approvals"
+            referencedColumns: ["meeting_id"]
+          },
+        ]
+      }
       eos_meeting_outcome_confirmations: {
         Row: {
           confirmed_at: string
@@ -27886,6 +27952,7 @@ export type Database = {
           issues: Json | null
           meeting_id: string
           meeting_type: string | null
+          one_phrase_closes: Json | null
           period_range: string | null
           rating: number | null
           rocks: Json | null
@@ -27905,6 +27972,7 @@ export type Database = {
           issues?: Json | null
           meeting_id: string
           meeting_type?: string | null
+          one_phrase_closes?: Json | null
           period_range?: string | null
           rating?: number | null
           rocks?: Json | null
@@ -27924,6 +27992,7 @@ export type Database = {
           issues?: Json | null
           meeting_id?: string
           meeting_type?: string | null
+          one_phrase_closes?: Json | null
           period_range?: string | null
           rating?: number | null
           rocks?: Json | null
@@ -32251,6 +32320,48 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
         ]
+      }
+      keap_users: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          job_title: string | null
+          last_name: string | null
+          phone: string | null
+          relationship_role: string | null
+          tenant_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          job_title?: string | null
+          last_name?: string | null
+          phone?: string | null
+          relationship_role?: string | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          job_title?: string | null
+          last_name?: string | null
+          phone?: string | null
+          relationship_role?: string | null
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       knowledge_edges: {
         Row: {
@@ -73080,6 +73191,10 @@ export type Database = {
       }
       save_meeting_rating: {
         Args: { p_meeting_id: string; p_rating: number }
+        Returns: Json
+      }
+      save_one_phrase_close: {
+        Args: { p_meeting_id: string; p_phrase: string }
         Returns: Json
       }
       save_outcome_confirmation: {

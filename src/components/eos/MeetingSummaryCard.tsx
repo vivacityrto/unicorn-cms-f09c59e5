@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, AlertCircle, Target, MessageSquare, Star, Users, Heart } from 'lucide-react';
+import { CheckCircle, AlertCircle, Target, MessageSquare, Star, Users, Heart, Quote } from 'lucide-react';
 import { format } from 'date-fns';
 import type { EosMeetingSummary } from '@/types/eos';
+import { clientAvatarColor, clientInitials } from '@/lib/clientAvatarColor';
 
 interface MeetingSummaryCardProps {
   summary: EosMeetingSummary;
@@ -29,9 +31,9 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
   const issues = Array.isArray(summary.issues) ? summary.issues : [];
   const headlines = Array.isArray(summary.headlines) ? summary.headlines : [];
   const rocks = Array.isArray(summary.rocks) ? summary.rocks : [];
-  const cascades = Array.isArray(summary.cascades) ? summary.cascades : [];
   const attendance = Array.isArray(summary.attendance) ? summary.attendance : [];
   const segueShares = Array.isArray(summary.segue_shares) ? summary.segue_shares : [];
+  const onePhraseCloses = Array.isArray(summary.one_phrase_closes) ? summary.one_phrase_closes : [];
 
   const solvedIssues = issues.filter((i: any) => i.status === 'Solved');
   const unsolvedIssues = issues.filter((i: any) => i.status !== 'Solved');
@@ -40,24 +42,30 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
   const attendancePct = attendance.length > 0 ? Math.round((attendedCount / attendance.length) * 100) : 0;
   const quorumMet = attendance.length === 0 || attendedCount >= Math.ceil(attendance.length * 0.5);
 
-  // Segue shares only carry user_id (no bridging FK to public.users - same
-  // reason the live view resolves names in a separate query rather than
-  // an embed hint).
-  const segueUserIds = segueShares.map((s: any) => s.user_id).filter(Boolean);
-  const { data: segueUsers } = useQuery({
-    queryKey: ['summary-segue-users', summary.id, segueUserIds],
+  // Segue shares and one-phrase-closes only carry user_id (no bridging FK
+  // to public.users - same reason the live view resolves names in a
+  // separate query rather than an embed hint).
+  const summaryUserIds = Array.from(new Set([
+    ...segueShares.map((s: any) => s.user_id),
+    ...onePhraseCloses.map((c: any) => c.user_id),
+  ].filter(Boolean)));
+  const { data: summaryUsers } = useQuery({
+    queryKey: ['summary-users', summary.id, summaryUserIds],
     queryFn: async () => {
-      if (segueUserIds.length === 0) return {};
+      if (summaryUserIds.length === 0) return {};
       const { data, error } = await supabase
         .from('users')
-        .select('user_uuid, first_name, last_name')
-        .in('user_uuid', segueUserIds);
+        .select('user_uuid, first_name, last_name, avatar_url')
+        .in('user_uuid', summaryUserIds);
       if (error) throw error;
       return Object.fromEntries(
-        (data ?? []).map((u: any) => [u.user_uuid, `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown'])
+        (data ?? []).map((u: any) => [
+          u.user_uuid,
+          { name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown', avatarUrl: u.avatar_url as string | null },
+        ])
       );
     },
-    enabled: segueUserIds.length > 0,
+    enabled: summaryUserIds.length > 0,
   });
 
   return (
@@ -250,7 +258,7 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
               {segueShares.map((share: any, index: number) => (
                 <div key={index} className="p-3 bg-muted/50 rounded space-y-1">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm">{segueUsers?.[share.user_id] ?? 'Unknown'}</p>
+                    <p className="font-medium text-sm">{summaryUsers?.[share.user_id]?.name ?? 'Unknown'}</p>
                     {share.rating != null && (
                       <Badge variant="secondary">{share.rating}/10</Badge>
                     )}
@@ -264,19 +272,36 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
         </Card>
       )}
 
-      {/* Cascades */}
-      {cascades.length > 0 && (
+      {/* One Phrase Close */}
+      {onePhraseCloses.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Cascade Messages</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Quote className="h-5 w-5" />
+              One Phrase Close ({onePhraseCloses.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {cascades.map((cascade: any, index: number) => (
-                <div key={index} className="p-3 bg-muted/50 rounded">
-                  <p className="text-sm">{cascade.message || cascade}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {onePhraseCloses.map((close: any, index: number) => {
+                const user = summaryUsers?.[close.user_id];
+                const name = user?.name ?? 'Unknown';
+                const color = clientAvatarColor(close.user_id);
+                return (
+                  <div key={index} className="p-4 rounded-lg bg-primary/5 space-y-3">
+                    <p className="text-sm font-medium">&ldquo;{close.phrase}&rdquo;</p>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={name} />}
+                        <AvatarFallback className={`${color.solid} text-[10px] font-bold`}>
+                          {clientInitials(name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs font-medium text-muted-foreground">{name}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
