@@ -51521,7 +51521,9 @@ export type Database = {
           email: string
           first_name: string
           id: number
+          job_title: string | null
           last_name: string | null
+          phone: string | null
           position_type: string | null
           promoted_at: string | null
           promoted_to_user_id: string | null
@@ -51535,7 +51537,9 @@ export type Database = {
           email: string
           first_name: string
           id?: never
+          job_title?: string | null
           last_name?: string | null
+          phone?: string | null
           position_type?: string | null
           promoted_at?: string | null
           promoted_to_user_id?: string | null
@@ -51549,7 +51553,9 @@ export type Database = {
           email?: string
           first_name?: string
           id?: never
+          job_title?: string | null
           last_name?: string | null
+          phone?: string | null
           position_type?: string | null
           promoted_at?: string | null
           promoted_to_user_id?: string | null
