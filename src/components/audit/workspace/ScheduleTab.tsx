@@ -1,4 +1,5 @@
 import { ClipboardList, MessageSquare, Target, Info } from 'lucide-react';
+import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AppointmentPanel } from './AppointmentPanel';
 import { useAuditAppointments, useScheduleAuditPhase, useCancelAuditAppointment, useCompleteAuditAppointment } from '@/hooks/useAuditSchedule';
@@ -110,10 +111,12 @@ export function ScheduleTab({ audit }: ScheduleTabProps) {
           isScheduling={schedulePhase.isPending}
           disabled={!canScheduleClosing}
           disabledReason="Schedule the opening meeting first before setting the closing meeting."
+          minDate={openingMeeting?.scheduled_date ?? undefined}
           syncStatus={getSyncStatus(closingMeeting)}
           onSchedule={(params) => {
             // Validate closing is after opening
             if (openingMeeting?.scheduled_date && params.scheduledDate < openingMeeting.scheduled_date) {
+              toast.error('The closing meeting date must be on or after the opening meeting date.');
               return;
             }
             schedulePhase.mutate({
