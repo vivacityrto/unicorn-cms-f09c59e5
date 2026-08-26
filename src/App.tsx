@@ -227,6 +227,7 @@ const ComplianceAuditReport = lazy(() => import("./pages/ComplianceAuditReport")
 // Academy pages (placeholder)
 const AcademyCoursesListPage = lazy(() => import("./pages/academy/AcademyCoursesListPage"));
 const AcademyCertificatesPage = lazy(() => import("./pages/academy/AcademyCertificatesPage"));
+const AcademyWorkbooksPage = lazy(() => import("./pages/academy/AcademyWorkbooksPage"));
 const AcademyEvents = lazy(() => import("./pages/academy/AcademyEvents"));
 const AcademyCommunity = lazy(() => import("./pages/academy/AcademyCommunity"));
 const AcademyTeam = lazy(() => import("./pages/academy/AcademyTeam"));
@@ -1090,6 +1091,7 @@ const App = () => (
             <Route path="/resource-hub/training-webinars" element={<ProtectedRoute><ResourceCategoryPage categoryId="training-webinars" /></ProtectedRoute>} />
             <Route path="/resource-hub/guides-howto" element={<ProtectedRoute><ResourceCategoryPage categoryId="guides-howto" /></ProtectedRoute>} />
             <Route path="/resource-hub/ci-tools" element={<ProtectedRoute><ResourceCategoryPage categoryId="ci-tools" /></ProtectedRoute>} />
+            <Route path="/resource-hub/workbooks" element={<ProtectedRoute><ResourceCategoryPage categoryId="workbooks" /></ProtectedRoute>} />
             <Route path="/resource-hub/recently-added" element={<ProtectedRoute><ResourceRecentlyAdded /></ProtectedRoute>} />
             <Route path="/resource-hub/most-used" element={<ProtectedRoute><ResourceMostUsed /></ProtectedRoute>} />
             <Route path="/resource-hub/favourites" element={<ProtectedRoute><ResourceFavourites /></ProtectedRoute>} />
@@ -1193,6 +1195,7 @@ const App = () => (
             {/* Academy Routes */}
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCoursesListPage /></ProtectedRoute>} />
             <Route path="/academy/certificates" element={<ProtectedRoute><AcademyCertificatesPage /></ProtectedRoute>} />
+            <Route path="/academy/workbooks" element={<ProtectedRoute><AcademyWorkbooksPage /></ProtectedRoute>} />
             <Route path="/academy/events" element={<ProtectedRoute><AcademyEvents /></ProtectedRoute>} />
             <Route path="/academy/community" element={<ProtectedRoute><AcademyCommunity /></ProtectedRoute>} />
             <Route path="/academy/team" element={<ProtectedRoute><AcademyTeam /></ProtectedRoute>} />

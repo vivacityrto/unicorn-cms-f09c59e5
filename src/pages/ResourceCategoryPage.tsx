@@ -6,14 +6,15 @@ import { ResourceGrid } from "@/components/resource-hub/ResourceGrid";
 import { ResourceSearch } from "@/components/resource-hub/ResourceSearch";
 import { Resource, RESOURCE_CATEGORIES, getCategoryLabel } from "@/types/resource";
 import { toast } from "sonner";
-import { 
-  FileText, 
-  CheckSquare, 
-  ClipboardList, 
-  Search, 
-  Video, 
-  BookOpen, 
-  TrendingUp 
+import {
+  FileText,
+  CheckSquare,
+  ClipboardList,
+  Search,
+  Video,
+  BookOpen,
+  TrendingUp,
+  NotebookPen,
 } from "lucide-react";
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -24,6 +25,7 @@ const categoryIcons: Record<string, React.ElementType> = {
   "training-webinars": Video,
   "guides-howto": BookOpen,
   "ci-tools": TrendingUp,
+  workbooks: NotebookPen,
 };
 
 interface ResourceCategoryPageProps {
