@@ -122,6 +122,7 @@ interface Document {
   versionlastupdated: string | null;
   isclientdoc: boolean | null;
   category: string | null;
+  stage: number | null;
   sent_at?: string | null;
   is_sent?: boolean;
   uploaded_files?: string[] | null;

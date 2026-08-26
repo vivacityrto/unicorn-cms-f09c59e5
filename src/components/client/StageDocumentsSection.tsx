@@ -97,13 +97,15 @@ export function StageDocumentsSection({ stageInstanceId, stageId, tenantId, pack
   // that invites a duplicate job.
   useEffect(() => {
     let cancelled = false;
-    supabase
+    // The generated relationship types recurse excessively for this joined
+    // filter, so keep this small projection explicitly typed at the boundary.
+    (supabase as any)
       .from('bulk_document_job_items')
       .select('job_id, bulk_document_jobs!inner(status)')
       .eq('stageinstance_id', stageInstanceId)
       .in('bulk_document_jobs.status', ACTIVE_JOB_STATUSES)
       .limit(1)
-      .then(({ data }) => {
+      .then(({ data }: { data: Array<{ job_id: string }> | null }) => {
         if (cancelled) return;
         const row = (data ?? [])[0] as { job_id: string } | undefined;
         if (row?.job_id) setActiveJobId(row.job_id);
