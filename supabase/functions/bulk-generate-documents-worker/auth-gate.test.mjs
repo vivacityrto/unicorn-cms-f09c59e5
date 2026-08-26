@@ -1,9 +1,20 @@
 /**
- * Regression checks for bulk-generate-documents-worker JWT handling (C1).
+ * Regression checks for bulk-generate-documents-worker's caller gate.
  *
- * The worker used to decode `exp` from an unverified JWT payload. A
- * decoded-but-unverified claim is not evidence of anything — verify via
- * admin.auth.getUser, then read exp from getClaims.
+ * The worker used to decode `exp` from an unverified JWT payload (the old
+ * "C1" fix made it verify via admin.auth.getUser then read exp from
+ * getClaims). That model was superseded by a documented architecture
+ * change (see the file's own "Auth model" header comment): this is a
+ * machine-to-machine worker gated by a shared secret
+ * (BULK_DOCUMENT_WORKER_SECRET via requireSharedSecret), not a browser
+ * caller — x-caller-authorization is checked only for structural presence
+ * and is never verified against Supabase Auth. Every staff-gated
+ * downstream call instead authenticates as a dedicated system account.
+ *
+ * These checks were rewritten on 2026-08-26 (RBAC/security remediation
+ * pass) after discovering the old JWT-verification assertions had gone
+ * stale — this suite was excluded from the normal `npx vitest run` command
+ * (F-022) and nobody had run it since the architecture changed.
  *
  * Run: node --test supabase/functions/bulk-generate-documents-worker/auth-gate.test.mjs
  */
@@ -18,26 +29,29 @@ const src = readFileSync(
   "utf8",
 );
 
-describe("bulk-generate-documents-worker caller JWT verification", () => {
-  it("verifies the caller token with auth.getUser", () => {
-    assert.match(src, /\.auth\.getUser\(/);
+describe("bulk-generate-documents-worker caller gate", () => {
+  it("gates on a shared secret (requireSharedSecret) before any other check", () => {
+    assert.match(src, /requireSharedSecret\(/);
+    assert.match(src, /WORKER_SECRET_ENV\s*=\s*['"]BULK_DOCUMENT_WORKER_SECRET['"]/);
+    const secretGateIdx = src.indexOf("requireSharedSecret(req");
+    const methodCheckIdx = src.indexOf("req.method !== 'POST'");
+    assert.ok(secretGateIdx >= 0, "requireSharedSecret call present");
+    assert.ok(secretGateIdx < methodCheckIdx, "secret gate runs before the method check / any work");
   });
 
-  it("reads exp from verified getClaims, not a local payload decode", () => {
-    assert.match(src, /\.auth\.getClaims\(/);
-    assert.match(src, /claimsData\?\.claims\?\.exp/);
+  it("does not use the retired unverified-JWT-decode pattern (atob/jwtExpMs)", () => {
     assert.doesNotMatch(src, /atob\(/);
     assert.doesNotMatch(src, /function jwtExpMs/);
   });
 
-  it("rejects an invalid caller token before leasing work", () => {
-    const getUserIdx = src.indexOf(".auth.getUser(");
-    const leaseIdx = src.indexOf("rpc(\n      'lease_bulk_document_job_items'");
-    const unauthorizedIdx = src.indexOf("Invalid or expired caller token");
-    assert.ok(getUserIdx >= 0, "getUser present");
-    assert.ok(leaseIdx >= 0, "lease RPC present");
-    assert.ok(unauthorizedIdx >= 0, "401 body present");
-    assert.ok(getUserIdx < leaseIdx, "getUser before leasing");
-    assert.ok(unauthorizedIdx < leaseIdx, "401 path defined before leasing");
+  it("treats x-caller-authorization as structural-presence-only, not an auth check", () => {
+    assert.match(src, /callerAuth\s*=\s*req\.headers\.get\(\s*['"]x-caller-authorization['"]\s*\)/);
+    assert.match(src, /parseBearerToken\(callerAuth\)/);
+    assert.doesNotMatch(src, /\.auth\.getUser\(\s*callerToken\s*\)/);
+    assert.doesNotMatch(src, /\.auth\.getClaims\(\s*callerToken\s*\)/);
+  });
+
+  it("never calls cancel_bulk_document_job (that RPC must only run under a real staff JWT, per its own safety note)", () => {
+    assert.doesNotMatch(src, /rpc\(\s*['"]cancel_bulk_document_job['"]/);
   });
 });

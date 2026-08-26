@@ -57,7 +57,7 @@ function SaveIndicator() {
 export default function AuditWorkspaceNew() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: audit, isLoading } = useAudit(id);
+  const { data: audit, isLoading, error: auditError, refetch: refetchAudit } = useAudit(id);
   const { data: sections } = useAuditSections(id);
   const { data: responses } = useAuditResponses(id);
   const { data: findings } = useAuditFindings(id);
@@ -107,6 +107,22 @@ export default function AuditWorkspaceNew() {
         <div className="space-y-4 p-6">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-[400px] w-full" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (auditError) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-96 gap-4">
+          <p className="text-muted-foreground">Couldn't load this audit. {auditError instanceof Error ? auditError.message : 'Please try again.'}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => refetchAudit()}>Retry</Button>
+            <Button variant="ghost" onClick={() => navigate('/audits')}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Audits
+            </Button>
+          </div>
         </div>
       </DashboardLayout>
     );

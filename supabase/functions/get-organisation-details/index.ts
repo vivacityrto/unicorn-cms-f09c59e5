@@ -1,4 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts';
+import { FeatureKeys, requireCaller } from '../_shared/requireCaller.ts';
 
 // TGA SOAP Endpoints - V13 with policy suffix for SOAP 1.1 (per TGA spec section 3.9.2)
 const TGA_WS_BASE = Deno.env.get('TGA_WS_BASE') || 'https://ws.training.gov.au';
@@ -55,6 +56,9 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const caller = await requireCaller(req, FeatureKeys.staffTga);
+    if (caller instanceof Response) return caller;
+
     const { code } = await req.json();
 
     // Input validation

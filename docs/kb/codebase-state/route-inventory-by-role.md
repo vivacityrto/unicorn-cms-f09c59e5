@@ -1,172 +1,319 @@
 # Route Inventory by Role
 
-> **Last updated:** 2026-07-29 · **Reconsider by:** 2026-09-29 — routes churn fast (7 hotfix PRs landed 2026-07-27/28 alone touching route titles/redirects); re-derive from `App.tsx` rather than trust this list once stale.
+> **Last updated:** 2026-08-26 (full mechanical regeneration — see [F-024](../../audit-report-2026-08-26.md) in the RBAC/security remediation audit) · **Reconsider by:** 2026-10-26 — routes churn fast; re-derive rather than trust this list once stale.
 >
-> **Reflects commit:** `<codebase>@5756e75a` (2026-07-29, branch `hotfix/manage-documents-autofill`).
+> **Reflects:** working tree on branch `hotfix/rbac-security-remediation-20260826`, 2026-08-26 (uncommitted at generation time — includes this session's removal of `/client/eos` and `/package/:id`, both confirmed dead code). Last commit that touched `src/App.tsx` before these edits: `b4b2f031`.
 >
-> **Methodology:** Every `<Route>` in [`src/App.tsx`](../../unicorn-cms-f09c59e5/src/App.tsx) (216 total, both single-line and multi-line JSX formats), grouped by who can reach it. Built to support the 2026-07-29 cross-role bug/layout audit (see [`super-admin-exploration-2026-05-21.md`](super-admin-exploration-2026-05-21.md) for the prior admin-only pass this supersedes in scope, not in findings — that doc's findings still need re-verification).
+> **Methodology:** every `<Route>` in [`src/App.tsx`](../../../src/App.tsx) (**249 total**), extracted mechanically by [`scripts/generate-route-inventory.mjs`](../../../scripts/generate-route-inventory.mjs) — path, rendered component, and guard tier read directly from the JSX, not hand-transcribed. **Re-run that script and paste its output back into the tables below whenever this doc goes stale** — that's the "drift check" F-024 asked for; there's no separate CI job for it yet (nothing enforces re-running it, it's on whoever next relies on this doc to notice the count looks wrong).
 >
-> **Confidence:** high for the route→file→guard mapping (read directly from source); low for "who actually uses this" — several routes (`/client-portal/:tenantId/documents`, `/client/eos`) have staff-facing paths despite `/client` naming and need a live-session confirmation, flagged below.
+> **Confidence:** high for the route→file→guard mapping (mechanically extracted, not transcribed). Low for "who actually uses this" and for the deeper product question of which `requireSuperAdmin` routes are *intentionally* hard-gated vs. should be permission-gated instead — that's [`rbac-v6-gate-closure-plan.md`](../handoffs/rbac-v6-gate-closure-plan.md) Phase 0, not this doc.
 
 ---
 
 ## How routes are gated
 
-Three guard patterns in `App.tsx`:
-- No wrapper — public, pre-auth (`Login`, `ResetPassword`, etc.)
-- `<ProtectedRoute>` — any authenticated user; the *page itself* usually does further role/tenant checks internally (e.g. client vs staff view)
-- `<ProtectedRoute requireSuperAdmin>` — hard-gated, redirects non-superadmins away (confirmed behavior: redirects to `/dashboard`, per [`local_dev_server_verification`](../../memory/local_dev_server_verification.md) memory)
+Four guard patterns found in `App.tsx`:
+- **`public`** — no wrapper, reachable pre-auth (`Login`, `ResetPassword`, etc.) — or a `<Navigate>` redirect registered without `<ProtectedRoute>`, which just bounces to another (usually protected) path rather than rendering anything itself.
+- **`ProtectedRoute`** — any authenticated user; the *page itself* usually does further role/tenant checks internally (e.g. client vs staff view). `useRBAC`'s client-route allowlist (`isClientAccessibleRoute` — see [`useRBAC.tsx`](../../../src/hooks/useRBAC.tsx)) additionally fails closed here for non-staff users on any route not explicitly classified as client-accessible.
+- **`requireSuperAdmin`** — hard-gated, redirects non-SuperAdmins to `/dashboard`.
+- **`allowVivacityTeam`** / **`allowedRoles={CONST}`** — narrower allowlists layered on top of `ProtectedRoute` (an explicit role list, or "any Vivacity Team member" as a softer alternative to `requireSuperAdmin`).
+
+**Known issue found during this regeneration:** `/support-tickets` is registered twice (`SupportTicketsWrapper` and, later in the file, `SupportTicketsPage`) — React Router only ever reaches the first match, so the second registration is dead code. Not fixed as part of this doc regeneration; flagged for a follow-up hotfix.
 
 ---
 
-## 1. Public / pre-auth (8 routes)
+<!-- BEGIN GENERATED TABLES — regenerate with `node scripts/generate-route-inventory.mjs` -->
 
-No login required.
+## public (24 routes)
 
-| Route | Component |
-|---|---|
-| `/` | `Login` |
-| `/login` | `Login` |
-| `/reset-password` | `ResetPassword` |
-| `/activate` | `ActivateAccount` |
-| `/accept-invitation` | `AcceptInvitationWrapper` |
-| `/post-sign-in` | `PostSignInRedirect` |
-| `/oauth/consent` | `OAuthConsent` |
-| `/.lovable/oauth/consent` | `OAuthConsent` |
+| Route segment | Route | Component |
+|---|---|---|
+| (catch-all) | `*` | `NotFound` |
+| / | `/` | `Login` |
+| /.lovable | `/.lovable/oauth/consent` | `OAuthConsent` |
+| /accept-invitation | `/accept-invitation` | `AcceptInvitationWrapper` |
+| /activate | `/activate` | `ActivateAccount` |
+| /addin | `/addin` | `AddinShell` |
+| /admin | `/admin/governance-documents` | `Navigate` |
+| /admin | `/admin/integrations/xero-callback` | `XeroCallback` |
+| /calendar | `/calendar/outlook-callback` | `OutlookCallback` |
+| /client | `/client/communications` | `Navigate` |
+| /client | `/client/documents` | `Navigate` |
+| /client | `/client/notifications` | `Navigate` |
+| /client | `/client/suggestions` | `Navigate` |
+| /client | `/client/suggestions/:id` | `Navigate` |
+| /client | `/client/suggestions/new` | `Navigate` |
+| /client | `/client/team` | `Navigate` |
+| /eos | `/eos/issues` | `Navigate` |
+| /login | `/login` | `Login` |
+| /oauth | `/oauth/consent` | `OAuthConsent` |
+| /post-sign-in | `/post-sign-in` | `PostSignInRedirect` |
+| /reset-password | `/reset-password` | `ResetPassword` |
+| /suggestions | `/suggestions` | `Navigate` |
+| /suggestions | `/suggestions/new` | `Navigate` |
+| /teams | `/teams` | `TeamsShell` |
 
----
+## ProtectedRoute (170 routes)
 
-## 2. Super Admin only — `requireSuperAdmin` (47 routes)
+| Route segment | Route | Component |
+|---|---|---|
+| /academy | `/academy` | `AcademyDashboardWrapperNew` |
+| /academy | `/academy/administration-assistant` | `AcademyAdminAssistantWrapper` |
+| /academy | `/academy/certificates` | `AcademyCertificatesPage` |
+| /academy | `/academy/community` | `AcademyCommunity` |
+| /academy | `/academy/compliance-manager` | `AcademyComplianceManagerWrapperNew` |
+| /academy | `/academy/course/:slug` | `AcademyCourseDetailWrapper` |
+| /academy | `/academy/course/:slug/assessment/:assessmentId` | `AcademyAssessmentWrapper` |
+| /academy | `/academy/course/:slug/assessment/:assessmentId/result/:attemptId` | `AcademyAssessmentResultWrapper` |
+| /academy | `/academy/course/:slug/lesson/:lessonId` | `AcademyLessonViewerWrapper` |
+| /academy | `/academy/courses` | `AcademyCoursesListPage` |
+| /academy | `/academy/events` | `AcademyEvents` |
+| /academy | `/academy/governance-person` | `AcademyGovernancePersonWrapperNew` |
+| /academy | `/academy/pdp` | `AcademyPdpPage` |
+| /academy | `/academy/pdp/cycle/:cycleId` | `AcademyPdpCyclePage` |
+| /academy | `/academy/pdp/reviews` | `AcademyPdpReviewsPage` |
+| /academy | `/academy/profile` | `AcademyProfileWrapperNew` |
+| /academy | `/academy/student-support-officer` | `AcademyStudentSupportWrapper` |
+| /academy | `/academy/team` | `AcademyTeam` |
+| /academy | `/academy/trainer` | `AcademyTrainerWrapperNew` |
+| /academy | `/academy/workbooks` | `AcademyWorkbooksPage` |
+| /admin | `/admin/ai-insights` | `AiInsightsPage` |
+| /admin | `/admin/client-packages/:clientPackageId` | `ClientPackageDetailWrapper` |
+| /admin | `/admin/email-templates` | `ManageEmailTemplatesWrapper` |
+| /admin | `/admin/integrations/tga` | `AdminTgaIntegrationWrapper` |
+| /admin | `/admin/integrations/xero` | `AdminXeroIntegrationWrapper` |
+| /admin | `/admin/package/:id` | `AdminPackageDetailWrapper` |
+| /admin | `/admin/package/:id/tenant/:tenantId` | `AdminPackageTenantDetailWrapper` |
+| /admin | `/admin/package/:id/tenant/:tenantId/instance/:instanceId` | `AdminPackageTenantDetailWrapper` |
+| /admin | `/admin/research-jobs` | `ResearchJobs` |
+| /admin | `/admin/research-jobs/:jobId` | `ResearchJobDetail` |
+| /admin | `/admin/reviews` | `AdminReviews` |
+| /admin | `/admin/sharepoint-folder-mapping` | `SharePointFolderMapping` |
+| /admin | `/admin/sharepoint-sites` | `SharePointSitesAdmin` |
+| /admin | `/admin/staff-engagements` | `StaffEngagements` |
+| /admin | `/admin/staff-engagements/:id` | `StaffEngagementDetail` |
+| /admin | `/admin/team-users` | `TeamUsers` |
+| /admin | `/admin/tenant-users` | `TenantUsers` |
+| /admin | `/admin/user-audit` | `AdminUserAudit` |
+| /audits | `/audits` | `AuditsAssessments` |
+| /audits | `/audits/:id` | `AuditWorkspaceNew` |
+| /audits | `/audits/:id/actions` | `AuditActions` |
+| /audits | `/audits/:id/findings` | `AuditFindings` |
+| /audits | `/audits/:id/report` | `AuditReport` |
+| /audits | `/audits/create-template` | `AuditTemplateBuilder` |
+| /audits | `/audits/create-template/:templateId` | `AuditTemplateBuilder` |
+| /calendar | `/calendar` | `CalendarWrapper` |
+| /calendar | `/calendar/time-capture` | `CalendarTimeCapture` |
+| /client-activity | `/client-activity` | `ClientActivityFeed` |
+| /client-portal | `/client-portal/:tenantId/documents` | `ClientPortalDocumentsWrapper` |
+| /client-preview | `/client-preview` | `ClientPreview` |
+| /client | `/client/academy-activity` | `AcademyActivityWrapperNew` |
+| /client | `/client/calendar` | `ClientCalendarWrapperNew` |
+| /client | `/client/certificate` | `ClientCertificateWrapper` |
+| /client | `/client/files` | `ClientFilesWrapperNew` |
+| /client | `/client/governance-documents` | `ClientGovernanceDocumentsWrapperNew` |
+| /client | `/client/home` | `ClientHomeWrapperNew` |
+| /client | `/client/inbox` | `ClientInboxWrapperNew` |
+| /client | `/client/packages` | `ClientPackagesWrapperNew` |
+| /client | `/client/profile` | `ClientProfileWrapperNew` |
+| /client | `/client/regulatory-updates` | `RegulatoryUpdatesWrapper` |
+| /client | `/client/regulatory-updates/:eventId` | `RegulatoryUpdateDetailWrapper` |
+| /client | `/client/reports` | `ClientReportsWrapperNew` |
+| /client | `/client/resource-hub` | `ClientResourceHubWrapperNew` |
+| /client | `/client/resource-hub/:categoryId` | `ClientResourceHubWrapperNew` |
+| /client | `/client/settings` | `ClientSettingsWrapperNew` |
+| /client | `/client/staff-pdps` | `StaffPdpsWrapperNew` |
+| /client | `/client/support-tickets` | `SupportTicketsPortalWrapper` |
+| /client | `/client/support-tickets/:id` | `SupportTicketPortalDetailWrapper` |
+| /client | `/client/tasks` | `ClientTasksWrapperNew` |
+| /client | `/client/tga` | `ClientTgaDetailsWrapperNew` |
+| /client | `/client/users` | `ClientUsersWrapperNew` |
+| /clients | `/clients/bulk-membership-certificates` | `BulkMembershipCertificatesPage` |
+| /communications | `/communications` | `TeamCommunicationsWrapper` |
+| /compliance-audits | `/compliance-audits` | `ComplianceAuditGlobal` |
+| /compliance-audits | `/compliance-audits/:tenantId` | `ComplianceAuditList` |
+| /compliance-audits | `/compliance-audits/:tenantId/audit/:auditId` | `ComplianceAuditForm` |
+| /compliance-audits | `/compliance-audits/:tenantId/audit/:auditId/report` | `ComplianceAuditReport` |
+| /dashboard | `/dashboard` | `MainDashboard` |
+| /documents | `/documents` | `Dashboard` |
+| /email-triage | `/email-triage` | `EmailTriageWrapper` |
+| /eos | `/eos` | `EosOverview` |
+| /eos | `/eos/accountability` | `EosAccountabilityChart` |
+| /eos | `/eos/calendar` | `EosCalendar` |
+| /eos | `/eos/client-impact` | `EosClientImpact` |
+| /eos | `/eos/client-impact/:reportId` | `EosClientImpactDetail` |
+| /eos | `/eos/configurations` | `EosConfigurations` |
+| /eos | `/eos/configurations/:id` | `EosConfigurationDetail` |
+| /eos | `/eos/flight-plan` | `EosFlightPlan` |
+| /eos | `/eos/gwc-trends` | `EosGWCTrends` |
+| /eos | `/eos/health` | `EosHealth` |
+| /eos | `/eos/health-check` | `EosHealthCheck` |
+| /eos | `/eos/leadership` | `EosLeadershipDashboard` |
+| /eos | `/eos/meetings` | `EosMeetings` |
+| /eos | `/eos/meetings/:meetingId/live` | `LiveMeetingView` |
+| /eos | `/eos/meetings/:meetingId/summary` | `EosMeetingSummary` |
+| /eos | `/eos/onboarding` | `EosOnboarding` |
+| /eos | `/eos/people-analyzer` | `EosPeopleAnalyzer` |
+| /eos | `/eos/qc` | `EosQC` |
+| /eos | `/eos/qc/:id` | `EosQCSession` |
+| /eos | `/eos/risks-opportunities` | `EosRisksOpportunities` |
+| /eos | `/eos/rock-analysis` | `EosRockAnalysis` |
+| /eos | `/eos/rocks` | `EosRocks` |
+| /eos | `/eos/scorecard` | `EosScorecard` |
+| /eos | `/eos/todos` | `EosTodos` |
+| /eos | `/eos/vto` | `EosVto` |
+| /executive | `/executive` | `ExecutiveDashboard` |
+| /inbox | `/inbox` | `TeamInboxWrapper` |
+| /kpi | `/kpi` | `KpiPage` |
+| /manage-categories | `/manage-categories` | `ManageCategoriesWrapper` |
+| /manage-documents | `/manage-documents` | `ManageDocumentsWrapper` |
+| /manage-documents | `/manage-documents/bulk-generate/new` | `BulkGenerateNew` |
+| /manage-documents | `/manage-documents/bulk-jobs` | `BulkDocumentJobsList` |
+| /manage-documents | `/manage-documents/bulk-jobs/:id` | `BulkDocumentJobProgress` |
+| /manage-invites | `/manage-invites` | `ManageInvitesWrapper` |
+| /manage-stages | `/manage-stages` | `ManageStagesWrapper` |
+| /manage-tenants | `/manage-tenants` | `ManageTenantsWrapper` |
+| /manage-users | `/manage-users` | `ManageUsersWrapper` |
+| /membership-dashboard | `/membership-dashboard` | `MembershipDashboardWrapper` |
+| /messages | `/messages` | `Dashboard` |
+| /my-exit-interview | `/my-exit-interview` | `MyExitInterview` |
+| /my-onboarding | `/my-onboarding` | `MyOnboardingPage` |
+| /my-work | `/my-work` | `MyWork` |
+| /my | `/my/kpi` | `MyKpiDashboardPage` |
+| /processes | `/processes` | `ProcessesWrapper` |
+| /processes | `/processes/:id` | `ProcessDetail` |
+| /processes | `/processes/:id/edit` | `ProcessForm` |
+| /processes | `/processes/new` | `ProcessForm` |
+| /profile | `/profile` | `Navigate` |
+| /reports | `/reports` | `Dashboard` |
+| /resource-hub | `/resource-hub` | `ResourceHubDashboard` |
+| /resource-hub | `/resource-hub/audit-evidence` | `ResourceCategoryPage` |
+| /resource-hub | `/resource-hub/checklists` | `ResourceCategoryPage` |
+| /resource-hub | `/resource-hub/ci-tools` | `ResourceCategoryPage` |
+| /resource-hub | `/resource-hub/favourites` | `ResourceFavourites` |
+| /resource-hub | `/resource-hub/guides-howto` | `ResourceCategoryPage` |
+| /resource-hub | `/resource-hub/most-used` | `ResourceMostUsed` |
+| /resource-hub | `/resource-hub/recently-added` | `ResourceRecentlyAdded` |
+| /resource-hub | `/resource-hub/registers-forms` | `ResourceCategoryPage` |
+| /resource-hub | `/resource-hub/templates` | `ResourceCategoryPage` |
+| /resource-hub | `/resource-hub/training-webinars` | `ResourceCategoryPage` |
+| /resource-hub | `/resource-hub/updates` | `ResourceUpdatesLog` |
+| /resource-hub | `/resource-hub/workbooks` | `ResourceCategoryPage` |
+| /rto-tips | `/rto-tips` | `RtoTipsWrapper` |
+| /settings | `/settings` | `SettingsWrapper` |
+| /settings | `/settings/calendar` | `Navigate` |
+| /settings | `/settings/integrations` | `IntegrationSettings` |
+| /settings | `/settings/notifications` | `NotificationSettings` |
+| /settings | `/settings/roles` | `RoleReference` |
+| /suggestions | `/suggestions/:id` | `SuggestionDetail` |
+| /support-tickets | `/support-tickets` | `SupportTicketsWrapper` |
+| /support-tickets | `/support-tickets` | `SupportTicketsPage` |
+| /support-tickets | `/support-tickets/:id` | `SuggestionDetail` |
+| /support-tickets | `/support-tickets/new` | `NewSupportTicketPage` |
+| /tasks | `/tasks` | `TasksManagementWrapper` |
+| /team-settings | `/team-settings` | `TeamSettingsWrapper` |
+| /tenant-detail | `/tenant-detail/:tenantId` | `ClientDetailWrapper` |
+| /tenant | `/tenant/:clientId/impact` | `ClientImpactPage` |
+| /tenant | `/tenant/:tenantId` | `ClientDetailWrapper` |
+| /tenant | `/tenant/:tenantId/document/:documentId` | `TenantDocumentDetailWrapper` |
+| /tenant | `/tenant/:tenantId/documents` | `TenantDocumentsWrapper` |
+| /tenant | `/tenant/:tenantId/documents-hub` | `TenantDocumentsHubWrapper` |
+| /tenant | `/tenant/:tenantId/logins` | `TenantLoginsWrapper` |
+| /tenant | `/tenant/:tenantId/members` | `TenantMembersWrapper` |
+| /tenant | `/tenant/:tenantId/notes` | `TenantNotesWrapper` |
+| /tenant | `/tenant/:tenantId/tasks` | `TasksManagementWrapper` |
+| /time-inbox | `/time-inbox` | `TimeInbox` |
+| /triage-dashboard | `/triage-dashboard` | `Dashboard` |
+| /user-profile | `/user-profile/:userId` | `UserProfileWrapper` |
+| /work | `/work/calendar` | `WorkCalendarWrapper` |
+| /work | `/work/meetings` | `WorkMeetings` |
 
-Hard-gated. Sections per current sidebar grouping (see prior doc's 7-section map — this list adds routes introduced since 2026-05-21: `/admin/diagnostics/zero-progress-packages`, `/admin/regulator-watch(+detail)`, `/admin/risk-radar`, `/admin/template-gap-analysis`, `/admin/knowledge-explorer`, `/admin/strategic-command`, `/admin/workflow-optimisation`, `/admin/risk-command`, `/admin/strategic-orchestration`, `/admin/settings/reporting-obligations`, `/superadmin/workforce-pdp`, `/admin/team-users/new-starter(+runs)`, `/admin/bulk-invite`, `/admin/cohort-sender(+jobs)`).
+## requireSuperAdmin (42 routes)
 
-**Executive**
-- `/executive/financial-controls`
-- `/executive/client-commitments`
-- `/executive/decision-queue`
-- (`/executive` itself is plain `<ProtectedRoute>` — see Internal Staff section)
+| Route segment | Route | Component |
+|---|---|---|
+| /admin | `/admin/addin-diagnostics` | `AddinDiagnostics` |
+| /admin | `/admin/addin-settings` | `AddinSettings` |
+| /admin | `/admin/assistant` | `AdminAssistant` |
+| /admin | `/admin/bulk-invite` | `BulkInvite` |
+| /admin | `/admin/clickup-import` | `ClickUpImport` |
+| /admin | `/admin/clickup-mapping` | `ClickUpTenantMapping` |
+| /admin | `/admin/code-tables` | `CodeTablesAdmin` |
+| /admin | `/admin/cohort-sender` | `CohortAccessSender` |
+| /admin | `/admin/cohort-sender/jobs/:jobId` | `CohortAccessSenderJob` |
+| /admin | `/admin/compliance-packs` | `AdminCompliancePacks` |
+| /admin | `/admin/diagnostics/zero-progress-packages` | `AdminZeroProgressPackagesPage` |
+| /admin | `/admin/eos-processes` | `AdminEOSProcesses` |
+| /admin | `/admin/knowledge` | `AdminKnowledgeLibrary` |
+| /admin | `/admin/knowledge-explorer` | `KnowledgeExplorer` |
+| /admin | `/admin/lifecycle-checklists` | `LifecycleChecklistsAdmin` |
+| /admin | `/admin/manage-packages` | `PackageBuilder` |
+| /admin | `/admin/merge-field-tags` | `MergeFieldTagsAdmin` |
+| /admin | `/admin/operations` | `AdminOperations` |
+| /admin | `/admin/package-builder/:id` | `PackageBuilderDetail` |
+| /admin | `/admin/qa/responsive` | `QAResponsiveHarness` |
+| /admin | `/admin/qa/smoke` | `QASmokeTest` |
+| /admin | `/admin/risk-command` | `RiskCommandCentre` |
+| /admin | `/admin/risk-radar` | `CrossTenantRiskRadar` |
+| /admin | `/admin/settings/reporting-obligations` | `ReportingObligationsAdmin` |
+| /admin | `/admin/stage-analytics` | `AdminStageAnalytics` |
+| /admin | `/admin/stage-builder` | `StageBuilder` |
+| /admin | `/admin/stages` | `AdminManageStagesWrapper` |
+| /admin | `/admin/stages/:stage_id` | `AdminStageDetailWrapper` |
+| /admin | `/admin/strategic-command` | `StrategicCommandCentre` |
+| /admin | `/admin/strategic-orchestration` | `StrategicOrchestrationDashboard` |
+| /admin | `/admin/team-users/new-starter` | `NewStarterWizard` |
+| /admin | `/admin/team-users/runs/:runId` | `ProvisioningRunDetailPage` |
+| /admin | `/admin/team-users/runs/:runId/onboarding` | `OnboardingHubPage` |
+| /admin | `/admin/template-gap-analysis` | `TemplateGapAnalysis` |
+| /admin | `/admin/workflow-optimisation` | `WorkflowOptimisation` |
+| /administration | `/administration/contacts` | `ContactDirectory` |
+| /administration | `/administration/role-permissions` | `RolePermissionsEditor` |
+| /ask-viv | `/ask-viv` | `AskVivAssistant` |
+| /executive | `/executive/client-commitments` | `ExecutiveClientCommitments` |
+| /executive | `/executive/decision-queue` | `ExecutiveDecisionQueue` |
+| /executive | `/executive/financial-controls` | `ExecutiveFinancialControls` |
+| /internal | `/internal/ask-viv/flags` | `AskVivFlags` |
 
-**Package/stage system config**
-- `/admin/manage-packages`, `/admin/package-builder/:id`
-- `/admin/stages`, `/admin/stages/:stage_id`, `/admin/stage-builder`, `/admin/stage-analytics`
-- `/admin/operations`
-- `/admin/compliance-packs`
-- `/admin/code-tables`, `/admin/lifecycle-checklists`, `/admin/merge-field-tags`
-- `/admin/settings/reporting-obligations`
-- `/administration/role-permissions`
+## allowVivacityTeam (2 routes)
 
-**Team/user provisioning**
-- `/admin/team-users/new-starter`
-- `/admin/team-users/runs/:runId`, `/admin/team-users/runs/:runId/onboarding`
-- `/admin/bulk-invite`
-- `/admin/cohort-sender`, `/admin/cohort-sender/jobs/:jobId`
-- `/admin/diagnostics/zero-progress-packages`
+| Route segment | Route | Component |
+|---|---|---|
+| /admin | `/admin/regulator-watch` | `RegulatorWatchDashboard` |
+| /admin | `/admin/regulator-watch/:eventId` | `RegulatorChangeEventDetail` |
 
-**AI / knowledge / process config**
-- `/admin/assistant`
-- `/admin/knowledge`
-- `/admin/eos-processes`
-- `/internal/ask-viv/flags`
-- `/admin/knowledge-explorer`
+## allowedRoles=ACADEMY_BUILDER_ROLES (11 routes)
 
-**Integrations / diagnostics**
-- `/admin/addin-settings`, `/admin/addin-diagnostics`
-- `/admin/clickup-mapping`, `/admin/clickup-import`
-- `/admin/qa/responsive`, `/admin/qa/smoke`
+| Route segment | Route | Component |
+|---|---|---|
+| /superadmin | `/superadmin/academy/builder` | `AcademyBuilderLibrary` |
+| /superadmin | `/superadmin/academy/builder/:courseId` | `AcademyBuilderCourse` |
+| /superadmin | `/superadmin/academy/bulk-import` | `AcademyBulkImportPage` |
+| /superadmin | `/superadmin/academy/certificates` | `AcademyCertificatesAdminPage` |
+| /superadmin | `/superadmin/academy/course-cleanup` | `AcademyCourseCleanupPage` |
+| /superadmin | `/superadmin/academy/enrollments` | `AcademyEnrolmentsPage` |
+| /superadmin | `/superadmin/academy/package-course-rules` | `AcademyPackageCourseRulesPage` |
+| /superadmin | `/superadmin/academy/quick-add` | `AcademyQuickAddPage` |
+| /superadmin | `/superadmin/academy/tag-management` | `AcademyTagManagementPage` |
+| /superadmin | `/superadmin/academy/tenant-access` | `AcademyTenantAccessPage` |
+| /superadmin | `/superadmin/workforce-pdp` | `SuperAdminWorkforcePdp` |
 
-**Regulator / risk / strategy (newer surfaces, not in the 2026-05-21 doc)**
-- `/admin/regulator-watch`, `/admin/regulator-watch/:eventId`
-- `/admin/risk-radar`
-- `/admin/template-gap-analysis`
-- `/admin/strategic-command`
-- `/admin/workflow-optimisation`
-- `/admin/risk-command`
-- `/admin/strategic-orchestration`
-- `/superadmin/workforce-pdp`
-
-**Academy (admin/builder side)**
-- `/superadmin/academy/enrollments`
-- `/superadmin/academy/tenant-access`
-- `/superadmin/academy/certificates`
-- `/superadmin/academy/builder`, `/superadmin/academy/builder/:courseId`
-- `/superadmin/academy/package-course-rules`
-
----
-
-## 3. Internal staff — plain `<ProtectedRoute>`, non-client, non-academy-learner (~110 routes)
-
-Everything a Vivacity staff member (CSC, consultant, admin without superadmin) can reach. Largest bucket — grouped by module.
-
-**Work / dashboard**
-`/dashboard`, `/triage-dashboard`, `/my-onboarding`, `/my-work`, `/tasks`, `/tenant/:tenantId/tasks`, `/time-inbox`, `/calendar`, `/work/calendar`, `/work/meetings`, `/calendar/time-capture`, `/calendar/outlook-callback`, `/messages`, `/inbox`, `/email-triage`, `/executive` (base — unlike its sub-pages, not superadmin-gated), `/profile`, `/settings`, `/settings/calendar`, `/settings/notifications`, `/settings/integrations`, `/settings/roles`, `/team-settings`
-
-**Clients / tenant management**
-`/manage-users`, `/manage-invites`, `/manage-tenants`, `/manage-documents` (+`/manage-documents/bulk-generate/new`, `/manage-documents/bulk-jobs`, `/manage-documents/bulk-jobs/:id`), `/manage-categories`, `/manage-stages`, `/document/:id`, `/user-profile/:userId`, `/tenant/:tenantId` (+`/logins`, `/members`, `/documents`, `/documents-hub`, `/document/:documentId`, `/notes`), `/tenant-detail/:tenantId`, `/admin/client-packages/:clientPackageId`, `/admin/package/:id` (+`/tenant/:tenantId`, `/tenant/:tenantId/instance/:instanceId`), `/package/:id`, `/rto-tips`, `/communications`, `/support-tickets` (+`/new`, `/:id`), `/suggestions/:id` (redirects for base paths → support-tickets), `/clients/bulk-membership-certificates`, `/admin/tenant-users`, `/admin/user-audit`, `/admin/staff-engagements` (+`/:id`), `/my-exit-interview`, `/admin/team-users`, `/admin/integrations/tga`, `/admin/reviews`, `/admin/research-jobs` (+`/:jobId`)
-
-**⚠️ Needs live-session confirmation** — `/client-portal/:tenantId/documents` (line ~577): named like a client route but sits in the staff `<ProtectedRoute>` block, not `/client/*`. Likely a staff-side view of a specific tenant's documents (parallel to `/tenant/:tenantId/documents`) — confirm during audit before assuming it's client-portal-facing.
-
-**EOS Level 10** (large subtree, all staff-facing)
-`/eos`, `/eos/onboarding`, `/eos/health`, `/eos/health-check`, `/eos/rocks`, `/eos/flight-plan`, `/eos/risks-opportunities`, `/eos/issues`, `/eos/todos`, `/eos/meetings` (+`/:meetingId/summary`, `/:meetingId/live`), `/eos/configurations` (+`/:id`), `/eos/scorecard`, `/eos/vto`, `/eos/calendar`, `/eos/qc` (+`/:id`), `/eos/accountability`, `/eos/people-analyzer`, `/eos/gwc-trends`, `/eos/client-impact` (+`/:reportId`), `/eos/rock-analysis`, `/eos/leadership`, `/processes` (+`/new`, `/:id`, `/:id/edit`), `/tenant/:clientId/impact`
-
-**⚠️ Needs live-session confirmation** — `/client/eos` (line ~865): the one `/client/*`-prefixed route living inside the staff EOS block rather than the client-portal block. Likely staff's "view as client would see EOS" screen — confirm.
-
-**Audits (Vivacity's own compliance audit tool, distinct from `/compliance-audits/*`)**
-`/audits`, `/audits/create-template` (+`/:templateId`), `/audits/:id`, `/audits/:id/findings`, `/audits/:id/actions`, `/audits/:id/report`
-
-**Compliance audits (client-facing audit engagements, staff side)**
-`/compliance-audits`, `/compliance-audits/:tenantId`, `/compliance-audits/:tenantId/audit/:auditId` (+`/report`)
-
-**Resource Hub (staff/admin management side)**
-`/resource-hub`, `/resource-hub/templates`, `/resource-hub/checklists`, `/resource-hub/registers-forms`, `/resource-hub/audit-evidence`, `/resource-hub/training-webinars`, `/resource-hub/guides-howto`, `/resource-hub/ci-tools`, `/resource-hub/recently-added`, `/resource-hub/most-used`, `/resource-hub/favourites`, `/resource-hub/updates`
-
-**Other admin-adjacent (not gated `requireSuperAdmin` despite the path)**
-`/admin/sharepoint-folder-mapping`, `/admin/sharepoint-sites`, `/admin/governance-documents`, `/admin/ai-insights`, `/admin/email-templates` (appears twice in App.tsx — lines ~497 and ~707, worth checking for a duplicate-route bug), `/documents`, `/reports`, `/membership-dashboard`
-
-**KPI**
-`/kpi` (current, v2), `/my/kpi` (deprecated v1, still routed — see [`unicorn_app_url`](../../memory/unicorn_app_url.md) memory)
-
----
-
-## 4. Client Portal — `/client/*` (26 routes)
-
-Client-facing, gated by `<ProtectedRoute>` + internal role checks (`primary_contact`/`secondary_contact`/`academy_user`/`user` — see [`messaging_contact_only_policy`](../../memory/messaging_contact_only_policy.md) for one access-split example).
-
-`/client/home`, `/client/inbox`, `/client/tasks`, `/client/packages`, `/client/communications` (→ redirects to `/client/inbox?tab=messages`), `/client/governance-documents`, `/client/documents` (→ redirects to governance-documents), `/client/resource-hub` (+`/:categoryId`), `/client/calendar`, `/client/notifications` (→ redirects to `/client/inbox?tab=notifications`), `/client/reports`, `/client/users`, `/client/staff-pdps`, `/client/team` (→ redirects to `/client/users`), `/client/settings`, `/client/profile`, `/client/tga`, `/client/files`, `/client/certificate`, `/client/support-tickets` (+`/:id`), `/client/suggestions` (+`/new`, `/:id` — all redirect to support-tickets), `/client-preview`
-
----
-
-## 5. Vivacity Academy — learner-facing `/academy/*` (20 routes)
-
-Also `<ProtectedRoute>`, distinct from the superadmin `/superadmin/academy/*` builder/admin surfaces in section 2.
-
-`/academy` (dashboard), `/academy/courses`, `/academy/certificates`, `/academy/events`, `/academy/community`, `/academy/team`, `/academy/profile`, `/academy/pdp`, `/academy/pdp/reviews`, `/academy/pdp/cycle/:cycleId`, `/academy/trainer`, `/academy/compliance-manager`, `/academy/governance-person`, `/academy/student-support-officer`, `/academy/administration-assistant`, `/academy/course/:slug`, `/academy/course/:slug/lesson/:lessonId`, `/academy/course/:slug/assessment/:assessmentId` (+`/result/:attemptId`)
-
-Pathway dashboards (`trainer`, `compliance-manager`, `governance-person`, `student-support-officer`, `administration-assistant`) are role-based landing pages — a learner sees the one matching their academy role.
-
----
-
-## 6. Embedded shells (2 routes)
-
-- `/addin` → `AddinShell` — Outlook/Office add-in embed
-- `/teams` → `TeamsShell` — Microsoft Teams embed
-
----
-
-## 7. Catch-all
-
-- `*` → `NotFound`
+<!-- END GENERATED TABLES -->
 
 ---
 
 ## Known open questions from this pass
 
-1. `/admin/email-templates` is routed twice (~line 497 and ~line 707) — needs checking whether these are two different guard contexts (dead duplicate vs. intentional) or a copy-paste leftover.
-2. `/client-portal/:tenantId/documents` and `/client/eos` don't follow their section's naming convention — confirm who actually lands on these before relying on this doc's bucketing.
+1. **`/support-tickets` duplicate registration** (new this pass) — `SupportTicketsWrapper` and `SupportTicketsPage` both claim it; the second is dead code. Needs a hotfix to remove the unreachable registration (or confirm intent and rename one).
+2. ~~`/client/eos` and `/package/:id` don't follow their section's naming convention~~ — resolved 2026-08-26: both were orphaned/half-built dead code (no nav link anywhere in the app; `/package/:id`'s only consumer, `PackageDetailWrapper.tsx`, was itself never imported). Both deleted along with their pages and — for `/package/:id` — its broken, non-atomic stage-reorder handler (this was the original F-019 finding; resolved by removal, not by fixing the reorder logic).
 3. `/my/kpi` (deprecated v1) is still wired — not removed, just superseded per [`unicorn_app_url`](../../memory/unicorn_app_url.md).
+4. `/client-portal/:tenantId/documents` is `ProtectedRoute`-only (no `requireSuperAdmin`/`allowedRoles`) despite the staff-facing naming — same caution as before, confirm who actually lands on this before relying on this doc's tier bucketing for it specifically. F-001's `isClientAccessibleRoute()` allowlist does NOT include this path, so client roles are denied by the RBAC layer regardless of the route's own `ProtectedRoute`-only guard — see `src/test/rbac/useRBAC.test.ts` and `ProtectedRoute.test.tsx`.
+5. The `requireSuperAdmin` (42) vs `allowedRoles`/`allowVivacityTeam` (13) split is exactly what rbac-v6 Phase 0 needs to work through — which of the 42 hard-SA routes are *intentionally* SA-only (system config, the Role Permission Editor itself) vs. candidates for the Phase 1 permission-based route guard. Not decided here.
 
 ## Cross-references
 
+- [`scripts/generate-route-inventory.mjs`](../../../scripts/generate-route-inventory.mjs) — regenerates the tables above; re-run and paste back in whenever this doc is suspected stale
 - [`codebase-map.md`](codebase-map.md) — file-path/component structure (this doc adds the role lens on top)
+- [`rbac-v6-gate-closure-plan.md`](../handoffs/rbac-v6-gate-closure-plan.md) — the deeper per-route product classification this doc's mechanical extraction feeds into
 - [`super-admin-exploration-2026-05-21.md`](super-admin-exploration-2026-05-21.md) — prior admin-side bug/hygiene findings, due for re-verification against current `main`
 - [`feature-matrix-2026-05-20.md`](feature-matrix-2026-05-20.md) — per-route feature status for client-side roles
-- [`docs/client-portal/`](../../unicorn-cms-f09c59e5/docs/client-portal/) — client-portal data-access checklist per route

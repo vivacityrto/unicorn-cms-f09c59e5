@@ -376,7 +376,6 @@ export default function MainDashboard() {
   const [ticketOpen, setTicketOpen] = useState(false);
 
   // Metric card state
-  const [clientCount, setClientCount] = useState<number | null>(null);
   const [labour, setLabour] = useState<{ overdue_ratio_pct: number | null; client_count: number | null } | null>(null);
   const [kpiPct, setKpiPct] = useState<number | null>(null);
   const [kpiLoading, setKpiLoading] = useState(true);
@@ -432,7 +431,6 @@ export default function MainDashboard() {
         .eq("assigned_csc_user_id", userUuid)
         .eq("tenant_status", "active");
       const rows = data ?? [];
-      setClientCount(rows.length);
       setHealthMine(tallyHealth(rows));
       setHasMineAssignments(rows.length > 0);
       setHealthScope(rows.length > 0 ? "mine" : "portfolio");
@@ -777,6 +775,11 @@ export default function MainDashboard() {
   const today = todayIsoLocal();
 
   const health = healthScope === "mine" ? healthMine : healthPortfolio;
+  // Total for the *active* scope — mirrors ClientHealthDonut's own sum, so the
+  // top "Clients" card never shows a stale "mine" count while Portfolio is selected.
+  const activeClientTotal = health
+    ? health.healthy + health.monitoring + health.at_risk + health.critical
+    : null;
   const healthDonutData = health
     ? [
         { label: "Excellent", value: health.healthy, color: "#4CAF50" },
@@ -861,8 +864,8 @@ export default function MainDashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
           <SummaryCard
             title="Clients"
-            value={clientCount ?? "…"}
-            sub="active"
+            value={activeClientTotal ?? "…"}
+            sub={healthScope === "mine" ? "active" : "portfolio"}
             icon={UsersIcon}
             topAccent="#23C0DD"
             onClick={() => navigate("/manage-tenants")}

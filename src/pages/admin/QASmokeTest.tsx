@@ -39,12 +39,12 @@ const VIEWPORTS = [
 // Screen definitions for smoke testing
 const SCREENS = {
   core: [
-    { path: '/', label: 'Dashboard / Work', icon: LayoutDashboard, roles: ['all'] },
-    { path: '/settings/profile', label: 'Profile Settings', icon: Settings, roles: ['all'] },
+    { path: '/dashboard', label: 'Dashboard / Work', icon: LayoutDashboard, roles: ['all'] },
+    { path: '/profile', label: 'Profile Settings', icon: Settings, roles: ['all'] },
   ],
   admin: [
-    { path: '/admin/users', label: 'Manage Users', icon: Users, roles: ['SuperAdmin', 'TeamLeader'] },
-    { path: '/admin/tenants', label: 'Manage Tenants', icon: Building2, roles: ['SuperAdmin'] },
+    { path: '/manage-users', label: 'Manage Users', icon: Users, roles: ['SuperAdmin', 'TeamLeader'] },
+    { path: '/manage-tenants', label: 'Manage Tenants', icon: Building2, roles: ['SuperAdmin'] },
   ],
   documents: [
     { path: '/documents', label: 'Documents Portal', icon: FileText, roles: ['all'] },
@@ -54,7 +54,7 @@ const SCREENS = {
     { path: '/eos/meetings', label: 'EOS Meetings', icon: Calendar, roles: ['VivacityTeam'] },
     { path: '/eos/rocks', label: 'EOS Rocks', icon: Target, roles: ['VivacityTeam'] },
     { path: '/eos/todos', label: 'EOS To-Dos', icon: CheckSquare, roles: ['VivacityTeam'] },
-    { path: '/eos/issues', label: 'EOS Issues', icon: AlertTriangle, roles: ['VivacityTeam'] },
+    { path: '/eos/risks-opportunities', label: 'EOS Issues', icon: AlertTriangle, roles: ['VivacityTeam'] },
   ],
 };
 

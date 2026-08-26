@@ -55,7 +55,7 @@ describe("staff-onboarding-workbook authorization gate", () => {
     assert.match(src, /p_min_level:\s*["']full["']/);
     assert.match(
       src,
-      /jsonErr\(\s*403,\s*["']FORBIDDEN["'],\s*["']HR\/Admin only["']\s*\)/,
+      /jsonErr\(\s*req,\s*403,\s*["']FORBIDDEN["'],\s*["']HR\/Admin only["']\s*\)/,
     );
   });
 

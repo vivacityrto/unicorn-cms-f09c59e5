@@ -51,6 +51,15 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   on a clean checkout (e.g. a `supabase.auth.getUser is not a function` mock
   gap and an RBAC public-route expectation) — these are pre-existing, not
   environment issues.
+- Edge Function tests: `supabase/functions/**/*.test.mjs` (56+ files) are
+  **not** picked up by `npx vitest run` — they use Node's built-in
+  `node:test` runner (`describe`/`it` imported from `"node:test"`), a
+  different harness than Vitest, mostly doing static source-pattern
+  assertions against `index.ts` since Deno isn't available locally. Run them
+  with **`npm run test:edge-functions`** (`node --test
+  "supabase/functions/**/*.test.mjs"`). These were excluded from the normal
+  test command for long enough that some had gone stale — see the guardrail
+  below.
 
 ## Local dev server troubleshooting (Windows)
 
@@ -383,6 +392,24 @@ of bug reappearing in a new function, not just to document what was fixed.
   a base URL anchors unconditionally to that base's origin (`joinAppUrl`)
   rather than passing through a path that already looks like an absolute
   URL — that passthrough is an open-redirect vector.
+
+**Guardrail: refactoring a function's auth gate means re-checking its
+`*.test.mjs` file too — these tests were never run as part of the normal
+test command until 2026-08-26, so several had gone stale.** A 2026-08-26
+session ran `npm run test:edge-functions` (previously never wired up, see
+F-022 in `docs/audit-report-2026-08-26.md`) and found 4 of 220+ tests
+failing: three were stale regexes that hadn't been updated after the
+shared `json()`/`jsonErr()` helpers in those functions were changed to take
+`req` as their first argument (a one-line fix each); the fourth
+(`bulk-generate-documents-worker/auth-gate.test.mjs`) was asserting the
+*old* JWT-decode auth model that a later, well-documented architecture
+change (shared-secret + dedicated system account, see that function's own
+"Auth model" header comment) had deliberately superseded — the test was
+rewritten rather than patched. When you change a function's auth gate
+(swap in `requireCaller`, add `requireSharedSecret`, change a helper's
+signature), update or rewrite its `*.test.mjs` in the same change, and
+actually run `npm run test:edge-functions` before considering the change
+done — don't rely on the file existing as proof it still passes.
 
 **CI/lint follow-up (not yet implemented, worth adding):** a check that
 flags any new or modified file under `supabase/functions/*/index.ts` with no

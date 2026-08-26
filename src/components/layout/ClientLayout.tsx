@@ -141,8 +141,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         {/* Top Bar */}
         <ClientTopbar isPreview={isPreview} />
 
-        {/* TODO: re-enable when document request workflow is complete */}
-        <ClientRequestContext.Provider value={() => {}}>
+        <ClientRequestContext.Provider value={openDocumentRequest}>
           {/* Compliance Pulse Banner */}
           <div className="px-4 md:px-6 pt-3">
             <CompliancePulseBanner />

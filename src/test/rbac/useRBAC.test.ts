@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { mockUsers } from '../fixtures/auth-test-data';
 import type { Permission } from '@/hooks/useRBAC';
-import { ADMIN_ROUTES, CLIENT_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
+import { ADMIN_ROUTES, EOS_ROUTES, isClientAccessibleRoute } from '@/hooks/useRBAC';
 
 // Profile type that accepts any user role
 interface UserProfile {
@@ -114,7 +114,7 @@ function hasPermission(profile: UserProfile | null, permission: Permission): boo
 }
 
 function canAccessRoute(profile: UserProfile | null, path: string): boolean {
-  const isClientRoute = CLIENT_ROUTES.some(route => path.startsWith(route));
+  const isClientRoute = isClientAccessibleRoute(path);
   // Deny-by-default: routes not in CLIENT_ROUTES require Vivacity Team membership.
   if (!isClientRoute && !isVivacityTeam(profile)) {
     return false;
@@ -311,7 +311,7 @@ describe('Route Access Control', () => {
   });
 
   describe('Public Routes', () => {
-    const publicRoutes = ['/dashboard', '/clients', '/settings', '/profile'];
+    const publicRoutes = ['/dashboard', '/settings', '/profile', '/client/portal'];
 
     it('All roles can access public routes', () => {
       publicRoutes.forEach(route => {
@@ -321,6 +321,18 @@ describe('Route Access Control', () => {
         expect(canAccessRoute(mockUsers.clientUser, route)).toBe(true);
       });
     });
+
+  it('Client roles cannot access unlisted internal routes', () => {
+    expect(canAccessRoute(mockUsers.clientAdmin, '/clients')).toBe(false);
+    expect(canAccessRoute(mockUsers.clientUser, '/internal-feature')).toBe(false);
+  });
+
+  it('Client routes use exact settings and bounded prefixes', () => {
+    expect(canAccessRoute(mockUsers.clientAdmin, '/settings')).toBe(true);
+    expect(canAccessRoute(mockUsers.clientAdmin, '/settings/calendar')).toBe(false);
+    expect(canAccessRoute(mockUsers.clientAdmin, '/settings-evil')).toBe(false);
+    expect(canAccessRoute(mockUsers.clientAdmin, '/client-portal/1/documents')).toBe(false);
+  });
   });
 });
 

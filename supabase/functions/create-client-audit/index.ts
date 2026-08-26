@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
+import { FeatureKeys, requireCaller } from "../_shared/requireCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,24 +21,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
-    }
-
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData?.user) {
-      return jsonResponse({ error: "Invalid token" }, 401);
-    }
-    const userId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
     const {
@@ -75,33 +61,33 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Authorization: Vivacity staff (unicorn_role set) OR member of subject tenant
-    const { data: userRow, error: userRowErr } = await admin
-      .from("users")
-      .select("user_uuid, unicorn_role")
-      .eq("user_uuid", userId)
-      .maybeSingle();
+    const caller = await requireCaller(req, admin, {
+      featureKey: FeatureKeys.staffInternal,
+      headers: corsHeaders,
+      orAllow: async ({ userId, admin: client }) => (await hasTenantAccessSafe(client, userId, Number(subject_tenant_id))).allowed,
+    });
+    if (!caller.ok) return caller.response;
+    const userId = caller.user.id;
+    const isStaff = caller.via === "permission";
 
-    if (userRowErr) {
-      console.error("users lookup error", userRowErr);
-      return jsonResponse({ error: "Identity lookup failed" }, 500);
-    }
-
-    const isStaff = !!userRow?.unicorn_role;
-    let isMember = false;
-
-    if (!isStaff) {
-      const { data: membership } = await admin
-        .from("tenant_users")
-        .select("user_id")
-        .eq("tenant_id", subject_tenant_id)
-        .eq("user_id", userId)
+    if (linked_stage_instance_id) {
+      const { data: stageInstance, error: stageError } = await admin
+        .from("stage_instances")
+        .select("packageinstance_id")
+        .eq("id", linked_stage_instance_id)
         .maybeSingle();
-      isMember = !!membership;
-    }
-
-    if (!isStaff && !isMember) {
-      return jsonResponse({ error: "Forbidden: not a member of this tenant" }, 403);
+      if (stageError || !stageInstance) {
+        return jsonResponse({ error: "Linked stage instance not found" }, 403);
+      }
+      const { data: packageInstance, error: packageError } = await admin
+        .from("package_instances")
+        .select("id")
+        .eq("id", stageInstance.packageinstance_id)
+        .eq("tenant_id", subject_tenant_id)
+        .maybeSingle();
+      if (packageError || !packageInstance) {
+        return jsonResponse({ error: "Linked stage instance does not belong to this tenant" }, 403);
+      }
     }
 
     // Insert audit (service role bypasses RLS — authorisation verified above)
@@ -191,7 +177,7 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: authHeader,
+          Authorization: req.headers.get("Authorization") ?? "",
         },
         body: JSON.stringify({
           tenant_id: subject_tenant_id,

@@ -10,6 +10,17 @@ const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Configured rows in `sharepoint_sites.purpose` — keep in sync with that
+// table. Presence-only validation (the DB lookup already keyed on purpose)
+// is not a substitute for this: it stops a caller who has cleared the
+// staff-permission gate above from fishing for whatever site name happens
+// to exist.
+const ALLOWED_GLOBAL_SITE_PURPOSES = new Set([
+  "client_files",
+  "governance_client_files",
+  "master_documents",
+]);
+
 async function refreshToken(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
@@ -133,6 +144,26 @@ serve(async (req) => {
     const isSuperAdmin = caller.via === "permission";
     const requestedTenantId = body.tenant_id as number | undefined;
     const sitePurposeEarly = body.site_purpose as string | undefined;
+
+    // Global SharePoint sites (site_purpose mode) are not scoped to any
+    // tenant's root — the orAllow tenant-membership fallback above lets any
+    // tenant member through the caller gate, but that must not be enough to
+    // browse/download from a global site. Require the actual staff
+    // SharePoint permission, not just "authenticated with a tenant_id".
+    if (sitePurposeEarly) {
+      if (!isSuperAdmin) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: global SharePoint sites require staff SharePoint access" }),
+          { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        );
+      }
+      if (!ALLOWED_GLOBAL_SITE_PURPOSES.has(sitePurposeEarly)) {
+        return new Response(
+          JSON.stringify({ error: `Unknown site_purpose: ${sitePurposeEarly}` }),
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     if (requestedTenantId != null) {
       const requestedTenantIdNum = Number(requestedTenantId);

@@ -51,7 +51,6 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const TenantNotesWrapper = lazy(() => import("./pages/TenantNotesWrapper"));
  const ClientPortalDocumentsWrapper = lazy(() => import("./pages/ClientPortalDocumentsWrapper"));
  
- const PackageDetail = lazy(() => import("./pages/PackageDetail"));
  const AdminPackageDetailWrapper = lazy(() => import("./pages/AdminPackageDetailWrapper"));
  const AdminPackageTenantDetailWrapper = lazy(() => import("./pages/AdminPackageTenantDetailWrapper"));
  const PackageBuilder = lazy(() => import("./pages/PackageBuilder"));
@@ -73,7 +72,6 @@ const EosConfigurationDetail = lazy(() => import("./pages/EosConfigurationDetail
  const EosVto = lazy(() => import("./pages/EosVto"));
  const EosMeetingSummary = lazy(() => import("./pages/EosMeetingSummary"));
  const LiveMeetingView = lazy(() => import("./components/eos/LiveMeetingView").then(m => ({ default: m.LiveMeetingView })));
- const ClientEosOverview = lazy(() => import("./pages/ClientEosOverview"));
 const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const PostSignInRedirect = lazy(() => import("./pages/PostSignInRedirect"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
@@ -666,15 +664,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/package/:id"
-              element={
-                <ProtectedRoute>
-                  <PackageDetail />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
+            <Route
               path="/admin/manage-packages"
               element={
                 <ProtectedRoute requireSuperAdmin>
@@ -864,16 +854,8 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/client/eos"
-              element={
-                <ProtectedRoute>
-                  <ClientEosOverview />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/accountability" 
+            <Route
+              path="/eos/accountability"
               element={
                 <ProtectedRoute>
                   <EosAccountabilityChart />
