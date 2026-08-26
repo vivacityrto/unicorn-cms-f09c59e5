@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag, Pencil, RefreshCw, Blocks } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -71,6 +72,26 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         .order('version_number', { ascending: false });
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Deliver to Clients only works for a document instantiated (via a package
+  // assignment) into at least one tenant's stage — create_document_delivery_job
+  // resolves delivery items by joining document_instances, and a document with
+  // no assignment matches nothing there. Previously that silently produced a
+  // job with 0 items marked "Completed", looking indistinguishable from a
+  // real (if empty) delivery. Gate the button on the same check
+  // GovernancePackageAssignments already uses to show "not assigned to any
+  // stages or packages" below.
+  const { data: hasPackageAssignment, isLoading: assignmentLoading } = useQuery({
+    queryKey: ['governance-doc-has-assignment', documentId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('document_instances')
+        .select('id', { count: 'exact', head: true })
+        .eq('document_id', documentId);
+      if (error) throw error;
+      return (count ?? 0) > 0;
     },
   });
 
@@ -205,9 +226,28 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
             <Pencil className="h-4 w-4 mr-2" /> Edit
           </Button>
           {publishedVersion && (
-            <Button variant="default" size="sm" onClick={() => setShowDelivery(true)}>
-              <Send className="h-4 w-4 mr-2" /> Deliver to Clients
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {/* span wrapper so the tooltip still fires while the button is disabled */}
+                  <span>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setShowDelivery(true)}
+                      disabled={assignmentLoading || !hasPackageAssignment}
+                    >
+                      <Send className="h-4 w-4 mr-2" /> Deliver to Clients
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!assignmentLoading && !hasPackageAssignment && (
+                  <TooltipContent>
+                    <p>This document isn't assigned to any stage or package yet, so there's nothing to deliver to any client.</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           )}
           {publishedVersion && (
             <Button variant="outline" size="sm" onClick={handleCheckDrift} disabled={checkingDrift}>
