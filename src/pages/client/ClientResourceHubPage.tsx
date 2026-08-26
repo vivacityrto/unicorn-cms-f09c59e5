@@ -29,6 +29,7 @@ import {
   ArrowRight,
   MessageSquarePlus,
   Library,
+  NotebookPen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ const categoryIcons: Record<string, React.ElementType> = {
   "audit-evidence": Search,
   "guides-howto": BookOpen,
   "ci-tools": TrendingUp,
+  workbooks: NotebookPen,
 };
 
 const ClientResourceHubPage = () => {

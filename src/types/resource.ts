@@ -64,6 +64,13 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
     description: 'Continuous improvement tracking tools',
     icon: 'TrendingUp',
     path: '/resource-hub/ci-tools'
+  },
+  {
+    id: 'workbooks',
+    label: 'Workbooks',
+    description: 'Course workbooks and companion materials',
+    icon: 'NotebookPen',
+    path: '/resource-hub/workbooks'
   }
 ];
 

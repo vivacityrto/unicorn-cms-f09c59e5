@@ -24,6 +24,7 @@ export interface CourseResource {
   storageBucket: string | null;
   storagePath: string | null;
   fileUrl: string | null;
+  category: string | null;
   kind: CourseResourceKind;
 }
 
@@ -42,6 +43,7 @@ interface LibraryRow {
   storage_bucket?: string | null;
   storage_path?: string | null;
   file_name?: string | null;
+  category?: string | null;
 }
 
 async function currentUserId(): Promise<string | null> {
@@ -69,6 +71,7 @@ function mapRows(links: LinkRow[], library: LibraryRow[]): CourseResource[] {
         storageBucket: resource.storage_bucket ?? null,
         storagePath: resource.storage_path ?? null,
         fileUrl: resource.file_url ?? null,
+        category: resource.category ?? null,
         kind: resourceKind(resource),
       } satisfies CourseResource;
     })

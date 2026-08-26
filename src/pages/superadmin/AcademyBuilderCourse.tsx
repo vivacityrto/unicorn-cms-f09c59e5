@@ -668,7 +668,7 @@ export default function AcademyBuilderCourse() {
   if (courseLoading) {
     return (
       <DashboardLayout>
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="p-6 space-y-6 max-w-[1800px] mx-auto">
         <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-[30%_1fr] gap-6">
           <Skeleton className="h-[600px]" />
@@ -692,7 +692,7 @@ export default function AcademyBuilderCourse() {
 
   return (
     <DashboardLayout>
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 space-y-6 max-w-[1800px] mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/superadmin/academy/builder")}>
@@ -724,7 +724,7 @@ export default function AcademyBuilderCourse() {
             />
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[440px_1fr] gap-6">
             {/* Left Panel — Course Settings */}
             <div className="space-y-4 p-5 rounded-xl border" style={{ borderColor: "hsl(var(--border))" }}>
               <div className="flex items-center justify-between gap-2">
@@ -756,9 +756,14 @@ export default function AcademyBuilderCourse() {
                 </div>
               </div>
 
-              <Field label="Title">
-                <Input value={formState.title} onChange={(e) => setFormState((p) => ({ ...p, title: e.target.value }))} />
-              </Field>
+              <div className="grid grid-cols-[1fr_140px] gap-3">
+                <Field label="Title">
+                  <Input value={formState.title} onChange={(e) => setFormState((p) => ({ ...p, title: e.target.value }))} />
+                </Field>
+                <Field label="Slug">
+                  <Input value={formState.slug} onChange={(e) => setFormState((p) => ({ ...p, slug: e.target.value }))} className="font-mono text-xs" />
+                </Field>
+              </div>
 
               <ThumbnailPositionEditor
                 imageUrl={formState.thumbnail_url}
@@ -772,7 +777,7 @@ export default function AcademyBuilderCourse() {
                 isUploading={isThumbnailUploading}
               />
 
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <Field label={requiresFacilitatorFields ? "Facilitator *" : "Facilitator"}>
                   <Select
                     value={formState.facilitator_id ? `staff:${formState.facilitator_id}` : formState.facilitator_display_name ? `historical:${formState.facilitator_display_name}` : undefined}
@@ -814,10 +819,6 @@ export default function AcademyBuilderCourse() {
                 </Field>
               </div>
 
-              <Field label="Slug">
-                <Input value={formState.slug} onChange={(e) => setFormState((p) => ({ ...p, slug: e.target.value }))} className="font-mono text-xs" />
-              </Field>
-
               <Field label="Short Description">
                 <Textarea value={formState.short_description} onChange={(e) => setFormState((p) => ({ ...p, short_description: e.target.value }))} rows={2} />
               </Field>
@@ -837,6 +838,7 @@ export default function AcademyBuilderCourse() {
                 <CourseResourcesSection courseId={courseId} canManage={canManageResources} />
               )}
 
+              <div className="grid grid-cols-2 gap-3">
               <Field label="Difficulty Level">
                 <Select value={formState.difficulty_level} onValueChange={(v) => setFormState((p) => ({ ...p, difficulty_level: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -892,7 +894,7 @@ export default function AcademyBuilderCourse() {
                   );
                 })()}
               </Field>
-
+              </div>
 
               <Field label="Sub-categories (Tags)">
                 <TagChipInput
@@ -912,14 +914,16 @@ export default function AcademyBuilderCourse() {
                 }
               />
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground">Free Course</span>
-                <Switch checked={formState.is_free} onCheckedChange={(v) => setFormState((p) => ({ ...p, is_free: v }))} />
-              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center justify-between rounded-md border px-3 py-2" style={{ borderColor: "hsl(var(--border))" }}>
+                  <span className="text-sm text-foreground">Free Course</span>
+                  <Switch checked={formState.is_free} onCheckedChange={(v) => setFormState((p) => ({ ...p, is_free: v }))} />
+                </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground">Certificate Enabled</span>
-                <Switch checked={formState.certificate_enabled} onCheckedChange={(v) => setFormState((p) => ({ ...p, certificate_enabled: v }))} />
+                <div className="flex items-center justify-between rounded-md border px-3 py-2" style={{ borderColor: "hsl(var(--border))" }}>
+                  <span className="text-sm text-foreground">Certificate Enabled</span>
+                  <Switch checked={formState.certificate_enabled} onCheckedChange={(v) => setFormState((p) => ({ ...p, certificate_enabled: v }))} />
+                </div>
               </div>
 
               {formState.certificate_enabled && (

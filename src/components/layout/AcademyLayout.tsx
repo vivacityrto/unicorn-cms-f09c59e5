@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronRight,
   GraduationCap,
+  NotebookPen,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
@@ -47,6 +48,7 @@ const academyMainItems = [
   { icon: BookOpen, label: "My Courses", path: "/academy/courses" },
   { icon: ClipboardList, label: "My PDP", path: "/academy/pdp" },
   { icon: Award, label: "Certificates", path: "/academy/certificates" },
+  { icon: NotebookPen, label: "Workbooks", path: "/academy/workbooks" },
   { icon: Calendar, label: "Events", path: "/academy/events" },
   { icon: MessageSquare, label: "Community", path: "/academy/community" },
 ];

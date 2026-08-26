@@ -82,7 +82,7 @@ function SortableResourceRow({
           <GripVertical className="h-3.5 w-3.5" />
         </button>
       )}
-      <CourseResourceTypeIcon kind={resource.kind} />
+      <CourseResourceTypeIcon kind={resource.kind} category={resource.category} />
       <span className="flex-1 min-w-0 truncate text-xs text-foreground" title={resource.title}>
         {resource.title}
       </span>
@@ -218,7 +218,7 @@ export default function CourseResourcesSection({
 
     if (mode === "file") {
       if (!file) {
-        toast.error("Choose a PDF or Word file");
+        toast.error("Choose a PDF, Word, Excel, or Markdown file");
         return;
       }
       addFile.mutate(
@@ -347,7 +347,7 @@ export default function CourseResourcesSection({
                 id="course-resource-file"
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                accept=".pdf,.doc,.docx,.xlsx,.xls,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/markdown"
                 className="h-8 text-xs"
                 onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
               />
