@@ -102,6 +102,10 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
         const p = progressMap.get(c.id);
         return {
           ...c,
+          thumbnail_fit:
+            c.thumbnail_fit === "cover" || c.thumbnail_fit === "contain"
+              ? c.thumbnail_fit
+              : null,
           enrollment_status: p?.enrollment_status ?? null,
           progress_percentage: p?.progress_percentage ?? 0,
           completed_lessons: p?.completed_lessons ?? 0,
