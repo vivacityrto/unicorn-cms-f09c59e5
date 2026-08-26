@@ -29,6 +29,8 @@ interface AppointmentPanelProps {
   isScheduling: boolean;
   disabled?: boolean;
   disabledReason?: string;
+  /** yyyy-MM-dd — dates before this are not selectable in the calendar (e.g. closing meeting can't precede opening). */
+  minDate?: string;
   onSchedule: (params: {
     scheduledDate: string;
     startTime?: string;
@@ -62,7 +64,7 @@ const DURATION_OPTIONS = [
 
 export function AppointmentPanel({
   icon, title, description, appointment, defaultInstructions = '',
-  showTimeFields = true, isScheduling, disabled, disabledReason,
+  showTimeFields = true, isScheduling, disabled, disabledReason, minDate,
   onSchedule, onCancel, onComplete, syncStatus, onRetrySync,
 }: AppointmentPanelProps) {
   const [date, setDate] = useState<Date | undefined>();
@@ -246,15 +248,29 @@ export function AppointmentPanel({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  {/* No lower-bound restriction: this date can be backfilled for a
-                      meeting that's already taken place, not just scheduled ahead
-                      of time. */}
-                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className={cn('p-3 pointer-events-auto')} />
+                  {/* No lower-bound restriction against "today": this date can be
+                      backfilled for a meeting that's already taken place, not just
+                      scheduled ahead of time. minDate (when set) is a different
+                      constraint — e.g. the closing meeting can't precede whatever
+                      date the opening meeting was actually given. */}
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                    disabled={minDate ? (d) => format(d, 'yyyy-MM-dd') < minDate : undefined}
+                    className={cn('p-3 pointer-events-auto')}
+                  />
                 </PopoverContent>
               </Popover>
               {isPastDate && (
                 <p className="text-xs text-muted-foreground">
                   This date is in the past — logging it will mark the meeting as already completed.
+                </p>
+              )}
+              {minDate && (
+                <p className="text-xs text-muted-foreground">
+                  Must be on or after {format(new Date(minDate + 'T00:00:00'), 'PPP')}.
                 </p>
               )}
             </div>
