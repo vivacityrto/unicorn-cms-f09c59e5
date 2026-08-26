@@ -58,6 +58,7 @@ vi.mock("@/integrations/supabase/client", () => ({
     }),
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
     },
     channel: () => ({
@@ -147,6 +148,7 @@ describe("AddinSettings shell integration", () => {
       canAccessAdvanced: true,
       canAccessEOS: () => true,
       canAccessRoute: () => true,
+      canAccessAskViv: () => true,
       isTeamLeader: false,
       isTeamMember: false,
     });

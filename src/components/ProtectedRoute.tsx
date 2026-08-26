@@ -1,6 +1,6 @@
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useRBAC, ADMIN_ROUTES, CLIENT_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
+import { useRBAC, ADMIN_ROUTES, EOS_ROUTES, isClientAccessibleRoute } from '@/hooks/useRBAC';
 import { useUserAccess } from '@/hooks/useUserAccess';
 import { ACADEMY_ONLY_ROUTES } from '@/config/navigationConfig';
 import { useEffect, useRef, useState } from 'react';
@@ -19,7 +19,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRoles, allowVivacityTeam = false }: ProtectedRouteProps) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, profileError, refreshProfile, signOut } = useAuth();
   const { canAccessRoute, isSuperAdmin, canAccessEOS, isVivacityTeam } = useRBAC();
   const { hasAcademyOnly, hasFullAccess, isVivacityStaff, isLoading: accessLoading } = useUserAccess();
   const location = useLocation();
@@ -83,6 +83,24 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRol
   // Vivacity staff get a transient isVivacityTeam=false and are redirected
   // to /dashboard from non-client routes like /manage-documents.
   if (!profile) {
+    if (profileError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <CardTitle>We couldn't load your account</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-muted-foreground">{profileError}</p>
+              <div className="flex gap-3">
+                <Button onClick={() => void refreshProfile()} className="flex-1">Retry</Button>
+                <Button variant="outline" onClick={() => void signOut()} className="flex-1">Sign Out</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary-dark to-secondary">
         <div className="text-white text-xl">Loading...</div>
@@ -145,7 +163,7 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRol
   const currentPath = location.pathname;
   const isAdminRoute = ADMIN_ROUTES.some(route => currentPath.startsWith(route));
   const isEosRoute = EOS_ROUTES.some(route => currentPath.startsWith(route));
-  const isClientRoute = CLIENT_ROUTES.some(route => currentPath.startsWith(route));
+  const isClientRoute = isClientAccessibleRoute(currentPath);
 
   // Deny-by-default: any route not in CLIENT_ROUTES requires Vivacity Team membership.
   // Clients (unicorn_role 'Admin' or 'User') are redirected to dashboard.

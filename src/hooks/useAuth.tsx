@@ -34,6 +34,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   memberships: TenantMembership[];
   loading: boolean;
+  profileError: string | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   // Helper functions for RBAC
@@ -49,6 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [memberships, setMemberships] = useState<TenantMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -68,6 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }, 0);
         } else {
           setProfile(null);
+          setProfileError(null);
           setMemberships([]);
         }
       }
@@ -89,6 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
+    setProfileError(null);
     try {
       const { data, error } = await supabase
         .from('users')
@@ -98,17 +102,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        setProfileError('We could not load your account profile. Please try again.');
         return;
       }
       
       if (!data) {
         console.warn('No user profile found for user:', userId);
+        setProfileError('Your account profile is not available. Please contact support if this continues.');
         return;
       }
       
       setProfile(data as UserProfile);
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      setProfileError('We could not load your account profile. Please try again.');
     }
   };
 
@@ -136,6 +143,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     setSession(null);
     setProfile(null);
+    setProfileError(null);
     setMemberships([]);
     navigate('/login');
   };
@@ -174,6 +182,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user, 
       session, 
       profile, 
+      profileError,
       memberships,
       loading, 
       signOut, 

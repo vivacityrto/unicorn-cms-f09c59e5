@@ -10,6 +10,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { validateExternalScrapeUrl } from "../_shared/safe-fetch-url.ts";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -71,6 +72,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    const websiteValidation = validateExternalScrapeUrl(website);
+    if (!websiteValidation.ok) {
+      return new Response(
+        JSON.stringify({ ok: false, code: "BAD_REQUEST", detail: `Invalid website: ${websiteValidation.error}` }),
+        { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+      );
+    }
+
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
     const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
 
@@ -110,9 +119,7 @@ Deno.serve(async (req) => {
     await auditLog(supabase, user.id, job.id, "scrape_started", { paths: SCRAPE_PATHS });
 
     // Step 2: Scrape tenant website
-    let base = website.trim();
-    if (!base.startsWith("http")) base = `https://${base}`;
-    base = base.replace(/\/+$/, "");
+    const base = websiteValidation.url!.replace(/\/+$/, "");
 
     // Restrict to domain only
     const domain = new URL(base).hostname;

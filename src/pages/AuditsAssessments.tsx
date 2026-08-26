@@ -28,7 +28,7 @@ import { usePermission } from '@/hooks/usePermission';
 export default function AuditsAssessments() {
   const navigate = useNavigate();
   const canSetupAudit = usePermission('audits.setup');
-  const { data: audits = [], isLoading } = useAuditsDashboard();
+  const { data: audits = [], isLoading, error: auditsError, refetch: refetchAudits } = useAuditsDashboard();
   const { data: overdueCount = 0 } = useOverdueActionCount();
   const [modalOpen, setModalOpen] = useState(false);
   const [schedulerCHCTenantId, setSchedulerCHCTenantId] = useState<number | null>(null);
@@ -161,7 +161,18 @@ export default function AuditsAssessments() {
       </div>
 
       {/* Table */}
-      {isLoading ? (
+      {auditsError ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertTriangle className="h-12 w-12 text-destructive/60 mb-4" />
+          <p className="text-lg font-medium text-muted-foreground">Couldn't load audits</p>
+          <p className="text-sm text-muted-foreground/60 mt-1">
+            {auditsError instanceof Error ? auditsError.message : 'Please try again.'}
+          </p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => refetchAudits()}>
+            Retry
+          </Button>
+        </div>
+      ) : isLoading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>

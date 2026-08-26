@@ -7,6 +7,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateExternalScrapeUrl } from "../_shared/safe-fetch-url.ts";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -46,6 +47,18 @@ Deno.serve(async (req) => {
       );
     }
 
+    let validatedWebsite: string | undefined;
+    if (website) {
+      const validation = validateExternalScrapeUrl(website);
+      if (!validation.ok) {
+        return new Response(
+          JSON.stringify({ ok: false, code: "BAD_REQUEST", detail: `Invalid website: ${validation.error}` }),
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        );
+      }
+      validatedWebsite = validation.url!;
+    }
+
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
     const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
 
@@ -79,11 +92,8 @@ Deno.serve(async (req) => {
 
     // Build URLs to scrape
     const urls: string[] = [];
-    if (website) {
-      let base = website.trim();
-      if (!base.startsWith("http")) base = `https://${base}`;
-      // Remove trailing slash
-      base = base.replace(/\/+$/, "");
+    if (validatedWebsite) {
+      const base = validatedWebsite.replace(/\/+$/, "");
       for (const path of WHITELISTED_PATHS) {
         urls.push(`${base}${path}`);
       }

@@ -171,10 +171,11 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
     try {
       // Update end_date on the package instance
       if (finaliseEndDate) {
-        await (supabase as any)
+        const { error: endDateError } = await (supabase as any)
           .from('package_instances')
           .update({ end_date: format(finaliseEndDate, 'yyyy-MM-dd') })
           .eq('id', parseInt(finaliseTarget.id, 10));
+        if (endDateError) throw endDateError;
       }
 
       // Transition state to complete
@@ -202,10 +203,11 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
 
         // RPC sets start_date = CURRENT_DATE; override to the chosen renewal start
         if (newInstanceId && newStartDate !== format(new Date(), 'yyyy-MM-dd')) {
-          await (supabase as any)
+          const { error: startDateError } = await (supabase as any)
             .from('package_instances')
             .update({ start_date: newStartDate })
             .eq('id', newInstanceId);
+          if (startDateError) throw startDateError;
         }
       }
 

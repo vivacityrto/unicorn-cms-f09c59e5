@@ -12,6 +12,7 @@ import { Slider } from "@/components/ui/slider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Loader2, Search, Play, FileText, Paperclip, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface Props {
   open: boolean;
@@ -386,7 +387,7 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
               {contentMarkdown && (
                 <div className="border rounded-lg p-4 prose prose-sm max-w-none text-foreground" style={{ borderColor: "hsl(var(--border))" }}>
                   <p className="text-xs text-muted-foreground mb-2">Preview</p>
-                  <div dangerouslySetInnerHTML={{ __html: contentMarkdown.replace(/\n/g, "<br/>") }} />
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(contentMarkdown.replace(/\n/g, "<br/>")) }} />
                 </div>
               )}
             </div>

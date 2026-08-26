@@ -167,13 +167,25 @@ export const ADMIN_ROUTES = [
 // Everything NOT in this list requires isVivacityTeam. Add new client-facing routes here.
 export const CLIENT_ROUTES = [
   '/dashboard',
-  '/settings',
   '/profile',
   '/my-exit-interview',
   '/client/',
-  '/client-portal/',
   '/academy',
 ];
+
+const CLIENT_EXACT_ROUTES = new Set([
+  '/dashboard',
+  '/settings',
+  '/profile',
+  '/my-exit-interview',
+  '/academy',
+]);
+
+const CLIENT_PREFIX_ROUTES = ['/client/', '/academy/'];
+
+/** Client navigation is allowlist-only; unknown paths must remain staff-only. */
+export const isClientAccessibleRoute = (path: string): boolean =>
+  CLIENT_EXACT_ROUTES.has(path) || CLIENT_PREFIX_ROUTES.some(route => path.startsWith(route));
 
 // EOS routes - Vivacity Team only (Super Admin, Team Leader, Team Member)
 export const EOS_ROUTES = [
@@ -323,6 +335,15 @@ export const useRBAC = () => {
    * Check if a route is protected and user has access
    */
   const canAccessRoute = (path: string): boolean => {
+    const isClientRoute = isClientAccessibleRoute(path);
+
+    // Client roles must be explicitly allowed onto client-facing routes.
+    // UI navigation is not an authorization boundary, so an omitted internal
+    // route must never become client-accessible by falling through to `true`.
+    if (!isClientRoute && !is_vivacity_team) {
+      return false;
+    }
+
     if (path.startsWith('/admin/staff-engagements')) {
       return hasPermission('administration:access') || hasPermission('staff_engagements:access');
     }

@@ -418,6 +418,23 @@ export function useAuditStatusTransition(auditId: string | undefined) {
   return useMutation({
     mutationFn: async ({ status, audit }: { status: string; audit: ClientAudit }) => {
       if (!auditId) throw new Error('No audit ID');
+
+      let syncCount = 0;
+      if (status === 'complete') {
+        // Sync corrective actions to the client action plan BEFORE marking
+        // the audit complete, not after. If this RPC fails, the mutation
+        // throws and the status update below never runs — an auditor
+        // closing out an audit with real findings must not be able to reach
+        // "complete" while those actions silently failed to reach the
+        // client's action plan. (sync_audit_actions_to_client_items is
+        // idempotent per audit, so retrying "Mark Complete" after a failure
+        // here is safe.)
+        const { data, error: syncError } = await supabase
+          .rpc('sync_audit_actions_to_client_items', { p_audit_id: auditId } as any);
+        if (syncError) throw syncError;
+        syncCount = (data as number) || 0;
+      }
+
       const updates: any = { status };
       if (status === 'complete') updates.closed_at = new Date().toISOString();
 
@@ -427,22 +444,7 @@ export function useAuditStatusTransition(auditId: string | undefined) {
         .eq('id', auditId);
       if (error) throw error;
 
-      let syncCount = 0;
-      let actionSyncFailed = false;
       if (status === 'complete') {
-        // Sync audit actions to client action items. A failure here must not
-        // be indistinguishable from "no actions to sync" — an auditor closing
-        // out an audit with real findings needs to know if the corrective
-        // actions didn't reach the client's action plan.
-        try {
-          const { data } = await supabase
-            .rpc('sync_audit_actions_to_client_items', { p_audit_id: auditId } as any);
-          syncCount = (data as number) || 0;
-        } catch (err) {
-          actionSyncFailed = true;
-          console.error('sync_audit_actions_to_client_items failed', err);
-        }
-
         try {
           await supabase.from('client_timeline_events' as any).insert({
             tenant_id: audit.subject_tenant_id,
@@ -470,19 +472,26 @@ export function useAuditStatusTransition(auditId: string | undefined) {
         }
       }
 
-      return { syncCount, actionSyncFailed };
+      return { syncCount };
     },
-    onSuccess: ({ syncCount, actionSyncFailed }, { status }) => {
+    onSuccess: ({ syncCount }, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['client-audit', auditId] });
       queryClient.invalidateQueries({ queryKey: ['client-audits-dashboard'] });
-      if (status === 'complete' && actionSyncFailed) {
-        toast.error('Audit marked complete, but corrective actions could not be synced to the client action plan. Contact support.');
-      } else if (status === 'complete' && syncCount > 0) {
+      if (status === 'complete' && syncCount > 0) {
         toast.success(`Audit marked complete. ${syncCount} corrective action${syncCount > 1 ? 's' : ''} added to client action plan.`);
       } else if (status === 'complete') {
         toast.success('Audit marked complete. No open actions to sync.');
       } else {
         toast.success('Status updated');
+      }
+    },
+    onError: (err: any, { status }) => {
+      if (status === 'complete') {
+        toast.error(
+          `Could not mark the audit complete (${err?.message || 'unknown error'}). The audit was not marked complete — please retry.`,
+        );
+      } else {
+        toast.error(`Failed to update status: ${err?.message || 'Unknown error'}`);
       }
     },
   });

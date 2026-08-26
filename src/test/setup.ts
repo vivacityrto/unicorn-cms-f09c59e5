@@ -16,22 +16,29 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+// Mock ResizeObserver. The implementation must be a real `function`, not an
+// arrow function — Radix components (e.g. Checkbox's useSize) construct it
+// with `new`, and an arrow-function implementation has no [[Construct]] and
+// throws "is not a constructor".
+global.ResizeObserver = vi.fn().mockImplementation(function () {
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  };
+});
 
-// Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-  root: null,
-  rootMargin: "",
-  thresholds: [],
-}));
+// Mock IntersectionObserver (same constructability requirement as above).
+global.IntersectionObserver = vi.fn().mockImplementation(function () {
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+    root: null,
+    rootMargin: "",
+    thresholds: [],
+  };
+});
 
 // Mock scrollTo
 window.scrollTo = vi.fn();

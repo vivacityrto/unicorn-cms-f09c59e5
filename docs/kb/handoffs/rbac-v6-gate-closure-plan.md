@@ -1,6 +1,6 @@
 # RBAC v6 — Gate Closure & Industry-Standard Alignment Plan
 
-> **Last updated:** 2026-08-25 (added gap #6, staff-listing centralization) · **Reconsider by:** 2026-09-30 · **Confidence:** high on the findings below (grounded in live DB queries + source reads on 2026-07-31 and 2026-08-25); low on effort/sizing estimates — no line-by-line codebase audit has been done yet (see "Investigation required before implementation").
+> **Last updated:** 2026-08-26 (added route-classification and regression lessons from the remediation audit) · **Reconsider by:** 2026-09-30 · **Confidence:** high on the findings below (grounded in live DB queries + source reads on 2026-07-31, 2026-08-25, and the remediation audit on 2026-08-26); low on effort/sizing estimates — no line-by-line codebase audit has been done yet (see "Investigation required before implementation").
 >
 > **Status:** Planning only. No code or DB changes made. Triggered by a real access request (AJ Delostrico, CSC role, needs package/stage/academy-admin access) that turned out to be blocked by an architectural gap, not a missing permission row.
 >
@@ -57,6 +57,18 @@ Every staff-facing listing surface (team directory pickers, meeting attendee aut
   - **Why this belongs in v6, not as a one-off:** the same gap will recur for the next exclusion someone needs (a future QA/test/demo account, a contractor who should show in some lists but not others, etc.) unless "is this user eligible to appear in a staff listing" becomes one owned definition instead of N copies. This is a narrower, cheaper version of the "route-level access does not go through the permission system" problem (#1 above) — same shape (logic re-derived per call site instead of delegated to one gate), smaller blast radius (visibility, not authorization).
   - **Proposed shape (not yet built, sizing not done):** a single Postgres view (e.g. `public.staff_directory` or `public.listable_staff`) encapsulating `is_vivacity_internal = true AND COALESCE(archived,false)=false AND COALESCE(disabled,false)=false AND COALESCE(is_system_account,false)=false AND COALESCE(kpi_pod,'')<>'qa'`, with every current call site (functions and frontend queries alike) migrated to select from the view instead of repeating the predicate. A frontend equivalent (a single `useListableStaff()` hook, mirroring the `usePermission()` pattern this doc already recommends generalizing) would close the client-side half. Whether this becomes its own v6 phase or folds into Phase 3 (RLS consolidation, since it's the same "stop inlining the same predicate everywhere" instinct) is a sequencing decision for whoever scopes Phase 0 next, not decided here.
 
+## Remediation-audit lessons to carry into v6 (2026-08-26)
+
+The targeted remediation audit found a route-classification drift: `ProtectedRoute` treated client access as an explicit allowlist, while the reusable `canAccessRoute()` helper initially defaulted to allowing paths it did not recognise. The live guard was already the safer implementation; the helper was corrected to match it. This is not a reason to replace the v6 design. It is concrete evidence for the following implementation constraints.
+
+1. **Classify client routes allowlist-first and fail closed.** A non-staff user may access only a deliberately registered client route or route prefix. An unknown, newly added, renamed, or internal route must resolve to denied access for client roles; hiding a navigation item is not a substitute for this check.
+2. **Keep route guards, permission checks, and data authorization distinct.** `ProtectedRoute`/`useRBAC` improve the browser experience and prevent accidental deep-link access, while `usePermission` controls feature visibility and workflow affordances. Neither is an authorization boundary for Supabase data or Edge Functions: RLS and server-side permission checks must independently authorize the requested tenant, resource, and action.
+3. **Give route classification one owner.** Phase 0 should derive the canonical route inventory from `src/App.tsx`, then make both `ProtectedRoute` and `canAccessRoute()` consume or verify against that inventory. Do not maintain two hand-edited lists that can silently diverge. Each route must be explicitly marked as public, client-portal, internal permission-gated, or hard-SuperAdmin.
+4. **Test deep links, not just menus.** The v6 regression suite should cover direct navigation and browser refresh for every client-portal prefix, representative staff permission routes, hard-SuperAdmin routes, and an unrecognised path. At minimum, client Admin and client User must be denied an internal route and allowed every route deliberately assigned to them; staff/SuperAdmin outcomes must match the route's declared classification.
+5. **Make role predicates explicit and canonical.** New server-side gates must not treat a non-empty role string as proof of staff authorization. They should use the established caller/profile helpers and explicit role or permission predicates, so new role labels cannot acquire authority by accident.
+
+These are acceptance criteria for Phases 0–4, not a claim that frontend checks alone close the database/Edge Function authorization gaps. The detailed evidence is recorded in [`../../audit-report-2026-08-26.md`](../../audit-report-2026-08-26.md).
+
 ## Investigation required before implementation
 
 None of the following has been done yet — this plan intentionally stops short of it per this session's brief. Each must happen before its corresponding phase below is scoped into actual prompts/migrations:
@@ -67,18 +79,30 @@ None of the following has been done yet — this plan intentionally stops short 
 - Decision on whether Stages becomes its own `permission_features` module or folds under Packages (`packages.stages.*`) — product/data-model call, not just an engineering one.
 - Confirm with Angela/Carl whether any of the 47 SuperAdmin-only routes are *intentionally* SA-only regardless of permission table state (e.g. system config, role permission editor) — those should be explicitly excluded from the route-guard migration, not swept in by default.
 - Full census of every call site (Postgres function or frontend query) that filters `public.users` on `is_vivacity_internal` for a staff listing — gap #6 only fixed the 13 sites found by grep on 2026-08-25, not necessarily all of them — before deciding the final shape of a centralized `staff_directory`/`useListableStaff()` replacement.
+- Derive every static and parameterized path from `src/App.tsx`, compare it with the client-route allowlist and `canAccessRoute()` behavior, and record an explicit classification for each route. Include a CI-facing regression test so a route added without a classification fails closed for client roles rather than inheriting a permissive default.
 
-## Proposed phases (sequencing only — not yet broken into Lovable prompts)
+## Proposed phases (sequencing only)
+
+**Implementation path (decided 2026-08-26):** these phases will be shipped as
+direct git hotfixes reviewed via normal PRs, not phased Lovable prompts. That
+matches how the rest of this remediation work (RBAC route classifier, Edge
+Function auth gates, SharePoint/Firecrawl scoping) was actually delivered —
+see `docs/claude-rbac-security-remediation-handoff-2026-08-26.md` — and the
+root `CLAUDE.md` consolidation note that direct hotfixes are now the standing
+default path for this repo, not something reserved for cases where a Lovable
+prompt can't reach. Only route to a Lovable prompt instead if a specific
+phase turns out to suit Lovable's generation flow better (e.g. broad UI
+work) — it's not required by default the way earlier phrasing here implied.
 
 **Phase 0 — Investigation** (see above). Read-only. Produces the real scope for Phases 1-4.
 
-**Phase 1 — Route guard closure.** Extend `ProtectedRoute` to accept a permission-based alternative to `requireSuperAdmin` (e.g. a `requiredFeature`/`minLevel` prop backed by `usePermission`), and migrate the routes identified in Phase 0 that should be permission-gated rather than hard-SA-only. This directly unblocks cases like AJ's.
+**Phase 1 — Route guard closure.** Extend `ProtectedRoute` to accept a permission-based alternative to `requireSuperAdmin` (e.g. a `requiredFeature`/`minLevel` prop backed by `usePermission`), and migrate the routes identified in Phase 0 that should be permission-gated rather than hard-SA-only. Keep client-route matching explicit and fail-closed, and have the guard and `canAccessRoute()` share the same classification source. This directly unblocks cases like AJ's.
 
 **Phase 2 — Model Stages.** Add `stages.*` feature rows to `permission_features` (per the Phase 0 product decision on Packages vs. standalone), seed `role_permissions`, wire `StageBuilder.tsx` and related pages to `usePermission`, apply Phase 1's route-guard pattern to `/admin/stages`, `/admin/stage-builder`, `/admin/stage-analytics`.
 
 **Phase 3 — RLS consolidation.** Based on Phase 0's audit findings, replace remaining inline role checks in RLS policies/functions with calls to `check_permission` (or the existing `is_*_safe` helpers where a coarse staff/SA check is genuinely sufficient and per-feature granularity isn't needed at the data layer).
 
-**Phase 4 — Retire remaining raw frontend checks.** Work through the Phase 0 census, migrating legitimate permission gates to `usePermission` file by file. Not a big-bang rewrite — same incremental discipline v5 already used.
+**Phase 4 — Retire remaining raw frontend checks.** Work through the Phase 0 census, migrating legitimate permission gates to `usePermission` file by file. Add deep-link coverage alongside each migrated route, and retain explicit boolean checks only where they represent state rather than authority. Not a big-bang rewrite — same incremental discipline v5 already used.
 
 **Phase 5 (lower priority, evaluate only) — JWT custom claims.** Weigh adopting Supabase's Custom Access Token Hook against the current double-query approach, given the claim-staleness trade-off. Only worth doing if the double-query pattern becomes a measured performance problem — not a default "do this because Supabase's doc says so."
 

@@ -26,7 +26,7 @@ describe("academy-import-vimeo-showcase authorization gate", () => {
   });
 
   it("returns 401 when Authorization is missing or the token is invalid", () => {
-    assert.match(src, /return json\(\s*\{\s*error:\s*["']Unauthorized["']\s*\},\s*401\)/);
+    assert.match(src, /return json\(\s*req,\s*\{\s*error:\s*["']Unauthorized["']\s*\},\s*401\)/);
     assert.match(src, /authHeader\?\.startsWith\(\s*["']Bearer /);
     assert.match(src, /auth\.getUser\(/);
   });

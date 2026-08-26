@@ -19,6 +19,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { validateExternalScrapeUrl } from "../_shared/safe-fetch-url.ts";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -119,6 +120,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    let validatedTrainingGovUrl: string | undefined;
+    if (training_gov_url) {
+      const validation = validateExternalScrapeUrl(training_gov_url, { requireHostSuffix: "training.gov.au" });
+      if (!validation.ok) {
+        return new Response(
+          JSON.stringify({ ok: false, code: "BAD_REQUEST", detail: `Invalid training_gov_url: ${validation.error}` }),
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        );
+      }
+      validatedTrainingGovUrl = validation.url!;
+    }
+
+    let validatedClientSiteUrl: string | undefined;
+    if (client_site_url) {
+      const validation = validateExternalScrapeUrl(client_site_url);
+      if (!validation.ok) {
+        return new Response(
+          JSON.stringify({ ok: false, code: "BAD_REQUEST", detail: `Invalid client_site_url: ${validation.error}` }),
+          { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+        );
+      }
+      validatedClientSiteUrl = validation.url!;
+    }
+
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
     const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
 
@@ -169,14 +194,14 @@ Deno.serve(async (req) => {
     const scrapedContent: Array<{ url: string; title: string; markdown: string; sourceId?: string; role: string }> = [];
 
     // 2a: training.gov.au
-    if (training_gov_url) {
-      console.log(`Scraping training.gov.au: ${training_gov_url}`);
-      const result = await scrapeUrl(firecrawlKey, training_gov_url);
+    if (validatedTrainingGovUrl) {
+      console.log(`Scraping training.gov.au: ${validatedTrainingGovUrl}`);
+      const result = await scrapeUrl(firecrawlKey, validatedTrainingGovUrl);
       if (result) {
         const hash = await computeHash(result.markdown);
         const { data: src } = await supabase.from("research_sources").insert({
           job_id: job.id,
-          url: training_gov_url,
+          url: validatedTrainingGovUrl,
           title: result.title,
           content_hash: hash,
           raw_markdown: result.markdown,
@@ -184,7 +209,7 @@ Deno.serve(async (req) => {
         }).select("id").single();
 
         scrapedContent.push({
-          url: training_gov_url,
+          url: validatedTrainingGovUrl,
           title: result.title,
           markdown: result.markdown.slice(0, 6000),
           sourceId: src?.id,
@@ -194,10 +219,8 @@ Deno.serve(async (req) => {
     }
 
     // 2b: Client site pages
-    if (client_site_url) {
-      let base = client_site_url.trim();
-      if (!base.startsWith("http")) base = `https://${base}`;
-      base = base.replace(/\/+$/, "");
+    if (validatedClientSiteUrl) {
+      const base = validatedClientSiteUrl.replace(/\/+$/, "");
 
       for (const path of CLIENT_SCRAPE_PATHS) {
         const url = `${base}${path}`;

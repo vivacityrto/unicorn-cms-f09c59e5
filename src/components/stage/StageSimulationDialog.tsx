@@ -16,6 +16,7 @@ import {
   renderMergeFields 
 } from '@/hooks/useStageSimulation';
 import { Stage } from '@/hooks/usePackageBuilder';
+import { sanitizeEmailHtml } from '@/lib/sanitize';
 import { 
   Play, 
   Loader2, 
@@ -671,7 +672,7 @@ function EmailsTab({
                 </div>
                 <div 
                   className="text-sm prose prose-sm max-w-none bg-white p-3 rounded border max-h-[300px] overflow-auto"
-                  dangerouslySetInnerHTML={{ __html: email.rendered_body }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(email.rendered_body) }}
                 />
               </div>
             </div>

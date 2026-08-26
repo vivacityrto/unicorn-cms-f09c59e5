@@ -1,4 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts';
+import { FeatureKeys, requireCaller } from '../_shared/requireCaller.ts';
 
 const SANDBOX_URL = 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation';
 
@@ -14,6 +15,9 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const caller = await requireCaller(req, FeatureKeys.staffTga);
+    if (caller instanceof Response) return caller;
+
     const { query } = await req.json();
 
     if (!query || query.trim().length < 2) {

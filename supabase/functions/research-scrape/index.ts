@@ -7,6 +7,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { validateExternalScrapeUrl } from "../_shared/safe-fetch-url.ts";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -62,10 +63,12 @@ Deno.serve(async (req) => {
     const results: Array<{ url: string; success: boolean; source_id?: string; error?: string }> = [];
 
     for (const rawUrl of urls) {
-      let formattedUrl = rawUrl.trim();
-      if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-        formattedUrl = `https://${formattedUrl}`;
+      const validated = validateExternalScrapeUrl(rawUrl);
+      if (!validated.ok) {
+        results.push({ url: rawUrl, success: false, error: validated.error });
+        continue;
       }
+      const formattedUrl = validated.url!;
 
       try {
         console.log(`Scraping: ${formattedUrl}`);

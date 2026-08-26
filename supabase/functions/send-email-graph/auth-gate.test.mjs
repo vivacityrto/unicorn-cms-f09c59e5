@@ -22,7 +22,15 @@ describe("send-email-graph tenant access gate", () => {
   });
 
   it("returns 403 FORBIDDEN when the RPC denies access", () => {
-    assert.match(src, /if\s*\(\s*!ok\s*\)\s*return jsonResponse\(\s*403,\s*\{\s*code:\s*["']FORBIDDEN["']/);
+    assert.match(src, /if\s*\(\s*!ok\s*\)\s*return jsonResponse\(\s*req,\s*403,\s*\{\s*code:\s*["']FORBIDDEN["']/);
+  });
+
+  it("gates staff.email.send callers through has_tenant_access_safe too — staff permission alone is not enough to dry-run/merge-read another tenant's data", () => {
+    assert.match(src, /requireCaller\(/);
+    assert.match(src, /featureKey:\s*FeatureKeys\.staffEmailSend/);
+    const requireCallerIdx = src.indexOf("requireCaller(");
+    const tenantAccessIdx = src.indexOf('rpc("has_tenant_access_safe"');
+    assert.ok(tenantAccessIdx > requireCallerIdx, "has_tenant_access_safe runs after the requireCaller gate, not instead of it");
   });
 
   it("requires tenant_id before any tenant data read", () => {

@@ -220,7 +220,7 @@ export function AuditSidebar({
       {audit.linked_stage_instance_id && (
         <div className="p-4 border-b">
           <button
-            onClick={() => navigate(`/clients/${audit.subject_tenant_id}?tab=packages&stage=${audit.linked_stage_instance_id}`)}
+            onClick={() => navigate(`/tenant/${audit.subject_tenant_id}?tab=packages&stageInstance=${audit.linked_stage_instance_id}`)}
             className="flex items-center gap-2 text-xs text-primary hover:underline w-full"
           >
             <ClipboardList className="h-3.5 w-3.5" />

@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
+import { FeatureKeys, requireCaller } from "../_shared/requireCaller.ts";
 
 /**
  * Phase Completeness Checker
@@ -31,33 +33,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-
-    // Verify user
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { authorization: authHeader } } }
-    );
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
 
     const body = await req.json();
     const { package_id, phase_id, phase_key, tenant_id, framework } = body;
@@ -66,6 +45,35 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Missing required fields: package_id, phase_id, phase_key, tenant_id, framework" }),
         { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+      );
+    }
+
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffInternal,
+      headers: corsHeaders(req),
+      orAllow: async ({ userId, admin }) => (await hasTenantAccessSafe(admin, userId, Number(tenant_id))).allowed,
+    });
+    if (!caller.ok) return caller.response;
+    const authHeader = req.headers.get("authorization")!;
+
+    const { data: packageInstance, error: packageError } = await supabase
+      .from("package_instances")
+      .select("id")
+      .eq("tenant_id", tenant_id)
+      .eq("package_id", package_id)
+      .limit(1)
+      .maybeSingle();
+    const { data: phaseStage, error: phaseError } = await supabase
+      .from("phase_stages")
+      .select("id")
+      .eq("package_id", package_id)
+      .eq("phase_id", phase_id)
+      .limit(1)
+      .maybeSingle();
+    if (packageError || phaseError || !packageInstance || !phaseStage) {
+      return new Response(
+        JSON.stringify({ error: "Package or phase does not belong to this tenant" }),
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -183,7 +191,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           tenant_id,
-          actor_user_id: user.id,
+          actor_user_id: caller.user.id,
           task_type: "phase_completeness_check",
           feature: "phase_completeness",
           input: {

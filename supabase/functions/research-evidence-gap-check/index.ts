@@ -9,8 +9,9 @@
  * Auth: Authenticated users with tenant access
  */
 import { corsHeaders } from "../_shared/cors.ts";
-import { extractToken, verifyAuth } from "../_shared/auth-helpers.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
+import { FeatureKeys, requireCaller } from "../_shared/requireCaller.ts";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -62,29 +63,45 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const token = extractToken(req);
-    if (!token) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: "No token" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const { user, profile, error: authError } = await verifyAuth(supabase, token);
-    if (authError || !user || !profile) {
-      return new Response(
-        JSON.stringify({ ok: false, code: "UNAUTHORIZED", detail: authError || "Auth failed" }),
-        { status: 401, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
     const { tenant_id, stage_instance_id, stage_type } = await req.json();
 
     if (!tenant_id || !stage_instance_id) {
       return new Response(
         JSON.stringify({ ok: false, code: "BAD_REQUEST", detail: "tenant_id and stage_instance_id required" }),
         { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+      );
+    }
+
+    const caller = await requireCaller(req, supabase, {
+      featureKey: FeatureKeys.staffResearch,
+      headers: corsHeaders(req),
+      errorStyle: "ok-code",
+      orAllow: async ({ userId, admin }) => (await hasTenantAccessSafe(admin, userId, Number(tenant_id))).allowed,
+    });
+    if (!caller.ok) return caller.response;
+
+    const { data: stageInstance, error: stageError } = await supabase
+      .from("stage_instances")
+      .select("packageinstance_id")
+      .eq("id", stage_instance_id)
+      .maybeSingle();
+    if (stageError || !stageInstance) {
+      return new Response(
+        JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Stage instance not found" }),
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
+      );
+    }
+    const { data: packageInstance, error: packageError } = await supabase
+      .from("package_instances")
+      .select("id")
+      .eq("id", stageInstance.packageinstance_id)
+      .eq("tenant_id", tenant_id)
+      .maybeSingle();
+    if (packageError || !packageInstance) {
+      return new Response(
+        JSON.stringify({ ok: false, code: "FORBIDDEN", detail: "Stage instance does not belong to this tenant" }),
+        { status: 403, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -96,7 +113,7 @@ Deno.serve(async (req) => {
         stage_instance_id: stage_instance_id.toString(),
         job_type: "evidence_gap_check",
         status: "queued",
-        created_by: user.id,
+        created_by: caller.user.id,
         standards_version: "Standards for RTOs 2025",
         input_json: { tenant_id, stage_instance_id, stage_type },
       })
@@ -111,7 +128,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    await auditLog(supabase, user.id, job.id, "gap_check_created", { tenant_id, stage_instance_id });
+    await auditLog(supabase, caller.user.id, job.id, "gap_check_created", { tenant_id, stage_instance_id });
     await supabase.from("research_jobs").update({ status: "running" }).eq("id", job.id);
 
     // Step 2: Fetch required categories
@@ -187,7 +204,7 @@ Deno.serve(async (req) => {
         tenant_id,
         stage_instance_id,
         research_job_id: job.id,
-        generated_by_user_id: user.id,
+        generated_by_user_id: caller.user.id,
         required_categories_json: categories.map(c => ({
           category_name: c.category_name,
           category_description: c.category_description,
@@ -253,7 +270,7 @@ This check identifies missing evidence categories only. It does not assess docum
       },
     }).eq("id", job.id);
 
-    await auditLog(supabase, user.id, job.id, "gap_check_completed", {
+    await auditLog(supabase, caller.user.id, job.id, "gap_check_completed", {
       gap_check_id: gapCheck?.id,
       files_scanned: allFiles.length,
       missing_count: missingCategories.length,
