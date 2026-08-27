@@ -38,7 +38,7 @@ Measured as `git ls-files 'src/**' 'supabase/functions/**'` file count, and tota
 | 7 | Document/Excel/release-readiness cluster (§2.12–2.13) | 14 | ✅ Done | [#430](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/430) |
 | 8 | Client-portal component cluster (§2.5, §2.7, §2.29) | 15 | ✅ Done | [#431](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/431) |
 | 9 | Tenant-panel cluster (§2.26) | 8 | ✅ Done | [#432](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/432) |
-| 10 | KPI reviewer-admin cluster + remaining dead pages (§2.18, §2.29) | 8 | ✅ Done | #TBD |
+| 10 | KPI reviewer-admin cluster + remaining dead pages (§2.18, §2.29) | 8 | ✅ Done | [#433](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/433) |
 | 11 | Remaining single-file/small-cluster components (grab-bag) | ~45 | 🔲 Not started | — |
 | 12 | PDP superseded components + lib/utils/integrations (§2.31–2.34) | 9 | 🔲 Not started | — |
 | §3 | Needs-review items (4 frontend + 15 edge functions) — hold for explicit sign-off | 19 | ⏸️ Parked | — |
