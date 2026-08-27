@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { differenceInDays, format, formatDistanceToNow, parseISO } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import {
   MousePointerClick,
   Link as LinkIcon,
   KeyRound,
+  ArrowLeftRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,8 @@ import RevokeInviteAlert from "./users/RevokeInviteAlert";
 import { useInviteMutations } from "./users/useInviteMutations";
 import { CapacityPill } from "./users/CapacityPill";
 import { supabase } from "@/integrations/supabase/client";
+import { TenantContactsSection } from "./TenantContactsSection";
+import { type PositionTypeOption } from "@/lib/roles/positionType";
 
 
 function getInitials(name: string): string {
@@ -375,14 +378,50 @@ function LoadingSkeleton() {
 
 export default function ClientUsersPage() {
   const { data, isLoading, isError } = useClientTenantUsers();
-  const { canManagePortalUsers, activeTenantId, isReadOnly } = useClientTenant();
+  const { canManagePortalUsers, activeTenantId, isReadOnly, tenantName } = useClientTenant();
   const { resend, copyLink, resetPassword } = useInviteMutations();
   const capacity = useUserCapacity(activeTenantId);
   const atLimit = !!capacity.data?.atLimit;
+  const queryClient = useQueryClient();
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string | null } | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
+  const [contactsRefreshKey, setContactsRefreshKey] = useState(0);
+  const [userToSwap, setUserToSwap] = useState<ClientTenantUserRow | null>(null);
+  const [swapping, setSwapping] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from("dd_position_type")
+      .select("value, label, sort_order")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data }) => setPositionTypeOptions(data || []));
+  }, []);
+
+  const handleSwapToContact = async () => {
+    if (!userToSwap?.user_id || !activeTenantId) return;
+    setSwapping(true);
+    try {
+      const { error } = await supabase.rpc("swap_tenant_user_to_contact", {
+        p_tenant_id: activeTenantId,
+        p_user_id: userToSwap.user_id,
+      });
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["client_tenant_users", activeTenantId] });
+      setContactsRefreshKey((k) => k + 1);
+      toast.success(`${userToSwap.display_name} swapped to the contact list`);
+    } catch (err) {
+      console.error("swap_tenant_user_to_contact error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to swap user to contact");
+    } finally {
+      setSwapping(false);
+      setUserToSwap(null);
+    }
+  };
   const [inviteActionConfirm, setInviteActionConfirm] = useState<{
     action: "resend" | "copy";
     rowKey: string;
@@ -577,6 +616,10 @@ export default function ClientUsersPage() {
                                 <KeyRound className="mr-2 h-4 w-4" />
                                 Reset password
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setUserToSwap(row)}>
+                                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                                Swap to Contact
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : null}
@@ -588,6 +631,16 @@ export default function ClientUsersPage() {
             </Table>
           </div>
         ) : null}
+
+        {activeTenantId != null && (
+          <TenantContactsSection
+            key={contactsRefreshKey}
+            tenantId={activeTenantId}
+            tenantName={tenantName || ""}
+            canManage={canManagePortalUsers && !isReadOnly}
+            positionTypeOptions={positionTypeOptions}
+          />
+        )}
 
         <InviteUserDialog open={inviteOpen} onOpenChange={setInviteOpen} rows={rows} />
         <RevokeInviteAlert
@@ -631,6 +684,31 @@ export default function ClientUsersPage() {
                 }}
               >
                 Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={!!userToSwap} onOpenChange={(o) => !o && !swapping && setUserToSwap(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Swap to Contact</AlertDialogTitle>
+              <AlertDialogDescription>
+                <strong>{userToSwap?.display_name}</strong> will lose their Unicorn login and seat, and be
+                moved to your contact list instead — their name, email, and position are kept on file so you
+                can promote them back to a user later.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={swapping}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={swapping}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void handleSwapToContact();
+                }}
+              >
+                {swapping ? "Swapping…" : "Swap to Contact"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

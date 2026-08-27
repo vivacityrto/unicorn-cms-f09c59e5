@@ -72088,7 +72088,7 @@ export type Database = {
         Returns: Json
       }
       get_tenant_user_capacity: {
-        Args: { p_tenant_id: number }
+        Args: { p_caller_id?: string; p_tenant_id: number }
         Returns: {
           is_unlimited: boolean
           limit: number
@@ -72461,6 +72461,10 @@ export type Database = {
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
       mark_tenant_contact_promoted: {
         Args: { p_contact_id: number; p_user_id: string }
+        Returns: Json
+      }
+      swap_tenant_user_to_contact: {
+        Args: { p_reason?: string; p_tenant_id: number; p_user_id: string }
         Returns: Json
       }
       match_ask_viv_corpus: {
