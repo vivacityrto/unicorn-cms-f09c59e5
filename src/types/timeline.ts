@@ -52,6 +52,9 @@ export const TIMELINE_EVENT_TYPES = [
   'account_deactivated',
   'account_role_changed',
   'account_removed',
+  // User <-> Contact swap/promote (tenant_contacts)
+  'user_swapped_to_contact',
+  'contact_promoted_to_user',
   // Client portal activity (internal-only)
   'client_login',
   // Messaging (client-visible send activity, internal read activity)

@@ -105,7 +105,7 @@ const resourceManagementMenuItems = [
 const administrationMenuItems = [
   { icon: Shield, label: "Team Users", path: "/admin/team-users" },
   { icon: Building2, label: "Tenant Users", path: "/admin/tenant-users" },
-  { icon: UsersRound, label: "Contact Directory", path: "/administration/contacts", superAdminOnly: true },
+  { icon: UsersRound, label: "Contact Directory", path: "/administration/contacts" },
   { icon: Users, label: "People", path: "/admin/staff-engagements", saOrIntegratorOnly: true },
   
   { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
@@ -580,8 +580,10 @@ export const DashboardLayout = ({
                   "resourceManagement"
                 )}
 
-              {/* 5. ADMINISTRATION Section - Super Admin full, Team Leader & Integrator partial */}
-              {(isSuperAdmin || isTeamLeader || isIntegrator) &&
+              {/* 5. ADMINISTRATION Section - Super Admin full, Team Leader & Integrator partial,
+                  visible to all Vivacity staff so items without a role flag (e.g. Contact
+                  Directory) are reachable by everyone; individual items still gate themselves. */}
+              {isVivacityTeam &&
                 renderSection(
                   "administration",
                   "Administration",
