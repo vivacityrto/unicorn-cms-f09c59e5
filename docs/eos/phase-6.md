@@ -5,6 +5,8 @@ Phase 6 adds client-facing features, notification system, calendar management, a
 
 ## Features Implemented
 
+> **Current status (2026-08-27):** The original EOS-only client overview implementation has been retired. The legacy `/client/eos` URL is retained as a protected compatibility redirect to `/client/home`; this historical specification is not evidence that the old page should be restored without a new product decision.
+
 ### 1. Client Viewer Access
 
 **Role:** `client_viewer` (read-only)
@@ -16,7 +18,7 @@ Phase 6 adds client-facing features, notification system, calendar management, a
 - Cannot access internal V/TO or Accountability Chart
 
 **Routes:**
-- `/client/eos` - Main client overview with tabs for:
+- `/client/eos` - Historical client overview URL; now redirects to `/client/home`. The retired page previously provided tabs for:
   - Rocks (90-day goals)
   - Issues (IDS outcomes)
   - Headlines (meeting highlights)

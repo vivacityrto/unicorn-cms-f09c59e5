@@ -3,6 +3,7 @@ import { z } from "https://esm.sh/zod@3.23.8";
 import { corsHeaders } from "../_shared/cors.ts";
 import { graphGet, resolveDriveItemFromSharingUrl } from "../_shared/graph-app-client.ts";
 import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
+import { isDriveItemWithinRoot } from "../_shared/drive-root.ts";
 
 const BodySchema = z.object({
   file_url: z.string().url(),
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
 
   const { data: spSettings, error: spSettingsError } = await admin
     .from("tenant_sharepoint_settings")
-    .select("drive_id")
+    .select("drive_id, root_item_id, shared_folder_item_id")
     .eq("tenant_id", tenant_id)
     .maybeSingle();
   if (spSettingsError || !spSettings?.drive_id) {
@@ -111,6 +112,29 @@ Deno.serve(async (req) => {
   // credentials, regardless of which tenant that file actually belongs to.
   if (resolved.driveId !== spSettings.drive_id) {
     return json(req, { error: "File does not belong to the requested tenant's SharePoint site" }, 403);
+  }
+
+  const tenantRootId = spSettings.shared_folder_item_id ?? spSettings.root_item_id;
+  if (!tenantRootId) {
+    return json(req, { error: "SharePoint root is not configured for this tenant" }, 400);
+  }
+  // Returning the configured root item's parent could disclose the enclosing,
+  // potentially shared folder outside the tenant-scoped subtree.
+  if (resolved.itemId === tenantRootId) {
+    return json(req, { error: "The configured SharePoint root has no accessible parent" }, 403);
+  }
+  const withinTenantRoot = await isDriveItemWithinRoot(
+    resolved.itemId,
+    tenantRootId,
+    async (itemId) => {
+      const item = await graphGet<{ parentReference?: { id?: string } }>(
+        `/drives/${resolved.driveId}/items/${itemId}?$select=parentReference`,
+      );
+      return item.ok ? item.data?.parentReference?.id ?? null : null;
+    },
+  );
+  if (!withinTenantRoot) {
+    return json(req, { error: "File is outside the requested tenant's SharePoint folder" }, 403);
   }
 
   // Step 1: fetch the item to get its parentReference.id
