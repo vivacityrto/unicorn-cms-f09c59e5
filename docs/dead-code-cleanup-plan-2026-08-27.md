@@ -44,7 +44,7 @@ Measured as `git ls-files 'src/**' 'supabase/functions/**'` file count, and tota
 | 9 | Tenant-panel cluster (§2.26) | 8 | ✅ Done | [#432](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/432) |
 | 10 | KPI reviewer-admin cluster + remaining dead pages (§2.18, §2.29) | 8 | ✅ Done | [#433](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/433) |
 | 11 | Remaining single-file/small-cluster components (grab-bag) | 36 (recounted from §2.1-2.28 remainder; plan's "~45" estimate) | ✅ Done | [#434](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/434) |
-| 12 | PDP superseded components + lib/utils/integrations (§2.31–2.34) | 8 (recounted; plan's "9" estimate) | ✅ Done | #TBD |
+| 12 | PDP superseded components + lib/utils/integrations (§2.31–2.34) | 8 (recounted; plan's "9" estimate) | ✅ Done | [#435](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/435) |
 | §3 | Needs-review items (4 frontend + 15 edge functions) — hold for explicit sign-off | 19 | ⏸️ Parked | — |
 
 ---
