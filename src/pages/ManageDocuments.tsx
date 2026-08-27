@@ -317,6 +317,7 @@ export default function ManageDocuments() {
   const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
   const [sharepointFilter, setSharepointFilter] = useState<string>("all");
   const [publishStatusFilter, setPublishStatusFilter] = useState<string>("all");
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState<string>("all");
   const [fileStatusFilter, setFileStatusFilter] = useState<'all' | 'needs_upload' | 'ready' | 'no_package'>('all');
   const [uploadingDocId, setUploadingDocId] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -544,7 +545,7 @@ export default function ManageDocuments() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1); // Reset to first page when filters change
-  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter, publishStatusFilter, fileStatusFilter]);
+  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter, publishStatusFilter, deliveryStatusFilter, fileStatusFilter]);
   useEffect(() => {
     if (bulkSendSearchQuery) {
       const filtered = bulkSendUsers.filter(user => user.email.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()) || `${user.first_name} ${user.last_name}`.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()));
@@ -824,6 +825,13 @@ export default function ManageDocuments() {
       filtered = filtered.filter(doc => getCurrentVersion(doc)?.status === "published");
     } else if (publishStatusFilter === "unpublished") {
       filtered = filtered.filter(doc => getCurrentVersion(doc)?.status !== "published");
+    }
+
+    // Delivery status filter
+    if (deliveryStatusFilter === "not_delivered") {
+      filtered = filtered.filter(doc => !doc.delivered_tenant_count || doc.delivered_tenant_count === 0);
+    } else if (deliveryStatusFilter === "delivered") {
+      filtered = filtered.filter(doc => !!doc.delivered_tenant_count && doc.delivered_tenant_count > 0);
     }
 
     return filtered;
@@ -2095,6 +2103,20 @@ export default function ManageDocuments() {
                 <SelectItem value="all">All Publish Status</SelectItem>
                 <SelectItem value="published">Published</SelectItem>
                 <SelectItem value="unpublished">Unpublished</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Delivery Status Filter */}
+          {showAdminView && (
+            <Select value={deliveryStatusFilter} onValueChange={setDeliveryStatusFilter}>
+              <SelectTrigger className="flex-1 min-w-[170px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+                <SelectValue placeholder="Delivery Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Delivery Status</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="not_delivered">Not Delivered</SelectItem>
               </SelectContent>
             </Select>
           )}
