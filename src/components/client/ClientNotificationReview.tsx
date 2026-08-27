@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, ChevronRight, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { useClientNotifications } from "@/hooks/useClientNotifications";
+import { useClientNotifications, type ClientNotification } from "@/hooks/useClientNotifications";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export function ClientNotificationReview({ isPreview }: { isPreview: boolean }) 
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [queue, setQueue] = useState<ClientNotification[]>([]);
   const reviewStarted = useRef(false);
 
   const unreadNotifications = useMemo(
@@ -47,18 +48,22 @@ export function ClientNotificationReview({ isPreview }: { isPreview: boolean }) 
 
     // Unread state is persisted in Supabase, so this also covers returning to
     // the app after a long absence, even when the auth session was retained.
+    // Snapshot the queue at open time — unreadNotifications re-derives live
+    // from the query and shrinks as markAsRead invalidates it, which would
+    // shift indices under an in-progress review.
     if (unreadNotifications.length > 0) {
+      setQueue(unreadNotifications);
       setCurrentIndex(0);
       setOpen(true);
     }
   }, [activeTenantId, isLoading, isPreview, profile?.user_uuid, unreadNotifications.length]);
 
-  const notification = unreadNotifications[currentIndex];
+  const notification = queue[currentIndex];
 
   const continueReview = () => {
     if (!notification) return;
     markAsRead(notification.id);
-    if (currentIndex >= unreadNotifications.length - 1) {
+    if (currentIndex >= queue.length - 1) {
       setOpen(false);
       return;
     }
@@ -75,12 +80,10 @@ export function ClientNotificationReview({ isPreview }: { isPreview: boolean }) 
   if (!notification) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => nextOpen && setOpen(true)}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         size="lg"
         className="gap-0 overflow-hidden border-primary/15 p-0"
-        onEscapeKeyDown={(event) => event.preventDefault()}
-        onPointerDownOutside={(event) => event.preventDefault()}
       >
         <div className="bg-primary/[0.06] px-6 pb-5 pt-7 sm:px-8">
           <div className="mb-5 flex items-center justify-between gap-4">
@@ -89,11 +92,11 @@ export function ClientNotificationReview({ isPreview }: { isPreview: boolean }) 
               Portal update
             </div>
             <span className="text-xs font-medium text-muted-foreground">
-              {currentIndex + 1} of {unreadNotifications.length}
+              {currentIndex + 1} of {queue.length}
             </span>
           </div>
           <div className="flex gap-1.5" aria-hidden="true">
-            {unreadNotifications.map((item, index) => (
+            {queue.map((item, index) => (
               <span key={item.id} className={cn("h-1.5 flex-1 rounded-full bg-primary/15", index <= currentIndex && "bg-primary")} />
             ))}
           </div>
@@ -121,7 +124,7 @@ export function ClientNotificationReview({ isPreview }: { isPreview: boolean }) 
             </Button>
           )}
           <Button onClick={continueReview} className="gap-2">
-            {currentIndex === unreadNotifications.length - 1 ? "Done" : "Continue"}
+            {currentIndex === queue.length - 1 ? "Done" : "Continue"}
             <ChevronRight className="h-4 w-4" />
           </Button>
         </DialogFooter>

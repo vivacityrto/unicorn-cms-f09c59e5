@@ -19,6 +19,7 @@ const ALLOWED_GLOBAL_SITE_PURPOSES = new Set([
   "client_files",
   "governance_client_files",
   "master_documents",
+  "client_success_files",
 ]);
 
 async function refreshToken(

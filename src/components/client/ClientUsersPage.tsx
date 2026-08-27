@@ -70,6 +70,7 @@ import {
 } from "@/hooks/use-client-tenant-users";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useUserCapacity } from "@/hooks/useUserCapacity";
+import { useAuth } from "@/hooks/useAuth";
 
 import InviteUserDialog from "./users/InviteUserDialog";
 import RevokeInviteAlert from "./users/RevokeInviteAlert";
@@ -379,6 +380,7 @@ function LoadingSkeleton() {
 export default function ClientUsersPage() {
   const { data, isLoading, isError } = useClientTenantUsers();
   const { canManagePortalUsers, activeTenantId, isReadOnly, tenantName } = useClientTenant();
+  const { profile } = useAuth();
   const { resend, copyLink, resetPassword } = useInviteMutations();
   const capacity = useUserCapacity(activeTenantId);
   const atLimit = !!capacity.data?.atLimit;
@@ -616,10 +618,12 @@ export default function ClientUsersPage() {
                                 <KeyRound className="mr-2 h-4 w-4" />
                                 Reset password
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setUserToSwap(row)}>
-                                <ArrowLeftRight className="mr-2 h-4 w-4" />
-                                Swap to Contact
-                              </DropdownMenuItem>
+                              {row.user_id !== profile?.user_uuid && (
+                                <DropdownMenuItem onClick={() => setUserToSwap(row)}>
+                                  <ArrowLeftRight className="mr-2 h-4 w-4" />
+                                  Swap to Contact
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : null}

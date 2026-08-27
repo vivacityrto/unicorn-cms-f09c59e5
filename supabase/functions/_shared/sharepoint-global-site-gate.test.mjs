@@ -29,6 +29,12 @@ describe("F-026: browse-sharepoint-folder global site_purpose mode", () => {
     assert.match(src, /ALLOWED_GLOBAL_SITE_PURPOSES\.has\(sitePurposeEarly\)/);
   });
 
+  it("allowlist covers every site_purpose the frontend admin UI offers, including client_success_files", () => {
+    const allowlistMatch = src.match(/ALLOWED_GLOBAL_SITE_PURPOSES = new Set\(\[([\s\S]*?)\]\)/);
+    assert.ok(allowlistMatch, "could not find ALLOWED_GLOBAL_SITE_PURPOSES definition");
+    assert.match(allowlistMatch[1], /"client_success_files"/);
+  });
+
   it("still gates every caller behind requireCaller before any DB/Graph access", () => {
     assert.match(src, /requireCaller\(/);
     assert.match(src, /if \(!caller\.ok\) return caller\.response;/);
