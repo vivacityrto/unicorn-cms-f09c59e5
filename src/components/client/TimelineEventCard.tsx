@@ -71,6 +71,8 @@ export const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   account_deactivated: UserX,
   account_role_changed: UserCog,
   account_removed: UserMinus,
+  user_swapped_to_contact: UserMinus,
+  contact_promoted_to_user: UserCheck,
   client_login: LogIn,
   message_sent: MessageSquare,
   message_read: MessageSquare,
@@ -137,6 +139,8 @@ export const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
   account_deactivated: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   account_role_changed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
   account_removed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  user_swapped_to_contact: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  contact_promoted_to_user: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   client_login: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
   message_sent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   message_read: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
@@ -172,6 +176,7 @@ function getModuleChip(eventType: string): string | null {
   if (eventType.startsWith('time')) return 'Time';
   if (eventType.startsWith('note') || eventType.startsWith('structured_note')) return 'Notes';
   if (eventType.startsWith('account') || eventType.startsWith('invitation')) return 'Accounts';
+  if (eventType === 'user_swapped_to_contact' || eventType === 'contact_promoted_to_user') return 'Accounts';
   if (eventType === 'client_login') return 'Logins';
   if (eventType === 'message_sent' || eventType === 'message_read') return 'Messages';
   if (eventType.startsWith('academy_')) return 'Academy';
@@ -247,6 +252,8 @@ function getPrimaryAction(event: TimelineEvent): DeepLinkAction | null {
     case 'invitation_clicked':
     case 'invitation_bounced':
     case 'invitation_accepted':
+    case 'user_swapped_to_contact':
+    case 'contact_promoted_to_user':
       return { label: 'View account', path: `/tenant/${event.tenant_id}?tab=users` };
     case 'xero_invoice_paid':
     case 'xero_invoice_issued':
