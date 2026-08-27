@@ -293,7 +293,7 @@ Four guard patterns found in `App.tsx`:
 | /superadmin | `/superadmin/academy/course-cleanup` | `AcademyCourseCleanupPage` |
 | /superadmin | `/superadmin/academy/enrollments` | `AcademyEnrolmentsPage` |
 | /superadmin | `/superadmin/academy/package-course-rules` | `AcademyPackageCourseRulesPage` |
-| /superadmin | `/superadmin/academy/quick-add` | `AcademyQuickAddPage` |
+| /superadmin | `/superadmin/academy/add-course` | `AcademyAddCoursePage` |
 | /superadmin | `/superadmin/academy/tag-management` | `AcademyTagManagementPage` |
 | /superadmin | `/superadmin/academy/tenant-access` | `AcademyTenantAccessPage` |
 | /superadmin | `/superadmin/workforce-pdp` | `SuperAdminWorkforcePdp` |

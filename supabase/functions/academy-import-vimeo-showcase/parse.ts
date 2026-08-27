@@ -109,6 +109,12 @@ export function findExistingModule(
   return modules.find((mod) => re.test(String(mod.title ?? "").trim())) ?? null;
 }
 
+function pickThumbnail(video: ShowcaseVideo): string | null {
+  return video.pictures?.sizes
+    ?.filter((picture) => picture.link)
+    .sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.link ?? null;
+}
+
 export function classifyVideos(videos: ShowcaseVideo[]): {
   parsed: ParsedVideo[];
   unmatched: UnmatchedVideo[];
@@ -129,10 +135,6 @@ export function classifyVideos(videos: ShowcaseVideo[]): {
       continue;
     }
 
-    const thumbnail = video.pictures?.sizes
-      ?.filter((picture) => picture.link)
-      .sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.link ?? null;
-
     parsed.push({
       moduleNumber: parsedTitle.moduleNumber,
       lessonNumber: parsedTitle.lessonNumber,
@@ -141,7 +143,7 @@ export function classifyVideos(videos: ShowcaseVideo[]): {
       vimeoName: name,
       description: video.description ?? null,
       duration: typeof video.duration === "number" ? video.duration : null,
-      thumbnail,
+      thumbnail: pickThumbnail(video),
       link: video.link ?? `https://vimeo.com/${vimeoId}`,
       embedLink: video.player_embed_url ?? null,
     });
@@ -155,4 +157,52 @@ export function classifyVideos(videos: ShowcaseVideo[]): {
 
 export function distinctModuleNumbers(parsed: ParsedVideo[]): number[] {
   return [...new Set(parsed.map((item) => item.moduleNumber))].sort((a, b) => a - b);
+}
+
+/**
+ * Fallback for a showcase whose titles carry no "M# - Lesson #" numbering at
+ * all (e.g. "Module 1 - Understanding FPP", one video per topic with no
+ * lesson sub-numbering). Rather than skip every video as unmatched, treat
+ * the whole showcase as one flat course: a single module, one lesson per
+ * video, sequenced in the showcase's own order, using each video's own
+ * title as-is. Only used when classifyVideos finds zero structured matches —
+ * a showcase with even one real "M# - Lesson #" title keeps using the
+ * structured parse so an accidental single mismatch doesn't flatten the rest.
+ */
+export function buildFallbackParse(videos: ShowcaseVideo[]): {
+  parsed: ParsedVideo[];
+  unmatched: UnmatchedVideo[];
+} {
+  const parsed: ParsedVideo[] = [];
+  const unmatched: UnmatchedVideo[] = [];
+  let lessonNumber = 0;
+
+  for (const video of videos) {
+    const name = video.name ?? "";
+    const vimeoId = extractVimeoVideoId(video.uri) ?? extractVimeoVideoId(video.link);
+    if (!vimeoId) {
+      unmatched.push({
+        title: name || "(untitled)",
+        vimeo_id: null,
+        link: video.link ?? null,
+      });
+      continue;
+    }
+
+    lessonNumber += 1;
+    parsed.push({
+      moduleNumber: 1,
+      lessonNumber,
+      title: name || `Lesson ${lessonNumber}`,
+      vimeoId,
+      vimeoName: name,
+      description: video.description ?? null,
+      duration: typeof video.duration === "number" ? video.duration : null,
+      thumbnail: pickThumbnail(video),
+      link: video.link ?? `https://vimeo.com/${vimeoId}`,
+      embedLink: video.player_embed_url ?? null,
+    });
+  }
+
+  return { parsed, unmatched };
 }
