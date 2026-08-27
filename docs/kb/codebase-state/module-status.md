@@ -85,7 +85,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 - Live meeting view — real-time multi-participant sync ([src/components/eos/LiveMeetingView.tsx](../src/components/eos/LiveMeetingView.tsx))
 - Meeting summary (`/eos/meetings/:id/summary`)
 - Quarterly Conversations (`/eos/qc`, `/eos/qc/:id`)
-- Legacy client EOS view (`/client/eos`) — retired page; the protected route now redirects to `/client/home`. The historical client-tagged-item contract remains documented in `docs/eos/phase-6.md` pending any future product replacement.
+- Legacy client EOS view (`/client/eos`) — retired page and route. The supported client portal is `/client/home`; the historical client-tagged-item contract remains documented in `docs/eos/phase-6.md` pending any future product replacement.
 - Accountability Chart (inferred from spec, components present in `src/components/eos/`)
 - Hooks: `useEos`, `useEosAgendaTemplates`, `useEosDrafts`, `useEosHeadlines`, `useEosMeetingRecurrences`, `useEosMeetingSegments`, `useEosScorecardEntries`, `useEosScorecardMetrics`, `useMeetingIssues`, `useMeetingRealtime`, `useMeetingTodos`, `useQuarterlyConversations`
 
@@ -154,7 +154,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 **What exists:**
 - `packages`, `package_stages`, `package_stage_instances` schema
 - Admin view (`/admin/manage-packages`, `/admin/package/:id`, `/admin/package/:id/tenant/:tenantId`)
-- Tenant view (`/manage-packages`, `/package/:id`) — legacy route retained pending explicit retirement/redirect decision
+- Tenant view (`/manage-packages`) — the legacy `/package/:id` route is retired; shared package detail remains available through active admin routes.
 - Stages management (`/manage-stages`)
 - `add-missing-packages` edge function — ensures default packages per tenant
 - **Duplicate-package guard (`1ce4b026`, 2026-04-23)** — `start_client_package` RPC now refuses to add a package of the same regulatory stream (RTO / CRICOS / GTO / generic) a tenant already has. New helper `fn_package_stream(p_package_id)` derives the stream from the package name/slug. Migration: `supabase/migrations/20260423093423_781c87e1-…sql`.

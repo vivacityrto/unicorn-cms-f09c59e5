@@ -12,8 +12,8 @@ Remove only routes and components proven to have no supported runtime, API, docu
 ## Decisions and evidence (2026-08-27)
 
 - **`PackageDetail.tsx`: retain.** PR #413 deleted the file after classifying the legacy `/package/:id` route as unreachable, but `AdminPackageDetailWrapper.tsx` and `AdminPackageTenantDetail.tsx` still import the shared component for active `/admin/package/:id...` routes. PR #416 restored it after the deletion broke module resolution.
-- **`/package/:id`: defer retirement.** It has no confirmed in-app navigation, but its route and feature history are documented. Do not remove it until bookmark/operational use and an intentional redirect destination are confirmed.
-- **`/client/eos`: retain compatibility, not its obsolete component implementation.** The original page remains removed, but the route now redirects to the supported, protected `/client/home` client portal route so old links no longer fail with Not Found.
+- **`/package/:id`: retire.** It has no confirmed in-app navigation, the route was already returning 404 in the live SuperAdmin check, and its shared `PackageDetail.tsx` implementation is still used by active admin routes and therefore remains.
+- **`/client/eos`: retire completely.** The old page and its sole-consumer components were already removed; the remaining compatibility redirect is now removed as requested. The supported client portal is `/client/home`.
 - **Security fixes included in this branch:** block IPv4-mapped IPv6 URL literals in the Firecrawl validator and bind SharePoint sharing URLs to the tenant's configured shared/root folder ancestry, not merely the same drive.
 
 ## Verification recorded
@@ -40,5 +40,5 @@ Remove only routes and components proven to have no supported runtime, API, docu
 
 ## Known adjacent open findings
 
-- `/client/eos` is currently absent after PR #413 and has documented client-facing semantics. It must be restored or redirected before it can be considered intentionally retired.
+- `/client/eos` and `/package/:id` are intentionally absent after explicit retirement; the route inventory and current EOS/package documentation now record that decision.
 - The `safe-fetch-url` IPv4-mapped IPv6 SSRF bypass and SharePoint same-drive/root-scoping gap are unrelated security fixes; do not mix them into a route-removal commit unless explicitly scoped and separately tested.

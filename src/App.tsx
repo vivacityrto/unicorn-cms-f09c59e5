@@ -1190,8 +1190,6 @@ const App = () => (
             
             {/* Client Portal Routes (isolated ClientLayout) */}
             <Route path="/client/home" element={<ProtectedRoute><ClientHomeWrapperNew /></ProtectedRoute>} />
-            {/* Retain compatibility for client bookmarks after retiring the old EOS-only view. */}
-            <Route path="/client/eos" element={<ProtectedRoute><Navigate to="/client/home" replace /></ProtectedRoute>} />
             <Route path="/client/inbox" element={<ProtectedRoute><ClientInboxWrapperNew /></ProtectedRoute>} />
             <Route path="/client/tasks" element={<ProtectedRoute><ClientTasksWrapperNew /></ProtectedRoute>} />
             <Route path="/client/packages" element={<ProtectedRoute><ClientPackagesWrapperNew /></ProtectedRoute>} />
