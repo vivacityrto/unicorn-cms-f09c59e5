@@ -228,7 +228,6 @@ const AcademyCertificatesPage = lazy(() => import("./pages/academy/AcademyCertif
 const AcademyWorkbooksPage = lazy(() => import("./pages/academy/AcademyWorkbooksPage"));
 const AcademyEvents = lazy(() => import("./pages/academy/AcademyEvents"));
 const AcademyCommunity = lazy(() => import("./pages/academy/AcademyCommunity"));
-const AcademyTeam = lazy(() => import("./pages/academy/AcademyTeam"));
 const AcademyProfileWrapperNew = lazy(() => import("./pages/client/AcademyProfileWrapper"));
 const AcademyPdpPage = lazy(() => import("./pages/academy/pdp"));
 const AcademyPdpCyclePage = lazy(() => import("./pages/academy/pdp/cycle/[cycleId]"));
@@ -1180,7 +1179,6 @@ const App = () => (
             <Route path="/academy/workbooks" element={<ProtectedRoute><AcademyWorkbooksPage /></ProtectedRoute>} />
             <Route path="/academy/events" element={<ProtectedRoute><AcademyEvents /></ProtectedRoute>} />
             <Route path="/academy/community" element={<ProtectedRoute><AcademyCommunity /></ProtectedRoute>} />
-            <Route path="/academy/team" element={<ProtectedRoute><AcademyTeam /></ProtectedRoute>} />
             <Route path="/academy/profile" element={<ProtectedRoute><AcademyProfileWrapperNew /></ProtectedRoute>} />
             <Route path="/academy/pdp" element={<ProtectedRoute><AcademyPdpPage /></ProtectedRoute>} />
             <Route path="/academy/pdp/reviews" element={<ProtectedRoute><AcademyPdpReviewsPage /></ProtectedRoute>} />

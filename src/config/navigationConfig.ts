@@ -104,38 +104,6 @@ export const complianceFooterLinks = [
 // Training-focused navigation for Academy-only customers
 // =============================================================================
 
-// Base Academy menu (for all tiers)
-export const academyMenuSections: MenuSection[] = [
-  {
-    key: "main",
-    title: "Learning",
-    items: [
-      { icon: LayoutDashboard, label: "Academy Dashboard", path: "/academy" },
-      { icon: BookOpen, label: "My Courses", path: "/academy/courses" },
-      { icon: ClipboardList, label: "My PDP", path: "/academy/pdp", activeColor: "#44235F" },
-      { icon: Award, label: "Certificates", path: "/academy/certificates" },
-      { icon: Calendar, label: "Events", path: "/academy/events" },
-      { icon: MessageSquare, label: "Community", path: "/academy/community" },
-    ],
-  },
-  {
-    key: "account",
-    title: "Account",
-    items: [
-      { icon: User, label: "Profile", path: "/settings" },
-    ],
-  },
-];
-
-// Team Members section (only for Team and Elite tiers)
-export const academyTeamSection: MenuSection = {
-  key: "team",
-  title: "Team",
-  items: [
-    { icon: Users, label: "Team Members", path: "/academy/team" },
-  ],
-};
-
 // Academy footer links
 export const academyFooterLinks = [
   {
