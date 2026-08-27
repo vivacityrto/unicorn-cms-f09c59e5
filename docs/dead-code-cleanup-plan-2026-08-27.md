@@ -20,6 +20,7 @@ Measured as `git ls-files 'src/**' 'supabase/functions/**'` file count, and tota
 | After Batch 6 (8 orphaned Executive Dashboard widgets) | 1,961 | 530,501 | −769 | −8 |
 | After Batch 7 (document/Excel/release-readiness cluster + BulkGenerateDialog) | 1,947 | 526,279 | −4,222 | −14 |
 | After Batch 8 (client-portal component cluster + orphaned client pages) | 1,932 | 523,438 | −2,841 | −15 |
+| After Batch 9 (8 orphaned tenant-panel components) | 1,924 | 521,604 | −1,834 | −8 |
 
 *Note: the very first baseline reading quoted 538,436 lines via a slightly different counting method (`cat`-concatenation through `xargs`, which double-counted some files due to arg-splitting). The `git archive`-based figure above (538,400) is the corrected, consistent baseline used for all progression tracking from here on.*
 
@@ -27,15 +28,15 @@ Measured as `git ls-files 'src/**' 'supabase/functions/**'` file count, and tota
 
 | Batch | Scope | Files | Status | PR |
 |---|---|---:|---|---|
-| 1 | Retired edge-function 410 stubs (§2.35) | 7 | ✅ Done | #TBD |
-| 2 | Unused shadcn/ui scaffold primitives (§2.27) | 17 | ✅ Done | #TBD |
-| 3 | Orphaned barrel/index files (§2.6) | 2 | ✅ Done | #TBD |
-| 4 | Unused data-layer hooks (§2.30) | 12 | ✅ Done | #TBD |
-| 5 | Orphaned EOS review-pane cluster (§2.14) | 18 (see note) | ✅ Done | #TBD |
-| 6 | Orphaned Executive dashboard widgets (§2.15) | 8 | ✅ Done | #TBD |
-| 7 | Document/Excel/release-readiness cluster (§2.12–2.13) | 14 | ✅ Done | #TBD |
-| 8 | Client-portal component cluster (§2.5, §2.7, §2.29) | 15 | ✅ Done | #TBD |
-| 9 | Tenant-panel cluster (§2.26) — needs §3 sign-off on `StageHealthPanel.tsx` first | 8 | 🔲 Not started | — |
+| 1 | Retired edge-function 410 stubs (§2.35) | 7 | ✅ Done | [#424](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/424) |
+| 2 | Unused shadcn/ui scaffold primitives (§2.27) | 17 | ✅ Done | [#425](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/425) |
+| 3 | Orphaned barrel/index files (§2.6) | 2 | ✅ Done | [#426](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/426) |
+| 4 | Unused data-layer hooks (§2.30) | 12 | ✅ Done | [#427](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/427) |
+| 5 | Orphaned EOS review-pane cluster (§2.14) | 18 (see note) | ✅ Done | [#428](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/428) |
+| 6 | Orphaned Executive dashboard widgets (§2.15) | 8 | ✅ Done | [#429](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/429) |
+| 7 | Document/Excel/release-readiness cluster (§2.12–2.13) | 14 | ✅ Done | [#430](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/430) |
+| 8 | Client-portal component cluster (§2.5, §2.7, §2.29) | 15 | ✅ Done | [#431](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/431) |
+| 9 | Tenant-panel cluster (§2.26) | 8 | ✅ Done | [#432](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/432) |
 | 10 | KPI reviewer-admin cluster + remaining dead pages (§2.18, §2.29) | 8 | 🔲 Not started | — |
 | 11 | Remaining single-file/small-cluster components (grab-bag) | ~45 | 🔲 Not started | — |
 | 12 | PDP superseded components + lib/utils/integrations (§2.31–2.34) | 9 | 🔲 Not started | — |
@@ -524,3 +525,4 @@ This section is the checklist for the **execution + Playwright-verification pass
 - **2026-08-27:** Batch 6 shipped — 8 orphaned Executive Dashboard widgets deleted (AIResearchActivityWidget, ClientHealthMatrix, ConsultantDistributionTable, ExecutiveKpiStrip, PriorityQueueTable, SignalsPanel, SystemHealthBlock, WatchlistPanel). Independently re-verified `SignalsPanel` isn't confused with the live `AlignmentSignalsPanel.tsx` before deleting. `npm run build` clean; `npx vitest run` 282 passed / 15 skipped / 0 failed. Playwright: `/executive` still renders its full ~20-widget tree with no missing-import errors (only the pre-existing, unrelated `query-knowledge-graph` CORS error).
 - **2026-08-27:** Batch 7 shipped — the abandoned "document release readiness" sub-feature plus the superseded top-level bulk-generate dialog, 14 files: AIAnalysisSummaryCard, BulkUploadAISummary, DocFileExtractedFields, DocumentLibraryBrowser, DocumentScanStatus, DocumentStageUsagePanel, DocumentVersionHistory, ExcelDataSourcesTab, ExcelFieldsTab, ReleaseReadinessDialog, ReleaseReviewPanel, StageDeliveryPanel, TenantPacksList, and `documents/bulk-generate/BulkGenerateDialog.tsx`. `npm run build` clean; `npx vitest run` 282 passed / 15 skipped / 0 failed. Playwright: Manage Documents, Manage Stages, and Admin Stage Detail (including its Documents tab, which shares `useExcelBindings`/`useExcelDataSources` with the deleted tab components) all zero console errors.
 - **2026-08-27:** Batch 8 shipped — the highest user-facing-risk batch. Deleted the orphaned client-portal component cluster (ActivityTimeline, AttentionPanel, ClientActionPlanSection, ClientDocumentsTab, ClientNotesTab, ClientPackageBadges, ClientProgressSummary, ClientSharePointDocumentsTab, ClientTimeWidget, ConsultantAssignmentCard, TimelineExportDialog), `client-portal/ClientAICompanionPanel.tsx`, and the 3 orphaned Suggestions pages (ClientNewSuggestionWrapper, ClientSuggestionDetailWrapper, ClientSuggestionsWrapper) — confirmed zero route references anywhere in App.tsx before deleting. Independently confirmed `src/hooks/useClientActivityTimeline.ts` (live, used by `CompliancePulseBanner.tsx`) was untouched — only the dead `ActivityTimeline.tsx` component was removed. `npm run build` clean; `npx vitest run` 282 passed / 15 skipped / 0 failed. Playwright: exhaustive client-portal sweep as the demo client — Home, Support Tickets, Tasks, Packages, Files, Governance Documents, Users, Staff PDPs, Academy Activity — 9 pages, zero errors traceable to the deletion (one pre-existing local-dev CORS error on Files, same signature seen in earlier batches, unrelated).
+- **2026-08-27:** Batch 9 — before touching this batch, resolved the §3 caution about `TenantStageHealthSummary.tsx`'s `health_status`-derivation logic: confirmed `supabase/functions/run-stage-health-monitor/index.ts` is a real, live edge function that independently implements the exact same rules (overdue tasks, high-risk count, mandatory evidence gaps, days-since-activity) and writes `health_status` to `stage_health_snapshots` server-side. The KB doc's `dashboard-overhaul-mockup.md` citation of `StageHealthPanel.tsx`/`TenantStageHealthSummary.tsx` was just a human-readable reference for explaining the algorithm, not the actual source of truth — safe to delete without porting anything. (Note: `StageHealthPanel.tsx` itself is a separate §3 item, not part of this batch's file list, and remains parked.) Shipped: deleted the 8-file orphaned tenant-panel cluster (AuditIntelligencePackPanel, PublicComplianceSnapshotPanel, TenantBurnForecastPanel, TenantCommercialHealthPanel, TenantPlaybooksPanel, TenantRiskForecastPanel, TenantRiskProfilePanel, TenantStageHealthSummary). `npm run build` clean; `npx vitest run` 282 passed / 15 skipped / 0 failed. Playwright: `/tenant/:tenantId` (`ClientDetailWrapper`) renders fully with zero console errors.
