@@ -103,7 +103,6 @@ QueryClientProvider        — react-query cache
 - EosOverview, EosRocks, EosIssues, EosTodos, EosTodos, EosMeetings, EosMeetingSummary
 - EosScorecard, EosVto, EosCalendar
 - EosQC, EosQCSession
-- ClientEosOverview
 
 **Audits**
 - Audits
