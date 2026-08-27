@@ -34,6 +34,10 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
   const attendance = Array.isArray(summary.attendance) ? summary.attendance : [];
   const segueShares = Array.isArray(summary.segue_shares) ? summary.segue_shares : [];
   const onePhraseCloses = Array.isArray(summary.one_phrase_closes) ? summary.one_phrase_closes : [];
+  // Pre-One-Phrase-Close summaries (before 25 Aug 2026) still hold cascade
+  // text in this column — it's intentionally kept in the schema for
+  // historical summaries, so render it as a fallback rather than dropping it.
+  const cascades = Array.isArray(summary.cascades) ? summary.cascades : [];
 
   const solvedIssues = issues.filter((i: any) => i.status === 'Solved');
   const unsolvedIssues = issues.filter((i: any) => i.status !== 'Solved');
@@ -302,6 +306,24 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
                   </div>
                 );
               })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cascade Messages — legacy summaries recorded before One Phrase Close replaced this section */}
+      {onePhraseCloses.length === 0 && cascades.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Cascade Messages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {cascades.map((cascade: any, index: number) => (
+                <div key={index} className="p-3 bg-muted/50 rounded">
+                  <p className="text-sm">{cascade.message || cascade}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
