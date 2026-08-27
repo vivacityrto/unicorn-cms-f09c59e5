@@ -22,7 +22,7 @@ Measured via `git ls-files 'src/**' 'supabase/functions/**' | xargs cat | wc -l`
 | Batch | Scope | Files | Status | PR |
 |---|---|---:|---|---|
 | 1 | Retired edge-function 410 stubs (§2.35) | 7 | ✅ Done | #TBD |
-| 2 | Unused shadcn/ui scaffold primitives (§2.27) | 17 | 🔲 Not started | — |
+| 2 | Unused shadcn/ui scaffold primitives (§2.27) | 17 | ✅ Done | #TBD |
 | 3 | Orphaned barrel/index files (§2.6) | 2 | 🔲 Not started | — |
 | 4 | Unused data-layer hooks (§2.30) | 12 | 🔲 Not started | — |
 | 5 | Orphaned EOS review-pane cluster (§2.14) | 19 | 🔲 Not started | — |
@@ -510,4 +510,5 @@ This section is the checklist for the **execution + Playwright-verification pass
 *Updated as each batch ships.*
 
 - **2026-08-27:** Plan authored (this doc). Baseline LOC captured. Starting Batch 1.
-- **2026-08-27:** Batch 1 shipped — 7 retired edge-function stubs deleted (`create-session`, `create-session-v2`, `auth-send-magic-link`, `admin-reset-user`, `auth-generate-password-reset`, `schedule-task-reminders`, `tmp-backfill-sharepoint-drive-ids`) plus their stale `supabase/config.toml` stanzas. Independently re-verified each retirement marker and zero-caller status before deleting. `npm run build` clean. **Note:** these were already deployed as HTTP 410 stubs in production Supabase — deleting the source here does not undeploy them; if Carl wants them fully removed from the live Supabase project (not just the repo), that's a separate manual step via the Supabase dashboard, since no MCP tool here can delete a deployed edge function.
+- **2026-08-27:** Batch 1 shipped — 7 retired edge-function stubs deleted (`create-session`, `create-session-v2`, `auth-send-magic-link`, `admin-reset-user`, `auth-generate-password-reset`, `schedule-task-reminders`, `tmp-backfill-sharepoint-drive-ids`) plus their stale `supabase/config.toml` stanzas. Independently re-verified each retirement marker and zero-caller status before deleting. `npm run build` clean. **Note:** these were already deployed as HTTP 410 stubs in production Supabase — deleting the source here does not undeploy them; if Carl wants them fully removed from the live Supabase project (not just the repo), that's a separate manual step via the Supabase dashboard, since no MCP tool here can delete a deployed edge function. PR #424 merged; Carl manually deleted all 7 from the Supabase dashboard same day — verified gone via `list_edge_functions` (213 functions remaining, none of the 7 present).
+- **2026-08-27:** Batch 2 shipped — 17 unused shadcn/ui scaffold primitives deleted (achievement-badge, animated-tabs, aspect-ratio, breadcrumb, carousel, chart, context-menu, data-table-empty, error-display, forms barrel, input-otp, menubar, navigation-menu, print, sidebar, stage-steps, use-toast). Independently re-verified zero importers (aliased + relative import forms, ruled out substring false-positives). `npm run build` clean; `npx vitest run` 282 passed / 15 skipped / 0 failed.
