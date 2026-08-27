@@ -238,7 +238,14 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
           tenant_id: tenantId,
           unicorn_role: promoteRole === 'primary_contact' || promoteRole === 'secondary_contact' ? 'Admin' : 'User',
           relationship_role: promoteRole,
-          skip_email: true,
+          // Send a real invitation email rather than creating the account
+          // directly — skip_email:true left promoted contacts as unusable
+          // "ghost" accounts with no way to set a password (client callers
+          // can't reach the staff-only activate-ghost-user function). The
+          // matching tenant_contacts row is archived and linked to the new
+          // user automatically by accept_invitation_v2 once they accept —
+          // not here, since no user exists yet at send time.
+          skip_email: false,
           job_title: null,
         },
       });
@@ -261,15 +268,7 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
         return;
       }
 
-      const { error: markError } = await supabase.rpc('mark_tenant_contact_promoted', {
-        p_contact_id: promotingContact.id,
-        p_user_id: data.user_uuid,
-      });
-      if (markError) {
-        console.error('mark_tenant_contact_promoted error:', markError);
-      }
-
-      toast.success(`${promotingContact.first_name} promoted to a user on ${tenantName}`);
+      toast.success(`Invitation sent to ${promotingContact.email} — they'll move to Users once they accept.`);
       invalidateCapacity(tenantId);
       setPromotingContact(null);
       fetchContacts();
@@ -467,8 +466,8 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
           <DialogHeader>
             <DialogTitle>Promote to User</DialogTitle>
             <DialogDescription>
-              {promotingContact?.first_name} will be created as a Unicorn user on {tenantName} and will use up one
-              seat, subject to the plan's user limit.
+              {promotingContact?.first_name} will be sent an email to set up their Unicorn login on {tenantName}.
+              This reserves one seat now, subject to the plan's user limit.
             </DialogDescription>
           </DialogHeader>
           <div>
