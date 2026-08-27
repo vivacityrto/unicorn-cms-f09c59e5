@@ -64,4 +64,10 @@ describe("F-027: get-sharepoint-parent-folder tenant binding", () => {
     const parentFetchIdx = src.indexOf("Step 1: fetch the item");
     assert.ok(bindIdx >= 0 && parentFetchIdx > bindIdx, "tenant/drive binding must be validated before fetching parent metadata");
   });
+
+  it("binds the resolved item to the tenant root even when tenants share a drive", () => {
+    assert.match(src, /select\("drive_id, root_item_id, shared_folder_item_id"\)/);
+    assert.match(src, /const tenantRootId = spSettings\.shared_folder_item_id \?\? spSettings\.root_item_id/);
+    assert.match(src, /isDriveItemWithinRoot\(/);
+  });
 });

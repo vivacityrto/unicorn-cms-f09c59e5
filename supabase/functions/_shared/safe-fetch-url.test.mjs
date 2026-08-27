@@ -35,6 +35,7 @@ describe("validateExternalScrapeUrl", () => {
   it("rejects localhost", () => {
     assert.equal(validateExternalScrapeUrl("https://localhost/").ok, false);
     assert.equal(validateExternalScrapeUrl("https://foo.localhost/").ok, false);
+    assert.equal(validateExternalScrapeUrl("https://localhost./").ok, false);
   });
 
   it("rejects loopback and private IPv4 literals", () => {
@@ -51,12 +52,19 @@ describe("validateExternalScrapeUrl", () => {
 
   it("rejects the cloud metadata hostname", () => {
     assert.equal(validateExternalScrapeUrl("https://metadata.google.internal/").ok, false);
+    assert.equal(validateExternalScrapeUrl("https://metadata.google.internal./").ok, false);
   });
 
   it("rejects IPv6 loopback and link-local/unique-local literals", () => {
     assert.equal(validateExternalScrapeUrl("https://[::1]/").ok, false);
     assert.equal(validateExternalScrapeUrl("https://[fe80::1]/").ok, false);
     assert.equal(validateExternalScrapeUrl("https://[fd00::1]/").ok, false);
+  });
+
+  it("rejects IPv4-mapped IPv6 literals", () => {
+    for (const host of ["::ffff:127.0.0.1", "::ffff:10.1.2.3", "::ffff:169.254.169.254"]) {
+      assert.equal(validateExternalScrapeUrl(`https://[${host}]/`).ok, false, `expected ${host} to be rejected`);
+    }
   });
 
   it("accepts a public IPv4 literal", () => {

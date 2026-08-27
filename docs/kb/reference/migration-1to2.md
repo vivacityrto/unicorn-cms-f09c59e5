@@ -127,7 +127,7 @@ These didn't exist in any legacy system — they're pure additions.
 | **EOS Level 10 Meeting module** | `/eos/*` — flagship feature |
 | Real-time live meeting sync | `useMeetingRealtime` + Supabase channels |
 | Quarterly Conversations workflow | `/eos/qc`, `/eos/qc/:id` |
-| Client-facing EOS view | `/client/eos` — client RTOs see their tagged Rocks/Issues |
+| Client-facing EOS view | Retired historical `/client/eos` surface; the supported client portal is `/client/home` |
 | training.gov.au org lookup | `search-organisations`, `get-organisation-details` |
 | Compliance audit workspace | `/audits/*` |
 | AI suggestion hooks | `ai-generate-suggestions`, `useAISuggestions` |

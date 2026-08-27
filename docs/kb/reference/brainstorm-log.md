@@ -174,10 +174,10 @@ All KB files have been corrected to use `6372`.
 
 ### [April 2026] — Client portal architecture
 
-**Topic:** Is `/client/eos` a one-off or the start of a dedicated client surface?
+**Topic:** Historical decision: was `/client/eos` a one-off or the start of a dedicated client surface?
 
 **Raw thinking:**
-- Currently one client-only route (`/client/eos`). Elsewhere, client access is via role-filtered views of admin routes (e.g. `/tenant/:id/documents` with RLS doing the lifting).
+- Historical note: `/client/eos` was the proposed client-only route. It is now retired; client access is provided through supported portal routes such as `/client/home` and role-filtered views where applicable.
 - Two paths:
   1. **Dedicated client surface** — `/client/*` routes that look and feel different from the admin app. Pro: cleaner UX for clients. Con: more to build and maintain.
   2. **Single app, role-aware** — one React app, rendering differs by role. Pro: less duplication. Con: easier to leak admin UX to clients.

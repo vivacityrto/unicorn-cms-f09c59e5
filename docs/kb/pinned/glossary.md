@@ -24,7 +24,7 @@ EOS is the business operating methodology from Gino Wickman's book *Traction*. U
 | **Accountability Chart** | The EOS alternative to an org chart — defines roles and their seats, not people. |
 | **Quarterly Conversation (QC)** | 1:1 between a manager and direct report; structured 5-question format; sets up the next quarter's Rocks. See `/eos/qc`. |
 | **Same Page Meeting** | Quarterly leadership alignment meeting (not yet a distinct surface in Unicorn 2.0 — may be subsumed by QC). |
-| **Client-tagged** | Rock or Issue that's owned in service of a specific client RTO. Appears in `/client/eos` for that tenant. |
+| **Client-tagged** | Rock or Issue that's owned in service of a specific client RTO. The former `/client/eos` presentation is retired. |
 | **Headlines** | Short positive updates shared in a Level 10 (Customer Headlines, Employee Headlines). |
 
 ---

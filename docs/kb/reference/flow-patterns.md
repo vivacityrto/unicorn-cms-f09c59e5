@@ -120,7 +120,7 @@ Hook: [src/hooks/useQuarterlyConversations.ts](../src/hooks/useQuarterlyConversa
 
 ### Rocks
 
-Quarterly priorities. Can be tagged `company`, `team`, or `client_id` (scoped to a tenant's relationship). Client-tagged Rocks appear in `/client/eos` for that client.
+Quarterly priorities. Can be tagged `company`, `team`, or `client_id` (scoped to a tenant's relationship). Client-tagged Rocks are a historical EOS contract; the retired `/client/eos` surface is not an active client portal.
 
 ---
 

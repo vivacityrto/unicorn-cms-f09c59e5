@@ -24,7 +24,9 @@ function stripBrackets(hostname: string): string {
 }
 
 function isDisallowedHost(rawHostname: string): boolean {
-  const hostname = stripBrackets(rawHostname.toLowerCase());
+  // A terminal DNS root dot is equivalent to the bare hostname. Normalize
+  // terminal dots before comparing blocklist values.
+  const hostname = stripBrackets(rawHostname.toLowerCase()).replace(/\.+$/, "");
 
   if (hostname === "localhost" || hostname.endsWith(".localhost")) return true;
   if (hostname === "metadata.google.internal") return true;
@@ -47,6 +49,11 @@ function isDisallowedHost(rawHostname: string): boolean {
 
   // IPv6 literal
   if (hostname === "::1" || hostname === "::") return true;
+  // IPv4-mapped IPv6 literals can encode loopback, RFC1918, or metadata
+  // IPv4 addresses (for example ::ffff:127.0.0.1). URL normalisation may
+  // render the IPv4 portion in hex, so reject the entire mapped range rather
+  // than trying to reconstruct an IPv4 string from its representation.
+  if (hostname.startsWith("::ffff:")) return true;
   if (hostname.startsWith("fe80")) return true; // link-local
   if (hostname.startsWith("fc") || hostname.startsWith("fd")) return true; // unique local (fc00::/7)
 
@@ -86,8 +93,8 @@ export function validateExternalScrapeUrl(
     return { ok: false, error: "URL resolves to a blocked or private host" };
   }
   if (opts?.requireHostSuffix) {
-    const suffix = opts.requireHostSuffix.toLowerCase();
-    const hostname = parsed.hostname.toLowerCase();
+    const suffix = opts.requireHostSuffix.toLowerCase().replace(/\.+$/, "");
+    const hostname = stripBrackets(parsed.hostname.toLowerCase()).replace(/\.+$/, "");
     if (hostname !== suffix && !hostname.endsWith(`.${suffix}`)) {
       return { ok: false, error: `URL must be a ${opts.requireHostSuffix} address` };
     }

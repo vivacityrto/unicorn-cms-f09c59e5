@@ -1,8 +1,8 @@
 # Route Inventory by Role
 
-> **Last updated:** 2026-08-26 (full mechanical regeneration — see [F-024](../../audit-report-2026-08-26.md) in the RBAC/security remediation audit) · **Reconsider by:** 2026-10-26 — routes churn fast; re-derive rather than trust this list once stale.
+> **Last updated:** 2026-08-28 (full mechanical regeneration after legacy-route retirement) · **Reconsider by:** 2026-10-28 — routes churn fast; re-derive rather than trust this list once stale.
 >
-> **Reflects:** working tree on branch `hotfix/rbac-security-remediation-20260826`, 2026-08-26 (uncommitted at generation time — includes this session's removal of `/client/eos` and `/package/:id`, both confirmed dead code). Last commit that touched `src/App.tsx` before these edits: `b4b2f031`.
+> **Reflects:** cleanup branch `hotfix/dead-code-route-cleanup`, 2026-08-28. The legacy `/client/eos` page and `/package/:id` route are retired; active admin package routes remain.
 >
 > **Methodology:** every `<Route>` in [`src/App.tsx`](../../../src/App.tsx) (**249 total**), extracted mechanically by [`scripts/generate-route-inventory.mjs`](../../../scripts/generate-route-inventory.mjs) — path, rendered component, and guard tier read directly from the JSX, not hand-transcribed. **Re-run that script and paste its output back into the tables below whenever this doc goes stale** — that's the "drift check" F-024 asked for; there's no separate CI job for it yet (nothing enforces re-running it, it's on whoever next relies on this doc to notice the count looks wrong).
 >
@@ -305,7 +305,7 @@ Four guard patterns found in `App.tsx`:
 ## Known open questions from this pass
 
 1. **`/support-tickets` duplicate registration** (new this pass) — `SupportTicketsWrapper` and `SupportTicketsPage` both claim it; the second is dead code. Needs a hotfix to remove the unreachable registration (or confirm intent and rename one).
-2. ~~`/client/eos` and `/package/:id` don't follow their section's naming convention~~ — resolved 2026-08-26: both were orphaned/half-built dead code (no nav link anywhere in the app; `/package/:id`'s only consumer, `PackageDetailWrapper.tsx`, was itself never imported). Both deleted along with their pages and — for `/package/:id` — its broken, non-atomic stage-reorder handler (this was the original F-019 finding; resolved by removal, not by fixing the reorder logic).
+2. **Legacy routes retired** — `/client/eos` and `/package/:id` are intentionally unregistered and return the catch-all 404. The shared `PackageDetail` implementation remains because active `/admin/package/:id...` routes use it.
 3. `/my/kpi` (deprecated v1) is still wired — not removed, just superseded per [`unicorn_app_url`](../../memory/unicorn_app_url.md).
 4. `/client-portal/:tenantId/documents` is `ProtectedRoute`-only (no `requireSuperAdmin`/`allowedRoles`) despite the staff-facing naming — same caution as before, confirm who actually lands on this before relying on this doc's tier bucketing for it specifically. F-001's `isClientAccessibleRoute()` allowlist does NOT include this path, so client roles are denied by the RBAC layer regardless of the route's own `ProtectedRoute`-only guard — see `src/test/rbac/useRBAC.test.ts` and `ProtectedRoute.test.tsx`.
 5. The `requireSuperAdmin` (42) vs `allowedRoles`/`allowVivacityTeam` (13) split is exactly what rbac-v6 Phase 0 needs to work through — which of the 42 hard-SA routes are *intentionally* SA-only (system config, the Role Permission Editor itself) vs. candidates for the Phase 1 permission-based route guard. Not decided here.
