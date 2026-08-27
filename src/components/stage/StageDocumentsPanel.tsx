@@ -15,11 +15,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { 
-  Plus, Trash2, FileText, Upload, Link2, GripVertical, 
+  Plus, Trash2, FileText, Link2, GripVertical,
   Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History, Package, Layers, AlertTriangle, Filter, Pencil
 } from 'lucide-react';
 import { DocumentVersionBadge } from '@/components/document/DocumentVersionBadge';
-import { BulkUploadWithMetadataDialog } from '@/components/document/BulkUploadWithMetadataDialog';
 import { DocumentReadinessBadge } from '@/components/document/DocumentReadinessBadge';
 import { GeneratePackDialog } from '@/components/document/GeneratePackDialog';
 import { DocumentReuseWarningDialog } from '@/components/document/DocumentReuseWarningDialog';
@@ -87,8 +86,6 @@ export function StageDocumentsPanel({
 }: StageDocumentsPanelProps) {
   const { toast } = useToast();
   
-  // Upload dialog state - using new metadata dialog
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [packDialogOpen, setPackDialogOpen] = useState(false);
   
   // Link from library dialog state
@@ -148,12 +145,6 @@ export function StageDocumentsPanel({
     if (formatLower.includes('xls') || formatLower.includes('excel')) return { label: 'Excel', className: 'bg-green-100 text-green-700 border-green-200' };
     if (formatLower.includes('ppt') || formatLower.includes('powerpoint')) return { label: 'PPT', className: 'bg-orange-100 text-orange-700 border-orange-200' };
     return { label: format || 'File', className: 'bg-muted text-muted-foreground' };
-  };
-
-  // Handle bulk upload success
-  const handleBulkUploadSuccess = () => {
-    setUploadDialogOpen(false);
-    onRefresh();
   };
 
   // Fetch stage usage counts for linked documents
@@ -534,20 +525,13 @@ export function StageDocumentsPanel({
                   Generate Pack
                 </Button>
               )}
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => safeAction(openLinkDialog)}
               >
                 <Link2 className="h-3 w-3 mr-1" />
                 Link from Library
-              </Button>
-              <Button 
-                size="sm" 
-                onClick={() => safeAction(() => setUploadDialogOpen(true))}
-              >
-                <Upload className="h-3 w-3 mr-1" />
-                Bulk Upload
               </Button>
             </div>
           </div>
@@ -565,10 +549,6 @@ export function StageDocumentsPanel({
                 <Button variant="outline" size="sm" onClick={() => safeAction(openLinkDialog)}>
                   <Link2 className="h-3 w-3 mr-1" />
                   Link from Library
-                </Button>
-                <Button size="sm" onClick={() => safeAction(() => setUploadDialogOpen(true))}>
-                  <Upload className="h-3 w-3 mr-1" />
-                  Upload Documents
                 </Button>
               </div>
             </div>
@@ -739,14 +719,6 @@ export function StageDocumentsPanel({
           )}
         </CardContent>
       </Card>
-
-      {/* Bulk Upload Dialog with Metadata */}
-      <BulkUploadWithMetadataDialog
-        open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
-        onSuccess={handleBulkUploadSuccess}
-        stageId={stageId}
-      />
 
       {/* Link from Library Dialog */}
       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>

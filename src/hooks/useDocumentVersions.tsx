@@ -39,18 +39,6 @@ export interface DocumentStageUsage {
   pinned_version_number: number | null;
 }
 
-export interface BulkUploadDocument {
-  title: string;
-  description?: string;
-  storage_path: string;
-  file_name: string;
-  mime_type?: string;
-  file_size?: number;
-  category?: string;
-  standard_set?: string;
-  standard_refs?: string[];
-}
-
 export function useDocumentVersions(documentId?: number) {
   const { toast } = useToast();
   const [versions, setVersions] = useState<DocumentVersion[]>([]);
@@ -176,64 +164,4 @@ export function useDocumentStageUsage(documentId?: number) {
   }, [fetchUsage]);
 
   return { usage, loading, refetch: fetchUsage };
-}
-
-export function useBulkDocumentUpload() {
-  const { toast } = useToast();
-  const [uploading, setUploading] = useState(false);
-
-  const uploadDocuments = async (
-    documents: BulkUploadDocument[],
-    options: {
-      category?: string;
-      standardSet?: string;
-      standardRefs?: string[];
-      autoPublish?: boolean;
-    } = {}
-  ): Promise<{ document_id: number; version_id: string; title: string }[]> => {
-    setUploading(true);
-    try {
-      const payload = documents.map(doc => ({
-        title: doc.title,
-        description: doc.description || '',
-        storage_path: doc.storage_path,
-        file_name: doc.file_name,
-        mime_type: doc.mime_type || null,
-        file_size: doc.file_size || null,
-        category: doc.category || options.category || null,
-        standard_set: doc.standard_set || options.standardSet || null,
-        standard_refs: doc.standard_refs || options.standardRefs || null
-      }));
-
-      const { data, error } = await supabase.rpc('bulk_create_documents_with_versions', {
-        p_documents: payload,
-        p_category: options.category || null,
-        p_standard_set: options.standardSet || null,
-        p_standard_refs: options.standardRefs || null,
-        p_auto_publish: options.autoPublish || false
-      });
-
-      if (error) throw error;
-
-      const results = data as { document_id: number; version_id: string; title: string }[];
-      
-      toast({
-        title: 'Upload Complete',
-        description: `${results.length} document${results.length !== 1 ? 's' : ''} created successfully`
-      });
-
-      return results;
-    } catch (error: any) {
-      toast({
-        title: 'Upload Failed',
-        description: error.message || 'Failed to create documents',
-        variant: 'destructive'
-      });
-      return [];
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return { uploadDocuments, uploading };
 }
