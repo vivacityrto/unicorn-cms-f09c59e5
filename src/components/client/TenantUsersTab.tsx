@@ -55,6 +55,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  ArrowLeftRight,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -151,6 +152,9 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<TenantMemberInfo | null>(null);
+  const [userToSwap, setUserToSwap] = useState<TenantMemberInfo | null>(null);
+  const [swapping, setSwapping] = useState(false);
+  const [contactsRefreshKey, setContactsRefreshKey] = useState(0);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const [updatingPositionType, setUpdatingPositionType] = useState<string | null>(null);
   const [ghostUserIds, setGhostUserIds] = useState<Set<string>>(new Set());
@@ -658,6 +662,29 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       toast.error('Failed to remove user');
     } finally {
       setUserToRemove(null);
+    }
+  };
+
+  const handleSwapToContact = async () => {
+    if (!userToSwap) return;
+    setSwapping(true);
+    try {
+      const { error } = await supabase.rpc('swap_tenant_user_to_contact', {
+        p_tenant_id: tenantId,
+        p_user_id: userToSwap.user_id,
+      });
+      if (error) throw error;
+
+      setMembers((prev) => prev.filter((m) => m.user_id !== userToSwap.user_id));
+      invalidateCapacity(tenantId);
+      setContactsRefreshKey((k) => k + 1);
+      toast.success(`${userToSwap.users?.first_name || 'User'} swapped to the contact list`);
+    } catch (error) {
+      console.error('swap_tenant_user_to_contact error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to swap user to contact');
+    } finally {
+      setSwapping(false);
+      setUserToSwap(null);
     }
   };
 
@@ -1282,6 +1309,10 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                             {member.user_id !== profile?.user_uuid && (
                               <>
                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setUserToSwap(member)}>
+                                  <ArrowLeftRight className="h-4 w-4 mr-2" />
+                                  Swap to Contact
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-destructive"
                                   onClick={() => setUserToRemove(member)}
@@ -1304,6 +1335,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       </Card>
 
       <TenantContactsSection
+        key={contactsRefreshKey}
         tenantId={tenantId}
         tenantName={tenantName}
         canManage={canManageUsers}
@@ -1506,6 +1538,32 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Swap to Contact Confirmation */}
+      <AlertDialog open={!!userToSwap} onOpenChange={(open) => !open && !swapping && setUserToSwap(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Swap to Contact</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{userToSwap?.users?.first_name} {userToSwap?.users?.last_name}</strong> will lose their
+              Unicorn login and seat, and be moved to the contact list instead — their name, email, and position
+              type are kept on file so they can be promoted back to a user later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={swapping}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={swapping}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleSwapToContact();
+              }}
+            >
+              {swapping ? 'Swapping…' : 'Swap to Contact'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

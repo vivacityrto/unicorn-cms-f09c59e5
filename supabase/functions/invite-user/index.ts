@@ -158,9 +158,13 @@ serve(async (req) => {
     // Vivacity staff bypass entirely.
     async function assertCapacity(): Promise<Response | null> {
       if (isVivacityStaff || isSuperAdmin) return null;
+      // p_caller_id is required here: this client is service-role
+      // authenticated (no session JWT), so auth.uid() inside the RPC
+      // would resolve to NULL and has_tenant_access_safe would always
+      // fail for a real (non-staff) caller.
       const { data: capRows, error: capErr } = await supabase.rpc(
         'get_tenant_user_capacity',
-        { p_tenant_id: payload.tenant_id },
+        { p_tenant_id: payload.tenant_id, p_caller_id: callerUser.user.id },
       );
       if (capErr) {
         console.error('[capacity] rpc error:', capErr);
