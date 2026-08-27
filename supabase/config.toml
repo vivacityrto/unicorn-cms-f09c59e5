@@ -107,11 +107,6 @@ verify_jwt = false
 [functions.send-self-password-reset]
 verify_jwt = false
 
-# Retired duplicate of send-self-password-reset (no in-repo callers).
-# Deployed as HTTP 410 FUNCTION_RETIRED stub; verify_jwt=false matches production.
-[functions.auth-generate-password-reset]
-verify_jwt = false
-
 [functions.bulk-user-action]
 verify_jwt = false
 
@@ -396,17 +391,6 @@ verify_jwt = false
 [functions.summarize-daily-notes]
 verify_jwt = false
 
-[functions.create-session]
-verify_jwt = false
-
-[functions.create-session-v2]
-verify_jwt = false
-
-# Retired unauthenticated magic-link orphan (410 stub). verify_jwt false matches
-# project convention; neutralization is in-function (same as create-session / C1).
-[functions.auth-send-magic-link]
-verify_jwt = false
-
 # Gated magic-link / recovery sender (self-service or admin.team_users.manage full).
 # Auth handled in-function; gateway verify_jwt alone accepts the public anon key.
 [functions.send-magic-link]
@@ -421,12 +405,6 @@ verify_jwt = true
 # are never taken from the request body; verify links use APP_BASE_URL + token.
 [functions.send-email]
 verify_jwt = true
-
-# Retired orphaned admin password-reset sender (410 stub). verify_jwt false matches
-# project convention; neutralization is in-function (same as auth-send-magic-link / C1).
-# Survivor: generate-recovery-link.
-[functions.admin-reset-user]
-verify_jwt = false
 
 # Historical / still-hosted orphan. Handles auth in-function; verify_jwt matches production.
 # H2: redirectTo pinned to APP_BASE_URL; caller gated via check_permission + disabled.
@@ -475,16 +453,6 @@ verify_jwt = false
 # bearer token is verified via supabase.auth.getUser(), then gated on
 # admin.invites.manage (full) or has_tenant_admin_safe for the target tenant.
 [functions.invite-to-tenant]
-verify_jwt = false
-
-# Retired 2026-08-18 (docs/audit-log/entries/2026-08-17-schedule-task-reminders-cron-auth.md):
-# no confirmed caller was ever found (repo, git history, cron, DB
-# triggers/functions, or docs) and its target table held 0 rows in
-# production. Task due-date reminders are handled by generate-notifications
-# (scope tasks_obligations) instead. Briefly gated on isCronAuthorized (v87)
-# before Carl confirmed retirement. Now a 410 stub; verify_jwt is
-# inconsequential but left unchanged.
-[functions.schedule-task-reminders]
 verify_jwt = false
 
 # Edge-function-drift-audit A2 capture (2026-08-17). Auth is in-function:
