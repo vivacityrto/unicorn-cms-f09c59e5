@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
-import { useTenantType } from "@/contexts/TenantTypeContext";
 import { AcademyTopBar } from "@/components/layout/AcademyTopBar";
 import { AcademyFooter } from "@/components/layout/AcademyFooter";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
@@ -57,10 +56,6 @@ const academyAccountItems = [
   { icon: User, label: "Profile", path: "/academy/profile" },
 ];
 
-const academyTeamItems = [
-  { icon: Users, label: "Team Members", path: "/academy/team" },
-];
-
 export const AcademyLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <ClientTenantProvider>
@@ -83,10 +78,8 @@ const AcademyLayoutInner = ({
     pathways: true,
     learning: true,
     account: false,
-    team: false,
   });
   const location = useLocation();
-  const { academyTier } = useTenantType();
   const { relationshipRole } = useCurrentRelationshipRole();
   const { isPreviewMode } = useClientPreview();
   const navRef = useRef<HTMLElement>(null);
@@ -104,9 +97,6 @@ const AcademyLayoutInner = ({
       if (hadDark) root.classList.add("dark");
     };
   }, []);
-
-  // Show team section only for Team and Elite tiers
-  const showTeamSection = academyTier === "team" || academyTier === "elite";
 
   // Scroll active menu item into view
   useLayoutEffect(() => {
@@ -262,9 +252,6 @@ const AcademyLayoutInner = ({
 
           {/* Learning Section */}
           {renderSection("Learning", academyMainItems, "learning")}
-
-          {/* Team Section (Team & Elite only) */}
-          {showTeamSection && renderSection("Team", academyTeamItems, "team")}
 
           {/* Account Section */}
           {renderSection("Account", academyAccountItems, "account")}

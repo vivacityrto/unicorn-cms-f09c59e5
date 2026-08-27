@@ -149,7 +149,6 @@ const routeTitles: Record<string, string> = {
   "/academy/certificates": "Certificates",
   "/academy/events": "Events",
   "/academy/community": "Community",
-  "/academy/team": "Team Members",
   // SuperAdmin Academy routes
   "/superadmin/academy/certificates": "Certificates",
   "/superadmin/academy/enrollments": "Enrolments",

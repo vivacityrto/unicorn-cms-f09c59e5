@@ -37,7 +37,6 @@ const academyRouteTitles: Record<string, string> = {
   "/academy/certificates": "Certificates",
   "/academy/events": "Events",
   "/academy/community": "Community",
-  "/academy/team": "Team Members",
   "/academy/profile": "Profile",
   "/settings": "Profile Settings",
 };
