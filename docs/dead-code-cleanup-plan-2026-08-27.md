@@ -5,17 +5,18 @@
 **Produced by:** a 44-agent audit workflow (parallel dead-code finders + git-history cross-reference + per-candidate blast-radius re-verification + synthesis), 27 Aug 2026.
 **Execution branch:** `chore/dead-code-cleanup-batch-1` (branched from `origin/main`), one PR per batch below.
 
-## Baseline (before any removal)
+## Lines of code progression
 
-Measured via `git ls-files 'src/**' 'supabase/functions/**' | xargs cat | wc -l` on `main` @ `a1476952`, 27 Aug 2026:
+Measured as `git ls-files 'src/**' 'supabase/functions/**'` file count, and total lines via `git archive <rev> -- src supabase/functions | tar -xO | wc -l` (or the equivalent on the working tree). Updated after every batch merges so the running total is visible.
 
-| | Files | Lines |
-|---|---:|---:|
-| `src/**` | 1,666 | 448,463 |
-| `supabase/functions/**` | 362 | 89,973 |
-| **Total** | **2,028** | **538,436** |
+| Checkpoint | Files | Lines | Δ Lines | Δ Files |
+|---|---:|---:|---:|---:|
+| Baseline (`main` @ `a1476952`, pre-cleanup) | 2,028 | 538,400 | — | — |
+| After Batch 1 (7 retired edge-function stubs) | 2,018 | 538,220 | −180 | −10 |
+| After Batch 2 (17 shadcn/ui scaffold primitives) | 2,001 | 535,546 | −2,674 | −17 |
+| After Batch 3 (2 orphaned barrel files) | 1,999 | 535,530 | −16 | −2 |
 
-*End-state numbers will be appended here once all batches are merged, for a before/after comparison.*
+*Note: the very first baseline reading quoted 538,436 lines via a slightly different counting method (`cat`-concatenation through `xargs`, which double-counted some files due to arg-splitting). The `git archive`-based figure above (538,400) is the corrected, consistent baseline used for all progression tracking from here on.*
 
 ## Progress tracker
 
@@ -23,7 +24,7 @@ Measured via `git ls-files 'src/**' 'supabase/functions/**' | xargs cat | wc -l`
 |---|---|---:|---|---|
 | 1 | Retired edge-function 410 stubs (§2.35) | 7 | ✅ Done | #TBD |
 | 2 | Unused shadcn/ui scaffold primitives (§2.27) | 17 | ✅ Done | #TBD |
-| 3 | Orphaned barrel/index files (§2.6) | 2 | 🔲 Not started | — |
+| 3 | Orphaned barrel/index files (§2.6) | 2 | ✅ Done | #TBD |
 | 4 | Unused data-layer hooks (§2.30) | 12 | 🔲 Not started | — |
 | 5 | Orphaned EOS review-pane cluster (§2.14) | 19 | 🔲 Not started | — |
 | 6 | Orphaned Executive dashboard widgets (§2.15) | 8 | 🔲 Not started | — |
@@ -511,4 +512,5 @@ This section is the checklist for the **execution + Playwright-verification pass
 
 - **2026-08-27:** Plan authored (this doc). Baseline LOC captured. Starting Batch 1.
 - **2026-08-27:** Batch 1 shipped — 7 retired edge-function stubs deleted (`create-session`, `create-session-v2`, `auth-send-magic-link`, `admin-reset-user`, `auth-generate-password-reset`, `schedule-task-reminders`, `tmp-backfill-sharepoint-drive-ids`) plus their stale `supabase/config.toml` stanzas. Independently re-verified each retirement marker and zero-caller status before deleting. `npm run build` clean. **Note:** these were already deployed as HTTP 410 stubs in production Supabase — deleting the source here does not undeploy them; if Carl wants them fully removed from the live Supabase project (not just the repo), that's a separate manual step via the Supabase dashboard, since no MCP tool here can delete a deployed edge function. PR #424 merged; Carl manually deleted all 7 from the Supabase dashboard same day — verified gone via `list_edge_functions` (213 functions remaining, none of the 7 present).
-- **2026-08-27:** Batch 2 shipped — 17 unused shadcn/ui scaffold primitives deleted (achievement-badge, animated-tabs, aspect-ratio, breadcrumb, carousel, chart, context-menu, data-table-empty, error-display, forms barrel, input-otp, menubar, navigation-menu, print, sidebar, stage-steps, use-toast). Independently re-verified zero importers (aliased + relative import forms, ruled out substring false-positives). `npm run build` clean; `npx vitest run` 282 passed / 15 skipped / 0 failed.
+- **2026-08-27:** Batch 2 shipped — 17 unused shadcn/ui scaffold primitives deleted (achievement-badge, animated-tabs, aspect-ratio, breadcrumb, carousel, chart, context-menu, data-table-empty, error-display, forms barrel, input-otp, menubar, navigation-menu, print, sidebar, stage-steps, use-toast). Independently re-verified zero importers (aliased + relative import forms, ruled out substring false-positives). `npm run build` clean; `npx vitest run` 282 passed / 15 skipped / 0 failed. Playwright pass across Dashboard, Executive Dashboard, EOS Live Meeting, Academy Course Detail, AuditWorkspaceNew, and the client portal (Home, Governance Documents, Reports) — zero console errors traceable to the removed files.
+- **2026-08-27:** Batch 3 shipped — 2 orphaned barrel files deleted (`client-impact/index.ts`, `eos/facilitator/index.ts`). Confirmed both are bypassed by direct file imports in every real consumer (`ClientImpactPage.tsx`, `EosClientImpact(Detail).tsx`, `LiveMeetingView.tsx`). `npm run build` clean.
