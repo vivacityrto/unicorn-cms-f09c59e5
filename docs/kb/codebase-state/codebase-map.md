@@ -141,7 +141,7 @@ Nav, sidebar, header, page shell.
 User / tenant / invite management dialogs and tables.
 
 **EOS** — [src/components/eos/](../src/components/eos/)
-The largest subtree. Rock/Issue/Todo forms, V/TO editor, Scorecard editor, Meeting controls, Agenda reorder (DnD), Live meeting view, Client EOS view, QC scheduler, Accountability chart.
+The largest subtree. Rock/Issue/Todo forms, V/TO editor, Scorecard editor, Meeting controls, Agenda reorder (DnD), Live meeting view, the retired Client EOS implementation, QC scheduler, and Accountability chart.
 - `eos/client/` — client-facing summaries and headlines
 - `eos/qc/` — quarterly conversation flow
 
