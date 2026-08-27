@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Loader2, Trash2, Video, Wand2, Save, AlertTriangle, Plus } from "lucide-react";
+import { Sparkles, Loader2, Trash2, Video, Wand2, Save, AlertTriangle, Plus, ListPlus, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import TagChipInput from "@/components/academy/TagChipInput";
 import WorkshopSegmentSplit, {
@@ -58,6 +58,8 @@ const AUDIENCE_OPTIONS = [
   { value: "student_support_officer", label: "Student Support Officer" },
   { value: "administration_assistant", label: "Administration Assistant" },
 ];
+
+type SourceType = "video" | "showcase";
 
 /** Slice a timestamped transcript ("[mm:ss] text" or WebVTT-ish lines) to a segment window. */
 function sliceTimestampedTranscript(timed: string, start: number, end: number): string {
@@ -102,6 +104,50 @@ interface SegmentDraft {
   tags: string[];
   questions: QuizQuestion[];
 }
+
+/** One lesson drafted from a showcase video — mirrors SegmentDraft's editable
+ * fields so the shared review UI (step 3) can treat either the same way. */
+interface ShowcaseItemDraft {
+  key: string;
+  moduleNumber: number;
+  lessonNumber: number;
+  vimeoId: string;
+  vimeoLink: string;
+  transcript: string;
+  title: string;
+  shortDescription: string;
+  description: string;
+  targetAudience: string[];
+  difficulty: string;
+  tags: string[];
+  questions: QuizQuestion[];
+  durationSeconds: number | null;
+  thumbnailUrl: string | null;
+  alreadyImported: boolean;
+  existingCourses: Array<{ id: number; title: string; status: string | null }>;
+}
+
+type ShowcaseParsedItem = {
+  module_number: number;
+  lesson_number: number;
+  title: string;
+  vimeo_id: string;
+  link: string;
+  duration_seconds: number | null;
+  thumbnail_url: string | null;
+  already_imported: boolean;
+  existing_courses: Array<{ id: number; title: string; status: string | null }>;
+};
+
+type ShowcaseUnmatchedItem = { title: string; vimeo_id: string | null; link: string | null };
+
+type ShowcasePreview = {
+  albumId: string;
+  videoCount: number;
+  parsed: ShowcaseParsedItem[];
+  unmatched: ShowcaseUnmatchedItem[];
+  usedFallback: boolean;
+};
 
 function generateSlug(title: string): string {
   return title
@@ -152,6 +198,24 @@ function validateVimeoUrl(raw: string): string | null {
   return null;
 }
 
+/** Returns an error message when the pasted Showcase URL cannot be resolved, else null. */
+function validateShowcaseUrl(raw: string): string | null {
+  if (/^\d+$/.test(raw.trim())) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return "That doesn't look like a valid URL. Paste the full Showcase link, e.g. https://vimeo.com/showcase/12364831";
+  }
+  if (!/(^|\.)vimeo\.com$/.test(url.hostname)) {
+    return "Only Vimeo links are supported.";
+  }
+  if (!/\/showcase\/\d+/.test(url.pathname)) {
+    return "Couldn't find a showcase id in that link. Use the showcase's own URL, e.g. https://vimeo.com/showcase/12364831";
+  }
+  return null;
+}
+
 /** Pull the real message out of a Supabase Functions error instead of "non-2xx status code". */
 async function extractEdgeError(err: any, fallback: string): Promise<string> {
   const res = err?.context;
@@ -186,11 +250,13 @@ function humaniseVimeoError(msg: string): string {
 }
 
 
-export default function AcademyQuickAddPage() {
+export default function AcademyAddCoursePage() {
   const navigate = useNavigate();
 
   // Step 1
+  const [sourceType, setSourceType] = useState<SourceType>("video");
   const [vimeoUrl, setVimeoUrl] = useState("");
+  const [showcaseUrl, setShowcaseUrl] = useState("");
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [series, setSeries] = useState<string>("");
   const [episodeTitle, setEpisodeTitle] = useState("");
@@ -216,7 +282,7 @@ export default function AcademyQuickAddPage() {
   });
 
   // Same distinct-tag source Tag Management and the course builder use, so
-  // Quick Add's tag chip input suggests real existing tags instead of
+  // Add Course's tag chip input suggests real existing tags instead of
   // operating in a vacuum and drifting from the curated list.
   const { data: distinctTags = [] } = useQuery({
     queryKey: ["academy-distinct-tags"],
@@ -224,7 +290,7 @@ export default function AcademyQuickAddPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Duplicate-video guard: Quick Add previously had no way to know a Vimeo
+  // Duplicate-video guard: Add Course previously had no way to know a Vimeo
   // recording had already been imported, which is exactly how the 2026-08-13
   // "Diversity Inclusion Cultural Safety" duplicate happened (same video run
   // through Quick Add twice, 2 minutes apart). Matched on the numeric Vimeo
@@ -236,7 +302,7 @@ export default function AcademyQuickAddPage() {
     courses: { id: number; title: string; status: string | null }[];
   } | null>(null);
 
-  // Step 2 results
+  // Step 2 results (single-video mode)
   const [generating, setGenerating] = useState(false);
   const [hasTranscript, setHasTranscript] = useState<boolean | null>(null);
   const [transcript, setTranscript] = useState("");
@@ -245,7 +311,7 @@ export default function AcademyQuickAddPage() {
   const [generated, setGenerated] = useState(false);
   const [transcriptTimestamped, setTranscriptTimestamped] = useState("");
 
-  // Workshop split (Compliance Lab only)
+  // Workshop split (Compliance Lab only, single-video mode)
   const [segments, setSegments] = useState<WorkshopSegment[]>([]);
   const [segmentsFallback, setSegmentsFallback] = useState(false);
   const [splitConfirming, setSplitConfirming] = useState(false);
@@ -254,7 +320,14 @@ export default function AcademyQuickAddPage() {
   const [drafts, setDrafts] = useState<SegmentDraft[]>([]);
   const [selectedDraft, setSelectedDraft] = useState(0);
 
-  // Step 3 editable fields
+  // Showcase mode
+  const [showcasePreview, setShowcasePreview] = useState<ShowcasePreview | null>(null);
+  const [showcaseConfirming, setShowcaseConfirming] = useState(false);
+  const [showcaseProgress, setShowcaseProgress] = useState<string | null>(null);
+  const [showcaseItems, setShowcaseItems] = useState<ShowcaseItemDraft[]>([]);
+  const [selectedShowcaseItem, setSelectedShowcaseItem] = useState(0);
+
+  // Step 3 editable fields (single-video mode)
   const [title, setTitle] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
@@ -274,15 +347,30 @@ export default function AcademyQuickAddPage() {
 
   const seriesCfg = useMemo(() => SERIES.find((s) => s.value === series), [series]);
   const sessionType = seriesCfg?.session_type ?? "webinar";
-  const workshopActive = splitIntoLessons && drafts.length > 0;
-  const draftIndex = Math.min(selectedDraft, Math.max(0, drafts.length - 1));
-  const cur = workshopActive ? drafts[draftIndex] : null;
+  const workshopActive = sourceType === "video" && splitIntoLessons && drafts.length > 0;
+  const showcaseActive = sourceType === "showcase" && showcaseItems.length > 0;
+  const multiActive = workshopActive || showcaseActive;
+  const activeItems: Array<SegmentDraft | ShowcaseItemDraft> = workshopActive
+    ? drafts
+    : showcaseActive
+      ? showcaseItems
+      : [];
+  const activeIndex = workshopActive
+    ? Math.min(selectedDraft, Math.max(0, drafts.length - 1))
+    : Math.min(selectedShowcaseItem, Math.max(0, showcaseItems.length - 1));
+  const setActiveIndex = workshopActive ? setSelectedDraft : setSelectedShowcaseItem;
+  const cur = multiActive ? (activeItems[activeIndex] as SegmentDraft & ShowcaseItemDraft) : null;
 
-  const patchDraft = (patch: Partial<SegmentDraft>) =>
-    setDrafts((prev) => prev.map((d, i) => (i === draftIndex ? { ...d, ...patch } : d)));
+  const patchDraft = (patch: Partial<SegmentDraft & ShowcaseItemDraft>) => {
+    if (workshopActive) {
+      setDrafts((prev) => prev.map((d, i) => (i === activeIndex ? { ...d, ...patch } : d)));
+    } else if (showcaseActive) {
+      setShowcaseItems((prev) => prev.map((d, i) => (i === activeIndex ? { ...d, ...patch } : d)));
+    }
+  };
 
-  // Step 3/5 fields resolve to the selected workshop segment when splitting,
-  // otherwise to the single-course state.
+  // Step 3/5 fields resolve to the selected workshop segment or showcase
+  // lesson when in a multi-item mode, otherwise to the single-course state.
   const vTitle = cur ? cur.title : title;
   const setVTitle = (v: string) => (cur ? patchDraft({ title: v }) : setTitle(v));
   const vShortDescription = cur ? cur.shortDescription : shortDescription;
@@ -316,7 +404,15 @@ export default function AcademyQuickAddPage() {
     }
   };
 
-  // ── Step 2: Generate with AI ──
+  const handleSourceTypeChange = (next: SourceType) => {
+    if (next === sourceType) return;
+    setSourceType(next);
+    setGenerateError(null);
+    setGenerated(false);
+    setDuplicateVideo(null);
+  };
+
+  // ── Step 2: Generate with AI (single-video mode) ──
   const handleGenerate = async (skipDuplicateCheck = false) => {
     setGenerateError(null);
     if (!vimeoUrl.trim()) { setGenerateError("Vimeo URL is required"); return; }
@@ -532,6 +628,163 @@ export default function AcademyQuickAddPage() {
     } finally {
       setSplitConfirming(false);
       setSplitProgress(null);
+    }
+  };
+
+  // ── Step 2 (showcase mode): fetch the album and parse its titles ──
+  const handlePreviewShowcase = async () => {
+    setGenerateError(null);
+    if (!showcaseUrl.trim()) { setGenerateError("Vimeo Showcase URL is required"); return; }
+    if (!series) { setGenerateError("Select a series before generating."); return; }
+    const urlProblem = validateShowcaseUrl(showcaseUrl.trim());
+    if (urlProblem) { setGenerateError(urlProblem); return; }
+    setGenerating(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "academy-import-vimeo-showcase",
+        { body: { showcase_url: showcaseUrl.trim() } },
+      );
+      if (fnError) {
+        throw new Error(await extractEdgeError(fnError, "Couldn't read that Vimeo showcase"));
+      }
+      if (data?.error) throw new Error(String(data.error));
+
+      const parsed: ShowcaseParsedItem[] = Array.isArray(data?.parsed) ? data.parsed : [];
+      const unmatched: ShowcaseUnmatchedItem[] = Array.isArray(data?.unmatched) ? data.unmatched : [];
+      const usedFallback = !!data?.used_fallback;
+      if (parsed.length === 0 && unmatched.length === 0) {
+        throw new Error("That showcase has no videos.");
+      }
+      setShowcasePreview({
+        albumId: String(data.album_id),
+        videoCount: Number(data.video_count) || parsed.length + unmatched.length,
+        parsed,
+        unmatched,
+        usedFallback,
+      });
+      setShowcaseItems([]);
+      setGenerated(false);
+      if (parsed.length === 0) {
+        toast.error("None of this showcase's titles matched the \"M# - Lesson # Title\" naming convention — see below.");
+      } else if (usedFallback) {
+        toast.success(`No M#/Lesson# numbering found — sequenced ${parsed.length} video${parsed.length === 1 ? "" : "s"} as one module in showcase order.`);
+      } else {
+        toast.success(`${parsed.length} video${parsed.length === 1 ? "" : "s"} found — review below, then draft with AI`);
+      }
+    } catch (e: any) {
+      setGenerateError(String(e?.message || "Failed to read that showcase"));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // ── Step 2b (showcase mode): fetch transcript + draft AI content per video ──
+  const handleConfirmShowcase = async () => {
+    if (!showcasePreview || showcasePreview.parsed.length === 0) return;
+    setShowcaseConfirming(true);
+    setShowcaseProgress(null);
+    try {
+      const built: ShowcaseItemDraft[] = [];
+      const items = showcasePreview.parsed;
+      // Same growing-tag-set trick as the workshop segment loop — lesson 2
+      // onward reuses tags lesson 1 already picked instead of coining a
+      // same-topic variant.
+      const sessionTags = new Set(distinctTags);
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const label = showcasePreview.usedFallback
+          ? item.title
+          : `M${item.module_number} Lesson ${item.lesson_number}: ${item.title}`;
+        setShowcaseProgress(`Reading video ${i + 1} of ${items.length} — ${label}…`);
+
+        const { data: vimeo, error: vErr } = await supabase.functions.invoke(
+          "academy-fetch-vimeo-transcript",
+          { body: { vimeo_url: item.link } },
+        );
+        if (vErr) {
+          throw new Error(humaniseVimeoError(await extractEdgeError(vErr, `Couldn't read ${label}`)));
+        }
+        if (vimeo?.accessible === false) {
+          throw new Error(
+            `${label}: ${vimeo?.error || "Vimeo's privacy settings block Academy from reading this video."}`,
+          );
+        }
+        const tx: string = vimeo?.transcript || "";
+
+        setShowcaseProgress(`Drafting ${i + 1} of ${items.length} — ${label}…`);
+
+        const { data: cls, error: cErr } = await supabase.functions.invoke("academy-ai-generate", {
+          body: {
+            action: "generate_classification",
+            title: item.title,
+            transcript: tx,
+            webinar_series: series || null,
+            existing_tags: Array.from(sessionTags),
+          },
+        });
+        if (cErr) throw new Error(await extractEdgeError(cErr, `AI classification failed for ${label}`));
+        const audience: string[] = Array.isArray(cls?.target_audience) ? cls.target_audience : [];
+        const level: string = cls?.difficulty_level || "beginner";
+        const aiTags: string[] = Array.isArray(cls?.tags) ? cls.tags : [];
+        aiTags.forEach((t) => sessionTags.add(t));
+
+        const { data: desc, error: dErr } = await supabase.functions.invoke("academy-ai-generate", {
+          body: {
+            action: "generate_descriptions",
+            title: item.title,
+            target_audience: audience,
+            difficulty_level: level,
+            tags: aiTags,
+            transcript: tx,
+          },
+        });
+        if (dErr) throw new Error(await extractEdgeError(dErr, `AI descriptions failed for ${label}`));
+
+        const { data: qz, error: qErr } = await supabase.functions.invoke("academy-ai-generate", {
+          body: {
+            action: "generate_questions",
+            title: item.title,
+            target_audience: audience,
+            context_text: tx,
+          },
+        });
+        if (qErr) throw new Error(await extractEdgeError(qErr, `AI quiz failed for ${label}`));
+        const rawQs = Array.isArray(qz?.questions) ? qz.questions : Array.isArray(qz) ? qz : [];
+
+        built.push({
+          key: `sc-${item.vimeo_id}`,
+          moduleNumber: item.module_number,
+          lessonNumber: item.lesson_number,
+          vimeoId: item.vimeo_id,
+          vimeoLink: item.link,
+          transcript: tx,
+          title: item.title,
+          shortDescription: desc?.short_description || "",
+          description: desc?.description || "",
+          targetAudience: audience,
+          difficulty: level,
+          tags: aiTags,
+          questions: rawQs.map((q: any, qi: number) => ({
+            key: `q-${item.vimeo_id}-${qi}`,
+            question_text: String(q?.question_text ?? ""),
+            explanation: String(q?.explanation ?? ""),
+            options: normaliseOptions(q?.options),
+          })),
+          durationSeconds: vimeo?.duration_seconds ?? item.duration_seconds ?? null,
+          thumbnailUrl: vimeo?.thumbnail_url ?? item.thumbnail_url ?? null,
+          alreadyImported: !!item.already_imported,
+          existingCourses: Array.isArray(item.existing_courses) ? item.existing_courses : [],
+        });
+      }
+      setShowcaseItems(built);
+      setSelectedShowcaseItem(0);
+      setGenerated(true);
+      toast.success(`${built.length} lesson${built.length === 1 ? "" : "s"} drafted — review below`);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to draft showcase lessons");
+    } finally {
+      setShowcaseConfirming(false);
+      setShowcaseProgress(null);
     }
   };
 
@@ -823,37 +1076,98 @@ export default function AcademyQuickAddPage() {
     return courseId;
   };
 
-  const handleSave = async () => {
-    if (!vimeoUrl.trim()) { toast.error("Vimeo URL is required"); return; }
-    if (!facilitatorId) { toast.error("Select a facilitator"); return; }
-    if (!deliveryDate) { toast.error("Date of delivery is required"); return; }
-    if (!availableToAll && packageIds.length === 0) {
-      toast.error("Select at least one package, or choose All clients");
-      return;
+  const SHOWCASE_VIDEO_FOLDER_NAME = "Course Lesson Videos";
+
+  /**
+   * Creates one new draft course from a Showcase import: one module per
+   * distinct module number, one lesson per drafted video (reusing an
+   * existing training_videos row for a Vimeo id already imported elsewhere,
+   * same as the structural Showcase Import panel on an existing course —
+   * never creating a second row for the same video), and one completion
+   * quiz unioning every lesson's drafted questions.
+   */
+  const createShowcaseCourse = async (userId: string | null): Promise<number> => {
+    const courseTitle = episodeTitle.trim();
+    const slug = await uniqueSlug(courseTitle);
+    const sorted = [...showcaseItems].sort(
+      (a, b) => a.moduleNumber - b.moduleNumber || a.lessonNumber - b.lessonNumber,
+    );
+    const audience = [...new Set(sorted.flatMap((d) => d.targetAudience))];
+    const tagsUnion = [...new Set(sorted.flatMap((d) => d.tags))];
+    const first = sorted[0];
+
+    const { data: course, error: cErr } = await supabase
+      .from("academy_courses")
+      .insert({
+        title: courseTitle,
+        slug,
+        description: first?.description || null,
+        short_description: first?.shortDescription || null,
+        thumbnail_url: first?.thumbnailUrl ?? null,
+        target_audience: audience.length ? audience : null,
+        difficulty_level: first?.difficulty || "beginner",
+        tags: tagsUnion.length ? tagsUnion : null,
+        status: "draft",
+        session_type: sessionType,
+        webinar_series: series || null,
+        source_video_id: null,
+        segment_start_seconds: null,
+        segment_end_seconds: null,
+        available_to_all_clients: availableToAll,
+        ai_generated: true,
+        created_by: userId,
+        facilitator_id: facilitatorId,
+        delivery_date: deliveryDate,
+      } as any)
+      .select("id")
+      .single();
+    if (cErr) throw cErr;
+    const courseId = course.id as number;
+
+    await insertPackageRules(courseId, userId);
+
+    const moduleNumbers = [...new Set(sorted.map((d) => d.moduleNumber))].sort((a, b) => a - b);
+    const moduleIdByNumber = new Map<number, number>();
+    for (const moduleNumber of moduleNumbers) {
+      const { data: mod, error: mErr } = await supabase
+        .from("academy_modules")
+        .insert({
+          course_id: courseId,
+          title: `Module ${moduleNumber}`,
+          sort_order: moduleNumber,
+          is_published: true,
+        } as any)
+        .select("id")
+        .single();
+      if (mErr) throw mErr;
+      moduleIdByNumber.set(moduleNumber, mod.id as number);
     }
 
-    if (workshopActive) {
-      if (!(episodeTitle.trim() || title.trim())) {
-        toast.error("The course needs a title");
-        return;
+    let folderId: string | null = null;
+    const ensureFolder = async (): Promise<string> => {
+      if (folderId) return folderId;
+      const { data: existingFolder, error: fLookupErr } = await supabase
+        .from("training_folders")
+        .select("id")
+        .eq("folder_name", SHOWCASE_VIDEO_FOLDER_NAME)
+        .maybeSingle();
+      if (fLookupErr) throw fLookupErr;
+      if (existingFolder?.id) {
+        folderId = existingFolder.id as string;
+        return folderId;
       }
-      if (drafts.some((d) => !d.title.trim())) {
-        toast.error("Every lesson needs a title");
-        return;
-      }
-    } else if (!title.trim()) {
-      toast.error("Every course needs a title");
-      return;
-    }
+      const { data: newFolder, error: fInsErr } = await supabase
+        .from("training_folders")
+        .insert({ folder_name: SHOWCASE_VIDEO_FOLDER_NAME } as any)
+        .select("id")
+        .single();
+      if (fInsErr) throw fInsErr;
+      folderId = newFolder.id as string;
+      return folderId;
+    };
 
-    setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id ?? null;
-      const cleanUrl = vimeoUrl.trim();
-      const videoName = (episodeTitle.trim() || title.trim()).trim();
-
-      // 1. training_videos — imported once per recording, reused by every lesson
+    for (const item of sorted) {
+      const cleanUrl = `https://vimeo.com/${item.vimeoId}`;
       const { data: existingVideo, error: vLookupErr } = await supabase
         .from("training_videos")
         .select("id")
@@ -863,34 +1177,16 @@ export default function AcademyQuickAddPage() {
 
       let videoId = existingVideo?.id as string | undefined;
       if (!videoId) {
-        const folderName = (series || "").trim() || "Quick Add Recordings";
-        const { data: existingFolder, error: fLookupErr } = await supabase
-          .from("training_folders")
-          .select("id")
-          .eq("folder_name", folderName)
-          .maybeSingle();
-        if (fLookupErr) throw fLookupErr;
-
-        let folderId = existingFolder?.id as string | undefined;
-        if (!folderId) {
-          const { data: newFolder, error: fInsErr } = await supabase
-            .from("training_folders")
-            .insert({ folder_name: folderName } as any)
-            .select("id")
-            .single();
-          if (fInsErr) throw fInsErr;
-          folderId = newFolder.id as string;
-        }
-
+        const fId = await ensureFolder();
         const { data: newVideo, error: vInsErr } = await supabase
           .from("training_videos")
           .insert({
-            folder_id: folderId,
-            video_name: videoName,
+            folder_id: fId,
+            folder_name: SHOWCASE_VIDEO_FOLDER_NAME,
+            video_name: item.title,
             vimeo_url: cleanUrl,
-            duration_seconds: durationSeconds,
-            thumbnail: thumbnailUrl,
-            folder_name: folderName,
+            duration_seconds: item.durationSeconds,
+            thumbnail: item.thumbnailUrl,
             added_by: userId,
           } as any)
           .select("id")
@@ -899,19 +1195,135 @@ export default function AcademyQuickAddPage() {
         videoId = newVideo.id as string;
       }
 
-      const courseId = workshopActive
-        ? await createWorkshopCourse(videoId!, userId)
-        : await createCourse({
-            title,
-            shortDescription,
-            description,
-            targetAudience,
-            difficulty,
-            tags,
-            questions,
-            segmentStart: null,
-            segmentEnd: null,
-          }, videoId!, userId);
+      const moduleId = moduleIdByNumber.get(item.moduleNumber);
+      if (!moduleId) continue;
+
+      const { error: lErr } = await supabase
+        .from("academy_lessons")
+        .insert({
+          course_id: courseId,
+          module_id: moduleId,
+          title: item.title.trim(),
+          description: item.shortDescription || null,
+          lesson_type: "video",
+          video_id: videoId,
+          sort_order: item.lessonNumber,
+          is_published: true,
+        } as any);
+      if (lErr) throw lErr;
+    }
+
+    await insertCompletionQuiz(
+      courseId,
+      courseTitle,
+      sorted.flatMap((d) => d.questions),
+      userId,
+    );
+    return courseId;
+  };
+
+  const handleSave = async () => {
+    if (!facilitatorId) { toast.error("Select a facilitator"); return; }
+    if (!deliveryDate) { toast.error("Date of delivery is required"); return; }
+    if (!availableToAll && packageIds.length === 0) {
+      toast.error("Select at least one package, or choose All clients");
+      return;
+    }
+
+    if (sourceType === "showcase") {
+      if (!showcaseUrl.trim()) { toast.error("Vimeo Showcase URL is required"); return; }
+      if (!episodeTitle.trim()) { toast.error("The course needs a title"); return; }
+      if (showcaseItems.length === 0) { toast.error("Draft the showcase's lessons with AI first"); return; }
+      if (showcaseItems.some((d) => !d.title.trim())) { toast.error("Every lesson needs a title"); return; }
+    } else {
+      if (!vimeoUrl.trim()) { toast.error("Vimeo URL is required"); return; }
+      if (workshopActive) {
+        if (!(episodeTitle.trim() || title.trim())) {
+          toast.error("The course needs a title");
+          return;
+        }
+        if (drafts.some((d) => !d.title.trim())) {
+          toast.error("Every lesson needs a title");
+          return;
+        }
+      } else if (!title.trim()) {
+        toast.error("Every course needs a title");
+        return;
+      }
+    }
+
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id ?? null;
+
+      let courseId: number;
+      if (sourceType === "showcase") {
+        courseId = await createShowcaseCourse(userId);
+      } else {
+        const cleanUrl = vimeoUrl.trim();
+        const videoName = (episodeTitle.trim() || title.trim()).trim();
+
+        // training_videos — imported once per recording, reused by every lesson
+        const { data: existingVideo, error: vLookupErr } = await supabase
+          .from("training_videos")
+          .select("id")
+          .eq("vimeo_url", cleanUrl)
+          .maybeSingle();
+        if (vLookupErr) throw vLookupErr;
+
+        let videoId = existingVideo?.id as string | undefined;
+        if (!videoId) {
+          const folderName = (series || "").trim() || "Quick Add Recordings";
+          const { data: existingFolder, error: fLookupErr } = await supabase
+            .from("training_folders")
+            .select("id")
+            .eq("folder_name", folderName)
+            .maybeSingle();
+          if (fLookupErr) throw fLookupErr;
+
+          let folderId = existingFolder?.id as string | undefined;
+          if (!folderId) {
+            const { data: newFolder, error: fInsErr } = await supabase
+              .from("training_folders")
+              .insert({ folder_name: folderName } as any)
+              .select("id")
+              .single();
+            if (fInsErr) throw fInsErr;
+            folderId = newFolder.id as string;
+          }
+
+          const { data: newVideo, error: vInsErr } = await supabase
+            .from("training_videos")
+            .insert({
+              folder_id: folderId,
+              video_name: videoName,
+              vimeo_url: cleanUrl,
+              duration_seconds: durationSeconds,
+              thumbnail: thumbnailUrl,
+              folder_name: folderName,
+              added_by: userId,
+            } as any)
+            .select("id")
+            .single();
+          if (vInsErr) throw vInsErr;
+          videoId = newVideo.id as string;
+        }
+
+        courseId = workshopActive
+          ? await createWorkshopCourse(videoId!, userId)
+          : await createCourse({
+              title,
+              shortDescription,
+              description,
+              targetAudience,
+              difficulty,
+              tags,
+              questions,
+              segmentStart: null,
+              segmentEnd: null,
+            }, videoId!, userId);
+      }
 
       toast.success("Draft course created — review and publish when ready");
       navigate(`/superadmin/academy/builder/${courseId}`);
@@ -922,17 +1334,32 @@ export default function AcademyQuickAddPage() {
     }
   };
 
+  const saveDisabled =
+    saving ||
+    !facilitatorId ||
+    !deliveryDate ||
+    (sourceType === "showcase"
+      ? !showcaseUrl.trim() || !episodeTitle.trim() || showcaseItems.length === 0 || showcaseItems.some((d) => !d.title.trim())
+      : !vimeoUrl.trim() || (splitIntoLessons ? !workshopActive || !(episodeTitle.trim() || title.trim()) : !title.trim()));
+
+  const reviewPending = sourceType === "showcase" ? !showcaseActive : (splitIntoLessons && !workshopActive);
+
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 max-w-4xl mx-auto">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Wand2 className="h-6 w-6" style={{ color: "#7130A0" }} />
-            Quick Add Recording
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Paste a webinar recording, let AI draft the course, review, and save as a draft for publishing.
-          </p>
+      <div className="p-6 space-y-6 max-w-[1800px] mx-auto">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/superadmin/academy/builder")}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Library
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <Wand2 className="h-6 w-6" style={{ color: "#7130A0" }} />
+              Add Course
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Paste a single Vimeo recording or a whole Vimeo Showcase, let AI draft the course, review, and save as a draft for publishing.
+            </p>
+          </div>
         </div>
 
         {/* Step 1 */}
@@ -942,53 +1369,99 @@ export default function AcademyQuickAddPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Vimeo URL *</Label>
-              <Input
-                value={vimeoUrl}
-                onChange={(e) => {
-                  setVimeoUrl(e.target.value);
-                  setDuplicateVideo(null);
-                }}
-                placeholder="https://vimeo.com/1234567890"
-                aria-invalid={!!generateError}
-                aria-describedby="vimeo-url-help"
-              />
-              <p id="vimeo-url-help" className="text-xs text-muted-foreground">
-                With the Vimeo API connection active, the plain video URL from the video's own page
-                works directly — e.g.{" "}
-                <code className="rounded bg-muted px-1 py-0.5">vimeo.com/1200358426</code>. Copy it
-                from the Vimeo address bar while viewing the video (not the Share panel or Manage
-                dashboard link).
-              </p>
-              <p className="text-xs text-muted-foreground">
-                If the video is on a different Vimeo account or has strict privacy settings, you may
-                still need the full link including the privacy hash, e.g.{" "}
-                <code className="rounded bg-muted px-1 py-0.5">vimeo.com/1194261152/ab12cd34ef</code>{" "}
-                or the player URL from the embed code.
-              </p>
-              {generateError && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="space-y-2">
-                    <span className="block">{generateError}</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleGenerate()}
-                      disabled={generating}
-                    >
-                      {generating ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4 mr-2" />
-                      )}
-                      Try again
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
+              <Label>Source</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={sourceType === "video" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSourceTypeChange("video")}
+                  className={sourceType === "video" ? "text-white" : ""}
+                  style={sourceType === "video" ? { backgroundColor: "#7130A0" } : undefined}
+                >
+                  <Video className="h-4 w-4 mr-2" /> Vimeo video
+                </Button>
+                <Button
+                  type="button"
+                  variant={sourceType === "showcase" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSourceTypeChange("showcase")}
+                  className={sourceType === "showcase" ? "text-white" : ""}
+                  style={sourceType === "showcase" ? { backgroundColor: "#7130A0" } : undefined}
+                >
+                  <ListPlus className="h-4 w-4 mr-2" /> Vimeo showcase
+                </Button>
+              </div>
             </div>
+
+            {sourceType === "video" ? (
+              <div className="space-y-2">
+                <Label>Vimeo URL *</Label>
+                <Input
+                  value={vimeoUrl}
+                  onChange={(e) => {
+                    setVimeoUrl(e.target.value);
+                    setDuplicateVideo(null);
+                  }}
+                  placeholder="https://vimeo.com/1234567890"
+                  aria-invalid={!!generateError}
+                  aria-describedby="vimeo-url-help"
+                />
+                <p id="vimeo-url-help" className="text-xs text-muted-foreground">
+                  With the Vimeo API connection active, the plain video URL from the video's own page
+                  works directly — e.g.{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">vimeo.com/1200358426</code>. Copy it
+                  from the Vimeo address bar while viewing the video (not the Share panel or Manage
+                  dashboard link).
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  If the video is on a different Vimeo account or has strict privacy settings, you may
+                  still need the full link including the privacy hash, e.g.{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">vimeo.com/1194261152/ab12cd34ef</code>{" "}
+                  or the player URL from the embed code.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Vimeo Showcase URL *</Label>
+                <Input
+                  value={showcaseUrl}
+                  onChange={(e) => setShowcaseUrl(e.target.value)}
+                  placeholder="https://vimeo.com/showcase/12364831"
+                  aria-invalid={!!generateError}
+                  aria-describedby="showcase-url-help"
+                />
+                <p id="showcase-url-help" className="text-xs text-muted-foreground">
+                  Paste the showcase's own URL, e.g.{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">vimeo.com/showcase/12364831</code>.
+                  Video titles in the form <code>M1 - Lesson 1 Title</code> become modules and lessons —
+                  each is fetched, transcribed, and drafted with AI just like a single recording.
+                </p>
+              </div>
+            )}
+
+            {generateError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="space-y-2">
+                  <span className="block">{generateError}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => (sourceType === "showcase" ? handlePreviewShowcase() : handleGenerate())}
+                    disabled={generating}
+                  >
+                    {generating ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-2" />
+                    )}
+                    Try again
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Series *</Label>
@@ -1001,26 +1474,28 @@ export default function AcademyQuickAddPage() {
                   </SelectContent>
                 </Select>
                 {series && (
-                  <p className="text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     Session type: <Badge variant="secondary" className="ml-1">{sessionType}</Badge>
-                  </p>
+                  </div>
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Episode title</Label>
+                <Label>{sourceType === "showcase" ? "Course title *" : "Episode title"}</Label>
                 <Input
                   value={episodeTitle}
                   onChange={(e) => setEpisodeTitle(e.target.value)}
                   placeholder="Inclusive Practice & Reasonable Adjustment Plans"
                 />
               </div>
-              <div className="flex items-center gap-3 md:col-span-2 rounded-lg border p-3">
-                <Checkbox checked={splitIntoLessons} onCheckedChange={(checked) => setSplitIntoLessons(checked === true)} />
-                <div>
-                  <Label className="cursor-pointer">Split into topic lessons</Label>
-                  <p className="text-xs text-muted-foreground">AI will detect topic boundaries for any series. Turn this off for one continuous lesson.</p>
+              {sourceType === "video" && (
+                <div className="flex items-center gap-3 md:col-span-2 rounded-lg border p-3">
+                  <Checkbox checked={splitIntoLessons} onCheckedChange={(checked) => setSplitIntoLessons(checked === true)} />
+                  <div>
+                    <Label className="cursor-pointer">Split into topic lessons</Label>
+                    <p className="text-xs text-muted-foreground">AI will detect topic boundaries for any series. Turn this off for one continuous lesson.</p>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="space-y-2">
                 <Label>Facilitator *</Label>
                 <Select value={facilitatorId} onValueChange={setFacilitatorId}>
@@ -1054,21 +1529,25 @@ export default function AcademyQuickAddPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 flex-wrap">
               <Button
-                onClick={() => handleGenerate()}
-                disabled={generating || !vimeoUrl.trim() || !series}
+                onClick={() => (sourceType === "showcase" ? handlePreviewShowcase() : handleGenerate())}
+                disabled={
+                  generating ||
+                  !series ||
+                  (sourceType === "showcase" ? !showcaseUrl.trim() : !vimeoUrl.trim())
+                }
                 className="text-white hover:opacity-90"
                 style={{ backgroundColor: "#7130A0" }}
               >
                 {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                Generate with AI
+                {sourceType === "showcase" ? "Find showcase videos" : "Generate with AI"}
               </Button>
-              {durationSeconds != null && (
+              {sourceType === "video" && durationSeconds != null && (
                 <span className="text-sm text-muted-foreground flex items-center gap-1">
                   <Video className="h-4 w-4" /> Estimated length: {formatDuration(durationSeconds)}
                 </span>
               )}
             </div>
-            {duplicateVideo && (
+            {sourceType === "video" && duplicateVideo && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription className="space-y-2">
@@ -1113,7 +1592,7 @@ export default function AcademyQuickAddPage() {
                 </AlertDescription>
               </Alert>
             )}
-            {hasTranscript === false && (
+            {sourceType === "video" && hasTranscript === false && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
@@ -1124,8 +1603,8 @@ export default function AcademyQuickAddPage() {
           </CardContent>
         </Card>
 
-        {/* Step 2b — Workshop split */}
-        {splitIntoLessons && segments.length > 0 && (
+        {/* Step 2b — Workshop split (video mode) */}
+        {sourceType === "video" && splitIntoLessons && segments.length > 0 && (
           <WorkshopSegmentSplit
             segments={segments}
             onChange={setSegments}
@@ -1139,15 +1618,106 @@ export default function AcademyQuickAddPage() {
           />
         )}
 
+        {/* Step 2b — Showcase preview (showcase mode) */}
+        {sourceType === "showcase" && showcasePreview && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">2b. Review showcase videos</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {showcasePreview.usedFallback && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    No video matched the "M# - Lesson # Title" numbering, so these are sequenced as one
+                    module with a lesson per video, in the showcase's own order, using each video's own title.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{showcasePreview.videoCount} video{showcasePreview.videoCount === 1 ? "" : "s"} in showcase</Badge>
+                <Badge variant="outline">{showcasePreview.parsed.length} matched</Badge>
+                {showcasePreview.parsed.some((p) => p.already_imported) && (
+                  <Badge variant="outline" className="border-amber-300 text-amber-800">
+                    {showcasePreview.parsed.filter((p) => p.already_imported).length} already imported elsewhere
+                  </Badge>
+                )}
+                {showcasePreview.unmatched.length > 0 && (
+                  <Badge variant="outline" className="border-amber-300 text-amber-800">
+                    {showcasePreview.unmatched.length} unmatched
+                  </Badge>
+                )}
+              </div>
+
+              <ul className="text-sm space-y-1 max-h-56 overflow-y-auto">
+                {showcasePreview.parsed.map((item) => (
+                  <li key={item.vimeo_id} className="flex items-center justify-between gap-2 border-b py-1 last:border-b-0">
+                    <span>
+                      {showcasePreview.usedFallback ? item.title : `M${item.module_number} Lesson ${item.lesson_number}: ${item.title}`}
+                    </span>
+                    <span className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-muted-foreground">{formatDuration(item.duration_seconds)}</span>
+                      {item.already_imported && (
+                        <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-800">
+                          already used by {item.existing_courses.map((c) => c.title).join(", ")}
+                        </Badge>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {showcasePreview.unmatched.length > 0 && (
+                <Alert variant="warning">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <span className="block font-medium mb-1">
+                      These titles didn't match "M# - Lesson # …" and will be skipped:
+                    </span>
+                    <ul className="list-disc pl-5 space-y-0.5">
+                      {showcasePreview.unmatched.map((item, idx) => (
+                        <li key={`${item.vimeo_id ?? "none"}-${idx}`}>{item.title}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {showcaseProgress && (
+                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> {showcaseProgress}
+                </p>
+              )}
+
+              <Button
+                onClick={() => void handleConfirmShowcase()}
+                disabled={showcaseConfirming || showcasePreview.parsed.length === 0}
+                className="text-white hover:opacity-90"
+                style={{ backgroundColor: "#7130A0" }}
+              >
+                {showcaseConfirming ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Drafting…</>
+                ) : showcaseActive ? (
+                  "Redraft all with AI"
+                ) : (
+                  "Draft all with AI"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Step 3 */}
-        {splitIntoLessons && !workshopActive ? (
+        {reviewPending ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">3. Review and adjust</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Confirm the workshop split above to draft each segment for review.
+                {sourceType === "showcase"
+                  ? "Find and draft the showcase's videos above to review each lesson."
+                  : "Confirm the workshop split above to draft each segment for review."}
               </p>
             </CardContent>
           </Card>
@@ -1159,32 +1729,39 @@ export default function AcademyQuickAddPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {workshopActive && (
+            {multiActive && (
               <div className="space-y-2">
-                <Label>Segment</Label>
+                <Label>{showcaseActive ? "Lesson" : "Segment"}</Label>
                 <div className="flex flex-wrap gap-2">
-                  {drafts.map((d, i) => (
+                  {activeItems.map((d, i) => (
                     <Button
                       key={d.key}
-                      variant={i === draftIndex ? "default" : "outline"}
+                      variant={i === activeIndex ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setSelectedDraft(i)}
-                      className={i === draftIndex ? "text-white" : ""}
-                      style={i === draftIndex ? { backgroundColor: "#7130A0" } : undefined}
+                      onClick={() => setActiveIndex(i)}
+                      className={i === activeIndex ? "text-white" : ""}
+                      style={i === activeIndex ? { backgroundColor: "#7130A0" } : undefined}
                     >
-                      {i + 1}. {d.title || "Untitled"}{" "}
-                      <span className="ml-1 opacity-70">
-                        ({formatTimecode(d.segment.start_seconds)}–{formatTimecode(d.segment.end_seconds)})
-                      </span>
+                      {i + 1}. {d.title || "Untitled"}
+                      {showcaseActive && !showcasePreview?.usedFallback && (
+                        <span className="ml-1 opacity-70">
+                          {`(M${(d as ShowcaseItemDraft).moduleNumber} L${(d as ShowcaseItemDraft).lessonNumber})`}
+                        </span>
+                      )}
+                      {!showcaseActive && workshopActive && (
+                        <span className="ml-1 opacity-70">
+                          {`(${formatTimecode((d as SegmentDraft).segment.start_seconds)}–${formatTimecode((d as SegmentDraft).segment.end_seconds)})`}
+                        </span>
+                      )}
                     </Button>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Reviewing segment {draftIndex + 1} of {drafts.length}. Each becomes a lesson in this course.
+                  Reviewing {showcaseActive ? "lesson" : "segment"} {activeIndex + 1} of {activeItems.length}. Each becomes a lesson in this course.
                 </p>
               </div>
             )}
-            {workshopActive && (
+            {multiActive && (
               <div className="space-y-2">
                 <Label>Course title</Label>
                 <Input
@@ -1193,12 +1770,14 @@ export default function AcademyQuickAddPage() {
                   placeholder="Inclusive Practice & Reasonable Adjustment Plans"
                 />
                 <p className="text-xs text-muted-foreground">
-                  The name of the whole recording — one course, with a lesson per segment below.
+                  {showcaseActive
+                    ? "The name of the whole course — one course, with the showcase's modules and lessons below."
+                    : "The name of the whole recording — one course, with a lesson per segment below."}
                 </p>
               </div>
             )}
             <div className="space-y-2">
-              <Label>{workshopActive ? "Lesson title" : "Course title"}</Label>
+              <Label>{multiActive ? "Lesson title" : "Course title"}</Label>
               <Input value={vTitle} onChange={(e) => setVTitle(e.target.value)} />
             </div>
             <div className="space-y-2">
@@ -1380,24 +1959,18 @@ export default function AcademyQuickAddPage() {
         {/* Step 6 */}
         <div className="flex items-center justify-between pb-6">
           <p className="text-sm text-muted-foreground">
-            {workshopActive
+            {multiActive
               ? "Saves one draft course with a lesson per segment — publish it from the course builder after review."
               : "Saves as a draft course — publish it from the course builder after review."}
           </p>
           <Button
             onClick={handleSave}
-            disabled={
-              saving ||
-              !vimeoUrl.trim() ||
-              !facilitatorId ||
-              !deliveryDate ||
-              (splitIntoLessons ? !workshopActive || !(episodeTitle.trim() || title.trim()) : !title.trim())
-            }
+            disabled={saveDisabled}
             className="text-white hover:opacity-90"
             style={{ backgroundColor: "#23c0dd" }}
           >
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            {workshopActive ? "Save draft course" : "Save as draft"}
+            {multiActive ? "Save draft course" : "Save as draft"}
           </Button>
         </div>
         {!generated && (

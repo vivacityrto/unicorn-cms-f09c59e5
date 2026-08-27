@@ -6,6 +6,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildFallbackParse,
   classifyVideos,
   extractAlbumId,
   extractVimeoVideoId,
@@ -92,6 +93,38 @@ describe("classifyVideos", () => {
     assert.equal(unmatched.length, 1);
     assert.equal(unmatched[0].title, "Welcome / trailer");
     assert.equal(unmatched[0].vimeo_id, "10");
+  });
+});
+
+describe("buildFallbackParse", () => {
+  it("flattens unnumbered videos into one module, sequenced in showcase order", () => {
+    const { parsed, unmatched } = buildFallbackParse([
+      { uri: "/videos/1", name: "Module 1 - Understanding FPP", link: "https://vimeo.com/1" },
+      { uri: "/videos/2", name: "Module 2 - Key FPPR Criteria", link: "https://vimeo.com/2" },
+      { uri: "/videos/3", name: "Module 3 - FPPR in Practice", link: "https://vimeo.com/3" },
+    ]);
+
+    assert.deepEqual(
+      parsed.map((item) => `${item.moduleNumber}.${item.lessonNumber}:${item.title}`),
+      ["1.1:Module 1 - Understanding FPP", "1.2:Module 2 - Key FPPR Criteria", "1.3:Module 3 - FPPR in Practice"],
+    );
+    assert.equal(unmatched.length, 0);
+  });
+
+  it("skips videos with no resolvable Vimeo id and keeps numbering sequential for the rest", () => {
+    const { parsed, unmatched } = buildFallbackParse([
+      { uri: "/videos/1", name: "First topic", link: "https://vimeo.com/1" },
+      { name: "Untitled with no id" },
+      { uri: "/videos/2", name: "Second topic", link: "https://vimeo.com/2" },
+    ]);
+
+    assert.deepEqual(
+      parsed.map((item) => `${item.lessonNumber}:${item.title}`),
+      ["1:First topic", "2:Second topic"],
+    );
+    assert.equal(unmatched.length, 1);
+    assert.equal(unmatched[0].title, "Untitled with no id");
+    assert.equal(unmatched[0].vimeo_id, null);
   });
 });
 

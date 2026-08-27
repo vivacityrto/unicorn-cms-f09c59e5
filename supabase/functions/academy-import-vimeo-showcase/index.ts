@@ -1,10 +1,21 @@
 /**
  * academy-import-vimeo-showcase
  *
- * Staff paste a Vimeo Showcase URL against an existing Academy course; this
- * function paginates GET /albums/{id}/videos, parses "M{n} - Lesson {k} {title}"
- * names, and additively creates missing academy_modules / training_videos /
- * academy_lessons. Existing rows are never updated or deleted.
+ * Two modes, selected by whether `course_id` is present in the body:
+ *
+ * - With `course_id`: staff are importing into an existing Academy course.
+ *   Paginates GET /albums/{id}/videos, parses "M{n} - Lesson {k} {title}"
+ *   names, and additively creates missing academy_modules / training_videos /
+ *   academy_lessons. Existing rows are never updated or deleted.
+ * - Without `course_id`: preview mode, used by Add Course when drafting a
+ *   brand-new course from a showcase (no course exists yet to import into).
+ *   Same Vimeo fetch + title parsing, but read-only — it reports the parsed
+ *   video list (flagging any Vimeo ids already used by another course) and
+ *   writes nothing. The caller drafts AI content per video client-side, then
+ *   creates the course and its modules/lessons/videos directly. If no video
+ *   title matches the "M# - Lesson #" convention at all, falls back to one
+ *   flat module with a lesson per video in showcase order (`used_fallback:
+ *   true` in the response) rather than reporting everything unmatched.
  *
  * Auth: JWT + check_permission(caller, 'academy.builder.edit', 'full') —
  * same gate as the course-builder UI. Service-role writes only after that.
@@ -15,6 +26,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import {
+  buildFallbackParse,
   classifyVideos,
   distinctModuleNumbers,
   extractAlbumId,
@@ -77,12 +89,16 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return json(req, { error: "A JSON body with course_id and a showcase URL is required" }, 400);
+    return json(req, { error: "A JSON body with a showcase URL is required" }, 400);
   }
 
-  const courseId = Number(body.course_id);
-  if (!Number.isInteger(courseId) || courseId <= 0) {
-    return json(req, { error: "A valid course_id is required" }, 400);
+  const hasCourseId = body.course_id !== undefined && body.course_id !== null && body.course_id !== "";
+  let courseId = 0;
+  if (hasCourseId) {
+    courseId = Number(body.course_id);
+    if (!Number.isInteger(courseId) || courseId <= 0) {
+      return json(req, { error: "A valid course_id is required" }, 400);
+    }
   }
 
   const albumId = extractAlbumId(
@@ -95,17 +111,19 @@ Deno.serve(async (req) => {
     }, 400);
   }
 
-  const { data: course, error: courseError } = await supabase
-    .from("academy_courses")
-    .select("id")
-    .eq("id", courseId)
-    .maybeSingle();
-  if (courseError) {
-    console.error("academy-import-vimeo-showcase course lookup failed", courseError);
-    return json(req, { error: "Unable to load that course" }, 500);
-  }
-  if (!course) {
-    return json(req, { error: "Course not found" }, 404);
+  if (hasCourseId) {
+    const { data: course, error: courseError } = await supabase
+      .from("academy_courses")
+      .select("id")
+      .eq("id", courseId)
+      .maybeSingle();
+    if (courseError) {
+      console.error("academy-import-vimeo-showcase course lookup failed", courseError);
+      return json(req, { error: "Unable to load that course" }, 500);
+    }
+    if (!course) {
+      return json(req, { error: "Course not found" }, 404);
+    }
   }
 
   const vimeoToken = Deno.env.get("VIMEO_ACCESS_TOKEN");
@@ -125,6 +143,92 @@ Deno.serve(async (req) => {
   }
 
   const { parsed, unmatched } = classifyVideos(videos);
+
+  if (!hasCourseId) {
+    let previewParsed = parsed;
+    let previewUnmatched = unmatched;
+    let usedFallback = false;
+    if (parsed.length === 0 && videos.length > 0) {
+      const fallback = buildFallbackParse(videos);
+      previewParsed = fallback.parsed;
+      previewUnmatched = fallback.unmatched;
+      usedFallback = true;
+    }
+
+    const { data: allVideos, error: videosLookupErr } = await supabase
+      .from("training_videos")
+      .select("id, vimeo_url");
+    if (videosLookupErr) {
+      console.error("academy-import-vimeo-showcase preview video lookup failed", videosLookupErr);
+      return json(req, { error: "Unable to check for already-imported videos" }, 500);
+    }
+    const videoIdByVimeoId = new Map<string, string>();
+    for (const row of allVideos ?? []) {
+      const id = extractVimeoVideoId((row as { vimeo_url: string }).vimeo_url);
+      if (id && !videoIdByVimeoId.has(id)) {
+        videoIdByVimeoId.set(id, (row as { id: string }).id);
+      }
+    }
+
+    const matchedVideoIds = [...new Set(
+      previewParsed
+        .map((item) => videoIdByVimeoId.get(item.vimeoId))
+        .filter((id): id is string => !!id),
+    )];
+
+    const coursesByVideoId = new Map<string, Array<{ id: number; title: string; status: string | null }>>();
+    if (matchedVideoIds.length > 0) {
+      const { data: existingLessons, error: lessonsLookupErr } = await supabase
+        .from("academy_lessons")
+        .select("video_id, course_id")
+        .in("video_id", matchedVideoIds);
+      if (lessonsLookupErr) {
+        console.error("academy-import-vimeo-showcase preview lesson lookup failed", lessonsLookupErr);
+        return json(req, { error: "Unable to check for already-imported videos" }, 500);
+      }
+      const courseIds = [...new Set(
+        (existingLessons ?? []).map((row: { course_id: number }) => row.course_id),
+      )];
+      const { data: courses, error: coursesLookupErr } = courseIds.length > 0
+        ? await supabase.from("academy_courses").select("id, title, status").in("id", courseIds)
+        : { data: [] as Array<{ id: number; title: string; status: string | null }>, error: null };
+      if (coursesLookupErr) {
+        console.error("academy-import-vimeo-showcase preview course lookup failed", coursesLookupErr);
+        return json(req, { error: "Unable to check for already-imported videos" }, 500);
+      }
+      const courseById = new Map((courses ?? []).map((c) => [c.id, c]));
+      for (const row of existingLessons ?? []) {
+        const lessonRow = row as { video_id: string; course_id: number };
+        const course = courseById.get(lessonRow.course_id);
+        if (!course) continue;
+        const list = coursesByVideoId.get(lessonRow.video_id) ?? [];
+        list.push({ id: course.id, title: course.title, status: course.status });
+        coursesByVideoId.set(lessonRow.video_id, list);
+      }
+    }
+
+    return json(req, {
+      album_id: albumId,
+      video_count: videos.length,
+      used_fallback: usedFallback,
+      parsed: previewParsed.map((item) => {
+        const existingVideoId = videoIdByVimeoId.get(item.vimeoId) ?? null;
+        const existingCourses = existingVideoId ? coursesByVideoId.get(existingVideoId) ?? [] : [];
+        return {
+          module_number: item.moduleNumber,
+          lesson_number: item.lessonNumber,
+          title: item.title,
+          vimeo_id: item.vimeoId,
+          link: item.link,
+          duration_seconds: item.duration,
+          thumbnail_url: item.thumbnail,
+          already_imported: existingCourses.length > 0,
+          existing_courses: existingCourses,
+        };
+      }),
+      unmatched: previewUnmatched,
+    });
+  }
 
   const [{ data: existingModules, error: modulesErr }, { data: existingLessons, error: lessonsErr }, { data: existingVideos, error: videosErr }] =
     await Promise.all([
