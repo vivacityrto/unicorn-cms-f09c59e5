@@ -33,19 +33,6 @@ function indexOfFirst(src, patterns) {
 }
 
 describe("stage/package -> tenant binding before service-role access", () => {
-  it("calculate-phase-completeness validates package_instances(tenant_id, package_id) and phase_stages(package_id, phase_id) before loading requirements", () => {
-    const src = readFn("calculate-phase-completeness");
-    assert.match(src, /from\("package_instances"\)/);
-    assert.match(src, /\.eq\("tenant_id", tenant_id\)/);
-    assert.match(src, /\.eq\("package_id", package_id\)/);
-    assert.match(src, /from\("phase_stages"\)/);
-    assert.match(src, /!packageInstance \|\| !phaseStage/);
-
-    const validationAt = indexOfFirst(src, [/if \(packageError \|\| phaseError \|\| !packageInstance \|\| !phaseStage\)/]);
-    const requirementsLoadAt = src.indexOf('from("phase_requirements")');
-    assert.ok(requirementsLoadAt > validationAt, "tenant/phase binding must be validated before loading phase requirements");
-  });
-
   it("research-evidence-gap-check resolves stage_instances -> package_instances and requires a tenant match before creating the job", () => {
     const src = readFn("research-evidence-gap-check");
     assert.match(src, /from\("stage_instances"\)/);

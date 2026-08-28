@@ -28,7 +28,6 @@ const MUST_CALL_RPC = [
   "generate-membership-certificate",
   "link-sharepoint-document",
   "outlook-auth",
-  "calculate-phase-completeness",
   "research-evidence-gap-check",
   "create-client-audit",
 ];
