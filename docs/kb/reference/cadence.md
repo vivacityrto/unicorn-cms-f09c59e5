@@ -3,6 +3,8 @@
 > **Last updated:** 2026-04-27 · **Reconsider by:** 2026-07-27 · **Confidence:** medium — review-gate claims corrected 2026-04-27 to match operating-model ADR-011; some sections (recent themes, roadmap buckets) remain inferred from git log and may be stale. Estimating section assumes hand-written code; Lovable estimates differ.
 >
 > The engineering team's working rhythm on Unicorn 2.0, the current roadmap, and the shape of what's in flight. Vivacity runs on EOS, so the engineering team uses the same vocabulary — Rocks, To-Dos, Issues, IDS — rather than Scrum sprints. This doc reflects that.
+>
+> **Safety warning (2026-08-28):** the review, migration, Wrapper, direct-to-main, and definition-of-done instructions below are historical and conflict with current `AGENTS.md`. Until this document is regenerated, `AGENTS.md` is authoritative: use an isolated branch/worktree, normal PR review, audited migration/Edge workflows, and no merge without a fresh explicit ask.
 
 ---
 
@@ -55,7 +57,7 @@ Read the signal: this isn't a net-new-features week, it's stabilisation work. Do
 - Campaign engine decision (build / buy / defer)
 - Client portal architecture decision
 - Tighten edge function error codes across all functions (pattern established in `invite-user`, not consistent elsewhere)
-- Pragmatic Clean Architecture refactor — pilot via Lovable on Lifecycle Checklists slice. Plan: [clean-architecture-refactor.md](clean-architecture-refactor.md)
+- Evidence-led codebase optimization and KB renewal — verification baseline first, then route/layout simplification and a re-evaluated Lifecycle Checklists boundary pilot. Planning proposal pending review/merge: [codebase-optimization-plan-2026-08-28.md](codebase-optimization-plan-2026-08-28.md). The April [Clean Architecture proposal](clean-architecture-refactor.md) is retained as superseded decision history.
 
 ### Later
 - ~~Outlook calendar sync~~ ✅ **Shipped**
