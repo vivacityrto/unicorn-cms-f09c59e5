@@ -11,4 +11,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Fail if token-bearing links are built from a request value
-        run: bash scripts/check-email-redirect-urls.sh
+        run: node scripts/check-email-redirect-urls.mjs

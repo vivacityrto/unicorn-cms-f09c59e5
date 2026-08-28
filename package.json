@@ -8,7 +8,7 @@
     "build": "npm run lint:email-redirects && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "lint:email-redirects": "bash scripts/check-email-redirect-urls.sh",
+    "lint:email-redirects": "node scripts/check-email-redirect-urls.mjs",
     "preview": "vite preview",
     "test:edge-functions": "node --test \"supabase/functions/**/*.test.mjs\""
   },
