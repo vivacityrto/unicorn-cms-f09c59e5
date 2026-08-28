@@ -23,6 +23,7 @@ import { useModulesWithLessons, useCreateModule, useUpdateModule, useDeleteModul
 import { useUpdateCourse, usePublishCourse, useDeleteCourse } from "@/hooks/academy/useAdminAcademyCourses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -422,6 +423,10 @@ export default function AcademyBuilderCourse() {
     thumbnail_position: string;
     thumbnail_fit: "cover" | "contain";
     thumbnail_zoom: number;
+    banner_thumbnail_url: string | null;
+    banner_thumbnail_position: string;
+    banner_thumbnail_fit: "cover" | "contain";
+    banner_thumbnail_zoom: number;
     webinar_series: string | null;
     transcript: string;
   };
@@ -449,6 +454,10 @@ export default function AcademyBuilderCourse() {
       thumbnail_position: c?.thumbnail_position ?? "50% 50%",
       thumbnail_fit: c?.thumbnail_fit === "contain" ? "contain" : "cover",
       thumbnail_zoom: Number(c?.thumbnail_zoom) >= 1 ? Number(c.thumbnail_zoom) : 1,
+      banner_thumbnail_url: c?.banner_thumbnail_url ?? null,
+      banner_thumbnail_position: c?.banner_thumbnail_position ?? "50% 50%",
+      banner_thumbnail_fit: c?.banner_thumbnail_fit === "contain" ? "contain" : "cover",
+      banner_thumbnail_zoom: Number(c?.banner_thumbnail_zoom) >= 1 ? Number(c.banner_thumbnail_zoom) : 1,
       webinar_series: c?.webinar_series ?? null,
       transcript: c?.transcript ?? "",
     };
@@ -456,6 +465,7 @@ export default function AcademyBuilderCourse() {
 
   const [formState, setFormState] = useState<SettingsForm>(() => buildForm(course));
   const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
+  const [isBannerThumbnailUploading, setIsBannerThumbnailUploading] = useState(false);
   const baselineRef = useRef<SettingsForm>(formState);
 
   useEffect(() => {
@@ -533,35 +543,67 @@ export default function AcademyBuilderCourse() {
     }));
   };
 
-  const handleThumbnailUpload = async (file: File) => {
+  /** Validates and uploads a thumbnail image to Storage, returning its public URL (or null on failure). */
+  const uploadThumbnailFile = async (file: File, pathPrefix: string): Promise<string | null> => {
     const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
     if (!allowedTypes.has(file.type)) {
       toast.error("Choose a JPG, PNG, or WebP image");
-      return;
+      return null;
     }
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Thumbnail images must be 5 MB or smaller");
-      return;
+      return null;
     }
-    if (!courseId) return;
+    if (!courseId) return null;
 
-    setIsThumbnailUploading(true);
     try {
       const extension = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
-      const path = `courses/${courseId}/${crypto.randomUUID()}.${extension}`;
+      const path = `courses/${courseId}/${pathPrefix}${crypto.randomUUID()}.${extension}`;
       const { error: uploadError } = await supabase.storage
         .from("academy-thumbnails")
         .upload(path, file, { contentType: file.type, upsert: false, cacheControl: "3600" });
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage.from("academy-thumbnails").getPublicUrl(path);
-      setFormState((p) => ({ ...p, thumbnail_url: data.publicUrl }));
-      toast.success("Custom thumbnail added — click Save Changes to apply it");
+      return data.publicUrl;
     } catch (error: any) {
       toast.error(error?.message || "Failed to upload thumbnail");
+      return null;
+    }
+  };
+
+  const handleThumbnailUpload = async (file: File) => {
+    setIsThumbnailUploading(true);
+    try {
+      const publicUrl = await uploadThumbnailFile(file, "");
+      if (!publicUrl) return;
+      setFormState((p) => ({ ...p, thumbnail_url: publicUrl }));
+      toast.success("Custom thumbnail added — click Save Changes to apply it");
     } finally {
       setIsThumbnailUploading(false);
     }
+  };
+
+  const handleBannerThumbnailUpload = async (file: File) => {
+    setIsBannerThumbnailUploading(true);
+    try {
+      const publicUrl = await uploadThumbnailFile(file, "banner-");
+      if (!publicUrl) return;
+      setFormState((p) => ({ ...p, banner_thumbnail_url: publicUrl }));
+      toast.success("Custom banner image added — click Save Changes to apply it");
+    } finally {
+      setIsBannerThumbnailUploading(false);
+    }
+  };
+
+  const handleRemoveBannerThumbnail = () => {
+    setFormState((p) => ({
+      ...p,
+      banner_thumbnail_url: null,
+      banner_thumbnail_position: "50% 50%",
+      banner_thumbnail_fit: "cover",
+      banner_thumbnail_zoom: 1,
+    }));
   };
 
   // Note: in-app navigation guard via useBlocker requires a data router; this app uses BrowserRouter.
@@ -766,6 +808,8 @@ export default function AcademyBuilderCourse() {
               </div>
 
               <ThumbnailPositionEditor
+                label="Course card image"
+                shape="square"
                 imageUrl={formState.thumbnail_url}
                 value={formState.thumbnail_position}
                 onChange={(thumbnail_position) => setFormState((p) => ({ ...p, thumbnail_position }))}
@@ -776,6 +820,54 @@ export default function AcademyBuilderCourse() {
                 onUpload={handleThumbnailUpload}
                 isUploading={isThumbnailUploading}
               />
+
+              {formState.banner_thumbnail_url ? (
+                <ThumbnailPositionEditor
+                  label="Course page banner image"
+                  shape="video"
+                  imageUrl={formState.banner_thumbnail_url}
+                  value={formState.banner_thumbnail_position}
+                  onChange={(banner_thumbnail_position) => setFormState((p) => ({ ...p, banner_thumbnail_position }))}
+                  fit={formState.banner_thumbnail_fit}
+                  onFitChange={(banner_thumbnail_fit) => setFormState((p) => ({ ...p, banner_thumbnail_fit }))}
+                  zoom={formState.banner_thumbnail_zoom}
+                  onZoomChange={(banner_thumbnail_zoom) => setFormState((p) => ({ ...p, banner_thumbnail_zoom }))}
+                  onUpload={handleBannerThumbnailUpload}
+                  isUploading={isBannerThumbnailUploading}
+                  onRemove={handleRemoveBannerThumbnail}
+                  removeLabel="Use course card image instead"
+                />
+              ) : (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <div>
+                    <Label>Course page banner image</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      No separate banner image set — the course page banner reuses the course card image above, centred. Upload a different image to frame the banner independently.
+                    </p>
+                  </div>
+                  <div className="aspect-video max-w-[320px] overflow-hidden rounded-lg bg-muted border">
+                    {formState.thumbnail_url ? (
+                      <img src={formState.thumbnail_url} alt="Course page banner preview" className="h-full w-full object-cover" style={{ objectPosition: "50% 50%" }} />
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-xs text-muted-foreground text-center p-4">Generate or add a course card image to preview the banner.</div>
+                    )}
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50">
+                    {isBannerThumbnailUploading ? "Uploading…" : "Upload custom banner image"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      disabled={isBannerThumbnailUploading}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.currentTarget.value = "";
+                        if (file) void handleBannerThumbnailUpload(file);
+                      }}
+                    />
+                  </label>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label={requiresFacilitatorFields ? "Facilitator *" : "Facilitator"}>

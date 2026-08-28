@@ -26,7 +26,7 @@ export default function AcademyCourseDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, target_audience, estimated_minutes, difficulty_level, status, tags, thumbnail_url, thumbnail_position, thumbnail_fit, thumbnail_zoom, certificate_enabled, webinar_series")
+        .select("id, title, slug, description, short_description, target_audience, estimated_minutes, difficulty_level, status, tags, thumbnail_url, thumbnail_position, thumbnail_fit, thumbnail_zoom, banner_thumbnail_url, banner_thumbnail_position, banner_thumbnail_fit, banner_thumbnail_zoom, certificate_enabled, webinar_series")
         .eq("slug", slug!)
         .eq("status", "published")
         .single();
@@ -107,6 +107,20 @@ export default function AcademyCourseDetailPage() {
     return <BookOpen className="h-4 w-4" />;
   };
 
+  // The banner prefers a dedicated banner image; when none is set it falls back to the
+  // course card's image, but centred/uncropped rather than the card's own square-tuned
+  // framing, since a crop chosen for a 1:1 card often doesn't suit a 16:9 banner.
+  const heroImage = course.banner_thumbnail_url
+    ? {
+        url: course.banner_thumbnail_url,
+        fit: (course.banner_thumbnail_fit as "cover" | "contain") || "cover",
+        position: course.banner_thumbnail_position || "50% 50%",
+        zoom: course.banner_thumbnail_zoom || 1,
+      }
+    : course.thumbnail_url
+      ? { url: course.thumbnail_url, fit: "cover" as const, position: "50% 50%", zoom: 1 }
+      : null;
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -128,23 +142,25 @@ export default function AcademyCourseDetailPage() {
       {/* Hero section */}
       <div className="rounded-xl overflow-hidden" style={{ border: "1px solid hsl(var(--border))" }}>
         <div
-          className="relative flex items-center justify-center aspect-video w-full overflow-hidden"
+          className="relative flex items-center justify-center w-full overflow-hidden"
           style={{
-            background: course.thumbnail_url
+            aspectRatio: "16 / 9",
+            maxHeight: 280,
+            background: heroImage
               ? undefined
               : `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)`,
           }}
         >
-          {course.thumbnail_url && (
+          {heroImage && (
             <img
-              src={course.thumbnail_url}
+              src={heroImage.url}
               alt={course.title}
               className="absolute inset-0 h-full w-full object-cover"
               style={{
-                objectFit: (course.thumbnail_fit as "cover" | "contain") || "cover",
-                objectPosition: course.thumbnail_position || "50% 50%",
-                transform: `scale(${course.thumbnail_zoom || 1})`,
-                transformOrigin: course.thumbnail_position || "50% 50%",
+                objectFit: heroImage.fit,
+                objectPosition: heroImage.position,
+                transform: `scale(${heroImage.zoom})`,
+                transformOrigin: heroImage.position,
               }}
             />
           )}

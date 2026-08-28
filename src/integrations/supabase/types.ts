@@ -748,6 +748,10 @@ export type Database = {
           archived_at: string | null
           auto_enrol_all_clients: boolean
           available_to_all_clients: boolean
+          banner_thumbnail_fit: string
+          banner_thumbnail_position: string
+          banner_thumbnail_url: string | null
+          banner_thumbnail_zoom: number
           certificate_enabled: boolean | null
           created_at: string | null
           created_by: string | null
@@ -789,6 +793,10 @@ export type Database = {
           archived_at?: string | null
           auto_enrol_all_clients?: boolean
           available_to_all_clients?: boolean
+          banner_thumbnail_fit?: string
+          banner_thumbnail_position?: string
+          banner_thumbnail_url?: string | null
+          banner_thumbnail_zoom?: number
           certificate_enabled?: boolean | null
           created_at?: string | null
           created_by?: string | null
@@ -830,6 +838,10 @@ export type Database = {
           archived_at?: string | null
           auto_enrol_all_clients?: boolean
           available_to_all_clients?: boolean
+          banner_thumbnail_fit?: string
+          banner_thumbnail_position?: string
+          banner_thumbnail_url?: string | null
+          banner_thumbnail_zoom?: number
           certificate_enabled?: boolean | null
           created_at?: string | null
           created_by?: string | null
@@ -15871,566 +15883,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      compliance_audit_responses: {
-        Row: {
-          audit_id: string
-          created_at: string
-          evidence_urls: string[] | null
-          id: string
-          is_flagged: boolean
-          notes: string | null
-          question_id: string
-          responded_at: string | null
-          responded_by: string | null
-          response: string | null
-          score: number | null
-          updated_at: string
-        }
-        Insert: {
-          audit_id: string
-          created_at?: string
-          evidence_urls?: string[] | null
-          id?: string
-          is_flagged?: boolean
-          notes?: string | null
-          question_id: string
-          responded_at?: string | null
-          responded_by?: string | null
-          response?: string | null
-          score?: number | null
-          updated_at?: string
-        }
-        Update: {
-          audit_id?: string
-          created_at?: string
-          evidence_urls?: string[] | null
-          id?: string
-          is_flagged?: boolean
-          notes?: string | null
-          question_id?: string
-          responded_at?: string | null
-          responded_by?: string | null
-          response?: string | null
-          score?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_audit_responses_audit_id_fkey"
-            columns: ["audit_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_audits"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_audit_responses_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_template_questions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_audit_responses_responded_by_fkey"
-            columns: ["responded_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audit_responses_responded_by_fkey"
-            columns: ["responded_by"]
-            isOneToOne: false
-            referencedRelation: "v_auth_user_state"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audit_responses_responded_by_fkey"
-            columns: ["responded_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_labour_efficiency"
-            referencedColumns: ["csc_user_id"]
-          },
-          {
-            foreignKeyName: "compliance_audit_responses_responded_by_fkey"
-            columns: ["responded_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_weekly_wins"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audit_responses_responded_by_fkey"
-            columns: ["responded_by"]
-            isOneToOne: false
-            referencedRelation: "v_executive_consultant_distribution"
-            referencedColumns: ["consultant_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audit_responses_responded_by_fkey"
-            columns: ["responded_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_capacity"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audit_responses_responded_by_fkey"
-            columns: ["responded_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_load"
-            referencedColumns: ["user_uuid"]
-          },
-        ]
-      }
-      compliance_audits: {
-        Row: {
-          audit_date: string | null
-          auditor_user_id: string | null
-          created_at: string
-          created_by: string | null
-          id: string
-          notes: string | null
-          score_max: number | null
-          score_pct: number | null
-          score_total: number | null
-          status: string
-          template_id: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          audit_date?: string | null
-          auditor_user_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          notes?: string | null
-          score_max?: number | null
-          score_pct?: number | null
-          score_total?: number | null
-          status?: string
-          template_id: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          audit_date?: string | null
-          auditor_user_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          notes?: string | null
-          score_max?: number | null
-          score_pct?: number | null
-          score_total?: number | null
-          status?: string
-          template_id?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_audits_auditor_user_id_fkey"
-            columns: ["auditor_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_auditor_user_id_fkey"
-            columns: ["auditor_user_id"]
-            isOneToOne: false
-            referencedRelation: "v_auth_user_state"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_auditor_user_id_fkey"
-            columns: ["auditor_user_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_labour_efficiency"
-            referencedColumns: ["csc_user_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_auditor_user_id_fkey"
-            columns: ["auditor_user_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_weekly_wins"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_auditor_user_id_fkey"
-            columns: ["auditor_user_id"]
-            isOneToOne: false
-            referencedRelation: "v_executive_consultant_distribution"
-            referencedColumns: ["consultant_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_auditor_user_id_fkey"
-            columns: ["auditor_user_id"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_capacity"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_auditor_user_id_fkey"
-            columns: ["auditor_user_id"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_load"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_auth_user_state"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_labour_efficiency"
-            referencedColumns: ["csc_user_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_weekly_wins"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_executive_consultant_distribution"
-            referencedColumns: ["consultant_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_capacity"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_load"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_audits_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_audit_schedule"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_engagement_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_eos_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_home_hero"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_reporting_reminders"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_attention_ranked"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_portfolio"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_recent_comms"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_academy_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_compliance_entitlements"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_compliance_task_metrics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_last_activity"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tga_audit_snapshot"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "compliance_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      compliance_corrective_actions: {
-        Row: {
-          audit_id: string
-          created_at: string
-          created_by: string | null
-          description: string
-          due_date: string | null
-          evidence_urls: string[] | null
-          id: string
-          notes: string | null
-          response_id: string
-          responsible_person: string | null
-          status: string
-          updated_at: string
-          verified_at: string | null
-          verified_by: string | null
-        }
-        Insert: {
-          audit_id: string
-          created_at?: string
-          created_by?: string | null
-          description: string
-          due_date?: string | null
-          evidence_urls?: string[] | null
-          id?: string
-          notes?: string | null
-          response_id: string
-          responsible_person?: string | null
-          status?: string
-          updated_at?: string
-          verified_at?: string | null
-          verified_by?: string | null
-        }
-        Update: {
-          audit_id?: string
-          created_at?: string
-          created_by?: string | null
-          description?: string
-          due_date?: string | null
-          evidence_urls?: string[] | null
-          id?: string
-          notes?: string | null
-          response_id?: string
-          responsible_person?: string | null
-          status?: string
-          updated_at?: string
-          verified_at?: string | null
-          verified_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_corrective_actions_audit_id_fkey"
-            columns: ["audit_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_audits"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_auth_user_state"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_labour_efficiency"
-            referencedColumns: ["csc_user_id"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_weekly_wins"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_executive_consultant_distribution"
-            referencedColumns: ["consultant_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_capacity"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_load"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_response_id_fkey"
-            columns: ["response_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_audit_responses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "v_auth_user_state"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_labour_efficiency"
-            referencedColumns: ["csc_user_id"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_weekly_wins"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "v_executive_consultant_distribution"
-            referencedColumns: ["consultant_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_capacity"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "compliance_corrective_actions_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_load"
-            referencedColumns: ["user_uuid"]
-          },
-        ]
       }
       compliance_obligations: {
         Row: {
@@ -70723,18 +70175,6 @@ export type Database = {
         Args: { p_actor?: string; p_reason?: string; p_time_entry_id: string }
         Returns: undefined
       }
-      apply_document_ai_analysis: {
-        Args: {
-          p_category_confidence: number
-          p_description_confidence: number
-          p_document_id: number
-          p_reasoning: string
-          p_suggested_category: string
-          p_suggested_description: string
-          p_user_id?: string
-        }
-        Returns: Json
-      }
       apply_stage_version_to_package: {
         Args: {
           p_package_id: number
@@ -70746,15 +70186,6 @@ export type Database = {
       apply_template_to_meeting: {
         Args: { p_meeting_id: string; p_template_id: string }
         Returns: undefined
-      }
-      approve_document_ai_suggestions: {
-        Args: {
-          p_apply_category?: boolean
-          p_apply_description?: boolean
-          p_document_id: number
-          p_user_id?: string
-        }
-        Returns: Json
       }
       audit_duplicate_emails: {
         Args: never
@@ -70841,16 +70272,6 @@ export type Database = {
       }
       auto_assign_consultant: { Args: { p_tenant_id: number }; Returns: string }
       backfill_l10_meeting_participants: { Args: never; Returns: Json }
-      bulk_create_documents_with_versions: {
-        Args: {
-          p_auto_publish?: boolean
-          p_category?: string
-          p_documents: Json
-          p_standard_refs?: string[]
-          p_standard_set?: string
-        }
-        Returns: Json
-      }
       bulk_reassign_primary_csc: {
         Args: {
           p_from_user_id: string
@@ -72463,10 +71884,6 @@ export type Database = {
         Args: { p_contact_id: number; p_user_id: string }
         Returns: Json
       }
-      swap_tenant_user_to_contact: {
-        Args: { p_reason?: string; p_tenant_id: number; p_user_id: string }
-        Returns: Json
-      }
       match_ask_viv_corpus: {
         Args: {
           filter_source_type?: string
@@ -72731,10 +72148,6 @@ export type Database = {
       }
       refresh_exec_trend_mvs: { Args: never; Returns: undefined }
       refresh_playbook_effectiveness: { Args: never; Returns: undefined }
-      reject_document_ai_suggestions: {
-        Args: { p_document_id: number; p_reason?: string; p_user_id?: string }
-        Returns: Json
-      }
       relationship_role_label: { Args: { p_role: string }; Returns: string }
       release_audit_report: {
         Args: {
@@ -73381,6 +72794,10 @@ export type Database = {
         Returns: boolean
       }
       strip_html_to_text: { Args: { p_html: string }; Returns: string }
+      swap_tenant_user_to_contact: {
+        Args: { p_reason?: string; p_tenant_id: number; p_user_id: string }
+        Returns: Json
+      }
       sync_audit_actions_to_client_items: {
         Args: { p_audit_id: string }
         Returns: number

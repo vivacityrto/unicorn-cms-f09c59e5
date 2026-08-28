@@ -16,6 +16,10 @@ function parsePosition(value: string | null | undefined): [number, number] {
 }
 
 interface Props {
+  /** Section heading, e.g. "Course card image" or "Course page banner image". */
+  label: string;
+  /** Preview aspect ratio — square for the course card, video (16:9) for the course-detail hero banner. */
+  shape?: "square" | "video";
   imageUrl: string | null;
   value: string;
   onChange: (value: string) => void;
@@ -25,9 +29,26 @@ interface Props {
   onZoomChange: (zoom: number) => void;
   onUpload: (file: File) => Promise<void>;
   isUploading?: boolean;
+  /** When provided, shows a "Remove" action (e.g. to fall back to another image) instead of requiring a replacement upload. */
+  onRemove?: () => void;
+  removeLabel?: string;
 }
 
-export default function ThumbnailPositionEditor({ imageUrl, value, onChange, fit, onFitChange, zoom, onZoomChange, onUpload, isUploading = false }: Props) {
+export default function ThumbnailPositionEditor({
+  label,
+  shape = "square",
+  imageUrl,
+  value,
+  onChange,
+  fit,
+  onFitChange,
+  zoom,
+  onZoomChange,
+  onUpload,
+  isUploading = false,
+  onRemove,
+  removeLabel = "Remove",
+}: Props) {
   const [x, y] = useMemo(() => parsePosition(value), [value]);
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
   const setPosition = (nextX: number, nextY: number) => {
@@ -47,40 +68,27 @@ export default function ThumbnailPositionEditor({ imageUrl, value, onChange, fit
   };
   const clearDrag = () => { dragRef.current = null; };
 
+  const previewShapeClass = shape === "video" ? "aspect-video max-w-[320px]" : "aspect-square max-w-[260px]";
+
   return (
     <div className="space-y-3 rounded-lg border p-3">
       <div>
-        <Label>Thumbnail framing</Label>
-        <p className="text-xs text-muted-foreground mt-1">Drag the square preview to reposition the image. The same framing is used on the course card and the course page banner below — check both before saving.</p>
+        <Label>{label}</Label>
+        <p className="text-xs text-muted-foreground mt-1">Drag the image to reposition it. Choose Fill to crop or Show full image to zoom out.</p>
       </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">Course card</p>
-          <div
-            className="aspect-square w-[120px] overflow-hidden rounded-lg bg-muted border cursor-move touch-none"
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={clearDrag}
-            onPointerCancel={clearDrag}
-            title={imageUrl ? "Drag to reposition thumbnail" : undefined}
-          >
-            {imageUrl ? (
-              <img src={imageUrl} alt="Course card preview" className="h-full w-full" style={{ objectFit: fit, objectPosition: value || "50% 50%", transform: `scale(${zoom})`, transformOrigin: value || "50% 50%" }} draggable={false} />
-            ) : (
-              <div className="h-full flex items-center justify-center text-xs text-muted-foreground text-center p-4">Generate or add a thumbnail to preview framing.</div>
-            )}
-          </div>
-        </div>
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">Course page banner</p>
-          <div className="aspect-video w-[220px] overflow-hidden rounded-lg bg-muted border">
-            {imageUrl ? (
-              <img src={imageUrl} alt="Course page banner preview" className="h-full w-full" style={{ objectFit: fit, objectPosition: value || "50% 50%", transform: `scale(${zoom})`, transformOrigin: value || "50% 50%" }} draggable={false} />
-            ) : (
-              <div className="h-full flex items-center justify-center text-xs text-muted-foreground text-center p-4">Generate or add a thumbnail to preview framing.</div>
-            )}
-          </div>
-        </div>
+      <div
+        className={`${previewShapeClass} overflow-hidden rounded-lg bg-muted border cursor-move touch-none`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={clearDrag}
+        onPointerCancel={clearDrag}
+        title={imageUrl ? "Drag to reposition thumbnail" : undefined}
+      >
+        {imageUrl ? (
+          <img src={imageUrl} alt={`${label} preview`} className="h-full w-full" style={{ objectFit: fit, objectPosition: value || "50% 50%", transform: `scale(${zoom})`, transformOrigin: value || "50% 50%" }} draggable={false} />
+        ) : (
+          <div className="h-full flex items-center justify-center text-xs text-muted-foreground text-center p-4">Generate or add a thumbnail to preview framing.</div>
+        )}
       </div>
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant={fit === "cover" ? "default" : "outline"} onClick={() => onFitChange("cover")}>Fill (crop)</Button>
@@ -88,23 +96,28 @@ export default function ThumbnailPositionEditor({ imageUrl, value, onChange, fit
       </div>
       <div className="rounded-md border border-dashed p-3 space-y-2">
         <div>
-          <p className="text-sm font-medium">Custom thumbnail</p>
-          <p className="text-xs text-muted-foreground">Use your own JPG, PNG, or WebP image instead of the Vimeo thumbnail.</p>
+          <p className="text-sm font-medium">Custom image</p>
+          <p className="text-xs text-muted-foreground">Use your own JPG, PNG, or WebP image.</p>
         </div>
-        <label className="inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50">
-          {isUploading ? "Uploading…" : imageUrl ? "Replace image" : "Upload custom image"}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="sr-only"
-            disabled={isUploading}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.currentTarget.value = "";
-              if (file) void onUpload(file);
-            }}
-          />
-        </label>
+        <div className="flex flex-wrap gap-2">
+          <label className="inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50">
+            {isUploading ? "Uploading…" : imageUrl ? "Replace image" : "Upload custom image"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              disabled={isUploading}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.currentTarget.value = "";
+                if (file) void onUpload(file);
+              }}
+            />
+          </label>
+          {onRemove && imageUrl && (
+            <Button type="button" size="sm" variant="outline" onClick={onRemove}>{removeLabel}</Button>
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         {PRESETS.map((preset) => (
