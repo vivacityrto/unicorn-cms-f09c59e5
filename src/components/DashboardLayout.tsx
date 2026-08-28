@@ -58,7 +58,6 @@ const clientsMenuItems = [
   { icon: Mail, label: "Communications", path: "/communications" },
   { icon: LifeBuoy, label: "Support Tickets", path: "/support-tickets" },
   { icon: Lightbulb, label: "RTO Tips", path: "/rto-tips" },
-  { icon: FileCheck, label: "Compliance Auditor", path: "/compliance-audits" },
   { icon: ClipboardCheck, label: "Audits", path: "/audits" },
   { icon: Download, label: "Cert & Contact Register", path: "/clients/bulk-membership-certificates", cscOrSuperAdminOnly: true },
 ];

@@ -216,12 +216,6 @@ const RolePermissionsEditor = lazy(() => import("./pages/admin/RolePermissionsEd
 const ContactDirectory = lazy(() => import("./pages/admin/ContactDirectory"));
 
 
-// Compliance Auditor pages
-const ComplianceAuditGlobal = lazy(() => import("./pages/ComplianceAuditGlobal"));
-const ComplianceAuditList = lazy(() => import("./pages/ComplianceAuditList"));
-const ComplianceAuditForm = lazy(() => import("./pages/ComplianceAuditForm"));
-const ComplianceAuditReport = lazy(() => import("./pages/ComplianceAuditReport"));
-
 // Academy pages (placeholder)
 const AcademyCoursesListPage = lazy(() => import("./pages/academy/AcademyCoursesListPage"));
 const AcademyCertificatesPage = lazy(() => import("./pages/academy/AcademyCertificatesPage"));
@@ -1058,11 +1052,6 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            {/* Compliance Auditor Routes */}
-            <Route path="/compliance-audits" element={<ProtectedRoute><ComplianceAuditGlobal /></ProtectedRoute>} />
-            <Route path="/compliance-audits/:tenantId" element={<ProtectedRoute><ComplianceAuditList /></ProtectedRoute>} />
-            <Route path="/compliance-audits/:tenantId/audit/:auditId" element={<ProtectedRoute><ComplianceAuditForm /></ProtectedRoute>} />
-            <Route path="/compliance-audits/:tenantId/audit/:auditId/report" element={<ProtectedRoute><ComplianceAuditReport /></ProtectedRoute>} />
             {/* Resource Hub Routes */}
             <Route path="/resource-hub" element={<ProtectedRoute><ResourceHubDashboard /></ProtectedRoute>} />
             <Route path="/resource-hub/templates" element={<ProtectedRoute><ResourceCategoryPage categoryId="templates" /></ProtectedRoute>} />

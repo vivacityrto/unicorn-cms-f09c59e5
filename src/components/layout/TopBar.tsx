@@ -66,7 +66,6 @@ const routeTitles: Record<string, string> = {
   "/suggestions/new": "New Suggestion",
   "/support-tickets": "Support Tickets",
   "/support-tickets/new": "New Support Ticket",
-  "/compliance-audits": "Compliance Auditor",
   "/audits": "Audits",
   "/clients/bulk-membership-certificates": "Cert & Contact Register",
   "/eos": "EOS Overview",
