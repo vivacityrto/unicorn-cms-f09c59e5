@@ -1,6 +1,23 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +33,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Loader2, Trash2, Video, Wand2, Save, AlertTriangle, Plus, ListPlus, ArrowLeft } from "lucide-react";
+import { Sparkles, Loader2, Trash2, Video, Wand2, Save, AlertTriangle, Plus, ListPlus, ArrowLeft, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import TagChipInput from "@/components/academy/TagChipInput";
 import WorkshopSegmentSplit, {
@@ -146,7 +163,6 @@ type ShowcasePreview = {
   videoCount: number;
   parsed: ShowcaseParsedItem[];
   unmatched: ShowcaseUnmatchedItem[];
-  usedFallback: boolean;
 };
 
 function generateSlug(title: string): string {
@@ -249,6 +265,45 @@ function humaniseVimeoError(msg: string): string {
   return msg;
 }
 
+/** One draggable row in the showcase review list — reordering here decides lesson order. */
+function SortableShowcaseRow({ item }: { item: ShowcaseParsedItem }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.vimeo_id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-2 border-b py-1 last:border-b-0 bg-background"
+    >
+      <button
+        type="button"
+        className="p-0.5 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none shrink-0"
+        aria-label={`Reorder ${item.title}`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <span className="text-xs text-muted-foreground shrink-0 w-5 text-right">{item.lesson_number}.</span>
+      <span className="flex-1 truncate">{item.title}</span>
+      <span className="flex items-center gap-2 shrink-0">
+        <span className="text-xs text-muted-foreground">{formatDuration(item.duration_seconds)}</span>
+        {item.already_imported && (
+          <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-800">
+            already used by {item.existing_courses.map((c) => c.title).join(", ")}
+          </Badge>
+        )}
+      </span>
+    </li>
+  );
+}
 
 export default function AcademyAddCoursePage() {
   const navigate = useNavigate();
@@ -326,6 +381,36 @@ export default function AcademyAddCoursePage() {
   const [showcaseProgress, setShowcaseProgress] = useState<string | null>(null);
   const [showcaseItems, setShowcaseItems] = useState<ShowcaseItemDraft[]>([]);
   const [selectedShowcaseItem, setSelectedShowcaseItem] = useState(0);
+
+  const showcaseSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  // Reordering the review list decides lesson order — resequence lesson_number
+  // to match, and keep any already-drafted items (showcaseItems) in step with
+  // it so a reorder after drafting doesn't require a full AI redraft.
+  const handleShowcaseReorder = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setShowcasePreview((prev) => {
+      if (!prev) return prev;
+      const oldIndex = prev.parsed.findIndex((p) => p.vimeo_id === active.id);
+      const newIndex = prev.parsed.findIndex((p) => p.vimeo_id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const reordered = arrayMove(prev.parsed, oldIndex, newIndex).map((item, i) => ({
+        ...item,
+        lesson_number: i + 1,
+      }));
+      return { ...prev, parsed: reordered };
+    });
+    setShowcaseItems((prev) => {
+      const oldIndex = prev.findIndex((d) => d.vimeoId === active.id);
+      const newIndex = prev.findIndex((d) => d.vimeoId === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex).map((d, i) => ({ ...d, lessonNumber: i + 1 }));
+    });
+  };
 
   // Step 3 editable fields (single-video mode)
   const [title, setTitle] = useState("");
@@ -651,7 +736,6 @@ export default function AcademyAddCoursePage() {
 
       const parsed: ShowcaseParsedItem[] = Array.isArray(data?.parsed) ? data.parsed : [];
       const unmatched: ShowcaseUnmatchedItem[] = Array.isArray(data?.unmatched) ? data.unmatched : [];
-      const usedFallback = !!data?.used_fallback;
       if (parsed.length === 0 && unmatched.length === 0) {
         throw new Error("That showcase has no videos.");
       }
@@ -660,17 +744,10 @@ export default function AcademyAddCoursePage() {
         videoCount: Number(data.video_count) || parsed.length + unmatched.length,
         parsed,
         unmatched,
-        usedFallback,
       });
       setShowcaseItems([]);
       setGenerated(false);
-      if (parsed.length === 0) {
-        toast.error("None of this showcase's titles matched the \"M# - Lesson # Title\" naming convention — see below.");
-      } else if (usedFallback) {
-        toast.success(`No M#/Lesson# numbering found — sequenced ${parsed.length} video${parsed.length === 1 ? "" : "s"} as one module in showcase order.`);
-      } else {
-        toast.success(`${parsed.length} video${parsed.length === 1 ? "" : "s"} found — review below, then draft with AI`);
-      }
+      toast.success(`${parsed.length} video${parsed.length === 1 ? "" : "s"} found — reorder below if needed, then draft with AI`);
     } catch (e: any) {
       setGenerateError(String(e?.message || "Failed to read that showcase"));
     } finally {
@@ -692,9 +769,7 @@ export default function AcademyAddCoursePage() {
       const sessionTags = new Set(distinctTags);
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        const label = showcasePreview.usedFallback
-          ? item.title
-          : `M${item.module_number} Lesson ${item.lesson_number}: ${item.title}`;
+        const label = item.title;
         setShowcaseProgress(`Reading video ${i + 1} of ${items.length} — ${label}…`);
 
         const { data: vimeo, error: vErr } = await supabase.functions.invoke(
@@ -1434,8 +1509,9 @@ export default function AcademyAddCoursePage() {
                 <p id="showcase-url-help" className="text-xs text-muted-foreground">
                   Paste the showcase's own URL, e.g.{" "}
                   <code className="rounded bg-muted px-1 py-0.5">vimeo.com/showcase/12364831</code>.
-                  Video titles in the form <code>M1 - Lesson 1 Title</code> become modules and lessons —
-                  each is fetched, transcribed, and drafted with AI just like a single recording.
+                  Every video becomes a lesson, in the showcase's own order — reorder them below
+                  before drafting. Each is fetched, transcribed, and drafted with AI just like a
+                  single recording.
                 </p>
               </div>
             )}
@@ -1625,18 +1701,8 @@ export default function AcademyAddCoursePage() {
               <CardTitle className="text-base">2b. Review showcase videos</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {showcasePreview.usedFallback && (
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    No video matched the "M# - Lesson # Title" numbering, so these are sequenced as one
-                    module with a lesson per video, in the showcase's own order, using each video's own title.
-                  </AlertDescription>
-                </Alert>
-              )}
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">{showcasePreview.videoCount} video{showcasePreview.videoCount === 1 ? "" : "s"} in showcase</Badge>
-                <Badge variant="outline">{showcasePreview.parsed.length} matched</Badge>
                 {showcasePreview.parsed.some((p) => p.already_imported) && (
                   <Badge variant="outline" className="border-amber-300 text-amber-800">
                     {showcasePreview.parsed.filter((p) => p.already_imported).length} already imported elsewhere
@@ -1644,35 +1710,41 @@ export default function AcademyAddCoursePage() {
                 )}
                 {showcasePreview.unmatched.length > 0 && (
                   <Badge variant="outline" className="border-amber-300 text-amber-800">
-                    {showcasePreview.unmatched.length} unmatched
+                    {showcasePreview.unmatched.length} skipped
                   </Badge>
                 )}
               </div>
 
-              <ul className="text-sm space-y-1 max-h-56 overflow-y-auto">
-                {showcasePreview.parsed.map((item) => (
-                  <li key={item.vimeo_id} className="flex items-center justify-between gap-2 border-b py-1 last:border-b-0">
-                    <span>
-                      {showcasePreview.usedFallback ? item.title : `M${item.module_number} Lesson ${item.lesson_number}: ${item.title}`}
-                    </span>
-                    <span className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-muted-foreground">{formatDuration(item.duration_seconds)}</span>
-                      {item.already_imported && (
-                        <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-800">
-                          already used by {item.existing_courses.map((c) => c.title).join(", ")}
-                        </Badge>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {showcasePreview.parsed.length > 0 && (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Drag <GripVertical className="inline h-3 w-3 align-text-top" /> to reorder — this sets the lesson order.
+                  </p>
+                  <DndContext
+                    sensors={showcaseSensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleShowcaseReorder}
+                  >
+                    <SortableContext
+                      items={showcasePreview.parsed.map((item) => item.vimeo_id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <ul className="text-sm space-y-1 max-h-56 overflow-y-auto">
+                        {showcasePreview.parsed.map((item) => (
+                          <SortableShowcaseRow key={item.vimeo_id} item={item} />
+                        ))}
+                      </ul>
+                    </SortableContext>
+                  </DndContext>
+                </>
+              )}
 
               {showcasePreview.unmatched.length > 0 && (
                 <Alert variant="warning">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
                     <span className="block font-medium mb-1">
-                      These titles didn't match "M# - Lesson # …" and will be skipped:
+                      These videos couldn't be read and will be skipped:
                     </span>
                     <ul className="list-disc pl-5 space-y-0.5">
                       {showcasePreview.unmatched.map((item, idx) => (
@@ -1743,11 +1815,6 @@ export default function AcademyAddCoursePage() {
                       style={i === activeIndex ? { backgroundColor: "#7130A0" } : undefined}
                     >
                       {i + 1}. {d.title || "Untitled"}
-                      {showcaseActive && !showcasePreview?.usedFallback && (
-                        <span className="ml-1 opacity-70">
-                          {`(M${(d as ShowcaseItemDraft).moduleNumber} L${(d as ShowcaseItemDraft).lessonNumber})`}
-                        </span>
-                      )}
                       {!showcaseActive && workshopActive && (
                         <span className="ml-1 opacity-70">
                           {`(${formatTimecode((d as SegmentDraft).segment.start_seconds)}–${formatTimecode((d as SegmentDraft).segment.end_seconds)})`}
