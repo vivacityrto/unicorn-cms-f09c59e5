@@ -52,6 +52,32 @@ function parseJson(content: string): unknown | null {
   }
 }
 
+/**
+ * Calls the AI gateway and parses its response as JSON, retrying the whole
+ * call (not just the parse) up to `maxAttempts` times — a malformed response
+ * is usually a one-off model flake (truncated output, a stray preamble
+ * sentence), and re-parsing the exact same broken string deterministically
+ * fails again. Logs the raw content on final failure so a real recurring
+ * problem is diagnosable via function logs instead of silently discarded.
+ */
+async function callAiJson(
+  apiKey: string,
+  system: string,
+  user: string,
+  maxAttempts = 2,
+): Promise<{ ok: true; data: unknown } | { ok: false; status: number; error: string }> {
+  let lastContent = "";
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const ai = await callAi(apiKey, system, user);
+    if (!ai.ok) return ai;
+    lastContent = ai.content;
+    const parsed = parseJson(ai.content);
+    if (parsed !== null) return { ok: true, data: parsed };
+  }
+  console.error(`callAiJson: failed to parse after ${maxAttempts} attempts. Raw content:`, lastContent);
+  return { ok: false, status: 500, error: "Failed to parse AI response" };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
@@ -112,7 +138,7 @@ Deno.serve(async (req) => {
         ? `\n\nExisting tag catalog (reuse one of these whenever it genuinely fits — only coin a new tag when none of these capture the topic):\n${existingTagList.join(", ")}`
         : "";
 
-      const ai = await callAi(
+      const ai = await callAiJson(
         LOVABLE_API_KEY,
         "You classify professional training content for Vivacity Academy, which serves Australian RTOs. You answer strictly with JSON.",
         `Classify this recording.\n\nTitle: ${title}\nSeries: ${webinar_series || "Not specified"}\nTranscript (may be truncated):\n${String(transcript || "").slice(0, 20000)}${tagGuidance}\n\nReturn ONLY JSON, no markdown:\n{"target_audience": ["ceo","compliance_manager","trainer","administrator"], "difficulty_level": "beginner|intermediate|advanced", "tags": ["3-6 short lowercase topical tags, lowercase with spaces not hyphens, preferring the existing catalog above where it fits"]}\nChoose only audiences that genuinely apply.`,
@@ -122,14 +148,8 @@ Deno.serve(async (req) => {
           status: ai.status, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
         });
       }
-      const parsedCls = parseJson(ai.content) as Record<string, unknown> | null;
-      if (!parsedCls) {
-        return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
-          status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-        });
-      }
 
-      return new Response(JSON.stringify(parsedCls), {
+      return new Response(JSON.stringify(ai.data), {
         headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
@@ -245,58 +265,18 @@ Deno.serve(async (req) => {
 
       const userPrompt = `Generate descriptions for a course with the following details:\n\nTitle: ${title}\nTarget Audience: ${target_audience || "Not specified"}\nDifficulty: ${difficulty_level || "Not specified"}\nTags: ${(tags || []).join(", ") || "None"}\n\nReturn ONLY a JSON object in this exact format, no markdown, no preamble:\n{"short_description": "1-2 sentences, max 30 words, punchy and specific", "description": "3-4 paragraphs, professional but human, explains what learners will gain and why it matters for their RTO"}`;
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content: "You write course descriptions for Vivacity Academy — a professional training platform for Australian RTOs (Registered Training Organisations). Your writing is warm, authoritative, and never corporate. You always write in flowing prose, never bullet points. You understand the VET sector deeply.",
-            },
-            { role: "user", content: userPrompt },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        const status = response.status;
-        if (status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later." }), {
-            status: 429, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-          });
-        }
-        if (status === 402) {
-          return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-            status: 402, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-          });
-        }
-        const t = await response.text();
-        console.error("AI gateway error:", status, t);
-        return new Response(JSON.stringify({ error: "AI generation failed" }), {
-          status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+      const ai = await callAiJson(
+        LOVABLE_API_KEY,
+        "You write course descriptions for Vivacity Academy — a professional training platform for Australian RTOs (Registered Training Organisations). Your writing is warm, authoritative, and never corporate. You always write in flowing prose, never bullet points. You understand the VET sector deeply.",
+        userPrompt,
+      );
+      if (!ai.ok) {
+        return new Response(JSON.stringify({ error: ai.error }), {
+          status: ai.status, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
-      const aiResult = await response.json();
-      const content = aiResult.choices?.[0]?.message?.content || "";
-
-      // Parse JSON from response (strip markdown fences if present)
-      let parsed;
-      try {
-        const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-        parsed = JSON.parse(cleaned);
-      } catch {
-        return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
-          status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-        });
-      }
-
-      return new Response(JSON.stringify(parsed), {
+      return new Response(JSON.stringify(ai.data), {
         headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
@@ -318,63 +298,24 @@ Deno.serve(async (req) => {
 
       const userPrompt = `Generate exactly ${questionCount} multiple-choice questions for a course called '${title}' aimed at '${target_audience || "training professionals"}'.\n\nCourse content context:\n${context_text}\n\nReturn ONLY a JSON array of exactly ${questionCount} objects, no markdown, no preamble, in this exact format:\n[{"question_text": "...", "explanation": "Brief explanation of why the correct answer is right, shown to learners who got it wrong", "options": [{"value": "A", "label": "...", "is_correct": true}, {"value": "B", "label": "...", "is_correct": false}, {"value": "C", "label": "...", "is_correct": false}, {"value": "D", "label": "...", "is_correct": false}]}]`;
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content: "You write multiple-choice assessment questions for professional training courses in the Australian VET (Vocational Education and Training) sector. Questions must be clear, unambiguous, and test genuine understanding — not trick questions. Each question must have exactly 4 options with only one correct answer.",
-            },
-            { role: "user", content: userPrompt },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        const status = response.status;
-        if (status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later." }), {
-            status: 429, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-          });
-        }
-        if (status === 402) {
-          return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-            status: 402, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-          });
-        }
-        const t = await response.text();
-        console.error("AI gateway error:", status, t);
-        return new Response(JSON.stringify({ error: "AI generation failed" }), {
-          status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+      const ai = await callAiJson(
+        LOVABLE_API_KEY,
+        "You write multiple-choice assessment questions for professional training courses in the Australian VET (Vocational Education and Training) sector. Questions must be clear, unambiguous, and test genuine understanding — not trick questions. Each question must have exactly 4 options with only one correct answer.",
+        userPrompt,
+      );
+      if (!ai.ok) {
+        return new Response(JSON.stringify({ error: ai.error }), {
+          status: ai.status, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
-      const aiResult = await response.json();
-      const content = aiResult.choices?.[0]?.message?.content || "";
-
-      let parsed;
-      try {
-        const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-        parsed = JSON.parse(cleaned);
-      } catch {
-        return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
-          status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
-        });
-      }
-
-      if (!Array.isArray(parsed)) {
+      if (!Array.isArray(ai.data)) {
         return new Response(JSON.stringify({ error: "Invalid AI response format" }), {
           status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ questions: parsed }), {
+      return new Response(JSON.stringify({ questions: ai.data }), {
         headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
