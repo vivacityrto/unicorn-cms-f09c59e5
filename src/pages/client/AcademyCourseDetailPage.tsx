@@ -138,8 +138,8 @@ export default function AcademyCourseDetailPage() {
         </span>
       </nav>
 
-      {/* Hero + at-a-glance sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* Hero + sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="rounded-xl overflow-hidden" style={{ border: "1px solid hsl(var(--border))" }}>
             <div
@@ -191,29 +191,8 @@ export default function AcademyCourseDetailPage() {
           )}
         </div>
 
-        {/* Sidebar */}
+        {/* Sidebar: at-a-glance, the action to take, then curriculum */}
         <div className="lg:col-span-1 space-y-4 rounded-xl border p-5" style={{ borderColor: "hsl(var(--border))" }}>
-          {!isEnrolled && (
-            <Button
-              onClick={() => course && enrolMutation.mutate(course.id)}
-              disabled={enrolMutation.isPending || !enrolMutation.canMutate}
-              style={{ backgroundColor: ACCENT }}
-              className="w-full text-white hover:opacity-90"
-            >
-              {enrolMutation.isPending ? "Enrolling…" : "Start Now"}
-            </Button>
-          )}
-          {isEnrolled && enrollment?.progress_percentage != null && (
-            <div className="text-sm font-medium" style={{ color: ACCENT }}>
-              {enrollment.progress_percentage}% complete · {enrollment.completed_lessons ?? 0} of {enrollment.total_lessons ?? totalLessons} lessons
-            </div>
-          )}
-          {enrollment?.has_certificate && (
-            <p className="text-sm font-medium text-amber-600 flex items-center gap-1">
-              🏆 Certificate Earned ({enrollment.certificate_number})
-            </p>
-          )}
-
           <div className="space-y-2 text-sm text-muted-foreground">
             <p className="flex items-center gap-2">
               <Clock className="h-4 w-4 flex-shrink-0" /> {formatDuration(course.estimated_minutes)}
@@ -249,137 +228,160 @@ export default function AcademyCourseDetailPage() {
             </div>
           )}
 
-          {course.certificate_enabled && (
-            <p className="flex items-center gap-2 border-t pt-3 text-xs" style={{ borderColor: "hsl(var(--border))", color: ACCENT }}>
-              <ClipboardCheck className="h-3.5 w-3.5 flex-shrink-0" />
-              Completing every lesson unlocks a short quiz for your certificate.
-            </p>
-          )}
+          {/* Action */}
+          <div className="space-y-2 border-t pt-3" style={{ borderColor: "hsl(var(--border))" }}>
+            {!isEnrolled && (
+              <Button
+                onClick={() => course && enrolMutation.mutate(course.id)}
+                disabled={enrolMutation.isPending || !enrolMutation.canMutate}
+                style={{ backgroundColor: ACCENT }}
+                className="w-full text-white hover:opacity-90"
+              >
+                {enrolMutation.isPending ? "Enrolling…" : "Start Now"}
+              </Button>
+            )}
+            {isEnrolled && enrollment?.progress_percentage != null && (
+              <div className="text-sm font-medium" style={{ color: ACCENT }}>
+                {enrollment.progress_percentage}% complete · {enrollment.completed_lessons ?? 0} of {enrollment.total_lessons ?? totalLessons} lessons
+              </div>
+            )}
+            {enrollment?.has_certificate && (
+              <p className="text-sm font-medium text-amber-600 flex items-center gap-1">
+                🏆 Certificate Earned ({enrollment.certificate_number})
+              </p>
+            )}
+            {course.certificate_enabled && (
+              <p className="flex items-center gap-2 text-xs" style={{ color: ACCENT }}>
+                <ClipboardCheck className="h-3.5 w-3.5 flex-shrink-0" />
+                Completing every lesson unlocks a short quiz for your certificate.
+              </p>
+            )}
+          </div>
 
           {Array.isArray(course.target_audience) && course.target_audience.length > 0 && (
-            <div className="space-y-1.5 border-t pt-3" style={{ borderColor: "hsl(var(--border))" }}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Who it's for</p>
-              <div className="flex flex-wrap gap-1.5">
-                {course.target_audience.slice(0, MAX_VISIBLE_BADGES).map((a: string) => (
-                  <span key={a} className="text-xs px-2 py-1 rounded-full bg-muted text-foreground">
-                    {a.replace(/_/g, " ")}
-                  </span>
-                ))}
-                {course.target_audience.length > MAX_VISIBLE_BADGES && (
-                  <span className="text-xs px-2 py-1 text-muted-foreground">
-                    +{course.target_audience.length - MAX_VISIBLE_BADGES} more
-                  </span>
-                )}
+              <div className="space-y-1.5 border-t pt-3" style={{ borderColor: "hsl(var(--border))" }}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Who it's for</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {course.target_audience.slice(0, MAX_VISIBLE_BADGES).map((a: string) => (
+                    <span key={a} className="text-xs px-2 py-1 rounded-full bg-muted text-foreground">
+                      {a.replace(/_/g, " ")}
+                    </span>
+                  ))}
+                  {course.target_audience.length > MAX_VISIBLE_BADGES && (
+                    <span className="text-xs px-2 py-1 text-muted-foreground">
+                      +{course.target_audience.length - MAX_VISIBLE_BADGES} more
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {Array.isArray(course.tags) && course.tags.length > 0 && (
-            <div className="space-y-1.5 border-t pt-3" style={{ borderColor: "hsl(var(--border))" }}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Topics</p>
-              <div className="flex flex-wrap gap-1.5">
-                {course.tags.slice(0, MAX_VISIBLE_BADGES).map((t: string) => (
-                  <span
-                    key={t}
-                    className="text-xs px-2 py-1 rounded-full"
-                    style={{ backgroundColor: `${ACCENT}1a`, color: "#44235F" }}
-                  >
-                    {t}
-                  </span>
-                ))}
-                {course.tags.length > MAX_VISIBLE_BADGES && (
-                  <span className="text-xs px-2 py-1 text-muted-foreground">
-                    +{course.tags.length - MAX_VISIBLE_BADGES} more
-                  </span>
-                )}
+            {Array.isArray(course.tags) && course.tags.length > 0 && (
+              <div className="space-y-1.5 border-t pt-3" style={{ borderColor: "hsl(var(--border))" }}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Topics</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {course.tags.slice(0, MAX_VISIBLE_BADGES).map((t: string) => (
+                    <span
+                      key={t}
+                      className="text-xs px-2 py-1 rounded-full"
+                      style={{ backgroundColor: `${ACCENT}1a`, color: "#44235F" }}
+                    >
+                      {t}
+                    </span>
+                  ))}
+                  {course.tags.length > MAX_VISIBLE_BADGES && (
+                    <span className="text-xs px-2 py-1 text-muted-foreground">
+                      +{course.tags.length - MAX_VISIBLE_BADGES} more
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
+            )}
 
-      {/* Course Outline */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-foreground">Course Outline</h2>
+            {/* Course Outline */}
+            <div className="space-y-2 border-t pt-3" style={{ borderColor: "hsl(var(--border))" }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Course Outline</h2>
 
-        {modulesLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : modules.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No modules have been published for this course yet.</p>
-        ) : (
-          <Accordion type="multiple" className="space-y-2">
-            {modules
-              .filter(m => m.is_published !== false)
-              .map((mod, idx) => {
-                const publishedModLessons = mod.lessons.filter(l => l.is_published !== false);
-                const completedCount = publishedModLessons.filter(l => completedLessonIds.includes(l.id)).length;
-                return (
-                  <AccordionItem
-                    key={mod.id}
-                    value={`mod-${mod.id}`}
-                    className="rounded-lg border px-4"
-                    style={{ borderColor: "hsl(var(--border))" }}
-                  >
-                    <AccordionTrigger className="hover:no-underline">
-                      <div className="flex items-center gap-3 text-left">
-                        <span
-                          className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white flex-shrink-0"
-                          style={{ backgroundColor: ACCENT }}
+              {modulesLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                  ))}
+                </div>
+              ) : modules.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No modules have been published for this course yet.</p>
+              ) : (
+                <Accordion type="multiple" className="space-y-2">
+                  {modules
+                    .filter(m => m.is_published !== false)
+                    .map((mod, idx) => {
+                      const publishedModLessons = mod.lessons.filter(l => l.is_published !== false);
+                      const completedCount = publishedModLessons.filter(l => completedLessonIds.includes(l.id)).length;
+                      return (
+                        <AccordionItem
+                          key={mod.id}
+                          value={`mod-${mod.id}`}
+                          className="rounded-lg border px-3"
+                          style={{ borderColor: "hsl(var(--border))" }}
                         >
-                          {idx + 1}
-                        </span>
-                        <div>
-                          <p className="font-semibold text-sm text-foreground">{mod.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {publishedModLessons.length} lessons
-                            {isEnrolled && ` · ${completedCount} completed`}
-                          </p>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ul className="space-y-1 pl-10">
-                        {publishedModLessons.map((lesson) => {
-                          const done = completedLessonIds.includes(lesson.id);
-                          const canNavigate = isEnrolled;
-                          return (
-                            <li
-                              key={lesson.id}
-                              className={`flex items-center gap-2 py-2 px-3 rounded-md text-sm hover:bg-muted/50 transition-colors ${canNavigate ? "cursor-pointer" : ""}`}
-                              onClick={canNavigate ? () => navigate(`/academy/course/${slug}/lesson/${lesson.id}`) : undefined}
-                              role={canNavigate ? "button" : undefined}
-                              tabIndex={canNavigate ? 0 : undefined}
-                              onKeyDown={canNavigate ? (e) => { if (e.key === "Enter") navigate(`/academy/course/${slug}/lesson/${lesson.id}`); } : undefined}
-                            >
-                              {done ? (
-                                <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: "#22c55e" }} />
-                              ) : isEnrolled ? (
-                                <span className="text-muted-foreground">{lessonIcon(lesson.lesson_type)}</span>
-                              ) : (
-                                <Lock className="h-4 w-4 flex-shrink-0 text-muted-foreground/50" />
-                              )}
-                              <span className={done ? "text-muted-foreground line-through" : "text-foreground"}>
-                                {lesson.title}
+                          <AccordionTrigger className="hover:no-underline">
+                            <div className="flex items-center gap-2.5 text-left">
+                              <span
+                                className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white flex-shrink-0"
+                                style={{ backgroundColor: ACCENT }}
+                              >
+                                {idx + 1}
                               </span>
-                              {lesson.estimated_minutes && (
-                                <span className="ml-auto text-xs text-muted-foreground">
-                                  {lesson.estimated_minutes}m
-                                </span>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-          </Accordion>
-        )}
+                              <div>
+                                <p className="font-semibold text-sm text-foreground">{mod.title}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {publishedModLessons.length} lessons
+                                  {isEnrolled && ` · ${completedCount} completed`}
+                                </p>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <ul className="space-y-1 pl-8">
+                              {publishedModLessons.map((lesson) => {
+                                const done = completedLessonIds.includes(lesson.id);
+                                const canNavigate = isEnrolled;
+                                return (
+                                  <li
+                                    key={lesson.id}
+                                    className={`flex items-center gap-2 py-2 px-2 rounded-md text-sm hover:bg-muted/50 transition-colors ${canNavigate ? "cursor-pointer" : ""}`}
+                                    onClick={canNavigate ? () => navigate(`/academy/course/${slug}/lesson/${lesson.id}`) : undefined}
+                                    role={canNavigate ? "button" : undefined}
+                                    tabIndex={canNavigate ? 0 : undefined}
+                                    onKeyDown={canNavigate ? (e) => { if (e.key === "Enter") navigate(`/academy/course/${slug}/lesson/${lesson.id}`); } : undefined}
+                                  >
+                                    {done ? (
+                                      <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: "#22c55e" }} />
+                                    ) : isEnrolled ? (
+                                      <span className="text-muted-foreground">{lessonIcon(lesson.lesson_type)}</span>
+                                    ) : (
+                                      <Lock className="h-4 w-4 flex-shrink-0 text-muted-foreground/50" />
+                                    )}
+                                    <span className={done ? "text-muted-foreground line-through" : "text-foreground"}>
+                                      {lesson.title}
+                                    </span>
+                                    {lesson.estimated_minutes && (
+                                      <span className="ml-auto text-xs text-muted-foreground">
+                                        {lesson.estimated_minutes}m
+                                      </span>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                </Accordion>
+              )}
+            </div>
+        </div>
       </div>
 
       {/* Assessment Section */}
