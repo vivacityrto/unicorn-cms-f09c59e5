@@ -226,9 +226,6 @@ verify_jwt = false
 [functions.extract-document-fields]
 verify_jwt = false
 
-[functions.calculate-phase-completeness]
-verify_jwt = false
-
 [functions.scan-risk-radar]
 verify_jwt = false
 
@@ -384,13 +381,6 @@ verify_jwt = false
 [functions.mailgun-webhook]
 verify_jwt = false
 
-# Retired 2026-08-28 (dead-code cleanup follow-up): confirmed via Mailgun's
-# actual dashboard config that only mailgun-webhook (singular) is
-# configured; this plural duplicate never received real traffic. Now a 410
-# stub.
-[functions.mailgun-webhooks]
-verify_jwt = false
-
 [functions.summarize-daily-notes]
 verify_jwt = false
 
@@ -470,12 +460,6 @@ verify_jwt = false
 # fills a config.toml gap left by that PR; verify_jwt was already false
 # in production. Auth is in-function via requireCaller(FeatureKeys.staffInternal).
 [functions.record-completed-audit]
-verify_jwt = false
-
-# Retired 2026-08-28 (dead-code cleanup follow-up): the legacy Compliance
-# Auditor workflow it served (compliance_audits schema, zero rows ever) was
-# fully retired in the same change. Now a 410 stub.
-[functions.generate-audit-report]
 verify_jwt = false
 
 # Edge-function-drift-audit A3 capture (2026-08-17). Auth is in-function:
