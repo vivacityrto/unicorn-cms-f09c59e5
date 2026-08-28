@@ -469,11 +469,9 @@ verify_jwt = false
 [functions.record-completed-audit]
 verify_jwt = false
 
-# Edge-function-drift-audit A3 capture (2026-08-17). Auth is in-function:
-# caller JWT verified via getUser(), then gated on internal staff (users.
-# global_role/is_vivacity_internal) or tenant match on the audit row. Reads
-# the legacy compliance_audits/compliance_templates schema, which currently
-# has zero rows in production — see handoff notes; not retired here.
+# Retired 2026-08-28 (dead-code cleanup follow-up): the legacy Compliance
+# Auditor workflow it served (compliance_audits schema, zero rows ever) was
+# fully retired in the same change. Now a 410 stub.
 [functions.generate-audit-report]
 verify_jwt = false
 
