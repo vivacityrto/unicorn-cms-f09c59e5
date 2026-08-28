@@ -9,13 +9,12 @@
  *   academy_lessons. Existing rows are never updated or deleted.
  * - Without `course_id`: preview mode, used by Add Course when drafting a
  *   brand-new course from a showcase (no course exists yet to import into).
- *   Same Vimeo fetch + title parsing, but read-only — it reports the parsed
+ *   Read-only — no title-numbering convention is required here, every video
+ *   becomes one lesson in showcase order using its own title. It reports the
  *   video list (flagging any Vimeo ids already used by another course) and
- *   writes nothing. The caller drafts AI content per video client-side, then
- *   creates the course and its modules/lessons/videos directly. If no video
- *   title matches the "M# - Lesson #" convention at all, falls back to one
- *   flat module with a lesson per video in showcase order (`used_fallback:
- *   true` in the response) rather than reporting everything unmatched.
+ *   writes nothing. The caller lets staff reorder the list, drafts AI content
+ *   per video client-side, then creates the course and its module/lessons/
+ *   videos directly.
  *
  * Auth: JWT + check_permission(caller, 'academy.builder.edit', 'full') —
  * same gate as the course-builder UI. Service-role writes only after that.
@@ -142,18 +141,12 @@ Deno.serve(async (req) => {
     return json(req, { error: message }, 502);
   }
 
-  const { parsed, unmatched } = classifyVideos(videos);
-
   if (!hasCourseId) {
-    let previewParsed = parsed;
-    let previewUnmatched = unmatched;
-    let usedFallback = false;
-    if (parsed.length === 0 && videos.length > 0) {
-      const fallback = buildFallbackParse(videos);
-      previewParsed = fallback.parsed;
-      previewUnmatched = fallback.unmatched;
-      usedFallback = true;
-    }
+    // Preview mode (drafting a brand-new course) never requires the
+    // "M# - Lesson #" title convention — every video becomes one lesson,
+    // sequenced in the showcase's own order, using each video's own title.
+    // The Add Course review step lets staff reorder before drafting with AI.
+    const { parsed: previewParsed, unmatched: previewUnmatched } = buildFallbackParse(videos);
 
     const { data: allVideos, error: videosLookupErr } = await supabase
       .from("training_videos")
@@ -210,7 +203,6 @@ Deno.serve(async (req) => {
     return json(req, {
       album_id: albumId,
       video_count: videos.length,
-      used_fallback: usedFallback,
       parsed: previewParsed.map((item) => {
         const existingVideoId = videoIdByVimeoId.get(item.vimeoId) ?? null;
         const existingCourses = existingVideoId ? coursesByVideoId.get(existingVideoId) ?? [] : [];
@@ -229,6 +221,11 @@ Deno.serve(async (req) => {
       unmatched: previewUnmatched,
     });
   }
+
+  // Importing into an existing course still routes on the "M# - Lesson #"
+  // convention, since something has to decide which of the course's existing
+  // modules each video belongs to.
+  const { parsed, unmatched } = classifyVideos(videos);
 
   const [{ data: existingModules, error: modulesErr }, { data: existingLessons, error: lessonsErr }, { data: existingVideos, error: videosErr }] =
     await Promise.all([
