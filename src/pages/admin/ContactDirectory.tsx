@@ -45,10 +45,11 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { ResponsiveTableShell, ResponsiveListCard, ResponsiveListCards, columnVisibility } from '@/components/ui/responsive-table';
-import { Users2, Search, FolderPlus, Trash2, Pencil, Loader2 } from 'lucide-react';
+import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { positionTypeLabel, type PositionTypeOption } from '@/lib/roles/positionType';
 import { cn } from '@/lib/utils';
+import { TenantFilterDialog } from '@/components/tenant-users/TenantFilterDialog';
 
 interface DirectoryRow {
   row_key: string;
@@ -79,7 +80,8 @@ export default function ContactDirectory() {
   const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [tenantFilter, setTenantFilter] = useState<string>('all');
+  const [tenantFilters, setTenantFilters] = useState<string[]>([]);
+  const [tenantFilterDialogOpen, setTenantFilterDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [positionFilter, setPositionFilter] = useState<string>('all');
@@ -174,7 +176,9 @@ export default function ContactDirectory() {
   const tenantOptions = useMemo(() => {
     const map = new Map<number, string>();
     rows.forEach((r) => map.set(r.tenant_id, r.tenant_name));
-    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+    return Array.from(map.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([id, name]) => ({ id, name, status: null, csc_user_id: null }));
   }, [rows]);
 
   const filteredRows = useMemo(() => {
@@ -188,8 +192,8 @@ export default function ContactDirectory() {
           r.tenant_name.toLowerCase().includes(q)
       );
     }
-    if (tenantFilter !== 'all') {
-      filtered = filtered.filter((r) => String(r.tenant_id) === tenantFilter);
+    if (tenantFilters.length > 0) {
+      filtered = filtered.filter((r) => tenantFilters.includes(String(r.tenant_id)));
     }
     if (statusFilter !== 'all') {
       filtered = filtered.filter((r) => r.status === statusFilter);
@@ -197,15 +201,17 @@ export default function ContactDirectory() {
     if (sourceFilter !== 'all') {
       filtered = filtered.filter((r) => r.source === sourceFilter);
     }
-    if (positionFilter !== 'all') {
+    if (positionFilter === '__none__') {
+      filtered = filtered.filter((r) => r.position_type == null);
+    } else if (positionFilter !== 'all') {
       filtered = filtered.filter((r) => r.position_type === positionFilter);
     }
     return filtered;
-  }, [rows, searchQuery, tenantFilter, statusFilter, sourceFilter, positionFilter]);
+  }, [rows, searchQuery, tenantFilters, statusFilter, sourceFilter, positionFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, tenantFilter, statusFilter, sourceFilter, positionFilter]);
+  }, [searchQuery, tenantFilters, statusFilter, sourceFilter, positionFilter]);
 
   const pagedRows = filteredRows.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / ITEMS_PER_PAGE));
@@ -323,19 +329,23 @@ export default function ContactDirectory() {
                   className="pl-10"
                 />
               </div>
-              <Select value={tenantFilter} onValueChange={setTenantFilter}>
-                <SelectTrigger className="w-full md:w-[220px]">
-                  <SelectValue placeholder="Client" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All clients</SelectItem>
-                  {tenantOptions.map(([id, name]) => (
-                    <SelectItem key={id} value={String(id)}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Button
+                variant="outline"
+                onClick={() => setTenantFilterDialogOpen(true)}
+                className={cn(
+                  'w-full md:w-[220px] justify-between font-normal min-w-0',
+                  tenantFilters.length === 0 && 'text-muted-foreground',
+                )}
+              >
+                <span className="truncate">
+                  {tenantFilters.length === 0
+                    ? 'All Tenants'
+                    : tenantFilters.length === 1
+                      ? tenantOptions.find((tenant) => String(tenant.id) === tenantFilters[0])?.name ?? '1 tenant'
+                      : `${tenantFilters.length} tenants selected`}
+                </span>
+                <Building2 className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+              </Button>
               <Select value={sourceFilter} onValueChange={setSourceFilter}>
                 <SelectTrigger className="w-full md:w-[160px]">
                   <SelectValue placeholder="Source" />
@@ -363,6 +373,7 @@ export default function ContactDirectory() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All positions</SelectItem>
+                  <SelectItem value="__none__">No position type</SelectItem>
                   {positionTypeOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
@@ -572,6 +583,15 @@ export default function ContactDirectory() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Tenant filter dialog — shared with Tenant Users for the same multi-select behavior. */}
+      <TenantFilterDialog
+        open={tenantFilterDialogOpen}
+        onOpenChange={setTenantFilterDialogOpen}
+        tenants={tenantOptions}
+        selected={tenantFilters}
+        onApply={setTenantFilters}
+      />
 
       {/* Add to group dialog */}
       <Dialog open={addToGroupOpen} onOpenChange={setAddToGroupOpen}>
