@@ -369,9 +369,6 @@ verify_jwt = false
 [functions.record-executive-summary-decision]
 verify_jwt = false
 
-[functions.compliance-assistant-client]
-verify_jwt = false
-
 [functions.notify-suggestion-submitted]
 verify_jwt = false
 
