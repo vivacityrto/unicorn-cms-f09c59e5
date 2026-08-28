@@ -1,5 +1,7 @@
 # Codebase Map
 
+> **Currentness warning (2026-08-28):** the counts, file paths, and relative links below have substantial post-consolidation drift. A mechanical audit found 102 broken links in this file alone. Use source search for current paths until the map is regenerated and link-checked under [the optimization and KB renewal plan](../reference/codebase-optimization-plan-2026-08-28.md).
+
 > **Last updated:** 2026-05-28 · **Reconsider by:** 2026-06-27 · **Confidence:** medium — tenant ID and docs table updated April 2026 audit; file moves/renames will desync this file fastest of any in the KB.
 >
 > **Reflects commit:** `<codebase>@a30052a0` (2026-05-28) — most recent addition (client Files tab + SharePoint browser). Core structure reflects `<codebase>@cf8d1314` (2026-04-25).

@@ -55,7 +55,7 @@ Read the signal: this isn't a net-new-features week, it's stabilisation work. Do
 - Campaign engine decision (build / buy / defer)
 - Client portal architecture decision
 - Tighten edge function error codes across all functions (pattern established in `invite-user`, not consistent elsewhere)
-- Pragmatic Clean Architecture refactor — pilot via Lovable on Lifecycle Checklists slice. Plan: [clean-architecture-refactor.md](clean-architecture-refactor.md)
+- Evidence-led codebase optimization and KB renewal — verification baseline first, then route/layout simplification and a re-evaluated Lifecycle Checklists boundary pilot. Active plan: [codebase-optimization-plan-2026-08-28.md](codebase-optimization-plan-2026-08-28.md). The April [Clean Architecture proposal](clean-architecture-refactor.md) is retained as superseded decision history.
 
 ### Later
 - ~~Outlook calendar sync~~ ✅ **Shipped**

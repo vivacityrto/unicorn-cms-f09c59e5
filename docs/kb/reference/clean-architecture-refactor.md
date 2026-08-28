@@ -1,8 +1,10 @@
 # Clean Architecture Refactor — Proposal
 
-> **Last updated:** 2026-04-27 · **Reconsider by:** 2026-07-27 · **Confidence:** medium — target shape and pilot scope are concrete; downstream slice list is provisional and will firm up after Slice 1 lands.
+> **Last updated:** 2026-08-28 · **Reconsider by:** 2026-11-28 · **Confidence:** high on historical status — the proposed pilot was checked against `origin/main@176e5e55` and has not been implemented.
 >
-> A pragmatic, incremental refactor of `<codebase>/src/` toward Clean-Architecture-style layering, executed slice-by-slice via Lovable prompts. **Status: proposed, not yet started.** No Lovable prompt has been pasted; no codebase change has been made. This doc captures the plan so it survives the chat that produced it.
+> **Status: superseded as the active plan.** This April proposal remains useful decision history, but its counts, operating assumptions, and global `domain/` + `data/` target predate the May–August feature stream and the August dead-code program. The current evidence-led plan is [codebase-optimization-plan-2026-08-28.md](codebase-optimization-plan-2026-08-28.md). Its first boundary pilot re-evaluates Lifecycle Checklists without assuming that adding a complete layer set will reduce cognitive load or LOC.
+>
+> Original proposal: a pragmatic, incremental refactor of `<codebase>/src/` toward Clean-Architecture-style layering, executed slice-by-slice via Lovable prompts. No pilot code was shipped from this proposal.
 
 ---
 

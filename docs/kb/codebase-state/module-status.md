@@ -1,5 +1,7 @@
 # Module Status
 
+> **Currentness warning (2026-08-28):** this May snapshot omits major shipped work in documents/delivery, package renewals, contacts, Xero, Academy, Ask Viv, KPI, EOS, and security remediation, and still contains features retired in August. Do not use its status labels for planning until the evidence-tier regeneration in [the optimization and KB renewal plan](../reference/codebase-optimization-plan-2026-08-28.md) is complete.
+
 > **Last updated:** 2026-05-28 · **Reconsider by:** 2026-06-30 · **Confidence:** medium — module presence confirmed by files/routes; "shipped" vs "partial" calls need RJ confirmation for several modules. Flagship-surfaces framing added 2026-05-15 per ADR-013; module 3 (EOS) reclassified from "the flagship feature" to "Vivacity's internal operating system."
 >
 > **Reflects commit:** `<codebase>@a30052a0` (2026-05-28) — most recent update. Earlier baselines: `<codebase>@893fc01a` (2026-05-11) for module body content; `<codebase>@d240b112` (origin/main, 2026-05-15) — `DashboardLayout.tsx` nav structure. AI audit stack (7 edge functions, 4 migrations) shipped 29–30 April 2026; Modules 4 and 14 updated accordingly. PDP schema applied 11 May 2026 (Module 18 added). Client Files tab shared folder + inline browser shipped 28 May 2026 (Module 6 + 15 updated accordingly).
