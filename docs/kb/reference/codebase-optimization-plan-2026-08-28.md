@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-08-28 · **Reconsider by:** 2026-11-28 · **Confidence:** high on repository measurements and the May–August change history; medium on effort and net-LOC forecasts until each slice completes its characterization pass.
 >
-> **Reflects commit:** `unicorn-cms-f09c59e5@176e5e55` (`origin/main`, 2026-08-28).
+> **Reflects commit:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458).
 >
 > **Status:** Planning only. This document authorizes no production deployment, migration, branch deletion, or feature retirement. Execute one bounded PR at a time, with a fresh blast-radius check and normal review.
 
@@ -50,26 +50,28 @@ This is an incremental program. There is no big-bang rewrite, no framework migra
 
 Git activity is a maintenance proxy, not telemetry. The 2026-05-01–2026-08-28 history contains thousands of small Lovable commits, so raw counts are used only to locate high-change seams.
 
-## 3. Baseline at `origin/main@176e5e55`
+## 3. Baseline at `origin/main@e91d013d`
+
+Counts below were refreshed after the council caught `main` advancing during review. Physical lines use a deterministic Git-tracked-file/`ReadAllLines` pass; P0.5 will replace this one-off measurement with the committed metrics tool. Do not compare counts produced by a different exclusion or newline method without labeling the difference.
 
 ### Code footprint
 
 | Metric | Baseline | Interpretation |
 |---|---:|---|
-| Tracked files under `src/**` + `supabase/functions/**` | 1,839 | Comparable with the existing dead-code plan |
-| Lines under those paths | 505,587 | Includes generated types and tests |
-| Lines excluding generated `src/integrations/supabase/types.ts` | 431,555 | Better human-maintained-code baseline |
-| Product TS/TSX/JS, excluding generated types and tests | about 416,000 | Use for net-LOC targets |
-| Frontend product code | about 334,700 lines | 1,464 files |
-| Edge Function product code | about 80,800 lines | 269 TS/JS files, including shared modules |
-| Product files over 600 lines | 120 | 94 frontend, 26 Edge Function |
-| Lines held by files over 600 lines | 117,734 | Roughly 28% of product code |
-| Product files over 1,000 lines | 35 | Highest cognitive-load group |
-| Parsed functions at least 100 lines | 1,123 | 501 are at least 200 lines; splitting must follow responsibilities |
+| Tracked files under `src/**` + `supabase/functions/**` | 1,837 | Repository inventory after the final two Edge Function folders were removed |
+| Physical lines under those paths | 506,181 | Includes generated types, tests, fixtures, and final-line differences from older `wc`-style counts |
+| Lines excluding generated `src/integrations/supabase/types.ts` | 432,150 | Better all-tracked human-maintained baseline, still including tests/fixtures |
+| Product TS/TSX/JS, excluding generated types and tests | 413,945 | Deterministic current net-LOC baseline; 1,735 files |
+| Frontend product code | 334,143 lines | 1,468 files under the declared filter |
+| Edge Function product code | 79,802 lines | 267 TS/JS files, including shared modules |
+| Product files over 600 lines | 120 | 95 frontend, 25 Edge Function |
+| Lines held by files over 600 lines | 118,204 | Roughly 29% of product code |
+| Product files over 1,000 lines | 36 | Highest cognitive-load group |
+| Parsed long-function inventory | Refresh in P0.5 | The prior 1,123/501 count came from an ad-hoc parser and is not carried forward as current truth |
 | Route declarations found by the route generator | 244 | Includes one duplicate path registration |
 | `*Wrapper.tsx` files | 71 / 1,369 lines | Many are layout-only adapters |
 | Frontend test files | 22 | Small relative to 1,464 frontend product files |
-| Edge Function test files | 56 | Run with a separate harness |
+| Edge Function test files | 56 | 39 Node `*.test.mjs` files currently execute; 17 TypeScript/Deno files are unexecuted by configured commands |
 
 Do not count the 74,000-line generated Supabase type file or historical migrations toward refactor progress. Shrinking generated truth or migration history would produce a misleading result.
 
@@ -272,7 +274,7 @@ P4 target states are design hypotheses, not implementation instructions. Before 
 | ID | Candidate | Evidence | Intended result |
 |---|---|---|---|
 | P5.1 | Adopt `_shared/response-helpers.ts` in bounded batches | About 10 adopters; dozens of local response helpers with different argument orders and envelopes | One CORS/cache/error response implementation, smaller functions |
-| P5.2 | Define a standard handler skeleton | Roughly 199 tracked `index.ts` files use several auth/helper families | Authentication and validation visibly precede every DB/external action |
+| P5.2 | Define a standard handler skeleton | 200 tracked top-level function `index.ts` files use several auth/helper families | Authentication and validation visibly precede every DB/external action |
 | P5.3 | Extract service logic from the largest handlers | `tga-sync` 2,674 lines; Ask Viv 1,874; compliance assistant 1,610 | Test pure transforms and mode dispatch without invoking `Deno.serve` |
 | P5.4 | Add runtime request schemas at trust boundaries | TypeScript unions do not validate attacker JSON; Zod/runtime allowlists are inconsistent | Every state-changing external request is parsed/validated before authorization-dependent work |
 | P5.5 | Keep an auth-adoption check in the aggregate suite | Security guardrail already calls for this; current scripts are shell-only and not automatically run everywhere | New/modified functions cannot land without an approved caller/machine gate |
@@ -325,7 +327,7 @@ Every schema/RPC/trigger candidate requires a migration, the live RPC/trigger sc
 - A mechanical audit found about 230 broken local KB links. The dominant cause is post-consolidation paths such as `../src/...` from `docs/kb/codebase-state/**`, which no longer reach the repo root.
 - `docs/audit-log/INDEX.md` contains 151 links using the former `audit/...` directory even though entries now live in `entries/...`.
 - `architecture.md`, `module-status.md`, and `codebase-map.md` reflect April/May commits and materially predate the May–August feature stream and the August deletion program.
-- Their inventories are stale: old docs cite 117–124 Edge Functions, about 187 pages, and about 895 migrations; the current repository has about 197 non-`_shared` function directories, 292 page TS/TSX files, 296 hook files, and more than 1,500 migrations. Repository directory count must not be mislabeled as the production deployed-function count.
+- Their inventories are stale: old docs cite 117–124 Edge Functions, about 187 pages, and about 895 migrations; the current repository has 200 tracked top-level function `index.ts` files, 292 page TS/TSX files, 296 hook files, and 1,534 migrations. Repository directory count must not be mislabeled as the production deployed-function count.
 - Several KB meta-docs still describe the old three-repository model after the 6 August consolidation.
 - The pinned set is already at its 1,500-line budget. Refresh it by replacing stale text, not adding another large pinned guide.
 
@@ -336,7 +338,7 @@ Perform before architectural refactors:
 1. Add explicit stale/currentness banners to the three May-era current-state docs.
 2. Correct the three-repo language in KB README/source-precedence/hygiene files.
 3. Mark the April Clean Architecture proposal as superseded by this evidence-led plan; retain it as decision history.
-4. Close the dead-code plan's PR #455 tracker with merge `b8933727` and record a final comparable baseline.
+4. Close the dead-code plan through PRs #457–#458, record the final 18-retired/one-retained disposition, and replace its “pending merge” summaries with the merged `e91d013d` state.
 5. Repair `docs/audit-log/INDEX.md` entry paths mechanically and verify every target.
 6. Add a local Markdown link checker covering README, KB, audit index, and code-adjacent docs.
 7. Add `docs/kb/reference/README.md` as the lifecycle registry for long plans/handoffs; until this proposal is merged and explicitly accepted, label it `planning`, never `active`.
@@ -459,9 +461,9 @@ Track outcomes quarterly, not just deletions:
 
 | Measure | Baseline | 90-day target |
 |---|---:|---:|
-| Human-maintained product LOC | about 416k | Net reduction of 5–8%, excluding generated types/tests/migrations |
+| Human-maintained product LOC | 413,945 under the refreshed product filter | Net reduction of 5–8%, excluding generated types/tests/migrations |
 | Product files over 600 lines | 120 | Below 80, with no arbitrary split-only files |
-| Product files over 1,000 lines | 35 | Below 20 |
+| Product files over 1,000 lines | 36 | Below 20 |
 | Layout wrapper files | 71 | Below 20 if nested routes prove stable |
 | Direct Supabase calls in pages/components | 210 files | Reduce by at least 40% in touched/high-churn features |
 | KB broken local links | about 230 | 0 in routed/current docs |
