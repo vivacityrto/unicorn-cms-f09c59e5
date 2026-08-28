@@ -9,6 +9,10 @@ export interface MyEnrolledCourse {
   course_slug: string;
   course_description: string | null;
   thumbnail_url: string | null;
+  banner_thumbnail_url: string | null;
+  banner_thumbnail_position: string | null;
+  banner_thumbnail_fit: string | null;
+  banner_thumbnail_zoom: number | null;
   estimated_minutes: number | null;
   enrollment_status: string | null;
   total_lessons: number;
@@ -41,7 +45,7 @@ export function useMyEnrolledCourses() {
       const [coursesRes, modulesRes, lessonsRes, completedRes] = await Promise.all([
         supabase
           .from("academy_courses")
-          .select("id, slug, description, thumbnail_url, webinar_series")
+          .select("id, slug, description, thumbnail_url, banner_thumbnail_url, banner_thumbnail_position, banner_thumbnail_fit, banner_thumbnail_zoom, webinar_series")
           .in("id", courseIds),
         supabase
           .from("academy_modules")
@@ -62,9 +66,27 @@ export function useMyEnrolledCourses() {
           .eq("is_completed", true),
       ]);
 
-      const courseMap = new Map<number, { slug: string; description: string | null; thumbnail_url: string | null; webinar_series: string | null }>();
+      const courseMap = new Map<number, {
+        slug: string;
+        description: string | null;
+        thumbnail_url: string | null;
+        banner_thumbnail_url: string | null;
+        banner_thumbnail_position: string | null;
+        banner_thumbnail_fit: string | null;
+        banner_thumbnail_zoom: number | null;
+        webinar_series: string | null;
+      }>();
       (coursesRes.data ?? []).forEach((c: any) =>
-        courseMap.set(c.id, { slug: c.slug, description: c.description, thumbnail_url: c.thumbnail_url, webinar_series: c.webinar_series ?? null })
+        courseMap.set(c.id, {
+          slug: c.slug,
+          description: c.description,
+          thumbnail_url: c.thumbnail_url,
+          banner_thumbnail_url: c.banner_thumbnail_url ?? null,
+          banner_thumbnail_position: c.banner_thumbnail_position ?? null,
+          banner_thumbnail_fit: c.banner_thumbnail_fit ?? null,
+          banner_thumbnail_zoom: c.banner_thumbnail_zoom ?? null,
+          webinar_series: c.webinar_series ?? null,
+        })
       );
 
       const moduleCountByCourse = new Map<number, number>();
@@ -106,6 +128,10 @@ export function useMyEnrolledCourses() {
           course_slug: meta?.slug ?? "",
           course_description: meta?.description ?? null,
           thumbnail_url: meta?.thumbnail_url ?? null,
+          banner_thumbnail_url: meta?.banner_thumbnail_url ?? null,
+          banner_thumbnail_position: meta?.banner_thumbnail_position ?? null,
+          banner_thumbnail_fit: meta?.banner_thumbnail_fit ?? null,
+          banner_thumbnail_zoom: meta?.banner_thumbnail_zoom ?? null,
           estimated_minutes: p.estimated_minutes,
           enrollment_status: p.enrollment_status,
           total_lessons: p.total_lessons ?? lessons.length,
