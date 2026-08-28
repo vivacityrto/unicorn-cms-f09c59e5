@@ -79,10 +79,8 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
               .eq("user_id", userId)
           : Promise.resolve({ data: null as any }),
         supabase
-          .from("v_academy_lesson_outline")
-          .select("course_id")
-          .eq("is_published", true)
-          .in("course_id", courseIds),
+          .rpc("get_academy_course_lesson_outline_safe", { p_course_ids: courseIds })
+          .select("course_id"),
       ]);
 
       if (progressRes.data) {
