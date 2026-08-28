@@ -49,9 +49,7 @@ export function useModulesWithLessons(courseId: number | null, opts?: { admin?: 
             .eq("course_id", courseId)
             .order("sort_order")
         : supabase
-            .from("v_academy_lesson_outline")
-            .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes")
-            .eq("course_id", courseId)
+            .rpc("get_academy_course_lesson_outline_safe", { p_course_ids: [courseId] })
             .order("sort_order");
 
       const [{ data: modules, error: mErr }, { data: lessons, error: lErr }] = await Promise.all([

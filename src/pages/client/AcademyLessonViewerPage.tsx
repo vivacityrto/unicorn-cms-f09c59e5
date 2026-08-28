@@ -121,7 +121,7 @@ export default function AcademyLessonViewerPage() {
     queryFn: async () => {
       const [{ data: mods, error: mErr }, { data: lessons, error: lErr }] = await Promise.all([
         supabase.from("academy_modules").select("id, course_id, title, sort_order, is_published").eq("course_id", course!.id).order("sort_order"),
-        supabase.from("v_academy_lesson_outline").select("id, module_id, title, lesson_type, sort_order, is_published, is_preview, estimated_minutes").eq("course_id", course!.id).order("sort_order"),
+        supabase.rpc("get_academy_course_lesson_outline_safe", { p_course_ids: [course!.id] }).select("id, module_id, title, lesson_type, sort_order, is_published, is_preview, estimated_minutes").order("sort_order"),
       ]);
       if (mErr) throw mErr;
       if (lErr) throw lErr;

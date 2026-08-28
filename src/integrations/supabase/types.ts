@@ -70983,6 +70983,21 @@ export type Database = {
         Args: { p_email: string; p_user_id: string }
         Returns: string
       }
+      get_academy_course_lesson_outline_safe: {
+        Args: { p_course_ids: number[] }
+        Returns: {
+          course_id: number
+          description: string
+          estimated_minutes: number
+          id: number
+          is_preview: boolean
+          is_published: boolean
+          lesson_type: string
+          module_id: number
+          sort_order: number
+          title: string
+        }[]
+      }
       get_academy_facilitator_names_safe: {
         Args: { p_facilitator_ids: string[] }
         Returns: {

@@ -311,7 +311,11 @@ export default function AcademyCourseDetailPage() {
               ) : modules.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No modules have been published for this course yet.</p>
               ) : (
-                <Accordion type="multiple" className="space-y-2">
+                <Accordion
+                  type="multiple"
+                  className="space-y-2"
+                  defaultValue={modules.filter(m => m.is_published !== false).map(m => `mod-${m.id}`)}
+                >
                   {modules
                     .filter(m => m.is_published !== false)
                     .map((mod, idx) => {
