@@ -448,10 +448,9 @@ verify_jwt = false
 [functions.invite-to-tenant]
 verify_jwt = false
 
-# Edge-function-drift-audit A2 capture (2026-08-17). Auth is in-function:
-# caller's Authorization header is forwarded to a user-scoped client, then
-# gated on canAdministerPasswords (Super Admin, Vivacity/Vivacity Team,
-# not disabled/archived) before the service-role password update.
+# Retired 2026-08-28 (dead-code cleanup follow-up): zero frontend callers,
+# zero production invocations in 24h, and confirmed with the project owner
+# no manual/ops use case exists. Now a 410 stub.
 [functions.admin-change-password]
 verify_jwt = false
 
