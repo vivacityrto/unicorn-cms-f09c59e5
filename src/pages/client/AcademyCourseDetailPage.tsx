@@ -140,12 +140,10 @@ export default function AcademyCourseDetailPage() {
       </nav>
 
       {/* Hero section */}
-      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid hsl(var(--border))" }}>
+      <div className="rounded-xl overflow-hidden max-w-2xl" style={{ border: "1px solid hsl(var(--border))" }}>
         <div
-          className="relative flex items-center justify-center w-full overflow-hidden"
+          className="relative flex items-center justify-center w-full aspect-video overflow-hidden"
           style={{
-            aspectRatio: "16 / 9",
-            maxHeight: 280,
             background: heroImage
               ? undefined
               : `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)`,
