@@ -90,9 +90,6 @@ verify_jwt = false
 [functions.tga-rto-sync]
 verify_jwt = false
 
-[functions.tga-product-lookup]
-verify_jwt = false
-
 [functions.resend-invite]
 verify_jwt = false
 
