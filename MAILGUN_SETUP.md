@@ -51,7 +51,7 @@ Create these templates in Mailgun:
 
 ### Webhook Setup (Optional but Recommended)
 1. Go to Sending > Webhooks
-2. Add webhook URL: `https://your-project.supabase.co/functions/v1/mailgun-webhooks`
+2. Add webhook URL: `https://your-project.supabase.co/functions/v1/mailgun-webhook`
 3. Enable events: delivered, opened, clicked, bounced, complained
 
 ## 4. Testing Your Setup
