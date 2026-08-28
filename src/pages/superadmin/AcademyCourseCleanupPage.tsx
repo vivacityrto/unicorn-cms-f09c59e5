@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { extractEdgeError } from "@/lib/academy/aiAssist";
+import { formatDuration } from "@/hooks/useAcademyCourses";
 import {
   useAdminAcademyCourses,
   useUpdateCourse,
@@ -60,6 +61,7 @@ export default function AcademyCourseCleanupPage() {
   const [missingFacilitator, setMissingFacilitator] = useState(false);
   const [missingDeliveryDate, setMissingDeliveryDate] = useState(false);
   const [missingDescription, setMissingDescription] = useState(false);
+  const [missingDuration, setMissingDuration] = useState(false);
 
   const [aiDrafts, setAiDrafts] = useState<Record<number, AiDraft>>({});
   const [generatingId, setGeneratingId] = useState<number | null>(null);
@@ -88,6 +90,7 @@ export default function AcademyCourseCleanupPage() {
       if (missingFacilitator && c.facilitator_id) return false;
       if (missingDeliveryDate && c.delivery_date) return false;
       if (missingDescription && descriptionStatus(c) === "present") return false;
+      if (missingDuration && c.estimated_minutes) return false;
       if (search.trim()) {
         const s = search.trim().toLowerCase();
         const title = (c.title || "").toLowerCase();
@@ -96,21 +99,23 @@ export default function AcademyCourseCleanupPage() {
       }
       return true;
     });
-  }, [courses, missingFacilitator, missingDeliveryDate, missingDescription, search]);
+  }, [courses, missingFacilitator, missingDeliveryDate, missingDescription, missingDuration, search]);
 
   const backlogCounts = useMemo(() => {
     let noFacilitator = 0;
     let noDate = 0;
     let noDesc = 0;
+    let noDuration = 0;
     for (const c of courses) {
       if (!c.facilitator_id) noFacilitator++;
       if (!c.delivery_date) noDate++;
       if (descriptionStatus(c) !== "present") noDesc++;
+      if (!c.estimated_minutes) noDuration++;
     }
-    return { noFacilitator, noDate, noDesc, total: courses.length };
+    return { noFacilitator, noDate, noDesc, noDuration, total: courses.length };
   }, [courses]);
 
-  const filtersActive = missingFacilitator || missingDeliveryDate || missingDescription || !!search.trim();
+  const filtersActive = missingFacilitator || missingDeliveryDate || missingDescription || missingDuration || !!search.trim();
 
   const persistField = async (id: number, data: Partial<AdminCourse>, fieldKey: string) => {
     setSavingField(fieldKey);
@@ -214,7 +219,7 @@ export default function AcademyCourseCleanupPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Course Cleanup</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Work through missing facilitators, delivery dates, and descriptions across all academy courses.
+            Work through missing facilitators, delivery dates, descriptions, and durations across all academy courses.
           </p>
         </div>
 
@@ -226,6 +231,8 @@ export default function AcademyCourseCleanupPage() {
           <span>{backlogCounts.noDate} missing delivery date</span>
           <span className="text-border">·</span>
           <span>{backlogCounts.noDesc} incomplete description</span>
+          <span className="text-border">·</span>
+          <span>{backlogCounts.noDuration} missing duration</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -257,6 +264,12 @@ export default function AcademyCourseCleanupPage() {
             label="Missing description"
             count={backlogCounts.noDesc}
           />
+          <FilterChip
+            active={missingDuration}
+            onClick={() => setMissingDuration((v) => !v)}
+            label="Missing duration"
+            count={backlogCounts.noDuration}
+          />
 
           {filtersActive && (
             <Button
@@ -267,6 +280,7 @@ export default function AcademyCourseCleanupPage() {
                 setMissingFacilitator(false);
                 setMissingDeliveryDate(false);
                 setMissingDescription(false);
+                setMissingDuration(false);
               }}
             >
               <X className="h-4 w-4 mr-1" /> Clear
@@ -296,6 +310,7 @@ export default function AcademyCourseCleanupPage() {
                   <TableHead className="min-w-[180px]">Facilitator</TableHead>
                   <TableHead className="min-w-[150px]">Date of delivery</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead className="w-[110px]">Duration</TableHead>
                   <TableHead className="w-[220px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -364,6 +379,15 @@ export default function AcademyCourseCleanupPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
+                          {course.estimated_minutes ? (
+                            <span className="text-sm text-foreground">{formatDuration(course.estimated_minutes)}</span>
+                          ) : (
+                            <Badge variant="outline" className="font-medium bg-red-100 text-red-700 border-red-200">
+                              Missing
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <div className="flex flex-wrap items-center gap-1.5">
                             <Button
                               variant="outline"
@@ -389,7 +413,7 @@ export default function AcademyCourseCleanupPage() {
                       </TableRow>
                       {draft && (
                         <TableRow className="bg-muted/40 hover:bg-muted/40">
-                          <TableCell colSpan={7} className="p-4">
+                          <TableCell colSpan={8} className="p-4">
                             <div className="space-y-3 max-w-3xl">
                               <p className="text-sm font-medium text-foreground">
                                 AI preview — edit if needed, then confirm to overwrite the course description
