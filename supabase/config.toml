@@ -442,9 +442,8 @@ verify_jwt = false
 [functions.unlink-email]
 verify_jwt = false
 
-# Edge-function-drift-audit A1 capture (2026-08-17). Auth is in-function: caller
-# bearer token is verified via supabase.auth.getUser(), then gated on
-# admin.invites.manage (full) or has_tenant_admin_safe for the target tenant.
+# Retired 2026-08-28 (dead-code cleanup follow-up): superseded by
+# invite-user (zero frontend callers, zero 24h invocations). Now a 410 stub.
 [functions.invite-to-tenant]
 verify_jwt = false
 
