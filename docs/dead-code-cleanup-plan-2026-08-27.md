@@ -537,7 +537,22 @@ This section is the checklist for the **execution + Playwright-verification pass
 - **2026-08-27:** Batch 11 shipped — the grab-bag of remaining §2.1-§2.28 single-file/small-cluster components (academy/admin, admin, audit, billing/capacity, compliance, consultant, top-level misc, dashboard, governance, help-center, layout, membership, package-builder, portfolio, risk, stage-safe-subset, task-notes, workboard). Recounted the actual remainder at 36 files, not the plan's original "~45" estimate. `npm run build` clean; `npx vitest run` 282 passed / 15 skipped / 0 failed. Playwright: spot-checked across the affected functional areas (Manage Invites, Audits, Risk Command Centre, Academy Builder) — all zero console errors.
 - **2026-08-27:** Batch 12 shipped — the final batch. §2.31–2.34 only ever listed 8 files despite the batch summary's "9" estimate (same pre-existing off-by-one pattern as batch 5); proceeded with the 8 verifiable files. Deleted: PDP superseded components (`features/pdp/components/EvidenceSheet.tsx`, `GoalSheet.tsx` — both replaced by `AddEvidenceSheet.tsx`/`AddGoalSheet.tsx` in `components/academy/pdp/`), `lib/logger.ts` and `lib/validation-schemas.ts` (documented-but-never-adopted patterns — only self-referential JSDoc usage examples matched grep, not real imports), `lib/emit-celebration.ts`, `lib/addinAudit.ts`, `utils/clickup-import-mappings.ts`, and `integrations/tga/tga_endpoints.ts`. `npm run build` clean; `npx vitest run` 282 passed / 15 skipped / 0 failed. Playwright: full PDP cycle flow (Goals tab → Add Goal opens `AddGoalSheet` cleanly; Evidence tab → Add Evidence opens `AddEvidenceSheet` cleanly) and the TGA Integration admin page — all zero console errors.
 
-**Cleanup complete.** All 12 planned batches shipped and merged. Final tally: 538,400 → 510,416 lines (−27,984, −5.2%), 2,028 → 1,872 files (−156, −7.7%), across `src/**` and `supabase/functions/**`. The 19 §3 needs-review items remain intentionally untouched and require Carl's explicit sign-off (see §3 and §7) before any future removal pass.
+**12-batch cleanup complete.** All 12 planned batches shipped and merged. Tally at that point: 538,400 → 510,416 lines (−27,984, −5.2%), 2,028 → 1,872 files (−156, −7.7%), across `src/**` and `supabase/functions/**`. The 19 §3 needs-review items were intentionally left untouched pending Carl's explicit sign-off (see §3 and §7) — resolved one by one in the follow-up below.
+
+### Grand total (12 batches + all §3 follow-up work to date)
+
+| | Files | Lines |
+|---|---:|---:|
+| Baseline (pre-cleanup) | 2,028 | 538,400 |
+| **Current** | **1,860** | **505,710** |
+| **Removed** | **−168 (−8.3%)** | **−32,690 (−6.1%)** |
+
+Breakdown of the follow-up work (beyond the original 12 batches), each its own PR:
+- `StageHealthPanel.tsx` deleted + 3 edge functions retired (`calculate-phase-completeness`, `academy-fetch-vimeo-showcase`, `validate-ai-assist`) — PR #437
+- `assign-package-to-tenant` retired stub source deleted (+ 2 stale edge-function tests fixed as a bonus find) — PR #440 (open, not yet merged)
+- `generate-audit-report` retired + the entire legacy Compliance Auditor implementation removed (9 files, 4 routes, 1 sidebar link) — PR #444 (open, not yet merged)
+
+Once #440 and #444 merge, `main` will match the "Current" row above exactly. **7 of the original 19 §3 items are now resolved** (3 frontend: `StageCompletenessWidget.tsx`, `StageHealthPanel.tsx`, `useDocumentAIConfidence.tsx`; 4 edge functions: `assign-package-to-tenant`, `academy-fetch-vimeo-showcase`, `validate-ai-assist`, `generate-audit-report`). The remaining 12 (1 frontend: `microsoft/scopes.ts`; 11 edge functions) are deliberately left for Carl or external checks — see §3/§7 for the full list.
 
 ### §3 follow-up (post-cleanup)
 
