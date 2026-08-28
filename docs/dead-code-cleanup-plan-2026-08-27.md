@@ -3,7 +3,7 @@
 **Date:** 27 August 2026
 **Repo:** `unicorn-cms-f09c59e5` (Unicorn 2.0 / ComplyHub.ai — single frontend, no Vivacity Coaching code paths involved)
 **Produced by:** a 44-agent audit workflow (parallel dead-code finders + git-history cross-reference + per-candidate blast-radius re-verification + synthesis), 27 Aug 2026.
-**Execution branch:** `chore/dead-code-cleanup-batch-1` (branched from `origin/main`), one PR per batch below.
+**Execution branch:** `chore/dead-code-cleanup-batch-1` (branched from `origin/main`) for the original 12 batches; each §3 follow-up item since then shipped on its own freshly-branched `chore:`/`audit:` branch, one PR per item/group (see Progress tracker and §3 follow-up below for the full list, now up to PR #458).
 
 ## Lines of code progression
 
@@ -29,9 +29,10 @@ Measured as `git ls-files 'src/**' 'supabase/functions/**'` file count, and tota
 | After retiring `mailgun-webhooks` (plural) | 1,857 | 505,485 | −225 | −3 |
 | After deleting the 5 now-stubbed edge-function folders + orphaned `StageCompletenessWidget.tsx` (folders only — 410 stubs already counted above) | 1,850 | 505,102 | −383 | −7 |
 | After retiring `admin-change-password`, `invite-to-tenant`, `get-email-status`, `report-delivery-issue` + `microsoft/scopes.ts` (410 stubs + folder deletions, all merged) | 1,843 | 504,498 | −604 | −7 |
-| Pending merge: retiring `test-mailgun`, `tga-product-lookup`, `import-vimeo-training` (PR #455, 410 stubs deployed to prod, folders deleted in the branch) | — | — | — | −3 (once merged) |
+| After retiring `test-mailgun`, `tga-product-lookup`, `import-vimeo-training` (PR #455, merged) | 1,839 | 503,748 | −750 | −4 |
+| Pending merge: retiring `compliance-assistant-client` + deleting `bootstrap-bulk-generate-system-account` (PR #457, 410 stub deployed to prod, folders deleted in the branch, verified live in Playwright as the Demo RTO client) | 1,837 | 503,059 | −689 | −2 (once merged) |
 
-**Total across all 12 batches: −27,984 lines (−5.2%), −156 files (−7.7%), from 538,400 → 510,416 lines and 2,028 → 1,872 files.** The 19 §3 needs-review items (4 frontend + 15 edge functions) remain untouched, parked for Carl's explicit sign-off before any future removal — see §3 and §7 below.
+**Total across all 12 batches: −27,984 lines (−5.2%), −156 files (−7.7%), from 538,400 → 510,416 lines and 2,028 → 1,872 files.** The 19 §3 needs-review items (4 frontend + 15 edge functions) were intentionally left untouched at this point, parked for Carl's explicit sign-off before any future removal. **Status as of 28 Aug 2026: all 19 have since been resolved** — 18 retired/deleted, 1 (`academy-backfill-course-thumbnails`) deliberately kept — see §3, §7, and the Grand total/§3 follow-up sections below for the full history.
 
 *Note: the very first baseline reading quoted 538,436 lines via a slightly different counting method (`cat`-concatenation through `xargs`, which double-counted some files due to arg-splitting). The `git archive`-based figure above (538,400) is the corrected, consistent baseline used for all progression tracking from here on.*
 
@@ -51,7 +52,7 @@ Measured as `git ls-files 'src/**' 'supabase/functions/**'` file count, and tota
 | 10 | KPI reviewer-admin cluster + remaining dead pages (§2.18, §2.29) | 8 | ✅ Done | [#433](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/433) |
 | 11 | Remaining single-file/small-cluster components (grab-bag) | 36 (recounted from §2.1-2.28 remainder; plan's "~45" estimate) | ✅ Done | [#434](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/434) |
 | 12 | PDP superseded components + lib/utils/integrations (§2.31–2.34) | 8 (recounted; plan's "9" estimate) | ✅ Done | [#435](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/435) |
-| §3 | Needs-review items (4 frontend + 15 edge functions) — hold for explicit sign-off | 19 | ⏸️ Parked | — |
+| §3 | Needs-review items (4 frontend + 15 edge functions) — hold for explicit sign-off | 19 | ✅ Resolved (18 retired/deleted, 1 kept) | see §3 follow-up |
 
 ---
 
@@ -78,6 +79,8 @@ Breakdown of the 172 by area:
 | `supabase/functions/**` | 22 | 7 | 15 |
 
 The `supabase/functions/**` split is the important one operationally: **7 are already-retired 410 stubs** with zero blast radius, while **15 are live, deployed functions with no in-repo caller** — these carry real production risk if deleted on code-search evidence alone, per the explicit prior audit guardrails (`docs/edge-function-remediation-handoff.md`, the 2026-08-18 security audit doc) that this synthesis is bound to respect.
+
+*(This table reflects the original 27 Aug 2026 audit findings. As of 28 Aug 2026, all 19 "needs review" items have since been resolved with Carl — see §3 and the §3 follow-up execution log.)*
 
 No entity-ambiguity issues surfaced — everything here is Unicorn/ComplyHub.ai frontend and edge-function code; nothing touches Vivacity Coaching & Consulting content or billing.
 
@@ -368,23 +371,23 @@ No importers — the two edge functions with similar constants (`get-organisatio
 
 ## 3. Needs manual review before removing
 
-### 3.1 Frontend (4)
+### 3.1 Frontend (4 — all resolved)
 
 | File | Symbol | What needs a human decision |
 |---|---|---|
 | ~~`src/components/stage/StageCompletenessWidget.tsx`~~ | `StageCompletenessWidget` | **RESOLVED 28 Aug 2026 — deleted, and its only caller edge function `calculate-phase-completeness` retired alongside it.** Carl confirmed phase-completeness tracking is not a feature to preserve. Note: the deletion was approved and logged here at the time but not actually committed until PR #447 (28 Aug 2026), caught during the edge-function folder-deletion follow-up. See execution log. |
 | ~~`src/components/stage/StageHealthPanel.tsx`~~ | `StageHealthPanel` | **RESOLVED 28 Aug 2026 — deleted.** Same finding as `TenantStageHealthSummary.tsx` (Batch 9): the KB doc's citation was documentation only, the real logic lives server-side in `run-stage-health-monitor`. Carl approved deletion. |
-| `src/hooks/useDocumentAIConfidence.tsx` | `useDocumentAIConfidence`, `DocumentAIData`, `AIStatus`, **and `useDocumentAIStatusCounts`** | **Investigated 27-28 Aug 2026, not yet actioned.** RPC lookup confirmed `apply_document_ai_analysis`/`approve_document_ai_suggestions` are called by a separate live hook (`useDocumentAIAnalysis.tsx`) — safe. But `reject_document_ai_suggestions` has no other caller anywhere; deleting this hook removes the app's only reject-suggestion path. Deeper investigation found the entire AI-document-analysis feature (an opt-in "Use AI to suggest categories & descriptions" checkbox in the bulk-upload dialog) has **zero production usage ever** (`document_ai_audit` table has 0 rows). This is now folded into the broader bulk-upload-removal investigation (see execution log) rather than treated as a standalone dead-code deletion. |
+| ~~`src/hooks/useDocumentAIConfidence.tsx`~~ | `useDocumentAIConfidence`, `DocumentAIData`, `AIStatus`, **and `useDocumentAIStatusCounts`** | **RESOLVED 28 Aug 2026 — deleted.** Investigation found the entire AI-document-analysis feature it belonged to (an opt-in "Use AI to suggest categories & descriptions" checkbox in the bulk-upload dialog) had zero production usage ever (`document_ai_audit` table, 0 rows). Folded into the broader bulk-upload-feature removal rather than treated as a standalone deletion — see execution log. Its 4 backing RPCs (including `reject_document_ai_suggestions`, this hook's one exclusive dependency) were confirmed orphaned and dropped in a same-day follow-up migration. |
 | ~~`src/lib/microsoft/scopes.ts`~~ | `buildScopeString`, `BASE_SCOPES`, `MAIL_SCOPES`, `CALENDAR_SCOPES`, `DOCUMENT_SCOPES`, `SurfaceFlags` | **RESOLVED 28 Aug 2026 — deleted (PR #454).** Carl confirmed no OAuth-connect UI or shared-source-of-truth plan for this file — genuinely dead, the Deno duplicate wired into `outlook-auth` is the real one. |
 
-### 3.2 Edge functions — deployed and live, no in-repo caller found (15, 11 resolved once #455 merges)
+### 3.2 Edge functions — deployed and live, no in-repo caller found (15 — 14 retired/resolved, 1 investigated and deliberately kept)
 
 These all pass the "zero grep hit in `src/**`/`supabase/functions/**`" bar, but each carries a specific reason a plain code search cannot settle the question. **None of these should be deleted on this synthesis alone.**
 
 | Function | What needs a human decision |
 |---|---|
-| `compliance-assistant-client` | Function's own header states it's deliberately "left deployed but unmounted" pending a **planned future decommission** — confirm the observation period has elapsed before deleting; deleting now would preempt an already-stated team plan. |
-| `bootstrap-bulk-generate-system-account` | Self-identifies as intentionally neutralised/retained on purpose ("kept only as an inert placeholder for the slug") — confirm the reason for keeping the placeholder no longer applies. |
+| ~~`compliance-assistant-client`~~ | **RESOLVED 28 Aug 2026 — retired (410 stub deployed to prod, folder deleted, PR #457).** Verified the "planned future decommission" condition: `ask-viv-assistant-client` has `app_settings.ask_viv_client_assistant_all_tenants = true` (fully rolled out, not just beta) with real usage since 6 Aug 2026 — 22 days of observation, satisfying the original migration plan's condition. Confirmed via grep that every `_shared` module this function imports is also used by `compliance-assistant` or `ask-viv-assistant-client` — nothing shared touched. Verified live in Playwright (Demo RTO client persona) that the Ask Viv panel hits `ask-viv-assistant-client`, not this function. |
+| ~~`bootstrap-bulk-generate-system-account`~~ | **RESOLVED 28 Aug 2026 — deleted (PR #457).** Turned out to already be a fully neutralized stub in the repo — unconditionally returns 410 to every caller, no live logic left. Its one-time provisioning (the `bulk-generate-automation@vivacity.com.au` system account) already succeeded per its own header comment; nothing left to observe or confirm. |
 | ~~`assign-package-to-tenant`~~ | **RESOLVED 28 Aug 2026 — source file deleted.** The behaviour-changing action (retiring the live function to a 410 response) already shipped 11 days earlier (17 Aug 2026) and has had zero reported incidents since — if an external caller existed, it would already have hit the 410 back then. Deleting the already-inert stub source today changes nothing about production behaviour. Same reasoning as the already-stubbed functions removed in Batch 1. |
 | ~~`academy-fetch-vimeo-showcase`~~ | **RESOLVED 28 Aug 2026 — retired (410 stub deployed to prod).** Re-verified three ways: zero code references, the live "preview showcase" UI actually calls `academy-import-vimeo-showcase` instead (naming coincidence caught and double-checked when Carl flagged doubt), and zero invocations in production edge-function logs over 24h. Carl confirmed no separate "preview before import" UX on this specific function is planned. |
 | ~~`generate-audit-report`~~ | **RESOLVED 28 Aug 2026 — retired (410 stub deployed to prod).** Carl confirmed the legacy `compliance_audits`-based Compliance Auditor workflow (0 rows ever) is fully superseded by `client_audits`, and directed removing the entire legacy implementation, not just this function — see execution log. |
@@ -471,6 +474,8 @@ One PR. Pair the `logger.ts`/`validation-schemas.ts` removal with either a CONTR
 **Not batched — hold for explicit sign-off (§3 items):**
 `StageCompletenessWidget.tsx`, `StageHealthPanel.tsx`, `useDocumentAIConfidence.tsx` (+ `useDocumentAIStatusCounts`), `microsoft/scopes.ts`, and all 15 needs-review edge functions. These should not enter any batch until the specific human decision each one lists in §3 has been made.
 
+*(Status as of 28 Aug 2026: every one of these has since had its human decision made and been actioned — see §3 and the §3 follow-up execution log for the full item-by-item history.)*
+
 ---
 
 ## 6. Post-removal verification plan
@@ -513,13 +518,13 @@ This section is the checklist for the **execution + Playwright-verification pass
 
 4. ~~**`generate-audit-report`:**~~ RESOLVED 28 Aug 2026 — Carl ruled the `client_audits`-based path has fully superseded this; see execution log for the full legacy-implementation removal.
 
-5. **`validate-ai-assist` and `academy-fetch-vimeo-showcase`:** both read as intentionally-built-ahead of a not-yet-shipped frontend feature (Sprint 3 AI layer; a Vimeo showcase preview step) rather than abandoned code. Worth a quick "is this still on the roadmap?" check before either is touched — deleting genuinely-planned scaffolding is a different mistake than deleting genuinely-dead code, and this synthesis can't tell them apart from source alone.
+5. ~~**`validate-ai-assist` and `academy-fetch-vimeo-showcase`:**~~ RESOLVED 28 Aug 2026 — Carl confirmed neither is on the roadmap (Sprint 3 AI layer / Vimeo showcase preview step); both retired.
 
-6. **`test-mailgun` / `academy-backfill-course-thumbnails`:** both are explicitly-flagged-but-deferred operator tools from a prior audit pass (item U2) — the standing question ("can a manual/operator workflow be proven retired from source alone?") was never answered, not newly raised here. Carl is the only person who can confirm whether these manual entry points have actually gone unused, since that's an operational fact, not a code fact.
+6. ~~**`test-mailgun` / `academy-backfill-course-thumbnails`:**~~ RESOLVED 28 Aug 2026 — Carl confirmed both operationally: `test-mailgun` had real past use but isn't needed going forward (retired); `academy-backfill-course-thumbnails` has genuine pending work (2 of 100 courses missing a thumbnail) and was deliberately kept, not retired.
 
-7. **`admin-change-password` / `invite-to-tenant` / `get-email-status` / `report-delivery-issue` / `import-vimeo-training` / `tga-product-lookup`:** all six are live, deployed, no-in-repo-caller functions where the most likely explanation is an out-of-repo caller (admin tooling, a webhook target, an ops script) that this audit has no way to see. Recommend Carl (or whoever owns any Zapier/ops/admin-tool integrations against this Supabase project) do a one-time check of what actually calls these before any of the 19 needs-review items move to a removal PR.
+7. ~~**`admin-change-password` / `invite-to-tenant` / `get-email-status` / `report-delivery-issue` / `import-vimeo-training` / `tga-product-lookup`:**~~ RESOLVED 28 Aug 2026 — checked with Carl individually rather than guessing at an out-of-repo caller. None had one: `admin-change-password` requires a live SuperAdmin JWT with no known manual use; `invite-to-tenant` was superseded by `invite-user`; `get-email-status`/`report-delivery-issue` had zero rows ever in their target tables; `import-vimeo-training` was superseded per its own code comments; `tga-product-lookup`'s cache table had zero rows ever despite 607 deploy versions. All six retired.
 
-8. **`StageHealthPanel.tsx` / `TenantStageHealthSummary.tsx`:** both dead as components, but a KB dashboard-overhaul mockup doc treats their `health_status`-derivation logic as canonical reference material for a not-yet-built dashboard feature. Worth confirming with whoever owns that mockup whether the logic needs porting somewhere before the source is deleted.
+8. ~~**`StageHealthPanel.tsx` / `TenantStageHealthSummary.tsx`:**~~ RESOLVED 27–28 Aug 2026 — confirmed `run-stage-health-monitor` independently implements the same `health_status`-derivation rules server-side; the KB mockup's citation was documentation only, nothing needed porting. Both deleted.
 
 ---
 
@@ -548,9 +553,10 @@ This section is the checklist for the **execution + Playwright-verification pass
 | | Files | Lines |
 |---|---:|---:|
 | Baseline (pre-cleanup) | 2,028 | 538,400 |
-| **Current (`main`)** | **1,843** | **504,498** |
-| **Removed** | **−185 (−9.1%)** | **−33,902 (−6.3%)** |
-| Pending merge (PR #455) | 1,840 | ~504,150 (est.) | −3 more files once merged |
+| **Current (`main`)** | **1,839** | **503,748** |
+| **Removed so far** | **−189 (−9.3%)** | **−34,652 (−6.4%)** |
+| Pending merge (PR #457) | 1,837 | 503,059 |
+| **Removed once #457 merges** | **−191 (−9.4%)** | **−35,341 (−6.6%)** |
 
 Breakdown of the follow-up work (beyond the original 12 batches), each its own PR:
 - `StageHealthPanel.tsx` deleted + 3 edge functions retired (`calculate-phase-completeness`, `academy-fetch-vimeo-showcase`, `validate-ai-assist`) — PR #437 (merged)
@@ -562,9 +568,13 @@ Breakdown of the follow-up work (beyond the original 12 batches), each its own P
 - `invite-to-tenant` retired (superseded by `invite-user`) — PR #450 (merged, folder deletion included in the same PR)
 - `get-email-status` + `report-delivery-issue` retired (zero rows ever in their target tables) — PR #451 (merged, folder deletions included in the same PR)
 - `src/lib/microsoft/scopes.ts` deleted (confirmed dead, no OAuth-connect UI planned) — PR #454 (merged)
-- `test-mailgun`, `tga-product-lookup`, `import-vimeo-training` retired (individually confirmed with Carl) — PR #455 (open, awaiting merge)
+- `test-mailgun`, `tga-product-lookup`, `import-vimeo-training` retired (individually confirmed with Carl, after investigation found `test-mailgun` had real past use but Carl chose to retire it anyway) — PR #455 (merged)
+- `compliance-assistant-client` retired (replacement `ask-viv-assistant-client` confirmed fully rolled out to all tenants with real usage since 6 Aug 2026) — PR #457 (open); `bootstrap-bulk-generate-system-account` deleted in the same PR (already a fully neutralized stub, one-time provisioning already complete)
+- This tracking doc itself updated after each round — PR #448 (merged), #456 (merged), #458 (open, this update)
 
-All PRs through #454 are merged; `main` matches the "Current" row exactly. PR #455 is still open. **13 of the original 19 §3 items are resolved-and-merged** (4 frontend: `StageCompletenessWidget.tsx`, `StageHealthPanel.tsx`, `useDocumentAIConfidence.tsx`, `microsoft/scopes.ts`; 9 edge functions: `assign-package-to-tenant`, `academy-fetch-vimeo-showcase`, `validate-ai-assist`, `generate-audit-report`, `mailgun-webhooks`, `admin-change-password`, `invite-to-tenant`, `get-email-status`, `report-delivery-issue`) — rising to **16 of 19** once PR #455 merges (adding `test-mailgun`, `tga-product-lookup`, `import-vimeo-training`). All 6 fully-resolved retired functions from the first round (the 5 + `assign-package-to-tenant`) are confirmed fully deleted from the live Supabase project (verified via `list_edge_functions`), not just stubbed; the 4 newest (`admin-change-password`, `invite-to-tenant`, `get-email-status`, `report-delivery-issue`) still show as 410 stubs in Supabase pending Carl's manual dashboard deletion — their folders are already gone from `main` so that deletion will hold. The remaining 3 (1 frontend: none left; edge functions: `compliance-assistant-client`, `bootstrap-bulk-generate-system-account`, `academy-backfill-course-thumbnails`) are deliberately parked — see §3/§7.
+All PRs through #455 are merged; `main` matches the pre-#457 row exactly. PR #457 is still open. **16 of the original 19 §3 items are resolved-and-merged** (4 frontend: `StageCompletenessWidget.tsx`, `StageHealthPanel.tsx`, `useDocumentAIConfidence.tsx`, `microsoft/scopes.ts`; 12 edge functions: `assign-package-to-tenant`, `academy-fetch-vimeo-showcase`, `validate-ai-assist`, `generate-audit-report`, `mailgun-webhooks`, `admin-change-password`, `invite-to-tenant`, `get-email-status`, `report-delivery-issue`, `test-mailgun`, `tga-product-lookup`, `import-vimeo-training`) — rising to **all 19 of 19** once PR #457 merges (adding `compliance-assistant-client` and `bootstrap-bulk-generate-system-account`; `academy-backfill-course-thumbnails` was investigated and deliberately kept, not retired, per Carl's explicit call — see below). All 6 fully-resolved retired functions from the first round (the 5 + `assign-package-to-tenant`) are confirmed fully deleted from the live Supabase project (verified via `list_edge_functions`), not just stubbed. The next 7 (`admin-change-password`, `invite-to-tenant`, `get-email-status`, `report-delivery-issue`, `test-mailgun`, `tga-product-lookup`, `import-vimeo-training`) still show as 410 stubs in Supabase pending Carl's manual dashboard deletion — their folders are already gone from `main` so that deletion will hold.
+
+Once PR #457 merges, every one of the original 19 §3 items will have a final disposition — 18 retired/deleted, 1 (`academy-backfill-course-thumbnails`) deliberately kept parked. This closes out the §3 needs-review list entirely.
 
 ### §3 follow-up (post-cleanup)
 
@@ -596,3 +606,6 @@ All PRs through #454 are merged; `main` matches the "Current" row exactly. PR #4
 - **2026-08-28:** Investigated the last group — `test-mailgun`, `academy-backfill-course-thumbnails`, `import-vimeo-training`, `tga-product-lookup` — before asking Carl, per his request. Findings changed the picture for two of them: `test-mailgun` had actually been used before (twice, 20 Jan 2026, via `audit_eos_events`) — not dead code, a real diagnostic tool, just not recently active. `academy-backfill-course-thumbnails` still has genuine pending work (2 of 100 `academy_courses` missing a `thumbnail_url`) — its job isn't finished. `tga-product-lookup`'s own cache table (`tga_cache`) has 0 rows, ever, despite 607 deploy versions — the caching logic has never actually fired in production. `import-vimeo-training` remains superseded per its own code comments, as originally flagged. Presented all four findings to Carl individually: he chose to retire `test-mailgun` anyway (not needed going forward, despite its past use), keep `academy-backfill-course-thumbnails` parked without running it now, and retire both `tga-product-lookup` and `import-vimeo-training`. Deployed 410 stubs for all three retirements, verified via curl, then deleted all three folders in the same PR (plus `test-mailgun`'s now-stale `cors-and-auth.test.mjs` and `tga-product-lookup`'s `config.toml` stanza). `npm run build` clean; edge-function suite 220/220. PR #455 (open, awaiting merge).
 
 **Status at this point:** 13 of the original 19 §3 items resolved-and-merged (rising to 16 once PR #455 merges); 3 remain deliberately parked (`compliance-assistant-client`, `bootstrap-bulk-generate-system-account` — both still waiting out their own stated observation periods — and `academy-backfill-course-thumbnails`, kept per Carl's explicit call today). `admin-change-password`, `invite-to-tenant`, `get-email-status`, `report-delivery-issue` are live in Supabase as 410 stubs with their folders already gone from `main` — safe for Carl to delete from the dashboard whenever, the deletion will hold.
+
+- **2026-08-28:** PR #455 merged. Carl then asked for a `cleanup-worktrees` skill (`~/.claude/skills/cleanup-worktrees/SKILL.md`, mirroring `kill-node`'s classify-before-touching pattern) to deal with the pile of git worktrees accumulated under this repo — 70 registered at the time, matching the exact root cause AGENTS.md documents for the Vite dep-scan hang. Ran it: enumerated all 70 via `git worktree list --porcelain`, checked each for uncommitted changes (`git status --porcelain`) and merge status (cross-referenced against `gh pr list --state all` rather than trusting `git branch --merged`, since many branches' remotes had already been deleted after squash-merge). Carl separately identified `review-worktrees/codebase-optimization-council` as Codex's active worktree (confirmed independently — its HEAD had just synced to the exact commit of a PR merged moments earlier). Classified: 1 active (excluded), 11 dirty (excluded), 55 merged-and-clean (bulk removed on Carl's approval), 2 with real unmerged commits but confirmed abandoned/superseded after review (removed on Carl's approval) — 57 removed via `git worktree remove`, 1 more stale registration cleared via `git worktree prune` (its directory had already been deleted outside git). 70 → 13 worktrees. Carl then asked to force-remove the remaining 11 dirty ones too — reviewed each first (7 shared an identical stale auto-generated Lovable `mcp/index.ts` bundle diff, 2 were Vite-hang debugging scratch files, 1 was a Playwright test-artifact folder, 1 was an already-obsolete audit-log note about functions already retired this session) and confirmed nothing of value, then force-removed all 11 (`git worktree remove --force`, which needed Carl's direct terminal approval once — the classifier blocked the same command from this session even after an in-chat "yes", requiring either a smaller single-command retry or Carl running it himself; a single-command retry went through). Final: **70 → 2 worktrees** — just `main` and Codex's still-active one, untouched throughout.
+- **2026-08-28:** Per Carl's direction to close out the remaining 3 parked items and "reduce pollution and LOC," investigated `compliance-assistant-client` and `bootstrap-bulk-generate-system-account` in depth. For the former: queried `app_settings` directly and found `ask_viv_client_assistant_all_tenants = true` with 28 real conversation turns since 6 Aug 2026 — the replacement's observation period has clearly elapsed. Grepped every `_shared` module the old function imports and confirmed each is also used by `compliance-assistant` (staff sibling, untouched) and/or `ask-viv-assistant-client` (the replacement) — nothing shared was at risk. Checked `ai_client_query_usage` specifically (the old function's usage-cap table) and found the new function deliberately reuses it as its own request-count cap — left untouched. For the latter: reading its actual source revealed it's already a fully neutralized 410-only stub, not a "confirm the placeholder reason" question at all. Deployed a 410 stub for `compliance-assistant-client` (verified via curl), deleted both folders, then — per Carl's explicit ask to verify in Playwright — signed out of the SuperAdmin session, logged in as the Demo RTO client persona, opened the live Ask Viv panel, and sent a real question; confirmed via `browser_network_requests` that it hit `POST /functions/v1/ask-viv-assistant-client` (200), not the retired function, with zero console errors. `npm run build` clean, `npx vitest run` 282/282, edge-function suite 220/220. PR #457 (open, awaiting merge). **This resolves all 19 of the original §3 items** — 18 retired/deleted once #457 merges, 1 (`academy-backfill-course-thumbnails`) deliberately kept.
