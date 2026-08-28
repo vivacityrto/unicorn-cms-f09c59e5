@@ -122,20 +122,25 @@ Size is a signal, not an automatic refactor order. Recent real use makes several
 | Xero | Live webhook 200s and production cache updates recorded on 11 August | Treat as active integration; isolate webhook/domain mapping rather than retire |
 | Tasks/action items | June overhaul published 127 client task instances across 27 stages | Preserve `client_action_items` as the canonical client-facing record |
 
-### Tier B — active/new, adoption volume uncertain
+### Active/new, adoption volume uncertain
 
 - Current Audits (`client_audits`) were exercised in live QA and remain under active repair, but client adoption volume is not proven.
-- Ask Viv staff/client redesign shipped across late July and early August. Keep the observation-period functions parked and add telemetry before architecture changes.
+- Ask Viv staff/client redesign shipped across late July and early August. The replacement had been fully rolled out with real usage for 22 days by 28 August; `compliance-assistant-client` was then retired. Protect the active staff/client replacements and preserve their telemetry before architecture changes.
 - KPI/KPI-v2 is routed and data was verified in July. The superseded reviewer-admin UI has already been removed.
 - PDP and its Academy analytics are recent. Optimize observability and boundaries first; usage maturity is still developing.
 
-### Tier D — retired or cleanup-ready only after final checks
+### Retired or verified absent
 
 - Legacy Compliance Auditor frontend, function, and three tables are removed.
 - Stage Documents bulk-upload-with-AI UI and its four RPCs are removed; `document_ai_audit` remains a schema candidate.
 - The deprecated Academy Solo/Team/Elite tier UI is removed; its enum/column residue is a schema candidate.
 - The dead-code plan's PR #455 has merged as `b8933727`; `test-mailgun`, `tga-product-lookup`, and `import-vimeo-training` are retired.
-- `compliance-assistant-client`, `bootstrap-bulk-generate-system-account`, and `academy-backfill-course-thumbnails` are explicitly parked, not removal-ready.
+- `compliance-assistant-client` and `bootstrap-bulk-generate-system-account` were retired/deleted in `cfdeec0f`; their repository/config absence must remain durable because Supabase's GitHub sync can resurrect a deployed function whose folder remains on `main`.
+
+### Unknown/investigate or explicitly retained
+
+- `academy-backfill-course-thumbnails` is explicitly retained: two of 100 Academy courses still lacked a thumbnail during the 28 August investigation. It is not a retirement candidate.
+- Use four unambiguous lifecycle states throughout implementation: `active/protect`, `unknown/investigate`, `retirement-approved`, and `retired/verified absent`. “Parked” never means removal-ready.
 
 ## 5. Target architecture
 
@@ -181,11 +186,13 @@ The default expectation is net-negative or LOC-neutral. A net-positive slice nee
 | ID | Candidate | Evidence | Intended result | Acceptance gate |
 |---|---|---|---|---|
 | P0.1 | Replace the Bash-only email-redirect check with a cross-platform Node script | `npm run build` is blocked on the documented Windows environment; F-004 in `docs/audit-report-2026-08-26.md` | One build command on Windows and CI | `npm run build` succeeds on Windows and CI; negative fixture proves the redirect guard still fails closed |
-| P0.2 | Add canonical `typecheck`, `test:frontend`, `test:edge`, and `test` scripts | No `test` script; the two suites use different runners | One obvious verification entry point for humans and agents | Aggregate command runs both suites and returns the first real failure without hiding either result |
+| P0.2 | Add canonical `typecheck`, `test:frontend`, `test:edge`, and `test` scripts | No `test` script; 39 MJS Edge test files run under Node, while 17 TypeScript/Deno test files are reached by neither that command nor Vitest | One obvious verification entry point that names every source/test class it covers | Inventory executable and orphaned tests; choose a supported runner/conversion for all 17; aggregate command reports each class and never calls 220 passing MJS tests “all Edge tests” |
 | P0.3 | Diagnose Vitest worker teardown and establish a fast focused-test mode | Passing single files can take 27–90 seconds and report fork termination timeouts | Predictable local feedback | Record before/after wall time; no worker-timeout warning on a passing focused test |
 | P0.4 | Introduce a lint ratchet rather than attempting a global cleanup | Existing lint has thousands of historical findings and unused-variable checking is disabled | New/changed code cannot add debt | Diff-scoped or baseline-aware lint passes; enable unused rules in one bounded directory first |
 | P0.5 | Add a repeatable architecture metrics script | Current measurements required ad-hoc commands | Every PR can report files/LOC/large files/direct Supabase imports | Script excludes generated types, migrations, and audit history and produces stable JSON/Markdown |
-| P0.6 | Turn route inventory generation into a check | The generator currently prints for manual paste and found a duplicate `/support-tickets` route | Route/KB drift fails automatically | `--check` mode compares generated inventory; CI or the aggregate verification command runs it |
+| P0.6 | Replace the `App.tsx`-only regex route inventory with a module-aware check | The current script reads only `src/App.tsx`, scans indentation-sensitive 4,000-character windows, reports 244 routes while the KB says 249, and will silently omit extracted route modules | Route/KB drift fails automatically before route extraction begins | Typed manifest or AST/multi-file traversal emits ordered path, component, redirect target/`replace`, exact guard props, layout, lazy import, params, and duplicates; fixtures prove no route module is omitted |
+| P0.7 | Establish a repeatable browser-verification harness | There is no Playwright dependency, config, E2E directory, or browser script; prior evidence is agent/manual | Reproducible, production-safe browser evidence | Public journey, staff deep link, real-client deep link, and academy-only redirect run from one documented read-only command with persona isolation and failure collectors |
+| P0.8 | Define browser personas and disposable-data rules | Localhost uses hosted production Supabase; staff preview does not exercise client RLS | Tests cannot silently mutate real data or claim unsupported personas | Every journey records real/preview identity, read/write class, fixture owner, unique run ID, external-side-effect allowlist, cleanup, and post-cleanup assertion; credentials/artifacts remain outside Git |
 
 ### P1 — route, layout, and navigation simplification
 
@@ -241,7 +248,7 @@ The pilot succeeds if the page becomes easier to read, domain behavior is indepe
 | P3.1 | Split authentication session, profile loading, memberships, and RBAC helpers | `useAuth.tsx` owns all four plus navigation and a `setTimeout` workaround | Smaller provider contract; queryable/retryable profile state; pure access helpers | Preserve the profile-failure recovery added after F-016 |
 | P3.2 | Consolidate role and permission predicates | `unicorn_role` appears in 133 files; raw checks coexist with `isVivacityStaffRole`, `isSuperAdmin`, `usePermission`, and route guards | One vocabulary for identity class vs feature permission | Do not replace feature permission with broad role checks |
 | P3.3 | Standardize typed feature errors and empty/forbidden states | Recent audits found data failures rendered as legitimate empty content | UIs distinguish empty, loading, forbidden, and failed | Start with current Audits and document delivery, where failures are consequential |
-| P3.4 | Tighten TypeScript by directory | Frontend strictness is off and `any` is widespread | Stop new unsafe contracts while avoiding a repo-wide flag day | Order: `noFallthroughCasesInSwitch`, unused checks, `noImplicitAny`, `strictNullChecks`, then `strict`; use scoped configs or project references |
+| P3.4 | Tighten TypeScript by directory | Frontend strictness is off, `any` is widespread, and generated Supabase types currently advertise RPCs already dropped live | Stop new unsafe contracts without letting `tsc` bless a stale schema | First regenerate/diff live types without hand-editing; then ratchet flags by directory and prove the pre/post typechecked file universe covers every intended frontend, Node, and Deno class |
 | P3.5 | Standardize React Query keys and invalidation per feature | Hundreds of query-hook files and many direct page/component calls | Predictable caching and smaller mutation blast radius | Measure duplicate query keys and stale-cache incidents before choosing a library |
 | P3.6 | Break the client-timeline import cycle | `useClientManagementData.tsx` and timeline helpers depend on types owned by the React hook | Move shared timeline types to a React-free module | Low-risk first dependency-inversion cleanup |
 
@@ -249,14 +256,16 @@ The pilot succeeds if the page becomes easier to read, domain behavior is indepe
 
 | ID | Rule family | Incident/evidence | Target state |
 |---|---|---|---|
-| P4.1 | Package usage and renewal-window calculations | August fixes found independent lifetime/window formulas across functions and views | One database-level canonical calculation contract with frontend display adapters only |
-| P4.2 | Conversation participant insertion | One invalid `auth.users` FK row caused an entire batch to fail silently; the same pattern existed in another path | One server-side operation with explicit per-row outcomes and logging; callers cannot silently ignore failure |
+| P4.1 | Package usage and renewal-window calculations | August fixes found independent formulas; `rpc_get_package_usage` still sums raw entries while views/functions and `ClientTimeTab` use allocations; browser renewal is multi-request and non-atomic | Design gate first: prove parity and ownership, then an idempotent transactional renewal command with locking and explicit core-vs-best-effort side effects |
+| P4.2 | Conversation participant insertion and broadcast delivery | One invalid auth FK row dropped a batch; broadcast claiming, conversation/message creation, attachment metadata, notifications, recipient status, and totals are non-atomic and race-prone | Design gate first: decide eligibility and notification guarantees, then atomic claiming/idempotency, explicit per-user outcomes, and durable observable delivery results |
 | P4.3 | Timeline event types/titles | Multiple August fixes updated event projections and labels in several places | Canonical event contract plus exhaustive rendering test |
 | P4.4 | Audit type labels/templates | Frontend canonical maps coexist with local Edge Function copies | Generate or validate cross-runtime maps from one small data contract; fail a drift check when values diverge |
 | P4.5 | System-account/staff predicates | Nine call sites were patched for `is_system_account`, followed by a grant incident | One query/helper policy per list use case; schema grants included in the same migration |
-| P4.6 | Document lifecycle/status | Manage Documents, bulk jobs, generation, delivery, versioning, and stage links each carry overlapping status logic | Explicit state machine or pure transition helpers with invalid-transition tests |
+| P4.6 | Document lifecycle/status and publication | Documents, versions/current pointer, stage releases, bulk jobs/items, generation, delivery, and legacy visibility flags are separate aggregates; SharePoint publication currently performs non-atomic archive/publish/pointer/audit requests | Inventory owners/consumers and compatibility projections first; define bounded state machines, then a transactional locked publish command with pointer/status invariants |
 
 P4 candidates are reliability work first and LOC work second. Consolidation can add validation code while still reducing the number of sources of truth.
+
+P4 target states are design hypotheses, not implementation instructions. Before selecting database, Edge, or pure-domain ownership for P4.1, P4.2, P4.5, or P4.6, write a short ADR/design packet and perform the live read-only object/caller sweep. Separate characterization, additive transactional contract, caller switches, observation, and old-contract retirement. Auth mechanics and permission-policy changes are likewise separate PRs.
 
 ### P5 — Edge Function consistency
 
@@ -298,12 +307,13 @@ Per-slice targets:
 
 These are investigation candidates, not approved drops:
 
-1. `document_ai_audit` after checking every table/function/trigger/cron consumer.
+1. `document_ai_audit` is Tier C, not removal-ready: `analyze-document` still inserts into it, while its current frontend caller appears to send mismatched request field names. Repair or retire that caller/function contract, check deployed/external invocations and logs, remove the writer in one observed PR, then consider a later drop migration.
 2. Deprecated Academy tier enum/columns after a column-privilege and dependency sweep.
 3. `get_client_eos_overview` after confirming no external consumer.
-4. Tasks Phase-6 compatibility artifacts such as legacy released-task sources or duplicate `package_id` writes.
-5. Legacy document flags such as `isclientdoc` / `is_released` after all current consumers are reconciled.
-6. Observation-period Edge Functions only when the existing window, production logs, callers, and owner decision all support retirement.
+4. Legacy document flags such as `isclientdoc` / `is_released` after all current consumers are reconciled.
+5. Unknown Edge Functions only when production logs, repository/deployed state, external callers, observation window, and owner decision all support retirement.
+
+Do not reopen the old Tasks Phase 6/7 compatibility cleanup without a new live-lineage audit. The `stage_task` union, released-task compatibility columns/branches, backfill RPC, and old `rpc_publish_stage_tasks` package write were already removed; current `client_action_items.package_id` is a deliberate package-template foreign key.
 
 Every schema/RPC/trigger candidate requires a migration, the live RPC/trigger scans in `AGENTS.md`, explicit grants where relevant, an audit entry, and post-apply verification. Never bundle speculative schema cleanup into a frontend refactor PR.
 
@@ -329,6 +339,7 @@ Perform before architectural refactors:
 4. Close the dead-code plan's PR #455 tracker with merge `b8933727` and record a final comparable baseline.
 5. Repair `docs/audit-log/INDEX.md` entry paths mechanically and verify every target.
 6. Add a local Markdown link checker covering README, KB, audit index, and code-adjacent docs.
+7. Add `docs/kb/reference/README.md` as the lifecycle registry for long plans/handoffs; until this proposal is merged and explicitly accepted, label it `planning`, never `active`.
 
 The pass must also correct these high-impact factual errors rather than merely refreshing dates:
 
@@ -368,13 +379,14 @@ Regenerate rather than patch around stale paragraphs:
 
 ## 8. Execution plan and PR sequence
 
-### Phase 0 — baseline and verification (1–3 PRs)
+### Phase 0 — baseline and verification (three or more independent PRs)
 
-1. Cross-platform build guard and canonical scripts.
-2. Vitest teardown investigation and focused-test profile.
-3. Architecture metrics, route drift, KB freshness, and Markdown link checks.
+1. **P0-A — executable baseline:** cross-platform build guard; named frontend/Node-MJS/Deno test universe; canonical typecheck/build/test commands; Vitest teardown investigation. Prove the guard with a negative fixture and disclose every unexecuted test class.
+2. **P0-B — deterministic checks:** architecture metrics; module-aware route manifest; KB freshness/link/anchor checks. Keep this free of Playwright dependency and lockfile churn.
+3. **P0-C — browser harness:** optional committed Playwright dependency/config/scripts/persona contract in its own PR. Default is read-only; hosted-production mutation remains separately authorized.
+4. **P0-D — CI decision, if approved:** the repository currently has only Bash security guard workflows and no build/test CI. Define runner, secrets policy, cost, browser availability, and which read-only checks are safe before claiming anything “passes in CI.”
 
-**Exit gate:** a Windows developer or agent can run one documented command that typechecks/builds and runs both test harnesses; metric output is reproducible.
+**Exit gate:** a Windows developer or agent can run one documented command that reports the complete intended source/test universe, typechecks/builds, and runs every supported harness; metrics are reproducible; route checking remains valid after route modules split. Browser infrastructure and CI each have an explicit accepted scope rather than being smuggled into the baseline PR.
 
 ### Phase 1 — KB truth restoration (2–4 PRs)
 
@@ -387,13 +399,17 @@ Regenerate rather than patch around stale paragraphs:
 
 ### Phase 2 — route/composition simplification (3–5 PRs)
 
-1. Duplicate route and stale navigation-config cleanup.
-2. Route characterization tests.
-3. Extract route families without behavior changes.
-4. Convert one layout family to nested routes; repeat after review.
-5. Introduce metadata only for facts genuinely shared by router/navigation/tests.
+1. Remove only the later duplicate `/support-tickets` registration and verify the still-wrapped canonical route.
+2. Add route/redirect/guard characterization.
+3. Land the module-aware route manifest/check before any route leaves `App.tsx`.
+4. Remove stale navigation config only after caller and persona checks.
+5. Extract one route family without layout, guard, metadata, or auth-provider changes.
+6. Convert one layout/guard family to nested routes per PR after explicit mount-lifetime decisions.
+7. Consolidate metadata last, only for facts genuinely shared by router/navigation/tests.
 
 **Exit gate:** route count and guards unchanged except intentional cleanup; wrapper LOC reduced; route inventory check passes.
+
+Do not combine route-module extraction, nested layouts, auth-provider splitting, or metadata consolidation. Preserve a last-known-good normalized route manifest and browser evidence so each family can roll back with one revert.
 
 ### Phase 3 — boundary pilot and platform seams (3–5 PRs)
 
@@ -499,6 +515,516 @@ Representative real-use/history evidence:
 
 ## 13. First recommended action
 
-Start with Phase 0, not a large-file refactor. The first PR should make the build guard cross-platform, add the canonical verification scripts, and turn the existing route inventory generator into a check. The second PR should repair KB routing/link truth. Only then begin route composition and the feature-boundary pilot.
+Start with Phase 0, not a large-file refactor. Do not bundle Phase 0 into one change: P0-A establishes the executable baseline, P0-B adds deterministic architecture/route/KB checks, and P0-C separately proposes the safe Playwright harness. The first KB truth-safety PR should follow or proceed in parallel without changing code behavior. Only then begin route composition and the feature-boundary pilot.
 
 That sequence improves every later human and AI change: there is one way to verify, one trustworthy map of the system, and fewer opportunities to preserve or optimize the wrong code.
+
+## 14. Claude Code implementation contract
+
+Claude Code should treat this plan as a queue of independent investigations and PRs, not one authorization to refactor the repository. Every implementation turn begins by writing a small execution packet and ends with an evidence report.
+
+### Required execution packet before editing
+
+```markdown
+## PR execution packet
+
+- Packet ID / status / owner / risk / reconsider-by:
+- Candidate IDs and dependency PRs:
+- Current `origin/main` SHA / exact measured baseline SHA / timestamp:
+- Branch / absolute worktree path:
+- Node / npm / browser / runner versions:
+- Problem and observable user impact:
+- Evidence tier and last verified date:
+- In-scope files, imports, routes, redirects, guards, layouts, and public contracts:
+- Known callers/consumers with evidence, confidence, and last-verified timestamp:
+- Query keys, invalidation, retries, caches, and failure/empty-state behavior:
+- Tables/views/RPC signatures/triggers/RLS/grants/storage/realtime/generated types:
+- Edge endpoint method/status/body/headers/CORS/auth/config/idempotency contract:
+- Cron, `pg_net`, webhooks, OAuth/email/add-in/manual callers, external dashboards, and telemetry:
+- Behavior freeze: success, empty, forbidden, error, timeout, and retry invariants:
+- Explicit non-goals:
+- Characterization test and independent oracle to add/run first:
+- Playwright real-vs-preview persona, route, viewport, fixture, read/write class, assertions, prohibited side effects, cleanup:
+- Non-Playwright evidence required:
+- Expected production/test/total LOC, largest module/function, direct-import, fan-in/out/cycle, duplicate-rule, bundle/request/runtime change:
+- Dependency/lockfile policy and allowed new indirection:
+- Rollback/compatibility boundary, observation window, signals, and stop thresholds:
+- Documentation matrix: current docs to update, historical docs not to edit, generated inventories to refresh:
+- Deployment/production-mutation authority (normally none):
+- Stop conditions specific to this PR:
+```
+
+If the packet cannot name the affected public behavior and an independent oracle, the candidate remains investigation-only.
+
+### Required implementation discipline
+
+1. Fetch `origin/main` and create a new isolated worktree/branch from the current tip. Never switch the shared checkout.
+2. Record `git status`, baseline SHA, package/tool versions, and the exact verification commands before editing.
+3. Run the focused baseline behavior first. A later failure cannot be called pre-existing without this evidence.
+4. Add or strengthen characterization coverage before structural movement when the affected behavior is not already observable.
+5. Make one coherent change. Do not opportunistically fix unrelated findings discovered during the pass; record them as follow-ups.
+6. Inspect the complete diff, including generated lockfile changes and documentation, before verification.
+7. Run focused checks, then affected suites, then build/type/lint checks, then browser verification against the final diff.
+8. Re-run the blast-radius searches after the edit. A pre-edit caller search is insufficient when imports, routes, or signatures moved.
+9. Ask a read-only council to review the final diff from independent axes before declaring it ready.
+10. Stop after PR creation unless Carl explicitly asks to merge in that session.
+
+### Change-size limits
+
+- One candidate family or one user workflow per PR.
+- A structural refactor and a schema change are separate PRs unless the code cannot compile against either state independently and a phased compatibility design is documented.
+- A route-family extraction and an auth-policy redesign are separate PRs.
+- A shared Edge Function helper and broad adoption are separate: land/test the helper first, then migrate small contract-compatible batches.
+- TypeScript flag changes are separate from business refactors. Fixing unrelated newly surfaced errors in the same PR hides scope.
+- Deletion candidates are grouped by one feature/domain, never as a mixed grab-bag after the first dead-code program.
+
+## 15. Second-round blast-radius checklist
+
+### Program freshness and lifecycle gate
+
+This council pass caught `origin/main` advancing while the plan was being reviewed. Treat that as a mandatory control, not a one-off inconvenience:
+
+- Record both `current origin/main SHA` and `measured baseline SHA`, with timestamp, at packet creation and again immediately before PR handoff.
+- If `main` advanced, inspect every intervening commit and refresh affected candidate state, metrics, route/schema inventories, and evidence. “Docs-only upstream change” must be demonstrated, not assumed.
+- This plan remains `planning` until it is reviewed, merged, and explicitly accepted. An implementation branch created from `main` cannot depend on an unmerged plan unless the PR is intentionally stacked and says so.
+- Create a lifecycle registry for KB plans/handoffs. Current implementation context may include only documents marked active; planning, historical, completed, and superseded material is evidence, not an instruction queue.
+- Before the first architecture PR, remove or quarantine current KB instructions that conflict with `AGENTS.md`. The warning added to `cadence.md` is only an interim safety measure.
+
+### Test-universe gate
+
+The current Edge test inventory is heterogeneous:
+
+- 39 `*.test.mjs` files are executed by `npm run test:edge-functions`; the council ran 220/220 successfully.
+- 17 TypeScript/Deno-style test files are reached by neither that Node command nor `vitest.config.ts`, which includes only `src/**`.
+- Static source-pattern assertions are useful guardrails but do not prove a handler's runtime behavior.
+
+Phase 0 must inventory every intended source/test class, select a supported runner or conversion path for the 17 unexecuted files, and make the aggregate output name what ran and what did not. Scoped TypeScript configs must likewise compare their pre/post file universe so project references cannot silently make errors disappear by excluding files.
+
+### Build and verification infrastructure
+
+Look out for:
+
+- The current email-redirect guard uses a Bash pipeline whose exit/output semantics must be preserved when rewritten in Node. Prove both a clean tree and a deliberately bad fixture.
+- Use npm only. Do not regenerate `bun.lock` as a side effect of adding Playwright or another dev dependency.
+- Adding `@playwright/test` changes `package.json` and `package-lock.json`; isolate that infrastructure change and review the lockfile for unrelated churn.
+- Build, Vitest, Playwright, and Vite can share caches/output directories. Serialize commands until isolation is proven; do not run multiple browser/build jobs that race on the same worktree.
+- A green build says nothing about route authorization, RLS, realtime cleanup, external webhook contracts, or data accuracy.
+- The current frontend test setup does not suppress console output, which is useful. Do not add global suppression to make noisy tests appear green.
+
+### Route modules, metadata, and nested layouts
+
+Callers and hidden coupling:
+
+- `App.tsx` is also the provider composition root. Preserve the order of Query Client, router, auth, error boundary, tenant/client-preview/view-mode contexts, chunk boundary, Suspense, page-title provider, and routes.
+- Route order matters for redirects, parameterized paths, duplicate registrations, and the catch-all.
+- Lazy modules differ between default exports and named-export adapters. A manifest conversion can compile while producing runtime chunk failures.
+- Wrappers are not all mechanical. Some own inner Suspense, loader UI, data setup, or layout variants; classify each before deletion.
+- Nested layouts require `<Outlet>` and can change component mount lifetime. Longer-lived layouts may preserve stale local state/subscriptions; shorter-lived layouts may reset forms and query observers.
+- Moving `ProtectedRoute` above or below a layout changes whether unauthorized users mount layout queries, navigation, preview state, and side effects before redirect.
+- Preserve path params, search params, hash fragments, `Navigate replace`, browser back behavior, titles, scroll position, error boundaries, and deep links from emails/timeline events.
+- Navigation visibility is not authorization. Do not derive RLS or Edge permissions from UI metadata.
+
+Required evidence:
+
+- Generated before/after route table: path, component, redirect target, guard props, layout, lazy import, and unique path count.
+- Unit/integration coverage for route classification and each guard tier.
+- Playwright direct deep links, redirects, back/forward navigation, refresh, chunk-load errors, layout count, title, and representative query loading.
+- A real client session for client denial/allowance; staff preview is only a comparison.
+
+Concrete route findings from this pass:
+
+- The first `/support-tickets` registration renders `SupportTicketsWrapper` and therefore `DashboardLayout`; the later duplicate renders the page directly. P1.1 should remove the later registration only, then verify one dashboard shell, route heading, staff tabs/filter/modal, reload/back/forward, and real-client denial. Removing the first registration would expose the previously dead unwrapped branch.
+- Preserve special public/nonstandard surfaces during `App.tsx` extraction: OAuth/Outlook/Xero callbacks, password reset, activation, invitation acceptance, `/addin` JWT-holder behavior, `/teams` meeting mode, and the catch-all.
+- Characterize static/dynamic route pairs so extraction cannot reorder them: `/audits/create-template` vs `/audits/:id`, `/processes/new` vs `/processes/:id`, Support Ticket new/detail routes, Academy course/lesson/assessment/result routes, and package/stage/job details.
+- `ClientLayout` owns tenant context/guarding, Ask Viv state, page-view tracking, forced-light cleanup, a realtime message channel, document-request modal, and notification surfaces. `AcademyLayout` owns a second tenant provider, access gate, forced-light behavior, preview banner, and sidebar state. Moving either to a persistent parent layout changes all of those lifetimes.
+- Before nested layouts, decide whether dialogs/sidebar/scroll persist across route changes, whether page tracking fires per route, whether subscriptions persist without duplicate toasts, whether disabled-account state is refreshed, and whether page titles reset immediately.
+- Current `ClientRouteGuard` tries to detect layout leakage using `[data-layout="dashboard"]`, but no such marker exists. Add real stable layout markers before treating that diagnostic as evidence.
+- Current guard order prevents unauthorized users from mounting shell queries. Never place a data-fetching parent layout outside a stricter child guard merely to reduce wrapper count.
+
+### Unreachable-file and deletion candidates
+
+Static reachability can miss:
+
+- literal and computed dynamic imports;
+- route strings opened from email, notifications, timeline records, bookmarks, or external systems;
+- components loaded by registries or `import.meta.glob`;
+- Edge Functions invoked by string, cron, database webhooks, OAuth redirect configuration, Mailgun/Microsoft/Xero dashboards, Supabase GitHub sync, or manual operational runbooks;
+- database functions, views, triggers, and policies whose consumers do not contain the object name in frontend code;
+- types imported only through generated declarations or tests that represent a still-required contract.
+
+Deletion gate:
+
+1. Prove zero source importers and zero route/menu/registry consumers.
+2. Search documentation, audit history since May, email templates, migrations, function configuration, and external callback references.
+3. For database/Edge candidates, run the live object/log/deployment/caller checks appropriate to the object.
+4. Verify the intended replacement route/workflow with Playwright before deletion.
+5. Delete one domain cluster, build/test, and verify old deep links intentionally redirect or 404.
+6. Record capability loss and product-owner confirmation for anything once user-visible.
+
+### Clone consolidation
+
+Look out for semantic differences hidden in small diffs:
+
+- role/tenant authorization;
+- query keys and invalidation;
+- toast/error wording that signals different recovery;
+- default values and validation;
+- audit/timeline attribution;
+- modal focus/reset/close behavior;
+- public endpoint response shape and rate/auth policy.
+
+Prefer a shared pure core with thin adapters over one component with many boolean props. Run parity tests against both original behaviors before removing either implementation.
+
+### God-component extraction
+
+Moving JSX alone reduces file size but not cognitive load. Trace these responsibilities separately:
+
+- server data and query keys;
+- local draft/form state;
+- derived view models and calculations;
+- mutations, optimistic state, invalidation, and toasts;
+- URL/search-param synchronization;
+- modal/drawer portals and focus management;
+- realtime/channel subscription lifetime;
+- permission and feature-flag decisions;
+- export/download/browser APIs;
+- logging/audit/timeline side effects.
+
+Common refactor regressions:
+
+- stale closures after callbacks move;
+- effects reordered or invoked twice;
+- forms reset because the extracted child remounts;
+- dialogs lose controlled open state, initial focus, Escape behavior, or scroll containment;
+- React Query keys change identity and duplicate requests or retain stale data;
+- optimistic updates no longer roll back;
+- realtime channels leak or subscribe twice;
+- an error becomes an empty state;
+- loading indicators disappear before all dependent data is ready.
+
+Use pure reducers/view models and focused hooks only where they make these lifecycles explicit. Playwright must exercise interaction and remount behavior; unit/contract tests must cover calculations and failure branches.
+
+### Auth, profile, membership, and RBAC split
+
+The current provider intentionally coordinates `onAuthStateChange`, initial `getSession`, profile loading, memberships, profile failure recovery, sign-out navigation, and a zero-delay callback used to avoid a Supabase auth callback deadlock.
+
+Preserve and verify:
+
+- no flash of protected content before profile/role is resolved;
+- no infinite spinner when profile loading fails;
+- Retry refetches profile and memberships;
+- Sign Out clears all auth/profile/membership state and reaches Login;
+- initial session and auth-state callbacks cannot race into stale/null profile state;
+- token refresh and browser refresh preserve the session;
+- membership changes become visible after the documented refresh/invalidation action;
+- Super Admin legacy/current role equivalence remains intentional;
+- real client Admin/User, staff roles, Academy builder roles, and add-in/Teams shells retain their separate behavior;
+- ClientPreview/ViewMode contexts do not become proof of database access;
+- splitting context values does not create excessive rerenders or stale selectors.
+
+Playwright covers public navigation/session behavior. Unit tests with controlled auth events are required for callback ordering, profile-error recovery, and race conditions. RLS must be verified as the real role, not through staff impersonation.
+
+Write an authority map before moving code. The current sources are intentionally non-equivalent:
+
+| Authority | Current responsibility |
+|---|---|
+| Supabase session / `useAuth` | authenticated identity and session events |
+| `users` profile | global/primary Unicorn role, disabled/profile state |
+| `tenant_members` | tenant memberships and tenant-admin helpers |
+| `tenant_users.access_scope` / `useUserAccess` | full versus Academy-only tenant access |
+| `role_permissions` plus extra `user_roles` / `usePermission` | database-backed additional permissions |
+| static `ROLE_PERMISSIONS` / `useRBAC` and route lists | frontend policy vocabulary that does not include every extra role |
+
+Do not silently select one of these as canonical during a provider split. The disabled-account lookup currently fails open on query error; changing that to fail closed is a separate security/availability decision. Add generation/cancellation protection for async profile/membership loads only with tests for rapid account/session changes. Existing RBAC tests reimplement policy constants/helpers inside the test, so progressively replace shadow-copy assertions with tests of exported pure policies plus real `ProtectedRoute` integration.
+
+### Supabase query/API boundary migration
+
+For every moved query or mutation, capture before/after:
+
+- table/view/RPC/function name;
+- selected columns, joins, aliases, filters, ordering, limits, and pagination;
+- `.single()` versus `.maybeSingle()` semantics;
+- null/default mapping and date/timezone conversion;
+- error propagation versus swallowed/best-effort behavior;
+- caller identity (browser JWT, service role, dedicated worker, shared secret);
+- query key, stale time, enabled condition, retry policy, and invalidation set;
+- storage bucket/path/content-type and signed URL lifetime;
+- response contract consumed by UI and any other callers.
+
+Do not generalize a repository method across queries with different RLS visibility. An adapter returning `[]` for both “no data” and “forbidden/error” recreates a known failure class. Playwright can show a blank screen but cannot establish why; retain network/error-state assertions and direct role-bound data checks.
+
+### TypeScript strictness and unused-code ratchets
+
+- Never enable `strict`, `strictNullChecks`, `noImplicitAny`, or unused checks repo-wide in a feature PR.
+- Exclude generated Supabase types from hand fixes and metrics.
+- Keep Vite frontend, Node scripts/config, and Deno Edge Functions in their correct type environments.
+- Review casts added merely to silence the new flag; replacing `any` with `unknown` without narrowing only moves the problem.
+- `noUnusedLocals` can expose side-effect imports, JSX/runtime conventions, generated declarations, and intentionally exported public types. Classify before deletion.
+- A typecheck pass does not validate runtime JSON, database nullability in production, or an Edge Function deployed with a different bundle.
+
+### Shared Edge Function response/auth helpers
+
+Before migrating a function, snapshot its actual contract:
+
+- status codes and method handling;
+- raw JSON versus `{ ok, data }` envelope;
+- error code/message/detail fields;
+- `Content-Type`, `Cache-Control`, CORS origin/header/method behavior, and `Vary`;
+- OPTIONS response body/status;
+- auth mode and exact placement before DB/external actions;
+- caller context forwarded to helpers;
+- retry/idempotency semantics expected by the caller.
+
+`response-helpers.ts` changes the response envelope for `jsonOk`; adopting it mechanically can break otherwise green callers. Header spread order can also accidentally replace request-aware CORS. For deployment, include the full shared dependency tree; earlier MCP deployments failed when shared files were not bundled.
+
+Playwright proves only browser-consumed happy paths and visible CORS failures. Use direct request contract tests for unauthenticated, forbidden, malformed, wrong-tenant, unsupported-method, preflight, success, and internal-error cases. Run `npm run test:edge-functions` after every auth/helper refactor.
+
+### Calculation, messaging, document-state, and schema work
+
+- Package/time: compare UI numbers to an independently calculated fixed fixture and a direct canonical SQL result. Cover period start/end, open-ended period, carry-in, date-only edit, split allocations, child instances, source breakdown, billable filters, and exact timezone boundaries. `rpc_get_package_usage` currently sums raw `time_entries.duration_minutes`, unlike allocation-aware views/functions and `ClientTimeTab`; treat parity as a live correctness investigation.
+- Renewal: the browser currently updates dates, closes/inserts periods, creates carry-over, resets stages/tasks, and appends audit/note in separate requests, with ignored errors. Design an idempotent server-side command with package-row lock, expected-renewal precondition/idempotency key, and one transaction for core state. Define best-effort/outbox work separately. Failure-inject every boundary and preserve exactly one open period, matching bounds, monotonic numbering, no duplicate carry/timeline entry, and recurring `na` stages.
+- Messaging: test a mixed batch containing valid auth users and one missing auth user; assert valid participants survive, skipped rows are logged, notifications fan out once, and retry is idempotent. Add an atomic campaign/tenant claim and stable delivery key before promising exactly-once behavior. Explicitly decide whether notification fan-out is atomic or best-effort because its trigger currently catches errors and warns.
+- Messaging eligibility: conversation participation controls RLS visibility, while notification delivery excludes Academy-only users. Define a product/security matrix for full, Academy-only, pending/orphaned, disabled/archived, missing-auth, staff-sender, and client-sender cases. Verify conversation readability as well as notification appearance.
+- Document lifecycle: enumerate separate aggregates and compatibility projections before proposing one state machine: `documents.document_status`; `document_versions.status` and `current_published_version_id`; stage/release generation status; bulk job/item status; delivery status; and legacy `isclientdoc`/`is_released`. Current consumers intentionally differ.
+- Document publishing: SharePoint import archives old version, publishes draft, updates pointer, and writes activity as separate requests with ignored errors and no partial unique constraint for one published version. Characterize Graph drift-check semantics, then move publication behind a locked transactional RPC that preserves pointer/status invariants. Land DB command, Edge switch, caller switch, and retirement as separate expand/contract steps.
+- Schema/RPC/trigger: run frontend writers plus `pg_proc`, trigger, grant, overload, cron, and external caller checks. Test in a transaction where possible, inspect lock impact, write the audit entry, and deploy only through the configured Supabase MCP workflow with explicit authority.
+- Never combine a destructive schema drop with the frontend cleanup that supposedly made it orphaned. Observe the compatible code state first.
+
+Universal live-data preflight for a table/view/RPC/trigger change:
+
+- frontend and Edge reads/writes;
+- `pg_proc` bodies for select/insert/update/delete and exact identity arguments;
+- triggers, views/materialized views, policies (`qual` and `with_check`), table/column grants, function owner/security/search path/execute grants, and `pg_depend`;
+- cron/`pg_net`, realtime publication, storage, generated types, deployment/source drift, production logs, and external owner confirmation;
+- representative allowed and denied JWT calls, not service-role-only queries;
+- current row counts/invariants, performance plan for high-cardinality paths, and exact pre-change definitions/grants for rollback.
+
+Use expand/contract sequencing: additive DB contract with grants/RLS/audit → live verification → generated type refresh → backward-compatible Edge change → one caller family → observation → remaining callers → separate removal migration. A Git revert is not a production database rollback.
+
+Stop immediately if generated types disagree with live schema, authenticated and service-role results differ unexpectedly, a mutation spans multiple requests without a partial-failure model, an external caller/response/config is unknown, a trigger swallows errors required for the claimed guarantee, or a destructive change has no executable rollback.
+
+### KB and documentation changes
+
+- Do not rewrite dated audit entries to make current code look consistent; add current-state docs or correction addenda where appropriate.
+- Relative-link rewrites must preserve anchors, case, and whether the destination is a directory or file.
+- A file can exist while its heading anchor is broken; the link checker should validate fragments where practical.
+- Update generated current-state inventories from the final branch, not the pre-refactor baseline.
+- Keep the pinned set under its context budget by replacing stale content rather than appending long incident narratives.
+- Mark implementation plans `planning`, `active`, `completed`, `superseded`, or `historical` so Claude does not execute an old prompt as current direction.
+
+## 16. Playwright verification architecture
+
+### Current limitation
+
+This repository currently has no `@playwright/test` dependency, no `playwright.config.*`, and no committed E2E suite. Historical browser verification was performed through agent-controlled browser sessions. That evidence can be useful, but it is not automatically reproducible by the next agent or CI.
+
+Phase 0 should establish a dedicated Playwright infrastructure PR:
+
+1. Add `@playwright/test` with npm and commit only the expected `package.json`/`package-lock.json` changes; do not touch `bun.lock`.
+2. Add a config with a controlled Vite `webServer`, deterministic Chromium desktop/mobile projects, and one worker for authenticated production-backed checks. Do not silently reuse an existing server. Record worktree, branch, SHA, PID, port, and base URL and assert a branch/build identity before the first test.
+3. Add scripts such as `e2e:unauth`, `e2e:smoke`, and `e2e:changed`; keep the aggregate default read-only.
+4. Ignore `playwright/.auth/**`, traces, videos, HTML reports, and test results. Authenticated storage state contains live tokens and must never be committed. For production-backed authenticated runs, keep screenshots/traces off by default and enable them only under an explicit local evidence policy with PII review.
+5. Provide interactive/global setup for approved QA sessions through environment variables or locally generated storage state. Never commit usernames, passwords, magic links, cookies, tokens, or service keys.
+6. Make write-capable tests opt-in with an explicit flag, fresh authority, approved disposable tenant/records, deterministic `TEST — <run-id>` identifiers, captured row IDs, external-side-effect allowlist, cleanup in `finally`, and a post-cleanup data assertion. Cleanup failure fails the run loudly. Default Playwright must be read-only.
+7. Document how agent-driven browser checks map to the same route/persona/oracle matrix when the test package is unavailable.
+
+Because the local frontend talks to hosted production Supabase, even localhost browser tests are production data access. Run mutation tests only with explicit permission and an approved cleanup plan.
+
+Shared Edge CORS currently allows `http://localhost:8080` and `http://127.0.0.1:8080`, not arbitrary free ports or `[::1]`. Therefore Edge-consuming browser journeys use `localhost:8080 --strictPort`; if another worktree owns 8080, stop and resolve ownership rather than auto-incrementing or killing processes. A configurable alternate port is acceptable only for an explicitly UI-only suite that does not claim Edge behavior. Never use system-wide Node termination without confirmation.
+
+### Browser contexts and personas
+
+Use isolated contexts, never role-switching inside one shared authenticated context as the only evidence:
+
+| Persona | Purpose | Minimum checks |
+|---|---|---|
+| Unauthenticated | Public routes and redirect boundary | Login/reset/activate; protected deep link returns Login without protected content flash |
+| Super Admin | Full shell and Super Admin routes | Dashboard, QA route, representative admin/Academy builder, sign-out |
+| Vivacity operational staff | Broad staff without SA bypass | Representative WORK/CLIENTS/EOS routes and denial from SA-only routes |
+| Client Admin | Real tenant JWT and admin affordances | `/client/home`, users/invites/settings, staff-route denial, own-tenant data |
+| Client User | Non-admin tenant JWT | Shared client routes work; admin affordances and routes denied |
+| Add-in/Teams context | Shells with alternate auth/loading assumptions | `/addin` and `/teams` load without accidentally inheriting full-app route guards |
+
+Operational-staff coverage should include real CSC and Integrator sessions where available, plus BGT/CET behavior when affected. Do not claim Team Leader as live-verified from the existing audit evidence: the 28 August investigation found no real Team Leader account. Add Academy-only and disabled-user contexts when guard/auth work is in scope. Staff preview remains its own persona class and cannot be substituted for either client persona.
+
+There are no seeded credentials in this environment. Use the standardized production QA accounts only when the operator has access. Ask the user to authenticate interactively when needed. “View as Client” can compare presentation but never proves client RLS or role behavior.
+
+### Safe browser instrumentation
+
+For every test page:
+
+- fail on uncaught `pageerror`;
+- collect `console.error` and reviewed `console.warn` events;
+- collect failed requests and HTTP 4xx/5xx responses, with explicit allowlists only for intentional negative cases;
+- assert the final pathname, a stable page-specific heading/landmark, and one meaningful data or empty-state marker;
+- assert the app 404 and generic error boundary are absent unless intentionally tested;
+- wait on stable UI/data locators, not `networkidle`—realtime subscriptions and polling can prevent network idleness;
+- verify refresh and direct deep link for changed routes;
+- use semantic assertions instead of broad screenshots or pixel snapshots against changing production data;
+- run the changed workflow at desktop and 375px mobile; run the full shallow route inventory at desktop only unless layout changed;
+- capture traces/screenshots locally on failure, but do not commit authenticated production traces or screenshots containing client/staff information.
+
+A page that returns HTTP 200 and renders a shell has not passed. Vite returns the SPA entry document for unknown routes, and many components hide on missing data. The oracle must distinguish expected populated, expected empty, forbidden, failed, redirect, and not-found states.
+
+Common false passes to reject:
+
+- invitation acceptance in a browser still authenticated as staff can bind the wrong identity;
+- cached React Query data can conceal a failed refetch;
+- same-account tabs prove transport propagation, not cross-user realtime authorization;
+- a success toast can precede failed fan-out or later database work;
+- service-role SQL bypasses the RLS/grants being claimed;
+- local browser calls exercise deployed Edge Functions and applied schema, not edited-but-undeployed local source;
+- dev/HMR success does not prove production chunking/build;
+- Playwright retry can hide a race unless the first failure is classified;
+- screenshots miss stale titles, wrong data, duplicate subscriptions, and hidden network failures.
+
+The existing `docs/ui-smoke-tests.md` and in-app `QASmokeTest` are evidence to repair, not acceptance truth: both classify `/documents` incorrectly for current clients, the page's stated access differs from its Super Admin route guard, and its popup viewport control cannot reliably test responsive behavior. Regenerate that matrix from the route/persona contract; use Playwright viewport control.
+
+### Baseline-versus-branch method
+
+For every refactor PR:
+
+1. Run the focused semantic smoke on the baseline commit in its own clean worktree.
+2. Record routes, persona, fixture identity, visible values/state, console/page errors, failed responses, and command/tool version.
+3. Run the same check on the final branch using the same backend state and persona as soon as practical.
+4. Explain every difference. Do not auto-approve screenshot changes.
+5. If production data changed between runs, use invariant assertions or a direct data snapshot instead of claiming a visual regression.
+6. Do not retry a failure until green without classifying it first.
+
+### What Playwright cannot prove alone
+
+- RLS cross-tenant safety unless run as the real restricted JWT with known fixtures.
+- An Edge Function's negative auth branches, secret/cron/webhook callers, or raw response contract.
+- Transaction atomicity, race safety, idempotency, locks, retry recovery, or trigger ordering.
+- A calculation is correct unless expected values come from an independent fixture/formula/SQL result.
+- A deleted function has no external caller.
+- A migration is safe to apply, reversible, grant-correct, or free of function overloads.
+- Type correctness, unused-code absence, bundle compatibility, or all dynamic imports.
+- Accessibility beyond the assertions actually run.
+
+Use Playwright as the user-workflow layer of a larger evidence stack, not the release verdict by itself.
+
+For P5 specifically, a Playwright run against the local frontend invokes the deployed production Edge Function. It can pass while the edited local function is broken and undeployed. Before a separately approved deployment, use runtime/pure-service tests, auth/schema negatives, direct HTTP contract tests where an approved environment exists, CORS tests, static auth checks, and the full declared Edge test universe. Browser evidence becomes relevant to the new Edge source only after deployed/source versions are reconciled. The same rule applies to unapplied migrations.
+
+## 17. Phase-specific Playwright matrix
+
+| Candidate/phase | Required browser coverage | Required non-browser evidence |
+|---|---|---|
+| Phase 0 scripts | Unauthenticated Login smoke after build/dev startup | Negative build-guard fixture, typecheck, both test runners, timing evidence |
+| Route duplicate cleanup | `/support-tickets`, `/support-tickets/new`, one detail deep link, browser back | Generated unique route table and intended-component source/history proof |
+| Route modules | Direct/refresh navigation for every changed route family; representative redirect and guard tier; chunk/error monitoring | Exact path/component/guard/layout manifest diff; route unit tests |
+| Nested layouts/wrapper retirement | Staff/client/Academy shell appears once; navigation works; local form/tab state across sibling navigation; mobile shell | Wrapper classification, provider/mount analysis, import graph/build |
+| Navigation metadata | Visible/hidden item per relevant role; every changed item navigates to canonical path | Authorization tests independent of menu; route inventory drift check |
+| Lifecycle pilot | SA list/tabs; open/create/edit dialog and cancel; client/staff denial; write only with approved disposable record | Query/adapter contract, validation/error tests, direct-import metrics |
+| Auth split | cold login, refresh, protected deep link, sign-out, client/staff/SA redirects, interactive profile failure only if safely inducible | Controlled auth-event unit tests, race/recovery tests, context-consumer audit |
+| Documents | Manage list/filter/detail; bulk-job list/progress; stage document section; client released-document view | Worker/transition contract tests, delivery/RPC evidence, known job fixture |
+| Identity/invitations | Staff users/invites, real Client Admin users screen, Client User denial; open/cancel dialogs by default | Role/capacity/RPC tests, FK mixed-batch test, invitation role ceiling |
+| Packages/time | Staff package detail and real client package/time displays; compare exact displayed minutes/hours to fixture | Independent calculation/unit/property tests and canonical SQL result |
+| Messaging | Staff communications and client inbox/read state; read-only by default | Participant/notification/idempotency integration tests and trigger evidence |
+| Academy | Client learner dashboard/course/lesson and allowed Academy builder role; denied non-builder role | Entitlement/facilitator/resource contract tests; no production course mutation by default |
+| EOS | Meeting list/summary; live view read-only; facilitator controls only with disposable meeting and two isolated contexts | Pure state-transition tests, realtime subscription/fallback evidence, RPC authorization |
+| Current Audits | List/workspace/template builder/report read paths; linked-stage deep link; error vs empty | Status/action sync tests, RPC error behavior, report contract |
+| Edge helper batches | One real browser consumer per migrated contract, including CORS-visible path | Direct request matrix, static auth adoption, full edge suite |
+| Type/lint ratchet | Changed route smoke only | Scoped type/lint outputs and cast/ignore review |
+| Documentation | None unless routes/runbooks changed | Link+anchor checker, generated inventory, source citation review |
+
+## 18. Verification verdict and evidence report
+
+Claude's final comment for each PR must use two independent verdicts:
+
+- **Specification verdict:** Pass / Partial / Fail / Inconclusive against the execution packet's behavior invariants.
+- **Engineering-quality verdict:** Pass / Partial / Fail / Inconclusive across readability, architecture, security, performance, operability, and test quality.
+
+Required evidence table:
+
+| Requirement or risk | Observable behavior | Best evidence | Result | Gap |
+|---|---|---|---|---|
+| One row per invariant/risk | Public state, response, calculation, or route outcome | Direct environment > E2E > contract > unit > static | Pass/Partial/Fail/Inconclusive | Missing persona, fixture, environment, or branch |
+
+Maintain a detailed ledger behind that summary:
+
+`E-ID | claim/risk | command/query/source | commit + environment/project + timestamp | raw artifact location | result | severity | confidence | expiry | PII/redaction handling | reviewer`
+
+Keep the command, exit code, and material output. Rebaseline deterministic metrics after every merged PR using the same tool version, file ordering, and exclusions. Report production LOC, test LOC, total changed LOC, largest module/function, dependency fan-in/out/cycles, direct-call sites, duplicated-rule sites, and relevant bundle/request/runtime signals; LOC movement alone is not improvement.
+
+Classify every failed check as one of:
+
+- implementation defect;
+- test defect;
+- environment limitation;
+- flaky result, supported by conflicting identical runs;
+- pre-existing failure, supported by a baseline run;
+- unresolved.
+
+An implementation defect blocks. A test defect blocks until the oracle/setup is repaired or explicitly re-scoped. An environment limitation yields Partial/Inconclusive, not Pass. “Flaky” requires conflicting results from identical runs. “Pre-existing” requires the same failure signature on the exact baseline. Any unresolved medium/high-risk failure blocks handoff as merge-ready.
+
+Do not call a result flaky because one retry passed. Do not call it pre-existing because AGENTS says “some tests fail” without reproducing the same failure on the baseline.
+
+Final evidence report must include:
+
+- baseline/final SHAs and branch/worktree;
+- changed files and diff statistics;
+- before/after architecture metrics;
+- commands with exit codes and material output;
+- Playwright version/mode, browser, base URL, persona class, viewport, fixture prerequisites, routes, and results;
+- console/page/network failures and allowlist rationale;
+- database/Edge deployment state and whether source differs from production;
+- specification and quality verdicts;
+- residual gaps and actions deliberately not performed;
+- documentation/audit updates;
+- rollback instructions.
+
+## 19. Council checkpoints for implementation
+
+Use these checkpoints:
+
+- **C0 — program acceptance:** refresh/rebase to current `main`; reconcile source/history/live read-only evidence; user reviews the plan; merge only on a fresh explicit ask; then mark the plan `active`.
+- **C1 — per-PR go/no-go:** execution packet complete; dependencies merged; exact baseline captured; caller/contract matrix complete; characterization oracle exists; production authority stated. Unknown external caller or ambiguous product behavior means investigation-only.
+- **C2 — independent pre-code council for medium/high risk:** behavior archaeology, security/data, browser/test, and KB/currentness reviewers inspect raw requirements independently and record dissent.
+- **C3 — implementation and independent final-diff review:** implement one packet; inspect the exact committed diff, test sensitivity, rollback, and post-edit caller searches.
+- **C4 — runtime gate:** run the same semantic journey on baseline and final branch with exact personas and fixtures; add contract/SQL/auth evidence that the browser cannot provide.
+- **C5 — PR handoff:** complete ledger, two-axis verdict, metrics, residual risk, and rollback; open the PR and stop.
+
+For medium/high-risk PRs, the read-only council covers four axes after implementation and before handoff:
+
+1. **Behavior reviewer:** compares the execution packet and final diff, checks caller/consumer coverage, and evaluates whether tests would catch the old behavior changing.
+2. **Security/data reviewer:** checks auth/RLS/tenant binding, response/schema contracts, migrations/triggers/grants, external callers, concurrency, and recovery.
+3. **Browser/operability reviewer:** checks the Playwright evidence, console/network failures, route/persona coverage, responsive behavior, logs, and rollback observability.
+4. **KB/currentness reviewer:** checks that the final implementation agrees with `AGENTS.md`, active lifecycle documents, generated inventories, and immutable audit history; stale plans are not silently executed.
+
+Council reviewers inspect the raw diff and requirements independently; do not prime them with “the implementation is correct.” The coordinator resolves disagreements against direct evidence. Parallel reviews do not replace one integrated final check on the exact committed state.
+
+Mandatory council triggers:
+
+- route/guard/provider/auth changes;
+- schema, RLS, trigger, RPC, grant, cron, or Edge auth changes;
+- shared helper adoption across more than one function;
+- package/time formulas;
+- messaging participant/notification behavior;
+- document job state transitions;
+- deletion over 500 lines or any externally callable candidate;
+- a PR touching more than one major feature area;
+- any Partial/Inconclusive verification verdict proposed for merge.
+
+## 20. Rollback and observation rules
+
+- Prefer refactors that can be reverted with one PR commit and no data migration.
+- Keep old and new API/schema shapes compatible during staged changes; remove compatibility only after consumers are verified.
+- Feature flags are useful only when both paths are tested and the rollback path remains deployable.
+- Record which Edge Functions or migrations require deployment; merging source does not prove production changed, while MCP deployment can make production lead source.
+- For Edge retirement, deploy a contract-preserving deprecation/410 stage only when appropriate, observe logs for the agreed window, remove the repository folder so GitHub sync cannot resurrect it, then verify hosted absence.
+- For destructive schema work, take dependency/object definitions needed for rollback, prefer reversible/transactional steps, and document irreversible data loss explicitly.
+- After high-risk changes, define an observation window with the exact logs, tables, error rates, stuck states, or support signals to inspect. “No complaint received” is not sufficient telemetry.
+- Stop and roll back when a real restricted persona loses data/access, error/empty states become ambiguous, job retries duplicate work, auth negatives regress, or source/deployed state cannot be reconciled.
+
+## 21. Definition of done for each implementation PR
+
+- The exact committed diff is scoped, the worktree is clean, the lockfile/generated artifacts/full diff were reviewed, and the branch is still based on the intended current-main baseline.
+- Every packet invariant and material risk maps to evidence and a result; no test, console, page, request, data, or council failure remains unclassified.
+- Focused characterization, affected suites, named frontend/Node/Deno test classes, type/build/lint/route/docs checks, and the risk-based Playwright matrix pass, or the evidence report shows the exact baseline failure signature. Unexecuted test classes are disclosed.
+- Real restricted personas are used for any authorization claim. Browser evidence is not used to prove SQL/RLS/grants, transactions, triggers, raw Edge contracts, external callers, or migration safety.
+- Security/data and KB/currentness reviews pass when triggered; current docs/generated inventories are refreshed and historical documents retain explicit lifecycle status.
+- Reproducible before/after metrics show why readability and change safety improved; net-positive LOC or indirection has a reliability justification.
+- Rollback is executable, compatible intermediate states exist for DB/API changes, and the observation signals/window/stop thresholds are named.
+- Repository source and deployed Supabase state are explicitly reconciled. No migration, Edge deployment, email/external side effect, or production mutation occurred without fresh separate authority.
+- The PR description includes packet ID, base/final SHAs, evidence ledger, residual risks, docs/audit links, and rollback. The PR is opened but not merged; merging still requires a fresh explicit ask.
