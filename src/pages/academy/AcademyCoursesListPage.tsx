@@ -10,6 +10,7 @@ import {
   type MyEnrolledCourse,
 } from "@/hooks/academy/useMyEnrolledCourses";
 import { useEnrolCourse } from "@/hooks/academy/useEnrolCourse";
+import { resolveCourseBannerImage } from "@/lib/academy/thumbnails";
 
 const ACCENT = "#23c0dd";
 
@@ -74,7 +75,7 @@ export default function AcademyCoursesListPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="overflow-hidden">
-                <Skeleton className="h-32 w-full" />
+                <Skeleton className="aspect-video w-full" />
                 <CardContent className="space-y-3 pt-4">
                   <Skeleton className="h-5 w-2/3" />
                   <Skeleton className="h-4 w-full" />
@@ -109,18 +110,34 @@ export default function AcademyCoursesListPage() {
                 : course.enrollment_status === "active"
                   ? "Continue"
                   : "Start Course";
+              const bannerImage = resolveCourseBannerImage(course);
               return (
                 <Card key={course.enrollment_id} className="overflow-hidden">
                   <div
-                    className="h-32 flex items-center justify-center"
+                    className="relative aspect-video w-full flex items-center justify-center overflow-hidden"
                     style={{
-                      background: `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)`,
+                      background: bannerImage
+                        ? undefined
+                        : `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)`,
                     }}
                   >
+                    {bannerImage && (
+                      <img
+                        src={bannerImage.url}
+                        alt={course.course_title}
+                        className="absolute inset-0 h-full w-full object-cover"
+                        style={{
+                          objectFit: bannerImage.fit,
+                          objectPosition: bannerImage.position,
+                          transform: `scale(${bannerImage.zoom})`,
+                          transformOrigin: bannerImage.position,
+                        }}
+                      />
+                    )}
                     {isCompleted ? (
-                      <CheckCircle2 className="h-12 w-12 text-white/80" />
+                      <CheckCircle2 className="relative h-12 w-12 text-white/80" />
                     ) : (
-                      <BookOpen className="h-12 w-12 text-white/80" />
+                      <BookOpen className="relative h-12 w-12 text-white/80" />
                     )}
                   </div>
                   <CardContent className="pt-4 space-y-3">

@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { GraduationCap, ChevronRight, Clock, Video, Star, Play, BookOpen, FileText, CheckCircle2, Lock } from "lucide-react";
+import { GraduationCap, ChevronRight, Clock, Video, Star, Play, BookOpen, FileText, CheckCircle2, Lock, User, CalendarDays, ClipboardCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -12,6 +12,11 @@ import AssessmentEntrySection from "@/components/academy/AssessmentEntrySection"
 import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
 import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 import { useEnrolCourse } from "@/hooks/academy/useEnrolCourse";
+import { useFacilitatorNames } from "@/hooks/academy/useFacilitatorNames";
+import { resolveCourseBannerImage } from "@/lib/academy/thumbnails";
+import { formatDeliveryDate } from "@/lib/academy/formatDeliveryDate";
+
+const MAX_VISIBLE_BADGES = 6;
 
 export default function AcademyCourseDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -26,7 +31,7 @@ export default function AcademyCourseDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, target_audience, estimated_minutes, difficulty_level, status, tags, thumbnail_url, thumbnail_position, thumbnail_fit, thumbnail_zoom, banner_thumbnail_url, banner_thumbnail_position, banner_thumbnail_fit, banner_thumbnail_zoom, certificate_enabled, webinar_series")
+        .select("id, title, slug, description, short_description, target_audience, estimated_minutes, difficulty_level, status, tags, thumbnail_url, banner_thumbnail_url, banner_thumbnail_position, banner_thumbnail_fit, banner_thumbnail_zoom, certificate_enabled, pass_score, webinar_series, facilitator_id, facilitator_display_name, delivery_date")
         .eq("slug", slug!)
         .eq("status", "published")
         .single();
@@ -68,6 +73,12 @@ export default function AcademyCourseDetailPage() {
   // Modules + lessons
   const { data: modules = [], isLoading: modulesLoading } = useModulesWithLessons(course?.id ?? null);
 
+  // Facilitator display name (manual historical entry wins over a resolved staff name)
+  const facilitatorLookupIds = course?.facilitator_id ? [course.facilitator_id] : [];
+  const { data: facilitatorNameById = {} } = useFacilitatorNames(facilitatorLookupIds);
+  const facilitatorName = course?.facilitator_display_name?.trim() || (course?.facilitator_id ? facilitatorNameById[course.facilitator_id] : undefined);
+  const deliveryDateLabel = formatDeliveryDate(course?.delivery_date);
+
   // Enrol via dispatch hook (handles impersonation routing)
   const enrolMutation = useEnrolCourse();
 
@@ -107,19 +118,7 @@ export default function AcademyCourseDetailPage() {
     return <BookOpen className="h-4 w-4" />;
   };
 
-  // The banner prefers a dedicated banner image; when none is set it falls back to the
-  // course card's image, but centred/uncropped rather than the card's own square-tuned
-  // framing, since a crop chosen for a 1:1 card often doesn't suit a 16:9 banner.
-  const heroImage = course.banner_thumbnail_url
-    ? {
-        url: course.banner_thumbnail_url,
-        fit: (course.banner_thumbnail_fit as "cover" | "contain") || "cover",
-        position: course.banner_thumbnail_position || "50% 50%",
-        zoom: course.banner_thumbnail_zoom || 1,
-      }
-    : course.thumbnail_url
-      ? { url: course.thumbnail_url, fit: "cover" as const, position: "50% 50%", zoom: 1 }
-      : null;
+  const heroImage = resolveCourseBannerImage(course);
 
   return (
     <div className="space-y-6">
@@ -139,93 +138,163 @@ export default function AcademyCourseDetailPage() {
         </span>
       </nav>
 
-      {/* Hero section */}
-      <div className="rounded-xl overflow-hidden max-w-2xl" style={{ border: "1px solid hsl(var(--border))" }}>
-        <div
-          className="relative flex items-center justify-center w-full aspect-video overflow-hidden"
-          style={{
-            background: heroImage
-              ? undefined
-              : `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)`,
-          }}
-        >
-          {heroImage && (
-            <img
-              src={heroImage.url}
-              alt={course.title}
-              className="absolute inset-0 h-full w-full object-cover"
+      {/* Hero + at-a-glance sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="rounded-xl overflow-hidden" style={{ border: "1px solid hsl(var(--border))" }}>
+            <div
+              className="relative flex items-center justify-center w-full aspect-video overflow-hidden"
               style={{
-                objectFit: heroImage.fit,
-                objectPosition: heroImage.position,
-                transform: `scale(${heroImage.zoom})`,
-                transformOrigin: heroImage.position,
+                background: heroImage
+                  ? undefined
+                  : `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)`,
               }}
-            />
-          )}
-          <div className="relative h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-            <Play className="h-7 w-7 text-white fill-white ml-0.5" />
-          </div>
-          {enrollment && enrollment.progress_percentage != null && enrollment.progress_percentage > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 h-2 bg-black/20">
-              <div
-                className="h-full rounded-r-full"
-                style={{ width: `${Math.min(100, enrollment.progress_percentage)}%`, backgroundColor: ACCENT }}
-              />
+            >
+              {heroImage && (
+                <img
+                  src={heroImage.url}
+                  alt={course.title}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{
+                    objectFit: heroImage.fit,
+                    objectPosition: heroImage.position,
+                    transform: `scale(${heroImage.zoom})`,
+                    transformOrigin: heroImage.position,
+                  }}
+                />
+              )}
+              <div className="relative h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <Play className="h-7 w-7 text-white fill-white ml-0.5" />
+              </div>
+              {enrollment && enrollment.progress_percentage != null && enrollment.progress_percentage > 0 && (
+                <div className="absolute bottom-0 left-0 right-0 h-2 bg-black/20">
+                  <div
+                    className="h-full rounded-r-full"
+                    style={{ width: `${Math.min(100, enrollment.progress_percentage)}%`, backgroundColor: ACCENT }}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
 
-        <div className="p-6 space-y-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{course.title}</h1>
             <WebinarSeriesSubtitle series={course.webinar_series} />
           </div>
 
-          {/* Meta row */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4" /> {formatDuration(course.estimated_minutes)}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Video className="h-4 w-4" /> {publishedLessons} lessons
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Star className="h-4 w-4" /> {course.difficulty_level ?? "Beginner"}
-            </span>
-            {course.certificate_enabled && (
-              <span className="flex items-center gap-1.5 text-amber-600">
-                <GraduationCap className="h-4 w-4" /> Certificate
-              </span>
-            )}
-          </div>
+          {course.short_description && (
+            <p className="text-base font-medium text-foreground leading-snug">{course.short_description}</p>
+          )}
 
           {course.description && (
             <p className="text-sm text-muted-foreground leading-relaxed">{course.description}</p>
           )}
+        </div>
 
-          {/* Action area */}
-          <div className="flex items-center gap-3">
-            {!isEnrolled && (
-              <Button
-                onClick={() => course && enrolMutation.mutate(course.id)}
-                disabled={enrolMutation.isPending || !enrolMutation.canMutate}
-                style={{ backgroundColor: ACCENT }}
-                className="text-white hover:opacity-90"
-              >
-                {enrolMutation.isPending ? "Enrolling…" : "Start Now"}
-              </Button>
-            )}
-            {isEnrolled && enrollment?.progress_percentage != null && (
-              <div className="text-sm font-medium" style={{ color: ACCENT }}>
-                {enrollment.progress_percentage}% complete · {enrollment.completed_lessons ?? 0} of {enrollment.total_lessons ?? totalLessons} lessons
-              </div>
-            )}
-            {enrollment?.has_certificate && (
-              <span className="text-sm font-medium text-amber-600 flex items-center gap-1">
-                🏆 Certificate Earned ({enrollment.certificate_number})
-              </span>
+        {/* Sidebar */}
+        <div className="lg:col-span-1 space-y-4 rounded-xl border p-5" style={{ borderColor: "hsl(var(--border))" }}>
+          {!isEnrolled && (
+            <Button
+              onClick={() => course && enrolMutation.mutate(course.id)}
+              disabled={enrolMutation.isPending || !enrolMutation.canMutate}
+              style={{ backgroundColor: ACCENT }}
+              className="w-full text-white hover:opacity-90"
+            >
+              {enrolMutation.isPending ? "Enrolling…" : "Start Now"}
+            </Button>
+          )}
+          {isEnrolled && enrollment?.progress_percentage != null && (
+            <div className="text-sm font-medium" style={{ color: ACCENT }}>
+              {enrollment.progress_percentage}% complete · {enrollment.completed_lessons ?? 0} of {enrollment.total_lessons ?? totalLessons} lessons
+            </div>
+          )}
+          {enrollment?.has_certificate && (
+            <p className="text-sm font-medium text-amber-600 flex items-center gap-1">
+              🏆 Certificate Earned ({enrollment.certificate_number})
+            </p>
+          )}
+
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p className="flex items-center gap-2">
+              <Clock className="h-4 w-4 flex-shrink-0" /> {formatDuration(course.estimated_minutes)}
+            </p>
+            <p className="flex items-center gap-2">
+              <Video className="h-4 w-4 flex-shrink-0" /> {publishedLessons} lesson{publishedLessons === 1 ? "" : "s"}
+            </p>
+            <p className="flex items-center gap-2">
+              <Star className="h-4 w-4 flex-shrink-0" /> {course.difficulty_level ?? "Beginner"}
+            </p>
+            {course.certificate_enabled && (
+              <p className="flex items-center gap-2 text-amber-600">
+                <GraduationCap className="h-4 w-4 flex-shrink-0" /> Certificate on completion
+                {course.pass_score != null && ` · ${course.pass_score}% to pass`}
+              </p>
             )}
           </div>
+
+          {(facilitatorName || deliveryDateLabel) && (
+            <div className="space-y-1.5 border-t pt-3 text-sm text-muted-foreground" style={{ borderColor: "hsl(var(--border))" }}>
+              {facilitatorName && (
+                <p className="flex items-center gap-2">
+                  <User className="h-4 w-4 flex-shrink-0" />
+                  <span><span className="font-medium text-foreground">Facilitator:</span> {facilitatorName}</span>
+                </p>
+              )}
+              {deliveryDateLabel && (
+                <p className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 flex-shrink-0" />
+                  <span><span className="font-medium text-foreground">Delivered:</span> {deliveryDateLabel}</span>
+                </p>
+              )}
+            </div>
+          )}
+
+          {course.certificate_enabled && (
+            <p className="flex items-center gap-2 border-t pt-3 text-xs" style={{ borderColor: "hsl(var(--border))", color: ACCENT }}>
+              <ClipboardCheck className="h-3.5 w-3.5 flex-shrink-0" />
+              Completing every lesson unlocks a short quiz for your certificate.
+            </p>
+          )}
+
+          {Array.isArray(course.target_audience) && course.target_audience.length > 0 && (
+            <div className="space-y-1.5 border-t pt-3" style={{ borderColor: "hsl(var(--border))" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Who it's for</p>
+              <div className="flex flex-wrap gap-1.5">
+                {course.target_audience.slice(0, MAX_VISIBLE_BADGES).map((a: string) => (
+                  <span key={a} className="text-xs px-2 py-1 rounded-full bg-muted text-foreground">
+                    {a.replace(/_/g, " ")}
+                  </span>
+                ))}
+                {course.target_audience.length > MAX_VISIBLE_BADGES && (
+                  <span className="text-xs px-2 py-1 text-muted-foreground">
+                    +{course.target_audience.length - MAX_VISIBLE_BADGES} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {Array.isArray(course.tags) && course.tags.length > 0 && (
+            <div className="space-y-1.5 border-t pt-3" style={{ borderColor: "hsl(var(--border))" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Topics</p>
+              <div className="flex flex-wrap gap-1.5">
+                {course.tags.slice(0, MAX_VISIBLE_BADGES).map((t: string) => (
+                  <span
+                    key={t}
+                    className="text-xs px-2 py-1 rounded-full"
+                    style={{ backgroundColor: `${ACCENT}1a`, color: "#44235F" }}
+                  >
+                    {t}
+                  </span>
+                ))}
+                {course.tags.length > MAX_VISIBLE_BADGES && (
+                  <span className="text-xs px-2 py-1 text-muted-foreground">
+                    +{course.tags.length - MAX_VISIBLE_BADGES} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
