@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -15,6 +15,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -305,6 +306,41 @@ function SortableShowcaseRow({ item }: { item: ShowcaseParsedItem }) {
   );
 }
 
+/** One draggable lesson chip in the drafted-lessons strip — reordering here doesn't re-run AI. */
+function SortableShowcaseChip({
+  id,
+  selected,
+  onSelect,
+  children,
+}: {
+  id: string;
+  selected: boolean;
+  onSelect: () => void;
+  children: ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="touch-none" {...attributes} {...listeners}>
+      <Button
+        type="button"
+        variant={selected ? "default" : "outline"}
+        size="sm"
+        onClick={onSelect}
+        className={selected ? "text-white cursor-grab active:cursor-grabbing" : "cursor-grab active:cursor-grabbing"}
+        style={selected ? { backgroundColor: "#7130A0" } : undefined}
+      >
+        {children}
+      </Button>
+    </div>
+  );
+}
+
 export default function AcademyAddCoursePage() {
   const navigate = useNavigate();
 
@@ -409,6 +445,31 @@ export default function AcademyAddCoursePage() {
       const newIndex = prev.findIndex((d) => d.vimeoId === over.id);
       if (oldIndex === -1 || newIndex === -1) return prev;
       return arrayMove(prev, oldIndex, newIndex).map((d, i) => ({ ...d, lessonNumber: i + 1 }));
+    });
+  };
+
+  // Reordering the drafted-lessons strip (after AI drafting) — keeps the
+  // preview list's numbering in sync too, but never re-invokes the AI, since
+  // the content is already drafted and re-running it would just burn tokens
+  // to produce the same text.
+  const handleShowcaseItemsReorder = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = showcaseItems.findIndex((d) => d.key === active.id);
+    const newIndex = showcaseItems.findIndex((d) => d.key === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(showcaseItems, oldIndex, newIndex).map((d, i) => ({ ...d, lessonNumber: i + 1 }));
+    setShowcaseItems(reordered);
+    if (selectedShowcaseItem === oldIndex) setSelectedShowcaseItem(newIndex);
+    setShowcasePreview((prev) => {
+      if (!prev) return prev;
+      const byVimeoId = new Map(reordered.map((d, i) => [d.vimeoId, i + 1]));
+      return {
+        ...prev,
+        parsed: prev.parsed
+          .map((p) => ({ ...p, lesson_number: byVimeoId.get(p.vimeo_id) ?? p.lesson_number }))
+          .sort((a, b) => a.lesson_number - b.lesson_number),
+      };
     });
   };
 
@@ -760,8 +821,9 @@ export default function AcademyAddCoursePage() {
     if (!showcasePreview || showcasePreview.parsed.length === 0) return;
     setShowcaseConfirming(true);
     setShowcaseProgress(null);
+    const built: ShowcaseItemDraft[] = [];
+    const failed: Array<{ title: string; error: string }> = [];
     try {
-      const built: ShowcaseItemDraft[] = [];
       const items = showcasePreview.parsed;
       // Same growing-tag-set trick as the workshop segment loop — lesson 2
       // onward reuses tags lesson 1 already picked instead of coining a
@@ -770,93 +832,106 @@ export default function AcademyAddCoursePage() {
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const label = item.title;
-        setShowcaseProgress(`Reading video ${i + 1} of ${items.length} — ${label}…`);
+        try {
+          setShowcaseProgress(`Reading video ${i + 1} of ${items.length} — ${label}…`);
 
-        const { data: vimeo, error: vErr } = await supabase.functions.invoke(
-          "academy-fetch-vimeo-transcript",
-          { body: { vimeo_url: item.link } },
-        );
-        if (vErr) {
-          throw new Error(humaniseVimeoError(await extractEdgeError(vErr, `Couldn't read ${label}`)));
-        }
-        if (vimeo?.accessible === false) {
-          throw new Error(
-            `${label}: ${vimeo?.error || "Vimeo's privacy settings block Academy from reading this video."}`,
+          const { data: vimeo, error: vErr } = await supabase.functions.invoke(
+            "academy-fetch-vimeo-transcript",
+            { body: { vimeo_url: item.link } },
           );
-        }
-        const tx: string = vimeo?.transcript || "";
+          if (vErr) {
+            throw new Error(humaniseVimeoError(await extractEdgeError(vErr, `Couldn't read ${label}`)));
+          }
+          if (vimeo?.accessible === false) {
+            throw new Error(
+              `${vimeo?.error || "Vimeo's privacy settings block Academy from reading this video."}`,
+            );
+          }
+          const tx: string = vimeo?.transcript || "";
 
-        setShowcaseProgress(`Drafting ${i + 1} of ${items.length} — ${label}…`);
+          setShowcaseProgress(`Drafting ${i + 1} of ${items.length} — ${label}…`);
 
-        const { data: cls, error: cErr } = await supabase.functions.invoke("academy-ai-generate", {
-          body: {
-            action: "generate_classification",
-            title: item.title,
+          const { data: cls, error: cErr } = await supabase.functions.invoke("academy-ai-generate", {
+            body: {
+              action: "generate_classification",
+              title: item.title,
+              transcript: tx,
+              webinar_series: series || null,
+              existing_tags: Array.from(sessionTags),
+            },
+          });
+          if (cErr) throw new Error(await extractEdgeError(cErr, "AI classification failed"));
+          const audience: string[] = Array.isArray(cls?.target_audience) ? cls.target_audience : [];
+          const level: string = cls?.difficulty_level || "beginner";
+          const aiTags: string[] = Array.isArray(cls?.tags) ? cls.tags : [];
+          aiTags.forEach((t) => sessionTags.add(t));
+
+          const { data: desc, error: dErr } = await supabase.functions.invoke("academy-ai-generate", {
+            body: {
+              action: "generate_descriptions",
+              title: item.title,
+              target_audience: audience,
+              difficulty_level: level,
+              tags: aiTags,
+              transcript: tx,
+            },
+          });
+          if (dErr) throw new Error(await extractEdgeError(dErr, "AI descriptions failed"));
+
+          const { data: qz, error: qErr } = await supabase.functions.invoke("academy-ai-generate", {
+            body: {
+              action: "generate_questions",
+              title: item.title,
+              target_audience: audience,
+              context_text: tx,
+            },
+          });
+          if (qErr) throw new Error(await extractEdgeError(qErr, "AI quiz failed"));
+          const rawQs = Array.isArray(qz?.questions) ? qz.questions : Array.isArray(qz) ? qz : [];
+
+          built.push({
+            key: `sc-${item.vimeo_id}`,
+            moduleNumber: item.module_number,
+            lessonNumber: item.lesson_number,
+            vimeoId: item.vimeo_id,
+            vimeoLink: item.link,
             transcript: tx,
-            webinar_series: series || null,
-            existing_tags: Array.from(sessionTags),
-          },
-        });
-        if (cErr) throw new Error(await extractEdgeError(cErr, `AI classification failed for ${label}`));
-        const audience: string[] = Array.isArray(cls?.target_audience) ? cls.target_audience : [];
-        const level: string = cls?.difficulty_level || "beginner";
-        const aiTags: string[] = Array.isArray(cls?.tags) ? cls.tags : [];
-        aiTags.forEach((t) => sessionTags.add(t));
-
-        const { data: desc, error: dErr } = await supabase.functions.invoke("academy-ai-generate", {
-          body: {
-            action: "generate_descriptions",
             title: item.title,
-            target_audience: audience,
-            difficulty_level: level,
+            shortDescription: desc?.short_description || "",
+            description: desc?.description || "",
+            targetAudience: audience,
+            difficulty: level,
             tags: aiTags,
-            transcript: tx,
-          },
-        });
-        if (dErr) throw new Error(await extractEdgeError(dErr, `AI descriptions failed for ${label}`));
-
-        const { data: qz, error: qErr } = await supabase.functions.invoke("academy-ai-generate", {
-          body: {
-            action: "generate_questions",
-            title: item.title,
-            target_audience: audience,
-            context_text: tx,
-          },
-        });
-        if (qErr) throw new Error(await extractEdgeError(qErr, `AI quiz failed for ${label}`));
-        const rawQs = Array.isArray(qz?.questions) ? qz.questions : Array.isArray(qz) ? qz : [];
-
-        built.push({
-          key: `sc-${item.vimeo_id}`,
-          moduleNumber: item.module_number,
-          lessonNumber: item.lesson_number,
-          vimeoId: item.vimeo_id,
-          vimeoLink: item.link,
-          transcript: tx,
-          title: item.title,
-          shortDescription: desc?.short_description || "",
-          description: desc?.description || "",
-          targetAudience: audience,
-          difficulty: level,
-          tags: aiTags,
-          questions: rawQs.map((q: any, qi: number) => ({
-            key: `q-${item.vimeo_id}-${qi}`,
-            question_text: String(q?.question_text ?? ""),
-            explanation: String(q?.explanation ?? ""),
-            options: normaliseOptions(q?.options),
-          })),
-          durationSeconds: vimeo?.duration_seconds ?? item.duration_seconds ?? null,
-          thumbnailUrl: vimeo?.thumbnail_url ?? item.thumbnail_url ?? null,
-          alreadyImported: !!item.already_imported,
-          existingCourses: Array.isArray(item.existing_courses) ? item.existing_courses : [],
-        });
+            questions: rawQs.map((q: any, qi: number) => ({
+              key: `q-${item.vimeo_id}-${qi}`,
+              question_text: String(q?.question_text ?? ""),
+              explanation: String(q?.explanation ?? ""),
+              options: normaliseOptions(q?.options),
+            })),
+            durationSeconds: vimeo?.duration_seconds ?? item.duration_seconds ?? null,
+            thumbnailUrl: vimeo?.thumbnail_url ?? item.thumbnail_url ?? null,
+            alreadyImported: !!item.already_imported,
+            existingCourses: Array.isArray(item.existing_courses) ? item.existing_courses : [],
+          });
+        } catch (itemErr: any) {
+          // One video's transient failure (e.g. a flaky AI response) shouldn't
+          // discard everything already drafted in this batch — record it and
+          // keep going, so the user only has to retry the ones that failed.
+          failed.push({ title: label, error: itemErr?.message || "Unknown error" });
+        }
       }
       setShowcaseItems(built);
       setSelectedShowcaseItem(0);
-      setGenerated(true);
-      toast.success(`${built.length} lesson${built.length === 1 ? "" : "s"} drafted — review below`);
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to draft showcase lessons");
+      setGenerated(built.length > 0);
+      if (failed.length === 0) {
+        toast.success(`${built.length} lesson${built.length === 1 ? "" : "s"} drafted — review below`);
+      } else if (built.length === 0) {
+        toast.error(`All ${failed.length} videos failed to draft. First error: ${failed[0].error}`);
+      } else {
+        toast.warning(
+          `${built.length} lesson${built.length === 1 ? "" : "s"} drafted, ${failed.length} failed: ${failed.map((f) => f.title).join(", ")}. Click "Redraft all with AI" to retry.`,
+        );
+      }
     } finally {
       setShowcaseConfirming(false);
       setShowcaseProgress(null);
@@ -1729,7 +1804,7 @@ export default function AcademyAddCoursePage() {
                       items={showcasePreview.parsed.map((item) => item.vimeo_id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <ul className="text-sm space-y-1 max-h-56 overflow-y-auto">
+                      <ul className="text-sm space-y-1 max-h-[420px] overflow-y-auto">
                         {showcasePreview.parsed.map((item) => (
                           <SortableShowcaseRow key={item.vimeo_id} item={item} />
                         ))}
@@ -1804,27 +1879,51 @@ export default function AcademyAddCoursePage() {
             {multiActive && (
               <div className="space-y-2">
                 <Label>{showcaseActive ? "Lesson" : "Segment"}</Label>
-                <div className="flex flex-wrap gap-2">
-                  {activeItems.map((d, i) => (
-                    <Button
-                      key={d.key}
-                      variant={i === activeIndex ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setActiveIndex(i)}
-                      className={i === activeIndex ? "text-white" : ""}
-                      style={i === activeIndex ? { backgroundColor: "#7130A0" } : undefined}
-                    >
-                      {i + 1}. {d.title || "Untitled"}
-                      {!showcaseActive && workshopActive && (
-                        <span className="ml-1 opacity-70">
-                          {`(${formatTimecode((d as SegmentDraft).segment.start_seconds)}–${formatTimecode((d as SegmentDraft).segment.end_seconds)})`}
-                        </span>
-                      )}
-                    </Button>
-                  ))}
-                </div>
+                {showcaseActive ? (
+                  <DndContext
+                    sensors={showcaseSensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleShowcaseItemsReorder}
+                  >
+                    <SortableContext items={showcaseItems.map((d) => d.key)} strategy={rectSortingStrategy}>
+                      <div className="flex flex-wrap gap-2">
+                        {showcaseItems.map((d, i) => (
+                          <SortableShowcaseChip
+                            key={d.key}
+                            id={d.key}
+                            selected={i === activeIndex}
+                            onSelect={() => setActiveIndex(i)}
+                          >
+                            {i + 1}. {d.title || "Untitled"}
+                          </SortableShowcaseChip>
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {activeItems.map((d, i) => (
+                      <Button
+                        key={d.key}
+                        variant={i === activeIndex ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setActiveIndex(i)}
+                        className={i === activeIndex ? "text-white" : ""}
+                        style={i === activeIndex ? { backgroundColor: "#7130A0" } : undefined}
+                      >
+                        {i + 1}. {d.title || "Untitled"}
+                        {workshopActive && (
+                          <span className="ml-1 opacity-70">
+                            {`(${formatTimecode((d as SegmentDraft).segment.start_seconds)}–${formatTimecode((d as SegmentDraft).segment.end_seconds)})`}
+                          </span>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Reviewing {showcaseActive ? "lesson" : "segment"} {activeIndex + 1} of {activeItems.length}. Each becomes a lesson in this course.
+                  {showcaseActive && " Drag a chip to reorder without redrafting with AI."}
                 </p>
               </div>
             )}
