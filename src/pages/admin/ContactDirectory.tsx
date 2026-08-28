@@ -49,7 +49,8 @@ import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2 } from '
 import { toast } from 'sonner';
 import { positionTypeLabel, type PositionTypeOption } from '@/lib/roles/positionType';
 import { cn } from '@/lib/utils';
-import { TenantFilterDialog } from '@/components/tenant-users/TenantFilterDialog';
+import { TenantFilterDialog, type CscOption, type TenantFilterOption, type TenantStatusOption } from '@/components/tenant-users/TenantFilterDialog';
+import { useCscAssignments } from '@/hooks/useCscAssignments';
 
 interface DirectoryRow {
   row_key: string;
@@ -78,6 +79,9 @@ export default function ContactDirectory() {
   const [rows, setRows] = useState<DirectoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
+  const [tenants, setTenants] = useState<TenantFilterOption[]>([]);
+  const [tenantStatusOptions, setTenantStatusOptions] = useState<TenantStatusOption[]>([]);
+  const [cscFilterOptions, setCscFilterOptions] = useState<CscOption[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [tenantFilters, setTenantFilters] = useState<string[]>([]);
@@ -98,9 +102,22 @@ export default function ContactDirectory() {
   const [groupToDelete, setGroupToDelete] = useState<ContactGroup | null>(null);
   const [updatingPositionType, setUpdatingPositionType] = useState<string | null>(null);
 
+  const tenantIds = useMemo(() => tenants.map((tenant) => tenant.id), [tenants]);
+  const cscQuery = useCscAssignments(tenantIds);
+  const enrichedTenants = useMemo(() => {
+    const cscMap = cscQuery.data || {};
+    return tenants.map((tenant) => ({
+      ...tenant,
+      csc_user_id: cscMap[tenant.id]?.csc_user_id ?? null,
+    }));
+  }, [tenants, cscQuery.data]);
+
   useEffect(() => {
     fetchDirectory();
     fetchPositionTypeOptions();
+    fetchTenantFilterOptions();
+    fetchTenantStatusOptions();
+    fetchCscFilterOptions();
     fetchGroups();
   }, []);
 
@@ -149,6 +166,52 @@ export default function ContactDirectory() {
     setPositionTypeOptions(data || []);
   };
 
+  const fetchTenantFilterOptions = async () => {
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('id, name, status')
+      .order('name');
+    if (error) {
+      console.error('tenants fetch error:', error);
+      return;
+    }
+    setTenants(data || []);
+  };
+
+  const fetchTenantStatusOptions = async () => {
+    const { data, error } = await supabase
+      .from('dd_status')
+      .select('value, description')
+      .gte('code', 100)
+      .order('code');
+    if (error) {
+      console.error('dd_status fetch error:', error);
+      return;
+    }
+    setTenantStatusOptions(data || []);
+  };
+
+  const fetchCscFilterOptions = async () => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('user_uuid, first_name, last_name, staff_teams, staff_team, archived')
+      .eq('disabled', false)
+      .order('archived', { ascending: true })
+      .order('first_name', { ascending: true });
+    if (error) {
+      console.error('CSC options fetch error:', error);
+      return;
+    }
+    setCscFilterOptions((data || []).filter((user) =>
+      user.staff_teams?.includes('client_success') || user.staff_team === 'client_success'
+    ).map((user) => ({
+      user_uuid: user.user_uuid,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      archived: user.archived || false,
+    })));
+  };
+
   const fetchGroups = async () => {
     setGroupsLoading(true);
     const { data: groupRows, error } = await supabase
@@ -172,14 +235,6 @@ export default function ContactDirectory() {
     );
     setGroupsLoading(false);
   };
-
-  const tenantOptions = useMemo(() => {
-    const map = new Map<number, string>();
-    rows.forEach((r) => map.set(r.tenant_id, r.tenant_name));
-    return Array.from(map.entries())
-      .sort((a, b) => a[1].localeCompare(b[1]))
-      .map(([id, name]) => ({ id, name, status: null, csc_user_id: null }));
-  }, [rows]);
 
   const filteredRows = useMemo(() => {
     let filtered = [...rows];
@@ -341,7 +396,7 @@ export default function ContactDirectory() {
                   {tenantFilters.length === 0
                     ? 'All Tenants'
                     : tenantFilters.length === 1
-                      ? tenantOptions.find((tenant) => String(tenant.id) === tenantFilters[0])?.name ?? '1 tenant'
+                      ? tenants.find((tenant) => String(tenant.id) === tenantFilters[0])?.name ?? '1 tenant'
                       : `${tenantFilters.length} tenants selected`}
                 </span>
                 <Building2 className="h-4 w-4 shrink-0 opacity-50 ml-2" />
@@ -588,7 +643,9 @@ export default function ContactDirectory() {
       <TenantFilterDialog
         open={tenantFilterDialogOpen}
         onOpenChange={setTenantFilterDialogOpen}
-        tenants={tenantOptions}
+        tenants={enrichedTenants}
+        statusOptions={tenantStatusOptions}
+        cscOptions={cscFilterOptions}
         selected={tenantFilters}
         onApply={setTenantFilters}
       />
