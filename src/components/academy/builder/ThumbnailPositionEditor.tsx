@@ -51,21 +51,36 @@ export default function ThumbnailPositionEditor({ imageUrl, value, onChange, fit
     <div className="space-y-3 rounded-lg border p-3">
       <div>
         <Label>Thumbnail framing</Label>
-        <p className="text-xs text-muted-foreground mt-1">Drag the image to reposition it. Choose Fill to crop or Show full image to zoom out.</p>
+        <p className="text-xs text-muted-foreground mt-1">Drag the square preview to reposition the image. The same framing is used on the course card and the course page banner below — check both before saving.</p>
       </div>
-      <div
-        className="aspect-square max-w-[260px] overflow-hidden rounded-lg bg-muted border cursor-move touch-none"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={clearDrag}
-        onPointerCancel={clearDrag}
-        title={imageUrl ? "Drag to reposition thumbnail" : undefined}
-      >
-        {imageUrl ? (
-          <img src={imageUrl} alt="Thumbnail preview" className="h-full w-full" style={{ objectFit: fit, objectPosition: value || "50% 50%", transform: `scale(${zoom})`, transformOrigin: value || "50% 50%" }} draggable={false} />
-        ) : (
-          <div className="h-full flex items-center justify-center text-xs text-muted-foreground text-center p-4">Generate or add a thumbnail to preview framing.</div>
-        )}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Course card</p>
+          <div
+            className="aspect-square w-[120px] overflow-hidden rounded-lg bg-muted border cursor-move touch-none"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={clearDrag}
+            onPointerCancel={clearDrag}
+            title={imageUrl ? "Drag to reposition thumbnail" : undefined}
+          >
+            {imageUrl ? (
+              <img src={imageUrl} alt="Course card preview" className="h-full w-full" style={{ objectFit: fit, objectPosition: value || "50% 50%", transform: `scale(${zoom})`, transformOrigin: value || "50% 50%" }} draggable={false} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground text-center p-4">Generate or add a thumbnail to preview framing.</div>
+            )}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Course page banner</p>
+          <div className="aspect-video w-[220px] overflow-hidden rounded-lg bg-muted border">
+            {imageUrl ? (
+              <img src={imageUrl} alt="Course page banner preview" className="h-full w-full" style={{ objectFit: fit, objectPosition: value || "50% 50%", transform: `scale(${zoom})`, transformOrigin: value || "50% 50%" }} draggable={false} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground text-center p-4">Generate or add a thumbnail to preview framing.</div>
+            )}
+          </div>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant={fit === "cover" ? "default" : "outline"} onClick={() => onFitChange("cover")}>Fill (crop)</Button>

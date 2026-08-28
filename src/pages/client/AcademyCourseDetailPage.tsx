@@ -26,7 +26,7 @@ export default function AcademyCourseDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_courses")
-        .select("id, title, slug, description, short_description, target_audience, estimated_minutes, difficulty_level, status, tags, thumbnail_url, certificate_enabled, webinar_series")
+        .select("id, title, slug, description, short_description, target_audience, estimated_minutes, difficulty_level, status, tags, thumbnail_url, thumbnail_position, thumbnail_fit, thumbnail_zoom, certificate_enabled, webinar_series")
         .eq("slug", slug!)
         .eq("status", "published")
         .single();
@@ -128,13 +128,27 @@ export default function AcademyCourseDetailPage() {
       {/* Hero section */}
       <div className="rounded-xl overflow-hidden" style={{ border: "1px solid hsl(var(--border))" }}>
         <div
-          className="relative flex items-center justify-center"
+          className="relative flex items-center justify-center aspect-video w-full overflow-hidden"
           style={{
-            height: 180,
-            background: `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)`,
+            background: course.thumbnail_url
+              ? undefined
+              : `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)`,
           }}
         >
-          <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+          {course.thumbnail_url && (
+            <img
+              src={course.thumbnail_url}
+              alt={course.title}
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{
+                objectFit: (course.thumbnail_fit as "cover" | "contain") || "cover",
+                objectPosition: course.thumbnail_position || "50% 50%",
+                transform: `scale(${course.thumbnail_zoom || 1})`,
+                transformOrigin: course.thumbnail_position || "50% 50%",
+              }}
+            />
+          )}
+          <div className="relative h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
             <Play className="h-7 w-7 text-white fill-white ml-0.5" />
           </div>
           {enrollment && enrollment.progress_percentage != null && enrollment.progress_percentage > 0 && (
