@@ -4,6 +4,8 @@
 >
 > **Status:** Planning only. No code or DB changes made. Triggered by a real access request (AJ Delostrico, CSC role, needs package/stage/academy-admin access) that turned out to be blocked by an architectural gap, not a missing permission row.
 >
+> **2026-09-01 execution note:** This historical investigation is now expanded and corrected by the [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../reference/rbac-v6-authorization-implementation-plan-2026-09-01.md). Use that document for implementation sequencing, current counts, target authorization semantics, blast-radius checks, and verification gates. Preserve this handoff as the record of the original AJ access investigation.
+>
 > **Supersedes nothing. Extends:** [`rbac-v5-implementation-plan.md`](rbac-v5-implementation-plan.md) (all 8 phases shipped 10 June 2026 — that doc's own status header still says "In planning", which is stale; see correction note in that file).
 
 ---
