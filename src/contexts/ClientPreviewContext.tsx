@@ -97,7 +97,7 @@ function clearPreviewState() {
 
 export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => {
   const { profile, session } = useAuth();
-  const { isSuperAdmin, isVivacityTeam } = useRBAC();
+  const { isSuperAdmin } = useRBAC();
   const queryClient = useQueryClient();
 
   const [isPreviewMode, setIsPreviewMode] = useState(false);

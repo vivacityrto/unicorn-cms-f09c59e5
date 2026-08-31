@@ -42,9 +42,29 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   port set in `vite.config.ts`).
 - Build: `npm run build` (production; also inlines critical CSS + writes
   `version.json`). `npm run build:dev` for a development-mode build.
-- Lint: `npm run lint`. NOTE: the codebase currently reports **many thousands
-  of pre-existing eslint errors** (including in `supabase/functions/**`); a
-  non-zero exit is the current baseline, not an environment problem.
+- Lint: `npm run lint`. NOTE: the codebase currently reports **~4,100
+  pre-existing eslint errors** (measured 2026-09-01; corrected from an
+  earlier vaguer "many thousands" here — 97% of them are a single rule,
+  `@typescript-eslint/no-explicit-any`, including in `supabase/functions/**`);
+  a non-zero exit is the current baseline, not an environment problem.
+  `eslint.config.js`'s top-level `ignores` now also excludes
+  `.worktrees/**`/`worktrees/**`/`.claude/worktrees/**` — without it, ESLint
+  was re-linting the full contents of any stray nested git worktree left
+  inside the repo (see "Local dev server troubleshooting" below for the
+  same class of problem hitting Vite's dep scanner).
+- Lint ratchet (P0.4, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`):
+  `npm run lint:ratchet` (`scripts/lint-ratchet.mjs`) is diff-scoped, not a
+  full-repo check — for every `.ts`/`.tsx` file changed since
+  `origin/main` (override the base with `LINT_RATCHET_BASE`), it compares
+  that file's lint error count before vs. after. A file that already had
+  errors and still has the *same* count after your change passes (fixing
+  the ~4,100-error backlog isn't required to ship a PR); a file with *more*
+  errors than before, or a brand-new file with any errors at all, fails the
+  check. Runs in CI on every PR (`.github/workflows/lint-ratchet.yml`).
+  Separately, `@typescript-eslint/no-unused-vars` (off repo-wide) is now
+  `error` for `src/services/**` and `src/contexts/**` specifically — both
+  tested at zero violations, the plan's requested "one bounded directory"
+  proof that the rule doesn't regress before wider adoption is considered.
 - Tests (P0.2, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`):
   canonical scripts now exist — `npm run test:frontend` (Vitest, `src/**`),
   `npm run test:edge` (Node's built-in `node:test` runner over
