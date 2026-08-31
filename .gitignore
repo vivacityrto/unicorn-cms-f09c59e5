@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# tsc -p ... --noEmit still writes these incremental caches (composite
+# project references) — regenerated on every `npm run typecheck`
+*.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

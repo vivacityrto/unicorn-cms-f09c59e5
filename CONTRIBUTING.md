@@ -285,14 +285,21 @@ describe('Permission checks', () => {
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run everything: frontend (Vitest) + Edge Functions (node --test), then
+# print which Edge test files aren't covered by either harness
 npm run test
 
-# Run specific file
-npm run test src/test/auth/useAuth.test.ts
+# Frontend only
+npm run test:frontend
 
-# Watch mode
+# Run a specific frontend file
+npm run test:frontend -- src/test/auth/useAuth.test.ts
+
+# Frontend watch mode
 npm run test:watch
+
+# Edge Functions only (supabase/functions/**)
+npm run test:edge
 ```
 
 ---
