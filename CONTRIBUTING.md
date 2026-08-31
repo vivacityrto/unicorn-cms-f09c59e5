@@ -295,6 +295,9 @@ npm run test:frontend
 # Run a specific frontend file
 npm run test:frontend -- src/test/auth/useAuth.test.ts
 
+# Frontend only, just tests related to files changed since the last commit
+npm run test:frontend:changed
+
 # Frontend watch mode
 npm run test:watch
 
