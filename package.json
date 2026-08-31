@@ -11,6 +11,7 @@
     "lint:ratchet": "node scripts/lint-ratchet.mjs",
     "lint:email-redirects": "node scripts/check-email-redirect-urls.mjs",
     "preview": "vite preview",
+    "metrics": "node scripts/architecture-metrics.mjs",
     "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit && node --max-old-space-size=4096 node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit",
     "test:frontend": "vitest run",
     "test:frontend:changed": "vitest run --changed",
