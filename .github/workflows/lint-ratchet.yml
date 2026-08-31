@@ -1,0 +1,20 @@
+name: Lint ratchet
+
+on:
+  pull_request:
+
+jobs:
+  lint-ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Fail if changed files introduce new lint errors
+        run: node scripts/lint-ratchet.mjs
+        env:
+          LINT_RATCHET_BASE: origin/${{ github.base_ref }}
