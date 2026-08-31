@@ -114,6 +114,27 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   (or just `npm run test`, which calls it automatically) to see the exact
   file-by-file split. These were excluded from the normal test command for
   long enough that some had gone stale — see the guardrail below.
+- Architecture metrics (P0.5, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`):
+  `npm run metrics` (`scripts/architecture-metrics.mjs`) reproduces the
+  plan's section-3 baseline table from a script instead of an ad-hoc pass —
+  file/line counts, files over 600/1000 lines, wrapper files, Supabase
+  import/call counts by pages/components/hooks, Zod adoption, `unicorn_role`
+  spread, and an `any`-keyword count (tracks closely with the real
+  `@typescript-eslint/no-explicit-any` ESLint count — 4288 vs. 4023 measured
+  the same day, not identical since this is a raw grep, not a parse). Runs
+  in under a second; deliberately walks only `src/` and `supabase/functions/`
+  by name (never the repo root), so a stray nested git worktree is never
+  visited — no separate exclusion needed there, unlike `eslint.config.js`.
+  `supabase/migrations/**` and `docs/audit-log/**` are out of scope
+  entirely, not merely filtered. `--json` for machine-readable output,
+  `--out <file>` to write instead of printing. Re-measured 2026-09-01
+  against the plan's original 28 Aug baseline: most figures track closely
+  (files-over-600/1000, wrapper count, frontend test count, Zod adoption all
+  match exactly or near-exactly) but "direct Supabase calls" reads notably
+  higher here (97/179/237 by pages/components/hooks vs. the plan's
+  73/137/144) — different detection method (regex over `supabase\.(from|
+  rpc|storage|functions)\(`, not whatever the original ad-hoc pass used),
+  not a regression. Don't compare the two without accounting for that.
 
 ## Local dev server troubleshooting (Windows)
 
