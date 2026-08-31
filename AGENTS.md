@@ -69,8 +69,19 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   starts. It's still slow (several minutes for the app project alone) and
   its exact duration varies a lot with whatever else is resident on this
   machine (this dev box has only ~8 GB total RAM) — don't read a slow run as
-  broken. A full performance diagnosis is out of scope here; P0.3 (Vitest
-  teardown) may be a natural place to fold a deeper look at this in too.
+  broken. A full performance diagnosis is out of scope here.
+- Vitest single-file/teardown speed (P0.3): the plan's evidence for this
+  candidate ("single files can take 27-90s and report fork termination
+  timeouts") does **not** currently reproduce. Verified 2026-09-01 on
+  Vitest 4.1.10/Vite 8.1.0: 6 individual single-file runs (`useAuth`,
+  `tenant/isolation`, `eos/meetings`, and all 3 `rbac/*` files) each
+  completed in 3.5-9s wall time with a clean exit and no warning of any
+  kind; the full 22-file/282-test suite completes in ~33s. Whatever caused
+  the original observation isn't present in this environment/version
+  combination right now — treat it as resolved unless it resurfaces, not as
+  a standing problem to keep re-diagnosing. `npm run test:frontend:changed`
+  (`vitest run --changed`, new) is the fast focused-test mode the plan asked
+  for — runs only tests related to files changed since the last commit.
 - Edge Function tests: `npm run test:edge` covers `.test.mjs` files plus
   Deno-free `.test.ts`/`.node-test.ts` files (mostly static source-pattern
   assertions against `index.ts`, since Deno isn't available locally). It does

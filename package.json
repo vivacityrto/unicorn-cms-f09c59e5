@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit && node --max-old-space-size=4096 node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit",
     "test:frontend": "vitest run",
+    "test:frontend:changed": "vitest run --changed",
     "test:watch": "vitest",
     "test:edge": "node --test \"supabase/functions/**/*.test.mjs\" \"supabase/functions/**/*.test.ts\" \"supabase/functions/**/*.node-test.ts\"",
     "test": "npm run test:frontend && npm run test:edge && node scripts/report-edge-test-inventory.mjs"
