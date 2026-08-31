@@ -45,21 +45,44 @@ former `unicorn-kb` and `unicorn-audit` repos — see
 - Lint: `npm run lint`. NOTE: the codebase currently reports **many thousands
   of pre-existing eslint errors** (including in `supabase/functions/**`); a
   non-zero exit is the current baseline, not an environment problem.
-- Tests: there is **no `test` script in `package.json`** despite
-  `CONTRIBUTING.md` referencing `npm run test`. Run the vitest suite directly
-  with **`npx vitest run`** (watch mode: `npx vitest`). A handful of tests fail
-  on a clean checkout (e.g. a `supabase.auth.getUser is not a function` mock
-  gap and an RBAC public-route expectation) — these are pre-existing, not
-  environment issues.
-- Edge Function tests: `supabase/functions/**/*.test.mjs` (56+ files) are
-  **not** picked up by `npx vitest run` — they use Node's built-in
-  `node:test` runner (`describe`/`it` imported from `"node:test"`), a
-  different harness than Vitest, mostly doing static source-pattern
-  assertions against `index.ts` since Deno isn't available locally. Run them
-  with **`npm run test:edge-functions`** (`node --test
-  "supabase/functions/**/*.test.mjs"`). These were excluded from the normal
-  test command for long enough that some had gone stale — see the guardrail
-  below.
+- Tests (P0.2, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`):
+  canonical scripts now exist — `npm run test:frontend` (Vitest, `src/**`),
+  `npm run test:edge` (Node's built-in `node:test` runner over
+  `supabase/functions/**`), `npm run typecheck`, and `npm run test` (runs
+  both suites, then prints the Edge test inventory below so a green run can
+  never be read as "all Edge tests"). `CONTRIBUTING.md`'s `npm run test`
+  reference is accurate again. As of P0.2 (2026-09-01), `npm run test:frontend`
+  passes clean on a fresh checkout — 22 files / 282 tests / 15 skipped, 0
+  failing — superseding an earlier note here about pre-existing mock-gap/RBAC
+  failures; re-verify before trusting that figure if it's been a while.
+  `npm run typecheck` is intentionally **not** chained into `npm run test`:
+  it currently reports one pre-existing error (`ContactDirectory.tsx`
+  TS2345, an object literal missing `csc_user_id`) that predates P0.2 and is
+  out of scope for a tooling PR to fix — a follow-up, not something this
+  change introduced. `npm run typecheck` **is not** `tsc -b --noEmit`: that
+  composite/project-references invocation reliably crashes with
+  `JavaScript heap out of memory` after ~6.5 minutes on this codebase's
+  default V8 heap (~2 GB), regardless of system load. The script instead
+  runs `tsconfig.app.json` and `tsconfig.node.json` as two separate
+  `tsc -p <config> --noEmit` invocations with `--max-old-space-size=4096`,
+  which peaks lower because each project's graph is freed before the next
+  starts. It's still slow (several minutes for the app project alone) and
+  its exact duration varies a lot with whatever else is resident on this
+  machine (this dev box has only ~8 GB total RAM) — don't read a slow run as
+  broken. A full performance diagnosis is out of scope here; P0.3 (Vitest
+  teardown) may be a natural place to fold a deeper look at this in too.
+- Edge Function tests: `npm run test:edge` covers `.test.mjs` files plus
+  Deno-free `.test.ts`/`.node-test.ts` files (mostly static source-pattern
+  assertions against `index.ts`, since Deno isn't available locally). It does
+  **not** cover files that reference the `Deno.test` global or a
+  `deno.land`/`npm:` import specifier — those need the Deno CLI, which isn't
+  installed in this environment (as of P0.2: 14 such files, all under
+  `supabase/functions/_shared/ask-viv-*` and a handful of others — see
+  `scripts/report-edge-test-inventory.mjs`). Run
+  `node scripts/report-edge-test-inventory.mjs`
+  (or just `npm run test`, which calls it automatically) to see the exact
+  file-by-file split. These were excluded from the normal test command for
+  long enough that some had gone stale — see the guardrail below.
 
 ## Local dev server troubleshooting (Windows)
 
@@ -408,8 +431,9 @@ change (shared-secret + dedicated system account, see that function's own
 rewritten rather than patched. When you change a function's auth gate
 (swap in `requireCaller`, add `requireSharedSecret`, change a helper's
 signature), update or rewrite its `*.test.mjs` in the same change, and
-actually run `npm run test:edge-functions` before considering the change
-done — don't rely on the file existing as proof it still passes.
+actually run `npm run test:edge` (renamed from `test:edge-functions` in
+P0.2) before considering the change done — don't rely on the file existing
+as proof it still passes.
 
 **CI/lint follow-up (not yet implemented, worth adding):** a check that
 flags any new or modified file under `supabase/functions/*/index.ts` with no
