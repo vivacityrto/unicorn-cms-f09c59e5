@@ -19,6 +19,7 @@ import { ChunkErrorBoundary } from "./components/ChunkErrorBoundary";
 import { startVersionChecking, stopVersionChecking } from "./utils/versionCheck";
 import { DevDiagnosticsPanel } from "./components/DevDiagnosticsPanel";
 import { CelebrationProvider } from "./components/ui/celebration";
+import { supportTicketsRoutes } from "./routes/supportTicketsRoutes";
 
 // Non-SuperAdmin roles allowed on Academy Builder admin routes (SuperAdmin is always allowed by ProtectedRoute).
 const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"];
@@ -182,14 +183,9 @@ const KnowledgeExplorer = lazy(() => import("./pages/KnowledgeExplorer"));
  const StrategicOrchestrationDashboard = lazy(() => import("./pages/StrategicOrchestrationDashboard"));
 const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
 const LifecycleChecklistsAdmin = lazy(() => import("./pages/admin/LifecycleChecklistsAdmin"));
-const SuggestionRegister = lazy(() => import("./pages/SuggestionRegister"));
-const NewSuggestionForm = lazy(() => import("./pages/NewSuggestionForm"));
-const SuggestionDetail = lazy(() => import("./pages/SuggestionDetail"));
-const NewSupportTicketPage = lazy(() => import("./pages/NewSupportTicketPage"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const ReportingObligationsAdmin = lazy(() => import("./pages/admin/settings/ReportingObligations"));
 const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
-const SupportTicketsWrapper = lazy(() => import("./pages/SupportTicketsWrapper"));
 const AcademyDashboardWrapperNew = lazy(() => import("./pages/client/AcademyDashboardWrapper"));
 const AcademyTrainerWrapperNew = lazy(() => import("./pages/client/AcademyTrainerWrapper"));
 const AcademyComplianceManagerWrapperNew = lazy(() => import("./pages/client/AcademyComplianceManagerWrapper"));
@@ -249,8 +245,6 @@ const ClientTgaDetailsWrapperNew = lazy(() => import("./pages/client/ClientTgaDe
 const ClientFilesWrapperNew = lazy(() => import("./pages/client/ClientFilesWrapper"));
 const ClientTasksWrapperNew = lazy(() => import("./pages/client/ClientTasksWrapper"));
 const ClientCertificateWrapper = lazy(() => import("./pages/client/ClientCertificateWrapper"));
-const SupportTicketsPortalWrapper = lazy(() => import("./pages/client/SupportTicketsPortalWrapper"));
-const SupportTicketPortalDetailWrapper = lazy(() => import("./pages/client/SupportTicketPortalDetailWrapper"));
 // ClientCommunicationsWrapperNew removed — consolidated into ClientInboxPage
 const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
 const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
@@ -645,14 +639,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <TeamCommunicationsWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/support-tickets" 
-              element={
-                <ProtectedRoute>
-                  <SupportTicketsWrapper />
                 </ProtectedRoute>
               } 
             />
@@ -1139,13 +1125,7 @@ const App = () => (
             <Route path="/admin/strategic-orchestration" element={<ProtectedRoute requireSuperAdmin><StrategicOrchestrationDashboard /></ProtectedRoute>} />
             <Route path="/admin/code-tables" element={<ProtectedRoute requireSuperAdmin><CodeTablesAdmin /></ProtectedRoute>} />
             <Route path="/admin/lifecycle-checklists" element={<ProtectedRoute requireSuperAdmin><LifecycleChecklistsAdmin /></ProtectedRoute>} />
-            {/* Suggestion & Issue Register (legacy → redirect to Support Tickets) */}
-            <Route path="/suggestions" element={<Navigate to="/support-tickets" replace />} />
-            <Route path="/suggestions/new" element={<Navigate to="/support-tickets/new" replace />} />
-            <Route path="/suggestions/:id" element={<ProtectedRoute><SuggestionDetail /></ProtectedRoute>} />
-            {/* Support Tickets */}
-            <Route path="/support-tickets/new" element={<ProtectedRoute><NewSupportTicketPage /></ProtectedRoute>} />
-            <Route path="/support-tickets/:id" element={<ProtectedRoute><SuggestionDetail /></ProtectedRoute>} />
+            {supportTicketsRoutes}
             <Route path="/admin/merge-field-tags" element={<ProtectedRoute requireSuperAdmin><MergeFieldTagsAdmin /></ProtectedRoute>} />
             <Route path="/admin/settings/reporting-obligations" element={<ProtectedRoute requireSuperAdmin><ReportingObligationsAdmin /></ProtectedRoute>} />
             {/* Academy Management - SuperAdmin, Team Leader, Integrator, CSC */}
@@ -1197,11 +1177,6 @@ const App = () => (
             <Route path="/client/tga" element={<ProtectedRoute><ClientTgaDetailsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/files" element={<ProtectedRoute><ClientFilesWrapperNew /></ProtectedRoute>} />
             <Route path="/client/certificate" element={<ProtectedRoute><ClientCertificateWrapper /></ProtectedRoute>} />
-            <Route path="/client/support-tickets" element={<ProtectedRoute><SupportTicketsPortalWrapper /></ProtectedRoute>} />
-            <Route path="/client/support-tickets/:id" element={<ProtectedRoute><SupportTicketPortalDetailWrapper /></ProtectedRoute>} />
-            <Route path="/client/suggestions" element={<Navigate to="/client/support-tickets" replace />} />
-            <Route path="/client/suggestions/new" element={<Navigate to="/client/support-tickets" replace />} />
-            <Route path="/client/suggestions/:id" element={<Navigate to="/client/support-tickets" replace />} />
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboardWrapperNew /></ProtectedRoute>} />
             <Route path="/academy/trainer" element={<ProtectedRoute><AcademyTrainerWrapperNew /></ProtectedRoute>} />
             <Route path="/academy/compliance-manager" element={<ProtectedRoute><AcademyComplianceManagerWrapperNew /></ProtectedRoute>} />
