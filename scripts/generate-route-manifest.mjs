@@ -217,7 +217,16 @@ function extractRoutesFromFile(absPath) {
     if ((ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) && jsxTagName(node) === "Route") {
       const attrs = jsxAttrs(node);
       const ownPath = typeof attrs.path === "string" ? attrs.path : attrs.index ? "(index)" : null;
-      if (ownPath !== null) {
+      const isLayoutParent = hasNestedRouteChildren(node);
+      // A layout route doesn't need its own path or index -- when its
+      // children have no shared prefix (e.g. a staff-shell layout route
+      // whose children are scattered across /admin/*, /tenant/*, /work/*,
+      // etc. with no common ancestor segment), the parent is legitimately
+      // pathless. Only skip this node entirely if it's neither a route with
+      // its own path/index NOR a layout parent -- a bare `element`-only
+      // <Route> with no children would be meaningless in React Router
+      // anyway, so this isn't narrowing real cases.
+      if (ownPath !== null || isLayoutParent) {
         const elementAttrs = ts.isJsxElement(node) ? node.openingElement.attributes : node.attributes;
         const elementAttr = elementAttrs.properties.find(
           (a) => ts.isJsxAttribute(a) && a.name.getText() === "element",
@@ -228,10 +237,12 @@ function extractRoutesFromFile(absPath) {
           if (inner) resolved = resolveElement(inner);
         }
 
-        const path = composePath(ctx.path, ownPath);
+        // A pathless layout parent contributes no path segment of its own --
+        // children compose against ctx.path unchanged, exactly as if this
+        // node weren't there, while its resolved guard chain still applies.
+        const path = ownPath !== null ? composePath(ctx.path, ownPath) : ctx.path;
         const guardChain = [...ctx.guardChain, ...resolved.guardChain];
         const guardProps = { ...ctx.guardProps, ...resolved.guardProps };
-        const isLayoutParent = hasNestedRouteChildren(node);
 
         if (!isLayoutParent) {
           const componentInfo = resolved.component ? imports.get(resolved.component) : undefined;

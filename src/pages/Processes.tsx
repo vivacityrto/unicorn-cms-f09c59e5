@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useProcesses, Process, ProcessCategory, ProcessStatus, getCategoryLabel, getStatusLabel } from '@/hooks/useProcesses';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -159,7 +158,6 @@ export default function Processes() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <Skeleton className="h-8 w-48" />
@@ -173,12 +171,11 @@ export default function Processes() {
           </div>
           <Skeleton className="h-96 w-full" />
         </div>
-      </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -380,6 +377,6 @@ export default function Processes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </>
   );
 }
