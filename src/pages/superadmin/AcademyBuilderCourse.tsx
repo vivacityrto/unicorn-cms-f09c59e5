@@ -619,8 +619,9 @@ export default function AcademyBuilderCourse() {
     if (referenceError) throw referenceError;
 
     const fallbackByCourseId = new Map<number, string | null>();
-    if (item.category === "course" && references?.length) {
-      const courseIds = references.map((reference) => reference.id);
+    const sourceReference = references?.find((reference) => reference.id === item.sourceCourseId);
+    if (item.category === "course" && sourceReference) {
+      const courseIds = [sourceReference.id];
       const [{ data: modules, error: modulesError }, { data: lessons, error: lessonsError }] = await Promise.all([
         supabase.from("academy_modules").select("id, course_id, sort_order").in("course_id", courseIds).order("sort_order"),
         supabase.from("academy_lessons").select("course_id, module_id, video_id, sort_order").in("course_id", courseIds).not("video_id", "is", null).order("sort_order"),
@@ -645,7 +646,7 @@ export default function AcademyBuilderCourse() {
       }
     }
 
-    for (const reference of references ?? []) {
+    for (const reference of sourceReference ? [sourceReference] : []) {
       const fallback = item.category === "course" ? fallbackByCourseId.get(reference.id) ?? null : null;
       const updatePayload: { thumbnail_url?: string | null; banner_thumbnail_url?: string | null } = { [column]: fallback };
       const { error: clearError } = await supabase
@@ -674,10 +675,14 @@ export default function AcademyBuilderCourse() {
         ? { ...previous, thumbnail_url: fallbackByCourseId.get(courseId) ?? null }
         : { ...previous, banner_thumbnail_url: null });
     }
-    toast.success(stillReferenced ? "Image reference removed; the file is still used elsewhere" : "Image deleted; affected course cards reverted to Vimeo thumbnails");
+    toast.success(stillReferenced ? "Source image replaced; other linked courses kept their reference" : "Image deleted; source course reverted to its Vimeo thumbnail");
     qc.invalidateQueries({ queryKey: ["academy-thumbnail-library"] });
     qc.invalidateQueries({ queryKey: ["academy-builder-course", courseId] });
     qc.invalidateQueries({ queryKey: ["academy-courses-admin"] });
+  };
+
+  const handleChangeLibrarySource = (item: AcademyThumbnailLibraryItem) => {
+    navigate(`/superadmin/academy/builder/${item.sourceCourseId}`);
   };
 
   // Note: in-app navigation guard via useBlocker requires a data router; this app uses BrowserRouter.
@@ -897,6 +902,7 @@ export default function AcademyBuilderCourse() {
                 libraryCategory="course"
                 onSelectLibraryImage={(thumbnail_url) => setFormState((p) => ({ ...p, thumbnail_url }))}
                 onDeleteLibraryImage={handleDeleteLibraryImage}
+                onChangeLibrarySource={handleChangeLibrarySource}
               />
 
               {formState.banner_thumbnail_url ? (
@@ -916,6 +922,7 @@ export default function AcademyBuilderCourse() {
                   libraryCategory="banner"
                   onSelectLibraryImage={(banner_thumbnail_url) => setFormState((p) => ({ ...p, banner_thumbnail_url }))}
                   onDeleteLibraryImage={handleDeleteLibraryImage}
+                  onChangeLibrarySource={handleChangeLibrarySource}
                   onRemove={handleRemoveBannerThumbnail}
                   removeLabel="Use course card image instead"
                 />
@@ -955,6 +962,7 @@ export default function AcademyBuilderCourse() {
                       value={formState.banner_thumbnail_url}
                       onSelect={(banner_thumbnail_url) => setFormState((p) => ({ ...p, banner_thumbnail_url }))}
                       onDelete={handleDeleteLibraryImage}
+                      onChangeSource={handleChangeLibrarySource}
                     />
                   </div>
                 </div>
