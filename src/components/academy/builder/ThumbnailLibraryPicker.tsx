@@ -51,7 +51,11 @@ export default function ThumbnailLibraryPicker({ category, items, value, onSelec
                 onClick={() => { onSelect(item.url); setOpen(false); }}
                 title={`Uploaded on ${item.sourceCourseTitle}`}
               >
-                <img src={item.url} alt="" className="aspect-video w-full object-cover" />
+                <img
+                  src={item.url}
+                  alt=""
+                  className={`${category === "course" ? "aspect-square" : "aspect-video"} w-full object-cover`}
+                />
                 <span className="block truncate px-2 py-1.5 text-[11px] text-muted-foreground">{item.sourceCourseTitle}</span>
                 {value === item.url && <Check className="absolute right-1 top-1 h-4 w-4 rounded-full bg-background p-0.5 text-primary" />}
                 {onDelete && (
