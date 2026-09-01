@@ -1067,9 +1067,17 @@ The plan's original 28 Aug baseline (`e91d013d`) measured 413,945 product LOC / 
 |---|---|---|---|---:|
 | P1.1 | Remove duplicate `/support-tickets` registration | ✅ Done | [#482](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/482) | −2 |
 | P0.6 (already shipped in Phase 0) | Module-aware route manifest/check | ✅ Confirmed still passing after P1.1 (`npm run routes` shows exactly one `/support-tickets` row) | #472 | — |
-| P1.5 | Remove stale `navigationConfig.ts` exports after caller/persona check | ⏳ Not started | — | — |
-| — | Extract one route family out of `App.tsx` | ⏳ Not started | — | — |
-| — | Convert one layout/guard family to nested routes | ⏳ Not started | — | — |
-| — | Consolidate route metadata (title/guard-tier/layout) | ⏳ Not started | — | — |
+| P1.5 | Remove stale `navigationConfig.ts` exports after caller/persona check | ✅ Done | [#484](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/484) | −166 |
+| — | Characterize legacy `/suggestions → /support-tickets` redirects before extraction | ✅ Done | [#485](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/485) | (tests only) |
+| — | Extract one route family out of `App.tsx` (Support Tickets, 11 routes, 3 previously non-adjacent locations) | ✅ Done | [#486](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/486) | — |
+| — | Convert Academy Wrapper routes to a nested layout route (11 files) | ✅ Done | [#487](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/487) | −170 |
+| — | Convert Client Portal Wrapper routes to a nested layout route (20 files) | ✅ Done | [#488](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/488) | — |
+| — | Convert DashboardLayout Wrapper routes to a nested layout route (27 files, 32 routes) | ✅ Done | [#489](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/489) | — |
+| — | Fix guard-ordering regression in #489 (`/admin/stages*` mounted the shell before its SuperAdmin child guard ran) | ✅ Done | [#490](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/490) | — |
+| — | Consolidate route metadata (title/guard-tier/layout) | ⏳ Not started — flagged as the highest-risk remaining item; no concrete well-scoped candidate yet | — | — |
 
-Phase 2 exit gate (from §8): route count and guards unchanged except intentional cleanup; wrapper LOC reduced; route inventory check passes. Not yet met — only the dedup slice has landed; the wrapper-reduction slices (nested layouts) haven't started.
+Phase 2 exit gate (from §8): route count and guards unchanged except intentional cleanup; wrapper LOC reduced; route inventory check passes. The mechanical-wrapper slice is now complete (Academy/Client/Dashboard, PRs #487–#489, plus the #490 guard-ordering correction) — 58 wrapper files retired across the three portals. LOC deltas above are per-PR, not re-derived from a fresh whole-repo measurement; see the note below on why a full re-measurement is deferred.
+
+**Known gap surfaced immediately after #489, tracked as its own child plan:** converting the *mechanical* `*Wrapper.tsx` files was only part of the picture. `grep -rl "<DashboardLayout" src/pages` still returns 122 files at the post-#490 tip — pages where `DashboardLayout` is woven directly into the page's own JSX rather than a retired wrapper file, so they still fully remount the staff shell on every navigation. This is materially larger and riskier than the wrapper conversions (51 of the 122 files render the layout across 2–4 branches, several routes need a corrected guard-tier architecture rather than a mechanical unwrap) and is tracked in its own document rather than as a single row here: [`dashboard-direct-layout-migration-plan-2026-09-01.md`](dashboard-direct-layout-migration-plan-2026-09-01.md), a council-reviewed 19-PR implementation plan. That document's own §22-equivalent (its "Completion outcome" section) is where that program's progress should be tracked going forward; this table gets one summary line once that program starts landing PRs, not a row per page batch.
+
+A full LOC re-measurement (per the methodology above — disposable detached worktree, `scripts/architecture-metrics.mjs`) has not been re-run since the P1.1 checkpoint; the mechanical-wrapper PRs' own descriptions record their individual file/line deltas, which is treated as sufficient until the next natural checkpoint (either Phase 2's close, or a specific request for an updated whole-repo table) rather than re-running the full measurement after every single merge.
