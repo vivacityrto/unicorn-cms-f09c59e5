@@ -1,13 +1,10 @@
 # Architecture
 
-> **Currentness warning (2026-08-28):** the inventories and navigation snapshot below materially predate the May–August feature stream and the August retirement program. In particular, the legacy Compliance Auditor is no longer live and the 124-function inventory is not current. Treat this file as a historical baseline until it is regenerated under [the optimization and KB renewal plan](../reference/codebase-optimization-plan-2026-08-28.md); verify every current-state claim against source and, for deployed functions/schema, the hosted Supabase project.
-
-> **Last updated:** 2026-05-15 · **Reconsider by:** 2026-08-15 · **Confidence:** medium — flagship-surfaces product overview added 2026-05-15 sourced from `origin/main@d240b112` `DashboardLayout.tsx`. Edge function counts, tables, and supabase project ID still reflect the 2026-04-30 audit; SHA bumped to acknowledge nav sourced from origin, but full reconciliation against origin/main is deferred until the next material feature ship.
+> **Last updated:** 2026-09-01 · **Reconsider by:** 2026-10-01 (this codebase adds Edge Functions and migrations fast enough that a one-month shelf life is realistic, not conservative — see the velocity note under Edge functions below) · **Confidence:** high on counts (regenerated via direct repository measurement, not inference); medium on per-function purpose for anything not skimmed individually; **repository counts, not deployed-Supabase counts** — see the caveat under Edge functions.
 >
-> **Reflects commit:** `<codebase>@9cdc2a85` (2026-04-30) for edge function inventory, tables, and integration stack. Sidebar nav snapshot sourced from `<codebase>@d240b112` (origin/main, 2026-05-15). 7 new AI audit edge functions shipped 29–30 April 2026 (`embed-srto-corpus`, `retrieve-srto-context`, `draft-finding`, `record-finding-decision`, `analyse-evidence`, `draft-executive-summary`, `record-executive-summary-decision`); edge function count updated from 117 → 124. `srto_corpus` (pgvector), `client_audit_response_documents`, `ai_evidence_analysis_usage` tables added. See `reference/ai-audit-stack.md` for the full reference.
+> **Reflects commit:** `unicorn-cms-f09c59e5@5782860e` (2026-09-01). Full regeneration under [the optimization and KB renewal plan](../reference/codebase-optimization-plan-2026-08-28.md), superseding the 2026-05-15 revision (which itself only partially reconciled a 2026-04-30 baseline — see `git log` on this file for that history, preserved rather than described here). Generated Supabase types (`src/integrations/supabase/types.ts`) were regenerated the same day as the newest migration in this measurement (2026-08-28) — types are not stale relative to schema as of this pass.
 >
-> System design reference for Unicorn 2.0. How everything connects, where logic lives, and the constraints to respect.
-> Reconciled against the `unicorn-cms-f09c59e5` working tree — April 2026. Note: a separate Vivacity Supabase project previously shared the "Unicorn 2.0" name but had different edge functions and module scope. That sibling project is now largely superseded — this doc describes the current codebase.
+> System design reference for Unicorn 2.0. How everything connects, where logic lives, and the constraints to respect. Note: a separate Vivacity Supabase project previously shared the "Unicorn 2.0" name but had different edge functions and module scope. That sibling project is now largely superseded — this doc describes the current codebase.
 
 ---
 
@@ -110,6 +107,11 @@ Lovable (React + Vite + TS + shadcn + Tailwind — admin/consultant + client UI)
     │
     ├──► Microsoft 365 / Outlook (calendar sync, email capture, addin, SharePoint)
     ├──► ClickUp (task and time sync)
+    ├──► training.gov.au (RTO/qualification lookup + sync — `tga-*` functions)
+    ├──► Xero (invoice sync + webhook — new since the 2026-05-15 revision, see Edge functions)
+    ├──► Anthropic API — direct, bypassing the Lovable AI Gateway (`_shared/anthropic-client.ts`; Ask Viv Assistant)
+    ├──► OpenAI API — direct, for embeddings (`_shared/openai-embeddings.ts`) and `gpt-4o-mini` in `assistant-answer`
+    ├──► Lovable AI Gateway (`google/gemini-*` models — most other AI functions)
     └──► [Planned] Stripe
 ```
 
@@ -117,153 +119,52 @@ Lovable (React + Vite + TS + shadcn + Tailwind — admin/consultant + client UI)
 
 ---
 
-## Edge functions (124 live)
+## Edge functions (195 in the repository — see the deployed-vs-repository caveat below)
 
-All in [supabase/functions/](../../../supabase/functions/). Pattern: service-role Supabase client, manual caller validation, JSON response with `{ ok, code, detail }` error shape.
+All in [supabase/functions/](../../../supabase/functions/). Pattern: `requireCaller`/`requireSharedSecret` gate (see `_shared/requireCaller.ts` and `AGENTS.md → Edge Function security guardrails` — the old "manual `supabase.auth.getUser()`" pattern below in Constraints is what this superseded, not the current standard), then JSON response with `{ ok, code, detail }` error shape.
 
-**Core user/auth functions:**
+**Velocity:** 195 top-level function directories with an `index.ts`, plus `_shared/` (58 files — helpers, not deployed as functions themselves) and `_retired/` (3 stub subdirectories kept for reference, not deployed). This is up from 124 at the 2026-05-15 revision — roughly 70 net-new functions in under four months, consistent with the migration velocity below (~20% of all 1,515 migrations landed in the last two months alone). Re-measure before trusting this count if it's been more than a few weeks.
 
-| Function | Purpose |
-|---|---|
-| `invite-user` | Creates user in `auth.users` + `tenant_members`; dispatches Mailgun invite email. Validates caller is Super Admin. |
-| `resend-invite` | Resend an existing pending invite. |
-| `cancel-invite` | Cancel a pending invitation. |
-| `send-invitation-email` | Template-driven Mailgun send (invite template). |
-| ~~`admin-change-password`~~ | ~~Super Admin password change for another user (service-role).~~ **Not found in `supabase/functions/` — function may have been removed or renamed. Verify with RJ.** |
-| `delete-user` | Hard delete from `auth.users` + cleanup. |
-| `bulk-user-action` | Batch user operations. |
-| `toggle-user-status` | Enable/disable user. |
-| `update-user-profile` | Update user profile fields (name, avatar, etc.). |
-| `update-user-role` | Change `unicorn_role` for a user. |
-| `send-password-reset` / `send-self-password-reset` | Password reset emails. |
-| `send-staff-onboarding-email` | Staff onboarding flow. |
-| `provision-m365-user` | Microsoft 365 user provisioning. |
+**Repository vs. deployed — do not conflate the two.** This count is a repository count (directories under `supabase/functions/` with an `index.ts`), not a live query against the hosted Supabase project (`yxkgdalkbrriasiyyrwk`). Concrete evidence the two sets differ in both directions:
+- `supabase/config.toml` references `admin-change-password`, `invite-to-tenant`, and `run-document-job` — none of which have a matching directory in the repo today. These may be deployed-but-removed-from-repo, or stale config entries; `admin-change-password` is the same function this doc previously flagged as "not found — verify with RJ," now corroborated by the `config.toml` entry rather than resolved.
+- Five functions (`issue-token`, `consume-token`, `mark-token-used`, `invite-or-reset-user`, `create-tenant`) carry explicit header comments marking them **vendored from production** ("still ACTIVE on project `yxkgdalkbrriasiyyrwk` … vendored via `get_edge_function` on 15 Jul 2026") — reverse-engineered back into the repo from what's actually deployed, not authored from repo history. Two of those five (`invite-or-reset-user`, `create-tenant`) are further marked **orphan — no in-repo callers**: deployed and presumably still invoked by something, but nothing in the current frontend calls them.
+- `generate-client-audit-report-docx`, `generate-client-audit-report`, `repair-staff-uuids`, and `send-magic-link` are similarly marked orphan in their own header comments.
 
-**AI / intelligence functions:**
+Treat repo presence as evidence, not proof of deployment; treat repo absence as evidence, not proof of retirement.
 
-| Function | Purpose |
-|---|---|
-| `ai-generate-suggestions` | LLM-backed suggestion generator (Rocks drafts, agenda hints). |
-| `ai-orchestrator` | Central AI orchestration hub. |
-| `ai-suggest-rock` | AI-powered Rock suggestions. |
-| `academy-ai-generate` | Academy content generation. |
-| `generate-certificate-pdf` | Generates a branded A4 landscape PDF certificate from Angela's PNG template, uploads to `academy-certificates` storage bucket, and returns a signed download URL. Called from the learner certificates page on first download. |
-| `analyze-document` | Document AI analysis. |
-| `assistant-answer` / `copilot-chat` | AI assistant / copilot chat. |
-| `compliance-assistant` / `client-ai-companion` | Compliance and client-facing AI. |
-| `research-answer` / `research-scrape` | Research intelligence. |
-| `research-audit-intelligence` | Audit intelligence packs. |
-| `research-evidence-gap-check` / `research-template-gap-analysis` | Gap analysis tools. |
-| `research-enrich-tenant` / `research-public-snapshot` | Tenant enrichment. |
-| `research-tas-context` / `research-jobs` variant | TAS-specific research. |
-| `calculate-predictive-risk` / `run-tenant-risk-forecast` | Risk forecasting. |
-| `run-strategic-signal-analysis` / `strategic-orchestration` | Strategic intelligence. |
-| `query-knowledge-graph` / `vector-search` | Knowledge graph and vector search. |
-| `vector-index-rebuild` / `vector-index-update` / `vector-index-remove` | Vector index management. |
-| `chunk-document` / `scan-document` | Document processing pipeline. |
-| `extract-document-fields` | AI field extraction from documents. |
-| `generate-document` / `generate-excel-document` | Document generation. |
-| `help-center-chat` | Help center AI chat. |
+**Auth / identity / user management (~26):** `invite-user`, `resend-invite`, `cancel-invite`, `invite-or-reset-user` *(orphan)*, `send-invitation-email`, `delete-user`, `bulk-user-action`, `bulk-send-invitations`, `bulk-account-actions` (thin orchestrator over `activate-ghost-user` + `send-password-reset` — its own code comment: "NEVER reimplement the senders here"), `bulk-reassign-team-member`, `toggle-user-status`, `update-user-profile`, `update-user-role`, `update-role-permission`, `send-password-reset`, `send-self-password-reset`, `send-staff-onboarding-email`, `staff-onboarding-workbook`, `provision-m365-user`, `activate-ghost-user`, `create-tenant` *(orphan, vendored)*, `repair-staff-uuids` *(orphan — SuperAdmin sweep realigning `users.user_uuid` with `auth.users.id`)*, `unlink-email`, `set-invite-password`, `generate-recovery-link`, `reconcile-invite-delivery-status` (Mailgun Events API fallback to the `mailgun-webhook` push path), `issue-token` / `consume-token` / `mark-token-used` *(vendored, still active)*, `cohort-access-sender-worker` (staff-initiated, time-budgeted drain; calls `activate-ghost-user` + `send-password-reset` unmodified; **`pg_cron` is explicitly not permitted to invoke this function** per its own header).
 
-**AI audit stack (shipped 29–30 April 2026 — see `reference/ai-audit-stack.md`):**
+**AI / Ask Viv / intelligence (~30):** `ask-viv-assistant`, `ask-viv-assistant-client`, `embed-ask-viv-corpus`, `embed-ask-viv-documents`, `generate-ask-viv-faqs`, `ai-orchestrator`, `ai-generate-suggestions`, `ai-suggest-rock`, `academy-ai-generate`, `copilot-chat`, `compliance-assistant`, `client-ai-companion`, `assistant-answer`, `help-center-chat`, `analyze-document`, `extract-document-fields`, `extract-note-title`, `extract-suggest-title`, `chunk-document`, `scan-document`, `query-knowledge-graph`, `vector-search`, `vector-index-rebuild` / `vector-index-update` / `vector-index-remove`, `calculate-predictive-risk`, `run-tenant-risk-forecast`, `run-strategic-signal-analysis`, `strategic-orchestration`, `risk-command-engine`, `scan-risk-radar`, `run-retention-forecast`, `run-workload-forecast`, `run-workflow-optimisation`, `research-answer`, `research-scrape`, `research-audit-intelligence`, `research-evidence-gap-check`, `research-template-gap-analysis`, `research-enrich-tenant`, `research-public-snapshot`, `research-tas-context`.
 
-| Function | Purpose |
-|---|---|
-| `embed-srto-corpus` | Admin-only; PDF → chunk → `text-embedding-3-small` embed → upsert `srto_corpus`. Covers SRTO 2025, National Code 2018, ESOS Act 2000. |
-| `retrieve-srto-context` | Caller-JWT semantic search over `srto_corpus` via `match_srto_chunks()` RPC. Optional framework filter. |
-| `draft-finding` | RAG + Gemini 2.5 Pro finding draft for `at_risk`/`non_compliant` responses; 40/user/day cap; logged to `client_audit_log`. Framework-routed by `compliance_templates.framework`. |
-| `record-finding-decision` | Logs auditor's accepted/edited/rejected decision on an AI finding draft. |
-| `analyse-evidence` | RAG + Gemini 2.5 Pro analysis of linked documents against a question; 30/user/day cap; hallucination guard; persists to `client_audit_responses.ai_*`. |
-| `draft-executive-summary` | Synthesises 4-part executive narrative for a near-complete audit; 5-min cool-down/audit; discriminated-union validator; fabricated-finding-ID guard. |
-| `record-executive-summary-decision` | Logs per-field (executive_summary / overall_finding / risk_rationale) accepted/edited/rejected decisions. |
+  **New AI subsystem, not previously documented here.** `_shared/anthropic-client.ts` calls the Anthropic Messages API **directly** ("the Lovable AI Gateway does not support Anthropic/Claude models at all … this bypasses the gateway entirely, the same way `_shared/openai-embeddings.ts` already bypasses it for embeddings"), exporting `CLAUDE_SONNET_MODEL = "claude-sonnet-5"` and `CLAUDE_HAIKU_MODEL = "claude-haiku-4-5-20251001"`; used by the Ask Viv Assistant. Backed by three new `_shared/` subsystems: `ai-brain/` (confidence-scorer, context-builder, escalation-detector, fact-builder, reasoning-engine, system-prompt), `ask-viv-fact-builder/` (data-retrieval, fact-derivation, freshness, portfolio-facts, record-links, scope-inference, scope-lock — with its own tests), and `ask-viv-prompts/` (safety pipeline, compliance/global/knowledge prompts, intent classifier, gap-key-mapper, phrase-filter, quality-telemetry, response-validator-v2 — with its own tests). This **resolves** the "Anthropic models are not currently routed" open question from the 2026-05-15 revision — see Open architectural questions below.
 
-**Meetings / EOS functions:**
+  Also new: `mcp` — auto-generated by `@lovable.dev/mcp-js`, bundled from `src/lib/mcp/index.ts`; a Lovable MCP bridge, not hand-authored (don't hand-edit its `index.ts`; see `AGENTS.md` for why it's gitignored from the usual diff-review expectations).
 
-| Function | Purpose |
-|---|---|
-| `generate-meeting-recurrence` | Expand a recurrence rule into instances. |
-| `generate-meeting-summary` | Post-meeting AI summary. |
-| `generate-minutes-draft` / `generate-minutes-from-transcript` | Meeting minutes generation. |
-| `extract-copilot-minutes` | Extract minutes from Copilot transcripts. |
-| `publish-meeting-minutes` | Publish approved minutes. |
-| `create-meeting-time-drafts` / `create-tasks-from-minutes` | Meeting artifact creation. |
-| `sync-meeting-artifacts` | Sync meeting artifacts across systems. |
-| `scorecard-refresh` | EOS scorecard data refresh. |
+**AI audit stack (~14 — up from 7 at the last revision, see `reference/ai-audit-stack.md`):** the original 7 (`embed-srto-corpus`, `retrieve-srto-context`, `draft-finding`, `record-finding-decision`, `analyse-evidence`, `draft-executive-summary`, `record-executive-summary-decision`) plus `create-client-audit`, `delete-incomplete-audit`, `generate-client-audit-report`, `generate-client-audit-report-docx` *(orphan)*, `record-completed-audit`, `release-audit-report`, `export-pdp-audit-pack`. **This resolves module-status.md's previous "no dedicated audit edge function" note** — `create-client-audit` was flagged there as reverted the same day it shipped; it's back, and the surface has grown since.
 
-**Outlook / Microsoft 365 integration:**
+**Meetings / EOS (~12):** `generate-meeting-recurrence`, `generate-meeting-summary`, `generate-minutes-draft`, `generate-minutes-from-transcript`, `extract-copilot-minutes`, `publish-meeting-minutes`, `create-meeting-time-drafts`, `create-tasks-from-minutes`, `sync-meeting-artifacts`, `scorecard-refresh`, `summarize-daily-notes`, `generate-email-note`.
 
-| Function | Purpose |
-|---|---|
-| `outlook-auth` | Outlook OAuth flow. |
-| `sync-outlook-calendar` | Calendar sync. |
-| `outlook-time-draft-worker` | Time draft worker. |
-| `capture-outlook-email` / `addin-email-capture` | Outlook addin email capture. |
-| `addin-auth-exchange` / `addin-diagnostics-usage` | Outlook addin auth and diagnostics. |
-| `addin-email-create-task` / `addin-email-link-attachments` | Addin task/attachment management. |
-| `addin-meeting-capture` / `addin-meeting-create-time-draft` | Addin meeting capture. |
-| `send-email-graph` / `send-composed-email` | Email sending via Microsoft Graph. |
-| `send-stage-email` | Stage-triggered emails. |
+**Outlook / Microsoft 365 / addin (~18):** `outlook-auth`, `sync-outlook-calendar`, `sync-outlook-calendar-cron`, `outlook-time-draft-worker`, `capture-outlook-email`, `addin-email-capture`, `addin-auth-exchange`, `addin-diagnostics-usage`, `addin-email-create-task`, `addin-email-link-attachments`, `addin-meeting-capture`, `addin-meeting-create-time-draft`, `send-email-graph`, `send-composed-email`, `send-stage-email`, `get-message-attachment-url`, `upload-message-attachment`, `handle-email-intake` (Email Triage intake — server-to-server from Power Automate, auth via constant-time `x-intake-secret` compare, no JWT), `kpi-email-log-sync` (pulls the caller's Outlook Inbox + Sent Items, upserts `kpi_email_log`, computes `response_minutes` per conversation).
 
-**SharePoint functions:**
+**SharePoint (~12):** `browse-sharepoint-folder`, `import-sharepoint-template`, `link-sharepoint-document`, `provision-tenant-sharepoint-folder`, `resolve-tenant-folder`, `validate-sharepoint-root-folder`, `deliver-governance-document`, `verify-compliance-folder`, `check-tenant-sharepoint-liveness`, `get-sharepoint-parent-folder`, `resolve-sharepoint-folder-url`, `upload-sharepoint-file`.
 
-| Function | Purpose |
-|---|---|
-| `browse-sharepoint-folder` | Browse SharePoint folders. |
-| `import-sharepoint-template` | Import document templates from SharePoint. |
-| `link-sharepoint-document` | Link documents to SharePoint. |
-| `provision-tenant-sharepoint-folder` | Provision tenant folder structure. |
-| `resolve-tenant-folder` | Resolve tenant SharePoint path. |
-| `validate-sharepoint-root-folder` | Validate root folder config. |
-| `deliver-governance-document` | Deliver governance docs. |
+**training.gov.au / TGA (9):** `search-organisations`, `get-organisation-details`, `tga-integration`, `tga-sync`, `tga-fetch-scope`, `tga-rto-import`, `tga-rto-preview`, `tga-rto-sync`, `tga-search-training` (**`tga-product-lookup` from the last revision no longer exists under that name**).
 
-**TGA / RTO integration:**
+**Package / lifecycle (3):** `add-missing-packages`, `run-stage-health-monitor`, `tenant-lifecycle`. **`calculate-phase-completeness` no longer exists** — removed or renamed since the last revision; verify with RJ before assuming its function moved elsewhere.
 
-| Function | Purpose |
-|---|---|
-| `search-organisations` / `get-organisation-details` | Lookup against training.gov.au. |
-| `tga-integration` / `tga-sync` / `tga-fetch-scope` | TGA data sync. |
-| `tga-product-lookup` / `tga-rto-import` / `tga-rto-preview` / `tga-rto-sync` | RTO product management. |
+**ClickUp (5):** `sync-clickup-tasks`, `sync-clickup-time`, `fetch-clickup-comments`, `import-clickup-csv`, `clickup-ai-search`.
 
-**Compliance / audit functions:**
+**Xero — new integration, absent from every prior revision (5):** `xero-auth`, `xero-invoice-list`, `xero-invoice-status`, `xero-invoice-sync-all`, `xero-webhook`. **Confirm which Vivacity/ComplyHub Xero account this integration targets before referencing it in any client- or entity-facing content** — the org runs two legally separate ABNs with separate Xero accounts (see the org's routing rules), and this doc doesn't currently record which one is wired up.
 
-| Function | Purpose |
-|---|---|
-| `export-compliance-pack` / `export-client-timeline-pdf` | Compliance pack export. |
-| `generate-pack` / `generate-release-documents` | Document pack generation. |
-| `generate-staff-checklist` | Staff checklist generation. |
-| `bulk-generate-phase-documents` | Bulk document generation for phases. |
-| `regulator-watch-check` | Regulator monitoring. |
+**Documents / generation / bulk (~14):** `generate-document`, `generate-document-description`, `generate-excel-document`, `generate-pack`, `generate-release-documents`, `generate-staff-checklist`, `bulk-generate-phase-documents`, `bulk-generate-documents-launcher`, `bulk-generate-documents-resume-stalled`, `bulk-generate-documents-worker`, `upload-portal-document`, `generate-membership-certificate`, `generate-certificate-pdf` (branded A4 landscape PDF from Angela's PNG template, uploaded to the `academy-certificates` bucket, signed URL returned), `export-client-timeline-pdf`, `export-compliance-pack`.
 
-**Package / lifecycle functions:**
+**Email / notifications / campaigns (~22):** `notify-chat`, `notify-action-shared`, `notify-merge-fields-updated`, `notify-suggestion-submitted`, `generate-notifications`, `process-notification-outbox`, `process-notification-queue`, `mailgun-send`, `mailgun-webhook`, `send-mailgun-template`, `send-broadcast-campaign`, `send-automated-email` (**both of these resolve module-status.md's previous "not yet confirmed" note for the campaign builder / automated-email dispatcher**), `send-email`, `send-enhanced-email`, `send-notification-email`, `send-test-email`, `send-magic-link` *(orphan)*, `send-action-item-due-reminders`.
 
-| Function | Purpose |
-|---|---|
-| `add-missing-packages` | Ensure all tenants have the default package set. |
-| `calculate-phase-completeness` | Phase completion calculation. |
-| `run-stage-health-monitor` | Stage health monitoring. |
-| `tenant-lifecycle` | Tenant lifecycle management. |
+**Unicorn 1.0 migration (3, unchanged):** `import-unicorn1-client`, `lookup-unicorn1-client`, `search-unicorn1-users`.
 
-**ClickUp integration:**
+**Academy / admin / misc ops (~8):** `academy-backfill-course-thumbnails`, `academy-fetch-vimeo-transcript`, `academy-import-vimeo-showcase`, `backfill-vimeo-durations`, `pdp-auto-evidence`, `regulator-watch-check`, `dashboard-test-seed`.
 
-| Function | Purpose |
-|---|---|
-| `sync-clickup-tasks` / `sync-clickup-time` | ClickUp sync. |
-| `fetch-clickup-comments` / `import-clickup-csv` | ClickUp data import. |
-| `clickup-ai-search` | AI-powered ClickUp search. |
-
-**Other:**
-
-| Function | Purpose |
-|---|---|
-| `notify-chat` | Outbound chat/webhook notifications. |
-| `generate-notifications` / `process-notification-outbox` | Notification pipeline. |
-| `import-unicorn1-client` / `lookup-unicorn1-client` / `search-unicorn1-users` | Unicorn 1.0 migration. |
-| `run-retention-forecast` / `run-workload-forecast` / `run-workflow-optimisation` | Operational forecasting. |
-| `risk-command-engine` / `scan-risk-radar` | Risk management. |
-| `extract-note-title` / `extract-suggest-title` | AI-assisted title extraction for notes and suggestions. |
-| `verify-compliance-folder` | Verify compliance folder structure (SharePoint-adjacent). |
-| `dashboard-test-seed` | Test data seeding. |
-| `_shared/*` | Shared utilities (CORS, auth helpers, etc.). |
+**`_shared/` (58 files)** is a much richer, security-hardening-focused layer than function counts alone suggest — beyond CORS/auth basics (`auth-helpers.ts`, `admin-authorization.ts`, `addin-auth.ts`, `supabase-client.ts`, `response-helpers.ts`, `cors.ts`, `escape-html.ts`), it now includes `requireCaller.ts` (+ helpers, docs, and its own test coverage — the canonical caller gate, see Constraints below), `webhook-signature.ts`, `safe-fetch-url.ts`, `safe-redirect-path.ts`, `oauth-redirects.ts`, `oauth-states.ts`, `password-reset-rate-limit.ts`, `app-base-url.ts` / `app-base-url-parse.ts` (+ an open-redirect regression test), `users-write-allowlist.ts`, `cron-auth.ts` / `cron-invoke-auth.ts`, `drive-root.ts`, Microsoft Graph clients (`graph-client.ts`, `graph-app-client.ts`, `microsoft-scopes.ts`), email helpers (`email-merge.ts`, `email-urls.ts`), and the AI/vector helpers already described above (`openai-embeddings.ts`, `anthropic-client.ts`, `vector-helpers.ts`). Most of the security-hardening helpers carry adjacent `.test.mjs`/`.test.ts` coverage — see `AGENTS.md`'s Edge Function test-inventory notes (P0.2) for which harness actually runs them.
 
 ---
 
@@ -276,7 +177,7 @@ Every tenant-scoped row carries `tenant_id: int`. Tenant `6372` is Vivacity (sta
 | Table | Purpose | Role values | Key columns |
 |---|---|---|---|
 | `tenant_members` | Platform RBAC — who has active access to the Unicorn platform for a given tenant | `Admin` / `General User` | `status` (active/inactive/pending), `invited_at`, `joined_at` |
-| `tenant_users` | Client-side contacts — users associated with a client RTO tenant, and their contact role | `parent` (can manage) / `child` (read-only) | `primary_contact` bool, `secondary_contact` bool (auto-set by trigger) |
+| `tenant_users` | Client-side contacts — users associated with a client RTO tenant, and their contact role | `parent` (can manage) / `child` (read-only) | `relationship_role` (text, FK to `dd_relationship_role.value`: `primary_contact`/`secondary_contact`/`user`/`academy_user` — **not** separate booleans; the old `primary_contact`/`secondary_contact` boolean columns were superseded by migration `20260518023538_*` , Phase 4C) |
 
 `tenant_members` is the table used by RLS policies and auth checks (see ritual below). `tenant_users` is the operational table for invite-user, email delivery, document generation, and M365 provisioning. `useClientActingUser.ts` queries `tenant_users` first (primary contact), then falls back to `tenant_members` (Admin role) — confirming the two tables are complementary, not redundant.
 
@@ -322,7 +223,7 @@ Diagnostics reference: [docs/INVITE_USER_DIAGNOSTICS.md](../../../docs/INVITE_US
 
 ## Frontend (src/)
 
-- **Pages** (`src/pages/`, ~247 files) — 180 top-level + 67 in subdirectories (`academy/`, `addin/`, `admin/`, `client/`, `internal/`, `superadmin/`, `teams/`). Many pages have `*Wrapper` variants that handle layout/auth boilerplate around the core page. When in doubt, the `Wrapper` is what `App.tsx` mounts.
+- **Pages** (`src/pages/`, 289 files, counted directly): 185 top-level + 54 in `client/` + 28 in `admin/` (26 flat + `admin/ai-insights/` (5, backs the `/admin/ai-insights` AI Drafting Insights dashboard) + `admin/settings/` (1, `ReportingObligations.tsx` — new, undocumented until this pass)) + 11 in `superadmin/` (all Academy Builder pages) + 8 in `academy/` (5 flat + 3 in `academy/pdp/`) + 1 each in `addin/`, `internal/`, `teams/`. **Academy content is scattered across three top-level locations** (`academy/`, several `Academy*` files inside `client/`, and all of `superadmin/`) — add them up before citing a single "Academy page count." Many pages have `*Wrapper` variants that handle layout/auth boilerplate around the core page; when in doubt, the `Wrapper` is what `App.tsx` mounts (see `scripts/generate-route-manifest.mjs`'s `lazy`/`importSource` fields to check any specific route).
 - **Components** (`src/components/`):
   - `ui/` — shadcn-ui primitives
   - `layout/` — nav, sidebar, header
@@ -330,10 +231,12 @@ Diagnostics reference: [docs/INVITE_USER_DIAGNOSTICS.md](../../../docs/INVITE_US
   - `eos/` — the EOS module (largest subtree): rocks, issues, todos, scorecard, V/TO editor, meeting controls, live meeting view, QC scheduler, accountability chart. Subdirs `client/` (client-facing) and `qc/` (quarterly conversations).
   - `audit/` — audit inspection dialogs and workspace pieces
   - `dashboard/` — stats, charts
+  - `ask-viv/` — client Ask Viv panel (`ClientAskVivPanel.tsx`) and staff equivalents
   - `profile/`, `tenant/`
-- **Contexts** (`src/contexts/ViewModeContext.tsx`) — view-mode switcher (e.g., admin vs. client view).
-- **Hooks** (`src/hooks/`) — ~230 top-level items + academy/ subdirectory (~9 hooks), ≈238 total. Domain clusters include EOS, Audits, Academy (`src/hooks/academy/`), plus `useAuth`, `useMobile`, `useToast`, `useAISuggestions`, `useNotifications`, `useDashboardData`, and more.
-- **Integrations** (`src/integrations/supabase/client.ts`) — the Supabase JS client singleton.
+- **Contexts** (`src/contexts/`) — `ViewModeContext.tsx` (admin vs. client view), `ClientPreviewContext.tsx`, `ClientTenantContext.tsx`, `PageTitleContext.tsx`, `TenantTypeContext.tsx`.
+- **Features** (`src/features/`) — **new top-level directory since the 2026-05-15 revision**, not previously documented here. Currently one feature module, `src/features/pdp/` (Academy PDP — types, API helpers, hooks, workforce queries; components in its own `components/` subdir), structured differently from the flat `pages/`+`hooks/`+`components/` split everywhere else. This looks like an emerging feature-module convention (the "Lifecycle Checklists pilot" the optimization plan discusses would follow the same shape) — watch for more `src/features/<name>/` directories appearing, and note this pattern explicitly if/when a second one lands.
+- **Hooks** (`src/hooks/`) — 296 files (confirmed exact match against the optimization plan's own count). Domain clusters include EOS, Audits, Academy (`src/hooks/academy/`), plus `useAuth`, `useMobile`, `useToast`, `useAISuggestions`, `useNotifications`, `useDashboardData`, and more.
+- **Integrations** (`src/integrations/supabase/client.ts`) — the Supabase JS client singleton; `src/integrations/supabase/types.ts` — generated types, 73,463 lines, regenerated 2026-08-28 (same day as the newest migration in this pass — not stale relative to schema as of this measurement).
 - **Types** (`src/types/audit.ts`, `eos.ts`, `qc.ts`) — domain types.
 
 ---
@@ -368,7 +271,9 @@ Historical Vivacity docs list five audit-specific storage buckets by name — th
 | Outlook calendar | ✅ Live via `sync-outlook-calendar`, `outlook-auth`, addin functions. |
 | SharePoint | ✅ Live via multiple SharePoint edge functions (browse, import, link, provision). |
 | ClickUp | ✅ Live via `sync-clickup-tasks`, `sync-clickup-time`, `import-clickup-csv`. |
-| Scheduled jobs (pg_cron) | ✅ Deployed. `pg_cron` extension enabled in migration `20260209232822`. One scheduled job confirmed: `seed-compliance-tasks-nightly` runs `run_seed_compliance_tasks_job()` at `0 2 * * *` (2am daily). |
+| training.gov.au | ✅ Live via `tga-sync`, `tga-rto-sync`, `tga-search-training`, and related `tga-*` functions. |
+| Xero | ✅ Live via `xero-auth`, `xero-invoice-sync-all`, `xero-webhook` — **new since the 2026-05-15 revision**; which Vivacity/ComplyHub entity's Xero account this targets isn't recorded here yet, confirm before referencing in entity-facing content. |
+| Scheduled jobs (pg_cron) | ✅ Deployed. `pg_cron` extension enabled in migration `20260209232822`. One scheduled job confirmed: `seed-compliance-tasks-nightly` runs `run_seed_compliance_tasks_job()` at `0 2 * * *` (2am daily). A second cron surface exists via `sync-outlook-calendar-cron` (a dedicated cron variant of `sync-outlook-calendar`) — its own schedule not independently confirmed in this pass. |
 | Stripe | Not wired. No subscription tables, no webhook handlers confirmed. |
 
 ---
@@ -378,7 +283,7 @@ Historical Vivacity docs list five audit-specific storage buckets by name — th
 1. **AI logic → server-side only** (Edge Functions or n8n). Never frontend. API keys must not leak.
 2. **New tables → three-step RLS ritual** (tenant-read SELECT + staff ALL + `ENABLE ROW LEVEL SECURITY`). Omitting any step is a silent failure.
 3. **Lovable → UI layer only.** No schema decisions, no business logic. If Lovable scaffolds a table, remove it before migration.
-4. **Service-role edge functions validate the caller manually.** Always `supabase.auth.getUser(callerToken)` then check `unicorn_role` + `tenant_id`.
+4. **Service-role edge functions gate through the shared `requireCaller` helper** (`supabase/functions/_shared/requireCaller.ts`), not a hand-rolled `supabase.auth.getUser()` + manual `unicorn_role`/`tenant_id` check — see `pinned/conventions.md` for the current pattern and `AGENTS.md → Edge Function security guardrails` for the full new-function checklist.
 5. **NOT NULL columns with frontend writes → add a coercion trigger.** Column defaults do not protect against explicit `NULL` values sent by Lovable-generated forms.
 6. **Tenant 6372 is Vivacity** — hardcoded constant (`VIVACITY_TENANT_ID = 6372`) in `invite-user/index.ts` and exported from `useVivacityTeamUsers.tsx`. If this changes, grep `6372` across the repo.
 7. **Multi-tenant defaults.** Every domain query should filter by `tenant_id`. Cross-tenant access is Vivacity-staff-only and goes through `is_vivacity()`.
@@ -390,6 +295,8 @@ Historical Vivacity docs list five audit-specific storage buckets by name — th
 Track these in [decisions.md → Open Decisions](../pinned/decisions.md#open-decisions). Highlights:
 
 - **Stripe webhooks** — Edge Function or n8n? Subscriptions still not wired.
-- **LLM providers (partially resolved):** Primary gateway: `https://ai.gateway.lovable.dev/v1/chat/completions` with `LOVABLE_API_KEY`. AI audit stack uses `google/gemini-2.5-pro`; corpus embeddings use `text-embedding-3-small` — both via the Lovable AI Gateway. Legacy functions (`ai-orchestrator`, `compliance-assistant`, etc.) use `google/gemini-2.5-flash` / `google/gemini-3-flash-preview` via the same gateway. Secondary: Direct OpenAI `gpt-4o-mini` in `assistant-answer` with `OPENAI_API_KEY`. Note: Anthropic models are not currently routed by the Lovable AI Gateway — an Anthropic key + direct API call would be required to use Claude in any edge function. Prompt ownership and orchestration routing for legacy functions are still undocumented — flag to RJ.
+- **LLM providers (resolved for Anthropic, otherwise unchanged):** Primary gateway: `https://ai.gateway.lovable.dev/v1/chat/completions` with `LOVABLE_API_KEY`. AI audit stack uses `google/gemini-2.5-pro`; corpus embeddings use `text-embedding-3-small` — both via the Lovable AI Gateway. Legacy functions (`ai-orchestrator`, `compliance-assistant`, etc.) use `google/gemini-2.5-flash` / `google/gemini-3-flash-preview` via the same gateway. Direct OpenAI `gpt-4o-mini` in `assistant-answer` with `OPENAI_API_KEY`. **Resolved:** Anthropic/Claude models are used, via a direct API call in `_shared/anthropic-client.ts` (`claude-sonnet-5`, `claude-haiku-4-5-20251001`) — the Lovable AI Gateway genuinely doesn't support Anthropic, so this bypasses it deliberately, the same way embeddings already bypass it. Prompt ownership and orchestration routing for the legacy Gemini-based functions are still undocumented — flag to RJ.
 - **Lovable environments** — dev / staging / prod separation is not documented.
-- **AI orchestrator scope** — `ai-orchestrator` is a central hub; how is routing and model selection configured?
+- **AI orchestrator scope** — `ai-orchestrator` is a central hub; how is routing and model selection configured, and how does it relate to the newer `ask-viv-assistant`/`_shared/ai-brain/` subsystem — are they on a convergence path, or two independent AI surfaces? Not established in this pass.
+- **Xero entity mapping** — which of the two ABNs (Vivacity Coaching & Consulting vs. ComplyHub.ai) does the current `xero-*` integration authenticate against? Not recorded anywhere in this repo as of this pass; confirm before any client- or entity-facing use.
+- **`admin-change-password` / `invite-to-tenant` / `run-document-job`** — referenced in `supabase/config.toml` with no matching function directory in the repo. Deployed-but-repo-deleted, or stale config? Needs a live deployed-function list (Supabase MCP) to resolve, not available in this pass.
