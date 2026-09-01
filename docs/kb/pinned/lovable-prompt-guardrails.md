@@ -38,11 +38,24 @@ Full procedure in `handoffs/lovable-production-db-change.md`. Summary:
 
 ---
 
+## 4. Client Portal / Academy new-page guardrail — mandatory for any new page under `/client/*` or `/academy/*`
+
+Full detail in `docs/route-composition-conventions.md` (code-adjacent — Lovable reads it directly; this is the prompt-writing summary, not a substitute for reading it once).
+
+Include this block in any prompt adding a new Client Portal or Academy page (e.g. "add a new page like Regulatory Updates" or "add a new tab to the client dashboard"):
+
+> **Route composition:** Add this page as a child `<Route>` in the existing nested layout route in `src/routes/clientRoutes.tsx` (for `/client/*`) or `src/routes/academyRoutes.tsx` (for `/academy/*`) — do not create a new file that imports `ClientLayout` or `AcademyLayout` and wraps the page in it yourself. The page component itself should contain only its own content, no layout/sidebar/topbar markup. See `docs/route-composition-conventions.md` for why and for the canonical example.
+
+**Why:** Every Client Portal/Academy page used to mount its own copy of the shared layout via a dedicated wrapper file. That forced the whole layout — sidebar state, a live Supabase realtime channel, the Ask Viv chat panel, a tenant/access check — to fully remount on every navigation between pages, which was fixed 2026-09-01 by moving to one shared, persistent layout per portal. A Lovable prompt that doesn't know this will naturally reach for the old wrapper pattern (it's simpler to generate in isolation) and silently reintroduce full-layout remounts for every page in that portal, not just the new one.
+
+---
+
 ## Guardrail selection reference
 
 | Prompt type | Guardrails to apply |
 |---|---|
 | New page or component | 1 (Design) |
+| New page under `/client/*` or `/academy/*` specifically | 1 + 4 |
 | Modifying an existing page | 1 (Design) |
 | Any Supabase query, hook, or pagination change | 1 + 2 |
 | Migration, constraint, RLS, trigger, enum, or backfill | 1 + 2 + 3 |

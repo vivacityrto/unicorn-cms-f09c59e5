@@ -21,6 +21,7 @@ import { DevDiagnosticsPanel } from "./components/DevDiagnosticsPanel";
 import { CelebrationProvider } from "./components/ui/celebration";
 import { supportTicketsRoutes } from "./routes/supportTicketsRoutes";
 import { academyLayoutRoutes } from "./routes/academyRoutes";
+import { clientLayoutRoutes } from "./routes/clientRoutes";
 
 // Non-SuperAdmin roles allowed on Academy Builder admin routes (SuperAdmin is always allowed by ProtectedRoute).
 const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"];
@@ -215,31 +216,11 @@ const AcademyPdpReviewsPage = lazy(() => import("./pages/academy/pdp/reviews"));
 // Client Preview pages
 const ClientPreview = lazy(() => import("./pages/ClientPreview"));
 
-const ClientCalendarWrapperLegacy = lazy(() => import("./pages/ClientCalendarWrapper"));
 // ClientNotificationsWrapperLegacy removed — /client/notifications now redirects to /client/inbox?tab=notifications
 
 // Client Portal pages (isolated layout)
-const ClientHomeWrapperNew = lazy(() => import("./pages/client/ClientHomeWrapper"));
-const ClientGovernanceDocumentsWrapperNew = lazy(() => import("./pages/client/ClientGovernanceDocumentsWrapper"));
-const ClientResourceHubWrapperNew = lazy(() => import("./pages/client/ClientResourceHubWrapper"));
-const ClientCalendarWrapperNew = lazy(() => import("./pages/client/ClientCalendarWrapper"));
 // ClientNotificationsWrapperNew removed — consolidated into ClientInboxPage
-const ClientReportsWrapperNew = lazy(() => import("./pages/client/ClientReportsWrapper"));
-const RegulatoryUpdatesWrapper = lazy(() => import("./pages/client/RegulatoryUpdatesWrapper"));
-const RegulatoryUpdateDetailWrapper = lazy(() => import("./pages/client/RegulatoryUpdateDetailWrapper"));
-const ClientUsersWrapperNew = lazy(() => import("./pages/client/ClientUsersWrapper"));
-const ClientSettingsWrapperNew = lazy(() => import("./pages/client/ClientSettingsWrapper"));
-const ClientTeamWrapperNew = lazy(() => import("./pages/client/ClientTeamWrapper"));
-const ClientProfileWrapperNew = lazy(() => import("./pages/client/ClientProfileWrapper"));
-const ClientTgaDetailsWrapperNew = lazy(() => import("./pages/client/ClientTgaDetailsWrapper"));
-const ClientFilesWrapperNew = lazy(() => import("./pages/client/ClientFilesWrapper"));
-const ClientTasksWrapperNew = lazy(() => import("./pages/client/ClientTasksWrapper"));
-const ClientCertificateWrapper = lazy(() => import("./pages/client/ClientCertificateWrapper"));
 // ClientCommunicationsWrapperNew removed — consolidated into ClientInboxPage
-const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
-const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
-const StaffPdpsWrapperNew = lazy(() => import("./pages/client/StaffPdpsWrapper"));
-const AcademyActivityWrapperNew = lazy(() => import("./pages/client/AcademyActivityWrapper"));
 const TeamInboxWrapper = lazy(() => import("./pages/TeamInboxWrapper"));
 const EmailTriageWrapper = lazy(() => import("./pages/EmailTriageWrapper"));
 const queryClient = new QueryClient({
@@ -1143,29 +1124,11 @@ const App = () => (
             <Route path="/client-preview" element={<ProtectedRoute><ClientPreview /></ProtectedRoute>} />
             
             {/* Client Portal Routes (isolated ClientLayout) */}
-            <Route path="/client/home" element={<ProtectedRoute><ClientHomeWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/inbox" element={<ProtectedRoute><ClientInboxWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/tasks" element={<ProtectedRoute><ClientTasksWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/packages" element={<ProtectedRoute><ClientPackagesWrapperNew /></ProtectedRoute>} />
             <Route path="/client/communications" element={<Navigate to="/client/inbox?tab=messages" replace />} />
-            <Route path="/client/governance-documents" element={<ProtectedRoute><ClientGovernanceDocumentsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/documents" element={<Navigate to="/client/governance-documents" replace />} />
-            <Route path="/client/resource-hub" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/resource-hub/:categoryId" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/calendar" element={<ProtectedRoute><ClientCalendarWrapperNew /></ProtectedRoute>} />
             <Route path="/client/notifications" element={<Navigate to="/client/inbox?tab=notifications" replace />} />
-            <Route path="/client/reports" element={<ProtectedRoute><ClientReportsWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/regulatory-updates" element={<ProtectedRoute><RegulatoryUpdatesWrapper /></ProtectedRoute>} />
-            <Route path="/client/regulatory-updates/:eventId" element={<ProtectedRoute><RegulatoryUpdateDetailWrapper /></ProtectedRoute>} />
-            <Route path="/client/users" element={<ProtectedRoute><ClientUsersWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/staff-pdps" element={<ProtectedRoute><StaffPdpsWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/academy-activity" element={<ProtectedRoute><AcademyActivityWrapperNew /></ProtectedRoute>} />
             <Route path="/client/team" element={<Navigate to="/client/users" replace />} />
-            <Route path="/client/settings" element={<ProtectedRoute><ClientSettingsWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/profile" element={<ProtectedRoute><ClientProfileWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/tga" element={<ProtectedRoute><ClientTgaDetailsWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/files" element={<ProtectedRoute><ClientFilesWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/certificate" element={<ProtectedRoute><ClientCertificateWrapper /></ProtectedRoute>} />
+            {clientLayoutRoutes}
             {academyLayoutRoutes}
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}

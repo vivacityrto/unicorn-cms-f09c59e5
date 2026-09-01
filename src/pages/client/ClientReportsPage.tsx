@@ -1,15 +1,13 @@
-import { ClientLayout } from "@/components/layout/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, AlertTriangle, Sparkles } from "lucide-react";
 import { useReleasedAudits } from "@/hooks/useReleasedAudits";
 import { ReleasedAuditCard } from "@/components/client/ReleasedAuditCard";
 
-export default function ClientReportsWrapper() {
+export default function ClientReportsPage() {
   const { data, isLoading, error } = useReleasedAudits();
 
   return (
-    <ClientLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-secondary">Reports</h1>
@@ -89,6 +87,5 @@ export default function ClientReportsWrapper() {
           </CardContent>
         </Card>
       </div>
-    </ClientLayout>
   );
 }

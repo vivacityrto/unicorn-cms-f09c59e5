@@ -1,11 +1,10 @@
 /**
- * RegulatoryUpdatesWrapper – client-portal list of regulator change events.
+ * RegulatoryUpdatesPage – client-portal list of regulator change events.
  * Read-only mirror of the SuperAdmin Regulator Change Watch feature.
  */
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ClientLayout } from "@/components/layout/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,7 +28,21 @@ function stripMarkdown(md: string): string {
     .trim();
 }
 
-export default function RegulatoryUpdatesWrapper() {
+interface RegulatorWatchlist {
+  name: string | null;
+  url: string | null;
+  category: string | null;
+}
+
+interface RegulatorChangeEventSummary {
+  id: string;
+  detected_at: string | null;
+  impact_level: string | null;
+  change_summary_md: string | null;
+  regulator_watchlist: RegulatorWatchlist | null;
+}
+
+export default function RegulatoryUpdatesPage() {
   const navigate = useNavigate();
 
   const { data, isLoading, error } = useQuery({
@@ -40,12 +53,11 @@ export default function RegulatoryUpdatesWrapper() {
         .select(`*, regulator_watchlist(name, url, category)`)
         .order("detected_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as any[];
+      return (data || []) as unknown as RegulatorChangeEventSummary[];
     },
   });
 
   return (
-    <ClientLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-secondary">Regulatory Updates</h1>
@@ -94,7 +106,7 @@ export default function RegulatoryUpdatesWrapper() {
         {!isLoading && !error && (data?.length ?? 0) > 0 && (
           <div className="space-y-4">
             {data!.map((event) => {
-              const wl = event.regulator_watchlist as any;
+              const wl = event.regulator_watchlist;
               const excerpt = event.change_summary_md
                 ? stripMarkdown(event.change_summary_md).slice(0, 200)
                 : null;
@@ -151,6 +163,5 @@ export default function RegulatoryUpdatesWrapper() {
           </div>
         )}
       </div>
-    </ClientLayout>
   );
 }
