@@ -15,9 +15,10 @@ interface Props {
   value: string | null;
   onSelect: (url: string) => void;
   onDelete?: (item: AcademyThumbnailLibraryItem) => Promise<void>;
+  onChangeSource?: (item: AcademyThumbnailLibraryItem) => void;
 }
 
-export default function ThumbnailLibraryPicker({ category, items, value, onSelect, onDelete }: Props) {
+export default function ThumbnailLibraryPicker({ category, items, value, onSelect, onDelete, onChangeSource }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<AcademyThumbnailLibraryItem | null>(null);
@@ -86,9 +87,45 @@ export default function ThumbnailLibraryPicker({ category, items, value, onSelec
             <AlertDialogHeader>
               <AlertDialogTitle>Delete this library image?</AlertDialogTitle>
               <AlertDialogDescription>
-                This removes the {label} image reference from every course using it and deletes the Storage file when no other thumbnail reference remains. This cannot be undone.
+                This removes the {label} image reference from the source course and deletes the Storage file only when no other course references it. Other linked courses will keep their image.
               </AlertDialogDescription>
             </AlertDialogHeader>
+            {deleteTarget && (
+              <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Linked courses ({deleteTarget.linkedCourses.length})
+                </p>
+                <div className="max-h-40 space-y-1 overflow-y-auto">
+                  {deleteTarget.linkedCourses.map((course) => (
+                    <div key={course.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="truncate">{course.title}</span>
+                      {course.id === deleteTarget.sourceCourseId && (
+                        <span className="shrink-0 text-[11px] text-muted-foreground">Source</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {onChangeSource && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={isDeleting}
+                    onClick={() => {
+                      onChangeSource(deleteTarget);
+                      setDeleteTarget(null);
+                      setOpen(false);
+                    }}
+                  >
+                    Change source course
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Change the source course first if you want to replace its image while preserving the other linked courses.
+                </p>
+              </div>
+            )}
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
               <AlertDialogAction

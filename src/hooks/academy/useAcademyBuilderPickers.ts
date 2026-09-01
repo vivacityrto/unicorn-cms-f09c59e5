@@ -24,6 +24,7 @@ export type AcademyThumbnailLibraryItem = {
   category: "course" | "banner";
   sourceCourseId: number;
   sourceCourseTitle: string;
+  linkedCourses: Array<{ id: number; title: string }>;
 };
 
 /** Returns distinct custom-uploaded Academy thumbnails already referenced by courses. */
@@ -37,6 +38,7 @@ export function useAcademyThumbnailLibrary() {
         .order("title");
       if (error) throw error;
 
+      const courseById = new Map((data ?? []).map((course) => [course.id, course]));
       const items = new Map<string, AcademyThumbnailLibraryItem>();
       for (const course of data ?? []) {
         const entries = [
@@ -46,12 +48,20 @@ export function useAcademyThumbnailLibrary() {
         for (const [category, url] of entries) {
           if (!url || !url.includes("/storage/v1/object/public/academy-thumbnails/")) continue;
           const key = `${category}:${url}`;
-          if (!items.has(key)) {
+          const existing = items.get(key);
+          if (existing) {
+            if (!existing.linkedCourses.some((linkedCourse) => linkedCourse.id === course.id)) {
+              existing.linkedCourses.push({ id: course.id, title: course.title });
+            }
+          } else {
+            const pathCourseId = Number(url.match(/\/courses\/(\d+)\//)?.[1]);
+            const sourceCourse = courseById.get(pathCourseId) ?? course;
             items.set(key, {
               url,
               category,
-              sourceCourseId: course.id,
-              sourceCourseTitle: course.title,
+              sourceCourseId: sourceCourse.id,
+              sourceCourseTitle: sourceCourse.title,
+              linkedCourses: [{ id: course.id, title: course.title }],
             });
           }
         }
