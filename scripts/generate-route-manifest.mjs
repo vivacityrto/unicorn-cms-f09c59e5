@@ -172,6 +172,37 @@ function resolveElement(exprNode) {
 
 // --- route extraction --------------------------------------------------
 
+// True if this <Route>...</Route> has one or more nested <Route> JSX
+// children (React Router's "layout route" pattern: <Route path="/x"
+// element={<Layout/>}><Route index .../><Route path="y" .../></Route>).
+// A route shaped like this is not itself independently navigable -- its
+// own `element` only ever renders via a child's <Outlet/>, and its actual
+// navigable path(s) come from its children (including its own path, via an
+// `index` child) -- so it's excluded from the emitted route list, but its
+// path and effective guard chain still become the base context for
+// composing/prepending onto its children below.
+function hasNestedRouteChildren(node) {
+  if (!ts.isJsxElement(node)) return false;
+  for (const child of node.children) {
+    if ((ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)) && jsxTagName(child) === "Route") {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Composes a nested <Route>'s own `path`/`index` against its parent
+// layout-route's already-composed path, matching React Router v6 nesting
+// semantics: an `index` child inherits the parent's exact path; an
+// absolute child path (leading "/") overrides the parent entirely; anything
+// else is a relative segment appended under the parent.
+function composePath(parentPath, ownPath) {
+  if (ownPath === "(index)") return parentPath;
+  if (ownPath.startsWith("/")) return ownPath;
+  if (!parentPath) return `/${ownPath}`;
+  return `${parentPath.replace(/\/$/, "")}/${ownPath}`;
+}
+
 function extractRoutesFromFile(absPath) {
   const text = readFileSync(absPath, "utf8");
   if (!text.includes("<Route")) return [];
@@ -180,11 +211,13 @@ function extractRoutesFromFile(absPath) {
   const imports = collectImportSources(sourceFile);
   const routes = [];
 
-  function visit(node) {
+  // ctx carries the composed path/guard chain/guard props inherited from
+  // any enclosing layout-route parent(s); {} at the document root.
+  function visit(node, ctx) {
     if ((ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) && jsxTagName(node) === "Route") {
       const attrs = jsxAttrs(node);
-      const path = typeof attrs.path === "string" ? attrs.path : attrs.index ? "(index)" : null;
-      if (path !== null) {
+      const ownPath = typeof attrs.path === "string" ? attrs.path : attrs.index ? "(index)" : null;
+      if (ownPath !== null) {
         const elementAttrs = ts.isJsxElement(node) ? node.openingElement.attributes : node.attributes;
         const elementAttr = elementAttrs.properties.find(
           (a) => ts.isJsxAttribute(a) && a.name.getText() === "element",
@@ -195,23 +228,41 @@ function extractRoutesFromFile(absPath) {
           if (inner) resolved = resolveElement(inner);
         }
 
-        const componentInfo = resolved.component ? imports.get(resolved.component) : undefined;
-        routes.push({
-          path,
-          params: [...path.matchAll(/:[A-Za-z0-9_]+/g)].map((m) => m[0]),
-          component: resolved.component,
-          lazy: componentInfo?.lazy ?? null,
-          importSource: componentInfo?.source ?? null,
-          guardChain: resolved.guardChain,
-          guardProps: resolved.guardProps,
-          redirect: resolved.redirect,
-          sourceFile: relPath(absPath),
-        });
+        const path = composePath(ctx.path, ownPath);
+        const guardChain = [...ctx.guardChain, ...resolved.guardChain];
+        const guardProps = { ...ctx.guardProps, ...resolved.guardProps };
+        const isLayoutParent = hasNestedRouteChildren(node);
+
+        if (!isLayoutParent) {
+          const componentInfo = resolved.component ? imports.get(resolved.component) : undefined;
+          routes.push({
+            path,
+            params: [...path.matchAll(/:[A-Za-z0-9_]+/g)].map((m) => m[0]),
+            component: resolved.component,
+            lazy: componentInfo?.lazy ?? null,
+            importSource: componentInfo?.source ?? null,
+            guardChain,
+            guardProps,
+            redirect: resolved.redirect,
+            sourceFile: relPath(absPath),
+          });
+        }
+
+        // Recurse into this Route's own JSX children (nested <Route>s, for
+        // a layout parent) using the composed context, instead of falling
+        // through to the generic forEachChild below with the stale parent
+        // ctx -- which would either miss the composition entirely or, once
+        // a match is found, needs a `return` to avoid double-visiting.
+        if (ts.isJsxElement(node)) {
+          const childCtx = { path, guardChain, guardProps };
+          for (const child of node.children) visit(child, childCtx);
+        }
+        return;
       }
     }
-    ts.forEachChild(node, visit);
+    ts.forEachChild(node, (child) => visit(child, ctx));
   }
-  visit(sourceFile);
+  visit(sourceFile, { path: "", guardChain: [], guardProps: {} });
   return routes;
 }
 

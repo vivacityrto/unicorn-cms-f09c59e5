@@ -20,6 +20,7 @@ import { startVersionChecking, stopVersionChecking } from "./utils/versionCheck"
 import { DevDiagnosticsPanel } from "./components/DevDiagnosticsPanel";
 import { CelebrationProvider } from "./components/ui/celebration";
 import { supportTicketsRoutes } from "./routes/supportTicketsRoutes";
+import { academyLayoutRoutes } from "./routes/academyRoutes";
 
 // Non-SuperAdmin roles allowed on Academy Builder admin routes (SuperAdmin is always allowed by ProtectedRoute).
 const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"];
@@ -186,16 +187,6 @@ const LifecycleChecklistsAdmin = lazy(() => import("./pages/admin/LifecycleCheck
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const ReportingObligationsAdmin = lazy(() => import("./pages/admin/settings/ReportingObligations"));
 const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
-const AcademyDashboardWrapperNew = lazy(() => import("./pages/client/AcademyDashboardWrapper"));
-const AcademyTrainerWrapperNew = lazy(() => import("./pages/client/AcademyTrainerWrapper"));
-const AcademyComplianceManagerWrapperNew = lazy(() => import("./pages/client/AcademyComplianceManagerWrapper"));
-const AcademyGovernancePersonWrapperNew = lazy(() => import("./pages/client/AcademyGovernancePersonWrapper"));
-const AcademyStudentSupportWrapper = lazy(() => import("./pages/client/AcademyStudentSupportWrapper"));
-const AcademyAdminAssistantWrapper = lazy(() => import("./pages/client/AcademyAdminAssistantWrapper"));
-const AcademyCourseDetailWrapper = lazy(() => import("./pages/client/AcademyCourseDetailWrapper"));
-const AcademyLessonViewerWrapper = lazy(() => import("./pages/client/AcademyLessonViewerWrapper"));
-const AcademyAssessmentWrapper = lazy(() => import("./pages/client/AcademyAssessmentWrapper"));
-const AcademyAssessmentResultWrapper = lazy(() => import("./pages/client/AcademyAssessmentResultWrapper"));
 const AcademyEnrolmentsPage = lazy(() => import("./pages/superadmin/AcademyEnrolmentsPage"));
 const SuperAdminWorkforcePdp = lazy(() => import("./pages/superadmin/workforce-pdp"));
 const AcademyTenantAccessPage = lazy(() => import("./pages/superadmin/AcademyTenantAccessPage"));
@@ -217,7 +208,6 @@ const AcademyCertificatesPage = lazy(() => import("./pages/academy/AcademyCertif
 const AcademyWorkbooksPage = lazy(() => import("./pages/academy/AcademyWorkbooksPage"));
 const AcademyEvents = lazy(() => import("./pages/academy/AcademyEvents"));
 const AcademyCommunity = lazy(() => import("./pages/academy/AcademyCommunity"));
-const AcademyProfileWrapperNew = lazy(() => import("./pages/client/AcademyProfileWrapper"));
 const AcademyPdpPage = lazy(() => import("./pages/academy/pdp"));
 const AcademyPdpCyclePage = lazy(() => import("./pages/academy/pdp/cycle/[cycleId]"));
 const AcademyPdpReviewsPage = lazy(() => import("./pages/academy/pdp/reviews"));
@@ -1146,7 +1136,6 @@ const App = () => (
             <Route path="/academy/workbooks" element={<ProtectedRoute><AcademyWorkbooksPage /></ProtectedRoute>} />
             <Route path="/academy/events" element={<ProtectedRoute><AcademyEvents /></ProtectedRoute>} />
             <Route path="/academy/community" element={<ProtectedRoute><AcademyCommunity /></ProtectedRoute>} />
-            <Route path="/academy/profile" element={<ProtectedRoute><AcademyProfileWrapperNew /></ProtectedRoute>} />
             <Route path="/academy/pdp" element={<ProtectedRoute><AcademyPdpPage /></ProtectedRoute>} />
             <Route path="/academy/pdp/reviews" element={<ProtectedRoute><AcademyPdpReviewsPage /></ProtectedRoute>} />
             <Route path="/academy/pdp/cycle/:cycleId" element={<ProtectedRoute><AcademyPdpCyclePage /></ProtectedRoute>} />
@@ -1177,16 +1166,7 @@ const App = () => (
             <Route path="/client/tga" element={<ProtectedRoute><ClientTgaDetailsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/files" element={<ProtectedRoute><ClientFilesWrapperNew /></ProtectedRoute>} />
             <Route path="/client/certificate" element={<ProtectedRoute><ClientCertificateWrapper /></ProtectedRoute>} />
-            <Route path="/academy" element={<ProtectedRoute><AcademyDashboardWrapperNew /></ProtectedRoute>} />
-            <Route path="/academy/trainer" element={<ProtectedRoute><AcademyTrainerWrapperNew /></ProtectedRoute>} />
-            <Route path="/academy/compliance-manager" element={<ProtectedRoute><AcademyComplianceManagerWrapperNew /></ProtectedRoute>} />
-            <Route path="/academy/governance-person" element={<ProtectedRoute><AcademyGovernancePersonWrapperNew /></ProtectedRoute>} />
-            <Route path="/academy/student-support-officer" element={<ProtectedRoute><AcademyStudentSupportWrapper /></ProtectedRoute>} />
-            <Route path="/academy/administration-assistant" element={<ProtectedRoute><AcademyAdminAssistantWrapper /></ProtectedRoute>} />
-            <Route path="/academy/course/:slug" element={<ProtectedRoute><AcademyCourseDetailWrapper /></ProtectedRoute>} />
-            <Route path="/academy/course/:slug/lesson/:lessonId" element={<ProtectedRoute><AcademyLessonViewerWrapper /></ProtectedRoute>} />
-            <Route path="/academy/course/:slug/assessment/:assessmentId" element={<ProtectedRoute><AcademyAssessmentWrapper /></ProtectedRoute>} />
-            <Route path="/academy/course/:slug/assessment/:assessmentId/result/:attemptId" element={<ProtectedRoute><AcademyAssessmentResultWrapper /></ProtectedRoute>} />
+            {academyLayoutRoutes}
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
             <Route path="/addin" element={<AddinShell />} />
