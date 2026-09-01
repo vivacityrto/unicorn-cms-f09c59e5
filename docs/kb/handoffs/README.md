@@ -23,6 +23,28 @@
 
 ---
 
+## Everything else in this folder
+
+The lookup above covers standing procedures. It's not the full folder —
+`docs/kb/handoffs/` also holds feature-specific implementation plans and
+build-prompt sequences, most now historical (shipped or superseded). For
+the lifecycle status of every file here (this table included), see
+[`../reference/README.md`](../reference/README.md).
+
+| File | What it was for |
+|---|---|
+| `ask-viv-client-mode.md` | Original client-facing Ask Viv build spec — superseded, the function it scoped was retired |
+| `dashboard-metrics-fix.md` | Dashboard metrics fix plan — not yet implemented |
+| `dashboard-overhaul-lovable-prompts.md` | Main Dashboard overhaul Lovable prompt sequence |
+| `email-triage-module.md` | Email Triage module implementation plan |
+| `eos-meeting-overhaul-plan.md` | EOS meeting overhaul — still in scoping/draft |
+| `impersonation-improvements-plan.md` | "View as Client" impersonation improvements — shipped |
+| `pdp-follow-up-prompts.md` | PDP module follow-up prompts (gaps in the original build) |
+| `pdp-lovable-prompts.md` | Original PDP module build prompts |
+| `rbac-v5-implementation-plan.md` | RBAC v5 — shipped, all 8 phases done |
+| `rbac-v6-gate-closure-plan.md` | RBAC v6 gate-closure planning — not yet implemented |
+| `tasks-overhaul-plan.md` | Tasks feature overhaul (stage tasks + action items unification) — shipped |
+
 ## Not a handoff
 
 Don't reach for a handoff if you're:
