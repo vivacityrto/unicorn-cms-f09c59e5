@@ -41,6 +41,24 @@ function changedFiles() {
     .filter((f) => !EXCLUDE.some((re) => re.test(f)));
 }
 
+// Maps a renamed file's new path to its old path at mergeBase, so a file
+// moved (with or without content changes) as part of a refactor is compared
+// against ITS OWN prior error count, not treated as a brand-new file with a
+// 0-error baseline. Without this, `git mv`-ing a file that already carried
+// pre-existing lint debt (e.g. unwrapping a *Wrapper.tsx and dropping
+// "Wrapper" from its name once it no longer wraps anything) reports that
+// debt as newly introduced by this change, when none of it is: same lines,
+// same errors, just a new path.
+function renameMap(mergeBase) {
+  const out = sh("git", ["diff", "--name-status", "-M", "--diff-filter=R", mergeBase]);
+  const map = new Map();
+  for (const line of out.split("\n").map((l) => l.trim()).filter(Boolean)) {
+    const [status, oldPath, newPath] = line.split("\t");
+    if (status && status.startsWith("R") && oldPath && newPath) map.set(newPath, oldPath);
+  }
+  return map;
+}
+
 function fileExistsAt(ref, path) {
   try {
     sh("git", ["cat-file", "-e", `${ref}:${path}`]);
@@ -90,20 +108,23 @@ function main() {
   console.log(`lint-ratchet: checking ${files.length} changed file(s) vs ${BASE_REF} (merge-base ${mergeBase.slice(0, 8)})`);
   console.log("");
 
+  const renames = renameMap(mergeBase);
   let failed = false;
   for (const file of files) {
     if (!existsSync(file)) continue; // deleted in working tree relative to index — nothing to check
 
-    const existedBefore = fileExistsAt(mergeBase, file);
+    const baselinePath = renames.get(file) ?? file;
+    const existedBefore = fileExistsAt(mergeBase, baselinePath);
     const afterCount = errorCountFor(currentContent(file), file);
-    const beforeCount = existedBefore ? errorCountFor(contentAt(mergeBase, file), file) : 0;
+    const beforeCount = existedBefore ? errorCountFor(contentAt(mergeBase, baselinePath), baselinePath) : 0;
 
     const regressed = afterCount > beforeCount;
     const status = regressed ? "FAIL" : "ok";
     if (regressed) failed = true;
 
+    const renameNote = baselinePath !== file ? `, renamed from ${baselinePath}` : "";
     console.log(
-      `${status.padEnd(4)} ${file}  (errors: ${beforeCount} -> ${afterCount}${existedBefore ? "" : ", new file"})`,
+      `${status.padEnd(4)} ${file}  (errors: ${beforeCount} -> ${afterCount}${existedBefore ? "" : ", new file"}${renameNote})`,
     );
   }
 

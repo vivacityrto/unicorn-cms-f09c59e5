@@ -1,0 +1,44 @@
+---
+description: New Client Portal / Academy pages go in the nested route module, not a new Wrapper file
+alwaysApply: true
+---
+
+# New pages under /client/* or /academy/* are nested-route children
+
+Full detail: `docs/route-composition-conventions.md` (also read by Lovable).
+Pointer only, from `AGENTS.md → Client Portal / Academy route composition`.
+
+When adding a new page under `/client/*` or `/academy/*`:
+
+1. Create the page component under `src/pages/client/` (or
+   `src/pages/academy/` for Academy-only) with **no** layout wrapping — just
+   the page's own content.
+2. Add it as a child `<Route>` of the existing nested layout route in
+   `src/routes/clientRoutes.tsx` or `src/routes/academyRoutes.tsx`, pointing
+   at a `lazy()`-loaded import of the page.
+3. **Do not** create a new `*Wrapper.tsx` file that does
+   `<ClientLayout><MyPage /></ClientLayout>` (or `AcademyLayout`). That
+   per-page-wrapper pattern was retired 2026-09-01 specifically because it
+   forced the whole layout — sidebar state, a live realtime channel, the Ask
+   Viv chat panel, a tenant/access check — to fully remount on every
+   navigation between pages in the same portal. One new wrapper file
+   silently breaks that persistence for every other page in the portal too.
+4. Do not touch `ClientLayout.tsx`, `AcademyLayout.tsx`,
+   `ClientLayoutRoute.tsx`, or `AcademyLayoutRoute.tsx` unless the task is
+   specifically about the shared layout shell itself.
+
+```text
+❌ BAD:  src/pages/client/MyNewFeatureWrapper.tsx exporting
+         <ClientLayout><MyNewFeaturePage /></ClientLayout>, registered as
+         its own <Route> in App.tsx.
+
+✅ GOOD: src/pages/client/MyNewFeaturePage.tsx with just the page content,
+         added as <Route path="my-new-feature" element={<MyNewFeaturePage />} />
+         inside the existing parent <Route path="/client" ...> in
+         src/routes/clientRoutes.tsx.
+```
+
+Known gap, not a pattern to copy: several Academy pages under
+`src/pages/academy/**` (courses list, certificates, workbooks, events,
+community, the 3 PDP pages) predate this convention and still wrap
+`AcademyLayout` themselves. Follow the rule above for new pages regardless.

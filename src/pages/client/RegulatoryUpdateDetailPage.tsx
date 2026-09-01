@@ -1,11 +1,10 @@
 /**
- * RegulatoryUpdateDetailWrapper – client-portal read-only detail view for a
+ * RegulatoryUpdateDetailPage – client-portal read-only detail view for a
  * single regulator change event. No hashes, no review controls.
  */
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ClientLayout } from "@/components/layout/ClientLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,39 @@ const IMPACT_COLORS: Record<string, string> = {
   critical: "bg-red-100 text-red-800",
 };
 
-export default function RegulatoryUpdateDetailWrapper() {
+interface RegulatorWatchlist {
+  name: string | null;
+  url: string | null;
+  category: string | null;
+}
+
+interface AffectedArea {
+  area?: string;
+  risk_category?: string;
+  impact_type?: string;
+  claim_excerpt?: string;
+  standard_clause?: string;
+}
+
+interface RegulatorChangeEventDetail {
+  detected_at: string | null;
+  impact_level: string | null;
+  change_summary_md: string | null;
+  affected_areas_json: AffectedArea[] | null;
+  research_job_id: string | null;
+  regulator_watchlist: RegulatorWatchlist | null;
+}
+
+interface Citation {
+  index?: number;
+  url: string;
+}
+
+interface ResearchFinding {
+  citations_json: Citation[] | null;
+}
+
+export default function RegulatoryUpdateDetailPage() {
   const { eventId } = useParams<{ eventId: string }>();
 
   const { data: event, isLoading } = useQuery({
@@ -33,7 +64,7 @@ export default function RegulatoryUpdateDetailWrapper() {
         .eq("id", eventId!)
         .single();
       if (error) throw error;
-      return data as any;
+      return data as unknown as RegulatorChangeEventDetail;
     },
     enabled: !!eventId,
   });
@@ -46,7 +77,7 @@ export default function RegulatoryUpdateDetailWrapper() {
         .select("*")
         .eq("job_id", event!.research_job_id);
       if (error) throw error;
-      return (data || []) as any[];
+      return (data || []) as unknown as ResearchFinding[];
     },
     enabled: !!event?.research_job_id,
   });
@@ -61,24 +92,21 @@ export default function RegulatoryUpdateDetailWrapper() {
 
   if (isLoading || !event) {
     return (
-      <ClientLayout>
         <div className="space-y-4">
           {backLink}
           <div className="flex items-center justify-center min-h-[40vh]">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         </div>
-      </ClientLayout>
     );
   }
 
-  const wl = event.regulator_watchlist as any;
-  const affectedAreas = (event.affected_areas_json as any[]) || [];
+  const wl = event.regulator_watchlist;
+  const affectedAreas = event.affected_areas_json || [];
   const finding = findings?.[0];
-  const citations = (finding?.citations_json as any[]) || [];
+  const citations = finding?.citations_json || [];
 
   return (
-    <ClientLayout>
       <div className="space-y-4 max-w-screen-lg">
         {backLink}
 
@@ -153,7 +181,7 @@ export default function RegulatoryUpdateDetailWrapper() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {affectedAreas.map((area: any, i: number) => (
+                {affectedAreas.map((area, i) => (
                   <div key={i} className="flex items-start gap-3 p-2 rounded bg-muted/50 text-xs">
                     <div className="flex-1">
                       <p className="font-medium">{area.area || area.risk_category}</p>
@@ -177,7 +205,7 @@ export default function RegulatoryUpdateDetailWrapper() {
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
-                {citations.map((c: any, i: number) => (
+                {citations.map((c, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground w-6">[{c.index || i + 1}]</span>
                     <a
@@ -199,6 +227,5 @@ export default function RegulatoryUpdateDetailWrapper() {
           This summary identifies potential operational impacts only. Human review required.
         </p>
       </div>
-    </ClientLayout>
   );
 }

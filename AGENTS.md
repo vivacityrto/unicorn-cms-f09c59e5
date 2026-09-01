@@ -114,6 +114,29 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   (or just `npm run test`, which calls it automatically) to see the exact
   file-by-file split. These were excluded from the normal test command for
   long enough that some had gone stale — see the guardrail below.
+- **Known gap, parked for later (found 2026-09-01, not yet actioned):**
+  `src/test/tenant/isolation.test.tsx` has a genuinely good live-RLS suite
+  (15 real tests — cross-tenant message/conversation access,
+  same-tenant-different-conversation access, staff bypass, all against a
+  real hosted-Supabase connection with seeded personas) guarding exactly
+  the kind of cross-client message leak a change to `tenant_messages`/
+  `conversation_participants` RLS could introduce. It requires
+  `SUPABASE_SERVICE_ROLE_KEY` (non-`VITE_`-prefixed, read from
+  `process.env`, never bundled — see the file's own header comment) and
+  `describe.skipIf`s the whole block when that's unset. As of this date,
+  that variable is **not set in local dev** and **not a secret in any
+  `.github/workflows/*.yml`** — running `npx vitest run
+  src/test/tenant/isolation.test.tsx` here reports "11 passed, 15
+  skipped," and the 11 that pass are the unrelated legacy placeholder
+  block (`expect(true).toBe(true)` stubs), not this suite. So the suite
+  has never actually been proven to pass anywhere, CI included — it was
+  verified this date by directly reading the live `pg_policies` and their
+  `SECURITY DEFINER` helper functions (`is_conversation_participant_safe`,
+  `has_tenant_access_safe`, etc.) via Supabase MCP instead, which confirmed
+  correct scoping (message SELECT requires actual conversation-participant
+  membership, not just a tenant match). Wiring `SUPABASE_SERVICE_ROLE_KEY`
+  into CI so this suite actually runs is a separate, not-yet-scoped
+  follow-up — deliberately not done as a side effect of this note.
 - Architecture metrics (P0.5, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`):
   `npm run metrics` (`scripts/architecture-metrics.mjs`) reproduces the
   plan's section-3 baseline table from a script instead of an ad-hoc pass —
@@ -348,6 +371,30 @@ material Lovable needs in-context while generating features (specs, naming
 conventions, integration references, smoke tests). `docs/kb/` and
 `docs/audit-log/` are team opinion, decisions, and narrative history — they
 are **not** inputs to Lovable prompts.
+
+## Client Portal / Academy route composition
+
+Full detail and rationale: `docs/route-composition-conventions.md` — that
+file is code-adjacent (Lovable reads it), so it's the canonical source; this
+is a pointer, not a duplicate.
+
+**The short version:** a new page under `/client/*` or `/academy/*` is added
+as a child `<Route>` in `src/routes/clientRoutes.tsx` or
+`src/routes/academyRoutes.tsx` — never as a new `*Wrapper.tsx` file that
+mounts `ClientLayout`/`AcademyLayout` itself. That per-page-wrapper pattern
+was retired 2026-09-01 (`docs/kb/reference/codebase-optimization-plan-2026-08-28.md`,
+P1.3) specifically because it forced the whole layout — sidebar, a live
+realtime channel, the Ask Viv chat panel, a tenant/access check — to
+fully remount on every single navigation between pages in the same portal.
+Reintroducing a wrapper file for one new page silently breaks that
+persistence for every other page in the same portal too, not just the new
+one.
+
+Known gap, not a pattern to copy: several Academy pages that predate this
+convention (`src/pages/academy/**` — courses list, certificates, workbooks,
+events, community, the 3 PDP pages) still wrap `AcademyLayout` themselves
+inside the page component. A new Academy page should follow the nested-route
+rule above regardless.
 
 ## Guardrail: `docs/kb/` and `docs/audit-log/` are off-limits to Lovable
 
