@@ -185,7 +185,6 @@ const LifecycleChecklistsAdmin = lazy(() => import("./pages/admin/LifecycleCheck
 const SuggestionRegister = lazy(() => import("./pages/SuggestionRegister"));
 const NewSuggestionForm = lazy(() => import("./pages/NewSuggestionForm"));
 const SuggestionDetail = lazy(() => import("./pages/SuggestionDetail"));
-const SupportTicketsPage = lazy(() => import("./pages/SupportTicketsPage"));
 const NewSupportTicketPage = lazy(() => import("./pages/NewSupportTicketPage"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const ReportingObligationsAdmin = lazy(() => import("./pages/admin/settings/ReportingObligations"));
@@ -1145,7 +1144,6 @@ const App = () => (
             <Route path="/suggestions/new" element={<Navigate to="/support-tickets/new" replace />} />
             <Route path="/suggestions/:id" element={<ProtectedRoute><SuggestionDetail /></ProtectedRoute>} />
             {/* Support Tickets */}
-            <Route path="/support-tickets" element={<ProtectedRoute><SupportTicketsPage /></ProtectedRoute>} />
             <Route path="/support-tickets/new" element={<ProtectedRoute><NewSupportTicketPage /></ProtectedRoute>} />
             <Route path="/support-tickets/:id" element={<ProtectedRoute><SuggestionDetail /></ProtectedRoute>} />
             <Route path="/admin/merge-field-tags" element={<ProtectedRoute requireSuperAdmin><MergeFieldTagsAdmin /></ProtectedRoute>} />
