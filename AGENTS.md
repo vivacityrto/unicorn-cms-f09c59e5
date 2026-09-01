@@ -238,6 +238,62 @@ requests do, and they never resolve while the scan is stuck).
   password-reset and magic-link flows do reach the live backend and can be
   used to smoke-test connectivity without logging in.
 
+## Playwright browser harness (P0.7/P0.8, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`)
+
+- `@playwright/test` + `playwright.config.ts` (2026-09-01). The local
+  frontend talks to hosted **production** Supabase, so even an
+  unauthenticated run against `localhost:8080` is production data access —
+  default posture is **read-only**, nothing here writes data.
+- `npm run e2e:unauth` — no login needed: Login page at `/` and `/login`,
+  reset-password, activate-account (no token → "Invalid Link", not a
+  crash), a protected deep link (`/dashboard`) redirecting to `/login`
+  without flashing protected content, and the app's own 404 for an unknown
+  route. Runs desktop + 375px mobile.
+- Authenticated personas need a storage state generated **once** via
+  `E2E_EMAIL=... E2E_PASSWORD=... node e2e/auth-setup.mjs <persona-name>`
+  (requires `npm run dev` already running in another terminal) — this logs
+  in through the real UI and saves session state to
+  `playwright/.auth/<persona-name>.json`, which is gitignored and never
+  committed. Credentials are read from environment variables for that one
+  invocation only; nothing here hardcodes or persists them. Then
+  `npm run e2e:personas` runs `e2e/personas/superadmin.spec.ts` (storage
+  state `playwright/.auth/superadmin.json`) and `client-demo.spec.ts`
+  (`playwright/.auth/client-demo.json`) — both read-only: dashboard/home
+  loads, one representative same-persona route, one cross-persona denial
+  check (client persona hitting a SuperAdmin-only route). Neither test
+  signs out — doing so would invalidate the storage state for every
+  subsequent run.
+- **Coverage gap, honestly disclosed rather than faked:** only Super Admin
+  and the "Demo RTO" client account were available when this harness was
+  built. The plan's full persona table also names Vivacity operational
+  staff (non-SA), Academy-only, disabled-user, and add-in/Teams personas —
+  none of those have a test account here, so there's no spec for them.
+  Don't read `e2e:personas` passing as proof those personas work.
+- `reuseExistingServer: false` + `strictPort: true` in `playwright.config.ts`
+  are deliberate: this must be the dev server *this* worktree/branch just
+  started, not another worktree's server left running on 8080 (shared Edge
+  CORS only allows `localhost:8080`/`127.0.0.1:8080` — see "Local dev server
+  troubleshooting" below). If port 8080 is already owned by another
+  worktree, stop and resolve ownership rather than letting Playwright pick
+  a different port.
+- Chromium binary installs via `npx playwright install chromium` (not
+  `--with-deps`, which is a Debian/Ubuntu-only flag that hangs silently on
+  Windows with zero output — looks exactly like a stuck process; kill it
+  and reinstall without the flag). It's a real ~192 MiB download and can
+  take 10+ minutes on a slow connection with no visible progress unless you
+  run with `DEBUG=pw:install`.
+- `playwright/.auth/`, `playwright-report/`, `test-results/`, and
+  `blob-report/` are gitignored (run artefacts can capture what's on-screen
+  during an authenticated run, and storage-state files hold live session
+  tokens for whatever persona generated them).
+- **Known gap:** neither `tsconfig.app.json` (`include: ["src"]`) nor
+  `tsconfig.node.json` (`include: ["vite.config.ts"]`) covers `e2e/` or
+  `playwright.config.ts`, so `npm run typecheck` doesn't check them, and
+  Playwright's own esbuild-based transform doesn't type-check either — only
+  runtime errors surface when a spec actually runs. A `tsconfig.e2e.json`
+  wired into `typecheck` would close this; not done here to avoid scope
+  creep into P0.2's already-shipped script.
+
 ## Repo layout
 
 ```

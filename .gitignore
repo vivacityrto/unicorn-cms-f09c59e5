@@ -52,6 +52,15 @@ worktrees/
 # Playwright MCP local run artefacts (screenshots, traces, console logs)
 .playwright-mcp/
 
+# Playwright test harness (P0.7/P0.8) — storage state holds live session
+# tokens for whatever persona generated it; never commit it, and never
+# commit run artefacts (they can capture production data on-screen)
+playwright/.auth/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
 # Lovable's @lovable.dev/mcp-js Vite plugin regenerates this bundle from
 # src/lib/mcp/index.ts on every local `npm run dev`/build, producing a
 # broken stub (hardcoded absolute local path, stale package version) that
