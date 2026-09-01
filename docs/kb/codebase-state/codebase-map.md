@@ -1,13 +1,11 @@
 # Codebase Map
 
-> **Currentness warning (2026-08-28):** the counts, file paths, and relative links below have substantial post-consolidation drift. A mechanical audit found 102 broken links in this file alone. Use source search for current paths until the map is regenerated and link-checked under [the optimization and KB renewal plan](../reference/codebase-optimization-plan-2026-08-28.md).
-
-> **Last updated:** 2026-05-28 · **Reconsider by:** 2026-06-27 · **Confidence:** medium — tenant ID and docs table updated April 2026 audit; file moves/renames will desync this file fastest of any in the KB.
+> **Last updated:** 2026-09-01 · **Reconsider by:** 2026-10-01 (file moves/renames desync this file fastest of any in the KB — a one-month shelf life is realistic here, not conservative) · **Confidence:** high on top-level structure and counts (regenerated via direct repository measurement); medium on per-file descriptions not individually re-verified in this pass (most of the page/component/hook prose below predates this regeneration and wasn't re-checked line by line — treat specific claims about a given file's behavior with the same caution as before, only the counts/structure are freshly verified).
 >
-> **Reflects commit:** `<codebase>@a30052a0` (2026-05-28) — most recent addition (client Files tab + SharePoint browser). Core structure reflects `<codebase>@cf8d1314` (2026-04-25).
+> **Reflects commit:** `unicorn-cms-f09c59e5@5782860e` (2026-09-01). Supersedes the 2026-05-28 revision (`<codebase>@a30052a0`) — see this file's git history for that prior baseline rather than repeating its provenance here. The link-repair pass immediately before this one (`docs/kb/reference/codebase-optimization-plan-2026-08-28.md` Phase 1 PR1) already fixed every broken relative link in this file; this pass fixes stale counts/content and a handful of link *display text* that still named old files even though the target had already been corrected.
 >
 > A navigational reference. Where to find things, what depends on what, and the mental path for common tasks.
-> Paths are relative to the repo root (`~/repository/unicorn-workspace/<codebase>` — alias defined in workspace root `CLAUDE.md`).
+> Paths are relative to the repo root.
 
 ---
 
@@ -16,21 +14,24 @@
 ```
 unicorn-cms-f09c59e5/
 ├── src/                              # Frontend (React + TS + Vite + Lovable)
-│   ├── pages/                        # ~187 route files
+│   ├── pages/                        # 289 route files (185 top-level + client/54, admin/28, superadmin/11, academy/8, addin/1, internal/1, teams/1)
 │   ├── components/                   # UI components (many subdirs)
-│   ├── hooks/                        # ~238 domain hooks (230 top-level + academy/ subdir)
-│   ├── contexts/                     # React contexts
-│   ├── integrations/                 # Supabase client
+│   ├── features/                     # NEW since 2026-05-28 — emerging feature-module convention; currently just pdp/ (types, API, hooks, components)
+│   ├── hooks/                        # 296 domain hooks
+│   ├── contexts/                     # React contexts (ViewMode, ClientPreview, ClientTenant, PageTitle, TenantType)
+│   ├── integrations/                 # Supabase client + generated types (73,463 lines, regenerated 2026-08-28)
 │   ├── types/                        # Domain types
 │   ├── lib/                          # Utilities (cn(), etc.)
 │   ├── config/                       # navigationConfig.ts
 │   ├── services/                     # codeTablesService.ts
 │   ├── utils/                        # addressParser, qcPdfExport, etc.
 │   ├── styles/                       # Additional style files
+│   ├── assets/                       # Static images/icons — not previously listed here
 │   └── test/                         # Test utilities
 ├── supabase/                         # Backend: edge functions, migrations, email templates
-│   ├── functions/                    # 117 edge functions
-│   ├── migrations/                   # 895 migrations
+│   ├── functions/                    # 195 edge functions (repository count, not deployed count — see architecture.md), plus _shared/ (58 files) and _retired/ (3 stub dirs, not deployed)
+│   ├── migrations/                   # 1,515 migrations, spanning Oct 2025 - Aug 2026; ~20% landed in the last two months alone
+│   │   └── rollback/                 # 22 .down.sql rollback scripts — a convention from the July EOS overhaul, not previously documented here
 │   └── email-templates/              # Auth email templates
 ├── sql-setup/                        # Seed SQL (12 files incl. resource hub schema)
 ├── docs/                             # Product specs + integration docs
@@ -67,7 +68,9 @@ QueryClientProvider        — react-query cache
 
 ### Pages — [src/pages/](../../../src/pages/)
 
-~187 files. Convention: one file per route. Many have `*Wrapper` companions handling layout/auth chrome. Subdirectories: `academy/`, `addin/`, `admin/`, `client/`, `internal/`, `superadmin/`, `teams/`.
+289 files (185 top-level + client/54, admin/28, superadmin/11, academy/8, addin/1, internal/1, teams/1 — confirmed by direct count 2026-09-01, up from ~187 at the last count). Convention: one file per route. Many have `*Wrapper` companions handling layout/auth chrome. Subdirectories: `academy/`, `addin/`, `admin/` (including new `admin/ai-insights/` and `admin/settings/` subdirs), `client/`, `internal/`, `superadmin/`, `teams/`. The illustrative lists below are not exhaustive — for the authoritative current list of every route, component, and guard, generate the manifest directly: `node scripts/generate-route-manifest.mjs` (see `AGENTS.md` and `codebase-state/route-inventory-by-role.md`).
+
+**Academy is scattered across three locations**, not one: `pages/academy/` (learner surface), several `Academy*` pages inside `pages/client/`, and all of `pages/superadmin/` (Academy Builder). Add all three up before citing a single "Academy page count."
 
 **Auth & onboarding**
 - [Login.tsx](../../../src/pages/Login.tsx)
@@ -156,7 +159,14 @@ Stats cards, charts, week-tasks table.
 
 **Profile, Tenant** — header cards, settings panels.
 
+**Ask Viv** — [src/components/ask-viv/](../../../src/components/ask-viv/)
+Client-facing Ask Viv panel (`ClientAskVivPanel.tsx`, calls `ask-viv-assistant-client`) and staff equivalents. New since the last revision — see `codebase-state/architecture.md → Edge functions` for the backing AI subsystem.
+
 **Top-level components** — `ProtectedRoute.tsx`, and others.
+
+### Features — [src/features/](../../../src/features/)
+
+**New top-level directory since the 2026-05-28 revision.** Currently one module: `src/features/pdp/` (Academy PDP — types, API helpers, hooks, and a `components/` subdir), structured as a self-contained feature module rather than the flat `pages/`+`hooks/`+`components/` split everywhere else. This is the shape the optimization plan's "Lifecycle Checklists pilot" is expected to follow if/when it lands — watch for a second `src/features/<name>/` directory appearing, and note the pattern explicitly (not just the one instance) once there are two.
 
 ### Hooks — [src/hooks/](../../../src/hooks/)
 
@@ -217,7 +227,7 @@ Utility helpers: `addressParser.ts`, `clickup-import-mappings.ts`, `qcPdfExport.
 
 ### Edge functions — [supabase/functions/](../../../supabase/functions/)
 
-117 functions. All follow the canonical pattern in [02-system-design.md](architecture.md#edge-functions). See [01-architecture.md](architecture.md#edge-functions-117-live) for the full categorised list.
+195 functions (repository count — see [architecture.md](architecture.md)'s "Edge functions" section for the repo-vs-deployed caveat and the full categorised list, now organized into ~14 categories including two entirely new ones since the last revision: the AI/Ask Viv subsystem's direct Anthropic integration, and Xero). All follow the canonical caller-gate pattern described there.
 
 Key navigational landmarks:
 
@@ -231,11 +241,13 @@ Key navigational landmarks:
 | search-organisations | [supabase/functions/search-organisations/](../../../supabase/functions/search-organisations/) |
 | analyze-document | [supabase/functions/analyze-document/](../../../supabase/functions/analyze-document/) |
 | vector-search | [supabase/functions/vector-search/](../../../supabase/functions/vector-search/) |
-| _shared | [supabase/functions/_shared/](../../../supabase/functions/_shared/) — shared utilities |
+| _shared | [supabase/functions/_shared/](../../../supabase/functions/_shared/) — 58 files: CORS/auth basics, `requireCaller.ts` (the canonical caller gate — see Constraints in `architecture.md`), webhook/URL/redirect safety helpers, Microsoft Graph clients, and the AI/vector helpers backing the Ask Viv subsystem. See `architecture.md → Edge functions` for the full breakdown. |
+| ask-viv-assistant-client | [supabase/functions/ask-viv-assistant-client/](../../../supabase/functions/ask-viv-assistant-client/) — client-facing Ask Viv, calls Anthropic directly via `_shared/anthropic-client.ts` |
+| xero-webhook | [supabase/functions/xero-webhook/](../../../supabase/functions/xero-webhook/) — new integration, see `architecture.md` |
 
 ### Migrations — [supabase/migrations/](../../../supabase/migrations/)
 
-900+ migrations. Timestamped filenames. Most recent known: 2026-05-28 (`20260528043747_…` — `shared_folder_url TEXT NULL` on `tenant_sharepoint_settings`). Earlier landmark: 2026-04-23 (`20260423093423_…` — `fn_package_stream` + duplicate-package guard in `start_client_package`).
+1,515 migrations (confirmed by direct count 2026-09-01, up from ~895 at the last count), plus a `rollback/` subdirectory (22 `.down.sql` scripts, a convention from the July EOS overhaul — not a migration count itself). Timestamped filenames, spanning 2 October 2025 to 28 August 2026 (newest at this measurement: `20260828055136_get_academy_course_lesson_outline_safe.sql`). Velocity is high and uneven — roughly 20% of the entire history (313 of 1,515) landed in just the last two months; February 2026 was the single busiest month (354 migrations). Don't assume a flat rate when estimating "how much has landed since X" — check the actual monthly distribution if it matters (`ls supabase/migrations | grep -c '^202608'` style counts, adjusted per month).
 
 ### Email templates — [supabase/email-templates/](../../../supabase/email-templates/)
 
@@ -315,7 +327,7 @@ Initial / reproducible seed:
 
 ## Historical context
 
-The earlier codebase (`unicorn-2-0-dev`) was a smaller, earlier-stage repo with ~82 pages, 13 edge functions, and 201 migrations. The current codebase (`unicorn-cms-f09c59e5`) is a substantially more mature evolution with 117 edge functions, 894 migrations, and 187 pages. Many features previously absent (SharePoint, Outlook, AI orchestration, vector layer, ClickUp) are now present. When KB files reference "sibling project" or "historical reference only", those notes may be outdated — verify against the current codebase.
+The earlier codebase (`unicorn-2-0-dev`) was a smaller, earlier-stage repo with ~82 pages, 13 edge functions, and 201 migrations. The current codebase (`unicorn-cms-f09c59e5`) is a substantially more mature evolution — as of 2026-09-01, 195 edge functions, 1,515 migrations, and 289 pages, up again from the 117/894/187 figures cited at the previous (2026-05-28) revision of this doc. Many features previously absent (SharePoint, Outlook, AI orchestration, vector layer, ClickUp, and — new since the last revision — Xero and a direct-Anthropic AI subsystem) are now present. When KB files reference "sibling project" or "historical reference only", those notes may be outdated — verify against the current codebase.
 
 ---
 
@@ -332,19 +344,19 @@ The earlier codebase (`unicorn-2-0-dev`) was a smaller, earlier-stage repo with 
 ### "I need to add an edge function"
 
 1. Create `supabase/functions/<name>/index.ts`
-2. Copy the canonical pattern from [supabase/functions/invite-user/index.ts](../../../supabase/functions/invite-user/index.ts)
-3. Validate caller auth + role
-4. Return `{ ok, code, detail }` envelope
-5. Deploy via Supabase CLI
+2. Gate through `requireCaller`/`requireSharedSecret` from `supabase/functions/_shared/requireCaller.ts` before any DB read/write branch — not a hand-rolled auth check. See `AGENTS.md → Edge Function security guardrails` for the full checklist (every mode/branch needs the same gate; runtime allowlists for any union-typed role/action field).
+3. Return `{ ok, code, detail }` envelope
+4. Add/update its `.test.mjs` alongside the function; run `npm run test:edge` before considering it done
+5. Deploy via the Supabase MCP tools (`AGENTS.md → Supabase deployment workflow` — not the Supabase CLI or GitHub Actions)
 6. Invoke from frontend via `supabase.functions.invoke('<name>', { body })`
 
 ### "I need to add a table"
 
-1. Read [02-system-design.md → New table checklist](architecture.md#new-table-checklist)
+1. Read [conventions.md → RLS](../pinned/conventions.md#rls) for the three-step ritual
 2. Draft the migration with tenant_id, timestamps, RLS policies (BOTH), and `ENABLE ROW LEVEL SECURITY`
 3. If NOT NULL columns may receive writes from Lovable, add coercion triggers
-4. RJ reviews before apply
-5. Generate updated DB types (if that's in the workflow yet)
+4. Deploy via the Supabase MCP tools per `AGENTS.md → Supabase deployment workflow` (no RJ review gate exists today — see ADR-011 in `reference/decision-trail.md`); write an audit entry per `AGENTS.md → Schema / RLS / trigger changes`
+5. Regenerate DB types (`src/integrations/supabase/types.ts` — this is an active workflow step now, not a maybe; see the file's own regeneration cadence noted in `architecture.md`)
 
 ### "I need to add a real-time feature"
 
@@ -370,4 +382,4 @@ The earlier codebase (`unicorn-2-0-dev`) was a smaller, earlier-stage repo with 
 2. Does the table have both a tenant-read SELECT and a staff-ALL policy?
 3. Is the user's `tenant_id` in `tenant_members` for the target row's tenant? Is the user in tenant 6372 (Vivacity)?
 4. Run the query in the SQL editor impersonating the user (Supabase Studio has this).
-5. If still stuck, read [06-decision-trail.md → ADR-005](../reference/decision-trail.md#adr-005) — same failure modes keep recurring.
+5. If still stuck, read [decision-trail.md → ADR-005](../reference/decision-trail.md#adr-005) — same failure modes keep recurring.

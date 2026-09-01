@@ -1,10 +1,10 @@
 # Module Status
 
-> **Currentness warning (2026-08-28):** this May snapshot omits major shipped work in documents/delivery, package renewals, contacts, Xero, Academy, Ask Viv, KPI, EOS, and security remediation, and still contains features retired in August. Do not use its status labels for planning until the evidence-tier regeneration in [the optimization and KB renewal plan](../reference/codebase-optimization-plan-2026-08-28.md) is complete.
+> **Currentness warning, updated 2026-09-01 (was 2026-08-28):** this doc is still substantially a May snapshot. Modules 1, 4, 9, and 18 have been corrected in this pass (specific stale claims fixed, cited inline where changed) — the rest have **not** been independently re-verified and may still omit shipped work in documents/delivery, package renewals, contacts, Xero, Ask Viv, KPI, and security remediation, or still describe features retired since. Do not use any status label here for planning without spot-checking it against source first; the corrected modules are a start, not a full regeneration.
 
-> **Last updated:** 2026-05-28 · **Reconsider by:** 2026-06-30 · **Confidence:** medium — module presence confirmed by files/routes; "shipped" vs "partial" calls need RJ confirmation for several modules. Flagship-surfaces framing added 2026-05-15 per ADR-013; module 3 (EOS) reclassified from "the flagship feature" to "Vivacity's internal operating system."
+> **Last updated:** 2026-09-01 (partial correction pass; see currentness warning) · originally 2026-05-28 · **Reconsider by:** 2026-10-01 · **Confidence:** high for modules 1/4/9/18's corrected claims (verified directly against source in this pass); medium-as-before for everything else — module presence confirmed by files/routes; "shipped" vs "partial" calls need RJ confirmation for several modules. Flagship-surfaces framing added 2026-05-15 per ADR-013; module 3 (EOS) reclassified from "the flagship feature" to "Vivacity's internal operating system."
 >
-> **Reflects commit:** `<codebase>@a30052a0` (2026-05-28) — most recent update. Earlier baselines: `<codebase>@893fc01a` (2026-05-11) for module body content; `<codebase>@d240b112` (origin/main, 2026-05-15) — `DashboardLayout.tsx` nav structure. AI audit stack (7 edge functions, 4 migrations) shipped 29–30 April 2026; Modules 4 and 14 updated accordingly. PDP schema applied 11 May 2026 (Module 18 added). Client Files tab shared folder + inline browser shipped 28 May 2026 (Module 6 + 15 updated accordingly).
+> **Reflects commit:** `unicorn-cms-f09c59e5@5782860e` (2026-09-01) for the corrected claims in modules 1/4/9/18. Everything else still reflects `<codebase>@a30052a0` (2026-05-28) or earlier — see the file's own git history for the full prior provenance chain (AI audit stack 29-30 April 2026, PDP schema 11 May 2026, Client Files 28 May 2026) rather than repeating it here.
 >
 > Live tracker for each module. Grounded in the actual `unicorn-cms-f09c59e5` codebase (April–May 2026). Many features previously flagged as "historical reference only" are now present in this codebase.
 
@@ -44,7 +44,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 **What exists:**
 - Email/password login ([src/pages/Login.tsx](../../../src/pages/Login.tsx))
 - Invitation flow ([src/pages/AcceptInvitation.tsx](../../../src/pages/AcceptInvitation.tsx), [supabase/functions/invite-user/](../../../supabase/functions/invite-user/))
-- Password reset + Super Admin force-change (`send-password-reset`, `send-self-password-reset` edge functions confirmed. ~~`admin-change-password`~~ **not found in `supabase/functions/` — verify with RJ whether removed or renamed**)
+- Password reset + Super Admin force-change (`send-password-reset`, `send-self-password-reset` edge functions confirmed. ~~`admin-change-password`~~ **still not found in `supabase/functions/` as of 2026-09-01 — but `supabase/config.toml` references it, meaning it's likely deployed and repo-deleted, not just renamed. Needs a live deployed-function check (Supabase MCP) to resolve, not just another repo grep.**)
 - User management UI (`/manage-users`, `/manage-invites`)
 - Role matrix enforcement (Vivacity vs. client roles)
 - Audit of Super Admin actions (inferred from recent commits)
@@ -102,7 +102,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 
 ## 4. Audits & Assessments
 
-**Status:** 🟡 Workspace heavily expanded; AI drafting stack shipped 29–30 April 2026; audit CRUD still client-side direct DB
+**Status:** 🟡 Workspace heavily expanded; AI drafting stack shipped 29–30 April 2026; **a server-side audit edge-function surface now exists (corrected 2026-09-01 — see Backend reality below), audit CRUD is no longer exclusively client-side direct DB**
 
 **What exists:**
 - Audit templates ([sql-setup/05-audit-schema.sql](../../../sql-setup/05-audit-schema.sql), `/audits/create-template`)
@@ -133,13 +133,13 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 
 **Audit types:** [src/types/audit.ts](../../../src/types/audit.ts), [src/types/auditWorkspace.ts](../../../src/types/auditWorkspace.ts), [src/types/auditReferences.ts](../../../src/types/auditReferences.ts).
 
-**Backend reality:**
-- **No dedicated audit edge function.** Audit creation, save, and finding mutations all happen via the Supabase JS client direct against `client_audits` / related tables from `useClientAudits.ts` and `useAuditWorkspace.ts`. A `create-client-audit` Edge Function was added on 2026-04-20 (`65c426aa`) and **reverted the same day** (`084a5e17`); it is not at HEAD. If a server-side audit pipeline is wanted, this is greenfield again.
+**Backend reality (corrected 2026-09-01 — this whole subsection was stale):**
+- **A real audit edge-function surface exists, and has grown.** `create-client-audit` — the function this doc previously said was "added 2026-04-20 and reverted the same day, not at HEAD" — is back in the repo, alongside `delete-incomplete-audit`, `generate-client-audit-report`, `generate-client-audit-report-docx`, `record-completed-audit`, `release-audit-report`, and `export-pdp-audit-pack`. Some audit mutations may still go via the Supabase JS client direct against `client_audits` from `useClientAudits.ts`/`useAuditWorkspace.ts` — that wasn't re-verified in this pass — but "no dedicated audit edge function" is no longer an accurate characterization of the backend.
 - AI-adjacent functions still in place: `analyze-document`, `research-audit-intelligence`, `research-evidence-gap-check`, `research-template-gap-analysis`, `scan-document` / `chunk-document` pipeline.
-- **AI audit stack (7 new edge functions, 4 migrations, 29–30 April 2026)** — see bullet above and `reference/ai-audit-stack.md`.
+- **AI audit stack (now ~14 edge functions, up from 7 at the last count, see `reference/ai-audit-stack.md` and `codebase-state/architecture.md → Edge functions`).**
 
 **Still not confirmed in codebase:**
-- `generate-audit-report` — not found; confirm with RJ
+- ~~`generate-audit-report` — not found; confirm with RJ~~ **Resolved 2026-09-01:** `generate-client-audit-report` and a `generate-client-audit-report-docx` variant now exist, alongside a companion `release-audit-report`.
 - `audit_appointments` scheduling table — `AppointmentPanel.tsx` and `useAuditScheduler.ts` exist, suggesting the table is present, but not verified directly
 
 **Remaining:**
@@ -224,7 +224,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 
 ## 9. Campaigns / Email
 
-**Status:** 🟡 Partial
+**Status:** 🟡 Partial, larger surface than previously documented (corrected 2026-09-01)
 
 **What exists:**
 - Admin email template management (`/admin/manage-emails`)
@@ -235,15 +235,18 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 **Also present in this codebase:**
 - `send-email-graph` and `send-composed-email` via Microsoft Graph (not Mailgun)
 - `send-stage-email` — stage-triggered emails
-- `generate-notifications` + `process-notification-outbox` — notification pipeline
+- `generate-notifications` + `process-notification-outbox` + `process-notification-queue` — notification pipeline (an outbox *and* a queue variant both exist; whether these are two live paths or one migrating to the other wasn't established in this pass)
+- `send-email` / `send-enhanced-email` / `send-notification-email` / `send-test-email` — additional send-path functions not previously listed
+- `send-action-item-due-reminders` — scheduled reminder sends
 
-**Not yet confirmed:**
-- `send-automated-email` multi-handler dispatcher
-- Broadcast / campaign builder UI
-- Segmentation
+**Resolved as of 2026-09-01 (were "not yet confirmed"):**
+- ~~`send-automated-email` multi-handler dispatcher~~ — exists.
+- ~~Broadcast / campaign builder UI~~ — a `send-broadcast-campaign` edge function exists (a real 44-tenant campaign was run against it, exposing a participant-insertion failure now fixed — see `docs/audit-log/entries/2026-08-25-broadcast-notification-silent-participant-failure.md`). Whether there's a full campaign-builder *UI* behind it, versus an internal/API-only trigger, wasn't re-verified in this pass.
+- Segmentation — not independently re-verified in this pass; still worth confirming scope.
 
 **Remaining:**
-- Confirm whether campaign engine is in scope for 2.0 or deferred.
+- Confirm whether a full campaign-builder UI exists or the campaign function is internal-only.
+- `send-magic-link` exists as a function but is marked orphan (no in-repo caller found) — reconcile against this module's "magic-link" auth-email row above; either something calls it that a code search missed, or it's dead.
 
 ---
 
@@ -405,7 +408,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 
 **Last cross-checked:** 12 May 2026 (`unicorn-cms-f09c59e5` HEAD `aa81aab0`)
 
-**Schema (applied 11 May 2026 to `yxkgdalkbrriasiyyrwk` — live but NOT in repo migrations; run `supabase db pull` before next DB session):**
+**Schema (applied 11 May 2026 to `yxkgdalkbrriasiyyrwk`; the "live but NOT in repo migrations" gap this doc originally flagged is resolved — five migrations dated 11-13 May 2026 capture this schema in-repo):**
 - `pdp_audiences` — five audience categories with default target PD hours (Trainer 20h, Compliance Manager 15h, Governing Person 8h, Student Support Officer 12h, Administration Assistant 10h)
 - `pdp_cycles` — annual PDP cycle per user per tenant
 - `pdp_goals` — development goals mapped to a Standard (`standards_reference.standard_id`)
@@ -438,9 +441,9 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 |-----------|------|--------|
 | F13 | Add PDP to Academy sidebar nav (`AcademyLayout.tsx` `academyMainItems`) | ✅ Done — `f6a37e7b` |
 | F14 | Wire `QuickReflectionDrawer` into `AcademyLessonViewerPage` on lesson completion | ✅ Done — already implemented per-lesson (more robust than spec) |
-| F15-pre | Create `doc-templates` + `generated-docs` storage buckets (migration — DB change workflow applies) | ❌ Not done |
-| F15 | `supabase/functions/pdp-export/` Edge Function (DOCX export) | ❌ Not done |
-| F16 | ZIP audit pack in `StaffPdpsPage` (depends on F15) | ❌ Not done |
+| F15-pre | Create `doc-templates` + `generated-docs` storage buckets (migration — DB change workflow applies) | Not re-verified in this pass |
+| F15 | `supabase/functions/pdp-export/` Edge Function (DOCX export) | *(inferred)* Possibly resolved by a different function: `export-pdp-audit-pack` now exists in the repo (not present at the 12 May cross-check date), though not under the `pdp-export` name this row expects. Not confirmed to be the same feature — verify before marking F15 done. |
+| F16 | ZIP audit pack in `StaffPdpsPage` (depends on F15) | Depends on F15's actual resolution above — not independently re-verified |
 
 **Also remaining:**
 - DOCX export template to be authored and uploaded to `doc-templates/pdp/pdp-cycle-export-v1.docx` — brand spec in `handoffs/pdp-lovable-prompts.md` under Prompt 11
@@ -455,12 +458,12 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 | Auth & Users | ✅ | + bulk actions, resend/cancel invite, M365 provisioning |
 | Multi-tenancy | ✅ | Same conceptual model |
 | EOS Level 10 | ✅ | Vivacity's internal operating system — fully shipped; not a client-facing flagship (see ADR-013) |
-| Audits | 🟡 | + `analyze-document`, `research-audit-intelligence` now present; `generate-audit-report` still missing |
+| Audits | 🟡 | + `analyze-document`, `research-audit-intelligence` now present; a real audit edge-function surface now exists (`create-client-audit`, `generate-client-audit-report`, `release-audit-report`, etc. — corrected 2026-09-01, see Module 4) |
 | Packages / Pipeline | ✅ | `run-stage-health-monitor`, `calculate-phase-completeness` added |
 | Client Portal | 🟡 | Many new client pages (`ClientDetail`, `ClientImpact`, `ClientInbox`, `ClientCommunications`) |
 | Documents | 🟡 | + AI analysis, versions, categories, scan pipeline |
 | Tasks | ✅ | Same scope |
-| Campaigns/Email | 🟡 | + Microsoft Graph email; campaign builder still open |
+| Campaigns/Email | 🟡 | + Microsoft Graph email; `send-automated-email` and `send-broadcast-campaign` now exist (corrected 2026-09-01, see Module 9) — whether a full builder *UI* sits behind the campaign function isn't confirmed |
 | Subscriptions/Membership | 🔲 | `MembershipDashboard.tsx` manages tenant memberships/roles — NOT Stripe. Stripe is 🔲 Not started. |
 | Booking | 🟡 | + Outlook calendar sync now live; time capture pages added |
 | AI automation | ✅ | 40+ AI functions; orchestrator, vector layer, research, compliance AI |
@@ -469,6 +472,6 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 | ClickUp | ✅ | Task + time sync |
 | Academy | ✅ | Fully shipped — ~30 pages, 22 components, 9 hooks, role-specific client views, superadmin builder |
 | Resource Hub | ✅ | Shipped — 12 staff + client routes, categorised library |
-| **Academy PDP** | 🟡 | Schema applied 11 May 2026 (6 tables, 2 views, 21 RLS policies). UI not yet built — 12 Lovable prompts ready in `handoffs/pdp-lovable-prompts.md`. |
+| **Academy PDP** | 🟠 | Schema applied 11 May 2026 (6 tables, 2 views, 21 RLS policies), migration-backed. **This row was stale — the detailed Module 18 below already shows most UI shipped** (learner dashboard, cycle detail, reviews hub, workforce dashboard), not "not yet built." 3 of 4 follow-up gaps (F13-F16) remain, one possibly resolved by `export-pdp-audit-pack` — see Module 18. |
 
 See [migration-1to2.md](../reference/migration-1to2.md) for what came from Unicorn 1.0 and what's net-new.
