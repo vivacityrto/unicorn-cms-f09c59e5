@@ -19,6 +19,49 @@ export function useVideoLibraryPicker(search?: string) {
   });
 }
 
+export type AcademyThumbnailLibraryItem = {
+  url: string;
+  category: "course" | "banner";
+  sourceCourseId: number;
+  sourceCourseTitle: string;
+};
+
+/** Returns distinct custom-uploaded Academy thumbnails already referenced by courses. */
+export function useAcademyThumbnailLibrary() {
+  return useQuery<AcademyThumbnailLibraryItem[]>({
+    queryKey: ["academy-thumbnail-library"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("academy_courses")
+        .select("id, title, thumbnail_url, banner_thumbnail_url")
+        .order("title");
+      if (error) throw error;
+
+      const items = new Map<string, AcademyThumbnailLibraryItem>();
+      for (const course of data ?? []) {
+        const entries = [
+          ["course", course.thumbnail_url],
+          ["banner", course.banner_thumbnail_url],
+        ] as const;
+        for (const [category, url] of entries) {
+          if (!url || !url.includes("/storage/v1/object/public/academy-thumbnails/")) continue;
+          const key = `${category}:${url}`;
+          if (!items.has(key)) {
+            items.set(key, {
+              url,
+              category,
+              sourceCourseId: course.id,
+              sourceCourseTitle: course.title,
+            });
+          }
+        }
+      }
+      return [...items.values()];
+    },
+    staleTime: 30_000,
+  });
+}
+
 export function useResourceLibraryPicker(search?: string) {
   return useQuery({
     queryKey: ["resource-library-picker", search],
