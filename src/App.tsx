@@ -22,6 +22,7 @@ import { CelebrationProvider } from "./components/ui/celebration";
 import { supportTicketsRoutes } from "./routes/supportTicketsRoutes";
 import { academyLayoutRoutes } from "./routes/academyRoutes";
 import { clientLayoutRoutes } from "./routes/clientRoutes";
+import { dashboardLayoutRoutes } from "./routes/dashboardRoutes";
 
 // Non-SuperAdmin roles allowed on Academy Builder admin routes (SuperAdmin is always allowed by ProtectedRoute).
 const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"];
@@ -31,37 +32,19 @@ const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"];
  const Login = lazy(() => import("./pages/Login"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MainDashboard = lazy(() => import("./pages/MainDashboard"));
- const ManageUsersWrapper = lazy(() => import("./pages/ManageUsersWrapper"));
  const ManageInvitesWrapper = lazy(() => import("./pages/ManageInvitesWrapper"));
- const ManageTenantsWrapper = lazy(() => import("./pages/ManageTenantsWrapper"));
- const ManageDocumentsWrapper = lazy(() => import("./pages/ManageDocumentsWrapper"));
  const BulkDocumentJobsList = lazy(() => import("./pages/BulkDocumentJobsList"));
  const BulkDocumentJobProgress = lazy(() => import("./pages/BulkDocumentJobProgress"));
  const BulkGenerateNew = lazy(() => import("./pages/BulkGenerateNew"));
- const ManageCategoriesWrapper = lazy(() => import("./pages/ManageCategoriesWrapper"));
- const ManageStagesWrapper = lazy(() => import("./pages/ManageStagesWrapper"));
  const SharePointFolderMapping = lazy(() => import("./pages/admin/SharePointFolderMapping"));
  const SharePointSitesAdmin = lazy(() => import("./pages/admin/SharePointSitesAdmin"));
  const AiInsightsPage = lazy(() => import("./pages/admin/ai-insights"));
- 
- const UserProfileWrapper = lazy(() => import("./pages/UserProfileWrapper"));
+
  // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
- const TenantLoginsWrapper = lazy(() => import("./pages/TenantLoginsWrapper"));
- const TenantMembersWrapper = lazy(() => import("./pages/TenantMembersWrapper"));
- const TenantDocumentsWrapper = lazy(() => import("./pages/TenantDocumentsWrapper"));
- const TenantDocumentsHubWrapper = lazy(() => import("./pages/TenantDocumentsHubWrapper"));
  const TenantDocumentDetailWrapper = lazy(() => import("./pages/TenantDocumentDetailWrapper"));
- const TenantNotesWrapper = lazy(() => import("./pages/TenantNotesWrapper"));
- const ClientPortalDocumentsWrapper = lazy(() => import("./pages/ClientPortalDocumentsWrapper"));
- 
- const AdminPackageDetailWrapper = lazy(() => import("./pages/AdminPackageDetailWrapper"));
- const AdminPackageTenantDetailWrapper = lazy(() => import("./pages/AdminPackageTenantDetailWrapper"));
+
  const PackageBuilder = lazy(() => import("./pages/PackageBuilder"));
  const PackageBuilderDetail = lazy(() => import("./pages/PackageBuilderDetail"));
- const ManageEmailTemplatesWrapper = lazy(() => import("./pages/ManageEmailTemplatesWrapper"));
- const TeamSettingsWrapper = lazy(() => import("./pages/TeamSettingsWrapper"));
- const SettingsWrapper = lazy(() => import("./pages/SettingsWrapper"));
- const CalendarWrapper = lazy(() => import("./pages/CalendarWrapper"));
  const AcceptInvitationWrapper = lazy(() => import("./pages/AcceptInvitationWrapper"));
  const NotFound = lazy(() => import("./pages/NotFound"));
  const EosOverview = lazy(() => import("./pages/EosOverview"));
@@ -124,9 +107,6 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const ExecutiveFinancialControls = lazy(() => import("./pages/ExecutiveFinancialControls"));
  const ExecutiveClientCommitments = lazy(() => import("./pages/ExecutiveClientCommitments"));
  const ExecutiveDecisionQueue = lazy(() => import("./pages/ExecutiveDecisionQueue"));
- const ClientDetailWrapper = lazy(() => import("./pages/ClientDetailWrapper"));
- const AdminTgaIntegrationWrapper = lazy(() => import("./pages/AdminTgaIntegrationWrapper"));
- const AdminXeroIntegrationWrapper = lazy(() => import("./pages/AdminXeroIntegrationWrapper"));
  const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
   const TeamUsers = lazy(() => import("./pages/TeamUsers"));
 const NewStarterWizard = lazy(() => import("./pages/admin/NewStarterWizard"));
@@ -143,8 +123,6 @@ const StaffEngagementDetail = lazy(() => import("./pages/admin/StaffEngagementDe
 const MyExitInterview = lazy(() => import("./pages/MyExitInterview"));
  const TenantUsers = lazy(() => import("./pages/TenantUsers"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
- const AdminManageStagesWrapper = lazy(() => import("./pages/AdminManageStagesWrapper"));
- const AdminStageDetailWrapper = lazy(() => import("./pages/AdminStageDetailWrapper"));
  const StageBuilder = lazy(() => import("./pages/StageBuilder"));
 const AdminStageAnalytics = lazy(() => import("./pages/AdminStageAnalytics"));
 const AdminOperations = lazy(() => import("./pages/AdminOperations"));
@@ -157,9 +135,6 @@ const KpiPage = lazy(() => import("./pages/KpiPage"));
  const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
  const XeroCallback = lazy(() => import("./pages/XeroCallback"));
 const TimeInbox = lazy(() => import("./pages/TimeInbox"));
-const WorkCalendarWrapper = lazy(() => import("./pages/WorkCalendarWrapper"));
-const WorkMeetings = lazy(() => import("./pages/WorkMeetingsWrapper"));
-const ProcessesWrapper = lazy(() => import("./pages/ProcessesWrapper"));
 const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
 const ProcessForm = lazy(() => import("./pages/ProcessForm"));
 const RoleReference = lazy(() => import("./pages/RoleReference"));
@@ -187,7 +162,6 @@ const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
 const LifecycleChecklistsAdmin = lazy(() => import("./pages/admin/LifecycleChecklistsAdmin"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const ReportingObligationsAdmin = lazy(() => import("./pages/admin/settings/ReportingObligations"));
-const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
 const AcademyEnrolmentsPage = lazy(() => import("./pages/superadmin/AcademyEnrolmentsPage"));
 const SuperAdminWorkforcePdp = lazy(() => import("./pages/superadmin/workforce-pdp"));
 const AcademyTenantAccessPage = lazy(() => import("./pages/superadmin/AcademyTenantAccessPage"));
@@ -221,8 +195,6 @@ const ClientPreview = lazy(() => import("./pages/ClientPreview"));
 // Client Portal pages (isolated layout)
 // ClientNotificationsWrapperNew removed — consolidated into ClientInboxPage
 // ClientCommunicationsWrapperNew removed — consolidated into ClientInboxPage
-const TeamInboxWrapper = lazy(() => import("./pages/TeamInboxWrapper"));
-const EmailTriageWrapper = lazy(() => import("./pages/EmailTriageWrapper"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -320,32 +292,8 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/calendar" 
-              element={
-                <ProtectedRoute>
-                  <CalendarWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/work/calendar" 
-              element={
-                <ProtectedRoute>
-                  <WorkCalendarWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/work/meetings" 
-              element={
-                <ProtectedRoute>
-                  <WorkMeetings />
-                </ProtectedRoute>
-              }
-            />
             <Route
-              path="/calendar/time-capture" 
+              path="/calendar/time-capture"
               element={
                 <ProtectedRoute>
                   <CalendarTimeCapture />
@@ -368,43 +316,11 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <SettingsWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/manage-users" 
-              element={
-                <ProtectedRoute>
-                  <ManageUsersWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/manage-invites" 
+            <Route
+              path="/manage-invites"
               element={
                 <ProtectedRoute>
                   <ManageInvitesWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/manage-tenants" 
-              element={
-                <ProtectedRoute>
-                  <ManageTenantsWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/manage-documents" 
-              element={
-                <ProtectedRoute>
-                  <ManageDocumentsWrapper />
                 </ProtectedRoute>
               } 
             />
@@ -459,121 +375,23 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route 
-              path="/manage-categories"
-              element={
-                <ProtectedRoute>
-                  <ManageCategoriesWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/email-templates"
-              element={
-                <ProtectedRoute>
-                  <ManageEmailTemplatesWrapper />
-                </ProtectedRoute>
-              } 
-            />
             <Route
-              path="/manage-stages"
-              element={
-                <ProtectedRoute>
-                  <ManageStagesWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/user-profile/:userId"
-              element={
-                <ProtectedRoute>
-                  <UserProfileWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tenant/:tenantId" 
-              element={
-                <ProtectedRoute>
-                  <ClientDetailWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tenant/:tenantId/logins" 
-              element={
-                <ProtectedRoute>
-                  <TenantLoginsWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tenant/:tenantId/members" 
-              element={
-                <ProtectedRoute>
-                  <TenantMembersWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tenant/:tenantId/documents" 
-              element={
-                <ProtectedRoute>
-                  <TenantDocumentsWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tenant/:tenantId/documents-hub" 
-              element={
-                <ProtectedRoute>
-                  <TenantDocumentsHubWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tenant/:tenantId/document/:documentId" 
+              path="/tenant/:tenantId/document/:documentId"
               element={
                 <ProtectedRoute>
                   <TenantDocumentDetailWrapper />
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/client-portal/:tenantId/documents" 
-              element={
-                <ProtectedRoute>
-                  <ClientPortalDocumentsWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tenant/:tenantId/notes" 
-              element={
-                <ProtectedRoute>
-                  <TenantNotesWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tenant-detail/:tenantId"
-              element={
-                <ProtectedRoute>
-                  <ClientDetailWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/client-packages/:clientPackageId" 
+            <Route
+              path="/admin/client-packages/:clientPackageId"
               element={
                 <ProtectedRoute>
                   <ClientPackageDetailWrapper />
                 </ProtectedRoute>
               } 
             />
-            <Route path="/inbox" element={<ProtectedRoute><TeamInboxWrapper /></ProtectedRoute>} />
-            <Route path="/email-triage" element={<ProtectedRoute><EmailTriageWrapper /></ProtectedRoute>} />
-            <Route 
+            <Route
               path="/my-work" 
               element={
                 <ProtectedRoute>
@@ -605,14 +423,6 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/communications" 
-              element={
-                <ProtectedRoute>
-                  <TeamCommunicationsWrapper />
-                </ProtectedRoute>
-              } 
-            />
             <Route
               path="/admin/manage-packages"
               element={
@@ -629,40 +439,8 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/admin/package/:id"
-              element={
-                <ProtectedRoute>
-                  <AdminPackageDetailWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/package/:id/tenant/:tenantId/instance/:instanceId"
-              element={
-                <ProtectedRoute>
-                  <AdminPackageTenantDetailWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/package/:id/tenant/:tenantId"
-              element={
-                <ProtectedRoute>
-                  <AdminPackageTenantDetailWrapper />
-                </ProtectedRoute>
-              } 
-            />
             <Route
-              path="/team-settings" 
-              element={
-                <ProtectedRoute>
-                  <TeamSettingsWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos" 
+              path="/eos"
               element={
                 <ProtectedRoute>
                   <EosOverview />
@@ -880,16 +658,8 @@ const App = () => (
               } 
             />
             {/* Process Management Routes */}
-            <Route 
-              path="/processes" 
-              element={
-                <ProtectedRoute>
-                  <ProcessesWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/processes/new" 
+            <Route
+              path="/processes/new"
               element={
                 <ProtectedRoute>
                   <ProcessForm />
@@ -1030,9 +800,6 @@ const App = () => (
             <Route path="/executive/client-commitments" element={<ProtectedRoute requireSuperAdmin><ExecutiveClientCommitments /></ProtectedRoute>} />
             <Route path="/executive/decision-queue" element={<ProtectedRoute requireSuperAdmin><ExecutiveDecisionQueue /></ProtectedRoute>} />
             {/* Client Detail route removed — consolidated into /tenant/:tenantId above */}
-            {/* Admin Integrations */}
-            <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />
-            <Route path="/admin/integrations/xero" element={<ProtectedRoute><AdminXeroIntegrationWrapper /></ProtectedRoute>} />
             {/* Admin User Audit */}
             <Route path="/admin/user-audit" element={<ProtectedRoute><AdminUserAudit /></ProtectedRoute>} />
             <Route path="/clients/bulk-membership-certificates" element={<ProtectedRoute><BulkMembershipCertificatesPage /></ProtectedRoute>} />
@@ -1052,8 +819,6 @@ const App = () => (
             <Route path="/admin/diagnostics/zero-progress-packages" element={<ProtectedRoute requireSuperAdmin><AdminZeroProgressPackagesPage /></ProtectedRoute>} />
             <Route path="/admin/tenant-users" element={<ProtectedRoute><TenantUsers /></ProtectedRoute>} />
             {/* Admin Stages */}
-            <Route path="/admin/stages" element={<ProtectedRoute requireSuperAdmin><AdminManageStagesWrapper /></ProtectedRoute>} />
-            <Route path="/admin/stages/:stage_id" element={<ProtectedRoute requireSuperAdmin><AdminStageDetailWrapper /></ProtectedRoute>} />
             <Route path="/admin/stage-builder" element={<ProtectedRoute requireSuperAdmin><StageBuilder /></ProtectedRoute>} />
             <Route path="/admin/stage-analytics" element={<ProtectedRoute requireSuperAdmin><AdminStageAnalytics /></ProtectedRoute>} />
             <Route path="/admin/operations" element={<ProtectedRoute requireSuperAdmin><AdminOperations /></ProtectedRoute>} />
@@ -1130,6 +895,7 @@ const App = () => (
             <Route path="/client/team" element={<Navigate to="/client/users" replace />} />
             {clientLayoutRoutes}
             {academyLayoutRoutes}
+            {dashboardLayoutRoutes}
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
             <Route path="/addin" element={<AddinShell />} />
