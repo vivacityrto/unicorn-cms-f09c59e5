@@ -32,3 +32,28 @@ test("A SuperAdmin-only route denies the client persona", async ({ page }) => {
   await expect(page).not.toHaveURL(/\/admin\/user-audit/);
   expect(errors).toEqual([]);
 });
+
+// Legacy client-portal "suggestions" redirects (src/App.tsx). Unlike the
+// staff side, all three legacy paths collapse onto the same plain
+// /client/support-tickets target -- there is no client-side /new or /:id
+// preserved. Characterizing the exact current behavior, not asserting it's
+// the only sensible design, so a future route-module extraction can't
+// silently change it.
+
+test("/client/suggestions redirects to /client/support-tickets", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/client/suggestions");
+  await page.waitForURL("**/client/support-tickets");
+  expect(errors).toEqual([]);
+});
+
+test("/client/suggestions/new collapses onto /client/support-tickets (no distinct new-ticket target)", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/client/suggestions/new");
+  await page.waitForURL("**/client/support-tickets");
+  expect(errors).toEqual([]);
+});

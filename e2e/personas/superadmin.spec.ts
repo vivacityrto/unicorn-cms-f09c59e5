@@ -16,7 +16,11 @@ test("Dashboard loads as an authenticated SuperAdmin", async ({ page }) => {
   const response = await page.goto("/dashboard");
   expect(response?.status()).toBeLessThan(400);
   await expect(page).not.toHaveURL(/\/login/);
-  await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
+  // MainDashboard's own data (client counts, activity feed, KPIs) can take
+  // longer than the 5s assertion default on a cold Playwright context, even
+  // though the heading itself renders quickly once auth resolves -- extend
+  // the timeout rather than asserting on a fixed-size wait.
+  await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible({ timeout: 15_000 });
   expect(errors).toEqual([]);
 });
 
@@ -28,5 +32,36 @@ test("A representative SuperAdmin-only route is reachable, not redirected to /da
   await page.waitForLoadState("networkidle").catch(() => {});
   await expect(page).not.toHaveURL(/\/login/);
   await expect(page).not.toHaveURL("**/dashboard");
+  expect(errors).toEqual([]);
+});
+
+// Legacy "Suggestion & Issue Register" -> "Support Tickets" redirects
+// (src/App.tsx, "Suggestion & Issue Register (legacy -> redirect to Support
+// Tickets)"). Characterization for the P1.1 dedup fix and for any future
+// route-module extraction: these three legacy paths must keep landing on
+// the single wrapped /support-tickets registration, not the removed
+// unwrapped duplicate, and not each other's target by accident.
+
+test("/suggestions redirects to /support-tickets (wrapped shell, not the removed duplicate)", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/suggestions");
+  await page.waitForURL("**/support-tickets");
+  // Confirms the wrapped registration (SupportTicketsWrapper -> DashboardLayout),
+  // not the formerly-duplicate unwrapped one -- the sidebar only renders inside
+  // DashboardLayout. Scoped to <main>: the page title also appears as an h1 in
+  // TopBar's banner, so an unscoped locator matches both.
+  await expect(page.getByRole("main").getByRole("heading", { name: "Support Tickets", level: 1 })).toBeVisible();
+  await expect(page.getByRole("navigation")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("/suggestions/new redirects to /support-tickets/new", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/suggestions/new");
+  await page.waitForURL("**/support-tickets/new");
   expect(errors).toEqual([]);
 });
