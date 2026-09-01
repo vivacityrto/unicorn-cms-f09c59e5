@@ -33,6 +33,7 @@ interface Props {
   libraryItems?: AcademyThumbnailLibraryItem[];
   libraryCategory?: "course" | "banner";
   onSelectLibraryImage?: (url: string) => void;
+  onDeleteLibraryImage?: (item: AcademyThumbnailLibraryItem) => Promise<void>;
   isUploading?: boolean;
   /** When provided, shows a "Remove" action (e.g. to fall back to another image) instead of requiring a replacement upload. */
   onRemove?: () => void;
@@ -53,6 +54,7 @@ export default function ThumbnailPositionEditor({
   libraryItems = [],
   libraryCategory,
   onSelectLibraryImage,
+  onDeleteLibraryImage,
   isUploading = false,
   onRemove,
   removeLabel = "Remove",
@@ -128,6 +130,7 @@ export default function ThumbnailPositionEditor({
               items={libraryItems}
               value={imageUrl}
               onSelect={onSelectLibraryImage}
+              onDelete={onDeleteLibraryImage}
             />
           )}
           {onRemove && imageUrl && (
