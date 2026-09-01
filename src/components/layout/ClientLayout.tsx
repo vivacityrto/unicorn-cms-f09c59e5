@@ -171,7 +171,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       {/*
         Ask Viv (client surface)
         - Standalone trigger + panel; does NOT use the staff useAskViv() context.
-        - Calls compliance-assistant-client only.
+        - Calls ask-viv-assistant-client only (see ClientAskVivPanel.tsx).
         - Visual matches the staff AskVivButton (round, vivIcon, status dot).
       */}
       <Tooltip>

@@ -174,13 +174,15 @@ These didn't exist in any legacy system — they're pure additions.
 
 If you're given a bulk-import task, check [sql-setup/](../../../sql-setup/) first — the pattern is SQL seed files, not a GUI importer.
 
-### Unicorn 1.0 user ID bridge (open)
+### Unicorn 1.0 user ID bridge (closed — verified 2026-09-01)
 
 The 1.0 schema used **bigint** user IDs. 2.0 uses Supabase **UUIDs**. The legacy table diagram annotates `package_instances.client_id` and `package_instances.clo_id` as "FROM unicorn1 (int8)" — meaning those FKs still reference the legacy bigint space.
 
-Any historical-data import that touches `package_instances` (or any other table with these FKs) needs a `unicorn1_user_id (int8) → user_uuid` lookup table — either as a column on `users` or as a side mapping table.
+**Status: this bridge is implemented, not open.** Confirmed directly against `src/integrations/supabase/types.ts` and `supabase/migrations/`:
+- `users.legacy_id` (`number | null`) — a bigint-typed bridge column on `users` itself, exactly the shape this section was asking whether 2.0 already had.
+- `tenants.unicorn1_id` (`bigint`, nullable) — added by `supabase/migrations/20260806050000_add_unicorn1_id_to_tenants.sql`, a manual-override lookup for the *tenant/client* side (not users): Unicorn 1 redirect links (`TenantTimeTrackerBar`, `CompliancePulseBanner`) build `https://unicorn-cms.com.au/clients/{tenants.id}`, which only lines up for tenants imported 1:1 from Unicorn 1; `unicorn1_id` overrides that when set (`import-unicorn1-client` sets it explicitly on insert; a trigger defaults organically-created tenants to `id + 1`, correcting a known 1-off drift in Unicorn 1's own sequence), else falls back to `tenants.id`.
 
-**Status:** Not confirmed whether 2.0 already has such a bridge column on `users`. Verify before scoping any 1.0 → 2.0 data port. Likely places to check: `supabase/migrations/` for any column named `unicorn1_id`, `legacy_id`, `unicorn1_user_id`, etc.; the `import-unicorn1-client` / `lookup-unicorn1-client` / `search-unicorn1-users` edge functions (per [01-architecture.md](../codebase-state/architecture.md#edge-functions-117-live)) may already encode the lookup pattern.
+Any historical-data import touching `package_instances` (or another table with a `unicorn1`-space FK) can use `users.legacy_id` as the user-side lookup directly — no separate mapping table needed. The `import-unicorn1-client` / `lookup-unicorn1-client` / `search-unicorn1-users` edge functions already encode this lookup pattern in practice.
 
 ---
 

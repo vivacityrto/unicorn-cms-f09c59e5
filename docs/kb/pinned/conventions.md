@@ -25,11 +25,13 @@ User identity:
 - `auth.users` — Supabase-managed, UUID primary key
 - `users` — app profile, keyed by `user_uuid` matching `auth.users.id`. Holds `unicorn_role`, `tenant_id`, name, avatar.
 - `tenant_members` — platform RBAC table. Roles: `Admin` / `General User`. Has `status` (active/inactive/pending), `invited_at`, `joined_at`. Used for auth checks (`useAuth`), billing signals, seat limits, and AI feature gates. Used in RLS policies for client-user SELECT checks (see ritual below).
-- `tenant_users` — client-side contact/membership table. Roles: `parent` (can manage) / `child` (read-only). Has `primary_contact` and `secondary_contact` booleans (auto-set by trigger when `role = 'parent'`). Used for client management UI, email delivery, document generation, invite-user provisioning, and M365 provisioning.
+- `tenant_users` — client-side contact/membership table. Roles: `parent` (can manage) / `child` (read-only). **Contact designation is `relationship_role`** (a text column FK'd to the `dd_relationship_role` lookup table — values `primary_contact`/`secondary_contact`/`user`/`academy_user`), **not** separate `primary_contact`/`secondary_contact` booleans — those were superseded by `supabase/migrations/20260518023538_*.sql` (Phase 4C, May 2026; `user_invitations.relationship_role` moved the same way). Used for client management UI, email delivery, document generation, invite-user provisioning, and M365 provisioning.
 
 > **Two-table note:** both tables store user–tenant relationships but serve different purposes. The RLS SELECT policy template below references `tenant_members` — that governs platform access. `tenant_users` governs client-org contact roles and is written by the invite-user edge function. Do not conflate them.
 
 ### Role matrix
+
+This table is the `users.unicorn_role` axis only — platform/system access level. It is a different axis from `tenant_users.relationship_role` (client-tenant contact designation: `primary_contact`/`secondary_contact`/`user`/`academy_user`, see the two-table note above) — a client user's system access level (`Admin`/`User`) and their contact designation (primary/secondary/plain user) are independent and both matter for different features.
 
 | `tenant_id` | Role values | Capability |
 |---|---|---|
@@ -54,7 +56,7 @@ Enforced in `invite-user` edge function ([supabase/functions/invite-user/index.t
 CREATE POLICY tenant_read ON <table>
   FOR SELECT
   USING (tenant_id IN (
-    SELECT tenant_id FROM tenant_members WHERE user_uuid = auth.uid()
+    SELECT tenant_id FROM tenant_members WHERE user_id = auth.uid()
   ));
 
 -- 2. Vivacity staff ALL (consultants)
@@ -209,44 +211,31 @@ Always available in RLS policies:
 
 ### Canonical pattern
 
+**Use the shared `requireCaller` helper (`supabase/functions/_shared/requireCaller.ts`), not a hand-rolled `supabase.auth.getUser()` + manual role/tenant check.** This section previously taught the hand-rolled version as canonical; it wasn't wrong when written, but a shared, tested helper now exists and is the actual current standard — every user-JWT function should go through it instead of one-off `unicorn_role`/`global_role`/`is_vivacity_internal` checks. Authorization is `check_permission`, the same RPC the UI (`usePermission`) and RLS policies use; Super Admin always passes inside it. Two call shapes (from the helper's own docstring):
+
 ```ts
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    { auth: { persistSession: false } }
-  );
+  // Options form (orAllow, custom messages, injected admin client)
+  const caller = await requireCaller(req, admin, {
+    featureKey: FeatureKeys.staffInternal,
+    headers: corsHeaders(req),
+  });
+  if (!caller.ok) return caller.response;
 
-  // 1. Extract + validate caller token
-  const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!callerToken) return jsonResponse(401, { ok: false, code: "NO_AUTH", ... });
+  // Convenience form (builds the service-role client internally)
+  // const caller = await requireCaller(req, "admin.team_users.manage", "full");
+  // if (caller instanceof Response) return caller;
 
-  // 2. Resolve caller identity
-  const { data: callerUser, error } = await supabase.auth.getUser(callerToken);
-  if (error || !callerUser?.user) return jsonResponse(401, { ok: false, code: "AUTH_FAILED", ... });
-
-  // 3. Check caller's role/tenant from `users` table (NOT just JWT claims)
-  const { data: callerProfile } = await supabase.from('users')
-    .select('unicorn_role, tenant_id')
-    .eq('user_uuid', callerUser.user.id)
-    .maybeSingle();
-
-  // 4. Authorise — role + tenant + action-specific
-  if (callerProfile?.unicorn_role !== 'Super Admin') {
-    return jsonResponse(403, { ok: false, code: "FORBIDDEN", ... });
-  }
-
-  // 5. Validate input payload with explicit shape check
-
-  // 6. Do the work, return structured JSON
+  // ... do the work, return structured JSON
 });
 ```
+
+Bearer tokens are accepted only as exactly `Bearer <token>` (two parts) — never base64-decode a JWT to read claims. For machine-to-machine calls (cron, webhooks), use `requireSharedSecret`/`requireInternalEmailSecret` instead, gated the same way, before any DB read/write branch. See `AGENTS.md → Edge Function security guardrails` for the full new-function checklist — every mode/branch of a multi-action function must share the same gate, and any union-typed role/action field needs a matching runtime allowlist (TypeScript types don't validate an attacker-controlled JSON body).
 
 ### Response envelope
 
