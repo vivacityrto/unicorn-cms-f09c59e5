@@ -2,6 +2,8 @@ import { useMemo, useRef, type PointerEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import ThumbnailLibraryPicker from "@/components/academy/builder/ThumbnailLibraryPicker";
+import type { AcademyThumbnailLibraryItem } from "@/hooks/academy/useAcademyBuilderPickers";
 
 const PRESETS = [
   { label: "Top", value: "50% 0%" },
@@ -28,6 +30,9 @@ interface Props {
   zoom: number;
   onZoomChange: (zoom: number) => void;
   onUpload: (file: File) => Promise<void>;
+  libraryItems?: AcademyThumbnailLibraryItem[];
+  libraryCategory?: "course" | "banner";
+  onSelectLibraryImage?: (url: string) => void;
   isUploading?: boolean;
   /** When provided, shows a "Remove" action (e.g. to fall back to another image) instead of requiring a replacement upload. */
   onRemove?: () => void;
@@ -45,6 +50,9 @@ export default function ThumbnailPositionEditor({
   zoom,
   onZoomChange,
   onUpload,
+  libraryItems = [],
+  libraryCategory,
+  onSelectLibraryImage,
   isUploading = false,
   onRemove,
   removeLabel = "Remove",
@@ -114,6 +122,14 @@ export default function ThumbnailPositionEditor({
               }}
             />
           </label>
+          {libraryCategory && onSelectLibraryImage && (
+            <ThumbnailLibraryPicker
+              category={libraryCategory}
+              items={libraryItems}
+              value={imageUrl}
+              onSelect={onSelectLibraryImage}
+            />
+          )}
           {onRemove && imageUrl && (
             <Button type="button" size="sm" variant="outline" onClick={onRemove}>{removeLabel}</Button>
           )}

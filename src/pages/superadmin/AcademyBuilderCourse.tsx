@@ -52,6 +52,8 @@ import { usePermission } from "@/hooks/usePermission";
 import { cn } from "@/lib/utils";
 import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
 import ThumbnailPositionEditor from "@/components/academy/builder/ThumbnailPositionEditor";
+import ThumbnailLibraryPicker from "@/components/academy/builder/ThumbnailLibraryPicker";
+import { useAcademyThumbnailLibrary } from "@/hooks/academy/useAcademyBuilderPickers";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -487,6 +489,7 @@ export default function AcademyBuilderCourse() {
     queryFn: fetchDistinctAcademyTags,
     staleTime: 5 * 60 * 1000,
   });
+  const { data: thumbnailLibrary = [] } = useAcademyThumbnailLibrary();
 
   // Save mutation — single explicit Save Changes button
   const saveCourseSettings = useMutation({
@@ -505,6 +508,7 @@ export default function AcademyBuilderCourse() {
       toast.success("Course settings saved");
       qc.invalidateQueries({ queryKey: ["academy-builder-course", courseId] });
       qc.invalidateQueries({ queryKey: ["academy-courses-admin"] });
+      qc.invalidateQueries({ queryKey: ["academy-thumbnail-library"] });
     },
     onError: (e: any) => toast.error(e?.message || "Failed to save course settings"),
   });
@@ -819,6 +823,9 @@ export default function AcademyBuilderCourse() {
                 onZoomChange={(thumbnail_zoom) => setFormState((p) => ({ ...p, thumbnail_zoom }))}
                 onUpload={handleThumbnailUpload}
                 isUploading={isThumbnailUploading}
+                libraryItems={thumbnailLibrary}
+                libraryCategory="course"
+                onSelectLibraryImage={(thumbnail_url) => setFormState((p) => ({ ...p, thumbnail_url }))}
               />
 
               {formState.banner_thumbnail_url ? (
@@ -834,6 +841,9 @@ export default function AcademyBuilderCourse() {
                   onZoomChange={(banner_thumbnail_zoom) => setFormState((p) => ({ ...p, banner_thumbnail_zoom }))}
                   onUpload={handleBannerThumbnailUpload}
                   isUploading={isBannerThumbnailUploading}
+                  libraryItems={thumbnailLibrary}
+                  libraryCategory="banner"
+                  onSelectLibraryImage={(banner_thumbnail_url) => setFormState((p) => ({ ...p, banner_thumbnail_url }))}
                   onRemove={handleRemoveBannerThumbnail}
                   removeLabel="Use course card image instead"
                 />
@@ -866,6 +876,14 @@ export default function AcademyBuilderCourse() {
                       }}
                     />
                   </label>
+                  <div className="inline-flex">
+                    <ThumbnailLibraryPicker
+                      category="banner"
+                      items={thumbnailLibrary}
+                      value={formState.banner_thumbnail_url}
+                      onSelect={(banner_thumbnail_url) => setFormState((p) => ({ ...p, banner_thumbnail_url }))}
+                    />
+                  </div>
                 </div>
               )}
 
