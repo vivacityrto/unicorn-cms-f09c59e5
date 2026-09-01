@@ -6,7 +6,7 @@
 
 A self-contained interactive HTML walkthrough of Unicorn's two main UI surfaces — the staff (Vivacity Team) sidebar and the client portal sidebar. Click a nav item to see what it does, why it exists, build status, and the key files behind it. Built so a new dev (or pre-login onboarder) can understand the app without ever logging in.
 
-Open: [ui-explainer.html](ui-explainer.html)
+**Companion file `ui-explainer.html` is missing from the repo** (never committed, or removed since) — the interactive walkthrough described below can't currently be opened; see "Regeneration" below to rebuild it.
 
 ## Regeneration
 

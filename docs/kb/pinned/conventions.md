@@ -39,7 +39,7 @@ User identity:
 | any other | `Admin` | Client org admin. Manages their org's users + settings. |
 | any other | `User` | Client user. Operational access only. |
 
-Enforced in `invite-user` edge function ([supabase/functions/invite-user/index.ts:22-36](../supabase/functions/invite-user/index.ts)).
+Enforced in `invite-user` edge function ([supabase/functions/invite-user/index.ts:22-36](../../../supabase/functions/invite-user/index.ts)).
 
 ---
 
@@ -256,7 +256,7 @@ Always return this shape:
 { "ok": false, "code": "MACHINE_READABLE_CODE", "detail": "human-readable explanation" }
 ```
 
-The frontend keys off `code`. See [docs/INVITE_USER_DIAGNOSTICS.md](../docs/INVITE_USER_DIAGNOSTICS.md) for the canonical error code map.
+The frontend keys off `code`. See [docs/INVITE_USER_DIAGNOSTICS.md](../../../docs/INVITE_USER_DIAGNOSTICS.md) for the canonical error code map.
 
 ### Why service-role
 
@@ -286,7 +286,7 @@ Do not use `refetchQueries` unless you need immediate data-in-hand. `invalidateQ
 
 ### Real-time subscriptions
 
-Pattern (see [src/hooks/useMeetingRealtime.ts](../src/hooks/useMeetingRealtime.ts)):
+Pattern (see [src/hooks/useMeetingRealtime.tsx](../../../src/hooks/useMeetingRealtime.tsx)):
 
 ```ts
 useEffect(() => {
@@ -433,7 +433,7 @@ In 2.0, `package_stage_instances` follows this pattern (template = `package_stag
 Whether to apply this pattern to tasks/emails/documents in 2.0 is an open question — flag in `reference/brainstorm-log.md` when scoping.
 
 ### Migrations
-- Files in [supabase/migrations/](../supabase/migrations/) — timestamped, one migration per logical change.
+- Files in [supabase/migrations/](../../../supabase/migrations/) — timestamped, one migration per logical change.
 - Naming: `<timestamp>_<uuid>.sql` (Lovable-generated default).
 - There is no pre-merge migration review gate today (see `reference/decision-trail.md → ADR-011`). Lovable-generated migrations land direct on `main`; hand-written migrations should be self-reviewed against the New table checklist below.
 - If the migration adds a table with mixed staff+client access, the three-step RLS ritual MUST be in the same migration.

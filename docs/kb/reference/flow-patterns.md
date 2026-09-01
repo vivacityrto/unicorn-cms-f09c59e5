@@ -22,7 +22,7 @@ User submits email+password on /login
   → Redirect to default landing (currently /manage-packages)
 ```
 
-Files: [src/pages/Login.tsx](../src/pages/Login.tsx), [src/hooks/useAuth.tsx](../src/hooks/useAuth.tsx), [src/components/ProtectedRoute.tsx](../src/components/ProtectedRoute.tsx).
+Files: [src/pages/Login.tsx](../../../src/pages/Login.tsx), [src/hooks/useAuth.tsx](../../../src/hooks/useAuth.tsx), [src/components/ProtectedRoute.tsx](../../../src/components/ProtectedRoute.tsx).
 
 **Deadlock note:** `fetchUserProfile` is wrapped in `setTimeout(fn, 0)` inside `onAuthStateChange` to avoid a Supabase deadlock where synchronous DB calls inside the auth callback block the session update. Don't "refactor" this away.
 
@@ -48,7 +48,7 @@ Super Admin submits invite form
     → redirect to login
 ```
 
-Files: [supabase/functions/invite-user/index.ts](../supabase/functions/invite-user/index.ts), [supabase/functions/send-invitation-email/](../supabase/functions/send-invitation-email/), [src/pages/AcceptInvitation.tsx](../src/pages/AcceptInvitation.tsx), [docs/INVITE_USER_DIAGNOSTICS.md](../docs/INVITE_USER_DIAGNOSTICS.md).
+Files: [supabase/functions/invite-user/index.ts](../../../supabase/functions/invite-user/index.ts), [supabase/functions/send-invitation-email/](../../../supabase/functions/send-invitation-email/), [src/pages/AcceptInvitation.tsx](../../../src/pages/AcceptInvitation.tsx), [docs/INVITE_USER_DIAGNOSTICS.md](../../../docs/INVITE_USER_DIAGNOSTICS.md).
 
 **Failure modes:** The diagnostics doc is the canonical reference. Key classes: `NO_AUTH` (missing token), `AUTH_FAILED` (bad JWT), `FORBIDDEN` (non-Super Admin caller), `ROLE_NOT_ALLOWED` (e.g. client roles on Vivacity tenant or vice versa), `EMAIL_EXISTS`, `EMAIL_SEND_FAILED` (Mailgun).
 
@@ -71,7 +71,7 @@ Super Admin can bypass and force-change a user's password via `admin-change-pass
 
 ## EOS Level 10 Meeting flow
 
-Canonical spec: [docs/EOS_LEVEL10_SPECIFICATION.md](../docs/EOS_LEVEL10_SPECIFICATION.md). Paraphrase below.
+Canonical spec: [docs/EOS_LEVEL10_SPECIFICATION.md](../../../docs/EOS_LEVEL10_SPECIFICATION.md). Paraphrase below.
 
 ### Weekly meeting lifecycle
 
@@ -89,7 +89,7 @@ Scheduled time arrives (recurrence expanded by `generate-meeting-recurrence`)
   → /eos/meetings/:id/summary shows post-meeting recap
 ```
 
-Hook: [src/hooks/useMeetingRealtime.ts](../src/hooks/useMeetingRealtime.ts). View: [src/components/eos/LiveMeetingView.tsx](../src/components/eos/LiveMeetingView.tsx).
+Hook: [src/hooks/useMeetingRealtime.tsx](../../../src/hooks/useMeetingRealtime.tsx). View: [src/components/eos/LiveMeetingView.tsx](../../../src/components/eos/LiveMeetingView.tsx).
 
 **Failure modes:**
 - Channel drops mid-meeting → reconnect logic in the hook; if stale state persists, force `invalidateQueries`.
@@ -106,7 +106,7 @@ QC scheduled in /eos/qc
   → Result feeds into next quarter's Rocks planning
 ```
 
-Hook: [src/hooks/useQuarterlyConversations.ts](../src/hooks/useQuarterlyConversations.ts).
+Hook: [src/hooks/useQuarterlyConversations.tsx](../../../src/hooks/useQuarterlyConversations.tsx).
 
 ### V/TO editing
 
@@ -137,7 +137,7 @@ Admin starts an audit for a client
   → Report generated (/audits/:id/report)
 ```
 
-Hooks: [src/hooks/useAudits.ts](../src/hooks/useAudits.ts), [src/hooks/useAuditTemplates.ts](../src/hooks/useAuditTemplates.ts), [src/hooks/useReusableAuditTemplates.ts](../src/hooks/useReusableAuditTemplates.ts).
+Hooks: [src/hooks/useAudits.tsx](../../../src/hooks/useAudits.tsx), [src/hooks/useAuditTemplates.tsx](../../../src/hooks/useAuditTemplates.tsx), [src/hooks/useReusableAuditTemplates.tsx](../../../src/hooks/useReusableAuditTemplates.tsx).
 
 **Note:** `generate-audit-report` edge function is still not found. The AI drafting stack (finding drafter, evidence analyser, executive summary drafter) shipped 29–30 April 2026 and lives in this codebase — see flows below.
 

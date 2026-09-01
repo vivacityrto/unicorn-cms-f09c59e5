@@ -17,7 +17,7 @@ Every feature this affected (Audit Readiness tile, Upcoming Compliance Audit sec
 This protocol exists to close that gap and to make every other tenant-scoped surface go through the same check before it ships.
 
 See:
-- [`unicorn-audit/audit/2026-05-18-evidence-request-workflow-restoration.md`](../../unicorn-audit/audit/2026-05-18-evidence-request-workflow-restoration.md) — the anchoring incident
+- [`unicorn-audit/audit/2026-05-18-evidence-request-workflow-restoration.md`](../../../docs/audit-log/entries/2026-05-18-evidence-request-workflow-restoration.md) — the anchoring incident
 - [`pinned/conventions.md` → Tables with broad RLS + sensitive columns](../pinned/conventions.md) — the column-whitelist convention this protocol enforces
 
 ---
@@ -98,7 +98,7 @@ After per-surface verification, do these once for the session:
 
 ## Home page checklist (`/client/home`)
 
-Mounted under `ClientHomePage` ([src/components/client/ClientHomePage.tsx](../../<codebase>/src/components/client/ClientHomePage.tsx)). Sections in render order:
+Mounted under `ClientHomePage` ([src/components/client/ClientHomePage.tsx](../../../src/components/client/ClientHomePage.tsx)). Sections in render order:
 
 ### 1. Hero
 
@@ -172,7 +172,7 @@ Mounted under `ClientHomePage` ([src/components/client/ClientHomePage.tsx](../..
 
 - **What renders:** Audit title + auditor name, then a timeline: Document Deadline → Opening Meeting → Document Review → Closing Meeting, each with date, instructions, "Add to calendar" button, "Join meeting" link (for online appointments). "Upload documents" button at the bottom linking to `/client/documents`.
 - **Hidden when:** no `client_audits` row for the tenant with `status IN ('draft','in_progress','review')` OR zero `audit_appointments` for that audit
-- **⚠️ Component returns null if `audit_appointments` is empty** ([ClientUpcomingAuditSection.tsx:70](../../<codebase>/src/components/client/ClientUpcomingAuditSection.tsx#L70)) — common gotcha. An audit exists but no schedule yet → section silently hides.
+- **⚠️ Component returns null if `audit_appointments` is empty** ([ClientUpcomingAuditSection.tsx:70](../../../src/components/client/ClientUpcomingAuditSection.tsx#L70)) — common gotcha. An audit exists but no schedule yet → section silently hides.
 - **Network check:** confirm `select=` on `client_audits` is `id, title, audit_type, status, lead_auditor_id, subject_tenant_id` — explicit whitelist, no sensitive columns.
 
 ### 12. Audit Preparation section ("Prepare for your upcoming audit")
@@ -293,7 +293,7 @@ WHERE tenant_id = <tenant_id>;
 
 ## Reference
 
-- Anchoring incident: [`unicorn-audit/audit/2026-05-18-evidence-request-workflow-restoration.md`](../../unicorn-audit/audit/2026-05-18-evidence-request-workflow-restoration.md)
+- Anchoring incident: [`unicorn-audit/audit/2026-05-18-evidence-request-workflow-restoration.md`](../../../docs/audit-log/entries/2026-05-18-evidence-request-workflow-restoration.md)
 - RLS column-whitelist convention: [`pinned/conventions.md`](../pinned/conventions.md) → "Tables with broad RLS + sensitive columns (frontend whitelist required)"
-- Route gating: [`<codebase>/src/components/ProtectedRoute.tsx`](../../<codebase>/src/components/ProtectedRoute.tsx) — the `CLIENT_ROUTES` deny-by-default pattern
-- Tenant-safe data access (per-route): [`<codebase>/docs/client-portal/data-access-checklist.md`](../../<codebase>/docs/client-portal/data-access-checklist.md)
+- Route gating: [`<codebase>/src/components/ProtectedRoute.tsx`](../../../src/components/ProtectedRoute.tsx) — the `CLIENT_ROUTES` deny-by-default pattern
+- Tenant-safe data access (per-route): [`<codebase>/docs/client-portal/data-access-checklist.md`](../../../docs/client-portal/data-access-checklist.md)

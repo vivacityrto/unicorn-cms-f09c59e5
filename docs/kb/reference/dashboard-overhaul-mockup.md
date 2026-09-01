@@ -4,7 +4,7 @@
 >
 > **Reflects commit:** `<codebase>@89aefd4e` (2026-07-03) · **Data pulled from:** Supabase project `yxkgdalkbrriasiyyrwk` (Unicorn 2.0 prod), read-only queries, same date
 
-Open: [dashboard-overhaul-mockup.html](dashboard-overhaul-mockup.html)
+**Companion file `dashboard-overhaul-mockup.html` is missing from the repo** (never committed, or removed since) — the static mockup described below can't currently be opened; the numbers/analysis in this doc are the only surviving record.
 
 Static HTML mockup of Nova's VCC-PLAT-SPEC-001 Main Dashboard spec, seeded with real production numbers instead of Nova's placeholder sample data — so Carl can see what the dashboard would actually look like, not just what it looks like with invented numbers.
 

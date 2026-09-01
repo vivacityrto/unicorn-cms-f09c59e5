@@ -51,7 +51,7 @@ Every operational artifact in 1.0 (tasks, emails, documents) splits into:
 
 The fan-out ratio is the operational shape of the business: ~150× for staff tasks, ~143× for documents, ~45× for emails. Any historical-data import has to preserve this split or reporting/lifecycle hooks will not compose.
 
-2.0 is following this pattern for packages → `package_stage_instances` (per [11-codebase-map.md](11-codebase-map.md)). Whether tasks/emails/documents in 2.0 carry the template/instance split forward in the same shape is **not yet confirmed** — verify with RJ before any historical import.
+2.0 is following this pattern for packages → `package_stage_instances` (per [11-codebase-map.md](../codebase-state/codebase-map.md)). Whether tasks/emails/documents in 2.0 carry the template/instance split forward in the same shape is **not yet confirmed** — verify with RJ before any historical import.
 
 ### Key foreign keys (from the diagram)
 
@@ -68,7 +68,7 @@ The two `int8` annotations are the migration-bridge problem: 1.0 used bigint use
 
 ### Features in 1.0 not yet in 2.0
 
-Drawn from comparing this diagram against [04-module-status.md](04-module-status.md) and [11-codebase-map.md](11-codebase-map.md). **For the Dave meeting** — these are the candidate gaps to discuss for porting:
+Drawn from comparing this diagram against [04-module-status.md](../codebase-state/module-status.md) and [11-codebase-map.md](../codebase-state/codebase-map.md). **For the Dave meeting** — these are the candidate gaps to discuss for porting:
 
 | 1.0 capability | 2.0 status | Notes for the meeting |
 |---|---|---|
@@ -76,7 +76,7 @@ Drawn from comparing this diagram against [04-module-status.md](04-module-status
 | Email template + instance split (`emails` → `email_instances` per stage) | 🟡 No template/instance split confirmed | 2.0 has per-purpose senders (`send-stage-email`, etc.) but no equivalent of the `email_instances` history-of-sends-per-stage that the 1.0 row counts imply. Does the team need stage-level email history? |
 | Document template + instance split (`documents` → `document_instances` per stage) | 🟡 Partial | 103k document instances in 1.0. SharePoint suite in 2.0 covers generation/delivery (`deliver-governance-document`, `provision-tenant-sharepoint-folder`, etc.), but the per-stage instance ledger is unconfirmed. Without it, reporting on "what doc was delivered for which stage of which engagement" is hard. |
 | Staff task / client task distinction (separate `staff_tasks` and `client_tasks` tables in 1.0) | ✅ Tasks shipped — but **structural change** | 2.0 appears to have unified to a single tasks model. Confirm that staff vs. client semantics are preserved by role/scope rather than table separation, and that no 1.0 reporting depends on the table split. |
-| Stage-task auto-completion / pipeline automation | 🔲 Not started | Already flagged in [04-module-status.md → Packages / Pipeline Stages](04-module-status.md#5-packages--pipeline-stages). 1.0 row counts (5990 stage instances driving 22k+ task instances) suggest this was load-bearing. |
+| Stage-task auto-completion / pipeline automation | 🔲 Not started | Already flagged in [04-module-status.md → Packages / Pipeline Stages](../codebase-state/module-status.md#5-packages--pipeline-stages). 1.0 row counts (5990 stage instances driving 22k+ task instances) suggest this was load-bearing. |
 | Polymorphic-parent linking (note links to either tenant or package_instance) as a general pattern | 🔲 Not confirmed in 2.0 | If 2.0 needs anything to attach to either a tenant or an engagement, the pattern question matters across modules (notes, attachments, comments). |
 | `dd_` data-dictionary tables — central reference data | ✅ Equivalent partial — `/manage-categories`, `/manage-fields` exist | Confirm 2.0 covers everything the 20 categories + 24 fields covered in 1.0, or if some lookup data was dropped. |
 
@@ -170,9 +170,9 @@ These didn't exist in any legacy system — they're pure additions.
 - Contacts from Keap / legacy CMS → `users` + `tenants` + `tenant_members`
 - EOS data (V/TO, Rocks, Scorecard) from spreadsheets → EOS tables (manual import expected; spec is the contract)
 - Package data from legacy → `packages`, `package_stages` seed
-- Audit templates from Google Sheets → audit template seed ([sql-setup/08-audit-question-bank-seed.sql](../sql-setup/08-audit-question-bank-seed.sql))
+- Audit templates from Google Sheets → audit template seed ([sql-setup/08-audit-question-bank-seed.sql](../../../sql-setup/08-audit-question-bank-seed.sql))
 
-If you're given a bulk-import task, check [sql-setup/](../sql-setup/) first — the pattern is SQL seed files, not a GUI importer.
+If you're given a bulk-import task, check [sql-setup/](../../../sql-setup/) first — the pattern is SQL seed files, not a GUI importer.
 
 ### Unicorn 1.0 user ID bridge (open)
 
@@ -180,7 +180,7 @@ The 1.0 schema used **bigint** user IDs. 2.0 uses Supabase **UUIDs**. The legacy
 
 Any historical-data import that touches `package_instances` (or any other table with these FKs) needs a `unicorn1_user_id (int8) → user_uuid` lookup table — either as a column on `users` or as a side mapping table.
 
-**Status:** Not confirmed whether 2.0 already has such a bridge column on `users`. Verify before scoping any 1.0 → 2.0 data port. Likely places to check: `supabase/migrations/` for any column named `unicorn1_id`, `legacy_id`, `unicorn1_user_id`, etc.; the `import-unicorn1-client` / `lookup-unicorn1-client` / `search-unicorn1-users` edge functions (per [01-architecture.md](01-architecture.md#edge-functions-117-live)) may already encode the lookup pattern.
+**Status:** Not confirmed whether 2.0 already has such a bridge column on `users`. Verify before scoping any 1.0 → 2.0 data port. Likely places to check: `supabase/migrations/` for any column named `unicorn1_id`, `legacy_id`, `unicorn1_user_id`, etc.; the `import-unicorn1-client` / `lookup-unicorn1-client` / `search-unicorn1-users` edge functions (per [01-architecture.md](../codebase-state/architecture.md#edge-functions-117-live)) may already encode the lookup pattern.
 
 ---
 

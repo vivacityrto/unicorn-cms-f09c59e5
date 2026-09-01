@@ -30,7 +30,7 @@ Primary artifacts:
 3. **Lovable project board** — visible to RJ; may drift from GitHub.
 4. **Ad-hoc conversation** — Slack/Teams for micro-decisions.
 
-**Gap:** There's no issue tracker like Linear/Jira currently wired in. If that changes, add a note in [05-product-decisions.md](05-product-decisions.md).
+**Gap:** There's no issue tracker like Linear/Jira currently wired in. If that changes, add a note in [05-product-decisions.md](../pinned/decisions.md).
 
 ---
 
@@ -53,7 +53,7 @@ Read the signal: this isn't a net-new-features week, it's stabilisation work. Do
 - Audit module gaps (understand scope)
 
 ### Next (this quarter or start of next)
-- Subscription portal (Stripe) — pending decisions in [05-product-decisions.md](05-product-decisions.md#open-decisions)
+- Subscription portal (Stripe) — pending decisions in [05-product-decisions.md](../pinned/decisions.md#open-decisions)
 - Campaign engine decision (build / buy / defer)
 - Client portal architecture decision
 - Tighten edge function error codes across all functions (pattern established in `invite-user`, not consistent elsewhere)
@@ -153,7 +153,7 @@ When in doubt: check `pinned/decisions.md → Open Decisions`. If it's there, it
 | Work type | Done means |
 |---|---|
 | UI feature | Browser-tested golden path + one edge case. No mandatory code review per ADR-011 — self-review applies. |
-| Edge function | Deployed, invocation tested from the frontend, all error codes documented in [docs/INVITE_USER_DIAGNOSTICS.md](../docs/INVITE_USER_DIAGNOSTICS.md) or equivalent |
+| Edge function | Deployed, invocation tested from the frontend, all error codes documented in [docs/INVITE_USER_DIAGNOSTICS.md](../../../docs/INVITE_USER_DIAGNOSTICS.md) or equivalent |
 | Schema change | Migration merged, RLS verified enabled (when hand-written), dependent features still work. No sign-off gate per ADR-011. |
 | Bug fix | Root cause identified (not just symptom patched), regression test or documented repro |
 | Docs / convention update | Landed in the right `unicorn-kb/` file |

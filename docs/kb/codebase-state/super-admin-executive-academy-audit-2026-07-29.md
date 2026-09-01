@@ -2,7 +2,7 @@
 
 > **Reflects commit:** `<codebase>@5756e75a` (2026-07-29, branch `hotfix/manage-documents-autofill`).
 > **Reconsider by:** 2026-09-29 — re-verify before acting on any finding older than ~2 months.
-> **Confidence:** high — every finding below was reproduced live via Playwright in Carl's real Super Admin session against `localhost:8080` (Vite dev server, prod Supabase backend), cross-checked against source where noted. Strict read-only protocol per [`super_admin_exploration_protocol`](../../memory/super_admin_exploration_protocol.md) — no writes, no toggles, no submits.
+> **Confidence:** high — every finding below was reproduced live via Playwright in Carl's real Super Admin session against `localhost:8080` (Vite dev server, prod Supabase backend), cross-checked against source where noted. Strict read-only protocol per `super_admin_exploration_protocol` — no writes, no toggles, no submits.
 >
 > **Methodology:** Full pass over the `requireSuperAdmin` route set + `/executive/*` + Academy Builder (per [`route-inventory-by-role.md`](route-inventory-by-role.md) section 2) — 47 routes. For each: navigate, capture accessibility snapshot, check console errors, spot-check layout/chips/responsive. Supplements — does not replace — [`super-admin-exploration-2026-05-21.md`](super-admin-exploration-2026-05-21.md); several 05-21 findings are re-verified below as still-open, fixed, or worse.
 

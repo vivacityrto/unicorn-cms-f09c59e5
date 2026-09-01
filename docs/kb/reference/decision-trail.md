@@ -5,7 +5,7 @@
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
 >
-> **This differs from [05-product-decisions.md](05-product-decisions.md):** that file is the quick-reference summary. This is the long-form reasoning with alternatives, risks, and consequences.
+> **This differs from [05-product-decisions.md](../pinned/decisions.md):** that file is the quick-reference summary. This is the long-form reasoning with alternatives, risks, and consequences.
 
 Several ADRs below are carried forward from a sibling Vivacity Supabase project where the reasoning applies to this codebase, even if the implementation details (function names, table names) differ. Where an ADR was directly observed in that project rather than this one, it's noted in the confidence header.
 
@@ -45,7 +45,7 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 - Lovable may scaffold schema we don't want — mitigated by the hard rule "Lovable is UI-only, schema goes through RJ".
 - Lovable UI customization may require working around its conventions occasionally.
 **Consequences:** Schema decisions never go through Lovable. All AI logic goes server-side. Every frontend PR should be reviewable without needing to "reason like Lovable".
-**Linked to:** [01-architecture.md](01-architecture.md) · [05-product-decisions.md](05-product-decisions.md#platform)
+**Linked to:** [01-architecture.md](../codebase-state/architecture.md) · [05-product-decisions.md](../pinned/decisions.md#platform)
 
 ---
 
@@ -61,7 +61,7 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 - AI logic in DB functions: rejected — wrong layer for HTTP calls.
 **Risks accepted:** Edge function cold starts add latency. Acceptable for the workflows involved.
 **Consequences:** Every AI capability is an edge function or an n8n workflow. Currently one live: `ai-generate-suggestions`.
-**Linked to:** [01-architecture.md](01-architecture.md) · [02-system-design.md → Edge functions](02-system-design.md#edge-functions)
+**Linked to:** [01-architecture.md](../codebase-state/architecture.md) · [02-system-design.md → Edge functions](../codebase-state/architecture.md#edge-functions)
 
 ---
 
@@ -80,7 +80,7 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 - Hardcoded `6372` is a magic number. Mitigated by isolating it to a small number of places (edge function constants, helper function, exported from `useVivacityTeamUsers`).
 - If Vivacity ever needs multiple staff tenants, this model bends.
 **Consequences:** Every role check is `tenant_id === 6372 ? vivacity_roles : client_roles`. Every RLS policy checks either `is_vivacity()` or tenant membership.
-**Linked to:** [01-architecture.md → Multi-tenancy](01-architecture.md#multi-tenancy) · [02-system-design.md](02-system-design.md#multi-tenant-model) · [supabase/functions/invite-user/index.ts:24](../supabase/functions/invite-user/index.ts)
+**Linked to:** [01-architecture.md → Multi-tenancy](../codebase-state/architecture.md#multi-tenancy) · [02-system-design.md](../codebase-state/architecture.md#multi-tenant-model) · [supabase/functions/invite-user/index.ts:24](../../../supabase/functions/invite-user/index.ts)
 
 ---
 
@@ -94,9 +94,9 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 **Alternatives considered:**
 - User-scoped Supabase client in the function: rejected — can't do service-role work.
 - Postgres SECURITY DEFINER functions: considered for narrow cases; edge functions chosen for HTTP orchestration flexibility.
-**Risks accepted:** If authorization is skipped in a new function, it's a full system compromise. Mitigation: canonical pattern in [02-system-design.md](02-system-design.md#edge-functions) and review discipline.
+**Risks accepted:** If authorization is skipped in a new function, it's a full system compromise. Mitigation: canonical pattern in [02-system-design.md](../codebase-state/architecture.md#edge-functions) and review discipline.
 **Consequences:** Every new edge function follows the pattern: token → user → profile → role check → payload validate → work → structured JSON response.
-**Linked to:** [02-system-design.md → Edge functions](02-system-design.md#edge-functions)
+**Linked to:** [02-system-design.md → Edge functions](../codebase-state/architecture.md#edge-functions)
 
 ---
 
@@ -118,8 +118,8 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 - Rely on code review: rejected — failure mode 1 slipped review across six tables; failure mode 2 was only caught in production.
 - Automated lint / schema check: possible future mitigation but not yet built.
 **Risks accepted:** None — strictly safer convention with no trade-offs.
-**Consequences:** New table checklist ([02-system-design.md](02-system-design.md#new-table-checklist)) mandates all three. RJ reviews every migration.
-**Linked to:** [02-system-design.md](02-system-design.md#rls) · [01-architecture.md → Multi-tenancy](01-architecture.md#multi-tenancy)
+**Consequences:** New table checklist ([02-system-design.md](../codebase-state/architecture.md#new-table-checklist)) mandates all three. RJ reviews every migration.
+**Linked to:** [02-system-design.md](../codebase-state/architecture.md#rls) · [01-architecture.md → Multi-tenancy](../codebase-state/architecture.md#multi-tenancy)
 
 ---
 
@@ -133,9 +133,9 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 **Alternatives considered:**
 - Integrate with Ninety.io / Bloom Growth: rejected — third-party tools don't tie back to client records and pipeline.
 - Defer EOS module to post-launch: rejected — it's core to how Vivacity operates.
-**Risks accepted:** Scope creep — EOS module is large. Mitigated by shipping iteratively and following the spec in [docs/EOS_LEVEL10_SPECIFICATION.md](../docs/EOS_LEVEL10_SPECIFICATION.md).
+**Risks accepted:** Scope creep — EOS module is large. Mitigated by shipping iteratively and following the spec in [docs/EOS_LEVEL10_SPECIFICATION.md](../../../docs/EOS_LEVEL10_SPECIFICATION.md).
 **Consequences:** EOS occupies the largest subtree in `src/components/` and `src/pages/`. Real-time patterns were introduced primarily to support live meetings — reuse that infrastructure for future collaborative features.
-**Linked to:** [04-module-status.md → EOS](04-module-status.md#3-eos-level-10-meeting-module) · [docs/EOS_LEVEL10_SPECIFICATION.md](../docs/EOS_LEVEL10_SPECIFICATION.md)
+**Linked to:** [04-module-status.md → EOS](../codebase-state/module-status.md#3-eos-level-10-meeting-module) · [docs/EOS_LEVEL10_SPECIFICATION.md](../../../docs/EOS_LEVEL10_SPECIFICATION.md)
 
 ---
 
@@ -144,14 +144,14 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 **Status:** Decided — in production
 **Decided by:** RJ
 **Context:** Invitations and auth emails needed a reliable transactional sender with template support.
-**Decision:** Use Mailgun. Templates live in [templates/mailgun/](../templates/mailgun/) and [supabase/email-templates/](../supabase/email-templates/). Invocation via `send-invitation-email` edge function.
+**Decision:** Use Mailgun. Templates live in [templates/mailgun/](../../../templates/mailgun/) and [supabase/email-templates/](../../../supabase/email-templates/). Invocation via `send-invitation-email` edge function.
 **Reasoning:** Existing account; good deliverability in AU; simple API; supports Supabase's template variable model.
 **Alternatives considered:**
 - Resend, Postmark, SendGrid, AWS SES — all viable. Mailgun was the existing account with least friction.
 - Supabase built-in SMTP: rejected — insufficient for templated marketing sends and poor deliverability for high volume.
 **Risks accepted:** Vendor lock-in on templates; deliverability ownership.
 **Consequences:** All transactional email goes through `send-invitation-email` or Supabase auth email config. Campaign / broadcast email is an open question — decide before building.
-**Linked to:** [04-module-status.md → Campaigns/Email](04-module-status.md#9-campaigns--email)
+**Linked to:** [04-module-status.md → Campaigns/Email](../codebase-state/module-status.md#9-campaigns--email)
 
 ---
 
@@ -166,7 +166,7 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 - Fix the frontend in each form: rejected as fragile.
 - Make the column nullable: rejected when the default is semantically correct and should be enforced.
 **Risks accepted:** Trigger adds implicit behaviour — anyone writing raw SQL against the table should know nulls are silently coerced. Document in migration notes.
-**Consequences:** Pattern reusable for any similar column. See [02-system-design.md → Coercion triggers](02-system-design.md#coercion-triggers-for-not-null--frontend-writes).
+**Consequences:** Pattern reusable for any similar column. See [02-system-design.md → Coercion triggers](../codebase-state/architecture.md#coercion-triggers-for-not-null--frontend-writes).
 
 ---
 
@@ -182,7 +182,7 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 - Raw fetch + useEffect: rejected — no caching, no dedup, no stale-while-revalidate.
 **Risks accepted:** Team must learn query keys and cache invalidation model.
 **Consequences:** All new async data goes through `useQuery`/`useMutation`. Query keys follow `[domain, subentity, ...args]` convention.
-**Linked to:** [03-flow-patterns.md → Data fetching pattern](03-flow-patterns.md#data-fetching-pattern-canonical)
+**Linked to:** [03-flow-patterns.md → Data fetching pattern](flow-patterns.md#data-fetching-pattern-canonical)
 
 ---
 
@@ -197,7 +197,7 @@ Several ADRs below are carried forward from a sibling Vivacity Supabase project 
 - Standalone WebSocket server (e.g., Ably, Pusher): rejected — extra infra and auth complexity.
 - Long-polling: rejected — worse UX.
 **Risks accepted:** Supabase realtime has rate and size limits. For very high-volume events, may need to batch or route through an edge function.
-**Consequences:** Channel cleanup discipline is mandatory. See [03-flow-patterns.md → Real-time subscriptions](03-flow-patterns.md#real-time-subscriptions).
+**Consequences:** Channel cleanup discipline is mandatory. See [03-flow-patterns.md → Real-time subscriptions](flow-patterns.md#real-time-subscriptions).
 
 ---
 

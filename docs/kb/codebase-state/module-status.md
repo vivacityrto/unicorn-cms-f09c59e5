@@ -42,8 +42,8 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 **Status:** ✅ Shipped — active stabilisation
 
 **What exists:**
-- Email/password login ([src/pages/Login.tsx](../src/pages/Login.tsx))
-- Invitation flow ([src/pages/AcceptInvitation.tsx](../src/pages/AcceptInvitation.tsx), [supabase/functions/invite-user/](../supabase/functions/invite-user/))
+- Email/password login ([src/pages/Login.tsx](../../../src/pages/Login.tsx))
+- Invitation flow ([src/pages/AcceptInvitation.tsx](../../../src/pages/AcceptInvitation.tsx), [supabase/functions/invite-user/](../../../supabase/functions/invite-user/))
 - Password reset + Super Admin force-change (`send-password-reset`, `send-self-password-reset` edge functions confirmed. ~~`admin-change-password`~~ **not found in `supabase/functions/` — verify with RJ whether removed or renamed**)
 - User management UI (`/manage-users`, `/manage-invites`)
 - Role matrix enforcement (Vivacity vs. client roles)
@@ -62,9 +62,9 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 **Status:** ✅ Shipped
 
 **What exists:**
-- `tenants`, `tenant_members`, `user_invitations`, `tenant_settings` schema ([sql-setup/01-tenant-schema.sql](../sql-setup/01-tenant-schema.sql))
-- Helper functions `is_vivacity()`, `is_superadmin()`, `current_tenant()`, `set_active_tenant()` ([sql-setup/02-tenant-functions.sql](../sql-setup/02-tenant-functions.sql))
-- RLS policies ([sql-setup/03-tenant-policies.sql](../sql-setup/03-tenant-policies.sql))
+- `tenants`, `tenant_members`, `user_invitations`, `tenant_settings` schema ([sql-setup/01-tenant-schema.sql](../../../sql-setup/01-tenant-schema.sql))
+- Helper functions `is_vivacity()`, `is_superadmin()`, `current_tenant()`, `set_active_tenant()` ([sql-setup/02-tenant-functions.HISTORICAL.sql](../../../sql-setup/02-tenant-functions.HISTORICAL.sql))
+- RLS policies ([sql-setup/03-tenant-policies.sql](../../../sql-setup/03-tenant-policies.sql))
 - Admin tenant management (`/manage-tenants`, `/tenant/:id/*`)
 - Tenant switcher for Vivacity staff
 
@@ -84,14 +84,14 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 - To-Dos (`/eos/todos`)
 - Scorecard — weekly metrics (`/eos/scorecard`)
 - Meeting scheduler + calendar (`/eos/meetings`, `/eos/calendar`)
-- Live meeting view — real-time multi-participant sync ([src/components/eos/LiveMeetingView.tsx](../src/components/eos/LiveMeetingView.tsx))
+- Live meeting view — real-time multi-participant sync ([src/components/eos/LiveMeetingView.tsx](../../../src/components/eos/LiveMeetingView.tsx))
 - Meeting summary (`/eos/meetings/:id/summary`)
 - Quarterly Conversations (`/eos/qc`, `/eos/qc/:id`)
 - Legacy client EOS view (`/client/eos`) — retired page and route. The supported client portal is `/client/home`; the historical client-tagged-item contract remains documented in `docs/eos/phase-6.md` pending any future product replacement.
 - Accountability Chart (inferred from spec, components present in `src/components/eos/`)
 - Hooks: `useEos`, `useEosAgendaTemplates`, `useEosDrafts`, `useEosHeadlines`, `useEosMeetingRecurrences`, `useEosMeetingSegments`, `useEosScorecardEntries`, `useEosScorecardMetrics`, `useMeetingIssues`, `useMeetingRealtime`, `useMeetingTodos`, `useQuarterlyConversations`
 
-**Spec:** [docs/EOS_LEVEL10_SPECIFICATION.md](../docs/EOS_LEVEL10_SPECIFICATION.md)
+**Spec:** [docs/EOS_LEVEL10_SPECIFICATION.md](../../../docs/EOS_LEVEL10_SPECIFICATION.md)
 
 **Remaining:**
 - Tablet / facilitator focus mode (if planned)
@@ -105,14 +105,14 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 **Status:** 🟡 Workspace heavily expanded; AI drafting stack shipped 29–30 April 2026; audit CRUD still client-side direct DB
 
 **What exists:**
-- Audit templates ([sql-setup/05-audit-schema.sql](../sql-setup/05-audit-schema.sql), `/audits/create-template`)
-- Question bank seed (395 questions, 91 sections, 5 templates — [sql-setup/08-audit-question-bank-seed.sql](../sql-setup/08-audit-question-bank-seed.sql))
-- Audit workspace (`/audits/:id`) — built on [src/pages/AuditWorkspaceNew.tsx](../src/pages/AuditWorkspaceNew.tsx)
+- Audit templates ([sql-setup/05-audit-schema.sql](../../../sql-setup/05-audit-schema.sql), `/audits/create-template`)
+- Question bank seed (395 questions, 91 sections, 5 templates — [sql-setup/08-audit-question-bank-seed.sql](../../../sql-setup/08-audit-question-bank-seed.sql))
+- Audit workspace (`/audits/:id`) — built on [src/pages/AuditWorkspaceNew.tsx](../../../src/pages/AuditWorkspaceNew.tsx)
 - Findings (`/audits/:id/findings`)
 - Corrective actions (`/audits/:id/actions`)
 - Report view (`/audits/:id/report`)
-- RLS hardening ([sql-setup/06-audit-rls-policies.sql](../sql-setup/06-audit-rls-policies.sql))
-- RPC functions ([sql-setup/07-audit-rpc-functions.sql](../sql-setup/07-audit-rpc-functions.sql))
+- RLS hardening ([sql-setup/06-audit-rls-policies.sql](../../../sql-setup/06-audit-rls-policies.sql))
+- RPC functions ([sql-setup/07-audit-rpc-functions.sql](../../../sql-setup/07-audit-rpc-functions.sql))
 
 **Workspace surface (`src/components/audit/workspace/`, ~24 files):**
 - Tabbed shell — `OverviewTab`, `ScheduleTab`, `AuditFormTab`, `FindingsTab`, `ActionsTab`, `DocumentsTab`, `ReportTab` + `AuditSidebar`, `AuditSummaryPills`, `PhaseStepIndicator`
@@ -131,7 +131,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 
 **Audit hooks (`src/hooks/`, 17 files):** `useAudits`, `useClientAudits`, `useClientAuditPortal`, `useAuditWorkspace`, `useAuditTemplates`, `useReusableAuditTemplates`, `useAuditPrep`, `useAuditSchedule`, `useAuditScheduler`, `useAuditActionPlan`, `useAuditReferences`, `useAuditReport`, `useComplianceAudits`, `useEngagementAudit`, `useDocumentSyncAudit`, `useStageAuditLink`, `useStageAuditLog` (+ `useUserAudit` for user-action audit log).
 
-**Audit types:** [src/types/audit.ts](../src/types/audit.ts), [src/types/auditWorkspace.ts](../src/types/auditWorkspace.ts), [src/types/auditReferences.ts](../src/types/auditReferences.ts).
+**Audit types:** [src/types/audit.ts](../../../src/types/audit.ts), [src/types/auditWorkspace.ts](../../../src/types/auditWorkspace.ts), [src/types/auditReferences.ts](../../../src/types/auditReferences.ts).
 
 **Backend reality:**
 - **No dedicated audit edge function.** Audit creation, save, and finding mutations all happen via the Supabase JS client direct against `client_audits` / related tables from `useClientAudits.ts` and `useAuditWorkspace.ts`. A `create-client-audit` Edge Function was added on 2026-04-20 (`65c426aa`) and **reverted the same day** (`084a5e17`); it is not at HEAD. If a server-side audit pipeline is wanted, this is greenfield again.
@@ -181,7 +181,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 - `/team-settings` — manage team (tenant admin only)
 - Client portal also embeds the Academy learner surface for licenced tenants (see §16)
 - ~14+ wrappers in `src/pages/client/` covering Files, Inbox, Profile, Suggestions, TGA Details, Packages, Tasks, Team, etc.
-- Data-access RLS checklist: [docs/client-portal/data-access-checklist.md](../docs/client-portal/data-access-checklist.md)
+- Data-access RLS checklist: [docs/client-portal/data-access-checklist.md](../../../docs/client-portal/data-access-checklist.md)
 
 **No EOS access for clients.** EOS is Vivacity-internal (see §3). Client-tagged EOS outputs reach clients via consultant-mediated surfaces (e.g. reports, document deliveries), not direct EOS access.
 
@@ -228,7 +228,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 
 **What exists:**
 - Admin email template management (`/admin/manage-emails`)
-- Mailgun templates in [templates/mailgun/](../templates/mailgun/) and [supabase/email-templates/](../supabase/email-templates/)
+- Mailgun templates in [templates/mailgun/](../../../templates/mailgun/) and [supabase/email-templates/](../../../supabase/email-templates/)
 - Transactional email via `send-invitation-email` edge function
 - Auth emails (invite, confirm-signup, password-reset, magic-link, reauth, email-change)
 
@@ -252,8 +252,8 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 **Status:** ✅ Shipped
 
 **What exists:**
-- `/rto-tips` — [src/pages/RtoTips.tsx](../src/pages/RtoTips.tsx) / Wrapper
-- Hook: [src/hooks/useRtoTips.ts](../src/hooks/useRtoTips.ts)
+- `/rto-tips` — [src/pages/RtoTips.tsx](../../../src/pages/RtoTips.tsx) / Wrapper
+- Hook: [src/hooks/useRtoTips.tsx](../../../src/hooks/useRtoTips.tsx)
 
 **Purpose:** Domain knowledge / quick-reference content for RTO clients.
 
@@ -307,7 +307,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 **Status:** 🟡 Partial
 
 **What exists:**
-- `ai-generate-suggestions` edge function ([supabase/functions/ai-generate-suggestions/](../supabase/functions/ai-generate-suggestions/))
+- `ai-generate-suggestions` edge function ([supabase/functions/ai-generate-suggestions/](../../../supabase/functions/ai-generate-suggestions/))
 - `useAISuggestions` hook
 
 **Now present in this codebase:**
@@ -343,7 +343,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 |---|---|
 | Mailgun | ✅ Shipped (invites, auth emails) |
 | Microsoft Graph email | ✅ Shipped (`send-email-graph`, `send-composed-email`, `send-stage-email`) |
-| training.gov.au / TGA | ✅ Shipped (`search-organisations`, `get-organisation-details`, `tga-sync`, `tga-rto-import`, etc.) — see [docs/training-gov-au-integration.md](../docs/training-gov-au-integration.md) |
+| training.gov.au / TGA | ✅ Shipped (`search-organisations`, `get-organisation-details`, `tga-sync`, `tga-rto-import`, etc.) — see [docs/training-gov-au-integration.md](../../../docs/training-gov-au-integration.md) |
 | Outlook calendar | ✅ Shipped (`sync-outlook-calendar`, `outlook-auth`, addin functions) |
 | SharePoint | ✅ Shipped (browse, import, link, provision, deliver functions). Client portal `/client/files` now wired to `browse-sharepoint-folder` via `useSharePointBrowser { useSharedFolder: true }` — inline browser bounded to `shared_folder_item_id` (28 May 2026). Security fix: `effectiveRootId` hoisted in edge function so both list + download boundaries respect `use_shared_folder` flag. |
 | ClickUp | ✅ Shipped (`sync-clickup-tasks`, `sync-clickup-time`, `import-clickup-csv`) |

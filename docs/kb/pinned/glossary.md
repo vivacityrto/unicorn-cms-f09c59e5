@@ -42,7 +42,7 @@ Australian vocational education compliance context. Vivacity's client base is RT
 | **Mock audit** | Simulation of a real regulator audit. |
 | **Combined audit** | CHC + CRICOS in one engagement. |
 | **Due diligence audit** | Pre-acquisition or partnership compliance review. |
-| **training.gov.au** | Official registry of Australian training providers and qualifications. Unicorn 2.0 queries it via `search-organisations` and `get-organisation-details`. See [docs/training-gov-au-integration.md](../docs/training-gov-au-integration.md). |
+| **training.gov.au** | Official registry of Australian training providers and qualifications. Unicorn 2.0 queries it via `search-organisations` and `get-organisation-details`. See [docs/training-gov-au-integration.md](../../../docs/training-gov-au-integration.md). |
 | **TAS** | Training and Assessment Strategy. A document RTOs must maintain per qualification they deliver. "TAS Builder" appears in legacy docs as a possible feature — not in this codebase. |
 | **Audit template** | Structured question bank for an audit type (CHC, Mock, CRICOS, Combined, Due Diligence). 5 templates live, 395 questions total. |
 | **Finding** | An observation from an audit — typically non-conformance or partial conformance. |
