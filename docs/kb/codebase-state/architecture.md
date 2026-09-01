@@ -17,7 +17,7 @@ Unicorn 2.0 has three flagship product surfaces (consultant- or client-facing, s
 
 ### Flagship #1 — CSC workflow (staff `CLIENTS` section)
 
-Where Client Success Consultants run their portfolio. The staff sidebar's `CLIENTS` section ([DashboardLayout.tsx:38-48](../src/components/DashboardLayout.tsx#L38-L48)):
+Where Client Success Consultants run their portfolio. The staff sidebar's `CLIENTS` section ([DashboardLayout.tsx:38-48](../../../src/components/DashboardLayout.tsx#L38-L48)):
 
 | Item | Path | Purpose |
 |---|---|---|
@@ -32,7 +32,7 @@ Where Client Success Consultants run their portfolio. The staff sidebar's `CLIEN
 
 ### Flagship #2 — Client Portal (`/client/*`)
 
-What client RTOs see ([DashboardLayout.tsx:125-143](../src/components/DashboardLayout.tsx#L125-L143)). RLS-gated to the client's own tenant.
+What client RTOs see ([DashboardLayout.tsx:125-143](../../../src/components/DashboardLayout.tsx#L125-L143)). RLS-gated to the client's own tenant.
 
 | Item | Path | Audience |
 |---|---|---|
@@ -57,11 +57,11 @@ Learning platform for client RTO staff. Two surfaces:
 
 ### Internal operating system — EOS Level 10 (staff `EOS` section)
 
-Vivacity's own operating system — not sold to clients, not part of the Client Portal. The `EOS` section ([DashboardLayout.tsx:50-69](../src/components/DashboardLayout.tsx#L50-L69)) includes EOS Overview, Leadership Dashboard, Scorecard, Mission Control (V/TO), Rocks, Flight Plan, Risks & Opportunities, To-Dos, Meetings, Quarterly Conversations, Accountability Chart, GWC Trends, Rock Analysis, Client Impact, Processes. Visibility is role-aware (Leadership-only items hidden from Team Members). Client-tagged EOS items roll up into CSC workflow contexts ("Client Impact"), giving consultants a unified view of work-for-clients without exposing EOS to client tenants.
+Vivacity's own operating system — not sold to clients, not part of the Client Portal. The `EOS` section ([DashboardLayout.tsx:50-69](../../../src/components/DashboardLayout.tsx#L50-L69)) includes EOS Overview, Leadership Dashboard, Scorecard, Mission Control (V/TO), Rocks, Flight Plan, Risks & Opportunities, To-Dos, Meetings, Quarterly Conversations, Accountability Chart, GWC Trends, Rock Analysis, Client Impact, Processes. Visibility is role-aware (Leadership-only items hidden from Team Members). Client-tagged EOS items roll up into CSC workflow contexts ("Client Impact"), giving consultants a unified view of work-for-clients without exposing EOS to client tenants.
 
 ### Staff sidebar — full section map
 
-For reference, the seven top-level sections in the Vivacity staff sidebar and who sees them ([DashboardLayout.tsx](../src/components/DashboardLayout.tsx)):
+For reference, the seven top-level sections in the Vivacity staff sidebar and who sees them ([DashboardLayout.tsx](../../../src/components/DashboardLayout.tsx)):
 
 | # | Section | Items | Visible to |
 |---|---|---|---|
@@ -119,7 +119,7 @@ Lovable (React + Vite + TS + shadcn + Tailwind — admin/consultant + client UI)
 
 ## Edge functions (124 live)
 
-All in [supabase/functions/](../supabase/functions/). Pattern: service-role Supabase client, manual caller validation, JSON response with `{ ok, code, detail }` error shape.
+All in [supabase/functions/](../../../supabase/functions/). Pattern: service-role Supabase client, manual caller validation, JSON response with `{ ok, code, detail }` error shape.
 
 **Core user/auth functions:**
 
@@ -295,7 +295,7 @@ Every tenant-scoped row carries `tenant_id: int`. Tenant `6372` is Vivacity (sta
 - `fn_academy_enrollment_stats()` → `jsonb` of six dashboard tiles (total/active/completed/expired/revoked/auto_lifetime).
 - `fn_academy_enrollment_lesson_detail(p_enrollment_id bigint)` → per-enrolment lesson progress rows.
 - `fn_academy_rule_dashboard_stats()` → package-rule dashboard counts (active rules / total mappings / auto-enrolments / unmapped packages).
-- Migrations: `20260421082533_da37ce62-…sql`, `20260421085406_b2a157f8-…sql`. Surfaced in [src/pages/superadmin/AcademyEnrolmentsPage.tsx](../src/pages/superadmin/AcademyEnrolmentsPage.tsx) via [src/hooks/academy/useAcademyEnrollments.ts](../src/hooks/academy/useAcademyEnrollments.ts).
+- Migrations: `20260421082533_da37ce62-…sql`, `20260421085406_b2a157f8-…sql`. Surfaced in [src/pages/superadmin/AcademyEnrolmentsPage.tsx](../../../src/pages/superadmin/AcademyEnrolmentsPage.tsx) via [src/hooks/academy/useAcademyEnrollments.ts](../../../src/hooks/academy/useAcademyEnrollments.ts).
 
 **Edge function auth note:** Edge functions do NOT call `is_vivacity()` directly. They check the `is_vivacity_internal` boolean column on the `users` table (e.g. `.select('is_vivacity_internal')`), or use the `is_vivacity_staff` RPC (`supabase.rpc('is_vivacity_staff', {p_user: userId})`). The `has_tenant_access_safe` RPC handles tenant membership checks in shared addin auth (`_shared/addin-auth.ts`). The canonical pattern in [conventions.md](../pinned/conventions.md) covers the simplified form; real functions vary.
 
@@ -310,13 +310,13 @@ Every tenant-scoped row carries `tenant_id: int`. Tenant `6372` is Vivacity (sta
 ## Auth
 
 - Supabase Auth with email/password primary.
-- Invitation token flow: `user_invitations` table holds SHA256-hashed tokens; [src/pages/AcceptInvitation.tsx](../src/pages/AcceptInvitation.tsx) validates, creates auth user, upserts `tenant_members`.
-- Password reset via Supabase's native recovery flow + [src/pages/ResetPassword.tsx](../src/pages/ResetPassword.tsx).
+- Invitation token flow: `user_invitations` table holds SHA256-hashed tokens; [src/pages/AcceptInvitation.tsx](../../../src/pages/AcceptInvitation.tsx) validates, creates auth user, upserts `tenant_members`.
+- Password reset via Supabase's native recovery flow + [src/pages/ResetPassword.tsx](../../../src/pages/ResetPassword.tsx).
 - Magic link — email template exists (`supabase/email-templates/magic-link.html`) but no dedicated frontend handler. Either unused or relies on Supabase default.
-- Session state lives in [src/hooks/useAuth.tsx](../src/hooks/useAuth.tsx) — `AuthProvider` wraps the router, exposes `{ user, session, profile, loading, signOut, refreshProfile }`.
-- Protected routes via [src/components/ProtectedRoute.tsx](../src/components/ProtectedRoute.tsx).
+- Session state lives in [src/hooks/useAuth.tsx](../../../src/hooks/useAuth.tsx) — `AuthProvider` wraps the router, exposes `{ user, session, profile, loading, signOut, refreshProfile }`.
+- Protected routes via [src/components/ProtectedRoute.tsx](../../../src/components/ProtectedRoute.tsx).
 
-Diagnostics reference: [docs/INVITE_USER_DIAGNOSTICS.md](../docs/INVITE_USER_DIAGNOSTICS.md) — error codes + SMTP verification.
+Diagnostics reference: [docs/INVITE_USER_DIAGNOSTICS.md](../../../docs/INVITE_USER_DIAGNOSTICS.md) — error codes + SMTP verification.
 
 ---
 
@@ -342,7 +342,7 @@ Diagnostics reference: [docs/INVITE_USER_DIAGNOSTICS.md](../docs/INVITE_USER_DIA
 
 - **Reads** — `@tanstack/react-query` via `useQuery`. `QueryClient` is instantiated once at the top of `App.tsx` and never re-created.
 - **Mutations** — `useMutation`; on success, invalidate relevant query keys.
-- **Real-time** — Supabase channels, typically inside a domain hook (see [useMeetingRealtime](../src/hooks/useMeetingRealtime.ts) for the live-meeting example).
+- **Real-time** — Supabase channels, typically inside a domain hook (see [useMeetingRealtime](../../../src/hooks/useMeetingRealtime.tsx) for the live-meeting example).
 - **Forms** — `react-hook-form` + `zod` schemas. Validation at the form layer, RLS at the DB layer.
 
 Full patterns in [conventions.md](../pinned/conventions.md).

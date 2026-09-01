@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-04-27 · **Review by:** 2026-07-27 (items don't expire, but check whether they've moved to decisions or lost relevance) · **Confidence:** n/a — raw thinking, not claims of fact.
 >
-> Raw thinking, half-baked ideas, and explorations. Separate from [05-product-decisions.md](05-product-decisions.md) so that file stays clean. Ideas here are **not** decisions.
+> Raw thinking, half-baked ideas, and explorations. Separate from [05-product-decisions.md](../pinned/decisions.md) so that file stays clean. Ideas here are **not** decisions.
 
 ---
 
@@ -108,7 +108,7 @@ All KB files have been corrected to use `6372`.
 - If it's a branch, what's the merge plan?
 - Either way: the sibling docs are valuable as a library of solved problems and decision rationale, even if the implementation details don't transfer 1:1.
 
-**Outcome:** Flagged as an Open Decision in [05-product-decisions.md](05-product-decisions.md#open-decisions). Raise with RJ directly. The Claude Project docs treat *this* codebase as canonical and reference the sibling project by name where relevant.
+**Outcome:** Flagged as an Open Decision in [05-product-decisions.md](../pinned/decisions.md#open-decisions). Raise with RJ directly. The Claude Project docs treat *this* codebase as canonical and reference the sibling project by name where relevant.
 
 ---
 

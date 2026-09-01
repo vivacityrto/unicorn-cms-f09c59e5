@@ -1,0 +1,16 @@
+name: KB link check
+
+on:
+  pull_request:
+    paths:
+      - "docs/kb/**"
+      - "docs/audit-log/INDEX.md"
+      - "scripts/check-kb-links.mjs"
+
+jobs:
+  check-kb-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if a KB or audit-log-index link is broken
+        run: node scripts/check-kb-links.mjs

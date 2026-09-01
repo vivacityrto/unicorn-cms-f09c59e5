@@ -238,6 +238,32 @@ requests do, and they never resolve while the scan is stuck).
   password-reset and magic-link flows do reach the live backend and can be
   used to smoke-test connectivity without logging in.
 
+## KB link checker (Phase 1, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`)
+
+- `npm run check:kb-links` (`scripts/check-kb-links.mjs`) resolves every
+  local Markdown link under `docs/kb/**` and in `docs/audit-log/INDEX.md`
+  relative to its own file's directory and reports any that don't resolve
+  to a real file or directory (anchors are stripped before resolution — it
+  checks the target exists, not that the specific heading anchor does).
+  Wired into CI (`.github/workflows/kb-link-check.yml`), scoped to only run
+  when `docs/kb/**`/the audit index/the checker itself change.
+- 2026-09-01: fixed 230 broken KB links + 151 stale `docs/audit-log/INDEX.md`
+  links this surfaced (`](audit/...)` → `](entries/...)`, the actual current
+  directory). Root causes, for future reference: (1) most KB docs were
+  written when they lived one level shallower and never got their `../`
+  depth corrected after moving into `docs/kb/<subdir>/`; (2) several
+  `reference/`-family docs cross-link by an old numbered-filename scheme
+  (`01-architecture.md`, `02-system-design.md`, `05-product-decisions.md`,
+  etc.) that no longer exists — those files were renamed/merged (e.g.
+  `02-system-design.md`'s content is now inside `architecture.md`) without
+  updating the links pointing at them; (3) a handful linked to Claude's own
+  session-memory files (`../../memory/*.md`) that were never a repo path in
+  the first place — converted to plain backtick text; (4) two docs
+  (`dashboard-overhaul-mockup.md`, `ui-explainer.md`) link to a companion
+  `.html` file that isn't in the repo — annotated as missing rather than
+  fabricated. Zero broken links remain as of this fix; re-run the checker
+  before trusting that if it's been a while.
+
 ## Playwright browser harness (P0.7/P0.8, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`)
 
 - `@playwright/test` + `playwright.config.ts` (2026-09-01). The local

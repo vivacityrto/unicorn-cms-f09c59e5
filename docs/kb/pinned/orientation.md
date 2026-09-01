@@ -26,11 +26,11 @@
 
 The product has three flagship surfaces, all consultant- or client-facing. EOS (below) is internal operating infrastructure, not the flagship.
 
-1. **CSC workflow** — the `CLIENTS` section of the staff sidebar. Where Client Success Consultants run their client portfolio end-to-end: client list with CSC load and risk levels, packages, document libraries (~575 docs), communications, support tickets, RTO tips, compliance auditor, audits. See [DashboardLayout.tsx:38-48](../src/components/DashboardLayout.tsx#L38-L48).
-2. **Client Portal** — the `/client/*` surfaces. What client RTOs see: home dashboard, documents, resource hub, calendar, notifications, reports, and (admin only) team management. ~14+ surfaces, all RLS-gated to the client's own tenant. See [DashboardLayout.tsx:125-143](../src/components/DashboardLayout.tsx#L125-L143).
+1. **CSC workflow** — the `CLIENTS` section of the staff sidebar. Where Client Success Consultants run their client portfolio end-to-end: client list with CSC load and risk levels, packages, document libraries (~575 docs), communications, support tickets, RTO tips, compliance auditor, audits. See [DashboardLayout.tsx:38-48](../../../src/components/DashboardLayout.tsx#L38-L48).
+2. **Client Portal** — the `/client/*` surfaces. What client RTOs see: home dashboard, documents, resource hub, calendar, notifications, reports, and (admin only) team management. ~14+ surfaces, all RLS-gated to the client's own tenant. See [DashboardLayout.tsx:125-143](../../../src/components/DashboardLayout.tsx#L125-L143).
 3. **Vivacity Academy** — the learning platform for client RTO staff. Role-specific course views (Trainer, Compliance Manager, Governance Person, SSO, Administration Assistant), certificates, assessments, events, community, and the **Professional Development Plan (PDP)** — a Standards-anchored evidence and reflection cycle that satisfies SRTO 2025 §3.1/3.2/3.3 and the Credential Policy CPD obligations. Vivacity staff manage content via a dedicated Academy Builder.
 
-**Where EOS Level 10 fits.** Vivacity runs *itself* on EOS — V/TO, Rocks, Scorecard, Issues (IDS), To-Dos, Accountability Chart, live Level 10 meetings, Quarterly Conversations. It's a first-class product surface but an **internal operating system**, not a saleable surface. EOS-tagged client items appear in CSC workflow contexts ("Client Impact"), but client RTOs do not access EOS directly. See [docs/EOS_LEVEL10_SPECIFICATION.md](../docs/EOS_LEVEL10_SPECIFICATION.md) for the authoritative spec and [reference/decision-trail.md#adr-013](../reference/decision-trail.md#adr-013) for the flagship reframing rationale.
+**Where EOS Level 10 fits.** Vivacity runs *itself* on EOS — V/TO, Rocks, Scorecard, Issues (IDS), To-Dos, Accountability Chart, live Level 10 meetings, Quarterly Conversations. It's a first-class product surface but an **internal operating system**, not a saleable surface. EOS-tagged client items appear in CSC workflow contexts ("Client Impact"), but client RTOs do not access EOS directly. See [docs/EOS_LEVEL10_SPECIFICATION.md](../../../docs/EOS_LEVEL10_SPECIFICATION.md) for the authoritative spec and [reference/decision-trail.md#adr-013](../reference/decision-trail.md#adr-013) for the flagship reframing rationale.
 
 ---
 
@@ -48,11 +48,11 @@ This KB is shared across audiences. Where to go next depends on which seat you s
 | Layer | Tech |
 |---|---|
 | Frontend | React 18 + Vite + TypeScript + shadcn-ui + Tailwind (built in Lovable) |
-| Data fetching | `@tanstack/react-query` (global `QueryClientProvider` in [src/App.tsx](../src/App.tsx)) |
+| Data fetching | `@tanstack/react-query` (global `QueryClientProvider` in [src/App.tsx](../../../src/App.tsx)) |
 | Forms | `react-hook-form` + `zod` schema validation |
 | Animations / DnD | `framer-motion`, `@dnd-kit/*` |
 | Backend | Supabase — Postgres + RLS + Auth + Storage + Edge Functions + Realtime |
-| Email | Mailgun via edge functions (templates in [templates/mailgun/](../templates/mailgun/) and [supabase/email-templates/](../supabase/email-templates/)) |
+| Email | Mailgun via edge functions (templates in [templates/mailgun/](../../../templates/mailgun/) and [supabase/email-templates/](../../../supabase/email-templates/)) |
 | Automation | n8n now, migrating to Awesomate (Australia-hosted). Stripe not yet wired. |
 
 ---
@@ -65,7 +65,7 @@ Three concepts unlock 80% of the codebase:
 Every business-domain row has a `tenant_id`. Tenant `6372` is Vivacity — staff. All other tenants are client RTOs. A user belongs to one tenant via `tenant_members`; Vivacity Super Admins can switch active tenant via `set_active_tenant()`.
 
 ### 2. Two distinct UI surfaces
-- **Admin / consultant surface** — Vivacity staff sidebar with seven sections: `WORK`, `CLIENTS` (the CSC workflow flagship), `EOS`, `RESOURCE MANAGEMENT`, `ADMINISTRATION`, `ACADEMY BUILDER`, `SYSTEM CONFIG`. Visibility is role-aware (Super Admin / Team Leader / Team Member). See [DashboardLayout.tsx](../src/components/DashboardLayout.tsx).
+- **Admin / consultant surface** — Vivacity staff sidebar with seven sections: `WORK`, `CLIENTS` (the CSC workflow flagship), `EOS`, `RESOURCE MANAGEMENT`, `ADMINISTRATION`, `ACADEMY BUILDER`, `SYSTEM CONFIG`. Visibility is role-aware (Super Admin / Team Leader / Team Member). See [DashboardLayout.tsx](../../../src/components/DashboardLayout.tsx).
 - **Client surface** — client RTO views under `/client/*` (Home, Documents, Resource Hub, Calendar, Notifications, Reports, Team) plus the Academy learner surface. Clients have **no EOS access** — EOS is Vivacity-internal.
 
 They share UI primitives but render entirely different navigation and data based on `unicorn_role` + `tenant_id`. See [flow-patterns.md](../reference/flow-patterns.md#role-aware-rendering).
@@ -86,14 +86,14 @@ Helper functions (Postgres):
 
 | If you're looking for… | Go to… |
 |---|---|
-| Entry point / routes | [src/App.tsx](../src/App.tsx) |
-| Auth state | [src/hooks/useAuth.tsx](../src/hooks/useAuth.tsx) |
-| Supabase client | [src/integrations/supabase/client.ts](../src/integrations/supabase/client.ts) |
-| Edge functions | [supabase/functions/](../supabase/functions/) |
-| Schema seeds | [sql-setup/](../sql-setup/) |
-| Migrations | [supabase/migrations/](../supabase/migrations/) |
-| EOS spec | [docs/EOS_LEVEL10_SPECIFICATION.md](../docs/EOS_LEVEL10_SPECIFICATION.md) |
-| Invite error codes | [docs/INVITE_USER_DIAGNOSTICS.md](../docs/INVITE_USER_DIAGNOSTICS.md) |
+| Entry point / routes | [src/App.tsx](../../../src/App.tsx) |
+| Auth state | [src/hooks/useAuth.tsx](../../../src/hooks/useAuth.tsx) |
+| Supabase client | [src/integrations/supabase/client.ts](../../../src/integrations/supabase/client.ts) |
+| Edge functions | [supabase/functions/](../../../supabase/functions/) |
+| Schema seeds | [sql-setup/](../../../sql-setup/) |
+| Migrations | [supabase/migrations/](../../../supabase/migrations/) |
+| EOS spec | [docs/EOS_LEVEL10_SPECIFICATION.md](../../../docs/EOS_LEVEL10_SPECIFICATION.md) |
+| Invite error codes | [docs/INVITE_USER_DIAGNOSTICS.md](../../../docs/INVITE_USER_DIAGNOSTICS.md) |
 
 Full navigational map: [codebase-map.md](../codebase-state/codebase-map.md).
 
@@ -143,9 +143,9 @@ Headlines below are ordered with the three flagship surfaces first, then support
 
 ### Flagship surfaces
 
-**CSC workflow (CLIENTS section)** — flagship #1. The Client Success Consultant's daily workspace: a client list (~407 tenants in production) with CSC load distribution, risk levels, anniversaries, packages, and registration end dates; per-client packages, document libraries (~575 docs across ~21 categories), communications, support tickets, RTO tips, compliance auditor (AI-assisted), and audits. Drives the consulting business. See [DashboardLayout.tsx:38-48](../src/components/DashboardLayout.tsx#L38-L48) for the nav surface and [module-status.md#flagship-surfaces](../codebase-state/module-status.md#flagship-surfaces) for build status.
+**CSC workflow (CLIENTS section)** — flagship #1. The Client Success Consultant's daily workspace: a client list (~407 tenants in production) with CSC load distribution, risk levels, anniversaries, packages, and registration end dates; per-client packages, document libraries (~575 docs across ~21 categories), communications, support tickets, RTO tips, compliance auditor (AI-assisted), and audits. Drives the consulting business. See [DashboardLayout.tsx:38-48](../../../src/components/DashboardLayout.tsx#L38-L48) for the nav surface and [module-status.md#flagship-surfaces](../codebase-state/module-status.md#flagship-surfaces) for build status.
 
-**Client Portal (`/client/*`)** — flagship #2. What client RTOs experience: Home dashboard, Documents, Resource Hub (categorised compliance library), Calendar, Notifications, Reports, and — for tenant admins — Team management. ~14+ surfaces, all RLS-gated to the client's own tenant. EOS is intentionally absent — clients consume EOS-tagged outputs (e.g. Client Impact rollups) through their consultant, not through their own portal. See [DashboardLayout.tsx:125-143](../src/components/DashboardLayout.tsx#L125-L143) and [docs/client-portal/data-access-checklist.md](../docs/client-portal/data-access-checklist.md).
+**Client Portal (`/client/*`)** — flagship #2. What client RTOs experience: Home dashboard, Documents, Resource Hub (categorised compliance library), Calendar, Notifications, Reports, and — for tenant admins — Team management. ~14+ surfaces, all RLS-gated to the client's own tenant. EOS is intentionally absent — clients consume EOS-tagged outputs (e.g. Client Impact rollups) through their consultant, not through their own portal. See [DashboardLayout.tsx:125-143](../../../src/components/DashboardLayout.tsx#L125-L143) and [docs/client-portal/data-access-checklist.md](../../../docs/client-portal/data-access-checklist.md).
 
 **Vivacity Academy** — flagship #3. The learning offering to client RTO staff. Five role-specific learner surfaces (Trainer, Compliance Manager, Governance Person, Student Support Officer, Administration Assistant), courses, lessons, assessments, certificates, events, community. The **Professional Development Plan (PDP)** module — shipped May 2026 — anchors development goals to SRTO 2025 Standards, captures lesson reflections + manager reviews + CPD evidence, and surfaces a workforce dashboard for tenant admins and Vivacity Super Admins. Vivacity staff build content via the **Academy Builder** (`/superadmin/academy/*`); seat access gating is RLS-enforced. Stripe billing not yet wired. See [module-status.md#16-academy](../codebase-state/module-status.md#16-academy) and [#18-academy-pdp](../codebase-state/module-status.md#18-academy--professional-development-plan-pdp).
 
@@ -231,9 +231,9 @@ If you have a proposed change to the KB, see [handoffs/non-technical-proposal.md
 
 - [ ] Run the app locally. Login as a Vivacity Super Admin; hop into a client tenant via the switcher.
 - [ ] Read [architecture.md](../codebase-state/architecture.md) end-to-end.
-- [ ] Skim every file in [src/pages/](../src/pages/) — names map directly to product surfaces.
-- [ ] Read one edge function front-to-back: [supabase/functions/invite-user/index.ts](../supabase/functions/invite-user/index.ts). It's the canonical service-role pattern.
-- [ ] Read [docs/EOS_LEVEL10_SPECIFICATION.md](../docs/EOS_LEVEL10_SPECIFICATION.md) — EOS is Vivacity's internal operating system. For the flagship product framing (what Unicorn 2.0 sells and what clients consume), see the **Flagship surfaces** section above and [reference/decision-trail.md#adr-013](../reference/decision-trail.md#adr-013).
+- [ ] Skim every file in [src/pages/](../../../src/pages/) — names map directly to product surfaces.
+- [ ] Read one edge function front-to-back: [supabase/functions/invite-user/index.ts](../../../supabase/functions/invite-user/index.ts). It's the canonical service-role pattern.
+- [ ] Read [docs/EOS_LEVEL10_SPECIFICATION.md](../../../docs/EOS_LEVEL10_SPECIFICATION.md) — EOS is Vivacity's internal operating system. For the flagship product framing (what Unicorn 2.0 sells and what clients consume), see the **Flagship surfaces** section above and [reference/decision-trail.md#adr-013](../reference/decision-trail.md#adr-013).
 - [ ] Open [module-status.md](../codebase-state/module-status.md) and identify which modules are 🟡 partial — these are the highest-value areas to contribute to.
 - [ ] Ask Carl which open decisions in [decisions.md](decisions.md#open-decisions) are actively blocking work.
 

@@ -306,7 +306,7 @@ Four guard patterns found in `App.tsx`:
 
 1. **`/support-tickets` duplicate registration** (new this pass) — `SupportTicketsWrapper` and `SupportTicketsPage` both claim it; the second is dead code. Needs a hotfix to remove the unreachable registration (or confirm intent and rename one).
 2. **Legacy routes retired** — `/client/eos` and `/package/:id` are intentionally unregistered and return the catch-all 404. The shared `PackageDetail` implementation remains because active `/admin/package/:id...` routes use it.
-3. `/my/kpi` (deprecated v1) is still wired — not removed, just superseded per [`unicorn_app_url`](../../memory/unicorn_app_url.md).
+3. `/my/kpi` (deprecated v1) is still wired — not removed, just superseded per `unicorn_app_url`.
 4. `/client-portal/:tenantId/documents` is `ProtectedRoute`-only (no `requireSuperAdmin`/`allowedRoles`) despite the staff-facing naming — same caution as before, confirm who actually lands on this before relying on this doc's tier bucketing for it specifically. F-001's `isClientAccessibleRoute()` allowlist does NOT include this path, so client roles are denied by the RBAC layer regardless of the route's own `ProtectedRoute`-only guard — see `src/test/rbac/useRBAC.test.ts` and `ProtectedRoute.test.tsx`.
 5. The `requireSuperAdmin` (42) vs `allowedRoles`/`allowVivacityTeam` (13) split is exactly what rbac-v6 Phase 0 needs to work through — which of the 42 hard-SA routes are *intentionally* SA-only (system config, the Role Permission Editor itself) vs. candidates for the Phase 1 permission-based route guard. Not decided here.
 
