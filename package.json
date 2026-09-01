@@ -12,6 +12,8 @@
     "lint:email-redirects": "node scripts/check-email-redirect-urls.mjs",
     "preview": "vite preview",
     "metrics": "node scripts/architecture-metrics.mjs",
+    "routes": "node scripts/generate-route-manifest.mjs",
+    "routes:check-drift": "node scripts/check-route-drift.mjs",
     "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit && node --max-old-space-size=4096 node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit",
     "test:frontend": "vitest run",
     "test:frontend:changed": "vitest run --changed",

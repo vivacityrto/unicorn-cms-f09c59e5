@@ -4,7 +4,7 @@
 >
 > **Reflects:** cleanup branch `hotfix/dead-code-route-cleanup`, 2026-08-28. The legacy `/client/eos` page and `/package/:id` route are retired; active admin package routes remain.
 >
-> **Methodology:** every `<Route>` in [`src/App.tsx`](../../../src/App.tsx) (**249 total**), extracted mechanically by [`scripts/generate-route-inventory.mjs`](../../../scripts/generate-route-inventory.mjs) — path, rendered component, and guard tier read directly from the JSX, not hand-transcribed. **Re-run that script and paste its output back into the tables below whenever this doc goes stale** — that's the "drift check" F-024 asked for; there's no separate CI job for it yet (nothing enforces re-running it, it's on whoever next relies on this doc to notice the count looks wrong).
+> **Methodology:** every `<Route>` in [`src/App.tsx`](../../../src/App.tsx) (**249 total** as last regenerated 2026-08-28), originally extracted mechanically by `scripts/generate-route-inventory.mjs` — path, rendered component, and guard tier read directly from the JSX, not hand-transcribed. **That script was replaced 2026-09-01 (P0.6) by [`scripts/generate-route-manifest.mjs`](../../../scripts/generate-route-manifest.mjs)**, an AST-based, multi-file-capable generator (the old one read `App.tsx` only, via indentation-sensitive string slicing) — see `AGENTS.md` for what it adds (redirect targets, exact guard props, params, lazy-import source, per-route source file). **[`scripts/check-route-drift.mjs`](../../../scripts/check-route-drift.mjs) already confirms this doc is stale: the live count as of 2026-09-01 is 244, not 249** (the `/academy/team` and four `/compliance-audits` routes below were retired without this doc being regenerated). Reconciling the tables below to the live 244 is a Phase 1 KB-restoration task, not done as part of P0.6 — **don't trust the count or the specific routes named above until that reconciliation lands.** Re-run `node scripts/generate-route-manifest.mjs` and paste its output back into the tables below whenever this doc goes stale again.
 >
 > **Confidence:** high for the route→file→guard mapping (mechanically extracted, not transcribed). Low for "who actually uses this" and for the deeper product question of which `requireSuperAdmin` routes are *intentionally* hard-gated vs. should be permission-gated instead — that's [`rbac-v6-gate-closure-plan.md`](../handoffs/rbac-v6-gate-closure-plan.md) Phase 0, not this doc.
 
@@ -22,7 +22,7 @@ Four guard patterns found in `App.tsx`:
 
 ---
 
-<!-- BEGIN GENERATED TABLES — regenerate with `node scripts/generate-route-inventory.mjs` -->
+<!-- BEGIN GENERATED TABLES — regenerate with `node scripts/generate-route-manifest.mjs` (stale as of 2026-09-01, see Methodology above) -->
 
 ## public (24 routes)
 
@@ -312,7 +312,8 @@ Four guard patterns found in `App.tsx`:
 
 ## Cross-references
 
-- [`scripts/generate-route-inventory.mjs`](../../../scripts/generate-route-inventory.mjs) — regenerates the tables above; re-run and paste back in whenever this doc is suspected stale
+- [`scripts/generate-route-manifest.mjs`](../../../scripts/generate-route-manifest.mjs) — regenerates the tables above (replaced `generate-route-inventory.mjs` 2026-09-01, P0.6); re-run and paste back in whenever this doc is suspected stale
+- [`scripts/check-route-drift.mjs`](../../../scripts/check-route-drift.mjs) — checks this doc's claimed route count against the live one without regenerating anything; already reports a mismatch as of 2026-09-01
 - [`codebase-map.md`](codebase-map.md) — file-path/component structure (this doc adds the role lens on top)
 - [`rbac-v6-gate-closure-plan.md`](../handoffs/rbac-v6-gate-closure-plan.md) — the deeper per-route product classification this doc's mechanical extraction feeds into
 - [`super-admin-exploration-2026-05-21.md`](super-admin-exploration-2026-05-21.md) — prior admin-side bug/hygiene findings, due for re-verification against current `main`

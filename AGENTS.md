@@ -135,6 +135,40 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   73/137/144) — different detection method (regex over `supabase\.(from|
   rpc|storage|functions)\(`, not whatever the original ad-hoc pass used),
   not a regression. Don't compare the two without accounting for that.
+- Route manifest (P0.6, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`):
+  `npm run routes` (`scripts/generate-route-manifest.mjs`) replaces the
+  retired `scripts/generate-route-inventory.mjs`. The old one only read
+  `src/App.tsx`, via an indentation-sensitive string search (it assumed the
+  next `<Route>` started with exactly 12 spaces) capped at an 800-4000
+  character window — silently wrong for anything shaped differently, and
+  structurally incapable of seeing a route declared in any other file. The
+  new one walks a real TypeScript/TSX AST (the `typescript` package, already
+  a dependency) and scans every `.tsx` file under `src/` for `<Route>` JSX,
+  so a route extracted into its own module later (P1.2) is picked up
+  automatically — proven with a fixture: a route declared in a second file
+  outside `App.tsx` was correctly extracted with full guard/lazy/import
+  detail, then the fixture file was removed. No hardcoded guard-name
+  whitelist either: any JSX wrapper with a nested element/self-closing child
+  is treated as a guard layer regardless of name (works for `ProtectedRoute`
+  today, and for whatever wraps routes after P1.4's metadata work).
+  Per route it records: path, dynamic `:params`, rendered component, whether
+  it's lazy-loaded + its import source, the full guard wrapper chain + exact
+  props (`requireSuperAdmin`, `allowedRoles={CONST}`, `allowVivacityTeam`,
+  etc.), `<Navigate>` redirect target + `replace`, and the declaring file.
+  Verified against the old script: same 244 routes, same single duplicate
+  (`/support-tickets`) — the only difference is the new one lists both
+  `/support-tickets` registrations individually (with guard/component detail
+  for each) rather than deduping to one row, which is more useful, not a
+  regression. `--json`/`--out <file>` supported like the other new scripts.
+  `npm run routes:check-drift` (`scripts/check-route-drift.mjs`) compares
+  `route-inventory-by-role.md`'s claimed route count against the live one
+  and already caught real drift: the doc claims 249 (`/academy/team` and
+  four `/compliance-audits` routes were retired without the doc being
+  regenerated), live is 244. **Deliberately not wired into CI as a blocking
+  gate** — the doc is already known-stale, so a hard gate would just fail
+  every unrelated PR until Phase 1 (KB truth restoration) reconciles the
+  actual tables; that reconciliation is out of scope for a Phase 0 tooling
+  change. Run it manually, or make it a CI gate once Phase 1 lands.
 
 ## Local dev server troubleshooting (Windows)
 
