@@ -65,13 +65,26 @@ const WorkMeetings = lazy(() => import("@/pages/WorkMeetings"));
  * either way.
  *
  * Two routes (/admin/stages, /admin/stages/:stage_id) require SuperAdmin
- * specifically, stricter than every other route in this family. Rather
- * than lifting that onto the shared parent guard (which would wrongly
- * gate every other staff page behind SuperAdmin), they keep their own
- * additional <ProtectedRoute requireSuperAdmin> layered inside the shared
- * parent's plain <ProtectedRoute> -- same combined effect as today's single
- * requireSuperAdmin prop, since the parent guard was already a strict
- * subset of what these two additionally require.
+ * specifically, stricter than every other route in this family. They live
+ * under their own sibling parent route with <ProtectedRoute
+ * requireSuperAdmin> guarding DashboardLayoutRoute directly, reusing the
+ * same lazy component as the plain-tier parent below.
+ *
+ * Corrected 2026-09-02 (see docs/kb/reference/dashboard-direct-layout-
+ * migration-plan-2026-09-01.md, council seat C): this was originally
+ * implemented as a requireSuperAdmin guard nested *inside* the shared
+ * plain-tier parent's children, which is unsafe -- the outer plain
+ * ProtectedRoute authorizes and mounts DashboardLayoutRoute (the full
+ * shell: sidebar, Ask Viv, realtime subscriptions) for ANY authenticated
+ * staff member, and only the already-mounted child's inner guard then
+ * redirects a non-SuperAdmin user away. That is a real protected-shell
+ * mount for a rejected persona, not "the same combined effect" the
+ * original comment claimed. Moving these two routes to their own
+ * requireSuperAdmin-guarded parent (still pathless, still the same
+ * DashboardLayoutRoute) ensures authorization completes before the shell
+ * mounts, at the cost of a layout remount when navigating between this
+ * tier and the plain tier -- an accepted, documented tradeoff, not a
+ * regression, per the migration plan's guard-architecture section.
  *
  * Every child here is deliberately lazy-loaded, regardless of whether the
  * page it replaces was imported eagerly inside its retired Wrapper file
@@ -106,38 +119,42 @@ const WorkMeetings = lazy(() => import("@/pages/WorkMeetings"));
  * break that reference. Not fixed as part of this PR; flagged separately.
  */
 export const dashboardLayoutRoutes = (
-  <Route element={<ProtectedRoute><DashboardLayoutRoute /></ProtectedRoute>}>
-    <Route path="/admin/stages" element={<ProtectedRoute requireSuperAdmin><AdminManageStages /></ProtectedRoute>} />
-    <Route path="/admin/stages/:stage_id" element={<ProtectedRoute requireSuperAdmin><AdminStageDetail /></ProtectedRoute>} />
-    <Route path="/admin/package/:id" element={<PackageDetail />} />
-    <Route path="/admin/package/:id/tenant/:tenantId/instance/:instanceId" element={<AdminPackageTenantDetail />} />
-    <Route path="/admin/package/:id/tenant/:tenantId" element={<AdminPackageTenantDetail />} />
-    <Route path="/admin/integrations/tga" element={<AdminTgaIntegration />} />
-    <Route path="/admin/integrations/xero" element={<AdminXeroIntegration />} />
-    <Route path="/calendar" element={<Calendar />} />
-    <Route path="/tenant/:tenantId" element={<ClientDetail />} />
-    <Route path="/tenant-detail/:tenantId" element={<ClientDetail />} />
-    <Route path="/client-portal/:tenantId/documents" element={<ClientPortalDocuments />} />
-    <Route path="/email-triage" element={<EmailTriagePage />} />
-    <Route path="/manage-categories" element={<ManageCategories />} />
-    <Route path="/manage-documents" element={<ManageDocuments />} />
-    <Route path="/admin/email-templates" element={<ManageEmailTemplates />} />
-    <Route path="/manage-stages" element={<ManageStages />} />
-    <Route path="/manage-tenants" element={<ManageTenants />} />
-    <Route path="/manage-users" element={<ManageUsers />} />
-    <Route path="/processes" element={<Processes />} />
-    <Route path="/settings" element={<Settings />} />
-    <Route path="/support-tickets" element={<SupportTicketsPage />} />
-    <Route path="/communications" element={<TeamCommunicationsPage />} />
-    <Route path="/inbox" element={<TeamInboxTabs />} />
-    <Route path="/team-settings" element={<TeamSettings />} />
-    <Route path="/tenant/:tenantId/documents-hub" element={<TenantDocumentsHub />} />
-    <Route path="/tenant/:tenantId/documents" element={<TenantDocuments />} />
-    <Route path="/tenant/:tenantId/logins" element={<TenantLogins />} />
-    <Route path="/tenant/:tenantId/members" element={<TenantMembers />} />
-    <Route path="/tenant/:tenantId/notes" element={<TenantNotes />} />
-    <Route path="/user-profile/:userId" element={<UserProfile />} />
-    <Route path="/work/calendar" element={<WorkCalendar />} />
-    <Route path="/work/meetings" element={<WorkMeetings />} />
-  </Route>
+  <>
+    <Route element={<ProtectedRoute requireSuperAdmin><DashboardLayoutRoute /></ProtectedRoute>}>
+      <Route path="/admin/stages" element={<AdminManageStages />} />
+      <Route path="/admin/stages/:stage_id" element={<AdminStageDetail />} />
+    </Route>
+    <Route element={<ProtectedRoute><DashboardLayoutRoute /></ProtectedRoute>}>
+      <Route path="/admin/package/:id" element={<PackageDetail />} />
+      <Route path="/admin/package/:id/tenant/:tenantId/instance/:instanceId" element={<AdminPackageTenantDetail />} />
+      <Route path="/admin/package/:id/tenant/:tenantId" element={<AdminPackageTenantDetail />} />
+      <Route path="/admin/integrations/tga" element={<AdminTgaIntegration />} />
+      <Route path="/admin/integrations/xero" element={<AdminXeroIntegration />} />
+      <Route path="/calendar" element={<Calendar />} />
+      <Route path="/tenant/:tenantId" element={<ClientDetail />} />
+      <Route path="/tenant-detail/:tenantId" element={<ClientDetail />} />
+      <Route path="/client-portal/:tenantId/documents" element={<ClientPortalDocuments />} />
+      <Route path="/email-triage" element={<EmailTriagePage />} />
+      <Route path="/manage-categories" element={<ManageCategories />} />
+      <Route path="/manage-documents" element={<ManageDocuments />} />
+      <Route path="/admin/email-templates" element={<ManageEmailTemplates />} />
+      <Route path="/manage-stages" element={<ManageStages />} />
+      <Route path="/manage-tenants" element={<ManageTenants />} />
+      <Route path="/manage-users" element={<ManageUsers />} />
+      <Route path="/processes" element={<Processes />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/support-tickets" element={<SupportTicketsPage />} />
+      <Route path="/communications" element={<TeamCommunicationsPage />} />
+      <Route path="/inbox" element={<TeamInboxTabs />} />
+      <Route path="/team-settings" element={<TeamSettings />} />
+      <Route path="/tenant/:tenantId/documents-hub" element={<TenantDocumentsHub />} />
+      <Route path="/tenant/:tenantId/documents" element={<TenantDocuments />} />
+      <Route path="/tenant/:tenantId/logins" element={<TenantLogins />} />
+      <Route path="/tenant/:tenantId/members" element={<TenantMembers />} />
+      <Route path="/tenant/:tenantId/notes" element={<TenantNotes />} />
+      <Route path="/user-profile/:userId" element={<UserProfile />} />
+      <Route path="/work/calendar" element={<WorkCalendar />} />
+      <Route path="/work/meetings" element={<WorkMeetings />} />
+    </Route>
+  </>
 );
