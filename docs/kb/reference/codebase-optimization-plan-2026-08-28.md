@@ -1030,3 +1030,46 @@ Mandatory council triggers:
 - Rollback is executable, compatible intermediate states exist for DB/API changes, and the observation signals/window/stop thresholds are named.
 - Repository source and deployed Supabase state are explicitly reconciled. No migration, Edge deployment, email/external side effect, or production mutation occurred without fresh separate authority.
 - The PR description includes packet ID, base/final SHAs, evidence ledger, residual risks, docs/audit links, and rollback. The PR is opened but not merged; merging still requires a fresh explicit ask.
+
+## 22. Execution progress and LOC tracking
+
+Updated after every merged PR, in the same style as `docs/dead-code-cleanup-plan-2026-08-27.md`'s "Lines of code progression" — this section is the running record of what actually shipped against this plan, not a restatement of the candidate register above.
+
+### Measurement method (read before trusting a number below)
+
+Numbers below come from `scripts/architecture-metrics.mjs`, run against a **disposable detached worktree** at the exact commit being measured (`git worktree add --detach <path> <sha>`, then `node scripts/architecture-metrics.mjs --json` invoked with a path *relative to that worktree*, e.g. after `cd`-ing into it). Two gotchas found while building this tracker, both now load-bearing for anyone re-running these numbers later:
+
+1. **The script resolves its own root from `import.meta.url`, not `process.cwd()`.** Running it via an absolute path into a different checkout (e.g. invoking the main checkout's copy of the script while `cd`'d into a worktree) silently measures the *main checkout*, not the worktree — producing a false "0 delta" that looks like a clean measurement but isn't. Always invoke the script using a path that resolves inside the worktree you actually want measured (a bare relative `scripts/architecture-metrics.mjs` after `cd` works; an absolute path into another checkout does not).
+2. **The script walks the filesystem (`readdirSync`), not `git ls-files`.** Any local, gitignored, untracked directory sitting in whichever checkout you measure gets counted as if it were repository code. The shared main working directory used for day-to-day sessions has one such directory, `supabase/functions/mcp/` (local MCP tooling scaffold, `!!` in `git status --ignored`, not part of the repo) — it inflates `edgeFunctions.files`/`edgeFunctions.lines` by +1 file / +9 lines versus a true clean measurement. A disposable detached worktree never has this problem, because `git worktree add` only ever materializes tracked content. **Prefer a fresh detached worktree over the shared main checkout for any number that will be written down here.**
+
+Also note: the shared main working directory's local `main` branch had drifted 5 merged PRs behind `origin/main` for the entire Phase 0/1 window (all work happened in feature worktrees branched directly from `origin/main`, so nothing ever fast-forwarded local `main`). Harmless for the actual PRs — each was branched fresh from `origin/main` — but it means `git log -1` in the shared checkout is not a reliable way to check "what's currently on main"; use `git log --oneline -1 origin/main` after a `git fetch`, and pull local `main` (`git pull --ff-only origin main`, safe when the tree is clean) before trusting an in-place measurement.
+
+### LOC and structure progression
+
+| Checkpoint | SHA | Tracked product files | Product LOC (excl. generated/tests) | Files >600 lines | Files >1000 lines | Wrapper files |
+|---|---|---:|---:|---:|---:|---:|
+| Phase 2 start (= Phase 1 exit) | `ea3ffbfa` | 1,816 | 416,318 | 120 | 36 | 71 |
+| After P1.1 (dedupe `/support-tickets`, PR [#482](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/482)) | `94ec75c6` | 1,816 | 416,316 (−2) | 120 | 36 | 71 |
+
+The plan's original 28 Aug baseline (`e91d013d`) measured 413,945 product LOC / 120 files >600 / 36 files >1000 / 71 wrappers. The 416,318 reading above is higher not because Phase 0/1 added product code (both phases were tooling + docs, plus one comment-only line fix) but because ordinary feature work landed on `main` between 28 Aug and 1 Sept alongside this program — expected, and the reason every phase re-measures from the current tip rather than trusting the plan's original numbers. Files >600/1000 and wrapper counts are unchanged from the original baseline, which is coincidence, not evidence nothing moved — P1.1 is route dedup, not a size-reduction slice; the later route-extraction/nested-layout slices are where the wrapper/file counts are expected to move.
+
+### Phase 0 — baseline and verification (complete, 2026-09-01)
+
+8 sub-items across independent PRs (#465–#472). Not re-derived here since none of it touched `src/`/`supabase/functions/**` product code (build/test/lint/metrics/route-manifest/Playwright tooling only — 0 product LOC impact by design).
+
+### Phase 1 — KB truth restoration (complete, 2026-09-01)
+
+5 PRs (#476, #478, #479, #480, #481), `docs/kb/**` and `docs/audit-log/INDEX.md` only, plus one corrected code comment (`ClientLayout.tsx`) and one corrected RLS template inside a doc. 0 product LOC impact by design — this phase fixed documentation truth, not code structure.
+
+### Phase 2 — route/composition simplification (in progress)
+
+| ID | Candidate | Status | PR | LOC delta |
+|---|---|---|---|---:|
+| P1.1 | Remove duplicate `/support-tickets` registration | ✅ Done | [#482](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/482) | −2 |
+| P0.6 (already shipped in Phase 0) | Module-aware route manifest/check | ✅ Confirmed still passing after P1.1 (`npm run routes` shows exactly one `/support-tickets` row) | #472 | — |
+| P1.5 | Remove stale `navigationConfig.ts` exports after caller/persona check | ⏳ Not started | — | — |
+| — | Extract one route family out of `App.tsx` | ⏳ Not started | — | — |
+| — | Convert one layout/guard family to nested routes | ⏳ Not started | — | — |
+| — | Consolidate route metadata (title/guard-tier/layout) | ⏳ Not started | — | — |
+
+Phase 2 exit gate (from §8): route count and guards unchanged except intentional cleanup; wrapper LOC reduced; route inventory check passes. Not yet met — only the dedup slice has landed; the wrapper-reduction slices (nested layouts) haven't started.
