@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-05-15 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). RJ should review legacy ADRs before treating as canonical; ADR-011 and ADR-013 are canonical for current state.
+> **Last updated:** 2026-09-01 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, and ADR-014 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -336,6 +336,40 @@ This reframing is documentation-only. No code changes. ADR-006 (EOS Level 10 as 
 - `codebase-state/architecture.md → Product overview — flagship surfaces`
 - `codebase-state/module-status.md → Flagship surfaces`
 - `pinned/glossary.md` (CSC, CSC workflow, Flagship surface, Internal operating system)
+
+---
+
+### ADR-014: Hand-written code moved to a standing branch+PR discipline — amends ADR-011's "no gate for hand-written code" claim {#adr-014}
+**Date:** 2026-09-01
+**Status:** Decided — describes current reality
+**Decided by:** recorded during the codebase optimization program (`docs/kb/reference/codebase-optimization-plan-2026-08-28.md`), correcting several pinned docs found describing a stale model
+
+**Context:** ADR-011 (2026-04-27) accurately described its own moment: no peer review at any layer, Lovable pushing schema + frontend direct to `main`, and — for hand-written code — "lands on feature branches and merges via PR — also without mandatory review," framed as symmetric with Lovable's lack of process. `pinned/team-roles.md` similarly stated Claude Code is "forbidden from writing to `<codebase>/`... regardless of who's running it," and `pinned/orientation.md`'s ground rule 3 repeated the "also without mandatory review" framing. By 2026-09-01 the codebase repo's own `AGENTS.md` (the cross-tool rulebook, read natively by Claude Code, Cursor, and Codex) had established real, standing discipline for hand-written changes that none of those three pinned/reference docs reflected: direct git hotfix (a hand-written change on a branch, opened as a PR) is the *standing default path*, not a symmetrically-unreviewed fallback; there is no path to `main` except merging a PR; merging always requires a fresh, explicit in-session ask (a standing "yes" from an earlier session never carries forward); force-push, branch/tag deletion without confirmation, and amending pushed commits are all explicitly forbidden; branch-naming conventions (`hotfix/<slug>`, `chore/<slug>`) are defined and followed.
+
+**Decision:** This ADR amends — does not supersede — ADR-011. ADR-011's description of **Lovable's** direct-to-main, no-review behavior stands unchanged; that part of the operating model hasn't moved. What's superseded is the *symmetry claim* for hand-written code: hand-written changes (via Claude Code or any dev) now go through a standing branch+PR process with an explicit merge gate, and Claude Code is not forbidden from writing to the codebase — the opposite is true, it's the default path for hand-written changes.
+
+**Reasoning:**
+- **The gate is real, not aspirational.** Unlike ADR-011's finding that review claims in the pre-2026-04-27 KB didn't match practice, the branch+PR discipline in `AGENTS.md` is the actual, currently-followed process for hand-written changes — verified against the merge history of this optimization program itself (every PR in Phase 0 and Phase 1 followed exactly this path).
+- **Three pinned/reference docs had drifted from source, not from each other.** `pinned/team-roles.md`, `pinned/orientation.md`, and (by omission) this ADR all still described the 2026-04-27 snapshot. `AGENTS.md` is the actual current source of truth for write permissions per the KB's own source-precedence rules (codebase wins over KB when they disagree) — this ADR just makes that explicit in the decision trail rather than leaving readers to notice the contradiction unassisted.
+- **Consistent with ADR-011's own stated purpose.** ADR-011 exists specifically so "a KB that describes a process the team doesn't follow" doesn't stay wrong silently. Leaving the "no gate for hand-written code" claim uncorrected once it became false would repeat exactly the failure ADR-011 was written to stop.
+
+**Alternatives considered:**
+- **Edit ADR-011 in place.** Rejected — ADR-011 was accurate when written; editing it would erase real decision history and the KB's own convention (established by ADR-012 and ADR-013) is to amend via a new ADR, not rewrite old ones.
+- **Leave it uncorrected pending a full Phase-1 KB regeneration pass.** Rejected — the specific factual claim ("Claude Code forbidden") is wrong *today* and actively misleading if a reader acts on it; the cost of a small, scoped amendment is much lower than letting a wrong permission claim compound.
+
+**Risks accepted:**
+- **This ADR itself can go stale** if `AGENTS.md`'s branch/PR/merge rules change again. Mitigation: none beyond the KB's standing reconsider-by discipline — future readers should verify against current `AGENTS.md`, not treat this ADR as permanently authoritative on the exact mechanics.
+
+**Consequences:**
+- `pinned/team-roles.md` — the `<codebase>/` access line corrected to describe the current branch+PR path instead of "forbidden."
+- `pinned/orientation.md` — ground rule 3 corrected to describe the current standing discipline for hand-written code, while leaving the Lovable-direct-to-main description (still accurate) unchanged.
+- **For onboarding:** new readers should expect hand-written code changes (via Claude Code or any dev) to always go through a branch, a PR, and an explicit merge ask — never a direct push to `main` — while Lovable's own push behavior remains the separate, unreviewed path ADR-011 described.
+
+**Linked to:**
+- ADR-011 (operating model; this ADR amends the hand-written-code-gate aspect only, not the Lovable-direct-to-main aspect)
+- `AGENTS.md → Write permissions & branch naming` (the actual current rules this ADR describes)
+- `pinned/team-roles.md → Tool access matrix`
+- `pinned/orientation.md → Ground rules`
 
 ---
 

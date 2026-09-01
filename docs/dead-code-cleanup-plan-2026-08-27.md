@@ -30,7 +30,7 @@ Measured as `git ls-files 'src/**' 'supabase/functions/**'` file count, and tota
 | After deleting the 5 now-stubbed edge-function folders + orphaned `StageCompletenessWidget.tsx` (folders only — 410 stubs already counted above) | 1,850 | 505,102 | −383 | −7 |
 | After retiring `admin-change-password`, `invite-to-tenant`, `get-email-status`, `report-delivery-issue` + `microsoft/scopes.ts` (410 stubs + folder deletions, all merged) | 1,843 | 504,498 | −604 | −7 |
 | After retiring `test-mailgun`, `tga-product-lookup`, `import-vimeo-training` (PR #455, merged) | 1,839 | 503,748 | −750 | −4 |
-| Pending merge: retiring `compliance-assistant-client` + deleting `bootstrap-bulk-generate-system-account` (PR #457, 410 stub deployed to prod, folders deleted in the branch, verified live in Playwright as the Demo RTO client) | 1,837 | 503,059 | −689 | −2 (once merged) |
+| Merged: retired `compliance-assistant-client` + deleted `bootstrap-bulk-generate-system-account` (PR #457, merged as `cfdeec0f`, verified live in Playwright as the Demo RTO client) | 1,837 | 503,059 | −689 | −2 |
 
 **Total across all 12 batches: −27,984 lines (−5.2%), −156 files (−7.7%), from 538,400 → 510,416 lines and 2,028 → 1,872 files.** The 19 §3 needs-review items (4 frontend + 15 edge functions) were intentionally left untouched at this point, parked for Carl's explicit sign-off before any future removal. **Status as of 28 Aug 2026: all 19 have since been resolved** — 18 retired/deleted, 1 (`academy-backfill-course-thumbnails`) deliberately kept — see §3, §7, and the Grand total/§3 follow-up sections below for the full history.
 
@@ -555,7 +555,7 @@ This section is the checklist for the **execution + Playwright-verification pass
 | Baseline (pre-cleanup) | 2,028 | 538,400 |
 | **Current (`main`)** | **1,839** | **503,748** |
 | **Removed so far** | **−189 (−9.3%)** | **−34,652 (−6.4%)** |
-| Pending merge (PR #457) | 1,837 | 503,059 |
+| Merged (PR #457, `cfdeec0f`) | 1,837 | 503,059 |
 | **Removed once #457 merges** | **−191 (−9.4%)** | **−35,341 (−6.6%)** |
 
 Breakdown of the follow-up work (beyond the original 12 batches), each its own PR:

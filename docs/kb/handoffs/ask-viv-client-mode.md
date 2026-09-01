@@ -1,7 +1,7 @@
 # Ask Viv — Client Mode Build Spec
 
 > **Created:** 30 April 2026
-> **Status:** Active — use this to scope and ship client-facing Ask Viv.
+> **Status:** Superseded (2026-09-01) — client-facing Ask Viv already shipped as the `ask-viv-assistant-client` Edge Function (`compliance-assistant-client`, the function this doc originally scoped, was retired; see `docs/dead-code-cleanup-plan-2026-08-27.md` and PR #457/`cfdeec0f`). This build spec is preserved as decision history (the 7-step decision tree below is still real reasoning), not a current implementation guide — no replacement runbook exists yet as of this correction; treat any current-behavior claim below as unverified until one is written.
 > **Trigger:** Building case (a) of the original product brief — clients querying their own tenant data ("what's outstanding on our package", "when's our next phase due").
 > **Authority:** Carl (decisions locked across 7-step decision tree on 30 Apr).
 > **Sibling doc:** [`ask-viv-fix-procedure.md`](ask-viv-fix-procedure.md) — the V4 staff restoration procedure this build sits on top of.

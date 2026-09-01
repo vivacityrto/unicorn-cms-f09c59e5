@@ -1,6 +1,8 @@
 # Team Roles & Tool Access
 
-> **Last updated:** 2026-04-28 · **Reconsider by:** 2026-07-28 · **Confidence:** high — reflects the seat-centric model agreed in the 2026-04-27 restructure session; audit-repo read access added 2026-04-28; audit-entry authorship split per ADR-012 added 2026-04-28.
+> **Last updated:** 2026-04-28 · **Reconsider by:** 2026-07-28 · **Confidence:** high on the seat-centric model agreed in the 2026-04-27 restructure session; **stale** on repo/tool topology — see the 2026-09-01 correction note below.
+>
+> **2026-09-01 correction:** the "Tool access matrix" and prose below still describe the pre-2026-08-06 three-repo split (`unicorn-kb/`, `unicorn-audit/` as separate GitHub repos with their own commit/read/write columns). That consolidation folded both into this repo as `docs/kb/` and `docs/audit-log/` — there is no longer a separate `unicorn-kb/`/`unicorn-audit/` repo or PAT-scoped GitHub MCP distinction to make. The single specific claim this pass corrects is line 96 below (Claude Code write access); the rest of the seat/access matrix still needs a fuller reconciliation pass against the one-repo model and isn't rewritten here — treat "`unicorn-kb/`"/"`unicorn-audit/`" mentions elsewhere on this page as historical/pre-consolidation, not current tool topology.
 >
 > Vivacity has two products: Unicorn and ComplyHub. This KB covers Unicorn. Roles below describe **seats** (responsibilities), not people — the same person may sit in multiple seats. See "People → seat mapping" for who sits where today.
 
@@ -93,7 +95,7 @@ fetch its contents. Audit is not part of source precedence (see
 `pinned/kb-hygiene.md`); it's available for "why did we end up here"
 historical context, not for resolving current-state questions.
 
-**`<codebase>/` access.** Lovable users push direct to `main` from the Lovable UI. Claude Code is forbidden from writing to `<codebase>/` per `~/repository/unicorn-workspace/CLAUDE.md → Write permissions` regardless of who's running it.
+**`<codebase>/` access.** Lovable users push direct to `main` from the Lovable UI — that hasn't changed. **Claude Code is no longer forbidden from writing to `<codebase>/`** (superseding this doc's original claim): per `AGENTS.md → Write permissions & branch naming`, a direct git hotfix — a hand-written change on a branch, opened as a PR — is the standing default path for editing this repo, available to Claude Code the same as any dev. There is still no "Lovable's territory, refuse by default" posture, and no path to `main` except merging a PR with a fresh, explicit in-session ask.
 
 ---
 
