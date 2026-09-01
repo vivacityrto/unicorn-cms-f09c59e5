@@ -53,7 +53,7 @@ import { cn } from "@/lib/utils";
 import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
 import ThumbnailPositionEditor from "@/components/academy/builder/ThumbnailPositionEditor";
 import ThumbnailLibraryPicker from "@/components/academy/builder/ThumbnailLibraryPicker";
-import { useAcademyThumbnailLibrary } from "@/hooks/academy/useAcademyBuilderPickers";
+import { useAcademyThumbnailLibrary, type AcademyThumbnailLibraryItem } from "@/hooks/academy/useAcademyBuilderPickers";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -610,6 +610,76 @@ export default function AcademyBuilderCourse() {
     }));
   };
 
+  const handleDeleteLibraryImage = async (item: AcademyThumbnailLibraryItem) => {
+    const column = item.category === "course" ? "thumbnail_url" : "banner_thumbnail_url";
+    const { data: references, error: referenceError } = await supabase
+      .from("academy_courses")
+      .select("id, title")
+      .eq(column, item.url);
+    if (referenceError) throw referenceError;
+
+    const fallbackByCourseId = new Map<number, string | null>();
+    if (item.category === "course" && references?.length) {
+      const courseIds = references.map((reference) => reference.id);
+      const [{ data: modules, error: modulesError }, { data: lessons, error: lessonsError }] = await Promise.all([
+        supabase.from("academy_modules").select("id, course_id, sort_order").in("course_id", courseIds).order("sort_order"),
+        supabase.from("academy_lessons").select("course_id, module_id, video_id, sort_order").in("course_id", courseIds).not("video_id", "is", null).order("sort_order"),
+      ]);
+      if (modulesError) throw modulesError;
+      if (lessonsError) throw lessonsError;
+
+      const moduleOrder = new Map<number, number>();
+      for (const module of modules ?? []) moduleOrder.set(module.id, module.sort_order);
+      const videoIds = [...new Set((lessons ?? []).map((lesson) => lesson.video_id).filter(Boolean))] as string[];
+      const { data: videos, error: videosError } = videoIds.length
+        ? await supabase.from("training_videos").select("id, thumbnail").in("id", videoIds)
+        : { data: [], error: null };
+      if (videosError) throw videosError;
+      const thumbnailByVideoId = new Map((videos ?? []).map((video) => [video.id, video.thumbnail as string | null]));
+
+      for (const reference of references) {
+        const sourceLesson = (lessons ?? [])
+          .filter((lesson) => lesson.course_id === reference.id && lesson.video_id)
+          .sort((a, b) => (moduleOrder.get(a.module_id) ?? 0) - (moduleOrder.get(b.module_id) ?? 0) || a.sort_order - b.sort_order)[0];
+        fallbackByCourseId.set(reference.id, sourceLesson?.video_id ? thumbnailByVideoId.get(sourceLesson.video_id) ?? null : null);
+      }
+    }
+
+    for (const reference of references ?? []) {
+      const fallback = item.category === "course" ? fallbackByCourseId.get(reference.id) ?? null : null;
+      const updatePayload: { thumbnail_url?: string | null; banner_thumbnail_url?: string | null } = { [column]: fallback };
+      const { error: clearError } = await supabase
+        .from("academy_courses")
+        .update(updatePayload)
+        .eq("id", reference.id)
+        .eq(column, item.url);
+      if (clearError) throw clearError;
+    }
+
+    const [{ data: courseReferences }, { data: bannerReferences }] = await Promise.all([
+      supabase.from("academy_courses").select("id").eq("thumbnail_url", item.url),
+      supabase.from("academy_courses").select("id").eq("banner_thumbnail_url", item.url),
+    ]);
+    const stillReferenced = (courseReferences?.length ?? 0) + (bannerReferences?.length ?? 0) > 0;
+    if (!stillReferenced) {
+      const storagePath = item.url.split("/storage/v1/object/public/academy-thumbnails/")[1];
+      if (storagePath) {
+        const { error: storageError } = await supabase.storage.from("academy-thumbnails").remove([storagePath]);
+        if (storageError) throw storageError;
+      }
+    }
+
+    if (courseId && references?.some((reference) => reference.id === courseId)) {
+      setFormState((previous) => item.category === "course"
+        ? { ...previous, thumbnail_url: fallbackByCourseId.get(courseId) ?? null }
+        : { ...previous, banner_thumbnail_url: null });
+    }
+    toast.success(stillReferenced ? "Image reference removed; the file is still used elsewhere" : "Image deleted; affected course cards reverted to Vimeo thumbnails");
+    qc.invalidateQueries({ queryKey: ["academy-thumbnail-library"] });
+    qc.invalidateQueries({ queryKey: ["academy-builder-course", courseId] });
+    qc.invalidateQueries({ queryKey: ["academy-courses-admin"] });
+  };
+
   // Note: in-app navigation guard via useBlocker requires a data router; this app uses BrowserRouter.
   // The beforeunload handler below covers tab close / reload.
 
@@ -826,6 +896,7 @@ export default function AcademyBuilderCourse() {
                 libraryItems={thumbnailLibrary}
                 libraryCategory="course"
                 onSelectLibraryImage={(thumbnail_url) => setFormState((p) => ({ ...p, thumbnail_url }))}
+                onDeleteLibraryImage={handleDeleteLibraryImage}
               />
 
               {formState.banner_thumbnail_url ? (
@@ -844,6 +915,7 @@ export default function AcademyBuilderCourse() {
                   libraryItems={thumbnailLibrary}
                   libraryCategory="banner"
                   onSelectLibraryImage={(banner_thumbnail_url) => setFormState((p) => ({ ...p, banner_thumbnail_url }))}
+                  onDeleteLibraryImage={handleDeleteLibraryImage}
                   onRemove={handleRemoveBannerThumbnail}
                   removeLabel="Use course card image instead"
                 />
@@ -882,6 +954,7 @@ export default function AcademyBuilderCourse() {
                       items={thumbnailLibrary}
                       value={formState.banner_thumbnail_url}
                       onSelect={(banner_thumbnail_url) => setFormState((p) => ({ ...p, banner_thumbnail_url }))}
+                      onDelete={handleDeleteLibraryImage}
                     />
                   </div>
                 </div>
