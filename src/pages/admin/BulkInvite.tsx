@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +47,21 @@ type Override = {
 
 type LiveStatus = "queued" | "sent" | "skipped" | "failed";
 
+interface BulkSendDetail {
+  tenant_id: number;
+  outcome: LiveStatus;
+  code?: string;
+  detail?: string;
+}
+
+interface BulkSendResponse {
+  ok: boolean;
+  detail?: string;
+  partial_failure?: boolean;
+  details?: BulkSendDetail[];
+  summary: { sent: number; skipped: number; failed: number };
+}
+
 type TenantUserOption = {
   user_id: string;
   email: string;
@@ -92,11 +106,9 @@ export default function BulkInvite() {
   // on the transient null-profile state while useAuth's deferred profile fetch runs.
   if (authLoading || profile === null || profile === undefined) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
   if (profile.unicorn_role !== "Super Admin") {
@@ -117,7 +129,7 @@ export default function BulkInvite() {
           .eq("package_type", "membership");
         if (pkErr) throw pkErr;
         const pkgInfo = new Map<number, { tier_name: string; package_code: string }>();
-        (memberPkgs || []).forEach((p: any) => pkgInfo.set(p.id, { tier_name: p.full_text || "Membership", package_code: p.name || "M" }));
+        (memberPkgs || []).forEach((p) => pkgInfo.set(p.id, { tier_name: p.full_text || "Membership", package_code: p.name || "M" }));
         const memberPkgIds = Array.from(pkgInfo.keys());
         if (memberPkgIds.length === 0) { if (!cancelled) setRows([]); return; }
 
@@ -130,7 +142,7 @@ export default function BulkInvite() {
         if (piErr) throw piErr;
 
         const tierByTenant = new Map<number, { tier_name: string; package_code: string }>();
-        for (const pi of (pkgInstances || []) as any[]) {
+        for (const pi of pkgInstances || []) {
           if (!tierByTenant.has(pi.tenant_id)) {
             const info = pkgInfo.get(pi.package_id);
             if (info) tierByTenant.set(pi.tenant_id, info);
@@ -151,9 +163,9 @@ export default function BulkInvite() {
           .eq("status", "active");
         if (tErr) throw tErr;
 
-        const activeIds = (tenants || []).map((t: any) => t.id as number);
+        const activeIds = (tenants || []).map((t) => t.id);
         const tenantNameMap = new Map<number, string>();
-        (tenants || []).forEach((t: any) => tenantNameMap.set(t.id, t.name));
+        (tenants || []).forEach((t) => tenantNameMap.set(t.id, t.name));
 
         // 3. Most recent relationship_role='primary_contact' tenant_users row per tenant
         const { data: tus } = await supabase
@@ -164,18 +176,18 @@ export default function BulkInvite() {
           .order("created_at", { ascending: false });
 
         const pickedTu = new Map<number, { user_id: string; relationship_role: RelationshipRole | null }>();
-        for (const tu of (tus || []) as any[]) {
-          if (!pickedTu.has(tu.tenant_id)) pickedTu.set(tu.tenant_id, { user_id: tu.user_id, relationship_role: tu.relationship_role });
+        for (const tu of tus || []) {
+          if (!pickedTu.has(tu.tenant_id)) pickedTu.set(tu.tenant_id, { user_id: tu.user_id, relationship_role: tu.relationship_role as RelationshipRole | null });
         }
 
         const userIds = Array.from(pickedTu.values()).map((v) => v.user_id).filter(Boolean);
-        const userMap = new Map<string, any>();
+        const userMap = new Map<string, { user_uuid: string; email: string; first_name: string | null; last_name: string | null; unicorn_role: string | null }>();
         if (userIds.length > 0) {
           const { data: users } = await supabase
             .from("users")
             .select("user_uuid, email, first_name, last_name, unicorn_role")
             .in("user_uuid", userIds);
-          (users || []).forEach((u: any) => userMap.set(u.user_uuid, u));
+          (users || []).forEach((u) => userMap.set(u.user_uuid, u));
         }
 
         const launchRows: LaunchRow[] = activeIds
@@ -205,9 +217,9 @@ export default function BulkInvite() {
           launchRows.forEach((r) => { if (r.suggested_email) preselect.add(r.tenant_id); });
           setSelected(preselect);
         }
-      } catch (e: any) {
+      } catch (e) {
         console.error(e);
-        toast({ title: "Failed to load launch list", description: e.message, variant: "destructive" });
+        toast({ title: "Failed to load launch list", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -300,7 +312,7 @@ export default function BulkInvite() {
       if (!data) return;
       setLiveStatus((prev) => {
         const next = new Map(prev);
-        for (const row of data as any[]) {
+        for (const row of data) {
           if (next.get(row.tenant_id) === "queued") {
             if (row.status === "pending" || row.status === "sent") next.set(row.tenant_id, "sent");
             else if (row.status === "failed") next.set(row.tenant_id, "failed");
@@ -321,7 +333,7 @@ export default function BulkInvite() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
-      const { data, error } = await supabase.functions.invoke("bulk-send-invitations", {
+      const { data, error } = await supabase.functions.invoke<BulkSendResponse>("bulk-send-invitations", {
         body: { tenant_ids: tenantIdList, contact_overrides: overridesPayload },
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
@@ -342,7 +354,7 @@ export default function BulkInvite() {
       // Surface any per-row PRIMARY_EXISTS conflicts (HTTP 409 from invite-user)
       // so the operator can fix the affected tenant and retry — non-blocking.
       const primaryExistsRows = (data.details || []).filter(
-        (d: any) => d.code === "PRIMARY_EXISTS" || /primary.*exist/i.test(d.detail || ""),
+        (d) => d.code === "PRIMARY_EXISTS" || /primary.*exist/i.test(d.detail || ""),
       );
       for (const d of primaryExistsRows) {
         const r = selectedRows.find((row) => row.tenant_id === d.tenant_id);
@@ -358,9 +370,9 @@ export default function BulkInvite() {
         title: data.partial_failure ? "Bulk send partial" : "Bulk send complete",
         description: `Sent ${s.sent} · Skipped ${s.skipped} · Failed ${s.failed}`,
       });
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast({ title: "Bulk send failed", description: e.message, variant: "destructive" });
+      toast({ title: "Bulk send failed", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {
       setSending(false);
       setConfirmOpen(false);
@@ -376,17 +388,15 @@ export default function BulkInvite() {
 
   if (authLoading || loading) {
     return (
-      <DashboardLayout>
-        <div className="space-y-6 p-6">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </DashboardLayout>
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6 p-6 animate-fade-in">
         {/* Hero */}
         <div
@@ -591,7 +601,7 @@ export default function BulkInvite() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </>
   );
 }
 
@@ -637,16 +647,16 @@ function OverrideModal({
           .select("user_id, relationship_role, created_at")
           .eq("tenant_id", row.tenant_id)
           .order("created_at", { ascending: false });
-        const uids = (tus || []).map((t: any) => t.user_id).filter(Boolean);
+        const uids = (tus || []).map((t) => t.user_id).filter(Boolean);
         if (uids.length === 0) { setMembers([]); return; }
         const { data: users } = await supabase
           .from("users")
           .select("user_uuid, email, first_name, last_name, unicorn_role")
           .in("user_uuid", uids);
-        const userMap = new Map<string, any>();
-        (users || []).forEach((u: any) => userMap.set(u.user_uuid, u));
+        const userMap = new Map<string, { user_uuid: string; email: string; first_name: string | null; last_name: string | null; unicorn_role: string | null }>();
+        (users || []).forEach((u) => userMap.set(u.user_uuid, u));
         const opts: TenantUserOption[] = (tus || [])
-          .map((t: any) => {
+          .map((t) => {
             const u = userMap.get(t.user_id);
             if (!u) return null;
             return {
@@ -715,7 +725,7 @@ function OverrideModal({
           <DialogTitle>Override contact for {row.tenant_name}</DialogTitle>
           <DialogDescription>Pick a different existing tenant user, or type a new contact.</DialogDescription>
         </DialogHeader>
-        <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "existing" | "new")}>
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="existing">Existing tenant users ({members.length})</TabsTrigger>
             <TabsTrigger value="new">Type a new contact</TabsTrigger>

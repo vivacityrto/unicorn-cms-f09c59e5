@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -12,11 +11,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, ArrowLeft, Play, Pause, X, Download, Copy } from "lucide-react";
 import { format } from "date-fns";
 
+interface WorkerInvokeResult {
+  remaining?: number;
+  status?: string;
+  aborted?: string;
+}
+
 interface Job {
   id: string;
   action: string;
   status: string;
-  filter_json: any;
+  filter_json: unknown;
   cap: number;
   batch_size: number;
   throttle_ms: number;
@@ -62,11 +67,11 @@ export default function CohortAccessSenderJob() {
       supabase.from("cohort_send_jobs").select("*").eq("id", jobId).maybeSingle(),
       supabase.from("cohort_send_job_items").select("*").eq("job_id", jobId).order("id").limit(1000),
     ]);
-    if (j) setJob(j as any);
+    if (j) setJob(j as unknown as Job);
     if (it) {
-      setItems(it as any);
+      setItems(it as unknown as Item[]);
       const uniqueIds = Array.from(
-        new Set((it as any[]).map((i) => i.tenant_id).filter((id): id is number => id != null))
+        new Set((it as Item[]).map((i) => i.tenant_id).filter((id): id is number => id != null))
       );
       if (uniqueIds.length > 0) {
         const { data: tenants } = await supabase.from("tenants").select("id, name").in("id", uniqueIds);
@@ -103,9 +108,10 @@ export default function CohortAccessSenderJob() {
             break;
           }
           await refresh();
-          const remaining = (data as any)?.remaining;
-          const status = (data as any)?.status;
-          const aborted = (data as any)?.aborted;
+          const result = data as WorkerInvokeResult | null;
+          const remaining = result?.remaining;
+          const status = result?.status;
+          const aborted = result?.aborted;
           if (status === "paused" || status === "cancelled" || status === "completed") break;
           if (typeof remaining === "number" && remaining === 0) break;
           if (aborted) {
@@ -163,12 +169,11 @@ export default function CohortAccessSenderJob() {
     return { done, pct, remaining };
   }, [job, items]);
 
-  if (accessLoading) return <DashboardLayout><div className="p-8"><Loader2 className="h-4 w-4 animate-spin" /></div></DashboardLayout>;
-  if (!isVivacityStaff) return <DashboardLayout><div className="p-8">Vivacity staff only.</div></DashboardLayout>;
-  if (!job) return <DashboardLayout><div className="p-8 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading job…</div></DashboardLayout>;
+  if (accessLoading) return <div className="p-8"><Loader2 className="h-4 w-4 animate-spin" /></div>;
+  if (!isVivacityStaff) return <div className="p-8">Vivacity staff only.</div>;
+  if (!job) return <div className="p-8 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading job…</div>;
 
   return (
-    <DashboardLayout>
       <div className="container mx-auto p-6 space-y-6 max-w-6xl">
         <div className="flex items-center justify-between">
           <div>
@@ -288,7 +293,6 @@ export default function CohortAccessSenderJob() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }
 

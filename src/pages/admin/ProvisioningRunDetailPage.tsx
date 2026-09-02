@@ -1,5 +1,4 @@
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,16 +30,13 @@ export default function ProvisioningRunDetailPage() {
 
   if (!Number.isFinite(id)) {
     return (
-      <DashboardLayout>
-        <div className="max-w-5xl mx-auto p-6">
-          <div className="text-sm text-destructive">Invalid run id</div>
-        </div>
-      </DashboardLayout>
+      <div className="max-w-5xl mx-auto p-6">
+        <div className="text-sm text-destructive">Invalid run id</div>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="max-w-6xl mx-auto p-6 space-y-4">
         <Button
           variant="ghost"
@@ -70,7 +66,6 @@ export default function ProvisioningRunDetailPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
   );
 }
 
@@ -84,7 +79,7 @@ function AuditTab({ runId }: { runId: number }) {
         .eq("id", runId)
         .maybeSingle();
       if (error) throw error;
-      return (data as any)?.graph_transcript ?? null;
+      return data?.graph_transcript ?? null;
     },
   });
 
