@@ -2,7 +2,7 @@
 
 > **Status:** council-reviewed implementation plan; no implementation or production mutation in this planning session
 > **Prepared:** 2026-09-02
-> **Repository baseline:** `origin/main@be491dc3`
+> **Repository baseline:** `origin/main@31083c49`
 > **Planning branch/worktree:** `chore/tenant-data-model-optimization-plan` at `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
 > **Primary surface:** `/manage-tenants` (`src/pages/ManageTenants.tsx`) and its `/tenant/:tenantId` detail workflow
 > **Related programs:** [Codebase Optimization and KB Renewal Plan](./codebase-optimization-plan-2026-08-28.md) and [RBAC v6 Authorization Plan](./rbac-v6-authorization-implementation-plan-2026-09-01.md)
@@ -39,6 +39,20 @@ This order delivers the highest UX value while keeping the legacy write model co
 ### Explicit architectural call
 
 Handle the **read path before the write model**. The directory is high-traffic and visibly slow, but a read-only additive contract can be shadowed and rolled back without rewriting tenant records. Schema normalization comes later, table by table, after caller/trigger/RPC inventories and parity evidence exist.
+
+### Cross-program sequencing gate — code optimization, RBAC v6, then tenant data
+
+Claude Code must preserve this agreed program order:
+
+1. **Finish the currently active Codebase Optimization Phase 2 route/layout work.** Reach a clean merged checkpoint with route inventory, guard-tier characterization, build/tests, and Playwright persona evidence passing. Route and guard composition must stop moving before authorization becomes the next implementation focus.
+2. **Run this tenant-data plan's P0 discovery only.** P0.1–P0.3 may inventory, benchmark, document, and build disposable verification evidence. They must not change production schema, authorization, directory authority, or user-visible behavior.
+3. **Implement the RBAC v6 foundations.** Approve the capability/scope model, establish the server-side decision core in shadow mode, complete the AJ/CSC pilot, and explicitly decide whether each internal staff audience retains all-tenant read access for the directory, tenant detail, staff Ask Viv, cross-client retrieval, BI, and exports.
+4. **Then begin this plan's P1/P2+ implementation.** Design and cut over tenant directory, operating-context, Ask Viv, integrity, and analytics contracts against the settled authorization vocabulary and scope decisions.
+5. **Coordinate deeper RBAC/RLS migration and schema normalization as vertical slices.** Each slice owns its server enforcement, data contract, persona tests, migration evidence, and rollback; neither program silently changes the other program's policy.
+
+The entire multi-phase code-optimization program does **not** need to finish before RBAC v6. The prerequisite is the currently active route/guard composition phase reaching a stable checkpoint. Conversely, tenant P0 evidence collection does not need to wait for RBAC because it is read-only and behavior-preserving.
+
+**Stop gate:** if route/guard work is still moving, do not start RBAC implementation. If the RBAC staff-scope decision and shadow decision core are not approved, do not start tenant P1/P2 or publish a new directory/context/AI/BI permission surface. P0 discovery remains the only authorized tenant-data work before those gates.
 
 ---
 
@@ -553,6 +567,8 @@ Every fact must declare one grain. Every metric must name its source, formula, e
 ## 11. Implementation sequence — small PR stack
 
 Every PR starts from fresh `origin/main` in its own worktree. Counts and SQL object definitions must be regenerated; this dated plan is not a substitute for live inspection.
+
+The cross-program gate in §1 controls when these phases may run: tenant P0 discovery may proceed after or alongside the final verification of the active route-optimization checkpoint, but P1/P2+ must wait for the RBAC v6 foundation, shadow decision core, AJ/CSC pilot, and explicit staff-scope decision.
 
 ### Phase P0 — freeze truth and make risk measurable
 
@@ -1098,7 +1114,7 @@ This section exists so a later session can resume without repeating risky discov
 
 - Isolated worktree: `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
 - Branch: `chore/tenant-data-model-optimization-plan`
-- Base after refresh: `origin/main@be491dc3`
+- Base after refresh: `origin/main@31083c49`
 - Shared checkout's unrelated untracked file was deliberately left untouched.
 - Live Supabase project was queried read-only; no `apply_migration`, DDL, DML, deploy, extension enablement, or production `EXPLAIN ANALYZE` occurred.
 
