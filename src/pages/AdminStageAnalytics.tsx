@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useStageAnalytics, exportToCSV, TopStageByUsage, CertifiedUnusedStage, HighRiskStage } from '@/hooks/useStageAnalytics';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -66,11 +65,9 @@ export default function AdminStageAnalytics() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
-        <div className="p-6 text-center">
-          <p className="text-muted-foreground">Access denied. SuperAdmin only.</p>
-        </div>
-      </DashboardLayout>
+      <div className="p-6 text-center">
+        <p className="text-muted-foreground">Access denied. SuperAdmin only.</p>
+      </div>
     );
   }
 
@@ -109,8 +106,7 @@ export default function AdminStageAnalytics() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 p-6 animate-fade-in">
+    <div className="space-y-6 p-6 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -597,6 +593,5 @@ export default function AdminStageAnalytics() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
   );
 }

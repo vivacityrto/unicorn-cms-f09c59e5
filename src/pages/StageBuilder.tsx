@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useToast } from '@/hooks/use-toast';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -326,72 +325,67 @@ export default function StageBuilder() {
   // Access check
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <ShieldX className="h-16 w-16 mx-auto text-destructive/50" />
-            <h2 className="text-xl font-semibold">Access Denied</h2>
-            <p className="text-muted-foreground">
-              You need Super Admin privileges to access Stage Builder.
-            </p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <ShieldX className="h-16 w-16 mx-auto text-destructive/50" />
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-muted-foreground">
+            You need Super Admin privileges to access Stage Builder.
+          </p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   // Success screen
   if (createdStageId) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[500px]">
-          <Card className="w-full max-w-lg text-center">
-            <CardContent className="pt-12 pb-8 space-y-6">
-              <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Stage Created Successfully!</h2>
-                <p className="text-muted-foreground">
-                  "{state.stageName}" has been created with {state.teamTasks.length} team tasks, 
-                  {' '}{state.clientTasks.length} client tasks, and {state.emails.length} emails.
-                </p>
-              </div>
-              <div className="flex gap-3 justify-center pt-4">
-                <Button variant="outline" onClick={() => {
-                  setCreatedStageId(null);
-                  setCurrentStep(1);
-                  setState({
-                    stageName: '',
-                    stageType: 'onboarding',
-                    packageType: 'rto',
-                    isCertified: false,
-                    templateKey: 'blank',
-                    description: '',
-                    teamTasks: [],
-                    clientTasks: [],
-                    emails: [],
-                    linkDocumentsLater: true,
-                    selectedDocumentIds: [],
-                    warnings: [],
-                  });
-                }}>
-                  Create Another
-                </Button>
-                <Button onClick={() => navigate(`/admin/stages/${createdStageId}`)}>
-                  Open Stage Editor
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center min-h-[500px]">
+        <Card className="w-full max-w-lg text-center">
+          <CardContent className="pt-12 pb-8 space-y-6">
+            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Stage Created Successfully!</h2>
+              <p className="text-muted-foreground">
+                "{state.stageName}" has been created with {state.teamTasks.length} team tasks,
+                {' '}{state.clientTasks.length} client tasks, and {state.emails.length} emails.
+              </p>
+            </div>
+            <div className="flex gap-3 justify-center pt-4">
+              <Button variant="outline" onClick={() => {
+                setCreatedStageId(null);
+                setCurrentStep(1);
+                setState({
+                  stageName: '',
+                  stageType: 'onboarding',
+                  packageType: 'rto',
+                  isCertified: false,
+                  templateKey: 'blank',
+                  description: '',
+                  teamTasks: [],
+                  clientTasks: [],
+                  emails: [],
+                  linkDocumentsLater: true,
+                  selectedDocumentIds: [],
+                  warnings: [],
+                });
+              }}>
+                Create Another
+              </Button>
+              <Button onClick={() => navigate(`/admin/stages/${createdStageId}`)}>
+                Open Stage Editor
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 p-6 max-w-5xl mx-auto animate-fade-in">
+    <div className="space-y-6 p-6 max-w-5xl mx-auto animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -922,6 +916,5 @@ export default function StageBuilder() {
           )}
         </div>
       </div>
-    </DashboardLayout>
   );
 }
