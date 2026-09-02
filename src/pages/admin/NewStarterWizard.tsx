@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +19,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
+
+interface TranscriptStep {
+  ok: boolean;
+  step: string;
+  detail?: string;
+}
 
 interface FormState {
   firstName: string;
@@ -67,7 +72,7 @@ export default function NewStarterWizard() {
   const [isRedo, setIsRedo] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
   const [runId, setRunId] = useState<number | null>(null);
-  const [transcript, setTranscript] = useState<any[]>([]);
+  const [transcript, setTranscript] = useState<TranscriptStep[]>([]);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [teamLeaders, setTeamLeaders] = useState<{ user_uuid: string; first_name: string; last_name: string; email: string }[]>([]);
 
@@ -97,7 +102,7 @@ export default function NewStarterWizard() {
         .or("superadmin_level.eq.Team Leader,superadmin_level.eq.Administrator")
         .eq("disabled", false)
         .order("first_name");
-      setTeamLeaders((data ?? []) as any);
+      setTeamLeaders(data ?? []);
     })();
   }, []);
 
@@ -120,6 +125,15 @@ export default function NewStarterWizard() {
         });
         return;
       }
+
+      // full_name/preferred_name/start_date are selected above but predate the
+      // last generated-types refresh for public.users -- narrow extension
+      // instead of `any` until types are regenerated.
+      const extendedData = data as typeof data & {
+        full_name?: string | null;
+        preferred_name?: string | null;
+        start_date?: string | null;
+      };
 
       // Personal contact via SECURITY DEFINER RPC; soft-fail if denied
       let personalEmail: string | null = null;
@@ -160,8 +174,8 @@ export default function NewStarterWizard() {
         ...f,
         firstName: data.first_name ?? "",
         lastName: data.last_name ?? "",
-        fullName: (data as any).full_name ?? f.fullName,
-        preferredName: (data as any).preferred_name ?? f.preferredName,
+        fullName: extendedData.full_name ?? f.fullName,
+        preferredName: extendedData.preferred_name ?? f.preferredName,
         personalEmail: personalEmail ?? f.personalEmail,
         jobTitle: data.job_title ?? "",
         upn: data.email ?? "",
@@ -175,8 +189,8 @@ export default function NewStarterWizard() {
             ? (data.manager_uuid as string)
             : f.teamLeaderId,
         startDate:
-          (data as any).start_date
-            ? String((data as any).start_date).slice(0, 10)
+          extendedData.start_date
+            ? String(extendedData.start_date).slice(0, 10)
             : data.created_at
             ? String(data.created_at).slice(0, 10)
             : f.startDate,
@@ -277,7 +291,7 @@ export default function NewStarterWizard() {
       if (!data?.ok) throw new Error(data?.error || "Provisioning failed");
       setRunId(data.run_id);
       setTranscript(data.transcript ?? []);
-      const succeeded = data.transcript?.filter((s: any) => s.ok).length ?? 0;
+      const succeeded = (data.transcript as TranscriptStep[] | undefined)?.filter((s) => s.ok).length ?? 0;
       const total = data.transcript?.length ?? 0;
       const status = data.status as "provisioned" | "partial" | "failed";
       const label =
@@ -299,15 +313,15 @@ export default function NewStarterWizard() {
         });
       }
       if (mode !== "save_only") setEmailDialogOpen(true);
-    } catch (e: any) {
-      toast({ title: "Provisioning failed", description: e.message, variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Provisioning failed", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {
       setProvisioning(false);
     }
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="max-w-4xl mx-auto p-6 space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
@@ -694,6 +708,6 @@ export default function NewStarterWizard() {
           rule={resolved.data ?? null}
         />
       </div>
-    </DashboardLayout>
+    </>
   );
 }

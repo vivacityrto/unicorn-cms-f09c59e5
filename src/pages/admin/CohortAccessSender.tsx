@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -16,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, AlertTriangle, Send, ChevronRight, Search } from "lucide-react";
 import { format } from "date-fns";
+import type { Json } from "@/integrations/supabase/types";
 
 type Action = "activate" | "reset";
 type AccountState = "ghost" | "invited" | "active" | "dormant" | "disabled";
@@ -29,6 +29,14 @@ interface ResolvedRow {
   unicorn_role: string | null;
   last_sign_in_at: string | null;
   truncated: boolean;
+}
+
+interface CohortFilter {
+  account_state?: AccountState[];
+  tenant_ids?: number[];
+  complyhub_tier?: string[];
+  last_sign_in?: { mode: string; before?: string };
+  user_created?: { mode: string; before?: string };
 }
 
 interface JobRow {
@@ -77,7 +85,7 @@ export default function CohortAccessSender() {
   const [tenants, setTenants] = useState<{ id: number; name: string }[]>([]);
   useEffect(() => {
     supabase.from("tenants").select("id, name").order("name").limit(1000).then(({ data }) => {
-      setTenants((data || []) as any);
+      setTenants(data || []);
     });
   }, []);
 
@@ -99,12 +107,12 @@ export default function CohortAccessSender() {
       .select("id, action, status, total_resolved, total_planned, total_sent, total_skipped, total_failed, created_at, notes")
       .order("created_at", { ascending: false })
       .limit(50);
-    setJobs((data || []) as any);
+    setJobs((data || []) as unknown as JobRow[]);
   };
   useEffect(() => { refreshJobs(); }, []);
 
   const filterJson = useMemo(() => {
-    const f: any = {};
+    const f: CohortFilter = {};
     if (states.length) f.account_state = states;
     if (tenantIds.length) f.tenant_ids = tenantIds;
     if (tiers.length) f.complyhub_tier = tiers;
@@ -141,13 +149,13 @@ export default function CohortAccessSender() {
   const runPreview = async () => {
     setPreviewLoading(true); setPreview(null); setConfirmText(""); setSelectedPreviewUuids(new Set());
     try {
-      const { data, error } = await supabase.rpc("resolve_cohort", { p_filter: filterJson, p_cap: cap });
+      const { data, error } = await supabase.rpc("resolve_cohort", { p_filter: filterJson as unknown as Json, p_cap: cap });
       if (error) throw error;
       const rows = (data || []) as ResolvedRow[];
       setPreview(rows);
       setSelectedPreviewUuids(new Set(rows.map((r) => r.user_uuid)));
-    } catch (e: any) {
-      toast({ title: "Preview failed", description: e?.message || String(e), variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Preview failed", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {
       setPreviewLoading(false);
     }
@@ -184,7 +192,7 @@ export default function CohortAccessSender() {
       const selectionDiffers = selectedPreviewUuids.size !== totalResolved;
       const { data, error } = await supabase.rpc("launch_cohort_job", {
         p_action: action,
-        p_filter: filterJson,
+        p_filter: filterJson as unknown as Json,
         p_cap: cap,
         p_batch_size: batchSize,
         p_throttle_ms: throttle,
@@ -195,18 +203,17 @@ export default function CohortAccessSender() {
       const jobId = data as string;
       toast({ title: "Job launched", description: `Cohort job ${jobId.slice(0, 8)} created` });
       navigate(`/admin/cohort-sender/jobs/${jobId}`);
-    } catch (e: any) {
-      toast({ title: "Launch failed", description: e?.message || String(e), variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Launch failed", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {
       setLaunching(false);
     }
   };
 
-  if (accessLoading) return <DashboardLayout><div className="p-8 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div></DashboardLayout>;
-  if (!isVivacityStaff) return <DashboardLayout><div className="p-8">Vivacity staff only.</div></DashboardLayout>;
+  if (accessLoading) return <div className="p-8 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
+  if (!isVivacityStaff) return <div className="p-8">Vivacity staff only.</div>;
 
   return (
-    <DashboardLayout>
       <div className="container mx-auto p-6 space-y-6 max-w-6xl">
         <div>
           <h1 className="text-2xl font-semibold">Cohort Access Sender</h1>
@@ -475,6 +482,5 @@ export default function CohortAccessSender() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }

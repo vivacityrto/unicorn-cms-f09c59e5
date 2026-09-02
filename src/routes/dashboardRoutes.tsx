@@ -84,6 +84,11 @@ const ResourceUpdatesLog = lazy(() => import("@/pages/ResourceUpdatesLog"));
 const ContactDirectory = lazy(() => import("@/pages/admin/ContactDirectory"));
 const RegulatorWatchDashboard = lazy(() => import("@/pages/RegulatorWatchDashboard"));
 const RegulatorChangeEventDetail = lazy(() => import("@/pages/RegulatorChangeEventDetail"));
+const NewStarterWizard = lazy(() => import("@/pages/admin/NewStarterWizard"));
+const ProvisioningRunDetailPage = lazy(() => import("@/pages/admin/ProvisioningRunDetailPage"));
+const BulkInvite = lazy(() => import("@/pages/admin/BulkInvite"));
+const CohortAccessSender = lazy(() => import("@/pages/admin/CohortAccessSender"));
+const CohortAccessSenderJob = lazy(() => import("@/pages/admin/CohortAccessSenderJob"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -237,7 +242,17 @@ const RegulatorChangeEventDetail = lazy(() => import("@/pages/RegulatorChangeEve
  * kept their page-local `!isSuperAdmin && !isVivacityTeam` "Access
  * Restricted" check unchanged, now redundant given the route's own
  * allowVivacityTeam guard, per the plan's page-local-check preservation
- * rule; ContactDirectory has no such page-local gate.
+ * rule; ContactDirectory has no such page-local gate. PR 7 (Administration:
+ * SA cohort) added 5 more files to the requireSuperAdmin group:
+ * NewStarterWizard, ProvisioningRunDetailPage, BulkInvite,
+ * CohortAccessSender, CohortAccessSenderJob. BulkInvite kept its
+ * page-local `profile.unicorn_role !== "Super Admin"` Navigate redirect
+ * and CohortAccessSender/CohortAccessSenderJob kept their page-local
+ * `!isVivacityStaff` gate, both now redundant given the route's own
+ * requireSuperAdmin, per the plan's page-local-check preservation rule.
+ * NewStarterWizard and BulkInvite each needed a Fragment (a sibling
+ * Dialog alongside the main content div); the other three were
+ * single-root across all of their return branches.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -268,6 +283,11 @@ export const dashboardLayoutRoutes = (
       <Route path="/admin/lifecycle-checklists" element={<LifecycleChecklistsAdmin />} />
       <Route path="/admin/merge-field-tags" element={<MergeFieldTagsAdmin />} />
       <Route path="/admin/settings/reporting-obligations" element={<ReportingObligationsAdmin />} />
+      <Route path="/admin/team-users/new-starter" element={<NewStarterWizard />} />
+      <Route path="/admin/team-users/runs/:runId" element={<ProvisioningRunDetailPage />} />
+      <Route path="/admin/bulk-invite" element={<BulkInvite />} />
+      <Route path="/admin/cohort-sender" element={<CohortAccessSender />} />
+      <Route path="/admin/cohort-sender/jobs/:jobId" element={<CohortAccessSenderJob />} />
     </Route>
     <Route element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/superadmin/academy/enrollments" element={<AcademyEnrolmentsPage />} />
