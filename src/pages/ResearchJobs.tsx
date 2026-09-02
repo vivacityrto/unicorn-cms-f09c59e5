@@ -7,7 +7,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useRBAC } from "@/hooks/useRBAC";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -111,18 +110,15 @@ export default function ResearchJobs() {
 
   if (!isSuperAdmin && !isVivacityTeam) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Access Restricted</h2>
-          <p className="text-sm text-muted-foreground">Research Jobs is available to Vivacity Team only.</p>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Access Restricted</h2>
+        <p className="text-sm text-muted-foreground">Research Jobs is available to Vivacity Team only.</p>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="space-y-4 p-4 max-w-screen-xl mx-auto">
         <div className="flex items-center justify-between">
           <div>
@@ -203,10 +199,16 @@ export default function ResearchJobs() {
                     </TableRow>
                   ) : (
                     filteredJobs.map(job => {
-                      const findings = (job as any).research_findings || [];
+                      // research_findings/standards_version are selected via "*" but predate
+                      // the last generated-types refresh for public.research_jobs.
+                      const extendedJob = job as typeof job & {
+                        research_findings?: { review_status?: string; risk_flags_json?: unknown }[];
+                        standards_version?: string | null;
+                      };
+                      const findings = extendedJob.research_findings || [];
                       const reviewStatus = findings[0]?.review_status;
-                      const riskFlags = findings[0]?.risk_flags_json as any[] || [];
-                      const highRisks = riskFlags.filter((f: any) => f.severity === "high").length;
+                      const riskFlags = (findings[0]?.risk_flags_json as { severity?: string }[]) || [];
+                      const highRisks = riskFlags.filter((f) => f.severity === "high").length;
 
                       return (
                         <TableRow
@@ -245,7 +247,7 @@ export default function ResearchJobs() {
                             {format(new Date(job.created_at), "dd MMM yyyy HH:mm")}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {(job as any).standards_version || "—"}
+                            {extendedJob.standards_version || "—"}
                           </TableCell>
                         </TableRow>
                       );
@@ -257,6 +259,5 @@ export default function ResearchJobs() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }

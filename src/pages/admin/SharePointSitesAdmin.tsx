@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Card,
@@ -78,7 +77,6 @@ export default function SharePointSitesAdmin() {
   });
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -127,7 +125,6 @@ export default function SharePointSitesAdmin() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }
 
@@ -173,8 +170,8 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
       setEditing(false);
       setTestResult(null);
       onSaved();
-    } catch (err: any) {
-      toast.error('Save failed', { description: err.message });
+    } catch (err) {
+      toast.error('Save failed', { description: err instanceof Error ? err.message : String(err) });
     } finally {
       setSaving(false);
     }
@@ -204,8 +201,8 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
       } else {
         setTestResult({ success: true, message: data?.root_name ? `Access confirmed — "${data.root_name}"` : 'Access confirmed.' });
       }
-    } catch (err: any) {
-      setTestResult({ success: false, message: err.message });
+    } catch (err) {
+      setTestResult({ success: false, message: err instanceof Error ? err.message : String(err) });
     } finally {
       setTesting(false);
     }
@@ -229,7 +226,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
       } else if (data?.default_drive) {
         const drive = data.default_drive;
         setDriveId(drive.id);
-        const drivesInfo = (data.drives || []).map((d: any) => `${d.name} (${d.id})`).join(', ');
+        const drivesInfo = (data.drives || []).map((d: { name: string; id: string }) => `${d.name} (${d.id})`).join(', ');
         setTestResult({
           success: true,
           message: `Default drive: "${drive.name}" → ${drive.id}\nAll drives: ${drivesInfo}`,
@@ -241,8 +238,8 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         setTestResult({ success: true, message: `Drive: "${first.name}" → ${first.id}` });
         if (!editing) setEditing(true);
       }
-    } catch (err: any) {
-      setTestResult({ success: false, message: err.message });
+    } catch (err) {
+      setTestResult({ success: false, message: err instanceof Error ? err.message : String(err) });
     } finally {
       setResolving(false);
     }
@@ -280,8 +277,8 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
       } else {
         setTestResult({ success: true, message: 'No drives found on this site.' });
       }
-    } catch (err: any) {
-      setTestResult({ success: false, message: err.message });
+    } catch (err) {
+      setTestResult({ success: false, message: err instanceof Error ? err.message : String(err) });
     } finally {
       setListingDrives(false);
     }

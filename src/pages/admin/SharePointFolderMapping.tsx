@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -261,7 +260,6 @@ export default function SharePointFolderMapping() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -572,6 +570,5 @@ export default function SharePointFolderMapping() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
   );
 }
