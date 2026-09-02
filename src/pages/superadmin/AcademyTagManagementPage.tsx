@@ -1,6 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +78,7 @@ export default function AcademyTagManagementPage() {
   const anyMutationPending = renameTag.isPending;
 
   return (
-    <DashboardLayout>
+    <>
       <div className="p-6 space-y-6 max-w-[1200px] mx-auto">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Tag Management</h1>
@@ -319,6 +318,6 @@ export default function AcademyTagManagementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </>
   );
 }

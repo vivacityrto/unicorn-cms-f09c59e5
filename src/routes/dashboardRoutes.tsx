@@ -1,8 +1,14 @@
 import { lazy } from "react";
 import { Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PermissionGate } from "@/components/PermissionGate";
 
 const DashboardLayoutRoute = lazy(() => import("@/components/layout/DashboardLayoutRoute"));
+
+// Non-SuperAdmin roles allowed on Academy Builder admin routes (SuperAdmin is
+// always allowed by ProtectedRoute). Was a local const in App.tsx before
+// these routes moved here.
+const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"];
 
 const AdminManageStages = lazy(() => import("@/pages/AdminManageStages"));
 const AdminStageDetail = lazy(() => import("@/pages/AdminStageDetail"));
@@ -44,6 +50,17 @@ const TenantNotes = lazy(() => import("@/pages/TenantNotes"));
 const UserProfile = lazy(() => import("@/pages/UserProfile"));
 const WorkCalendar = lazy(() => import("@/pages/WorkCalendar"));
 const WorkMeetings = lazy(() => import("@/pages/WorkMeetings"));
+const AcademyEnrolmentsPage = lazy(() => import("@/pages/superadmin/AcademyEnrolmentsPage"));
+const SuperAdminWorkforcePdp = lazy(() => import("@/pages/superadmin/workforce-pdp"));
+const AcademyTenantAccessPage = lazy(() => import("@/pages/superadmin/AcademyTenantAccessPage"));
+const AcademyCertificatesAdminPage = lazy(() => import("@/pages/superadmin/AcademyCertificatesPage"));
+const AcademyBuilderLibrary = lazy(() => import("@/pages/superadmin/AcademyBuilderLibrary"));
+const AcademyBuilderCourse = lazy(() => import("@/pages/superadmin/AcademyBuilderCourse"));
+const AcademyAddCoursePage = lazy(() => import("@/pages/superadmin/AcademyAddCoursePage"));
+const AcademyBulkImportPage = lazy(() => import("@/pages/superadmin/AcademyBulkImportPage"));
+const AcademyCourseCleanupPage = lazy(() => import("@/pages/superadmin/AcademyCourseCleanupPage"));
+const AcademyTagManagementPage = lazy(() => import("@/pages/superadmin/AcademyTagManagementPage"));
+const AcademyPackageCourseRulesPage = lazy(() => import("@/pages/superadmin/AcademyPackageCourseRulesPage"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -144,7 +161,22 @@ const WorkMeetings = lazy(() => import("@/pages/WorkMeetings"));
  * StrategicOrchestrationDashboard, TemplateGapAnalysis, WorkflowOptimisation
  * to the same requireSuperAdmin group -- all six kept their page-local
  * `if (!isSuperAdmin)` (or `!isSuperAdmin && !isVivacityTeam`) early return
- * unchanged, same rule.
+ * unchanged, same rule. PR 3 (Academy Builder cohort) added a new
+ * allowedRoles={ACADEMY_BUILDER_ROLES} sibling group (Team Leader,
+ * Integrator, CSC, SuperAdmin implicitly) for 10 Academy Builder pages, plus
+ * a third sibling group layering <PermissionGate featureKey=
+ * "academy.mapping.view" minLevel="full"> inside the same allowedRoles tier
+ * for AcademyPackageCourseRulesPage specifically -- that page's real access
+ * gate is a role_permissions-driven check independent of unicorn_role
+ * membership, previously implemented as a page-owned accessLoading spinner
+ * + !hasAccess <Navigate>, both still shell-wrapped (see PermissionGate's
+ * own doc comment). Moving it to a route-level guard above
+ * DashboardLayoutRoute means the shell now never mounts for a role-
+ * permitted-but-permission-denied user, closing a flash that pre-dates this
+ * migration. Every other Academy Builder page's own DashboardLayout
+ * removal preserved any multi-sibling return (a Dialog/AlertDialog/Sheet/
+ * drawer alongside the main content div) with a Fragment rather than
+ * silently dropping a sibling.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -161,6 +193,29 @@ export const dashboardLayoutRoutes = (
       <Route path="/admin/strategic-orchestration" element={<StrategicOrchestrationDashboard />} />
       <Route path="/admin/template-gap-analysis" element={<TemplateGapAnalysis />} />
       <Route path="/admin/workflow-optimisation" element={<WorkflowOptimisation />} />
+    </Route>
+    <Route element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><DashboardLayoutRoute /></ProtectedRoute>}>
+      <Route path="/superadmin/academy/enrollments" element={<AcademyEnrolmentsPage />} />
+      <Route path="/superadmin/workforce-pdp" element={<SuperAdminWorkforcePdp />} />
+      <Route path="/superadmin/academy/tenant-access" element={<AcademyTenantAccessPage />} />
+      <Route path="/superadmin/academy/certificates" element={<AcademyCertificatesAdminPage />} />
+      <Route path="/superadmin/academy/builder" element={<AcademyBuilderLibrary />} />
+      <Route path="/superadmin/academy/add-course" element={<AcademyAddCoursePage />} />
+      <Route path="/superadmin/academy/bulk-import" element={<AcademyBulkImportPage />} />
+      <Route path="/superadmin/academy/course-cleanup" element={<AcademyCourseCleanupPage />} />
+      <Route path="/superadmin/academy/tag-management" element={<AcademyTagManagementPage />} />
+      <Route path="/superadmin/academy/builder/:courseId" element={<AcademyBuilderCourse />} />
+    </Route>
+    <Route
+      element={
+        <ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}>
+          <PermissionGate featureKey="academy.mapping.view" minLevel="full">
+            <DashboardLayoutRoute />
+          </PermissionGate>
+        </ProtectedRoute>
+      }
+    >
+      <Route path="/superadmin/academy/package-course-rules" element={<AcademyPackageCourseRulesPage />} />
     </Route>
     <Route element={<ProtectedRoute><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/admin/package/:id" element={<PackageDetail />} />

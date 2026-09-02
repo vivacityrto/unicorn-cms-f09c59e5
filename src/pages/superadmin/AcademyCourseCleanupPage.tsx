@@ -1,7 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -171,8 +170,8 @@ export default function AcademyCourseCleanupPage() {
         },
       }));
       toast.success("Descriptions generated — review and confirm to save");
-    } catch (e: any) {
-      toast.error(e?.message || "Generation failed — check your connection and try again");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Generation failed — check your connection and try again");
       console.error("AI generation error:", e);
     } finally {
       setGeneratingId(null);
@@ -214,7 +213,6 @@ export default function AcademyCourseCleanupPage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Course Cleanup</h1>
@@ -492,7 +490,6 @@ export default function AcademyCourseCleanupPage() {
           </p>
         )}
       </div>
-    </DashboardLayout>
   );
 }
 

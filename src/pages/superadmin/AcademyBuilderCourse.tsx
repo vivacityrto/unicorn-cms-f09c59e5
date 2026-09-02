@@ -32,7 +32,6 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2, Upload, Save } from "lucide-react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import LessonEditorPanel from "@/components/academy/builder/LessonEditorPanel";
@@ -368,7 +367,7 @@ export default function AcademyBuilderCourse() {
   const { data: historicalFacilitators = [] } = useQuery({
     queryKey: ["academy-historical-facilitators"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("academy_historical_facilitators" as any).select("id, display_name").eq("is_selectable", true).order("display_name");
+      const { data, error } = await supabase.from("academy_historical_facilitators").select("id, display_name").eq("is_selectable", true).order("display_name");
       if (error) throw error;
       return data ?? [];
     },
@@ -433,7 +432,7 @@ export default function AcademyBuilderCourse() {
     transcript: string;
   };
 
-  const buildForm = useCallback((c: any): SettingsForm => {
+  const buildForm = useCallback((c: (NonNullable<typeof course> & { facilitator_display_name?: string | null }) | null | undefined): SettingsForm => {
     const neverPublished = !c?.published_at;
     const existingDelivery = c?.delivery_date ? String(c.delivery_date).slice(0, 10) : null;
     return {
@@ -449,7 +448,7 @@ export default function AcademyBuilderCourse() {
       certificate_enabled: c?.certificate_enabled ?? false,
       pass_score: c?.pass_score ?? 80,
       facilitator_id: c?.facilitator_id ?? null,
-      facilitator_display_name: (c as any)?.facilitator_display_name ?? null,
+      facilitator_display_name: c?.facilitator_display_name ?? null,
       // Default delivery date to today only for never-published courses still missing one
       delivery_date: existingDelivery ?? (neverPublished ? todayLocalISODate() : null),
       thumbnail_url: c?.thumbnail_url ?? null,
@@ -495,9 +494,12 @@ export default function AcademyBuilderCourse() {
   const saveCourseSettings = useMutation({
     mutationFn: async (payload: SettingsForm) => {
       if (!courseId) throw new Error("Missing courseId");
+      // facilitator_display_name and transcript are form-only fields, not real
+      // academy_courses columns -- excluded rather than cast away with `any`.
+      const { facilitator_display_name: _facilitatorDisplayName, transcript: _transcript, ...updatePayload } = payload;
       const { data, error } = await supabase
         .from("academy_courses")
-        .update(payload as any)
+        .update(updatePayload)
         .eq("id", courseId)
         .select()
         .single();
@@ -510,7 +512,7 @@ export default function AcademyBuilderCourse() {
       qc.invalidateQueries({ queryKey: ["academy-courses-admin"] });
       qc.invalidateQueries({ queryKey: ["academy-thumbnail-library"] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to save course settings"),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to save course settings"),
   });
 
   // Require facilitator + delivery only for never-published courses (genuinely new drafts).
@@ -570,8 +572,8 @@ export default function AcademyBuilderCourse() {
 
       const { data } = supabase.storage.from("academy-thumbnails").getPublicUrl(path);
       return data.publicUrl;
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to upload thumbnail");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload thumbnail");
       return null;
     }
   };
@@ -727,13 +729,14 @@ export default function AcademyBuilderCourse() {
 
   const handleBackToDraft = () => {
     if (!courseId) return;
-    updateCourse.mutate({ id: courseId, data: { status: "draft" } as any });
+    updateCourse.mutate({ id: courseId, data: { status: "draft" } });
   };
 
   const toggleModuleExpand = (id: number) => {
     setExpandedModules(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -788,7 +791,6 @@ export default function AcademyBuilderCourse() {
 
   if (courseLoading) {
     return (
-      <DashboardLayout>
       <div className="p-6 space-y-6 max-w-[1800px] mx-auto">
         <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-[30%_1fr] gap-6">
@@ -796,23 +798,19 @@ export default function AcademyBuilderCourse() {
           <Skeleton className="h-[600px]" />
         </div>
       </div>
-      </DashboardLayout>
     );
   }
 
   if (!course) {
     return (
-      <DashboardLayout>
       <div className="p-6 text-center py-16">
         <p className="font-medium text-foreground">Course not found</p>
         <Button variant="outline" className="mt-4" onClick={() => navigate("/superadmin/academy/builder")}>Back to Library</Button>
       </div>
-      </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
     <div className="p-6 space-y-6 max-w-[1800px] mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -983,7 +981,7 @@ export default function AcademyBuilderCourse() {
                           {(u.full_name?.trim() || u.user_uuid) + (u.archived || u.disabled ? " (inactive)" : "")}
                         </SelectItem>
                       ))}
-                      {historicalFacilitators.map((f: any) => (
+                      {historicalFacilitators.map((f) => (
                         <SelectItem key={f.id} value={`historical:${f.display_name}`}>{f.display_name} (former/external)</SelectItem>
                       ))}
                     </SelectContent>
@@ -1272,7 +1270,6 @@ export default function AcademyBuilderCourse() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-    </DashboardLayout>
   );
 }
 
@@ -1324,7 +1321,7 @@ function AiDescriptionGenerator({
       } else {
         throw new Error("Invalid response format");
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError("Generation failed — check your connection and try again");
       console.error("AI generation error:", e);
     } finally {

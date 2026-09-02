@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import type { Json } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,6 +101,23 @@ function sliceTimestampedTranscript(timed: string, start: number, end: number): 
 }
 
 const DIFFICULTY_OPTIONS = ["beginner", "intermediate", "advanced"];
+
+/** Shape of one raw segment object returned by the generate_workshop_segments
+ * edge function action, before it's normalised into a WorkshopSegment. */
+interface RawAiSegment {
+  suggested_title?: string;
+  start_seconds?: number;
+  end_seconds?: number;
+  summary?: string;
+}
+
+/** Shape of one raw question object returned by the generate_questions edge
+ * function action, before it's normalised into a QuizQuestion. */
+interface RawAiQuestion {
+  question_text?: string;
+  explanation?: string;
+  options?: unknown;
+}
 
 interface QuizOption { value: string; label: string; is_correct: boolean }
 interface QuizQuestion {
@@ -183,13 +200,16 @@ function formatDuration(seconds: number | null): string {
   return `${h}h ${m % 60}m`;
 }
 
-function normaliseOptions(raw: any): QuizOption[] {
+function normaliseOptions(raw: unknown): QuizOption[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map((o: any, i: number) => ({
-    value: String(o?.value ?? String.fromCharCode(97 + i)),
-    label: String(o?.label ?? o ?? ""),
-    is_correct: !!o?.is_correct,
-  }));
+  return raw.map((o: unknown, i: number) => {
+    const opt = (o ?? {}) as Record<string, unknown>;
+    return {
+      value: String(opt.value ?? String.fromCharCode(97 + i)),
+      label: String(opt.label ?? o ?? ""),
+      is_correct: !!opt.is_correct,
+    };
+  });
 }
 
 /** Returns an error message when the pasted Vimeo URL cannot be resolved, else null. */
@@ -234,11 +254,12 @@ function validateShowcaseUrl(raw: string): string | null {
 }
 
 /** Pull the real message out of a Supabase Functions error instead of "non-2xx status code". */
-async function extractEdgeError(err: any, fallback: string): Promise<string> {
-  const res = err?.context;
+async function extractEdgeError(err: unknown, fallback: string): Promise<string> {
+  const e = (err ?? {}) as { context?: { clone?: () => { json: () => Promise<unknown>; text: () => Promise<string> } }; message?: string };
+  const res = e.context;
   if (res && typeof res.clone === "function") {
     try {
-      const body = await res.clone().json();
+      const body = (await res.clone().json()) as Record<string, unknown>;
       const msg = body?.error || body?.message || body?.reason;
       if (msg) return String(msg);
     } catch {
@@ -248,7 +269,7 @@ async function extractEdgeError(err: any, fallback: string): Promise<string> {
       } catch { /* ignore */ }
     }
   }
-  return err?.message || fallback;
+  return e.message || fallback;
 }
 
 /**
@@ -587,7 +608,7 @@ export default function AcademyAddCoursePage() {
           .from("training_videos")
           .select("id")
           .ilike("vimeo_url", `%${videoId}%`);
-        const matchIds = (matchingVideos ?? []).map((v: any) => v.id);
+        const matchIds = (matchingVideos ?? []).map((v) => v.id);
         if (matchIds.length > 0) {
           const { data: existingCourses } = await supabase
             .from("academy_courses")
@@ -595,7 +616,7 @@ export default function AcademyAddCoursePage() {
             .in("source_video_id", matchIds)
             .neq("status", "archived");
           if (existingCourses && existingCourses.length > 0) {
-            setDuplicateVideo({ videoId, courses: existingCourses as any });
+            setDuplicateVideo({ videoId, courses: existingCourses });
             setGenerating(false);
             return;
           }
@@ -627,7 +648,7 @@ export default function AcademyAddCoursePage() {
           },
         });
         if (sErr) throw new Error(await extractEdgeError(sErr, "AI segment detection failed"));
-        const rawSegments: any[] = Array.isArray(seg?.segments) ? seg.segments : [];
+        const rawSegments: RawAiSegment[] = Array.isArray(seg?.segments) ? seg.segments : [];
         if (rawSegments.length === 0) throw new Error("AI returned no workshop segments");
         const total = Number(vimeo?.duration_seconds) > 0 ? Math.floor(Number(vimeo.duration_seconds)) : null;
         setSegments(
@@ -678,8 +699,8 @@ export default function AcademyAddCoursePage() {
 
       setGenerated(true);
       toast.success("Draft content generated");
-    } catch (e: any) {
-      setGenerateError(String(e?.message || "Failed to generate content"));
+    } catch (e: unknown) {
+      setGenerateError(String(e instanceof Error ? e.message : "Failed to generate content"));
     } finally {
       setGenerating(false);
     }
@@ -757,7 +778,7 @@ export default function AcademyAddCoursePage() {
           targetAudience: audience,
           difficulty: level,
           tags: aiTags,
-          questions: rawQs.map((q: any, qi: number) => ({
+          questions: rawQs.map((q: RawAiQuestion, qi: number) => ({
             key: `q-${seg.key}-${qi}`,
             question_text: String(q?.question_text ?? ""),
             explanation: String(q?.explanation ?? ""),
@@ -769,8 +790,8 @@ export default function AcademyAddCoursePage() {
       setSelectedDraft(0);
       setSplitConfirmed(true);
       toast.success(`${built.length} segment drafts ready to review`);
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to draft workshop segments");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to draft workshop segments");
     } finally {
       setSplitConfirming(false);
       setSplitProgress(null);
@@ -809,8 +830,8 @@ export default function AcademyAddCoursePage() {
       setShowcaseItems([]);
       setGenerated(false);
       toast.success(`${parsed.length} video${parsed.length === 1 ? "" : "s"} found — reorder below if needed, then draft with AI`);
-    } catch (e: any) {
-      setGenerateError(String(e?.message || "Failed to read that showcase"));
+    } catch (e: unknown) {
+      setGenerateError(String(e instanceof Error ? e.message : "Failed to read that showcase"));
     } finally {
       setGenerating(false);
     }
@@ -902,7 +923,7 @@ export default function AcademyAddCoursePage() {
             targetAudience: audience,
             difficulty: level,
             tags: aiTags,
-            questions: rawQs.map((q: any, qi: number) => ({
+            questions: rawQs.map((q: RawAiQuestion, qi: number) => ({
               key: `q-${item.vimeo_id}-${qi}`,
               question_text: String(q?.question_text ?? ""),
               explanation: String(q?.explanation ?? ""),
@@ -913,11 +934,11 @@ export default function AcademyAddCoursePage() {
             alreadyImported: !!item.already_imported,
             existingCourses: Array.isArray(item.existing_courses) ? item.existing_courses : [],
           });
-        } catch (itemErr: any) {
+        } catch (itemErr: unknown) {
           // One video's transient failure (e.g. a flaky AI response) shouldn't
           // discard everything already drafted in this batch — record it and
           // keep going, so the user only has to retry the ones that failed.
-          failed.push({ title: label, error: itemErr?.message || "Unknown error" });
+          failed.push({ title: label, error: itemErr instanceof Error ? itemErr.message : "Unknown error" });
         }
       }
       setShowcaseItems(built);
@@ -954,7 +975,7 @@ export default function AcademyAddCoursePage() {
       if (error) throw new Error(await extractEdgeError(error, "Failed to generate questions"));
       const raw = Array.isArray(data?.questions) ? data.questions : Array.isArray(data) ? data : [];
       setVQuestions(() =>
-        raw.map((q: any, i: number) => ({
+        raw.map((q: RawAiQuestion, i: number) => ({
           key: `q-${Date.now()}-${i}`,
           question_text: String(q?.question_text ?? ""),
           explanation: String(q?.explanation ?? ""),
@@ -962,8 +983,8 @@ export default function AcademyAddCoursePage() {
         })),
       );
       toast.success(`${raw.length} questions drafted`);
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to generate questions");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate questions");
     } finally {
       setGeneratingQuiz(false);
     }
@@ -1018,7 +1039,7 @@ export default function AcademyAddCoursePage() {
       .select("slug")
       .ilike("slug", `${slug}%`);
     if (slugRows && slugRows.length > 0) {
-      const taken = new Set(slugRows.map((r: any) => r.slug));
+      const taken = new Set(slugRows.map((r) => r.slug));
       const base = slug;
       let i = 2;
       while (taken.has(slug)) { slug = `${base}-${i}`; i++; }
@@ -1036,7 +1057,7 @@ export default function AcademyAddCoursePage() {
           course_id: courseId,
           is_active: true,
           created_by: userId,
-        })) as any,
+        })),
       );
     if (prErr) throw prErr;
   };
@@ -1057,7 +1078,7 @@ export default function AcademyAddCoursePage() {
         pass_score: 80,
         is_required_for_certificate: true,
         created_by: userId,
-      } as any)
+      })
       .select("id")
       .single();
     if (aErr) throw aErr;
@@ -1069,11 +1090,11 @@ export default function AcademyAddCoursePage() {
           assessment_id: assessment.id,
           question_text: q.question_text,
           question_type: "multiple_choice",
-          options: q.options,
+          options: q.options as unknown as Json,
           explanation: q.explanation || null,
           points: 1,
           sort_order: i + 1,
-        })) as any,
+        })),
       );
     if (qErr) throw qErr;
   };
@@ -1107,7 +1128,7 @@ export default function AcademyAddCoursePage() {
         created_by: userId,
         facilitator_id: facilitatorId,
         delivery_date: deliveryDate,
-      } as any)
+      })
       .select("id")
       .single();
     if (cErr) throw cErr;
@@ -1122,7 +1143,7 @@ export default function AcademyAddCoursePage() {
         title: "Module 1",
         sort_order: 1,
         is_published: true,
-      } as any)
+      })
       .select("id")
       .single();
     if (mErr) throw mErr;
@@ -1140,7 +1161,7 @@ export default function AcademyAddCoursePage() {
         is_published: true,
         segment_start_seconds: spec.segmentStart,
         segment_end_seconds: spec.segmentEnd,
-      } as any);
+      });
     if (lErr) throw lErr;
 
     await insertCompletionQuiz(courseId, spec.title.trim(), spec.questions, userId);
@@ -1179,7 +1200,7 @@ export default function AcademyAddCoursePage() {
         created_by: userId,
         facilitator_id: facilitatorId,
         delivery_date: deliveryDate,
-      } as any)
+      })
       .select("id")
       .single();
     if (cErr) throw cErr;
@@ -1194,7 +1215,7 @@ export default function AcademyAddCoursePage() {
         title: "Workshop",
         sort_order: 1,
         is_published: true,
-      } as any)
+      })
       .select("id")
       .single();
     if (mErr) throw mErr;
@@ -1213,7 +1234,7 @@ export default function AcademyAddCoursePage() {
           is_published: true,
           segment_start_seconds: d.segment.start_seconds,
           segment_end_seconds: d.segment.end_seconds,
-        })) as any,
+        })),
       );
     if (lErr) throw lErr;
 
@@ -1268,7 +1289,7 @@ export default function AcademyAddCoursePage() {
         created_by: userId,
         facilitator_id: facilitatorId,
         delivery_date: deliveryDate,
-      } as any)
+      })
       .select("id")
       .single();
     if (cErr) throw cErr;
@@ -1286,7 +1307,7 @@ export default function AcademyAddCoursePage() {
           title: `Module ${moduleNumber}`,
           sort_order: moduleNumber,
           is_published: true,
-        } as any)
+        })
         .select("id")
         .single();
       if (mErr) throw mErr;
@@ -1308,7 +1329,7 @@ export default function AcademyAddCoursePage() {
       }
       const { data: newFolder, error: fInsErr } = await supabase
         .from("training_folders")
-        .insert({ folder_name: SHOWCASE_VIDEO_FOLDER_NAME } as any)
+        .insert({ folder_name: SHOWCASE_VIDEO_FOLDER_NAME })
         .select("id")
         .single();
       if (fInsErr) throw fInsErr;
@@ -1338,7 +1359,7 @@ export default function AcademyAddCoursePage() {
             duration_seconds: item.durationSeconds,
             thumbnail: item.thumbnailUrl,
             added_by: userId,
-          } as any)
+          })
           .select("id")
           .single();
         if (vInsErr) throw vInsErr;
@@ -1359,7 +1380,7 @@ export default function AcademyAddCoursePage() {
           video_id: videoId,
           sort_order: item.lessonNumber,
           is_published: true,
-        } as any);
+        });
       if (lErr) throw lErr;
     }
 
@@ -1436,7 +1457,7 @@ export default function AcademyAddCoursePage() {
           if (!folderId) {
             const { data: newFolder, error: fInsErr } = await supabase
               .from("training_folders")
-              .insert({ folder_name: folderName } as any)
+              .insert({ folder_name: folderName })
               .select("id")
               .single();
             if (fInsErr) throw fInsErr;
@@ -1453,7 +1474,7 @@ export default function AcademyAddCoursePage() {
               thumbnail: thumbnailUrl,
               folder_name: folderName,
               added_by: userId,
-            } as any)
+            })
             .select("id")
             .single();
           if (vInsErr) throw vInsErr;
@@ -1477,8 +1498,8 @@ export default function AcademyAddCoursePage() {
 
       toast.success("Draft course created — review and publish when ready");
       navigate(`/superadmin/academy/builder/${courseId}`);
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to save draft course");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to save draft course");
     } finally {
       setSaving(false);
     }
@@ -1495,8 +1516,7 @@ export default function AcademyAddCoursePage() {
   const reviewPending = sourceType === "showcase" ? !showcaseActive : (splitIntoLessons && !workshopActive);
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-6 max-w-[1800px] mx-auto">
+    <div className="p-6 space-y-6 max-w-[1800px] mx-auto">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate("/superadmin/academy/builder")}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Library
@@ -2143,6 +2163,5 @@ export default function AcademyAddCoursePage() {
           <p className="sr-only">Generate content before saving for best results.</p>
         )}
       </div>
-    </DashboardLayout>
   );
 }

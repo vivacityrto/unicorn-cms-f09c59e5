@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,6 +44,7 @@ import {
   useReactivateEnrollment,
   useExtendEnrollment,
   useEnrollmentRealtime,
+  type EnrichedEnrollment,
 } from "@/hooks/academy/useAcademyEnrollments";
 import { usePermission } from "@/hooks/usePermission";
 
@@ -93,7 +93,8 @@ export default function AcademyEnrolmentsPage() {
 
   const toggleSource = (s: SourceValue) => {
     const next = new Set(selectedSources);
-    next.has(s) ? next.delete(s) : next.add(s);
+    if (next.has(s)) next.delete(s);
+    else next.add(s);
     setParam("source", next.size ? Array.from(next).join(",") : null);
   };
 
@@ -127,13 +128,13 @@ export default function AcademyEnrolmentsPage() {
   const canManageEnrolments = usePermission('academy.enrolments.revoke');
 
   // Compute "expired" client-side (status='active' AND expires_at <= now())
-  const isExpired = (e: any) =>
-    e.status === "active" && e.expires_at && new Date(e.expires_at).getTime() <= Date.now();
+  const isExpired = (e: EnrichedEnrollment) =>
+    e.status === "active" && !!e.expires_at && new Date(e.expires_at).getTime() <= Date.now();
 
   // Filter enrolments
   const filtered = useMemo(() => {
     if (!enrolments) return [];
-    return enrolments.filter((e: any) => {
+    return enrolments.filter((e) => {
       // Status (special: 'expired' is derived)
       if (statusFilter === "expired") {
         if (!isExpired(e)) return false;
@@ -142,7 +143,7 @@ export default function AcademyEnrolmentsPage() {
         // When filtering by "active", exclude expired ones
         if (statusFilter === "active" && isExpired(e)) return false;
       }
-      if (selectedSources.size > 0 && !selectedSources.has(e.source)) return false;
+      if (selectedSources.size > 0 && !selectedSources.has(e.source as SourceValue)) return false;
       if (courseFilter !== "all" && String(e.course_id) !== courseFilter) return false;
       if (tenantFilter !== "all" && String(e.tenant_id) !== tenantFilter) return false;
       if (fromDate && e.enrolled_at && new Date(e.enrolled_at) < new Date(fromDate)) return false;
@@ -162,7 +163,7 @@ export default function AcademyEnrolmentsPage() {
   const tabCounts = useMemo(() => {
     if (!enrolments) return { all: 0, active: 0, completed: 0, expired: 0, revoked: 0 };
     let active = 0, completed = 0, expired = 0, revoked = 0;
-    for (const e of enrolments as any[]) {
+    for (const e of enrolments) {
       const exp = isExpired(e);
       if (exp) expired++;
       if (e.status === "active" && !exp) active++;
@@ -204,9 +205,9 @@ export default function AcademyEnrolmentsPage() {
   };
 
   // CSV export
-  const handleExport = (rows: any[]) => {
+  const handleExport = (rows: EnrichedEnrollment[]) => {
     if (!rows.length) return;
-    const data = rows.map((e: any) => ({
+    const data = rows.map((e) => ({
       User: `${e.user?.first_name || ""} ${e.user?.last_name || ""}`.trim(),
       Email: e.user?.email || "",
       Tenant: e.tenant?.name || "",
@@ -219,7 +220,7 @@ export default function AcademyEnrolmentsPage() {
       Expires: e.expires_at ? format(new Date(e.expires_at), "yyyy-MM-dd") : "",
     }));
     const headers = Object.keys(data[0]).join(",");
-    const escape = (v: any) => {
+    const escape = (v: unknown) => {
       const s = String(v ?? "");
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
@@ -236,7 +237,8 @@ export default function AcademyEnrolmentsPage() {
   const toggleSelect = (id: number) =>
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
 
@@ -244,11 +246,11 @@ export default function AcademyEnrolmentsPage() {
     if (selectedIds.size === filtered.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filtered.map((e: any) => e.id)));
+      setSelectedIds(new Set(filtered.map((e) => e.id)));
     }
   };
 
-  const statusChip = (e: any) => {
+  const statusChip = (e: EnrichedEnrollment) => {
     const expired = isExpired(e);
     const label = expired ? "expired" : e.status || "—";
     let tone = "bg-muted text-muted-foreground";
@@ -267,7 +269,7 @@ export default function AcademyEnrolmentsPage() {
     statusFilter !== "all" || fromDate || toDate || selectedSources.size > 0);
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -422,7 +424,7 @@ export default function AcademyEnrolmentsPage() {
             <Button size="sm" variant="outline" onClick={() => setBulkExtendOpen(true)}>
               <CalendarIcon className="h-3.5 w-3.5 mr-1" /> Extend expiry
             </Button>
-            <Button size="sm" variant="outline" onClick={() => handleExport(filtered.filter((e: any) => selectedIds.has(e.id)))}>
+            <Button size="sm" variant="outline" onClick={() => handleExport(filtered.filter((e) => selectedIds.has(e.id)))}>
               <Download className="h-3.5 w-3.5 mr-1" /> Export selected
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -490,7 +492,7 @@ export default function AcademyEnrolmentsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((e: any) => {
+                  filtered.map((e) => {
                     const prog = progressMap.get(e.id);
                     const expired = isExpired(e);
                     const revoked = e.status === "revoked" || !!e.revoked_at;
@@ -721,6 +723,6 @@ export default function AcademyEnrolmentsPage() {
 
       {/* New enrolment modal */}
       <NewEnrolmentModal open={newOpen} onOpenChange={setNewOpen} />
-    </DashboardLayout>
+    </>
   );
 }

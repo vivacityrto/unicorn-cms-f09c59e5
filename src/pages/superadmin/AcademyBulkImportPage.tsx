@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,7 +190,7 @@ export default function AcademyBulkImportPage() {
     if (!folderId) {
       const { data: newFolder, error: fInsErr } = await supabase
         .from("training_folders")
-        .insert({ folder_name: folderName } as any)
+        .insert({ folder_name: folderName })
         .select("id")
         .single();
       if (fInsErr) throw fInsErr;
@@ -208,7 +207,7 @@ export default function AcademyBulkImportPage() {
         duration_seconds: durationSeconds,
         thumbnail,
         added_by: userId,
-      } as any)
+      })
       .select("id")
       .single();
     if (vInsErr) throw vInsErr;
@@ -229,7 +228,7 @@ export default function AcademyBulkImportPage() {
       .select("slug")
       .ilike("slug", `${slug}%`);
     if (slugRows && slugRows.length > 0) {
-      const taken = new Set(slugRows.map((r: any) => r.slug));
+      const taken = new Set(slugRows.map((r) => r.slug));
       const base = slug;
       let i = 2;
       while (taken.has(slug)) { slug = `${base}-${i}`; i++; }
@@ -248,7 +247,7 @@ export default function AcademyBulkImportPage() {
         source_video_id: videoId,
         available_to_all_clients: availableToAll,
         created_by: userId,
-      } as any)
+      })
       .select("id")
       .single();
     if (cErr) throw cErr;
@@ -258,7 +257,7 @@ export default function AcademyBulkImportPage() {
       const { error: prErr } = await supabase
         .from("academy_package_course_rules")
         .insert(
-          packageIds.map((pid) => ({ course_id: courseId, package_id: pid, is_active: true })) as any,
+          packageIds.map((pid) => ({ course_id: courseId, package_id: pid, is_active: true })),
         );
       if (prErr) throw prErr;
     }
@@ -294,9 +293,9 @@ export default function AcademyBulkImportPage() {
         const courseId = await createDraftCourse(row, videoId, title, thumbnail, userId);
         created++;
         updateRow(row.key, { status: "done", courseId, title, message: "Draft created" });
-      } catch (e: any) {
+      } catch (e: unknown) {
         failed++;
-        updateRow(row.key, { status: "error", message: e?.message || "Failed to create draft" });
+        updateRow(row.key, { status: "error", message: e instanceof Error ? e.message : "Failed to create draft" });
       }
     }
 
@@ -324,7 +323,6 @@ export default function AcademyBulkImportPage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -487,6 +485,5 @@ export default function AcademyBulkImportPage() {
           </Card>
         )}
       </div>
-    </DashboardLayout>
   );
 }
