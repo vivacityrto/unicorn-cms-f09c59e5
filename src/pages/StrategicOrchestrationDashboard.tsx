@@ -7,7 +7,6 @@
  */
 
 import { useState } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -52,6 +51,18 @@ const SEVERITY_STYLES: Record<string, string> = {
   elevated: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800",
 };
 
+interface AffectedEntity {
+  type?: string;
+  name?: string;
+  utilisation?: number;
+  tenant_id?: string | number;
+}
+
+interface RecommendedAction {
+  priority: string;
+  action: string;
+}
+
 const SCOPE_LABELS: Record<string, string> = {
   tenant: "Single Tenant",
   multi_tenant: "Multi-Tenant",
@@ -70,13 +81,11 @@ export default function StrategicOrchestrationDashboard() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
-          <p className="text-sm text-muted-foreground">Strategic Orchestration is available to authorised Vivacity leadership only.</p>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
+        <p className="text-sm text-muted-foreground">Strategic Orchestration is available to authorised Vivacity leadership only.</p>
+      </div>
     );
   }
 
@@ -85,8 +94,7 @@ export default function StrategicOrchestrationDashboard() {
   const critical = active.filter(p => p.severity_level === "critical");
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
+    <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -204,7 +212,6 @@ export default function StrategicOrchestrationDashboard() {
           />
         )}
       </div>
-    </DashboardLayout>
   );
 }
 
@@ -353,7 +360,7 @@ function PriorityDetailDialog({
             <div>
               <h4 className="text-xs font-semibold text-foreground mb-1">Affected Entities</h4>
               <div className="flex flex-wrap gap-1">
-                {priority.affected_entities_json.map((e: any, i: number) => (
+                {priority.affected_entities_json.map((e: AffectedEntity, i: number) => (
                   <Badge key={i} variant="secondary" className="text-[10px]">
                     {e.type === "consultant" ? `${e.name} (${Math.round(e.utilisation)}%)` :
                      e.tenant_id ? `Tenant ${e.tenant_id}` : JSON.stringify(e)}
@@ -368,7 +375,7 @@ function PriorityDetailDialog({
             <div>
               <h4 className="text-xs font-semibold text-foreground mb-1">Recommended Actions</h4>
               <div className="space-y-1">
-                {priority.recommended_actions_json.map((a: any, i: number) => (
+                {priority.recommended_actions_json.map((a: RecommendedAction, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <Badge variant="outline" className="h-4 text-[9px]">{a.priority}</Badge>
                     <span className="text-muted-foreground">{a.action}</span>

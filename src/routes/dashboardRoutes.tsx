@@ -10,6 +10,12 @@ const PackageBuilder = lazy(() => import("@/pages/PackageBuilder"));
 const PackageBuilderDetail = lazy(() => import("@/pages/PackageBuilderDetail"));
 const StageBuilder = lazy(() => import("@/pages/StageBuilder"));
 const AdminStageAnalytics = lazy(() => import("@/pages/AdminStageAnalytics"));
+const CrossTenantRiskRadar = lazy(() => import("@/pages/CrossTenantRiskRadar"));
+const RiskCommandCentre = lazy(() => import("@/pages/RiskCommandCentre"));
+const StrategicCommandCentre = lazy(() => import("@/pages/StrategicCommandCentre"));
+const StrategicOrchestrationDashboard = lazy(() => import("@/pages/StrategicOrchestrationDashboard"));
+const TemplateGapAnalysis = lazy(() => import("@/pages/TemplateGapAnalysis"));
+const WorkflowOptimisation = lazy(() => import("@/pages/WorkflowOptimisation"));
 const PackageDetail = lazy(() => import("@/pages/PackageDetail"));
 const AdminPackageTenantDetail = lazy(() => import("@/pages/AdminPackageTenantDetail"));
 const AdminTgaIntegration = lazy(() => import("@/pages/AdminTgaIntegration"));
@@ -133,7 +139,12 @@ const WorkMeetings = lazy(() => import("@/pages/WorkMeetings"));
  * (e.g. StageBuilder/AdminStageAnalytics's own `if (!isSuperAdmin)` early
  * return) unchanged; only the DashboardLayout wrap was removed, per the
  * plan's rule against removing page-local authorization just because a
- * route guard appears equivalent.
+ * route guard appears equivalent. PR 2 (Strategic Intelligence: SA cohort)
+ * added CrossTenantRiskRadar, RiskCommandCentre, StrategicCommandCentre,
+ * StrategicOrchestrationDashboard, TemplateGapAnalysis, WorkflowOptimisation
+ * to the same requireSuperAdmin group -- all six kept their page-local
+ * `if (!isSuperAdmin)` (or `!isSuperAdmin && !isVivacityTeam`) early return
+ * unchanged, same rule.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -144,6 +155,12 @@ export const dashboardLayoutRoutes = (
       <Route path="/admin/package-builder/:id" element={<PackageBuilderDetail />} />
       <Route path="/admin/stage-builder" element={<StageBuilder />} />
       <Route path="/admin/stage-analytics" element={<AdminStageAnalytics />} />
+      <Route path="/admin/risk-radar" element={<CrossTenantRiskRadar />} />
+      <Route path="/admin/risk-command" element={<RiskCommandCentre />} />
+      <Route path="/admin/strategic-command" element={<StrategicCommandCentre />} />
+      <Route path="/admin/strategic-orchestration" element={<StrategicOrchestrationDashboard />} />
+      <Route path="/admin/template-gap-analysis" element={<TemplateGapAnalysis />} />
+      <Route path="/admin/workflow-optimisation" element={<WorkflowOptimisation />} />
     </Route>
     <Route element={<ProtectedRoute><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/admin/package/:id" element={<PackageDetail />} />

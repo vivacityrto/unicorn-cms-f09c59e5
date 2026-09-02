@@ -146,14 +146,8 @@ const ResearchJobs = lazy(() => import("./pages/ResearchJobs"));
 const ResearchJobDetail = lazy(() => import("./pages/ResearchJobDetail"));
 const RegulatorWatchDashboard = lazy(() => import("./pages/RegulatorWatchDashboard"));
 const RegulatorChangeEventDetail = lazy(() => import("./pages/RegulatorChangeEventDetail"));
-const CrossTenantRiskRadar = lazy(() => import("./pages/CrossTenantRiskRadar"));
-const TemplateGapAnalysis = lazy(() => import("./pages/TemplateGapAnalysis"));
 const KnowledgeExplorer = lazy(() => import("./pages/KnowledgeExplorer"));
- const StrategicCommandCentre = lazy(() => import("./pages/StrategicCommandCentre"));
- const WorkflowOptimisation = lazy(() => import("./pages/WorkflowOptimisation"));
- const RiskCommandCentre = lazy(() => import("./pages/RiskCommandCentre"));
  const ClientActivityFeed = lazy(() => import("./pages/ClientActivityFeed"));
- const StrategicOrchestrationDashboard = lazy(() => import("./pages/StrategicOrchestrationDashboard"));
 const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
 const LifecycleChecklistsAdmin = lazy(() => import("./pages/admin/LifecycleChecklistsAdmin"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
@@ -829,14 +823,8 @@ const App = () => (
             <Route path="/admin/research-jobs/:jobId" element={<ProtectedRoute><ResearchJobDetail /></ProtectedRoute>} />
             <Route path="/admin/regulator-watch" element={<ProtectedRoute allowVivacityTeam><RegulatorWatchDashboard /></ProtectedRoute>} />
             <Route path="/admin/regulator-watch/:eventId" element={<ProtectedRoute allowVivacityTeam><RegulatorChangeEventDetail /></ProtectedRoute>} />
-            <Route path="/admin/risk-radar" element={<ProtectedRoute requireSuperAdmin><CrossTenantRiskRadar /></ProtectedRoute>} />
-            <Route path="/admin/template-gap-analysis" element={<ProtectedRoute requireSuperAdmin><TemplateGapAnalysis /></ProtectedRoute>} />
             <Route path="/admin/knowledge-explorer" element={<ProtectedRoute requireSuperAdmin><KnowledgeExplorer /></ProtectedRoute>} />
-            <Route path="/admin/strategic-command" element={<ProtectedRoute requireSuperAdmin><StrategicCommandCentre /></ProtectedRoute>} />
-            <Route path="/admin/workflow-optimisation" element={<ProtectedRoute requireSuperAdmin><WorkflowOptimisation /></ProtectedRoute>} />
-            <Route path="/admin/risk-command" element={<ProtectedRoute requireSuperAdmin><RiskCommandCentre /></ProtectedRoute>} />
             <Route path="/client-activity" element={<ProtectedRoute><ClientActivityFeed /></ProtectedRoute>} />
-            <Route path="/admin/strategic-orchestration" element={<ProtectedRoute requireSuperAdmin><StrategicOrchestrationDashboard /></ProtectedRoute>} />
             <Route path="/admin/code-tables" element={<ProtectedRoute requireSuperAdmin><CodeTablesAdmin /></ProtectedRoute>} />
             <Route path="/admin/lifecycle-checklists" element={<ProtectedRoute requireSuperAdmin><LifecycleChecklistsAdmin /></ProtectedRoute>} />
             {supportTicketsRoutes}

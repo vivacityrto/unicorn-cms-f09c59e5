@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -60,13 +59,11 @@ export default function RiskCommandCentre() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
-          <p className="text-sm text-muted-foreground">Risk Command Centre is available to authorised Vivacity staff only.</p>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
+        <p className="text-sm text-muted-foreground">Risk Command Centre is available to authorised Vivacity staff only.</p>
+      </div>
     );
   }
 
@@ -89,8 +86,7 @@ export default function RiskCommandCentre() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
+    <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Radio className="w-6 h-6 text-destructive" />
@@ -187,7 +183,6 @@ export default function RiskCommandCentre() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
   );
 }
 
