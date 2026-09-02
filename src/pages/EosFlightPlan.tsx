@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Rocket } from 'lucide-react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useFlightPlan, useQuarterlyRocks } from '@/hooks/useFlightPlan';
 import { usePermission } from '@/hooks/usePermission';
 import { QuarterSelector } from '@/components/eos/flight-plan/QuarterSelector';
@@ -13,14 +12,6 @@ import { getQuarterDueDate, QUARTER_LABELS } from '@/types/flightPlan';
 import type { FlightPlan } from '@/types/flightPlan';
 
 export default function EosFlightPlan() {
-  return (
-    <DashboardLayout>
-      <FlightPlanContent />
-    </DashboardLayout>
-  );
-}
-
-function FlightPlanContent() {
   const currentDate = new Date();
   const currentQuarter = Math.ceil((currentDate.getMonth() + 1) / 3) as 1 | 2 | 3 | 4;
   const currentYear = currentDate.getFullYear();

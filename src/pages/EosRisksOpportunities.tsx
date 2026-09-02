@@ -13,21 +13,12 @@ import { useEosStatusOptions, useEosCategoryOptions } from '@/hooks/useEosOption
 import { useTenantUsers } from '@/hooks/useTenantUsers';
 import { useRBAC } from '@/hooks/useRBAC';
 import { format, formatDistanceToNow } from 'date-fns';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { RiskOpportunityForm, type RiskOpportunityFormData } from '@/components/eos/RiskOpportunityForm';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { WhyCantILink } from '@/components/eos/RoleInfoPanel';
-import type { RiskOpportunityType, RiskOpportunityCategory, RiskOpportunityStatus } from '@/types/risksOpportunities';
+import type { RiskOpportunity, RiskOpportunityType, RiskOpportunityCategory, RiskOpportunityStatus } from '@/types/risksOpportunities';
 
 export default function EosRisksOpportunities() {
-  return (
-    <DashboardLayout>
-      <RisksOpportunitiesContent />
-    </DashboardLayout>
-  );
-}
-
-function RisksOpportunitiesContent() {
   const { items, isLoading, createItem, updateItem } = useRisksOpportunities();
   const { rocks } = useEosRocks();
   const { data: statusOptions = [] } = useEosStatusOptions();
@@ -113,7 +104,7 @@ function RisksOpportunitiesContent() {
       return;
     }
     
-    const updates: any = { id, currentStatus, status: newStatus };
+    const updates: Partial<RiskOpportunity> & { id: string; currentStatus?: string; escalation_reason?: string } = { id, currentStatus, status: newStatus };
     if (newStatus === 'Closed' || newStatus === 'Solved') {
       updates.outcome_note = 'Resolved';
     }
@@ -337,7 +328,7 @@ function RisksOpportunitiesContent() {
               <span className="text-sm font-medium">Filters:</span>
             </div>
             
-            <Select value={filterType} onValueChange={(v) => setFilterType(v as any)}>
+            <Select value={filterType} onValueChange={(v) => setFilterType(v as 'all' | RiskOpportunityType)}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
@@ -348,7 +339,7 @@ function RisksOpportunitiesContent() {
               </SelectContent>
             </Select>
 
-            <Select value={filterCategory} onValueChange={(v) => setFilterCategory(v as any)}>
+            <Select value={filterCategory} onValueChange={(v) => setFilterCategory(v as 'all' | RiskOpportunityCategory)}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
@@ -360,7 +351,7 @@ function RisksOpportunitiesContent() {
               </SelectContent>
             </Select>
 
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as 'all' | RiskOpportunityStatus)}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>

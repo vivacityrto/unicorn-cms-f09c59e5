@@ -18,7 +18,6 @@ import {
   MessageSquare,
   Loader2,
 } from 'lucide-react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { useEosReadiness } from '@/hooks/useEosReadiness';
 import { READINESS_STATE_COLORS } from '@/types/eosReadiness';
@@ -46,14 +45,6 @@ const CATEGORY_LINKS: Record<OnboardingCategory['id'], string> = {
 };
 
 export default function EosOnboarding() {
-  return (
-    <DashboardLayout>
-      <OnboardingContent />
-    </DashboardLayout>
-  );
-}
-
-function OnboardingContent() {
   const { readiness, isLoading } = useEosReadiness();
   const isFacilitatorMode = useEosFacilitatorEligible();
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['foundation', 'vision']);

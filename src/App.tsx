@@ -38,15 +38,10 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
 
  const AcceptInvitationWrapper = lazy(() => import("./pages/AcceptInvitationWrapper"));
  const NotFound = lazy(() => import("./pages/NotFound"));
- const EosOverview = lazy(() => import("./pages/EosOverview"));
- const EosRocks = lazy(() => import("./pages/EosRocks"));
  const EosIssues = lazy(() => import("./pages/EosIssues"));
- const EosTodos = lazy(() => import("./pages/EosTodos"));
  const EosMeetings = lazy(() => import("./pages/EosMeetings"));
 const EosConfigurations = lazy(() => import("./pages/EosConfigurations"));
 const EosConfigurationDetail = lazy(() => import("./pages/EosConfigurationDetail"));
- const EosScorecard = lazy(() => import("./pages/EosScorecard"));
- const EosVto = lazy(() => import("./pages/EosVto"));
  const EosMeetingSummary = lazy(() => import("./pages/EosMeetingSummary"));
  const LiveMeetingView = lazy(() => import("./components/eos/LiveMeetingView").then(m => ({ default: m.LiveMeetingView })));
 const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
@@ -56,14 +51,8 @@ const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
 const ClickUpTenantMapping = lazy(() => import("./pages/admin/ClickUpTenantMapping"));
 const AddinShell = lazy(() => import("./pages/addin/AddinShell"));
 const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
-const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const EosQC = lazy(() => import("./pages/EosQC"));
  const EosQCSession = lazy(() => import("./pages/EosQCSession"));
- const EosFlightPlan = lazy(() => import("./pages/EosFlightPlan"));
- const EosRisksOpportunities = lazy(() => import("./pages/EosRisksOpportunities"));
- const EosAccountabilityChart = lazy(() => import("./pages/EosAccountabilityChart"));
- const EosOnboarding = lazy(() => import("./pages/EosOnboarding"));
- const EosHealth = lazy(() => import("./pages/EosHealth"));
  const EosPeopleAnalyzer = lazy(() => import("./pages/EosPeopleAnalyzer"));
  const EosGWCTrends = lazy(() => import("./pages/EosGWCTrends"));
  const EosClientImpact = lazy(() => import("./pages/EosClientImpact"));
@@ -108,7 +97,6 @@ const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
 const ProcessForm = lazy(() => import("./pages/ProcessForm"));
 const RoleReference = lazy(() => import("./pages/RoleReference"));
 const AskVivAssistant = lazy(() => import("./pages/AskVivAssistant"));
-const EosHealthCheck = lazy(() => import("./pages/EosHealthCheck"));
 const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
  const ClientActivityFeed = lazy(() => import("./pages/ClientActivityFeed"));
@@ -329,66 +317,10 @@ const App = () => (
               } 
             />
             <Route
-              path="/eos"
-              element={
-                <ProtectedRoute>
-                  <EosOverview />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/onboarding" 
-              element={
-                <ProtectedRoute>
-                  <EosOnboarding />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/health" 
-              element={
-                <ProtectedRoute>
-                  <EosHealth />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/rocks" 
-              element={
-                <ProtectedRoute>
-                  <EosRocks />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/flight-plan" 
-              element={
-                <ProtectedRoute>
-                  <EosFlightPlan />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/risks-opportunities" 
-              element={
-                <ProtectedRoute>
-                  <EosRisksOpportunities />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/issues" 
+              path="/eos/issues"
               element={
                 <Navigate to="/eos/risks-opportunities" replace />
-              } 
-            />
-            <Route 
-              path="/eos/todos" 
-              element={
-                <ProtectedRoute>
-                  <EosTodos />
-                </ProtectedRoute>
-              } 
+              }
             />
             <Route
               path="/eos/meetings"
@@ -430,31 +362,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/eos/scorecard" 
-              element={
-                <ProtectedRoute>
-                  <EosScorecard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/vto" 
-              element={
-                <ProtectedRoute>
-                  <EosVto />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/calendar" 
-              element={
-                <ProtectedRoute>
-                  <EosCalendar />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
+            <Route
               path="/eos/qc" 
               element={
                 <ProtectedRoute>
@@ -471,14 +379,6 @@ const App = () => (
               } 
             />
             <Route
-              path="/eos/accountability"
-              element={
-                <ProtectedRoute>
-                  <EosAccountabilityChart />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
               path="/eos/people-analyzer" 
               element={
                 <ProtectedRoute>
@@ -534,15 +434,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <EosLeadershipDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            {/* EOS Health Check Route */}
-            <Route 
-              path="/eos/health-check" 
-              element={
-                <ProtectedRoute>
-                  <EosHealthCheck />
                 </ProtectedRoute>
               } 
             />

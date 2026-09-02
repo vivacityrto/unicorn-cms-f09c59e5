@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -26,11 +25,7 @@ import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import type { ScorecardMetric } from '@/types/scorecard';
 
 export default function EosScorecard() {
-  return (
-    <DashboardLayout>
-      <ScorecardDashboard />
-    </DashboardLayout>
-  );
+  return <ScorecardDashboard />;
 }
 
 function SummaryCard({
