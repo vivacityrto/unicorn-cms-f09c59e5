@@ -4,20 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { MeetingSummaryCard } from '@/components/eos/MeetingSummaryCard';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { EosMeetingSummary } from '@/types/eos';
 
 export default function EosMeetingSummary() {
-  return (
-    <DashboardLayout>
-      <SummaryContent />
-    </DashboardLayout>
-  );
-}
-
-function SummaryContent() {
   const { meetingId } = useParams<{ meetingId: string }>();
   const navigate = useNavigate();
 

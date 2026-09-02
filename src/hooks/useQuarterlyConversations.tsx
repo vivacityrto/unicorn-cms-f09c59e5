@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
-import type { QuarterlyConversation, QCTemplate, QCAnswer, QCFit, QCFormData, QCLinkCreate } from '@/types/qc';
+import type { QuarterlyConversation, QCTemplate, QCAnswer, QCFit, QCSignoff, QCFormData, QCLinkCreate } from '@/types/qc';
 
 export const useQuarterlyConversations = () => {
   const { profile, isSuperAdmin } = useAuth();
@@ -330,9 +330,9 @@ export const useQCDetails = (qcId: string | undefined) => {
         .from('eos_qc_signoffs')
         .select('*')
         .eq('qc_id', qcId!);
-      
+
       if (error) throw error;
-      return data;
+      return data as unknown as QCSignoff[];
     },
     enabled: !!qcId,
   });

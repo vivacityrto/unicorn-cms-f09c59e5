@@ -22,19 +22,10 @@ import { ChangeFacilitatorDialog } from '@/components/eos/ChangeFacilitatorDialo
 import { DeleteMeetingDialog } from '@/components/eos/DeleteMeetingDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MeetingChainNav } from '@/components/eos/MeetingChainNav';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useEosConfigMeetingActions } from '@/hooks/useEosConfigMeetingActions';
 import type { MeetingType, EosMeeting } from '@/types/eos';
 
 export default function EosMeetings() {
-  return (
-    <DashboardLayout>
-      <MeetingsContent />
-    </DashboardLayout>
-  );
-}
-
-function MeetingsContent() {
   const navigate = useNavigate();
   const { meetings, isLoading, error, refetch, deleteMeeting } = useEosMeetings();
   const canScheduleMeetingsPerm = usePermission('eos.meetings.l10.create');
