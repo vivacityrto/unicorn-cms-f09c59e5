@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
-import { usePermission } from '@/hooks/usePermission';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,11 +26,9 @@ import { getCurrentQuarter, formatQuarter, parseQuarter } from '@/types/rockAnal
 
 export default function EosRockAnalysis() {
   const navigate = useNavigate();
-  const canView = usePermission('eos.rock_analysis.view');
   const [activeTab, setActiveTab] = useState<'overview' | 'seats' | 'detail'>('overview');
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
-  if (!canView) return <Navigate to="/eos" replace />;
-  
+
   const { data: availableQuarters, isLoading: quartersLoading } = useAvailableQuarters();
   const { data: summaries, isLoading: summariesLoading } = useQuarterlySummary();
   const { data: trendData, isLoading: trendsLoading } = useRockTrends(6);
@@ -69,9 +65,8 @@ export default function EosRockAnalysis() {
   };
   
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <PageHeader
+    <div className="space-y-6">
+      <PageHeader
           title="Rock Success Analysis"
           description="Quarterly analysis of rock execution quality and trends"
           icon={Target}
@@ -273,6 +268,5 @@ export default function EosRockAnalysis() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
   );
 }

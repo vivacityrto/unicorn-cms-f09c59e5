@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,14 +19,6 @@ import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { format } from 'date-fns';
 import type { QCStatus } from '@/types/qc';
 import type { QuarterlyConversation } from '@/types/qc';
-
-export default function EosQC() {
-  return (
-    <DashboardLayout>
-      <QCContent />
-    </DashboardLayout>
-  );
-}
 
 function ScheduleEditPopover({ qc, onSave }: { qc: QuarterlyConversation; onSave: (qcId: string, scheduledAt: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -87,7 +78,7 @@ function ScheduleEditPopover({ qc, onSave }: { qc: QuarterlyConversation; onSave
   );
 }
 
-const QCContent = () => {
+export default function EosQC() {
   const { conversations, isLoading, updateSchedule } = useQuarterlyConversations();
   const { profile } = useAuth();
   const canScheduleQCPerm = usePermission('eos.qc.create');
@@ -323,4 +314,4 @@ const QCContent = () => {
       </Tabs>
     </div>
   );
-};
+}

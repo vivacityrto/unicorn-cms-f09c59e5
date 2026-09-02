@@ -39,10 +39,6 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const AcceptInvitationWrapper = lazy(() => import("./pages/AcceptInvitationWrapper"));
  const NotFound = lazy(() => import("./pages/NotFound"));
  const EosIssues = lazy(() => import("./pages/EosIssues"));
- const EosMeetings = lazy(() => import("./pages/EosMeetings"));
-const EosConfigurations = lazy(() => import("./pages/EosConfigurations"));
-const EosConfigurationDetail = lazy(() => import("./pages/EosConfigurationDetail"));
- const EosMeetingSummary = lazy(() => import("./pages/EosMeetingSummary"));
  const LiveMeetingView = lazy(() => import("./components/eos/LiveMeetingView").then(m => ({ default: m.LiveMeetingView })));
 const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const PostSignInRedirect = lazy(() => import("./pages/PostSignInRedirect"));
@@ -51,15 +47,7 @@ const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
 const ClickUpTenantMapping = lazy(() => import("./pages/admin/ClickUpTenantMapping"));
 const AddinShell = lazy(() => import("./pages/addin/AddinShell"));
 const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
- const EosQC = lazy(() => import("./pages/EosQC"));
- const EosQCSession = lazy(() => import("./pages/EosQCSession"));
- const EosPeopleAnalyzer = lazy(() => import("./pages/EosPeopleAnalyzer"));
- const EosGWCTrends = lazy(() => import("./pages/EosGWCTrends"));
- const EosClientImpact = lazy(() => import("./pages/EosClientImpact"));
- const EosClientImpactDetail = lazy(() => import("./pages/EosClientImpactDetail"));
  const ClientImpactPage = lazy(() => import("./pages/ClientImpactPage"));
- const EosRockAnalysis = lazy(() => import("./pages/EosRockAnalysis"));
- const EosLeadershipDashboard = lazy(() => import("./pages/EosLeadershipDashboard"));
   const ResetPassword = lazy(() => import("./pages/ResetPassword"));
   const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));
  const Audits = lazy(() => import("./pages/Audits"));
@@ -323,119 +311,20 @@ const App = () => (
               }
             />
             <Route
-              path="/eos/meetings"
-              element={
-                <ProtectedRoute>
-                  <EosMeetings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/eos/configurations"
-              element={
-                <ProtectedRoute>
-                  <EosConfigurations />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/eos/configurations/:id"
-              element={
-                <ProtectedRoute>
-                  <EosConfigurationDetail />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/eos/meetings/:meetingId/summary"
-              element={
-                <ProtectedRoute>
-                  <EosMeetingSummary />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
               path="/eos/meetings/:meetingId/live"
               element={
                 <ProtectedRoute>
                   <LiveMeetingView />
                 </ProtectedRoute>
-              } 
+              }
             />
             <Route
-              path="/eos/qc" 
-              element={
-                <ProtectedRoute>
-                  <EosQC />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/qc/:id" 
-              element={
-                <ProtectedRoute>
-                  <EosQCSession />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/eos/people-analyzer" 
-              element={
-                <ProtectedRoute>
-                  <EosPeopleAnalyzer />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/gwc-trends" 
-              element={
-                <ProtectedRoute>
-                  <EosGWCTrends />
-                </ProtectedRoute>
-              } 
-            />
-            {/* Client Impact Reporting Routes */}
-            <Route 
-              path="/eos/client-impact" 
-              element={
-                <ProtectedRoute>
-                  <EosClientImpact />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/eos/client-impact/:reportId" 
-              element={
-                <ProtectedRoute>
-                  <EosClientImpactDetail />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tenant/:clientId/impact" 
+              path="/tenant/:clientId/impact"
               element={
                 <ProtectedRoute>
                   <ClientImpactPage />
                 </ProtectedRoute>
-              } 
-            />
-            {/* Rock Analysis Route */}
-            <Route 
-              path="/eos/rock-analysis" 
-              element={
-                <ProtectedRoute>
-                  <EosRockAnalysis />
-                </ProtectedRoute>
-              } 
-            />
-            {/* Leadership Dashboard Route */}
-            <Route 
-              path="/eos/leadership" 
-              element={
-                <ProtectedRoute>
-                  <EosLeadershipDashboard />
-                </ProtectedRoute>
-              } 
+              }
             />
             {/* Process Management Routes */}
             <Route

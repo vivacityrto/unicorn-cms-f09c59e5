@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -137,7 +136,7 @@ export default function EosPeopleAnalyzer() {
         seatSummaries.push({
           seatId,
           seatName: seat.seat_name,
-          functionName: (seat.accountability_functions as any)?.name || '',
+          functionName: seat.accountability_functions?.name || '',
           trends: seatTrends,
         });
       }
@@ -146,34 +145,31 @@ export default function EosPeopleAnalyzer() {
 
   if (!canView) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">
-            You don't have permission to view People Analyzer trends.
-          </p>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-96">
+        <p className="text-muted-foreground">
+          You don't have permission to view People Analyzer trends.
+        </p>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-start">
-          <PageHeader
-            title="People Analyzer Trends"
-            description="Core Values alignment tracking across quarters"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={trendsLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${trendsLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <PageHeader
+          title="People Analyzer Trends"
+          description="Core Values alignment tracking across quarters"
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={trendsLoading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${trendsLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
 
         {/* Info Banner */}
         <Card className="bg-muted/30 border-muted">
@@ -292,6 +288,5 @@ export default function EosPeopleAnalyzer() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
   );
 }

@@ -1,7 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -54,7 +53,7 @@ export default function EosQCSession() {
         link: qcLink,
         created_by: profile.user_uuid,
       }));
-      await supabase.from('user_notifications').insert(notifications as any);
+      await supabase.from('user_notifications').insert(notifications);
 
       // Email notifications
       const { data: userData } = await supabase
@@ -161,11 +160,7 @@ export default function EosQCSession() {
   };
 
   if (isLoading || !qc || !template) {
-    return (
-      <DashboardLayout>
-        <div className="p-8">Loading conversation...</div>
-      </DashboardLayout>
-    );
+    return <div className="p-8">Loading conversation...</div>;
   }
 
   const isReviewee = qc.reviewee_id === profile?.user_uuid;
@@ -190,11 +185,10 @@ export default function EosQCSession() {
   const managers = qc.manager_ids.map(id => ({ id, ...getUser(id) }));
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/eos/qc')}>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/eos/qc')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
@@ -409,9 +403,9 @@ export default function EosQCSession() {
                   />
                 </div>
 
-                <QCSignoffBar 
+                <QCSignoffBar
                   qcId={qc.id}
-                  signoffs={(signoffs || []) as any}
+                  signoffs={signoffs || []}
                   isReviewee={isReviewee}
                   isManager={isManager}
                   hasUserSigned={hasUserSigned}
@@ -430,7 +424,7 @@ export default function EosQCSession() {
                         sections: template.sections,
                         answers: answers || [],
                         fit: fit || [],
-                        signoffs: (signoffs || []) as any,
+                        signoffs: signoffs || [],
                         summaryText,
                         coreValues: coreValues || undefined,
                       });
@@ -453,6 +447,5 @@ export default function EosQCSession() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
   );
 }

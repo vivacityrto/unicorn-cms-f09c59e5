@@ -112,6 +112,18 @@ const EosVto = lazy(() => import("@/pages/EosVto"));
 const EosCalendar = lazy(() => import("@/pages/EosCalendar"));
 const EosAccountabilityChart = lazy(() => import("@/pages/EosAccountabilityChart"));
 const EosHealthCheck = lazy(() => import("@/pages/EosHealthCheck"));
+const EosMeetings = lazy(() => import("@/pages/EosMeetings"));
+const EosConfigurations = lazy(() => import("@/pages/EosConfigurations"));
+const EosConfigurationDetail = lazy(() => import("@/pages/EosConfigurationDetail"));
+const EosMeetingSummary = lazy(() => import("@/pages/EosMeetingSummary"));
+const EosQC = lazy(() => import("@/pages/EosQC"));
+const EosQCSession = lazy(() => import("@/pages/EosQCSession"));
+const EosPeopleAnalyzer = lazy(() => import("@/pages/EosPeopleAnalyzer"));
+const EosClientImpactDetail = lazy(() => import("@/pages/EosClientImpactDetail"));
+const EosClientImpact = lazy(() => import("@/pages/EosClientImpact"));
+const EosGWCTrends = lazy(() => import("@/pages/EosGWCTrends"));
+const EosRockAnalysis = lazy(() => import("@/pages/EosRockAnalysis"));
+const EosLeadershipDashboard = lazy(() => import("@/pages/EosLeadershipDashboard"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -325,7 +337,39 @@ const EosHealthCheck = lazy(() => import("@/pages/EosHealthCheck"));
  * needed. The remaining ~13 Eos-prefixed files (interactive/detail
  * cohort, including the 4 flagged pages needing a PermissionGate hoist:
  * EosClientImpact, EosGWCTrends, EosRockAnalysis, EosLeadershipDashboard)
- * are PR 11.
+ * are PR 11. PR 11 added 8 files to the plain group: EosMeetings,
+ * EosConfigurations, EosConfigurationDetail, EosMeetingSummary, EosQC,
+ * EosQCSession, EosPeopleAnalyzer, EosClientImpactDetail. It also added
+ * 4 new single-route PermissionGate-guarded sibling groups (one per
+ * distinct featureKey, since PermissionGate takes exactly one featureKey
+ * per instance) for the plan's remaining 4 flagged local-permission-gate
+ * pages: EosClientImpact (eos.client_impact.view), EosGWCTrends
+ * (eos.gwc_trends.view), EosRockAnalysis (eos.rock_analysis.view),
+ * EosLeadershipDashboard (eos.leadership_dashboard.view) -- all four
+ * redirect to /eos on denial, same as their removed page-local Navigate
+ * checks. Each page's page-local check was fully removed (not kept as a
+ * backstop), matching the AcademyPackageCourseRulesPage precedent from
+ * PR 3: PermissionGate is the new enforcement mechanism replacing the
+ * check, not a route-level duplicate of an existing check.
+ * EosLeadershipDashboard is a partial exception: it had two checks --
+ * `!canAccessEOS()` (redirect to /dashboard) was KEPT unchanged, since
+ * it's the same location-sensitive /eos/* check ProtectedRoute's plain
+ * tier already performs internally regardless of what's nested inside it
+ * (confirmed by reading ProtectedRoute.tsx's isEosRoute/canAccessEOS
+ * logic, which runs on currentPath, not on tier membership) -- only the
+ * second check (`!canViewLeadership`, redirect to /eos) was removed and
+ * replaced by PermissionGate. EosClientImpactDetail was NOT hoisted
+ * despite reading the same eos.client_impact.view permission as its
+ * list-page sibling: unlike EosClientImpact, its usePermission call was
+ * only ever used as a display prop (isVivacityUser), never a route
+ * guard -- adding one now would be a new restriction beyond current
+ * behavior, so it was left on the plain tier with its local usePermission
+ * call untouched. EosMeetings/EosConfigurations/EosMeetingSummary/EosQC/
+ * EosQCSession/EosPeopleAnalyzer had no page-local hard redirects at all
+ * (feature-level usePermission checks disabling buttons, or an
+ * already-shell-wrapped "no permission" message in EosPeopleAnalyzer's
+ * case) -- none flagged, none needed sign-off. All 12 PR 11 files were
+ * single-root, no Fragment needed.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -452,11 +496,63 @@ export const dashboardLayoutRoutes = (
       <Route path="/eos/calendar" element={<EosCalendar />} />
       <Route path="/eos/accountability" element={<EosAccountabilityChart />} />
       <Route path="/eos/health-check" element={<EosHealthCheck />} />
+      <Route path="/eos/meetings" element={<EosMeetings />} />
+      <Route path="/eos/configurations" element={<EosConfigurations />} />
+      <Route path="/eos/configurations/:id" element={<EosConfigurationDetail />} />
+      <Route path="/eos/meetings/:meetingId/summary" element={<EosMeetingSummary />} />
+      <Route path="/eos/qc" element={<EosQC />} />
+      <Route path="/eos/qc/:id" element={<EosQCSession />} />
+      <Route path="/eos/people-analyzer" element={<EosPeopleAnalyzer />} />
+      <Route path="/eos/client-impact/:reportId" element={<EosClientImpactDetail />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />
       <Route path="/admin/regulator-watch" element={<RegulatorWatchDashboard />} />
       <Route path="/admin/regulator-watch/:eventId" element={<RegulatorChangeEventDetail />} />
+    </Route>
+    <Route
+      element={
+        <ProtectedRoute>
+          <PermissionGate featureKey="eos.client_impact.view" redirectTo="/eos">
+            <DashboardLayoutRoute />
+          </PermissionGate>
+        </ProtectedRoute>
+      }
+    >
+      <Route path="/eos/client-impact" element={<EosClientImpact />} />
+    </Route>
+    <Route
+      element={
+        <ProtectedRoute>
+          <PermissionGate featureKey="eos.gwc_trends.view" redirectTo="/eos">
+            <DashboardLayoutRoute />
+          </PermissionGate>
+        </ProtectedRoute>
+      }
+    >
+      <Route path="/eos/gwc-trends" element={<EosGWCTrends />} />
+    </Route>
+    <Route
+      element={
+        <ProtectedRoute>
+          <PermissionGate featureKey="eos.rock_analysis.view" redirectTo="/eos">
+            <DashboardLayoutRoute />
+          </PermissionGate>
+        </ProtectedRoute>
+      }
+    >
+      <Route path="/eos/rock-analysis" element={<EosRockAnalysis />} />
+    </Route>
+    <Route
+      element={
+        <ProtectedRoute>
+          <PermissionGate featureKey="eos.leadership_dashboard.view" redirectTo="/eos">
+            <DashboardLayoutRoute />
+          </PermissionGate>
+        </ProtectedRoute>
+      }
+    >
+      <Route path="/eos/leadership" element={<EosLeadershipDashboard />} />
     </Route>
   </>
 );

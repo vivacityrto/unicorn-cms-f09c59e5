@@ -1,8 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
-import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeadershipDashboard } from '@/hooks/useLeadershipDashboard';
 import { useSeatSuccession } from '@/hooks/useSeatSuccession';
@@ -41,7 +39,6 @@ import { subDays } from 'date-fns';
 export default function EosLeadershipDashboard() {
   const { isSuperAdmin, hasPermission, canAccessEOS } = useRBAC();
   const { profile } = useAuth();
-  const canViewLeadership = usePermission('eos.leadership_dashboard.view');
   const isSuper = isSuperAdmin;
   const isTeamLeader = hasPermission('eos_meetings:schedule');
   const isTeamMember = profile?.unicorn_role === 'Team Member';
@@ -51,20 +48,13 @@ export default function EosLeadershipDashboard() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Gate Leadership Dashboard via permission matrix
-  if (!canViewLeadership) {
-    return <Navigate to="/eos" replace />;
-  }
-
   return (
-    <DashboardLayout>
-      <LeadershipContent 
-        isSuper={isSuper} 
-        isTeamLeader={isTeamLeader}
-        isTeamMember={isTeamMember}
-        currentUserId={profile?.user_uuid}
-      />
-    </DashboardLayout>
+    <LeadershipContent
+      isSuper={isSuper}
+      isTeamLeader={isTeamLeader}
+      isTeamMember={isTeamMember}
+      currentUserId={profile?.user_uuid}
+    />
   );
 }
 
