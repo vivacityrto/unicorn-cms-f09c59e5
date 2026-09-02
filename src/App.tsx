@@ -29,9 +29,6 @@ import { dashboardLayoutRoutes } from "./routes/dashboardRoutes";
  const Login = lazy(() => import("./pages/Login"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MainDashboard = lazy(() => import("./pages/MainDashboard"));
- const BulkDocumentJobsList = lazy(() => import("./pages/BulkDocumentJobsList"));
- const BulkDocumentJobProgress = lazy(() => import("./pages/BulkDocumentJobProgress"));
- const BulkGenerateNew = lazy(() => import("./pages/BulkGenerateNew"));
 
  // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
  const TenantDocumentDetailWrapper = lazy(() => import("./pages/TenantDocumentDetailWrapper"));
@@ -228,30 +225,6 @@ const App = () => (
                   <Dashboard />
                 </ProtectedRoute>
               } 
-            />
-            <Route
-              path="/manage-documents/bulk-generate/new"
-              element={
-                <ProtectedRoute>
-                  <BulkGenerateNew />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/manage-documents/bulk-jobs"
-              element={
-                <ProtectedRoute>
-                  <BulkDocumentJobsList />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/manage-documents/bulk-jobs/:id"
-              element={
-                <ProtectedRoute>
-                  <BulkDocumentJobProgress />
-                </ProtectedRoute>
-              }
             />
             {/* Superseded by /manage-documents, which uses the same GovernanceDocumentDetail
                 drill-down but is the actively-maintained canonical documents page. */}

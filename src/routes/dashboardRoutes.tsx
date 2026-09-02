@@ -124,6 +124,9 @@ const EosClientImpact = lazy(() => import("@/pages/EosClientImpact"));
 const EosGWCTrends = lazy(() => import("@/pages/EosGWCTrends"));
 const EosRockAnalysis = lazy(() => import("@/pages/EosRockAnalysis"));
 const EosLeadershipDashboard = lazy(() => import("@/pages/EosLeadershipDashboard"));
+const BulkDocumentJobsList = lazy(() => import("@/pages/BulkDocumentJobsList"));
+const BulkDocumentJobProgress = lazy(() => import("@/pages/BulkDocumentJobProgress"));
+const BulkGenerateNew = lazy(() => import("@/pages/BulkGenerateNew"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -369,7 +372,21 @@ const EosLeadershipDashboard = lazy(() => import("@/pages/EosLeadershipDashboard
  * (feature-level usePermission checks disabling buttons, or an
  * already-shell-wrapped "no permission" message in EosPeopleAnalyzer's
  * case) -- none flagged, none needed sign-off. All 12 PR 11 files were
- * single-root, no Fragment needed.
+ * single-root, no Fragment needed. PR 12 (Clients: document jobs, first of
+ * three Clients PRs) added 3 files to the plain group: BulkGenerateNew,
+ * BulkDocumentJobsList, BulkDocumentJobProgress. All three share an
+ * identical `!isVivacityStaff` shell-wrapped "You don't have access to
+ * this page" check (not a hard pre-shell Navigate) -- not one of the
+ * plan's flagged pages, preserved unchanged per the page-local-check
+ * preservation rule. All three were single-root -- BulkDocumentJobProgress
+ * looked like it might need a Fragment (RetryDialog/SkippedDocumentsDialog
+ * appear right before the closing wrapper tag) but both dialogs are
+ * actually nested inside the outer content div, not siblings of it.
+ * Remaining Clients PRs: PR 13 (audit workspace: AuditsAssessments,
+ * AuditWorkspaceNew, AuditActions, AuditFindings, AuditReport, excluding
+ * AuditTemplateBuilder pending its full-screen-mode design decision) and
+ * PR 14 (support/activity/impact: NewSupportTicketPage, SuggestionDetail,
+ * RtoTips, ClientActivityFeed, ClientImpactPage).
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -504,6 +521,9 @@ export const dashboardLayoutRoutes = (
       <Route path="/eos/qc/:id" element={<EosQCSession />} />
       <Route path="/eos/people-analyzer" element={<EosPeopleAnalyzer />} />
       <Route path="/eos/client-impact/:reportId" element={<EosClientImpactDetail />} />
+      <Route path="/manage-documents/bulk-generate/new" element={<BulkGenerateNew />} />
+      <Route path="/manage-documents/bulk-jobs" element={<BulkDocumentJobsList />} />
+      <Route path="/manage-documents/bulk-jobs/:id" element={<BulkDocumentJobProgress />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />
