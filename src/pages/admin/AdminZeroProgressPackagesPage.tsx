@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { AlertTriangle, Copy, RefreshCcw } from 'lucide-react';
 import {
@@ -268,7 +267,6 @@ export default function AdminZeroProgressPackagesPage() {
     sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
 
   return (
-    <DashboardLayout>
     <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         icon={AlertTriangle}
@@ -399,6 +397,5 @@ export default function AdminZeroProgressPackagesPage() {
         </CardContent>
       </Card>
     </div>
-    </DashboardLayout>
   );
 }

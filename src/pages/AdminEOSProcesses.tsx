@@ -1,5 +1,4 @@
  import { useState, useEffect } from 'react';
- import { DashboardLayout } from '@/components/DashboardLayout';
  import { useAuth } from '@/hooks/useAuth';
  import { usePermission } from '@/hooks/usePermission';
  import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +24,7 @@
    Trash2
  } from 'lucide-react';
  import { format } from 'date-fns';
+ import type { Json } from '@/integrations/supabase/types';
  
  interface EOSProcess {
    id: string;
@@ -32,11 +32,11 @@
    eos_component: string;
    purpose: string | null;
    scope: string | null;
-   steps: any;
-   inputs: any;
-   outputs: any;
-   roles_responsible: any;
-   evidence_records: any;
+   steps: Step[];
+   inputs: string[];
+   outputs: string[];
+   roles_responsible: string[];
+   evidence_records: string[];
    version: string;
    approval_status: string;
    review_date: string | null;
@@ -112,7 +112,7 @@
        console.error('Error loading processes:', error);
        toast({ title: 'Error loading processes', variant: 'destructive' });
      } else {
-       setProcesses((data || []) as EOSProcess[]);
+       setProcesses((data || []) as unknown as EOSProcess[]);
      }
      setIsLoading(false);
    }
@@ -132,11 +132,11 @@
        scope: formData.scope || null,
        version: formData.version,
        review_date: formData.review_date || null,
-       steps: steps.filter(s => s.description.trim()),
-       inputs: formData.inputs.split('\n').map(i => i.trim()).filter(Boolean),
-       outputs: formData.outputs.split('\n').map(o => o.trim()).filter(Boolean),
-       roles_responsible: formData.roles_responsible.split(',').map(r => r.trim()).filter(Boolean),
-       evidence_records: formData.evidence_records.split('\n').map(e => e.trim()).filter(Boolean),
+       steps: steps.filter(s => s.description.trim()) as unknown as Json,
+       inputs: formData.inputs.split('\n').map(i => i.trim()).filter(Boolean) as unknown as Json,
+       outputs: formData.outputs.split('\n').map(o => o.trim()).filter(Boolean) as unknown as Json,
+       roles_responsible: formData.roles_responsible.split(',').map(r => r.trim()).filter(Boolean) as unknown as Json,
+       evidence_records: formData.evidence_records.split('\n').map(e => e.trim()).filter(Boolean) as unknown as Json,
        owner_user_id: user?.id,
        updated_at: new Date().toISOString(),
      };
@@ -147,22 +147,22 @@
          await supabase.from('eos_process_versions').insert({
            eos_process_id: editingProcess.id,
            version: formData.version,
-           content_snapshot: processData as any,
+           content_snapshot: processData as unknown as Json,
            edit_reason: editReason || 'Process update',
            created_by: user?.id,
          });
- 
+
          const { error } = await supabase
            .from('eos_processes')
-           .update(processData as any)
+           .update(processData)
            .eq('id', editingProcess.id);
-         
+
          if (error) throw error;
          toast({ title: 'Process updated' });
        } else {
          const { error } = await supabase
            .from('eos_processes')
-           .insert({ ...processData, approval_status: 'draft' } as any);
+           .insert({ ...processData, approval_status: 'draft' });
          
          if (error) throw error;
          toast({ title: 'Process created' });
@@ -277,7 +277,6 @@
  
    if (!isSuperAdmin) {
      return (
-       <DashboardLayout>
          <div className="flex items-center justify-center h-full">
            <Card className="max-w-md">
              <CardContent className="pt-6">
@@ -291,12 +290,10 @@
              </CardContent>
            </Card>
          </div>
-       </DashboardLayout>
      );
    }
- 
+
    return (
-     <DashboardLayout>
        <div className="p-6 space-y-6">
          {/* Header */}
          <div className="flex items-center justify-between">
@@ -578,6 +575,5 @@
            </DialogContent>
          </Dialog>
        </div>
-     </DashboardLayout>
    );
  }

@@ -5,7 +5,6 @@
  */
 
 import { useState, useMemo } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,12 +30,17 @@ const RELATIONSHIP_TYPES = [
   "derived_from", "flagged_by", "influenced_by", "associated_with",
 ] as const;
 
+type KnowledgeNodeMetadata = {
+  clause_number?: string;
+  [key: string]: unknown;
+};
+
 type KnowledgeNode = {
   id: string;
   node_type: string;
   entity_id: string;
   label: string;
-  metadata_json: Record<string, any>;
+  metadata_json: KnowledgeNodeMetadata;
   tenant_id: number | null;
   created_at: string;
 };
@@ -50,7 +54,7 @@ type KnowledgeEdge = {
   created_at: string;
 };
 
-function useGraphQuery(filters: Record<string, any>, enabled: boolean) {
+function useGraphQuery(filters: Record<string, unknown>, enabled: boolean) {
   return useQuery({
     queryKey: ["knowledge-graph", filters],
     queryFn: async () => {
@@ -422,18 +426,15 @@ export default function KnowledgeExplorer() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <ShieldAlert className="h-12 w-12 text-muted-foreground" />
           <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
           <p className="text-sm text-muted-foreground">Knowledge Explorer is available to Super Admins only.</p>
         </div>
-      </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="space-y-4 p-3 md:p-4 max-w-screen-2xl mx-auto">
         <div className="flex items-center gap-2">
           <Network className="h-5 w-5 text-primary" />
@@ -467,6 +468,5 @@ export default function KnowledgeExplorer() {
           <TabsContent value="template"><TemplateImpactView /></TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
   );
 }

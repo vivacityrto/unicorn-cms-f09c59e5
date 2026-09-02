@@ -61,6 +61,20 @@ const AcademyBulkImportPage = lazy(() => import("@/pages/superadmin/AcademyBulkI
 const AcademyCourseCleanupPage = lazy(() => import("@/pages/superadmin/AcademyCourseCleanupPage"));
 const AcademyTagManagementPage = lazy(() => import("@/pages/superadmin/AcademyTagManagementPage"));
 const AcademyPackageCourseRulesPage = lazy(() => import("@/pages/superadmin/AcademyPackageCourseRulesPage"));
+const AdminZeroProgressPackagesPage = lazy(() => import("@/pages/admin/AdminZeroProgressPackagesPage"));
+const AdminOperations = lazy(() => import("@/pages/AdminOperations"));
+const RolePermissionsEditor = lazy(() => import("@/pages/admin/RolePermissionsEditor"));
+const AdminAssistant = lazy(() => import("@/pages/AdminAssistant"));
+const AdminKnowledgeLibrary = lazy(() => import("@/pages/AdminKnowledgeLibrary"));
+const AdminEOSProcesses = lazy(() => import("@/pages/AdminEOSProcesses"));
+const AddinSettings = lazy(() => import("@/pages/admin/AddinSettings"));
+const AddinDiagnostics = lazy(() => import("@/pages/admin/AddinDiagnostics"));
+const AskVivFlags = lazy(() => import("@/pages/internal/AskVivFlags"));
+const KnowledgeExplorer = lazy(() => import("@/pages/KnowledgeExplorer"));
+const CodeTablesAdmin = lazy(() => import("@/pages/CodeTablesAdmin"));
+const LifecycleChecklistsAdmin = lazy(() => import("@/pages/admin/LifecycleChecklistsAdmin"));
+const MergeFieldTagsAdmin = lazy(() => import("@/pages/admin/MergeFieldTagsAdmin"));
+const ReportingObligationsAdmin = lazy(() => import("@/pages/admin/settings/ReportingObligations"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -176,7 +190,20 @@ const AcademyPackageCourseRulesPage = lazy(() => import("@/pages/superadmin/Acad
  * migration. Every other Academy Builder page's own DashboardLayout
  * removal preserved any multi-sibling return (a Dialog/AlertDialog/Sheet/
  * drawer alongside the main content div) with a Fragment rather than
- * silently dropping a sibling.
+ * silently dropping a sibling. PR 4 (System Config: remaining SA cohort)
+ * added 14 more files to the requireSuperAdmin group: AdminZeroProgress
+ * PackagesPage, AdminOperations, RolePermissionsEditor, AdminAssistant,
+ * AdminKnowledgeLibrary, AdminEOSProcesses, AddinSettings,
+ * AddinDiagnostics, AskVivFlags, KnowledgeExplorer, CodeTablesAdmin,
+ * LifecycleChecklistsAdmin, MergeFieldTagsAdmin, ReportingObligationsAdmin.
+ * All 14 kept whatever page-local access check they already had (several
+ * are now redundant given the route's own requireSuperAdmin, e.g.
+ * AskVivFlags's own hasAccess check gates on the broader
+ * Vivacity-internal-staff status, not SuperAdmin specifically -- left
+ * unchanged per the plan's page-local-check preservation rule).
+ * ReportingObligationsAdmin needed a Fragment (three dialog siblings
+ * alongside the main content div); every other page in this batch was
+ * single-root.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -193,6 +220,20 @@ export const dashboardLayoutRoutes = (
       <Route path="/admin/strategic-orchestration" element={<StrategicOrchestrationDashboard />} />
       <Route path="/admin/template-gap-analysis" element={<TemplateGapAnalysis />} />
       <Route path="/admin/workflow-optimisation" element={<WorkflowOptimisation />} />
+      <Route path="/admin/diagnostics/zero-progress-packages" element={<AdminZeroProgressPackagesPage />} />
+      <Route path="/admin/operations" element={<AdminOperations />} />
+      <Route path="/administration/role-permissions" element={<RolePermissionsEditor />} />
+      <Route path="/admin/assistant" element={<AdminAssistant />} />
+      <Route path="/admin/knowledge" element={<AdminKnowledgeLibrary />} />
+      <Route path="/admin/eos-processes" element={<AdminEOSProcesses />} />
+      <Route path="/admin/addin-settings" element={<AddinSettings />} />
+      <Route path="/admin/addin-diagnostics" element={<AddinDiagnostics />} />
+      <Route path="/internal/ask-viv/flags" element={<AskVivFlags />} />
+      <Route path="/admin/knowledge-explorer" element={<KnowledgeExplorer />} />
+      <Route path="/admin/code-tables" element={<CodeTablesAdmin />} />
+      <Route path="/admin/lifecycle-checklists" element={<LifecycleChecklistsAdmin />} />
+      <Route path="/admin/merge-field-tags" element={<MergeFieldTagsAdmin />} />
+      <Route path="/admin/settings/reporting-obligations" element={<ReportingObligationsAdmin />} />
     </Route>
     <Route element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/superadmin/academy/enrollments" element={<AcademyEnrolmentsPage />} />

@@ -1,5 +1,4 @@
  import { useState, useEffect, useRef } from 'react';
- import { DashboardLayout } from '@/components/DashboardLayout';
  import { useAuth } from '@/hooks/useAuth';
  import { useRBAC } from '@/hooks/useRBAC';
  import { supabase } from '@/integrations/supabase/client';
@@ -38,13 +37,35 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
    updated_at: string;
  }
  
+ interface AssistantMessageSource {
+   type: string;
+   title: string;
+   version?: string | number;
+ }
+
  interface Message {
    id: string;
    thread_id: string;
    role: 'user' | 'assistant' | 'system';
    content: string;
-   sources_used?: any[];
+   sources_used?: AssistantMessageSource[];
    created_at: string;
+ }
+
+ interface AssistantReportSection {
+   title: string;
+   data: unknown;
+ }
+
+ interface AssistantReportResult {
+   reportType: string;
+   clientIdentifier: string;
+   timePeriod: string;
+   sections?: AssistantReportSection[];
+   knownGaps?: string[];
+   generatedAt: string;
+   dataSources?: string[];
+   redactions?: string[];
  }
  
  interface Tenant {
@@ -83,7 +104,7 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
    const [tenantSearch, setTenantSearch] = useState('');
    const [dateStart, setDateStart] = useState('');
    const [dateEnd, setDateEnd] = useState('');
-   const [reportResult, setReportResult] = useState<any>(null);
+   const [reportResult, setReportResult] = useState<AssistantReportResult | null>(null);
    const [isGeneratingReport, setIsGeneratingReport] = useState(false);
    
    const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -139,7 +160,7 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
     const typedMessages: Message[] = (data || []).map(msg => ({
       ...msg,
       role: msg.role as 'user' | 'assistant' | 'system',
-      sources_used: msg.sources_used as any[] | undefined,
+      sources_used: msg.sources_used as unknown as AssistantMessageSource[] | undefined,
     }));
     setMessages(typedMessages);
    }
@@ -161,7 +182,6 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
   // Check access - render unauthorized view
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
         <div className="flex items-center justify-center h-full">
           <Card className="max-w-md">
             <CardContent className="pt-6">
@@ -175,7 +195,6 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
             </CardContent>
           </Card>
         </div>
-      </DashboardLayout>
     );
   }
  
@@ -357,7 +376,6 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
    );
  
    return (
-     <DashboardLayout>
        <div className="flex h-[calc(100vh-120px)] gap-4 p-4">
          {/* Left Panel - Thread List */}
          <Card className="w-80 flex flex-col">
@@ -464,7 +482,7 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
                                </CollapsibleTrigger>
                                <CollapsibleContent className="mt-1">
                                  <div className="space-y-1">
-                                   {message.sources_used.map((source: any, idx: number) => (
+                                   {message.sources_used.map((source: AssistantMessageSource, idx: number) => (
                                      <div key={idx} className="text-xs bg-muted/50 rounded p-2">
                                        <Badge variant="outline" className="text-xs mb-1">
                                          {source.type}
@@ -646,7 +664,7 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
                    </div>
                    
                    <div className="space-y-4">
-                     {reportResult.sections?.map((section: any, idx: number) => (
+                     {reportResult.sections?.map((section: AssistantReportSection, idx: number) => (
                        <Collapsible key={idx} defaultOpen>
                          <CollapsibleTrigger className="flex items-center gap-2 font-medium hover:text-primary">
                            <ChevronDown className="h-4 w-4" />
@@ -691,6 +709,5 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
           <AssistantTestChecklist />
          </div>
        </div>
-     </DashboardLayout>
    );
  }

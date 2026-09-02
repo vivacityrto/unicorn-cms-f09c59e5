@@ -12,7 +12,6 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -273,7 +272,6 @@ export default function RolePermissionsEditor() {
   const error = featuresQ.error || matrixQ.error || rolesQ.error;
 
   return (
-    <DashboardLayout>
       <TooltipProvider>
         <div className="p-4 md:p-6 space-y-4">
         <PageHeader
@@ -404,7 +402,6 @@ export default function RolePermissionsEditor() {
           roles={roles}
         />
       </TooltipProvider>
-    </DashboardLayout>
   );
 }
 
