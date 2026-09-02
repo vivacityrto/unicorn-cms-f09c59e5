@@ -2,13 +2,12 @@
  * WorkflowOptimisation – Unicorn 2.0 Phase 16
  * Internal page showing bottlenecks, imbalances, and rework clusters.
  */
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
-import { useActiveWorkflowSignals, useResolveWorkflowSignal } from '@/hooks/useWorkflowOptimisation';
+import { useActiveWorkflowSignals, useResolveWorkflowSignal, type WorkflowSignal } from '@/hooks/useWorkflowOptimisation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShieldAlert, AlertTriangle, CheckCircle, Zap, Users, RefreshCcw, Pause } from 'lucide-react';
+import { Loader2, ShieldAlert, AlertTriangle, CheckCircle, Zap, Users, RefreshCcw, Pause, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -19,7 +18,7 @@ const severityConfig: Record<string, { color: string }> = {
   high: { color: 'bg-red-100 text-red-800' },
 };
 
-const typeConfig: Record<string, { label: string; icon: any }> = {
+const typeConfig: Record<string, { label: string; icon: LucideIcon }> = {
   bottleneck_detected: { label: 'Bottleneck', icon: Pause },
   sequencing_issue: { label: 'Sequencing', icon: Zap },
   workload_imbalance: { label: 'Imbalance', icon: Users },
@@ -36,14 +35,12 @@ export default function WorkflowOptimisation() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
-          <p className="text-sm text-muted-foreground">Workflow Optimisation is available to authorised roles only.</p>
-          <Button variant="outline" onClick={() => navigate('/dashboard')}>Return to Dashboard</Button>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
+        <p className="text-sm text-muted-foreground">Workflow Optimisation is available to authorised roles only.</p>
+        <Button variant="outline" onClick={() => navigate('/dashboard')}>Return to Dashboard</Button>
+      </div>
     );
   }
 
@@ -61,8 +58,7 @@ export default function WorkflowOptimisation() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
+    <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
         <div>
           <h1 className="text-lg font-bold text-foreground">Workflow Optimisation</h1>
           <p className="text-xs text-muted-foreground">
@@ -132,15 +128,14 @@ export default function WorkflowOptimisation() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }
 
-function SignalCard({ signal, onResolve }: { signal: any; onResolve: (id: string) => void }) {
+function SignalCard({ signal, onResolve }: { signal: WorkflowSignal; onResolve: (id: string) => void }) {
   const sev = severityConfig[signal.signal_severity] ?? severityConfig.low;
   const typeCfg = typeConfig[signal.signal_type] ?? { label: signal.signal_type, icon: Zap };
   const Icon = typeCfg.icon;
-  const actions = (signal.suggested_action_json ?? []) as string[];
+  const actions = signal.suggested_action_json ?? [];
 
   return (
     <div className="border rounded-lg p-3 space-y-2">

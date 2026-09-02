@@ -6,7 +6,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useRBAC } from "@/hooks/useRBAC";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +56,9 @@ const COVERAGE_ICONS: Record<string, React.ReactNode> = {
   missing: <XCircle className="h-3.5 w-3.5 text-destructive" />,
 };
 
-const COVERAGE_VARIANTS: Record<string, string> = {
+type BadgeVariant = React.ComponentProps<typeof Badge>["variant"];
+
+const COVERAGE_VARIANTS: Record<string, BadgeVariant> = {
   explicit: "outline",
   implicit: "secondary",
   weak: "secondary",
@@ -158,8 +159,9 @@ export default function TemplateGapAnalysis() {
       setRunForm({ templateName: "", templateCategory: "", templateContent: "" });
       queryClient.invalidateQueries({ queryKey: ["template-analysis-jobs"] });
       if (result.analysis_job_id) setSelectedJobId(result.analysis_job_id);
-    } catch (e: any) {
-      toast({ title: "Analysis failed", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      toast({ title: "Analysis failed", description: message, variant: "destructive" });
     } finally {
       setIsRunning(false);
     }
@@ -168,7 +170,7 @@ export default function TemplateGapAnalysis() {
   // Approval workflow
   const updateJobStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updates: any = { status };
+      const updates: { status: string; reviewed_by_user_id?: string; reviewed_at?: string } = { status };
       if (status === "reviewed" || status === "approved") {
         const { data: { user } } = await supabase.auth.getUser();
         updates.reviewed_by_user_id = user?.id;
@@ -193,21 +195,18 @@ export default function TemplateGapAnalysis() {
 
   if (!isSuperAdmin && !isVivacityTeam) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Access Restricted</h2>
-          <p className="text-sm text-muted-foreground">Template Gap Analysis is internal only.</p>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Access Restricted</h2>
+        <p className="text-sm text-muted-foreground">Template Gap Analysis is internal only.</p>
+      </div>
     );
   }
 
   const activeJob = jobs?.find(j => j.id === activeJobId);
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
+    <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -385,7 +384,7 @@ export default function TemplateGapAnalysis() {
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {COVERAGE_ICONS[c.coverage_status]}
-                            <Badge variant={COVERAGE_VARIANTS[c.coverage_status] as any || "outline"} className="text-[10px]">
+                            <Badge variant={COVERAGE_VARIANTS[c.coverage_status] || "outline"} className="text-[10px]">
                               {c.coverage_status}
                             </Badge>
                           </div>
@@ -413,6 +412,5 @@ export default function TemplateGapAnalysis() {
           This analysis identifies potential clause coverage gaps only and does not determine compliance. Standards for RTOs 2025.
         </p>
       </div>
-    </DashboardLayout>
   );
 }

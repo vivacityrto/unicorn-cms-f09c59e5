@@ -6,7 +6,6 @@
  */
 
 import { format } from 'date-fns';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -32,6 +31,12 @@ import {
   Zap,
 } from 'lucide-react';
 
+interface RisingTenantRow {
+  tenant_id: number | string;
+  composite_risk_index: number | string;
+  forecast_risk_status: string;
+}
+
 const STATUS_ORDER = ['high', 'elevated', 'emerging', 'stable'];
 const SEVERITY_COLORS: Record<string, string> = {
   high: 'bg-destructive text-destructive-foreground',
@@ -52,18 +57,16 @@ export default function StrategicCommandCentre() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
-          <p className="text-sm text-muted-foreground text-center max-w-md">
-            The Strategic Command Centre is available to executive roles only.
-          </p>
-          <Button variant="outline" onClick={() => navigate('/dashboard')}>
-            Return to Dashboard
-          </Button>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
+        <p className="text-sm text-muted-foreground text-center max-w-md">
+          The Strategic Command Centre is available to executive roles only.
+        </p>
+        <Button variant="outline" onClick={() => navigate('/dashboard')}>
+          Return to Dashboard
+        </Button>
+      </div>
     );
   }
 
@@ -86,8 +89,7 @@ export default function StrategicCommandCentre() {
   const recentSignals = signals?.slice(0, 10) ?? [];
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4 p-3 md:p-4 max-w-screen-2xl mx-auto">
+    <div className="space-y-4 p-3 md:p-4 max-w-screen-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -179,7 +181,7 @@ export default function StrategicCommandCentre() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {(risingTenants ?? []).slice(0, 5).map((t: any, i: number) => (
+                  {(risingTenants ?? []).slice(0, 5).map((t: RisingTenantRow, i: number) => (
                     <div key={i} className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground truncate max-w-[140px]">
                         Tenant {String(t.tenant_id).slice(0, 8)}
@@ -342,6 +344,5 @@ export default function StrategicCommandCentre() {
           This view consolidates operational intelligence for strategic planning only. It does not determine compliance status or create automated actions.
         </p>
       </div>
-    </DashboardLayout>
   );
 }

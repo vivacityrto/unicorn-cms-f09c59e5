@@ -6,7 +6,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useRBAC } from "@/hooks/useRBAC";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +30,9 @@ type RiskEvent = {
   notes: string | null;
 };
 
-const SEVERITY_COLORS: Record<string, string> = {
+type BadgeVariant = React.ComponentProps<typeof Badge>["variant"];
+
+const SEVERITY_COLORS: Record<string, BadgeVariant> = {
   high: "destructive",
   medium: "secondary",
   low: "outline",
@@ -152,19 +153,16 @@ export default function CrossTenantRiskRadar() {
 
   if (!isSuperAdmin && !isVivacityTeam) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Access Restricted</h2>
-          <p className="text-sm text-muted-foreground">Cross-Tenant Risk Radar is internal only.</p>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Access Restricted</h2>
+        <p className="text-sm text-muted-foreground">Cross-Tenant Risk Radar is internal only.</p>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
+    <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
         <div>
           <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
             <Radar className="h-5 w-5 text-primary" />
@@ -345,7 +343,7 @@ export default function CrossTenantRiskRadar() {
                         <TableCell className="text-xs font-mono">{e.standard_clause || "—"}</TableCell>
                         <TableCell className="text-xs truncate max-w-[160px]">{e.theme_label || "—"}</TableCell>
                         <TableCell>
-                          <Badge variant={SEVERITY_COLORS[e.severity] as any || "outline"} className="text-[10px]">{e.severity}</Badge>
+                          <Badge variant={SEVERITY_COLORS[e.severity] || "outline"} className="text-[10px]">{e.severity}</Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-[10px]">{e.status}</Badge>
@@ -380,6 +378,5 @@ export default function CrossTenantRiskRadar() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }
