@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -359,7 +358,7 @@ export default function ContactDirectory() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6 p-6 animate-fade-in">
         <PageHeader
           title="Contact Directory"
@@ -708,6 +707,6 @@ export default function ContactDirectory() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </>
   );
 }

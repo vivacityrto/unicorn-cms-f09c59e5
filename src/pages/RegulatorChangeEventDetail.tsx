@@ -5,7 +5,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +23,25 @@ const IMPACT_COLORS: Record<string, string> = {
   high: "bg-orange-100 text-orange-800",
   critical: "bg-red-100 text-red-800",
 };
+
+interface RegulatorWatchlistRef {
+  name: string;
+  url: string;
+  category: string;
+}
+
+interface AffectedArea {
+  area?: string;
+  risk_category?: string;
+  impact_type?: string;
+  claim_excerpt?: string;
+  standard_clause?: string;
+}
+
+interface Citation {
+  index?: number;
+  url: string;
+}
 
 export default function RegulatorChangeEventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -100,33 +118,28 @@ export default function RegulatorChangeEventDetail() {
 
   if (!isSuperAdmin && !isVivacityTeam) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Access Restricted</h2>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Access Restricted</h2>
+      </div>
     );
   }
 
   if (isLoading || !event) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
-  const wl = event.regulator_watchlist as any;
-  const affectedAreas = (event.affected_areas_json as any[]) || [];
+  const wl = event.regulator_watchlist as unknown as RegulatorWatchlistRef;
+  const affectedAreas = (event.affected_areas_json as unknown as AffectedArea[]) || [];
   const finding = findings?.[0];
-  const riskFlags = (finding?.risk_flags_json as any[]) || [];
-  const citations = (finding?.citations_json as any[]) || [];
+  const riskFlags = (finding?.risk_flags_json as unknown as unknown[]) || [];
+  const citations = (finding?.citations_json as unknown as Citation[]) || [];
 
   return (
-    <DashboardLayout>
       <div className="space-y-4 p-4 max-w-screen-lg mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -213,7 +226,7 @@ export default function RegulatorChangeEventDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {affectedAreas.map((area: any, i: number) => (
+                {affectedAreas.map((area: AffectedArea, i: number) => (
                   <div key={i} className="flex items-start gap-3 p-2 rounded bg-muted/50 text-xs">
                     <div className="flex-1">
                       <p className="font-medium">{area.area || area.risk_category}</p>
@@ -237,7 +250,7 @@ export default function RegulatorChangeEventDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
-                {citations.map((c: any, i: number) => (
+                {citations.map((c: Citation, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground w-6">[{c.index || i + 1}]</span>
                     <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
@@ -255,6 +268,5 @@ export default function RegulatorChangeEventDetail() {
           This summary identifies potential operational impacts only. Human review required.
         </p>
       </div>
-    </DashboardLayout>
   );
 }

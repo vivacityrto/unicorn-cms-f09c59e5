@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -160,21 +159,19 @@ export default function RegulatorWatchDashboard() {
 
   if (!isSuperAdmin && !isVivacityTeam) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Access Restricted</h2>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Access Restricted</h2>
+      </div>
     );
   }
 
   const filteredWatchlist = (watchlist || []).filter(w =>
-    categoryFilter === "all" || (w as any).category === categoryFilter
+    categoryFilter === "all" || w.category === categoryFilter
   );
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-4 p-4 max-w-screen-xl mx-auto">
         <div className="flex items-center justify-between">
           <div>
@@ -251,7 +248,7 @@ export default function RegulatorWatchDashboard() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        (changeEvents || []).map((evt: any) => {
+                        (changeEvents || []).map((evt) => {
                           const wl = evt.regulator_watchlist;
                           const badge = REVIEW_BADGE[evt.review_status] || REVIEW_BADGE.pending;
                           return (
@@ -342,7 +339,7 @@ export default function RegulatorWatchDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredWatchlist.map((entry: any) => (
+                      {filteredWatchlist.map((entry) => (
                         <TableRow key={entry.id}>
                           <TableCell className="text-xs">
                             <div className="flex items-center gap-1.5">
@@ -436,6 +433,6 @@ export default function RegulatorWatchDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </>
   );
 }

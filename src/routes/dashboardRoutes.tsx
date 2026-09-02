@@ -81,6 +81,9 @@ const ResourceRecentlyAdded = lazy(() => import("@/pages/ResourceRecentlyAdded")
 const ResourceMostUsed = lazy(() => import("@/pages/ResourceMostUsed"));
 const ResourceFavourites = lazy(() => import("@/pages/ResourceFavourites"));
 const ResourceUpdatesLog = lazy(() => import("@/pages/ResourceUpdatesLog"));
+const ContactDirectory = lazy(() => import("@/pages/admin/ContactDirectory"));
+const RegulatorWatchDashboard = lazy(() => import("@/pages/RegulatorWatchDashboard"));
+const RegulatorChangeEventDetail = lazy(() => import("@/pages/RegulatorChangeEventDetail"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -217,6 +220,24 @@ const ResourceUpdatesLog = lazy(() => import("@/pages/ResourceUpdatesLog"));
  * clientRoutes.tsx, untouched here), ResourceRecentlyAdded,
  * ResourceMostUsed, ResourceFavourites, ResourceUpdatesLog. All six were
  * already single-root with no page-local access checks to preserve.
+ * PR 6 (Strategic/Administration VT cohort) added a new
+ * allowVivacityTeam sibling group -- the fourth guard tier, distinct from
+ * requireSuperAdmin/allowedRoles/plain -- for the 3 routes the migration
+ * plan identified as unable to safely sit under the existing plain
+ * parent: /administration/contacts (ContactDirectory), /admin/
+ * regulator-watch (RegulatorWatchDashboard), and /admin/regulator-watch/
+ * :eventId (RegulatorChangeEventDetail). Before this PR these 3 routes
+ * used ProtectedRoute allowVivacityTeam directly in App.tsx (not nested
+ * under the plain DashboardLayoutRoute parent), so this is a new tier,
+ * not a guard-ordering fix like the /admin/stages one above.
+ * RegulatorWatchDashboard and ContactDirectory each needed a Fragment
+ * (a Dialog/AlertDialog sibling alongside the main content div);
+ * RegulatorChangeEventDetail was single-root across all 3 of its return
+ * branches. RegulatorWatchDashboard and RegulatorChangeEventDetail each
+ * kept their page-local `!isSuperAdmin && !isVivacityTeam` "Access
+ * Restricted" check unchanged, now redundant given the route's own
+ * allowVivacityTeam guard, per the plan's page-local-check preservation
+ * rule; ContactDirectory has no such page-local gate.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -315,6 +336,11 @@ export const dashboardLayoutRoutes = (
       <Route path="/resource-hub/most-used" element={<ResourceMostUsed />} />
       <Route path="/resource-hub/favourites" element={<ResourceFavourites />} />
       <Route path="/resource-hub/updates" element={<ResourceUpdatesLog />} />
+    </Route>
+    <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
+      <Route path="/administration/contacts" element={<ContactDirectory />} />
+      <Route path="/admin/regulator-watch" element={<RegulatorWatchDashboard />} />
+      <Route path="/admin/regulator-watch/:eventId" element={<RegulatorChangeEventDetail />} />
     </Route>
   </>
 );
