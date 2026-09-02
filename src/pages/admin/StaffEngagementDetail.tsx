@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ArrowLeft, AlertTriangle, MoreHorizontal, Check, Copy } from "lucide-react";
 
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -295,7 +294,7 @@ export default function StaffEngagementDetail() {
 
   const userNameMap = useMemo(() => {
     const m = new Map<string, string>();
-    (userNamesQuery.data ?? []).forEach((u: any) => {
+    (userNamesQuery.data ?? []).forEach((u) => {
       if (u.user_uuid && u.full_name) m.set(u.user_uuid, u.full_name);
     });
     return m;
@@ -325,7 +324,7 @@ export default function StaffEngagementDetail() {
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
       setConfirmCancel(false);
     },
-    onError: (e: any) => toast({ title: "Could not cancel", description: e?.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Could not cancel", description: e?.message, variant: "destructive" }),
   });
 
   const toggleMutation = useMutation({
@@ -339,7 +338,7 @@ export default function StaffEngagementDetail() {
           item_key: itemKey,
           completed_by: userRes.user.id,
           completed_at: new Date().toISOString(),
-        } as any);
+        });
         if (error) throw error;
       } else {
         const { error } = await supabase
@@ -357,7 +356,7 @@ export default function StaffEngagementDetail() {
       queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
     },
-    onError: (e: any) => toast({ title: "Could not update", description: e?.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Could not update", description: e?.message, variant: "destructive" }),
   });
 
   const completeMutation = useMutation({
@@ -373,7 +372,7 @@ export default function StaffEngagementDetail() {
       queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
     },
-    onError: (e: any) =>
+    onError: (e) =>
       toast({ title: "Could not complete", description: e?.message, variant: "destructive" }),
   });
 
@@ -391,8 +390,9 @@ export default function StaffEngagementDetail() {
         },
       });
 
-      if (res.error || (res.data as any)?.ok !== true) {
-        throw new Error((res.data as any)?.detail ?? res.error?.message ?? "Invite failed");
+      const resData = res.data as { ok?: boolean; detail?: string } | null;
+      if (res.error || resData?.ok !== true) {
+        throw new Error(resData?.detail ?? res.error?.message ?? "Invite failed");
       }
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
       if (userErr || !userRes.user) throw new Error("Not authenticated");
@@ -401,7 +401,7 @@ export default function StaffEngagementDetail() {
         item_key: "access.unicorn_provisioned",
         completed_by: userRes.user.id,
         completed_at: new Date().toISOString(),
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -412,7 +412,7 @@ export default function StaffEngagementDetail() {
       queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
     },
-    onError: (e: any) =>
+    onError: (e) =>
       toast({ title: "Could not send invite", description: e?.message, variant: "destructive" }),
   });
 
@@ -421,7 +421,7 @@ export default function StaffEngagementDetail() {
       if (!engagement?.linked_unicorn_user_id) throw new Error("No linked user");
       const { error: updErr } = await supabase
         .from("users")
-        .update({ disabled: true } as any)
+        .update({ disabled: true })
         .eq("user_uuid", engagement.linked_unicorn_user_id);
       if (updErr) throw updErr;
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
@@ -431,7 +431,7 @@ export default function StaffEngagementDetail() {
         item_key: "access_revoke.unicorn",
         completed_by: userRes.user.id,
         completed_at: new Date().toISOString(),
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -442,7 +442,7 @@ export default function StaffEngagementDetail() {
       queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
     },
-    onError: (e: any) =>
+    onError: (e) =>
       toast({ title: "Could not revoke access", description: e?.message, variant: "destructive" }),
   });
 
@@ -450,7 +450,7 @@ export default function StaffEngagementDetail() {
     mutationFn: async ({ userUuid }: { userUuid: string }) => {
       const { error } = await supabase
         .from("staff_engagements")
-        .update({ linked_unicorn_user_id: userUuid } as any)
+        .update({ linked_unicorn_user_id: userUuid })
         .eq("id", id!);
       if (error) throw error;
     },
@@ -461,7 +461,7 @@ export default function StaffEngagementDetail() {
       queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
     },
-    onError: (e: any) =>
+    onError: (e) =>
       toast({ title: "Could not link user", description: e?.message, variant: "destructive" }),
   });
 
@@ -478,7 +478,7 @@ export default function StaffEngagementDetail() {
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
       navigate("/admin/staff-engagements");
     },
-    onError: (e: any) =>
+    onError: (e) =>
       toast({ title: "Could not delete", description: e?.message, variant: "destructive" }),
   });
 
@@ -486,20 +486,16 @@ export default function StaffEngagementDetail() {
 
   if (!allowed) {
     return (
-      <DashboardLayout>
-        <div className="p-8">
-          <h1 className="text-2xl font-semibold">Access denied</h1>
-          <p className="text-muted-foreground mt-2">You do not have permission to view this page.</p>
-        </div>
-      </DashboardLayout>
+      <div className="p-8">
+        <h1 className="text-2xl font-semibold">Access denied</h1>
+        <p className="text-muted-foreground mt-2">You do not have permission to view this page.</p>
+      </div>
     );
   }
 
   if (engagementQuery.isLoading || !engagement) {
     return (
-      <DashboardLayout>
-        <div className="p-6 text-muted-foreground">Loading…</div>
-      </DashboardLayout>
+      <div className="p-6 text-muted-foreground">Loading…</div>
     );
   }
 
@@ -507,7 +503,7 @@ export default function StaffEngagementDetail() {
   const typeLabel = engagement.type === "offboarding" ? "Offboarding" : "Onboarding";
 
   return (
-    <DashboardLayout>
+    <>
       <div className="p-6 space-y-6 max-w-5xl">
         <button
           onClick={() => navigate("/admin/staff-engagements")}
@@ -564,7 +560,7 @@ export default function StaffEngagementDetail() {
                       e.preventDefault();
                       await supabase
                         .from("staff_engagements")
-                        .update({ linked_unicorn_user_id: null } as any)
+                        .update({ linked_unicorn_user_id: null })
                         .eq("id", id!);
                       queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
                       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
@@ -923,7 +919,7 @@ export default function StaffEngagementDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </>
   );
 }
 

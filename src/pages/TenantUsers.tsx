@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import {
   Table,
   TableBody,
@@ -167,10 +166,10 @@ export default function TenantUsers() {
         u.user_uuid === user.user_uuid ? { ...u, position_type: value || null } : u
       ));
       toast({ title: 'Position type updated' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
@@ -276,10 +275,10 @@ export default function TenantUsers() {
       
       setSelectedIds(new Set());
       fetchData();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
@@ -324,7 +323,7 @@ export default function TenantUsers() {
 
       if (error) throw error;
 
-      const tenantUsers: TenantUser[] = (data || []).map((user: any) => {
+      const tenantUsers: TenantUser[] = (data || []).map((user) => {
         const membershipRows = (user.tenant_users || []) as { tenant_id: number; position_type: string | null }[];
         const membership = membershipRows.find(tu => tu.tenant_id === user.tenant_id);
 
@@ -346,10 +345,10 @@ export default function TenantUsers() {
       });
 
       setUsers(tenantUsers);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
@@ -547,22 +546,19 @@ export default function TenantUsers() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="space-y-6 p-6">
-          <Skeleton className="h-12 w-64" />
-          <div className="grid gap-4 md:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-          <Skeleton className="h-96" />
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-12 w-64" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
         </div>
-      </DashboardLayout>
+        <Skeleton className="h-96" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="space-y-6 p-6 animate-fade-in">
         {/* Header */}
         <div>
@@ -947,6 +943,5 @@ export default function TenantUsers() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </DashboardLayout>
   );
 }

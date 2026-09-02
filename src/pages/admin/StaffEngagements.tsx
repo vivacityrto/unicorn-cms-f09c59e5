@@ -7,7 +7,6 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { CalendarIcon, Plus } from "lucide-react";
 
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -162,7 +161,7 @@ function NewEngagementDialog({ onCreated }: { onCreated: () => void }) {
         created_by: userRes.user.id,
       };
 
-      const { error } = await supabase.from("staff_engagements").insert(payload as any);
+      const { error } = await supabase.from("staff_engagements").insert(payload);
 
       if (error) throw error;
     },
@@ -173,7 +172,7 @@ function NewEngagementDialog({ onCreated }: { onCreated: () => void }) {
       setOpen(false);
       onCreated();
     },
-    onError: (e: any) => {
+    onError: (e) => {
       toast({
         title: "Could not create engagement",
         description: e?.message ?? String(e),
@@ -394,19 +393,16 @@ export default function StaffEngagements() {
 
   if (!allowed) {
     return (
-      <DashboardLayout>
-        <div className="p-8">
-          <h1 className="text-2xl font-semibold">Access denied</h1>
-          <p className="text-muted-foreground mt-2">
-            You do not have permission to view this page.
-          </p>
-        </div>
-      </DashboardLayout>
+      <div className="p-8">
+        <h1 className="text-2xl font-semibold">Access denied</h1>
+        <p className="text-muted-foreground mt-2">
+          You do not have permission to view this page.
+        </p>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -472,6 +468,5 @@ export default function StaffEngagements() {
           </Table>
         </div>
       </div>
-    </DashboardLayout>
   );
 }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -119,8 +118,8 @@ export default function ManageInvites() {
       setRevokeTarget(null);
       setRevokeReason("");
       await fetchInvites();
-    } catch (e: any) {
-      toast({ title: 'Revoke failed', description: e.message, variant: 'destructive' });
+    } catch (e) {
+      toast({ title: 'Revoke failed', description: e instanceof Error ? e.message : String(e), variant: 'destructive' });
     } finally {
       setRevoking(false);
     }
@@ -151,10 +150,10 @@ export default function ManageInvites() {
       } catch {
         toast({ title: 'Link ready', description: data.action_link });
       }
-    } catch (e: any) {
+    } catch (e) {
       toast({
         title: 'Could not generate link',
-        description: e?.message || 'The resend-invite function did not return a link.',
+        description: e instanceof Error ? e.message : 'The resend-invite function did not return a link.',
         variant: 'destructive',
       });
     } finally {
@@ -193,8 +192,8 @@ export default function ManageInvites() {
           fetchInviterNames(inviterIds)
         ]);
       }
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load invite data");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load invite data");
     } finally {
       setLoading(false);
     }
@@ -223,7 +222,7 @@ export default function ManageInvites() {
       });
 
       setUserStatuses(statusMap);
-    } catch (e: any) {
+    } catch (e) {
       console.error("Failed to fetch user statuses:", e);
     }
   };
@@ -243,7 +242,7 @@ export default function ManageInvites() {
       });
 
       setTenantNames(namesMap);
-    } catch (e: any) {
+    } catch (e) {
       console.error("Failed to fetch tenant names:", e);
     }
   };
@@ -267,7 +266,7 @@ export default function ManageInvites() {
       });
 
       setInviterData(dataMap);
-    } catch (e: any) {
+    } catch (e) {
       console.error("Failed to fetch inviter names:", e);
     }
   };
@@ -531,22 +530,20 @@ export default function ManageInvites() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="space-y-6 p-6">
-          <Skeleton className="h-12 w-full" />
-          <div className="grid gap-6 md:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32 w-full" />
-            ))}
-          </div>
-          <Skeleton className="h-96 w-full" />
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-12 w-full" />
+        <div className="grid gap-6 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
+          ))}
         </div>
-      </DashboardLayout>
+        <Skeleton className="h-96 w-full" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6 p-6 animate-fade-in">
         {launchMode && (
           <div className="rounded-lg border-l-4 border-l-[#7130A0] bg-[#DFD8E8]/40 px-4 py-3">
@@ -1168,11 +1165,11 @@ export default function ManageInvites() {
                   setSelectedInvites(new Set());
                   setDeleteDialogOpen(false);
                   await fetchInvites();
-                } catch (e: any) {
+                } catch (e) {
                   console.error('Failed to delete invitations:', e);
                   toast({
                     title: "Error",
-                    description: `Failed to delete invitations: ${e.message}`,
+                    description: `Failed to delete invitations: ${e instanceof Error ? e.message : String(e)}`,
                     variant: "destructive",
                   });
                 }
@@ -1216,6 +1213,6 @@ export default function ManageInvites() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </>
   );
 }

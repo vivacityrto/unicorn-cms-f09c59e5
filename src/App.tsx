@@ -29,7 +29,6 @@ import { dashboardLayoutRoutes } from "./routes/dashboardRoutes";
  const Login = lazy(() => import("./pages/Login"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MainDashboard = lazy(() => import("./pages/MainDashboard"));
- const ManageInvitesWrapper = lazy(() => import("./pages/ManageInvitesWrapper"));
  const BulkDocumentJobsList = lazy(() => import("./pages/BulkDocumentJobsList"));
  const BulkDocumentJobProgress = lazy(() => import("./pages/BulkDocumentJobProgress"));
  const BulkGenerateNew = lazy(() => import("./pages/BulkGenerateNew"));
@@ -95,14 +94,9 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const ExecutiveClientCommitments = lazy(() => import("./pages/ExecutiveClientCommitments"));
  const ExecutiveDecisionQueue = lazy(() => import("./pages/ExecutiveDecisionQueue"));
  const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
-  const TeamUsers = lazy(() => import("./pages/TeamUsers"));
 const OnboardingHubPage = lazy(() => import("./pages/admin/OnboardingHubPage"));
 const MyOnboardingPage = lazy(() => import("./pages/MyOnboardingPage"));
-const BulkMembershipCertificatesPage = lazy(() => import("./pages/admin/BulkMembershipCertificatesPage"));
-const StaffEngagements = lazy(() => import("./pages/admin/StaffEngagements"));
-const StaffEngagementDetail = lazy(() => import("./pages/admin/StaffEngagementDetail"));
 const MyExitInterview = lazy(() => import("./pages/MyExitInterview"));
- const TenantUsers = lazy(() => import("./pages/TenantUsers"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
@@ -261,14 +255,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/manage-invites"
-              element={
-                <ProtectedRoute>
-                  <ManageInvitesWrapper />
                 </ProtectedRoute>
               } 
             />
@@ -720,16 +706,9 @@ const App = () => (
             {/* Client Detail route removed — consolidated into /tenant/:tenantId above */}
             {/* Admin User Audit */}
             <Route path="/admin/user-audit" element={<ProtectedRoute><AdminUserAudit /></ProtectedRoute>} />
-            <Route path="/clients/bulk-membership-certificates" element={<ProtectedRoute><BulkMembershipCertificatesPage /></ProtectedRoute>} />
             {/* Team & Tenant Users */}
-            <Route path="/admin/team-users" element={<ProtectedRoute><TeamUsers /></ProtectedRoute>} />
-            <Route path="/admin/staff-engagements" element={<ProtectedRoute><StaffEngagements /></ProtectedRoute>} />
-            <Route path="/admin/staff-engagements/:id" element={<ProtectedRoute><StaffEngagementDetail /></ProtectedRoute>} />
             <Route path="/my-exit-interview" element={<ProtectedRoute><MyExitInterview /></ProtectedRoute>} />
             <Route path="/admin/team-users/runs/:runId/onboarding" element={<ProtectedRoute requireSuperAdmin><OnboardingHubPage /></ProtectedRoute>} />
-
-
-            <Route path="/admin/tenant-users" element={<ProtectedRoute><TenantUsers /></ProtectedRoute>} />
             {/* Admin Stages */}
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
