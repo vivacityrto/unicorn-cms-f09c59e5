@@ -89,12 +89,6 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const TasksManagementWrapper = lazy(() => import("./pages/TasksManagementWrapper"));
  const ClickUpImport = lazy(() => import("./pages/ClickUpImport"));
  const RtoTipsWrapper = lazy(() => import("./pages/RtoTipsWrapper"));
- const ResourceHubDashboard = lazy(() => import("./pages/ResourceHubDashboard"));
- const ResourceCategoryPage = lazy(() => import("./pages/ResourceCategoryPage"));
- const ResourceRecentlyAdded = lazy(() => import("./pages/ResourceRecentlyAdded"));
- const ResourceMostUsed = lazy(() => import("./pages/ResourceMostUsed"));
- const ResourceFavourites = lazy(() => import("./pages/ResourceFavourites"));
- const ResourceUpdatesLog = lazy(() => import("./pages/ResourceUpdatesLog"));
  const MembershipDashboardWrapper = lazy(() => import("./pages/MembershipDashboardWrapper"));
  const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
  const ExecutiveFinancialControls = lazy(() => import("./pages/ExecutiveFinancialControls"));
@@ -724,20 +718,6 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            {/* Resource Hub Routes */}
-            <Route path="/resource-hub" element={<ProtectedRoute><ResourceHubDashboard /></ProtectedRoute>} />
-            <Route path="/resource-hub/templates" element={<ProtectedRoute><ResourceCategoryPage categoryId="templates" /></ProtectedRoute>} />
-            <Route path="/resource-hub/checklists" element={<ProtectedRoute><ResourceCategoryPage categoryId="checklists" /></ProtectedRoute>} />
-            <Route path="/resource-hub/registers-forms" element={<ProtectedRoute><ResourceCategoryPage categoryId="registers-forms" /></ProtectedRoute>} />
-            <Route path="/resource-hub/audit-evidence" element={<ProtectedRoute><ResourceCategoryPage categoryId="audit-evidence" /></ProtectedRoute>} />
-            <Route path="/resource-hub/training-webinars" element={<ProtectedRoute><ResourceCategoryPage categoryId="training-webinars" /></ProtectedRoute>} />
-            <Route path="/resource-hub/guides-howto" element={<ProtectedRoute><ResourceCategoryPage categoryId="guides-howto" /></ProtectedRoute>} />
-            <Route path="/resource-hub/ci-tools" element={<ProtectedRoute><ResourceCategoryPage categoryId="ci-tools" /></ProtectedRoute>} />
-            <Route path="/resource-hub/workbooks" element={<ProtectedRoute><ResourceCategoryPage categoryId="workbooks" /></ProtectedRoute>} />
-            <Route path="/resource-hub/recently-added" element={<ProtectedRoute><ResourceRecentlyAdded /></ProtectedRoute>} />
-            <Route path="/resource-hub/most-used" element={<ProtectedRoute><ResourceMostUsed /></ProtectedRoute>} />
-            <Route path="/resource-hub/favourites" element={<ProtectedRoute><ResourceFavourites /></ProtectedRoute>} />
-            <Route path="/resource-hub/updates" element={<ProtectedRoute><ResourceUpdatesLog /></ProtectedRoute>} />
             {/* Membership Dashboard */}
             <Route path="/membership-dashboard" element={<ProtectedRoute><MembershipDashboardWrapper /></ProtectedRoute>} />
             {/* Executive Dashboard – Internal Only */}

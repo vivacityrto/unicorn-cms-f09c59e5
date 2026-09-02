@@ -75,6 +75,12 @@ const CodeTablesAdmin = lazy(() => import("@/pages/CodeTablesAdmin"));
 const LifecycleChecklistsAdmin = lazy(() => import("@/pages/admin/LifecycleChecklistsAdmin"));
 const MergeFieldTagsAdmin = lazy(() => import("@/pages/admin/MergeFieldTagsAdmin"));
 const ReportingObligationsAdmin = lazy(() => import("@/pages/admin/settings/ReportingObligations"));
+const ResourceHubDashboard = lazy(() => import("@/pages/ResourceHubDashboard"));
+const ResourceCategoryPage = lazy(() => import("@/pages/ResourceCategoryPage"));
+const ResourceRecentlyAdded = lazy(() => import("@/pages/ResourceRecentlyAdded"));
+const ResourceMostUsed = lazy(() => import("@/pages/ResourceMostUsed"));
+const ResourceFavourites = lazy(() => import("@/pages/ResourceFavourites"));
+const ResourceUpdatesLog = lazy(() => import("@/pages/ResourceUpdatesLog"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -203,7 +209,14 @@ const ReportingObligationsAdmin = lazy(() => import("@/pages/admin/settings/Repo
  * unchanged per the plan's page-local-check preservation rule).
  * ReportingObligationsAdmin needed a Fragment (three dialog siblings
  * alongside the main content div); every other page in this batch was
- * single-root.
+ * single-root. PR 5 (Resource Management cohort) added the 6-file/
+ * 13-route Resource Hub family to the plain group: ResourceHubDashboard,
+ * ResourceCategoryPage (rendered under 8 of the 13 routes, one per
+ * category via its categoryId prop -- the component also reads a
+ * :category route param for a separate client-portal route in
+ * clientRoutes.tsx, untouched here), ResourceRecentlyAdded,
+ * ResourceMostUsed, ResourceFavourites, ResourceUpdatesLog. All six were
+ * already single-root with no page-local access checks to preserve.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -289,6 +302,19 @@ export const dashboardLayoutRoutes = (
       <Route path="/user-profile/:userId" element={<UserProfile />} />
       <Route path="/work/calendar" element={<WorkCalendar />} />
       <Route path="/work/meetings" element={<WorkMeetings />} />
+      <Route path="/resource-hub" element={<ResourceHubDashboard />} />
+      <Route path="/resource-hub/templates" element={<ResourceCategoryPage categoryId="templates" />} />
+      <Route path="/resource-hub/checklists" element={<ResourceCategoryPage categoryId="checklists" />} />
+      <Route path="/resource-hub/registers-forms" element={<ResourceCategoryPage categoryId="registers-forms" />} />
+      <Route path="/resource-hub/audit-evidence" element={<ResourceCategoryPage categoryId="audit-evidence" />} />
+      <Route path="/resource-hub/training-webinars" element={<ResourceCategoryPage categoryId="training-webinars" />} />
+      <Route path="/resource-hub/guides-howto" element={<ResourceCategoryPage categoryId="guides-howto" />} />
+      <Route path="/resource-hub/ci-tools" element={<ResourceCategoryPage categoryId="ci-tools" />} />
+      <Route path="/resource-hub/workbooks" element={<ResourceCategoryPage categoryId="workbooks" />} />
+      <Route path="/resource-hub/recently-added" element={<ResourceRecentlyAdded />} />
+      <Route path="/resource-hub/most-used" element={<ResourceMostUsed />} />
+      <Route path="/resource-hub/favourites" element={<ResourceFavourites />} />
+      <Route path="/resource-hub/updates" element={<ResourceUpdatesLog />} />
     </Route>
   </>
 );

@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useResources } from "@/hooks/useResources";
 import { ResourceGrid } from "@/components/resource-hub/ResourceGrid";
 import { ResourceSearch } from "@/components/resource-hub/ResourceSearch";
@@ -62,7 +61,6 @@ const ResourceMostUsed = () => {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -98,7 +96,6 @@ const ResourceMostUsed = () => {
           onToggleFavourite={handleToggleFavourite}
         />
       </div>
-    </DashboardLayout>
   );
 };
 
