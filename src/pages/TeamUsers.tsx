@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import {
   Table,
   TableBody,
@@ -111,7 +110,7 @@ export default function TeamUsers() {
 
       if (invitesError) throw invitesError;
 
-      const teamUsers: TeamUser[] = (data || []).map((user: any) => ({
+      const teamUsers: TeamUser[] = (data || []).map((user) => ({
         user_uuid: user.user_uuid,
         first_name: user.first_name || '',
         last_name: user.last_name || '',
@@ -144,7 +143,7 @@ export default function TeamUsers() {
       });
       
       const pendingUsers: TeamUser[] = Array.from(emailToInvite.values())
-        .map((invite: any) => ({
+        .map((invite) => ({
           user_uuid: `invite-${invite.id}`,
           first_name: invite.first_name || '',
           last_name: invite.last_name || '',
@@ -164,10 +163,10 @@ export default function TeamUsers() {
         }));
 
       setUsers([...teamUsers, ...pendingUsers]);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
@@ -218,11 +217,11 @@ export default function TeamUsers() {
         title: 'Invitation Resent',
         description: `A new invitation has been sent to ${user.email}`,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error resending invite:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to resend invitation',
+        description: error instanceof Error ? error.message : 'Failed to resend invitation',
         variant: 'destructive',
       });
     } finally {
@@ -252,11 +251,11 @@ export default function TeamUsers() {
       
       // Refresh the list to remove the cancelled invite
       fetchTeamUsers();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error cancelling invite:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to cancel invitation',
+        description: error instanceof Error ? error.message : 'Failed to cancel invitation',
         variant: 'destructive',
       });
     } finally {
@@ -268,7 +267,7 @@ export default function TeamUsers() {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ is_csc: checked } as any)
+        .update({ is_csc: checked })
         .eq('user_uuid', user.user_uuid);
 
       if (error) throw error;
@@ -282,10 +281,10 @@ export default function TeamUsers() {
         title: checked ? 'CSC Enabled' : 'CSC Disabled',
         description: `${user.first_name} ${user.last_name} ${checked ? 'is now' : 'is no longer'} a CSC.`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
@@ -314,22 +313,19 @@ export default function TeamUsers() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="space-y-6 p-6">
-          <Skeleton className="h-12 w-64" />
-          <div className="grid gap-4 md:grid-cols-3">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-          <Skeleton className="h-96" />
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-12 w-64" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
         </div>
-      </DashboardLayout>
+        <Skeleton className="h-96" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="space-y-6 p-6 animate-fade-in">
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -572,6 +568,5 @@ export default function TeamUsers() {
           onSuccess={fetchTeamUsers}
         />
       </div>
-    </DashboardLayout>
   );
 }

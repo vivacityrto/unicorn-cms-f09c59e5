@@ -4,7 +4,6 @@ import JSZip from "jszip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +34,7 @@ import {
   AlertCircle,
   Archive,
   Search,
+  type LucideIcon,
 } from "lucide-react";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
@@ -56,7 +56,7 @@ interface TenantWithMembership {
 
 function getStatusBadge(status: string, labelMap: Map<string, string>) {
   const label = labelMap.get(status) ?? status ?? "—";
-  const configs: Record<string, { icon: any; className: string }> = {
+  const configs: Record<string, { icon: LucideIcon; className: string }> = {
     active: { icon: CheckCircle2, className: "border-green-200 text-green-700 bg-green-50" },
     disabled: { icon: XCircle, className: "border-red-200 text-red-700 bg-red-50" },
     on_hold: { icon: Pause, className: "border-amber-200 text-amber-700 bg-amber-50" },
@@ -112,8 +112,8 @@ export default function BulkMembershipCertificatesPage() {
         return;
       }
 
-      const tenantIds = [...new Set(instances.map((i: any) => i.tenant_id))];
-      const packageIds = [...new Set(instances.map((i: any) => i.package_id))];
+      const tenantIds = [...new Set(instances.map((i) => i.tenant_id))];
+      const packageIds = [...new Set(instances.map((i) => i.package_id))];
 
       const [
         { data: tenantRows },
@@ -138,10 +138,10 @@ export default function BulkMembershipCertificatesPage() {
       ]);
 
       const cscUserIds = [
-        ...new Set((cscAssignments ?? []).map((r: any) => r.csc_user_id).filter(Boolean)),
+        ...new Set((cscAssignments ?? []).map((r) => r.csc_user_id).filter(Boolean)),
       ];
       const contactUserIds = [
-        ...new Set((contactAssignments ?? []).map((r: any) => r.user_id).filter(Boolean)),
+        ...new Set((contactAssignments ?? []).map((r) => r.user_id).filter(Boolean)),
       ];
 
       const [{ data: cscUsers }, { data: contactUsers }] = await Promise.all([
@@ -150,38 +150,38 @@ export default function BulkMembershipCertificatesPage() {
               .from("users")
               .select("user_uuid, first_name, last_name")
               .in("user_uuid", cscUserIds)
-          : Promise.resolve({ data: [] as any[] }),
+          : Promise.resolve({ data: [] as { user_uuid: string; first_name: string | null; last_name: string | null }[] }),
         contactUserIds.length
           ? supabase
               .from("users")
               .select("user_uuid, first_name, last_name, email")
               .in("user_uuid", contactUserIds)
-          : Promise.resolve({ data: [] as any[] }),
+          : Promise.resolve({ data: [] as { user_uuid: string; first_name: string | null; last_name: string | null; email: string }[] }),
       ]);
 
       const pkgMap = new Map(
-        (packageRows ?? []).map((p: any) => [p.id, { name: p.name, slug: p.slug ?? "" }])
+        (packageRows ?? []).map((p) => [p.id, { name: p.name, slug: p.slug ?? "" }])
       );
-      const instMap = new Map(instances.map((i: any) => [i.tenant_id, i.package_id]));
+      const instMap = new Map(instances.map((i) => [i.tenant_id, i.package_id]));
       const cscAssignMap = new Map(
-        (cscAssignments ?? []).map((r: any) => [r.tenant_id, r.csc_user_id])
+        (cscAssignments ?? []).map((r) => [r.tenant_id, r.csc_user_id])
       );
       const cscUserMap = new Map(
-        (cscUsers ?? []).map((u: any) => [
+        (cscUsers ?? []).map((u) => [
           u.user_uuid,
           `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim(),
         ])
       );
       const contactAssignMap = new Map(
-        (contactAssignments ?? []).map((r: any) => [r.tenant_id, r.user_id])
+        (contactAssignments ?? []).map((r) => [r.tenant_id, r.user_id])
       );
-      const contactUserMap = new Map((contactUsers ?? []).map((u: any) => [u.user_uuid, u]));
+      const contactUserMap = new Map((contactUsers ?? []).map((u) => [u.user_uuid, u]));
       const statusLabels = new Map(
-        (statusRows ?? []).map((s: any) => [s.value, s.description])
+        (statusRows ?? []).map((s) => [s.value, s.description])
       );
 
       const result: TenantWithMembership[] = (tenantRows ?? [])
-        .map((t: any) => {
+        .map((t) => {
           const pkg = pkgMap.get(instMap.get(t.id));
           const cscUserId = cscAssignMap.get(t.id) ?? null;
           const contactUserId = contactAssignMap.get(t.id) ?? null;
@@ -388,7 +388,6 @@ export default function BulkMembershipCertificatesPage() {
   }
 
   return (
-    <DashboardLayout>
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
           <div>
@@ -586,6 +585,5 @@ export default function BulkMembershipCertificatesPage() {
           </>
         )}
       </div>
-    </DashboardLayout>
   );
 }

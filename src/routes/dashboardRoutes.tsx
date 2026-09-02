@@ -89,6 +89,12 @@ const ProvisioningRunDetailPage = lazy(() => import("@/pages/admin/ProvisioningR
 const BulkInvite = lazy(() => import("@/pages/admin/BulkInvite"));
 const CohortAccessSender = lazy(() => import("@/pages/admin/CohortAccessSender"));
 const CohortAccessSenderJob = lazy(() => import("@/pages/admin/CohortAccessSenderJob"));
+const ManageInvites = lazy(() => import("@/pages/ManageInvites"));
+const TeamUsers = lazy(() => import("@/pages/TeamUsers"));
+const TenantUsers = lazy(() => import("@/pages/TenantUsers"));
+const BulkMembershipCertificatesPage = lazy(() => import("@/pages/admin/BulkMembershipCertificatesPage"));
+const StaffEngagements = lazy(() => import("@/pages/admin/StaffEngagements"));
+const StaffEngagementDetail = lazy(() => import("@/pages/admin/StaffEngagementDetail"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -252,7 +258,24 @@ const CohortAccessSenderJob = lazy(() => import("@/pages/admin/CohortAccessSende
  * requireSuperAdmin, per the plan's page-local-check preservation rule.
  * NewStarterWizard and BulkInvite each needed a Fragment (a sibling
  * Dialog alongside the main content div); the other three were
- * single-root across all of their return branches.
+ * single-root across all of their return branches. PR 8 (Administration:
+ * plain cohort) added the last 6 Administration files to the plain
+ * group: ManageInvites, TeamUsers, TenantUsers,
+ * BulkMembershipCertificatesPage, StaffEngagements,
+ * StaffEngagementDetail. ManageInvites was previously routed through
+ * ManageInvitesWrapper.tsx, a non-mechanical adapter that added no
+ * DashboardLayout of its own (unlike the *Wrapper.tsx files retired in
+ * the original PR #489 sweep) -- following the Processes.tsx precedent
+ * from that same PR, the wrapper was deleted and /manage-invites now
+ * points directly at ManageInvites. ManageInvites and
+ * StaffEngagementDetail each needed a Fragment (dialog siblings
+ * alongside the main content div); the other four were single-root.
+ * StaffEngagements/StaffEngagementDetail's page-local
+ * `role !== "Super Admin" && role !== "Integrator"` gate and
+ * BulkMembershipCertificatesPage's page-local SuperAdmin/CSC navigation
+ * gate were kept unchanged -- both are the real access control for
+ * these plain-tier routes, not redundant with the route guard, per the
+ * plan's page-local-check preservation rule.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -356,6 +379,12 @@ export const dashboardLayoutRoutes = (
       <Route path="/resource-hub/most-used" element={<ResourceMostUsed />} />
       <Route path="/resource-hub/favourites" element={<ResourceFavourites />} />
       <Route path="/resource-hub/updates" element={<ResourceUpdatesLog />} />
+      <Route path="/manage-invites" element={<ManageInvites />} />
+      <Route path="/admin/team-users" element={<TeamUsers />} />
+      <Route path="/admin/tenant-users" element={<TenantUsers />} />
+      <Route path="/clients/bulk-membership-certificates" element={<BulkMembershipCertificatesPage />} />
+      <Route path="/admin/staff-engagements" element={<StaffEngagements />} />
+      <Route path="/admin/staff-engagements/:id" element={<StaffEngagementDetail />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />
