@@ -127,10 +127,7 @@ const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
 const ResearchJobs = lazy(() => import("./pages/ResearchJobs"));
 const ResearchJobDetail = lazy(() => import("./pages/ResearchJobDetail"));
-const RegulatorWatchDashboard = lazy(() => import("./pages/RegulatorWatchDashboard"));
-const RegulatorChangeEventDetail = lazy(() => import("./pages/RegulatorChangeEventDetail"));
  const ClientActivityFeed = lazy(() => import("./pages/ClientActivityFeed"));
-const ContactDirectory = lazy(() => import("./pages/admin/ContactDirectory"));
 
 
 // Academy pages (placeholder)
@@ -744,8 +741,6 @@ const App = () => (
 
             <Route path="/admin/tenant-users" element={<ProtectedRoute><TenantUsers /></ProtectedRoute>} />
             {/* Admin Stages */}
-            <Route path="/administration/contacts" element={<ProtectedRoute allowVivacityTeam><ContactDirectory /></ProtectedRoute>} />
-
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
             <Route path="/my/kpi" element={<ProtectedRoute><MyKpiDashboardPage /></ProtectedRoute>} />
@@ -761,8 +756,6 @@ const App = () => (
             {/* Research Jobs */}
             <Route path="/admin/research-jobs" element={<ProtectedRoute><ResearchJobs /></ProtectedRoute>} />
             <Route path="/admin/research-jobs/:jobId" element={<ProtectedRoute><ResearchJobDetail /></ProtectedRoute>} />
-            <Route path="/admin/regulator-watch" element={<ProtectedRoute allowVivacityTeam><RegulatorWatchDashboard /></ProtectedRoute>} />
-            <Route path="/admin/regulator-watch/:eventId" element={<ProtectedRoute allowVivacityTeam><RegulatorChangeEventDetail /></ProtectedRoute>} />
             <Route path="/client-activity" element={<ProtectedRoute><ClientActivityFeed /></ProtectedRoute>} />
             {supportTicketsRoutes}
             {/* Academy Routes */}
