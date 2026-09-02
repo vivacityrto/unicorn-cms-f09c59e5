@@ -7,7 +7,6 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +21,20 @@ import {
   AlertTriangle, Globe, FileText, Shield,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+
+interface RiskFlag {
+  severity?: string;
+  risk_category?: string;
+  standard_clause?: string;
+  claim_excerpt?: string;
+  source_url?: string;
+}
+
+interface Citation {
+  index?: number;
+  url: string;
+  retrieved_at?: string;
+}
 
 const SEVERITY_COLORS: Record<string, string> = {
   high: "bg-red-500/10 text-red-600 border-red-600",
@@ -127,31 +140,26 @@ export default function ResearchJobDetail() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   if (!job) {
     return (
-      <DashboardLayout>
-        <div className="p-6 text-center">
-          <p className="text-muted-foreground">Job not found</p>
-          <Button variant="outline" onClick={() => navigate("/admin/research-jobs")} className="mt-4">
-            Back to Research Jobs
-          </Button>
-        </div>
-      </DashboardLayout>
+      <div className="p-6 text-center">
+        <p className="text-muted-foreground">Job not found</p>
+        <Button variant="outline" onClick={() => navigate("/admin/research-jobs")} className="mt-4">
+          Back to Research Jobs
+        </Button>
+      </div>
     );
   }
 
-  const inputJson = job.input_json as Record<string, any> || {};
+  const inputJson = (job.input_json as { website?: string; rto_code?: string }) || {};
 
   return (
-    <DashboardLayout>
       <div className="space-y-4 p-4 max-w-screen-xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -183,7 +191,7 @@ export default function ResearchJobDetail() {
             </div>
             <div>
               <span className="text-muted-foreground">Standards</span>
-              <p className="font-medium">{(job as any).standards_version || "—"}</p>
+              <p className="font-medium">{(job as { standards_version?: string }).standards_version || "—"}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Created</span>
@@ -247,8 +255,8 @@ export default function ResearchJobDetail() {
 
         {/* Findings */}
         {findings && findings.map(finding => {
-          const riskFlags = (finding as any).risk_flags_json as any[] || [];
-          const citations = finding.citations_json as any[] || [];
+          const riskFlags = ((finding as { risk_flags_json?: RiskFlag[] }).risk_flags_json) || [];
+          const citations = (finding.citations_json as unknown as Citation[]) || [];
 
           return (
             <Card key={finding.id}>
@@ -289,7 +297,7 @@ export default function ResearchJobDetail() {
                         Risk Flags ({riskFlags.length})
                       </h4>
                       <div className="space-y-1.5">
-                        {riskFlags.map((flag: any, i: number) => (
+                        {riskFlags.map((flag: RiskFlag, i: number) => (
                           <div key={i} className="flex items-start gap-2 p-2 rounded border text-xs">
                             <Badge
                               variant="outline"
@@ -325,7 +333,7 @@ export default function ResearchJobDetail() {
                     <div>
                       <h4 className="text-xs font-semibold mb-1">Citations ({citations.length})</h4>
                       <div className="space-y-0.5">
-                        {citations.map((c: any) => (
+                        {citations.map((c: Citation) => (
                           <a
                             key={c.index || c.url}
                             href={c.url}
@@ -406,6 +414,5 @@ export default function ResearchJobDetail() {
           </Card>
         )}
       </div>
-    </DashboardLayout>
   );
 }

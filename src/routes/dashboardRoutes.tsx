@@ -95,6 +95,11 @@ const TenantUsers = lazy(() => import("@/pages/TenantUsers"));
 const BulkMembershipCertificatesPage = lazy(() => import("@/pages/admin/BulkMembershipCertificatesPage"));
 const StaffEngagements = lazy(() => import("@/pages/admin/StaffEngagements"));
 const StaffEngagementDetail = lazy(() => import("@/pages/admin/StaffEngagementDetail"));
+const ResearchJobs = lazy(() => import("@/pages/ResearchJobs"));
+const ResearchJobDetail = lazy(() => import("@/pages/ResearchJobDetail"));
+const SharePointFolderMapping = lazy(() => import("@/pages/admin/SharePointFolderMapping"));
+const SharePointSitesAdmin = lazy(() => import("@/pages/admin/SharePointSitesAdmin"));
+const AiInsightsPage = lazy(() => import("@/pages/admin/ai-insights"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -275,7 +280,24 @@ const StaffEngagementDetail = lazy(() => import("@/pages/admin/StaffEngagementDe
  * BulkMembershipCertificatesPage's page-local SuperAdmin/CSC navigation
  * gate were kept unchanged -- both are the real access control for
  * these plain-tier routes, not redundant with the route guard, per the
- * plan's page-local-check preservation rule.
+ * plan's page-local-check preservation rule. PR 9 (remaining System
+ * Config plain cohort, final PR of the migration plan's original
+ * 9-PR "narrow-audience-first" sequencing) added the last 5 System
+ * Config files: ResearchJobs, ResearchJobDetail, SharePointFolderMapping,
+ * SharePointSitesAdmin to the plain group, and admin/ai-insights
+ * (AiInsightsPage) to the requireSuperAdmin group. AiInsightsPage was
+ * one of the plan's 6 flagged local-permission-gate pages: its page-local
+ * `!isSuperAdmin()` check did a hard Navigate redirect with no shell at
+ * all -- placing it on the plain tier would have introduced a real
+ * regression (any authenticated staff member briefly mounting the SA
+ * shell before the page's own check redirected them away). Carl
+ * explicitly confirmed moving it to requireSuperAdmin instead (matching
+ * the check's own semantics exactly, closing that gap) -- the page-local
+ * check itself was left unchanged per the preservation rule, now a
+ * harmless backstop. ResearchJobs kept its page-local
+ * `!isSuperAdmin && !isVivacityTeam` shell-wrapped "Access Restricted"
+ * gate unchanged, same shape as RegulatorWatchDashboard from PR 6. All
+ * five pages were single-root, no Fragment needed.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -311,6 +333,7 @@ export const dashboardLayoutRoutes = (
       <Route path="/admin/bulk-invite" element={<BulkInvite />} />
       <Route path="/admin/cohort-sender" element={<CohortAccessSender />} />
       <Route path="/admin/cohort-sender/jobs/:jobId" element={<CohortAccessSenderJob />} />
+      <Route path="/admin/ai-insights" element={<AiInsightsPage />} />
     </Route>
     <Route element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/superadmin/academy/enrollments" element={<AcademyEnrolmentsPage />} />
@@ -385,6 +408,10 @@ export const dashboardLayoutRoutes = (
       <Route path="/clients/bulk-membership-certificates" element={<BulkMembershipCertificatesPage />} />
       <Route path="/admin/staff-engagements" element={<StaffEngagements />} />
       <Route path="/admin/staff-engagements/:id" element={<StaffEngagementDetail />} />
+      <Route path="/admin/research-jobs" element={<ResearchJobs />} />
+      <Route path="/admin/research-jobs/:jobId" element={<ResearchJobDetail />} />
+      <Route path="/admin/sharepoint-folder-mapping" element={<SharePointFolderMapping />} />
+      <Route path="/admin/sharepoint-sites" element={<SharePointSitesAdmin />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />

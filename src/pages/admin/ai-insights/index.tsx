@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import {
   Select,
   SelectContent,
@@ -26,7 +25,6 @@ export default function AiInsightsPage() {
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
   return (
-    <DashboardLayout>
       <div className="container mx-auto px-4 py-6 space-y-6 max-w-[1400px]">
         <header className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -78,6 +76,5 @@ export default function AiInsightsPage() {
 
         <DraftDrillDown row={openRow} open={drillOpen} onOpenChange={setDrillOpen} />
       </div>
-    </DashboardLayout>
   );
 }

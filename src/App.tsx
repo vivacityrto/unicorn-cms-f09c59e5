@@ -32,9 +32,6 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const BulkDocumentJobsList = lazy(() => import("./pages/BulkDocumentJobsList"));
  const BulkDocumentJobProgress = lazy(() => import("./pages/BulkDocumentJobProgress"));
  const BulkGenerateNew = lazy(() => import("./pages/BulkGenerateNew"));
- const SharePointFolderMapping = lazy(() => import("./pages/admin/SharePointFolderMapping"));
- const SharePointSitesAdmin = lazy(() => import("./pages/admin/SharePointSitesAdmin"));
- const AiInsightsPage = lazy(() => import("./pages/admin/ai-insights"));
 
  // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
  const TenantDocumentDetailWrapper = lazy(() => import("./pages/TenantDocumentDetailWrapper"));
@@ -114,8 +111,6 @@ const AskVivAssistant = lazy(() => import("./pages/AskVivAssistant"));
 const EosHealthCheck = lazy(() => import("./pages/EosHealthCheck"));
 const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
-const ResearchJobs = lazy(() => import("./pages/ResearchJobs"));
-const ResearchJobDetail = lazy(() => import("./pages/ResearchJobDetail"));
  const ClientActivityFeed = lazy(() => import("./pages/ClientActivityFeed"));
 
 
@@ -282,33 +277,9 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route 
-              path="/admin/sharepoint-folder-mapping" 
-              element={
-                <ProtectedRoute>
-                  <SharePointFolderMapping />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/sharepoint-sites" 
-              element={
-                <ProtectedRoute>
-                  <SharePointSitesAdmin />
-                </ProtectedRoute>
-              }
-            />
             {/* Superseded by /manage-documents, which uses the same GovernanceDocumentDetail
                 drill-down but is the actively-maintained canonical documents page. */}
             <Route path="/admin/governance-documents" element={<Navigate to="/manage-documents" replace />} />
-            <Route
-              path="/admin/ai-insights"
-              element={
-                <ProtectedRoute>
-                  <AiInsightsPage />
-                </ProtectedRoute>
-              }
-            />
             <Route
               path="/tenant/:tenantId/document/:documentId"
               element={
@@ -722,9 +693,6 @@ const App = () => (
             <Route path="/admin/qa/smoke" element={<ProtectedRoute requireSuperAdmin><QASmokeTest /></ProtectedRoute>} />
             <Route path="/admin/clickup-mapping" element={<ProtectedRoute requireSuperAdmin><ClickUpTenantMapping /></ProtectedRoute>} />
             <Route path="/admin/clickup-import" element={<ProtectedRoute requireSuperAdmin><ClickUpImport /></ProtectedRoute>} />
-            {/* Research Jobs */}
-            <Route path="/admin/research-jobs" element={<ProtectedRoute><ResearchJobs /></ProtectedRoute>} />
-            <Route path="/admin/research-jobs/:jobId" element={<ProtectedRoute><ResearchJobDetail /></ProtectedRoute>} />
             <Route path="/client-activity" element={<ProtectedRoute><ClientActivityFeed /></ProtectedRoute>} />
             {supportTicketsRoutes}
             {/* Academy Routes */}
