@@ -1,4 +1,3 @@
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useResources } from "@/hooks/useResources";
 import { Resource, getCategoryLabel } from "@/types/resource";
 import { formatDistanceToNow, format } from "date-fns";
@@ -28,7 +27,6 @@ const ResourceUpdatesLog = () => {
   const dateKeys = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -134,7 +132,6 @@ const ResourceUpdatesLog = () => {
           )}
         </div>
       </div>
-    </DashboardLayout>
   );
 };
 

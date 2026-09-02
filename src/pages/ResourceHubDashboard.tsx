@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useResources } from "@/hooks/useResources";
 import { ResourceGrid } from "@/components/resource-hub/ResourceGrid";
 import { ResourceSearch } from "@/components/resource-hub/ResourceSearch";
@@ -86,7 +85,6 @@ const ResourceHubDashboard = () => {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-8">
         {/* Header */}
         <div>
@@ -204,7 +202,6 @@ const ResourceHubDashboard = () => {
           </>
         )}
       </div>
-    </DashboardLayout>
   );
 };
 
