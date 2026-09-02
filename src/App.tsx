@@ -43,8 +43,6 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
  const TenantDocumentDetailWrapper = lazy(() => import("./pages/TenantDocumentDetailWrapper"));
 
- const PackageBuilder = lazy(() => import("./pages/PackageBuilder"));
- const PackageBuilderDetail = lazy(() => import("./pages/PackageBuilderDetail"));
  const AcceptInvitationWrapper = lazy(() => import("./pages/AcceptInvitationWrapper"));
  const NotFound = lazy(() => import("./pages/NotFound"));
  const EosOverview = lazy(() => import("./pages/EosOverview"));
@@ -123,8 +121,6 @@ const StaffEngagementDetail = lazy(() => import("./pages/admin/StaffEngagementDe
 const MyExitInterview = lazy(() => import("./pages/MyExitInterview"));
  const TenantUsers = lazy(() => import("./pages/TenantUsers"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
- const StageBuilder = lazy(() => import("./pages/StageBuilder"));
-const AdminStageAnalytics = lazy(() => import("./pages/AdminStageAnalytics"));
 const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
@@ -420,22 +416,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <RtoTipsWrapper />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/admin/manage-packages"
-              element={
-                <ProtectedRoute requireSuperAdmin>
-                  <PackageBuilder />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/package-builder/:id"
-              element={
-                <ProtectedRoute requireSuperAdmin>
-                  <PackageBuilderDetail />
                 </ProtectedRoute>
               } 
             />
@@ -819,8 +799,6 @@ const App = () => (
             <Route path="/admin/diagnostics/zero-progress-packages" element={<ProtectedRoute requireSuperAdmin><AdminZeroProgressPackagesPage /></ProtectedRoute>} />
             <Route path="/admin/tenant-users" element={<ProtectedRoute><TenantUsers /></ProtectedRoute>} />
             {/* Admin Stages */}
-            <Route path="/admin/stage-builder" element={<ProtectedRoute requireSuperAdmin><StageBuilder /></ProtectedRoute>} />
-            <Route path="/admin/stage-analytics" element={<ProtectedRoute requireSuperAdmin><AdminStageAnalytics /></ProtectedRoute>} />
             <Route path="/admin/operations" element={<ProtectedRoute requireSuperAdmin><AdminOperations /></ProtectedRoute>} />
             <Route path="/administration/role-permissions" element={<ProtectedRoute requireSuperAdmin><RolePermissionsEditor /></ProtectedRoute>} />
             <Route path="/administration/contacts" element={<ProtectedRoute allowVivacityTeam><ContactDirectory /></ProtectedRoute>} />

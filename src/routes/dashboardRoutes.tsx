@@ -6,6 +6,10 @@ const DashboardLayoutRoute = lazy(() => import("@/components/layout/DashboardLay
 
 const AdminManageStages = lazy(() => import("@/pages/AdminManageStages"));
 const AdminStageDetail = lazy(() => import("@/pages/AdminStageDetail"));
+const PackageBuilder = lazy(() => import("@/pages/PackageBuilder"));
+const PackageBuilderDetail = lazy(() => import("@/pages/PackageBuilderDetail"));
+const StageBuilder = lazy(() => import("@/pages/StageBuilder"));
+const AdminStageAnalytics = lazy(() => import("@/pages/AdminStageAnalytics"));
 const PackageDetail = lazy(() => import("@/pages/PackageDetail"));
 const AdminPackageTenantDetail = lazy(() => import("@/pages/AdminPackageTenantDetail"));
 const AdminTgaIntegration = lazy(() => import("@/pages/AdminTgaIntegration"));
@@ -117,12 +121,29 @@ const WorkMeetings = lazy(() => import("@/pages/WorkMeetings"));
  * route (unreachable from any UI, not linked from anywhere -- a
  * pre-existing bug, not introduced by this PR) -- deleting it here would
  * break that reference. Not fixed as part of this PR; flagged separately.
+ *
+ * Ongoing migration (see docs/kb/reference/dashboard-direct-layout-
+ * migration-plan-2026-09-01.md): the ~115 remaining staff pages that still
+ * weave <DashboardLayout> directly into their own JSX (rather than the
+ * *Wrapper.tsx mechanical pattern above) are being converted in batches,
+ * each as its own PR, into the sibling guard-tier groups below. PR 1
+ * (System Config: package/stage cohort) added PackageBuilder,
+ * PackageBuilderDetail, StageBuilder, AdminStageAnalytics to the
+ * requireSuperAdmin group -- all four kept their page-local access checks
+ * (e.g. StageBuilder/AdminStageAnalytics's own `if (!isSuperAdmin)` early
+ * return) unchanged; only the DashboardLayout wrap was removed, per the
+ * plan's rule against removing page-local authorization just because a
+ * route guard appears equivalent.
  */
 export const dashboardLayoutRoutes = (
   <>
     <Route element={<ProtectedRoute requireSuperAdmin><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/admin/stages" element={<AdminManageStages />} />
       <Route path="/admin/stages/:stage_id" element={<AdminStageDetail />} />
+      <Route path="/admin/manage-packages" element={<PackageBuilder />} />
+      <Route path="/admin/package-builder/:id" element={<PackageBuilderDetail />} />
+      <Route path="/admin/stage-builder" element={<StageBuilder />} />
+      <Route path="/admin/stage-analytics" element={<AdminStageAnalytics />} />
     </Route>
     <Route element={<ProtectedRoute><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/admin/package/:id" element={<PackageDetail />} />
