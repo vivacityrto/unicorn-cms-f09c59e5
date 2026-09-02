@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -387,36 +386,30 @@ export default function BulkDocumentJobProgress() {
 
   if (accessLoading || jobLoading) {
     return (
-      <DashboardLayout>
-        <div className="p-6 space-y-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-      </DashboardLayout>
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-32 w-full" />
+      </div>
     );
   }
 
   if (!isVivacityStaff) {
     return (
-      <DashboardLayout>
-        <div className="p-6">
-          <div className="rounded-md border p-6 text-sm text-muted-foreground">
-            You don't have access to this page.
-          </div>
+      <div className="p-6">
+        <div className="rounded-md border p-6 text-sm text-muted-foreground">
+          You don't have access to this page.
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (!job) {
     return (
-      <DashboardLayout>
-        <div className="p-6">
-          <div className="rounded-md border p-6 text-sm text-muted-foreground">
-            Job not found.
-          </div>
+      <div className="p-6">
+        <div className="rounded-md border p-6 text-sm text-muted-foreground">
+          Job not found.
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
@@ -454,7 +447,6 @@ export default function BulkDocumentJobProgress() {
   const seg = (n: number) => (total > 0 ? (n / total) * 100 : 0);
 
   return (
-    <DashboardLayout>
     <div className="p-6 space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -802,7 +794,6 @@ export default function BulkDocumentJobProgress() {
         onRequeued={(newJobId) => navigate(`/manage-documents/bulk-jobs/${newJobId}`)}
       />
     </div>
-    </DashboardLayout>
   );
 }
 

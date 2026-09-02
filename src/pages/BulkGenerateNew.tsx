@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { TargetedMode } from "@/components/documents/bulk-generate/targeted/TargetedMode";
 
 type ActiveTenant = { id: number; name: string | null; rto_name: string | null };
@@ -37,30 +36,25 @@ export default function BulkGenerateNew() {
 
   if (accessLoading) {
     return (
-      <DashboardLayout>
-        <div className="p-6 space-y-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </DashboardLayout>
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-96 w-full" />
+      </div>
     );
   }
 
   if (!isVivacityStaff) {
     return (
-      <DashboardLayout>
-        <div className="p-6">
-          <div className="rounded-md border p-6 text-sm text-muted-foreground">
-            You don't have access to this page.
-          </div>
+      <div className="p-6">
+        <div className="rounded-md border p-6 text-sm text-muted-foreground">
+          You don't have access to this page.
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-4 flex flex-col h-[calc(100vh-4rem)] animate-fade-in">
+    <div className="p-4 flex flex-col h-[calc(100vh-4rem)] animate-fade-in">
         <div className="flex items-center justify-between mb-3 shrink-0">
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">
@@ -85,6 +79,5 @@ export default function BulkGenerateNew() {
           <TargetedMode tenants={tenants} />
         </div>
       </div>
-    </DashboardLayout>
   );
 }

@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
@@ -172,29 +171,24 @@ export default function BulkDocumentJobsList() {
 
   if (accessLoading) {
     return (
-      <DashboardLayout>
-        <div className="p-6 space-y-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </DashboardLayout>
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-64 w-full" />
+      </div>
     );
   }
 
   if (!isVivacityStaff) {
     return (
-      <DashboardLayout>
-        <div className="p-6">
-          <div className="rounded-md border p-6 text-sm text-muted-foreground">
-            You don't have access to this page.
-          </div>
+      <div className="p-6">
+        <div className="rounded-md border p-6 text-sm text-muted-foreground">
+          You don't have access to this page.
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
     <div className="p-6 space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -383,6 +377,5 @@ export default function BulkDocumentJobsList() {
         </div>
       )}
     </div>
-    </DashboardLayout>
   );
 }
