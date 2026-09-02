@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useMergeFields, type MergeFieldDefinition } from "@/hooks/useMergeFields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,8 +161,8 @@ export default function MergeFieldTagsAdmin() {
         toast({ title: "Merge field created" });
       }
       setDialogOpen(false);
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Unknown error", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -174,8 +173,8 @@ export default function MergeFieldTagsAdmin() {
     try {
       await deleteMergeField(deleteTarget.id);
       toast({ title: "Merge field deleted" });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Unknown error", variant: "destructive" });
     }
     setDeleteTarget(null);
   };
@@ -184,13 +183,12 @@ export default function MergeFieldTagsAdmin() {
     try {
       await updateMergeField(field.id, { is_active: !field.is_active });
       toast({ title: field.is_active ? "Field deactivated" : "Field activated" });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Unknown error", variant: "destructive" });
     }
   };
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -478,6 +476,5 @@ export default function MergeFieldTagsAdmin() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </DashboardLayout>
   );
 }

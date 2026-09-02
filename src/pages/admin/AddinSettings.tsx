@@ -5,8 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { DashboardLayout } from "@/components/DashboardLayout";
-import { 
+import {
   Puzzle, 
   Mail, 
   Calendar, 
@@ -25,7 +24,6 @@ export default function AddinSettings() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
         <div className="p-6 space-y-6">
           <div className="space-y-2">
             <Skeleton className="h-8 w-64" />
@@ -33,12 +31,10 @@ export default function AddinSettings() {
           </div>
           <Skeleton className="h-64 w-full" />
         </div>
-      </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -215,6 +211,5 @@ export default function AddinSettings() {
         </CardContent>
       </Card>
       </div>
-    </DashboardLayout>
   );
 }

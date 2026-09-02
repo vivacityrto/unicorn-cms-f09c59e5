@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
@@ -207,17 +206,14 @@ export default function AskVivFlags() {
 
   if (authLoading) {
     return (
-      <DashboardLayout>
         <div className="flex items-center justify-center min-h-screen">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </DashboardLayout>
     );
   }
 
   if (!hasAccess) {
     return (
-      <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-screen gap-4">
           <h1 className="text-2xl font-semibold">Access Denied</h1>
           <p className="text-muted-foreground">This page is only available to Vivacity internal users.</p>
@@ -226,12 +222,10 @@ export default function AskVivFlags() {
             Go back
           </Button>
         </div>
-      </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
     <div className="container max-w-6xl py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -489,6 +483,5 @@ export default function AskVivFlags() {
         </DialogContent>
       </Dialog>
     </div>
-    </DashboardLayout>
   );
 }

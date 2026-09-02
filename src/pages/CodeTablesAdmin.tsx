@@ -5,7 +5,6 @@ import { CodeTableSidebar } from "@/components/admin/CodeTableSidebar";
 import { CodeTableDataGrid } from "@/components/admin/CodeTableDataGrid";
 import { CodeRowDialog } from "@/components/admin/CodeRowDialog";
 import { AppSettingsForm } from "@/components/admin/AppSettingsForm";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { codeTablesService } from "@/services/codeTablesService";
 import type { CodeTableRow } from "@/services/codeTablesService";
 import { toast } from "@/hooks/use-toast";
@@ -58,7 +57,7 @@ export default function CodeTablesAdmin() {
     setDialogOpen(true);
   }
 
-  function handleSave(data: Record<string, any>) {
+  function handleSave(data: Record<string, unknown>) {
     if (dialogMode === "edit" && dialogRow) {
       const pk = getPrimaryKey();
       updateRow.mutate(
@@ -81,7 +80,6 @@ export default function CodeTablesAdmin() {
   const isAppSettings = selectedTable === "app_settings";
 
   return (
-    <DashboardLayout>
       <div className="flex h-[calc(100vh-10rem)] bg-background rounded-lg border overflow-hidden">
         <CodeTableSidebar
           tables={tables}
@@ -104,8 +102,8 @@ export default function CodeTablesAdmin() {
                 toast({ title: "Setting added successfully" });
                 refetchTables();
                 refetchData();
-              } catch (err: any) {
-                toast({ title: "Failed to add setting", description: err.message, variant: "destructive" });
+              } catch (err) {
+                toast({ title: "Failed to add setting", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
               }
             }}
             saving={updateRow.isPending}
@@ -156,6 +154,5 @@ export default function CodeTablesAdmin() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </DashboardLayout>
   );
 }

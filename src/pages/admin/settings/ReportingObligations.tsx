@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Plus, BellRing } from "lucide-react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ObligationsTable } from "@/components/admin/reporting-obligations/ObligationsTable";
 import { ObligationFormDialog } from "@/components/admin/reporting-obligations/ObligationFormDialog";
@@ -29,7 +28,7 @@ export default function ReportingObligations() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="container mx-auto py-8 space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
@@ -68,6 +67,6 @@ export default function ReportingObligations() {
         onOpenChange={(o) => !o && setBroadcastTarget(null)}
         obligation={broadcastTarget}
       />
-    </DashboardLayout>
+    </>
   );
 }

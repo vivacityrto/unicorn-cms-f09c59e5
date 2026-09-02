@@ -1,5 +1,4 @@
  import { useState, useEffect } from 'react';
- import { DashboardLayout } from '@/components/DashboardLayout';
  import { useAuth } from '@/hooks/useAuth';
  import { useRBAC } from '@/hooks/useRBAC';
  import { supabase } from '@/integrations/supabase/client';
@@ -26,7 +25,8 @@
    Calendar
  } from 'lucide-react';
  import { format } from 'date-fns';
- 
+ import type { Json } from '@/integrations/supabase/types';
+
  interface KnowledgeItem {
    id: string;
    source_type: string;
@@ -36,9 +36,9 @@
    owner_user_id: string | null;
    approval_status: string;
    review_date: string | null;
-   applicable_packages: any;
-   applicable_phases: any;
-   applicable_roles: any;
+   applicable_packages: Json;
+   applicable_phases: Json;
+   applicable_roles: Json;
    tags: string[] | null;
    excludes_rto_2015: boolean;
    regulatory_standard: string | null;
@@ -103,7 +103,7 @@
        console.error('Error loading knowledge items:', error);
        toast({ title: 'Error loading items', variant: 'destructive' });
      } else {
-       setItems((data || []) as KnowledgeItem[]);
+       setItems((data || []) as unknown as KnowledgeItem[]);
      }
      setIsLoading(false);
    }
@@ -264,7 +264,6 @@
  
    if (!isSuperAdmin) {
      return (
-       <DashboardLayout>
          <div className="flex items-center justify-center h-full">
            <Card className="max-w-md">
              <CardContent className="pt-6">
@@ -278,12 +277,10 @@
              </CardContent>
            </Card>
          </div>
-       </DashboardLayout>
      );
    }
  
    return (
-     <DashboardLayout>
        <div className="p-6 space-y-6">
          {/* Header */}
          <div className="flex items-center justify-between">
@@ -527,6 +524,5 @@
            </DialogContent>
          </Dialog>
        </div>
-     </DashboardLayout>
    );
  }

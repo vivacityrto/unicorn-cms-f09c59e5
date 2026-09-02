@@ -57,8 +57,6 @@ const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const PostSignInRedirect = lazy(() => import("./pages/PostSignInRedirect"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
-const AddinSettings = lazy(() => import("./pages/admin/AddinSettings"));
-const AddinDiagnostics = lazy(() => import("./pages/admin/AddinDiagnostics"));
 const ClickUpTenantMapping = lazy(() => import("./pages/admin/ClickUpTenantMapping"));
 const AddinShell = lazy(() => import("./pages/addin/AddinShell"));
 const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
@@ -111,14 +109,12 @@ const ProvisioningRunDetailPage = lazy(() => import("./pages/admin/ProvisioningR
 const BulkInvite = lazy(() => import("./pages/admin/BulkInvite"));
 const CohortAccessSender = lazy(() => import("./pages/admin/CohortAccessSender"));
 const CohortAccessSenderJob = lazy(() => import("./pages/admin/CohortAccessSenderJob"));
-const AdminZeroProgressPackagesPage = lazy(() => import("./pages/admin/AdminZeroProgressPackagesPage"));
 const BulkMembershipCertificatesPage = lazy(() => import("./pages/admin/BulkMembershipCertificatesPage"));
 const StaffEngagements = lazy(() => import("./pages/admin/StaffEngagements"));
 const StaffEngagementDetail = lazy(() => import("./pages/admin/StaffEngagementDetail"));
 const MyExitInterview = lazy(() => import("./pages/MyExitInterview"));
  const TenantUsers = lazy(() => import("./pages/TenantUsers"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
-const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
 const MyKpiDashboardPage = lazy(() => import("./pages/MyKpiDashboardPage"));
@@ -131,25 +127,15 @@ const TimeInbox = lazy(() => import("./pages/TimeInbox"));
 const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
 const ProcessForm = lazy(() => import("./pages/ProcessForm"));
 const RoleReference = lazy(() => import("./pages/RoleReference"));
-const AdminAssistant = lazy(() => import("./pages/AdminAssistant"));
 const AskVivAssistant = lazy(() => import("./pages/AskVivAssistant"));
-const AdminKnowledgeLibrary = lazy(() => import("./pages/AdminKnowledgeLibrary"));
-const AdminEOSProcesses = lazy(() => import("./pages/AdminEOSProcesses"));
 const EosHealthCheck = lazy(() => import("./pages/EosHealthCheck"));
 const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
-const AskVivFlags = lazy(() => import("./pages/internal/AskVivFlags"));
 const ResearchJobs = lazy(() => import("./pages/ResearchJobs"));
 const ResearchJobDetail = lazy(() => import("./pages/ResearchJobDetail"));
 const RegulatorWatchDashboard = lazy(() => import("./pages/RegulatorWatchDashboard"));
 const RegulatorChangeEventDetail = lazy(() => import("./pages/RegulatorChangeEventDetail"));
-const KnowledgeExplorer = lazy(() => import("./pages/KnowledgeExplorer"));
  const ClientActivityFeed = lazy(() => import("./pages/ClientActivityFeed"));
-const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
-const LifecycleChecklistsAdmin = lazy(() => import("./pages/admin/LifecycleChecklistsAdmin"));
-const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
-const ReportingObligationsAdmin = lazy(() => import("./pages/admin/settings/ReportingObligations"));
-const RolePermissionsEditor = lazy(() => import("./pages/admin/RolePermissionsEditor"));
 const ContactDirectory = lazy(() => import("./pages/admin/ContactDirectory"));
 
 
@@ -776,46 +762,29 @@ const App = () => (
             <Route path="/admin/cohort-sender/jobs/:jobId" element={<ProtectedRoute requireSuperAdmin><CohortAccessSenderJob /></ProtectedRoute>} />
 
 
-            <Route path="/admin/diagnostics/zero-progress-packages" element={<ProtectedRoute requireSuperAdmin><AdminZeroProgressPackagesPage /></ProtectedRoute>} />
             <Route path="/admin/tenant-users" element={<ProtectedRoute><TenantUsers /></ProtectedRoute>} />
             {/* Admin Stages */}
-            <Route path="/admin/operations" element={<ProtectedRoute requireSuperAdmin><AdminOperations /></ProtectedRoute>} />
-            <Route path="/administration/role-permissions" element={<ProtectedRoute requireSuperAdmin><RolePermissionsEditor /></ProtectedRoute>} />
             <Route path="/administration/contacts" element={<ProtectedRoute allowVivacityTeam><ContactDirectory /></ProtectedRoute>} />
-            
+
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
             <Route path="/my/kpi" element={<ProtectedRoute><MyKpiDashboardPage /></ProtectedRoute>} />
             <Route path="/kpi" element={<ProtectedRoute><KpiPage /></ProtectedRoute>} />
-            {/* AI Assistant - SuperAdmin only */}
-            <Route path="/admin/assistant" element={<ProtectedRoute requireSuperAdmin><AdminAssistant /></ProtectedRoute>} />
             {/* Ask Viv Assistant - new conversational RAG bot, Vivacity staff only (self-gated inside the page via canAccessAskViv() + rollout flags) */}
             <Route path="/ask-viv" element={<ProtectedRoute><AskVivAssistant /></ProtectedRoute>} />
-           <Route path="/admin/knowledge" element={<ProtectedRoute requireSuperAdmin><AdminKnowledgeLibrary /></ProtectedRoute>} />
-           <Route path="/admin/eos-processes" element={<ProtectedRoute requireSuperAdmin><AdminEOSProcesses /></ProtectedRoute>} />
             {/* QA Responsive Harness - SuperAdmin/VivacityTeam only */}
             <Route path="/admin/qa/responsive" element={<ProtectedRoute requireSuperAdmin><QAResponsiveHarness /></ProtectedRoute>} />
             {/* QA Smoke Test - SuperAdmin/VivacityTeam only */}
             <Route path="/admin/qa/smoke" element={<ProtectedRoute requireSuperAdmin><QASmokeTest /></ProtectedRoute>} />
-            {/* Add-in Settings - SuperAdmin only */}
-            <Route path="/admin/addin-settings" element={<ProtectedRoute requireSuperAdmin><AddinSettings /></ProtectedRoute>} />
-            <Route path="/admin/addin-diagnostics" element={<ProtectedRoute requireSuperAdmin><AddinDiagnostics /></ProtectedRoute>} />
             <Route path="/admin/clickup-mapping" element={<ProtectedRoute requireSuperAdmin><ClickUpTenantMapping /></ProtectedRoute>} />
             <Route path="/admin/clickup-import" element={<ProtectedRoute requireSuperAdmin><ClickUpImport /></ProtectedRoute>} />
-            {/* Internal Ask Viv Flags - Vivacity Team only */}
-            <Route path="/internal/ask-viv/flags" element={<ProtectedRoute requireSuperAdmin><AskVivFlags /></ProtectedRoute>} />
             {/* Research Jobs */}
             <Route path="/admin/research-jobs" element={<ProtectedRoute><ResearchJobs /></ProtectedRoute>} />
             <Route path="/admin/research-jobs/:jobId" element={<ProtectedRoute><ResearchJobDetail /></ProtectedRoute>} />
             <Route path="/admin/regulator-watch" element={<ProtectedRoute allowVivacityTeam><RegulatorWatchDashboard /></ProtectedRoute>} />
             <Route path="/admin/regulator-watch/:eventId" element={<ProtectedRoute allowVivacityTeam><RegulatorChangeEventDetail /></ProtectedRoute>} />
-            <Route path="/admin/knowledge-explorer" element={<ProtectedRoute requireSuperAdmin><KnowledgeExplorer /></ProtectedRoute>} />
             <Route path="/client-activity" element={<ProtectedRoute><ClientActivityFeed /></ProtectedRoute>} />
-            <Route path="/admin/code-tables" element={<ProtectedRoute requireSuperAdmin><CodeTablesAdmin /></ProtectedRoute>} />
-            <Route path="/admin/lifecycle-checklists" element={<ProtectedRoute requireSuperAdmin><LifecycleChecklistsAdmin /></ProtectedRoute>} />
             {supportTicketsRoutes}
-            <Route path="/admin/merge-field-tags" element={<ProtectedRoute requireSuperAdmin><MergeFieldTagsAdmin /></ProtectedRoute>} />
-            <Route path="/admin/settings/reporting-obligations" element={<ProtectedRoute requireSuperAdmin><ReportingObligationsAdmin /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCoursesListPage /></ProtectedRoute>} />
             <Route path="/academy/certificates" element={<ProtectedRoute><AcademyCertificatesPage /></ProtectedRoute>} />

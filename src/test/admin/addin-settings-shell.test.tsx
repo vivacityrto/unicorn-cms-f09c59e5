@@ -116,10 +116,16 @@ function renderPage() {
     defaultOptions: { queries: { retry: false } },
   });
 
+  // AddinSettings no longer wraps DashboardLayout itself (moved to the
+  // shared route-level DashboardLayoutRoute, see
+  // src/routes/dashboardRoutes.tsx) -- compose the shell explicitly here to
+  // keep testing what a real visit to /admin/addin-settings renders.
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={["/admin/addin-settings"]}>
-        <AddinSettings />
+        <DashboardLayout>
+          <AddinSettings />
+        </DashboardLayout>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -127,6 +133,7 @@ function renderPage() {
 
 // Import after mocks
 import AddinSettings from "@/pages/admin/AddinSettings";
+import { DashboardLayout } from "@/components/DashboardLayout";
 
 // ── Tests ────────────────────────────────────────────────────────────
 

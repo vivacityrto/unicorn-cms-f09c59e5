@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -171,7 +170,6 @@ export default function AddinDiagnostics() {
   };
 
   return (
-    <DashboardLayout>
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -435,6 +433,5 @@ export default function AddinDiagnostics() {
         </TabsContent>
       </Tabs>
     </div>
-    </DashboardLayout>
   );
 }

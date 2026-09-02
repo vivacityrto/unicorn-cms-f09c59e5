@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useLifecycleDropdowns, useLifecycleTemplates } from "@/hooks/useLifecycleChecklists";
 import { LifecycleTemplateDialog } from "@/components/admin/lifecycle/LifecycleTemplateDialog";
 import { LifecycleTemplateGrid } from "@/components/admin/lifecycle/LifecycleTemplateGrid";
@@ -87,7 +86,7 @@ export default function LifecycleChecklistsAdmin() {
 
   function handleSave(data: Partial<LifecycleTemplate>) {
     if (editingTemplate) {
-      updateTemplate.mutate({ ...data, id: editingTemplate.id } as any, {
+      updateTemplate.mutate({ ...data, id: editingTemplate.id }, {
         onSuccess: () => setDialogOpen(false),
       });
     } else {
@@ -105,7 +104,6 @@ export default function LifecycleChecklistsAdmin() {
   }
 
   return (
-    <DashboardLayout>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -202,6 +200,5 @@ export default function LifecycleChecklistsAdmin() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
   );
 }
