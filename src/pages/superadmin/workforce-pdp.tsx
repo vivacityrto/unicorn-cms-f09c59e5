@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import Papa from "papaparse";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -256,7 +255,7 @@ export default function SuperAdminWorkforcePdp() {
   const hasFilters = !!(tenantFilter || audienceFilter || yearFilter || statusFilter.length);
 
   return (
-    <DashboardLayout>
+    <>
       <div className="container mx-auto p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Workforce PDP</h1>
@@ -446,6 +445,6 @@ export default function SuperAdminWorkforcePdp() {
           if (!open) setDrawer({ row: null });
         }}
       />
-    </DashboardLayout>
+    </>
   );
 }

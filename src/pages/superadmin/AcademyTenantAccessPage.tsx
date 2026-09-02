@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,7 +76,7 @@ export default function AcademyTenantAccessPage() {
     setFormAccess(t.academy_access_enabled);
     setFormMaxUsers(t.academy_max_users ?? "");
     setFormExpires(t.academy_subscription_expires_at ? new Date(t.academy_subscription_expires_at) : undefined);
-    setFormNotes((t.metadata as any)?.academy_notes ?? "");
+    setFormNotes((t.metadata as { academy_notes?: string } | null)?.academy_notes ?? "");
     setShowAddRule(false);
   };
 
@@ -156,7 +155,7 @@ export default function AcademyTenantAccessPage() {
 
   const handleSaveSettings = () => {
     if (!drawerTenant) return;
-    const existingMeta = (drawerTenant.metadata ?? {}) as Record<string, any>;
+    const existingMeta = (drawerTenant.metadata ?? {}) as Record<string, unknown>;
     const newMeta = { ...existingMeta, academy_notes: formNotes || null };
     saveMutation.mutate(
       {
@@ -173,7 +172,7 @@ export default function AcademyTenantAccessPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -419,7 +418,7 @@ export default function AcademyTenantAccessPage() {
                     <Select value={rulePackageId} onValueChange={setRulePackageId}>
                       <SelectTrigger><SelectValue placeholder="Select package" /></SelectTrigger>
                       <SelectContent>
-                        {allPackages.map((p: any) => (
+                        {allPackages.map((p) => (
                           <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -430,7 +429,7 @@ export default function AcademyTenantAccessPage() {
                     <Select value={ruleCourseId} onValueChange={setRuleCourseId}>
                       <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
                       <SelectContent>
-                        {allCourses.map((c: any) => (
+                        {allCourses.map((c) => (
                           <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>
                         ))}
                       </SelectContent>
@@ -465,6 +464,6 @@ export default function AcademyTenantAccessPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
-    </DashboardLayout>
+    </>
   );
 }

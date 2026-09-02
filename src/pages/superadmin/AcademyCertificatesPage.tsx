@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -204,7 +203,7 @@ export default function AcademyCertificatesPage() {
 
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -417,7 +416,7 @@ export default function AcademyCertificatesPage() {
               />
               {issueUserSearch.length >= 2 && !issueUserId && searchedUsers.length > 0 && (
                 <div className="border rounded-md max-h-40 overflow-y-auto">
-                  {searchedUsers.map((u: any) => (
+                  {searchedUsers.map((u) => (
                     <button
                       key={u.user_uuid}
                       onClick={() => {
@@ -441,7 +440,7 @@ export default function AcademyCertificatesPage() {
               <Select value={issueCourseId} onValueChange={setIssueCourseId}>
                 <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
                 <SelectContent>
-                  {issueCourses.map((c: any) => (
+                  {issueCourses.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>
                   ))}
                 </SelectContent>
@@ -502,6 +501,6 @@ export default function AcademyCertificatesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </>
   );
 }

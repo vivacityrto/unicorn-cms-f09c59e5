@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
 import { Activity, Eye, GraduationCap, Layers, Plus, Sparkles, Unlink } from "lucide-react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,38 +9,28 @@ import RulesMatrixTab from "@/components/academy/admin/rules/RulesMatrixTab";
 import RulesListTab from "@/components/academy/admin/rules/RulesListTab";
 import CreateRuleModal from "@/components/academy/admin/rules/CreateRuleModal";
 import { useRuleStats, useRulesRealtime } from "@/hooks/academy/useAcademyPackageRules";
-import { usePermission, usePermissionDetailed } from "@/hooks/usePermission";
-import { Loader2 } from "lucide-react";
+import { usePermission } from "@/hooks/usePermission";
 
+/**
+ * The academy.mapping.view/'full' access gate that used to live here
+ * (accessLoading spinner + !hasAccess Navigate, both still page-owned-shell-
+ * wrapped) now runs one level up as a route guard -- see PermissionGate in
+ * src/routes/dashboardRoutes.tsx's academyBuilderPermissionRoutes group.
+ * That moves the check above DashboardLayoutRoute so the shell never mounts
+ * for a role-permitted-but-permission-denied user, closing the pre-existing
+ * flash the migration plan's council review flagged for this page.
+ */
 export default function AcademyPackageCourseRulesPage() {
   useRulesRealtime();
   const { data: stats, isLoading } = useRuleStats();
   const [createOpen, setCreateOpen] = useState(false);
 
-  // ── RBAC gates ──
-  const { granted: hasAccess, isLoading: accessLoading } = usePermissionDetailed('academy.mapping.view', 'full');
+  // ── RBAC gate for the edit/view-only split within the page (access to the
+  // page itself is now the route-level PermissionGate above) ──
   const canManage = usePermission('academy.mapping.edit');
   const readOnly = !canManage;
 
-  // Wait for role_permissions to resolve before deciding - `granted` defaults
-  // to false while loading, which would otherwise redirect away non-SuperAdmin
-  // roles (CSC, Integrator, Team Leader) on every first visit/deep link.
-  if (accessLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center p-24">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!hasAccess) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return (
-    <DashboardLayout>
       <div className="p-4 md:p-6 space-y-6 relative pb-24">
         <div className="flex items-start justify-between gap-4">
           <PageHeader
@@ -113,6 +101,5 @@ export default function AcademyPackageCourseRulesPage() {
           </>
         )}
       </div>
-    </DashboardLayout>
   );
 }

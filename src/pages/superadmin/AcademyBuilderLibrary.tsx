@@ -25,7 +25,6 @@ import { MultiSelect } from "@/components/documents/bulk-generate/MultiSelect";
 import {
   Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter, Users, User, Calendar,
 } from "lucide-react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import { usePermission } from "@/hooks/usePermission";
 import { formatTargetAudienceLabel } from "@/lib/academy/pathways";
@@ -213,16 +212,15 @@ export default function AcademyBuilderLibrary() {
       qc.invalidateQueries({ queryKey: ["video-library"] });
       qc.invalidateQueries({ queryKey: ["training-videos-picker"] });
       qc.invalidateQueries({ queryKey: ["academy-course-total-minutes"] });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.dismiss(tId);
-      toast.error(e?.message || "Backfill failed");
+      toast.error(e instanceof Error ? e.message : "Backfill failed");
     } finally {
       setBackfillRunning(false);
     }
   };
 
   return (
-    <DashboardLayout>
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -411,7 +409,7 @@ export default function AcademyBuilderLibrary() {
                                 <User className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                 <span>
                                   Facilitator:{" "}
-                                  {(course as any).facilitator_display_name?.trim()
+                                  {course.facilitator_display_name?.trim()
                                     || (course.facilitator_id ? (facilitatorNameById[course.facilitator_id] ?? "Not set") : "Not set")}
                                 </span>
                               </p>
@@ -499,6 +497,5 @@ export default function AcademyBuilderLibrary() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-    </DashboardLayout>
   );
 }
