@@ -5,7 +5,7 @@
 > **Repository baseline:** `origin/main@31083c49`
 > **Planning branch/worktree:** `chore/tenant-data-model-optimization-plan` at `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
 > **Primary surface:** `/manage-tenants` (`src/pages/ManageTenants.tsx`) and its `/tenant/:tenantId` detail workflow
-> **Related programs:** [Codebase Optimization and KB Renewal Plan](./codebase-optimization-plan-2026-08-28.md) and [RBAC v6 Authorization Plan](./rbac-v6-authorization-implementation-plan-2026-09-01.md)
+> **Related programs:** [Codebase Optimization and KB Renewal Plan](./codebase-optimization-plan-2026-08-28.md), [RBAC v6 Authorization Plan](./rbac-v6-authorization-implementation-plan-2026-09-01.md), and [Client Health, Client Activity, Consultant Triage, and Intervention Analytics Plan](./client-health-activity-analytics-plan-2026-09-03.md)
 > **Implementation owner:** Claude Code, one small PR at a time, only after Carl approves the phase
 > **Production rule:** every schema, RLS, function, trigger, grant, constraint, backfill, or data correction needs a dated audit entry and separate explicit production authority
 
@@ -53,6 +53,20 @@ Claude Code must preserve this agreed program order:
 The entire multi-phase code-optimization program does **not** need to finish before RBAC v6. The prerequisite is the currently active route/guard composition phase reaching a stable checkpoint. Conversely, tenant P0 evidence collection does not need to wait for RBAC because it is read-only and behavior-preserving.
 
 **Stop gate:** if route/guard work is still moving, do not start RBAC implementation. If the RBAC staff-scope decision and shadow decision core are not approved, do not start tenant P1/P2 or publish a new directory/context/AI/BI permission surface. P0 discovery remains the only authorized tenant-data work before those gates.
+
+### Companion client-health/activity program
+
+The 2026-09-03 live Triage Dashboard investigation found that the present health graph is not a reliable foundation for ERP analytics: task status ID `2` is interpreted as completed although the live dictionary defines it as Not Started; all inspected stage-health progress values were zero; risk and retention jobs returned HTTP 500 and their current output tables were empty; recent notes were internal staff-authored; and 82.1% of recent timeline events were automated document-share events. Missing inputs must not be coalesced into reassuring “low/stable” values.
+
+Keep the detailed remediation, health definitions, consultant workflow, corpus evaluation, Anthropic extraction, intervention ledger, outcome validation, and score cutover in the separate [Client Health, Client Activity, Consultant Triage, and Intervention Analytics Plan](./client-health-activity-analytics-plan-2026-09-03.md). This parent plan owns only the reusable foundations:
+
+- generic event identity/provenance/freshness/quality vocabulary and optional outbox infrastructure. Companion H2 owns the health/activity-specific `client_activity_event_v1` and `client_activity_daily_fact` projections;
+- source freshness, coverage, quality and explicit unknown/reason semantics;
+- governed metric registry and effective-dated tenant/CSC/package/lifecycle context;
+- private analytics schema, distinct UI/Ask Viv/BI/batch identities, and RBAC-scoped read contracts;
+- generic immutable version/run/audit primitives and idempotent rebuild controls. The companion plan owns the health-specific attention/intervention ledger and consultant workflow.
+
+**Sequencing:** companion H0 read-only characterization may run alongside tenant P0. Before RBAC/operating-context gates, only behavior-restricting containment or reliability repairs that preserve or reduce existing exposure may ship—no new analytics permission surface or broader definer RPC. Health/activity implementation otherwise waits for the same RBAC v6 and tenant operating-context gates as P1/P2+. Canonical activity and deterministic health may then be delivered as coordinated vertical slices; Anthropic note processing and predictive weighting remain later gates. Do not delay urgent bounded repairs that stop false health defaults or broken scheduled jobs, but do not present a replacement score until the shared contracts and shadow evidence exist.
 
 ---
 
@@ -766,6 +780,18 @@ If P2 live queries meet latency and load budgets, defer P5 rather than adding co
 
 - Measure primary impact, refresh windows, data volume/growth, BI concurrency, WAL/slot cost, RPO/RTO, and product maturity.
 - Adopt external CDC/warehouse or read replica only when operational isolation is demonstrably needed.
+
+#### P7.4 — Client-health/activity companion integration gate
+
+- Confirm that the companion plan consumes the governed tenant, ownership, package, lifecycle, generic event/provenance/freshness/quality vocabulary and authorization contracts rather than rebuilding them. Companion H2—not this parent phase—owns `client_activity_event_v1` and `client_activity_daily_fact`.
+- Publish approved client activity, health-signal, attention and intervention facts into the private semantic layer at one declared grain each.
+- Keep client activity, client health, consultant attention and intervention effectiveness as separate metrics/products.
+- Do not permit Claude-derived note themes into health scoring until the companion plan's security, retention, structured-output, citation, human-review and evaluation gates pass.
+- Require explicit unknown/coverage behavior; absent or failed sources never mean healthy/stable.
+- Apply this gate at companion H2, H3, H5 and H6 rather than treating it as one late release checkpoint.
+- Current authorization always overrides historical CSC/tenant context. Derived facts inherit source sensitivity/retention, revalidate current access at read time, and tombstone/suppress after source deletion, scope/ACL change or retention expiry.
+
+**Exit:** shared facts reconcile to operational sources, RBAC/BI/Ask Viv scopes pass direct and revocation-race negative tests, derived-data deletion/suppression is proven, and the companion program can evolve metric/model versions without changing the tenant write model.
 
 ### Phase P8 — contract cleanup
 
