@@ -3,21 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, ListTodo, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, ListTodo, Clock, CheckCircle, XCircle, type LucideIcon } from 'lucide-react';
+import type { VariantProps } from 'class-variance-authority';
+import type { badgeVariants } from '@/components/ui/badge';
 import { useEosTodos } from '@/hooks/useEos';
 import { format } from 'date-fns';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { usePermission } from '@/hooks/usePermission';
 
 export default function EosTodos() {
-  return (
-    <DashboardLayout>
-      <TodosContent />
-    </DashboardLayout>
-  );
-}
-
-function TodosContent() {
   const { todos, isLoading, updateTodo } = useEosTodos();
   const canAssignOthers = usePermission('eos.todos.others');
   const [filter, setFilter] = useState<'all' | string>('all');
@@ -33,7 +26,7 @@ function TodosContent() {
 
   const getStatusBadge = (status: string) => {
     const statusLower = status?.toLowerCase() || 'open';
-    const configs: Record<string, { variant: any; label: string; icon: any }> = {
+    const configs: Record<string, { variant: VariantProps<typeof badgeVariants>['variant']; label: string; icon: LucideIcon }> = {
       open: { variant: 'outline' as const, label: 'Pending', icon: Clock },
       pending: { variant: 'outline' as const, label: 'Pending', icon: Clock },
       in_progress: { variant: 'default' as const, label: 'In Progress', icon: Clock },

@@ -6,20 +6,11 @@ import { Target, ListTodo, AlertCircle, Calendar, TrendingUp, Users } from 'luci
 import { Link } from 'react-router-dom';
 import { useEosRocks, useEosIssues, useEosTodos, useEosMeetings } from '@/hooks/useEos';
 import { Badge } from '@/components/ui/badge';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { ReadinessCard } from '@/components/eos/ReadinessCard';
 import { HealthScoreWidget } from '@/components/eos/HealthScoreWidget';
 import { AlertsBanner } from '@/components/eos/alerts';
 
 export default function EosOverview() {
-  return (
-    <DashboardLayout>
-      <OverviewContent />
-    </DashboardLayout>
-  );
-}
-
-function OverviewContent() {
   const { rocks } = useEosRocks();
   const { issues } = useEosIssues();
   const { todos } = useEosTodos();

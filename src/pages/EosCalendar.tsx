@@ -1,5 +1,4 @@
 import { useEosMeetings } from '@/hooks/useEos';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,16 +10,9 @@ import { format } from 'date-fns';
 import { useState } from 'react';
 import { RecurringMeetingDialog } from '@/components/eos/RecurringMeetingDialog';
 import { Link } from 'react-router-dom';
+import type { EosMeeting } from '@/types/eos';
 
 export default function EosCalendar() {
-  return (
-    <DashboardLayout>
-      <CalendarContent />
-    </DashboardLayout>
-  );
-}
-
-function CalendarContent() {
   const { meetings, isLoading } = useEosMeetings();
   const [selectedMeeting, setSelectedMeeting] = useState<{ id: string; title: string } | null>(null);
 
@@ -28,7 +20,7 @@ function CalendarContent() {
     ?.filter(m => !m.is_complete && new Date(m.scheduled_date) >= new Date())
     .sort((a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime());
 
-  const handleDownloadIcal = (meeting: any) => {
+  const handleDownloadIcal = (meeting: EosMeeting) => {
     const icsContent = generateICalFile(meeting);
     const blob = new Blob([icsContent], { type: 'text/calendar' });
     const url = URL.createObjectURL(blob);
@@ -41,7 +33,7 @@ function CalendarContent() {
     URL.revokeObjectURL(url);
   };
 
-  const generateGoogleCalendarUrl = (meeting: any) => {
+  const generateGoogleCalendarUrl = (meeting: EosMeeting) => {
     const startDate = format(new Date(meeting.scheduled_date), "yyyyMMdd'T'HHmmss");
     const endDate = format(
       new Date(new Date(meeting.scheduled_date).getTime() + (meeting.duration_minutes || 90) * 60000),
@@ -55,7 +47,7 @@ function CalendarContent() {
     )}`;
   };
 
-  const generateOutlookUrl = (meeting: any) => {
+  const generateOutlookUrl = (meeting: EosMeeting) => {
     const startDate = new Date(meeting.scheduled_date).toISOString();
     const endDate = new Date(
       new Date(meeting.scheduled_date).getTime() + (meeting.duration_minutes || 90) * 60000
@@ -187,7 +179,7 @@ function CalendarContent() {
   );
 }
 
-function generateICalFile(meeting: any): string {
+function generateICalFile(meeting: EosMeeting): string {
   const startDate = format(new Date(meeting.scheduled_date), "yyyyMMdd'T'HHmmss");
   const endDate = format(
     new Date(new Date(meeting.scheduled_date).getTime() + (meeting.duration_minutes || 90) * 60000),

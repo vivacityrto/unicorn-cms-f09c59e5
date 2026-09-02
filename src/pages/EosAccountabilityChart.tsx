@@ -1,13 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Info } from 'lucide-react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { RoleInfoPanel } from '@/components/eos/RoleInfoPanel';
 import { ChartBuilder } from '@/components/eos/accountability';
 
 export default function EosAccountabilityChart() {
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-start">
@@ -39,6 +37,5 @@ export default function EosAccountabilityChart() {
         {/* Chart Builder */}
         <ChartBuilder />
       </div>
-    </DashboardLayout>
   );
 }

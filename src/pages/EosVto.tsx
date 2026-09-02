@@ -12,17 +12,8 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { Eye, Edit, History, Target } from 'lucide-react';
 import { VtoEditor } from '@/components/eos/VtoEditor';
 import { VtoViewer } from '@/components/eos/VtoViewer';
-import { DashboardLayout } from '@/components/DashboardLayout';
 
 export default function EosVto() {
-  return (
-    <DashboardLayout>
-      <VtoContent />
-    </DashboardLayout>
-  );
-}
-
-function VtoContent() {
   const { profile } = useAuth();
   const canEditMission = usePermission('eos.mission_control.edit');
   const canEditVTO = () => canEditMission;

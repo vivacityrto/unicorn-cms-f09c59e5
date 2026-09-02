@@ -40,17 +40,12 @@ import { CreateTeamRockDialog } from '@/components/eos/rocks/CreateTeamRockDialo
 import { CreateIndividualRockDialog } from '@/components/eos/rocks/CreateIndividualRockDialog';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { dbToUiStatus } from '@/utils/rockStatusUtils';
 import { getCurrentQuarter, formatQuarter } from '@/utils/rockRollup';
 import type { RockWithHierarchy } from '@/types/eos';
 
 export default function EosRocks() {
-  return (
-    <DashboardLayout>
-      <RocksHierarchyContent />
-    </DashboardLayout>
-  );
+  return <RocksHierarchyContent />;
 }
 
 function RocksHierarchyContent() {
@@ -383,7 +378,7 @@ function RocksHierarchyContent() {
       {/* Tabs - as many as fit render directly; the rest collapse into a
           "More" dropdown, measured dynamically - never via horizontal
           scroll (see useOverflowTabs / feedback_no_tab_scroll). */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'company' | 'team' | 'individual' | 'cascade')}>
         <div ref={tabsContainerRef} className="flex items-center gap-0 min-w-0">
           <TabsList>
             {visibleRocksTabs.map((t) => {

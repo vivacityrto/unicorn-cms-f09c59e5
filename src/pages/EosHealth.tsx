@@ -23,7 +23,6 @@ import {
   CheckCircle,
   ExternalLink,
 } from 'lucide-react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEosHealth } from '@/hooks/useEosHealth';
@@ -73,14 +72,6 @@ const SEVERITY_COLORS = {
 };
 
 export default function EosHealth() {
-  return (
-    <DashboardLayout>
-      <HealthContent />
-    </DashboardLayout>
-  );
-}
-
-function HealthContent() {
   const { health, isLoading } = useEosHealth();
   const isFacilitatorMode = useEosFacilitatorEligible();
   const [expandedDimensions, setExpandedDimensions] = useState<string[]>([]);

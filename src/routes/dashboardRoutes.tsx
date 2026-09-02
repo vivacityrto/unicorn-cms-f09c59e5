@@ -100,6 +100,18 @@ const ResearchJobDetail = lazy(() => import("@/pages/ResearchJobDetail"));
 const SharePointFolderMapping = lazy(() => import("@/pages/admin/SharePointFolderMapping"));
 const SharePointSitesAdmin = lazy(() => import("@/pages/admin/SharePointSitesAdmin"));
 const AiInsightsPage = lazy(() => import("@/pages/admin/ai-insights"));
+const EosOverview = lazy(() => import("@/pages/EosOverview"));
+const EosOnboarding = lazy(() => import("@/pages/EosOnboarding"));
+const EosHealth = lazy(() => import("@/pages/EosHealth"));
+const EosRocks = lazy(() => import("@/pages/EosRocks"));
+const EosFlightPlan = lazy(() => import("@/pages/EosFlightPlan"));
+const EosRisksOpportunities = lazy(() => import("@/pages/EosRisksOpportunities"));
+const EosTodos = lazy(() => import("@/pages/EosTodos"));
+const EosScorecard = lazy(() => import("@/pages/EosScorecard"));
+const EosVto = lazy(() => import("@/pages/EosVto"));
+const EosCalendar = lazy(() => import("@/pages/EosCalendar"));
+const EosAccountabilityChart = lazy(() => import("@/pages/EosAccountabilityChart"));
+const EosHealthCheck = lazy(() => import("@/pages/EosHealthCheck"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -297,7 +309,23 @@ const AiInsightsPage = lazy(() => import("@/pages/admin/ai-insights"));
  * harmless backstop. ResearchJobs kept its page-local
  * `!isSuperAdmin && !isVivacityTeam` shell-wrapped "Access Restricted"
  * gate unchanged, same shape as RegulatorWatchDashboard from PR 6. All
- * five pages were single-root, no Fragment needed.
+ * five pages were single-root, no Fragment needed. PR 10 (EOS: overview/
+ * read-only cohort, first of two EOS PRs) added 12 files to the plain
+ * group: EosOverview, EosOnboarding, EosHealth, EosRocks, EosFlightPlan,
+ * EosRisksOpportunities, EosTodos, EosScorecard, EosVto, EosCalendar,
+ * EosAccountabilityChart, EosHealthCheck. None of these are among the
+ * plan's 6 flagged local-permission-gate pages. EosHealthCheck has a
+ * `useEffect`-based `!canAccessEOS()` redirect (not a synchronous
+ * render-time Navigate), so its shell already mounted briefly before the
+ * effect fired even before this migration -- no new regression, left
+ * unchanged. EosRocks and EosScorecard kept their separate Content
+ * component (wrapper simplified to `return <XContent />`); every other
+ * file in this batch had its Content component's body merged directly
+ * into the exported page function. All 12 were single-root, no Fragment
+ * needed. The remaining ~13 Eos-prefixed files (interactive/detail
+ * cohort, including the 4 flagged pages needing a PermissionGate hoist:
+ * EosClientImpact, EosGWCTrends, EosRockAnalysis, EosLeadershipDashboard)
+ * are PR 11.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -412,6 +440,18 @@ export const dashboardLayoutRoutes = (
       <Route path="/admin/research-jobs/:jobId" element={<ResearchJobDetail />} />
       <Route path="/admin/sharepoint-folder-mapping" element={<SharePointFolderMapping />} />
       <Route path="/admin/sharepoint-sites" element={<SharePointSitesAdmin />} />
+      <Route path="/eos" element={<EosOverview />} />
+      <Route path="/eos/onboarding" element={<EosOnboarding />} />
+      <Route path="/eos/health" element={<EosHealth />} />
+      <Route path="/eos/rocks" element={<EosRocks />} />
+      <Route path="/eos/flight-plan" element={<EosFlightPlan />} />
+      <Route path="/eos/risks-opportunities" element={<EosRisksOpportunities />} />
+      <Route path="/eos/todos" element={<EosTodos />} />
+      <Route path="/eos/scorecard" element={<EosScorecard />} />
+      <Route path="/eos/vto" element={<EosVto />} />
+      <Route path="/eos/calendar" element={<EosCalendar />} />
+      <Route path="/eos/accountability" element={<EosAccountabilityChart />} />
+      <Route path="/eos/health-check" element={<EosHealthCheck />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />
