@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T09:21:49.416Z",
-  "baselineSha": "bc75c287ad69ea8e37556080b2404ef52fe2cedd",
+  "generatedAt": "2026-09-03T09:43:07.993Z",
+  "baselineSha": "5c59779281c440ee2a56e0e002cc6064ac55c4a2",
   "totals": {
     "files": 1785,
-    "filesWithFindings": 621,
+    "filesWithFindings": 617,
     "errors": 3744,
-    "warnings": 110
+    "warnings": 98
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 72,
+    "react-hooks/exhaustive-deps": 60,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 110,
+      "warnings": 98,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 72,
+        "react-hooks/exhaustive-deps": 60,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -455,10 +455,9 @@
     },
     "src/hooks": {
       "errors": 1194,
-      "warnings": 13,
+      "warnings": 1,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1194,
-        "react-hooks/exhaustive-deps": 12,
         "react-refresh/only-export-components": 1
       }
     },
@@ -2166,8 +2165,7 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/hooks/useAuditWorkspace.ts": {
-      "@typescript-eslint/no-explicit-any": 49,
-      "react-hooks/exhaustive-deps": 1
+      "@typescript-eslint/no-explicit-any": 49
     },
     "src/hooks/useAuth.tsx": {
       "react-refresh/only-export-components": 1
@@ -2269,8 +2267,7 @@
       "@typescript-eslint/no-explicit-any": 5
     },
     "src/hooks/useEmailTemplates.tsx": {
-      "@typescript-eslint/no-explicit-any": 3,
-      "react-hooks/exhaustive-deps": 2
+      "@typescript-eslint/no-explicit-any": 3
     },
     "src/hooks/useEmailTicketCategories.ts": {
       "@typescript-eslint/no-explicit-any": 4
@@ -2381,8 +2378,7 @@
       "@typescript-eslint/no-explicit-any": 5
     },
     "src/hooks/useMissingMergeFields.tsx": {
-      "@typescript-eslint/no-explicit-any": 9,
-      "react-hooks/exhaustive-deps": 1
+      "@typescript-eslint/no-explicit-any": 9
     },
     "src/hooks/useMomentumPanel.ts": {
       "@typescript-eslint/no-explicit-any": 2
@@ -2403,7 +2399,6 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/hooks/useNotes.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/hooks/useNotificationPrefs.ts": {
@@ -2417,9 +2412,6 @@
     },
     "src/hooks/useOperationsDashboard.tsx": {
       "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/hooks/useOutlookCalendar.tsx": {
-      "react-hooks/exhaustive-deps": 1
     },
     "src/hooks/usePackageBuilder.tsx": {
       "@typescript-eslint/no-explicit-any": 79
@@ -2494,9 +2486,6 @@
     "src/hooks/useSeatScorecard.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/hooks/useSharePointBrowser.tsx": {
-      "react-hooks/exhaustive-deps": 1
-    },
     "src/hooks/useStaffOnboardingStatus.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
@@ -2525,21 +2514,16 @@
       "@typescript-eslint/no-explicit-any": 9
     },
     "src/hooks/useStageDocuments.ts": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 7
     },
     "src/hooks/useStageDuplication.tsx": {
       "@typescript-eslint/no-explicit-any": 18
     },
     "src/hooks/useStageEmails.ts": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 4
     },
     "src/hooks/useStageExportImport.tsx": {
       "@typescript-eslint/no-explicit-any": 21
-    },
-    "src/hooks/useStageNotes.ts": {
-      "react-hooks/exhaustive-deps": 1
     },
     "src/hooks/useStageQualityCheck.tsx": {
       "@typescript-eslint/no-explicit-any": 8
@@ -2599,8 +2583,7 @@
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/hooks/useTenantPacks.tsx": {
-      "@typescript-eslint/no-explicit-any": 6,
-      "react-hooks/exhaustive-deps": 1
+      "@typescript-eslint/no-explicit-any": 6
     },
     "src/hooks/useTenantsBasic.ts": {
       "@typescript-eslint/no-explicit-any": 1
@@ -2610,9 +2593,6 @@
     },
     "src/hooks/useTimeEntriesPaginated.tsx": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/hooks/useTimeInbox.tsx": {
-      "react-hooks/exhaustive-deps": 1
     },
     "src/hooks/useTriageStaffOptions.ts": {
       "@typescript-eslint/no-explicit-any": 2

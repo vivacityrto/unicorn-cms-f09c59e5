@@ -504,6 +504,11 @@ export function useAuditScore(
   questions: TemplateQuestion[] | undefined
 ) {
   const updateAudit = useUpdateAudit(auditId);
+  // Destructured because `updateAudit` (the mutation object) is a fresh
+  // object every render, but `.mutate` itself is a stable function
+  // reference — using the object directly in `calculate`'s deps would make
+  // `calculate` (and the effect below that calls it) re-run every render.
+  const { mutate: updateAuditMutate } = updateAudit;
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const calculate = useCallback(() => {
@@ -521,13 +526,13 @@ export function useAuditScore(
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      updateAudit.mutate({
+      updateAuditMutate({
         score_total: scoreTotal,
         score_max: scoreMax,
         score_pct: scorePct,
       } as any);
     }, 1000);
-  }, [responses, questions, auditId]);
+  }, [responses, questions, auditId, updateAuditMutate]);
 
   useEffect(() => {
     calculate();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -45,7 +45,7 @@ export function useEmailTemplates() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -64,11 +64,11 @@ export function useEmailTemplates() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchTemplates();
-  }, []);
+  }, [fetchTemplates]);
 
   const createTemplate = async (template: Partial<EmailTemplate>) => {
     const { data: userData } = await supabase.auth.getUser();
@@ -265,7 +265,7 @@ export function useEmailSendLogs(templateId?: string) {
   const [logs, setLogs] = useState<EmailSendLog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
       let query = supabase
@@ -286,11 +286,11 @@ export function useEmailSendLogs(templateId?: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [templateId]);
 
   useEffect(() => {
     fetchLogs();
-  }, [templateId]);
+  }, [fetchLogs]);
 
   return { logs, loading, fetchLogs };
 }

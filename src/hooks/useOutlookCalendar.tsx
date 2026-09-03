@@ -186,19 +186,6 @@ export function useOutlookCalendar() {
     setLoading(false);
   }, [toast]);
 
-  const syncCalendar = useCallback(async () => {
-    setLoading(true);
-    const { data, error } = await supabase.functions.invoke('sync-outlook-calendar', {});
-    
-    if (error) {
-      toast({ title: 'Sync failed', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Calendar synced', description: `${data.synced} events updated` });
-      await fetchEvents();
-    }
-    setLoading(false);
-  }, [toast]);
-
   const fetchEvents = useCallback(async (filters?: { startDate?: string; endDate?: string; unprocessedOnly?: boolean }) => {
     if (!user) return;
     
@@ -222,6 +209,19 @@ export function useOutlookCalendar() {
       setEvents(data as CalendarEvent[]);
     }
   }, [user]);
+
+  const syncCalendar = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke('sync-outlook-calendar', {});
+
+    if (error) {
+      toast({ title: 'Sync failed', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Calendar synced', description: `${data.synced} events updated` });
+      await fetchEvents();
+    }
+    setLoading(false);
+  }, [toast, fetchEvents]);
 
   const fetchDrafts = useCallback(async () => {
     if (!user) return;
