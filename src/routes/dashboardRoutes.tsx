@@ -151,6 +151,7 @@ const ExecutiveDashboard = lazy(() => import("@/pages/ExecutiveDashboard"));
 const ExecutiveClientCommitments = lazy(() => import("@/pages/ExecutiveClientCommitments"));
 const ExecutiveDecisionQueue = lazy(() => import("@/pages/ExecutiveDecisionQueue"));
 const ExecutiveFinancialControls = lazy(() => import("@/pages/ExecutiveFinancialControls"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -495,8 +496,21 @@ const ExecutiveFinancialControls = lazy(() => import("@/pages/ExecutiveFinancial
  * any)` blocks needed fixing, no `.map`/query-shape casts in this file).
  * AskVivAssistant/MyWork had none. All 7
  * were single-root, no Fragment needed. This completes the Work section
- * of the migration. Remaining work: PR 17 (Dashboard.tsx aliases) and
- * PR 18 (/dashboard itself, last).
+ * of the migration. PR 17 (Legacy dashboard aliases) moved all 4 alias
+ * registrations of `Dashboard.tsx` -- /triage-dashboard, /documents,
+ * /reports, /messages -- atomically to the plain group, per the plan's
+ * instruction to move every registration of a multi-route page together
+ * rather than splitting them across PRs. `Dashboard.tsx` is a distinct
+ * component from `MainDashboard.tsx` (which serves /dashboard itself,
+ * still self-wrapping DashboardLayout, deliberately untouched here --
+ * that's PR 18, the plan's own "migrate last" instruction for the
+ * highest-traffic, client-safe-path route). Dashboard.tsx had no
+ * page-local access check beyond an `isVivacityStaff` loading-state
+ * spinner (not a hard Navigate) and an unrelated `isAdminOrUser` redirect
+ * to /client/home -- both preserved unchanged. Single-root across all 3
+ * return branches (authLoading/!isVivacityStaff/main), no Fragment
+ * needed. No pre-existing `any` lint errors in this file. Remaining
+ * work: PR 18 (/dashboard itself, last).
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -659,6 +673,10 @@ export const dashboardLayoutRoutes = (
       <Route path="/calendar/time-capture" element={<CalendarTimeCapture />} />
       <Route path="/my-work" element={<MyWork />} />
       <Route path="/executive" element={<ExecutiveDashboard />} />
+      <Route path="/triage-dashboard" element={<Dashboard />} />
+      <Route path="/documents" element={<Dashboard />} />
+      <Route path="/reports" element={<Dashboard />} />
+      <Route path="/messages" element={<Dashboard />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />

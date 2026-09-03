@@ -27,7 +27,6 @@ import { dashboardLayoutRoutes } from "./routes/dashboardRoutes";
  // Lazy load all page components for code splitting
  const Index = lazy(() => import("./pages/Index"));
  const Login = lazy(() => import("./pages/Login"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MainDashboard = lazy(() => import("./pages/MainDashboard"));
 
  // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
@@ -140,30 +139,6 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/triage-dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/documents"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/reports" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
             <Route
               path="/calendar/outlook-callback"
               element={<OutlookCallback />}
@@ -171,14 +146,6 @@ const App = () => (
             <Route
               path="/admin/integrations/xero-callback"
               element={<XeroCallback />}
-            />
-            <Route
-              path="/messages" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
             />
             {/* Superseded by /manage-documents, which uses the same GovernanceDocumentDetail
                 drill-down but is the actively-maintained canonical documents page. */}
