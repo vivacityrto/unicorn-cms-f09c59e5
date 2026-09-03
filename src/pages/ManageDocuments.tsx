@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
@@ -403,11 +403,6 @@ export default function ManageDocuments() {
     fetchBulkTenants();
     fetchDocumentsCount();
   }, []);
-  useEffect(() => {
-    if (currentUserRole !== null) {
-      fetchDocuments();
-    }
-  }, [currentUserRole, currentUserTenantId]);
 
   // Populate form when editing a document
   useEffect(() => {
@@ -543,10 +538,6 @@ export default function ManageDocuments() {
     }
   };
   useEffect(() => {
-    applyFiltersAndSort();
-    setCurrentPage(1); // Reset to first page when filters change
-  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter, publishStatusFilter, deliveryStatusFilter, fileStatusFilter]);
-  useEffect(() => {
     if (bulkSendSearchQuery) {
       const filtered = bulkSendUsers.filter(user => user.email.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()) || `${user.first_name} ${user.last_name}`.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()));
       setBulkSendFilteredUsers(filtered);
@@ -573,7 +564,7 @@ export default function ManageDocuments() {
       console.error("Error fetching current user:", error);
     }
   };
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -742,7 +733,13 @@ export default function ManageDocuments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUserRole, currentUserTenantId, toast]);
+
+  useEffect(() => {
+    if (currentUserRole !== null) {
+      fetchDocuments();
+    }
+  }, [currentUserRole, fetchDocuments]);
   // Compute duplicate counts — keyed by title, format, AND category, so a
   // Word/PDF pair of the same title (a legitimate format variant) or two
   // documents that share a generic title but cover different categories
@@ -775,7 +772,7 @@ export default function ManageDocuments() {
   // and the file-status tab counts, so the tabs reflect whatever else is
   // currently filtered (search/format/category/etc.) instead of always
   // showing totals for the full unfiltered document list.
-  const applyNonFileStatusFilters = (docs: typeof documents) => {
+  const applyNonFileStatusFilters = useCallback((docs: typeof documents) => {
     let filtered = docs;
 
     // Search filter — words separated by spaces or dashes match across either
@@ -835,9 +832,9 @@ export default function ManageDocuments() {
     }
 
     return filtered;
-  };
+  }, [searchQuery, formatFilter, categoryFilter, showDuplicatesOnly, duplicateTitleCounts, frameworkFilter, sharepointFilter, publishStatusFilter, deliveryStatusFilter]);
 
-  const applyFiltersAndSort = () => {
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = applyNonFileStatusFilters(documents);
 
     // File status filter
@@ -881,7 +878,12 @@ export default function ManageDocuments() {
       }
     });
     setFilteredDocuments(filtered);
-  };
+  }, [documents, applyNonFileStatusFilters, sortField, sortDirection, showDuplicatesOnly, fileStatusFilter]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [applyFiltersAndSort]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);

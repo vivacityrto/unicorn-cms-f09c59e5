@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -170,7 +170,7 @@ export default function ManageInvites() {
     await doCopyLink(invite);
   };
 
-  const fetchInvites = async () => {
+  const fetchInvites = useCallback(async () => {
     try {
       const { data, error: fetchError } = await supabase
         .from("user_invitations")
@@ -197,7 +197,7 @@ export default function ManageInvites() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const fetchUserStatuses = async (emails: string[]) => {
     try {
@@ -293,7 +293,7 @@ export default function ManageInvites() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchInvites]);
 
   const getStatusBadge = (status: string, expiresAt?: string | null) => {
     const isExpired = expiresAt && new Date(expiresAt) < new Date();

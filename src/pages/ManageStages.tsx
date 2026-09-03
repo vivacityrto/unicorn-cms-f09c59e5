@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,11 +81,7 @@ export default function ManageStages() {
     video_url: '',
   });
 
-  useEffect(() => {
-    fetchStages();
-  }, []);
-
-  const fetchStages = async () => {
+  const fetchStages = useCallback(async () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
@@ -128,7 +124,11 @@ export default function ManageStages() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchStages();
+  }, [fetchStages]);
 
   const handleCreate = async () => {
     try {

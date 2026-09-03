@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermission } from "@/hooks/usePermission";
@@ -317,10 +317,6 @@ export default function ManageTenants() {
     }
   };
 
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
-
   const fetchPackages = async () => {
     try {
       const { data, error } = await supabase.from("packages").select("id, name, created_at").order("name");
@@ -440,7 +436,7 @@ export default function ManageTenants() {
 
 
 
-  const applyFiltersAndSort = () => {
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = [...tenants];
 
     if (searchQuery) {
@@ -561,7 +557,11 @@ export default function ManageTenants() {
       return 0;
     });
     setFilteredTenants(filtered);
-  };
+  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [applyFiltersAndSort]);
 
   const handleConnect = async (tenant: Tenant) => {
     if (!isSuperAdmin && !isTeamLeader) {

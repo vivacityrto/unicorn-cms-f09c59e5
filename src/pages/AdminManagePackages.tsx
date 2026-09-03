@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -101,13 +101,6 @@ export default function AdminManagePackages() {
   const [editingClientTask, setEditingClientTask] = useState<any>(null);
 
   useEffect(() => {
-    fetchPackages();
-    fetchCategories();
-    fetchDocumentStages();
-    fetchNextDocumentOrderNumber();
-  }, []);
-
-  useEffect(() => {
     if (selectedPackage && selectedStage) {
       // Fetch all data in parallel for faster loading
       setLoadingDocuments(true);
@@ -150,10 +143,7 @@ export default function AdminManagePackages() {
       })();
     }
   }, [selectedPackage, selectedStage]);
-  useEffect(() => {
-    filterPackages();
-  }, [searchQuery, packages, statusFilter]);
-  const fetchPackages = async () => {
+  const fetchPackages = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -189,8 +179,8 @@ export default function AdminManagePackages() {
     } finally {
       setLoading(false);
     }
-  };
-  const filterPackages = () => {
+  }, [toast]);
+  const filterPackages = useCallback(() => {
     let filtered = [...packages];
     if (searchQuery) {
       filtered = filtered.filter(pkg => pkg.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -201,7 +191,19 @@ export default function AdminManagePackages() {
       filtered = filtered.filter(pkg => pkg.status !== 'active');
     }
     setFilteredPackages(filtered);
-  };
+  }, [packages, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    fetchPackages();
+    fetchCategories();
+    fetchDocumentStages();
+    fetchNextDocumentOrderNumber();
+  }, [fetchPackages]);
+
+  useEffect(() => {
+    filterPackages();
+  }, [filterPackages]);
+
   const handleDelete = async () => {
     if (!packageToDelete) return;
     try {
