@@ -263,6 +263,11 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
     } finally {
       setLoading(false);
     }
+    // parentType is deliberately tracked via its serialized parentTypeKey
+    // above, not the raw prop — a caller passing an inline array literal
+    // would otherwise give it a new reference every render, defeating the
+    // memoization this callback exists for.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, parentTypeKey, parentId, packageId, toast]);
 
   useEffect(() => {

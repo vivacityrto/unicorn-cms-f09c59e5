@@ -161,7 +161,7 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
         setDownloading(null);
       }
     },
-    []
+    [tenantId, useSharedFolder]
   );
 
   return {

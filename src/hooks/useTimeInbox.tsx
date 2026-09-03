@@ -123,7 +123,7 @@ export function useTimeInbox() {
     } finally {
       setLoading(false);
     }
-  }, [user, getDateRange, confidenceFilter, toast]);
+  }, [user, getDateRange, confidenceFilter, toast, showOverdueOnly]);
 
   const fetchStats = useCallback(async () => {
     if (!user) return;

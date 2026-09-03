@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface StageNote {
@@ -21,11 +21,7 @@ export function useStageNotes({ tenantId, packageId }: UseStageNotesOptions) {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
 
-  useEffect(() => {
-    fetchNotes();
-  }, [tenantId, packageId]);
-
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
       // Notes are stored at tenant level; filter by package_id if available
@@ -59,7 +55,11 @@ export function useStageNotes({ tenantId, packageId }: UseStageNotesOptions) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
+
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
 
   return { notes, loading, totalCount, refetch: fetchNotes };
 }

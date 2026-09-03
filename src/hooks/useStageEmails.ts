@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface StageEmail {
@@ -22,11 +22,7 @@ export function useStageEmails({ stageInstanceId }: UseStageEmailsOptions) {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
 
-  useEffect(() => {
-    fetchEmails();
-  }, [stageInstanceId]);
-
-  const fetchEmails = async () => {
+  const fetchEmails = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -75,7 +71,11 @@ export function useStageEmails({ stageInstanceId }: UseStageEmailsOptions) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [stageInstanceId]);
+
+  useEffect(() => {
+    fetchEmails();
+  }, [fetchEmails]);
 
   return { emails, loading, totalCount, refetch: fetchEmails };
 }

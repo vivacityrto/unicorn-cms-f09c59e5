@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -38,7 +38,7 @@ export function useTenantPacks(tenantId?: number) {
   const [packs, setPacks] = useState<TenantPack[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchPacks = async () => {
+  const fetchPacks = useCallback(async () => {
     if (!tenantId) return;
     
     setLoading(true);
@@ -65,11 +65,11 @@ export function useTenantPacks(tenantId?: number) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
 
   useEffect(() => {
     fetchPacks();
-  }, [tenantId]);
+  }, [fetchPacks]);
 
   const generatePack = async (
     tenantId: number,

@@ -126,6 +126,76 @@ export function useMissingMergeFields(tenantId: number | null) {
   }, [tenantId, toast]);
 
   // Save client-supplied data and notify CSC
+  // Retry document generation
+  const retryDocumentGeneration = useCallback(async (
+    documentId: number,
+    stageId: number,
+    packageId: number
+  ) => {
+    if (!tenantId) return false;
+
+    try {
+      // Get client_legacy_id for this tenant (use limit 1 to avoid 406 on duplicates)
+      const { data: clientData } = await supabase
+        .from('clients_legacy')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (!clientData) {
+        throw new Error('Client not found for this tenant');
+      }
+
+      const { data, error } = await supabase.functions.invoke('generate-document', {
+        body: {
+          document_id: documentId,
+          tenant_id: tenantId,
+          client_legacy_id: clientData.id,
+          stage_id: stageId,
+          package_id: packageId
+        }
+      });
+
+      if (error) throw error;
+
+      // Log retry to audit
+      await supabase
+        .from('client_audit_log')
+        .insert({
+          tenant_id: tenantId,
+          actor_user_id: user?.id,
+          action: 'document.autogen_retry',
+          entity_type: 'document',
+          entity_id: String(documentId),
+          details: {
+            stage_id: stageId,
+            package_id: packageId,
+            result: data.success ? 'success' : 'failed'
+          }
+        });
+
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Document generated successfully'
+        });
+        return true;
+      } else {
+        throw new Error(data.error || 'Generation failed');
+      }
+    } catch (error: any) {
+      console.error('Error retrying document generation:', error);
+      toast({
+        title: 'Generation Failed',
+        description: error.message || 'Failed to generate document',
+        variant: 'destructive'
+      });
+      return false;
+    }
+  }, [tenantId, user, toast]);
+
   const saveMergeData = useCallback(async (
     data: Record<string, string>,
     options?: {
@@ -217,77 +287,7 @@ export function useMissingMergeFields(tenantId: number | null) {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, user, tenantMergeData, toast]);
-
-  // Retry document generation
-  const retryDocumentGeneration = useCallback(async (
-    documentId: number,
-    stageId: number,
-    packageId: number
-  ) => {
-    if (!tenantId) return false;
-
-    try {
-      // Get client_legacy_id for this tenant (use limit 1 to avoid 406 on duplicates)
-      const { data: clientData } = await supabase
-        .from('clients_legacy')
-        .select('id')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (!clientData) {
-        throw new Error('Client not found for this tenant');
-      }
-
-      const { data, error } = await supabase.functions.invoke('generate-document', {
-        body: {
-          document_id: documentId,
-          tenant_id: tenantId,
-          client_legacy_id: clientData.id,
-          stage_id: stageId,
-          package_id: packageId
-        }
-      });
-
-      if (error) throw error;
-
-      // Log retry to audit
-      await supabase
-        .from('client_audit_log')
-        .insert({
-          tenant_id: tenantId,
-          actor_user_id: user?.id,
-          action: 'document.autogen_retry',
-          entity_type: 'document',
-          entity_id: String(documentId),
-          details: {
-            stage_id: stageId,
-            package_id: packageId,
-            result: data.success ? 'success' : 'failed'
-          }
-        });
-
-      if (data.success) {
-        toast({
-          title: 'Success',
-          description: 'Document generated successfully'
-        });
-        return true;
-      } else {
-        throw new Error(data.error || 'Generation failed');
-      }
-    } catch (error: any) {
-      console.error('Error retrying document generation:', error);
-      toast({
-        title: 'Generation Failed',
-        description: error.message || 'Failed to generate document',
-        variant: 'destructive'
-      });
-      return false;
-    }
-  }, [tenantId, user, toast]);
+  }, [tenantId, user, tenantMergeData, toast, retryDocumentGeneration]);
 
   // Get current values for missing fields (for pre-filling form)
   const getCurrentValues = useCallback(async () => {

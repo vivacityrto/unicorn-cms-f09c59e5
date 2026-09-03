@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface StageDocument {
@@ -33,11 +33,7 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
 
-  useEffect(() => {
-    fetchDocuments();
-  }, [stageInstanceId, tenantId]);
-
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     setLoading(true);
     try {
       if (debug) {
@@ -129,7 +125,11 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
     } finally {
       setLoading(false);
     }
-  };
+  }, [stageInstanceId, tenantId, debug]);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
 
   return { documents, loading, totalCount, refetch: fetchDocuments };
 }
