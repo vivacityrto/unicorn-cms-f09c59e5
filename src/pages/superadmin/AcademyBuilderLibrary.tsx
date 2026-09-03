@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAdminAcademyCourses, useDeleteCourse, usePermanentDeleteCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
+import { useAdminAcademyCourses, useDeleteCourse, usePermanentDeleteCourse, useUpdateCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,12 +18,10 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MultiSelect } from "@/components/documents/bulk-generate/MultiSelect";
 import {
-  Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter, Users, User, Calendar,
+  Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2, Sparkles, ListPlus, MoreVertical, Trash2, Archive, Filter, Users, User, Calendar, LayoutGrid, List, Pencil, ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePermission } from "@/hooks/usePermission";
@@ -58,6 +56,20 @@ type CourseSection = {
   courses: AdminCourse[];
 };
 
+type ViewMode = "grid" | "list";
+type CourseSort = "created_desc" | "created_asc" | "updated_desc" | "title_asc" | "title_desc" | "delivery_asc" | "delivery_desc" | "status";
+
+const sortOptions: Array<{ value: CourseSort; label: string }> = [
+  { value: "created_desc", label: "Newest created" },
+  { value: "created_asc", label: "Oldest created" },
+  { value: "updated_desc", label: "Recently updated" },
+  { value: "title_asc", label: "Title: A–Z" },
+  { value: "title_desc", label: "Title: Z–A" },
+  { value: "delivery_asc", label: "Delivery date: soonest" },
+  { value: "delivery_desc", label: "Delivery date: latest" },
+  { value: "status", label: "Status" },
+];
+
 function seriesKeyForCourse(course: AdminCourse): string {
   const series = course.webinar_series?.trim();
   return series ? series : STANDALONE_KEY;
@@ -73,6 +85,27 @@ function formatAudiencePreview(audience: string[] | null | undefined): string | 
 
 function formatDeliveryDateLabel(dateString: string | null | undefined): string {
   return formatDeliveryDate(dateString) ?? "Not set";
+}
+
+function sortCourses(courses: AdminCourse[], sort: CourseSort): AdminCourse[] {
+  return [...courses].sort((a, b) => {
+    if (sort === "title_asc" || sort === "title_desc") {
+      const result = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" });
+      return sort === "title_asc" ? result : -result;
+    }
+    if (sort === "status") {
+      const rank: Record<string, number> = { draft: 0, published: 1, archived: 2 };
+      return (rank[a.status ?? "draft"] ?? 9) - (rank[b.status ?? "draft"] ?? 9) || a.title.localeCompare(b.title);
+    }
+    const field: "updated_at" | "delivery_date" | "created_at" = sort.startsWith("updated") ? "updated_at" : sort.startsWith("delivery") ? "delivery_date" : "created_at";
+    const aValue = a[field] ? new Date(a[field] as string).getTime() : null;
+    const bValue = b[field] ? new Date(b[field] as string).getTime() : null;
+    if (aValue == null && bValue == null) return a.title.localeCompare(b.title);
+    if (aValue == null) return 1;
+    if (bValue == null) return -1;
+    const descending = sort.endsWith("desc");
+    return descending ? bValue - aValue : aValue - bValue;
+  });
 }
 
 function groupCoursesBySeries(courses: AdminCourse[]): CourseSection[] {
@@ -115,8 +148,13 @@ export default function AcademyBuilderLibrary() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [userTypeFilter, setUserTypeFilter] = useState<string[]>([]);
-  const [openSections, setOpenSections] = useState<string[]>([]);
-  const seenSectionKeysRef = useRef<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [sort, setSort] = useState<CourseSort>("created_desc");
+  const [selectedSeries, setSelectedSeries] = useState<string>("all");
+  const [quickEditCourse, setQuickEditCourse] = useState<AdminCourse | null>(null);
+  const [quickEditTitle, setQuickEditTitle] = useState("");
+  const [quickEditStatus, setQuickEditStatus] = useState("draft");
+  const [quickEditSeries, setQuickEditSeries] = useState("");
   const [backfillConfirmOpen, setBackfillConfirmOpen] = useState(false);
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminCourse | null>(null);
@@ -125,6 +163,7 @@ export default function AcademyBuilderLibrary() {
   // ── RBAC gates ──
   const canCreateCourse = usePermission('academy.builder.edit');
   const canBackfill = usePermission('academy.builder.publish');
+  const updateCourse = useUpdateCourse();
 
   const { data: courses = [], isLoading } = useAdminAcademyCourses({
     status: statusFilter,
@@ -161,29 +200,40 @@ export default function AcademyBuilderLibrary() {
     );
   }, [courses, userTypeFilter]);
 
-  const sections = useMemo(
-    () => groupCoursesBySeries(filteredCourses),
-    [filteredCourses],
+  const sortedCourses = useMemo(() => sortCourses(filteredCourses, sort), [filteredCourses, sort]);
+  const sections = useMemo(() => groupCoursesBySeries(sortedCourses), [sortedCourses]);
+  const selectedCourses = useMemo(
+    () => selectedSeries === "all" ? sortedCourses : sortedCourses.filter((course) => seriesKeyForCourse(course) === selectedSeries),
+    [selectedSeries, sortedCourses],
   );
-
-  // Auto-expand only the first time a section becomes visible; preserve manual toggles.
-  useEffect(() => {
-    const visibleKeys = sections.map((s) => s.key);
-    const newlyVisible = visibleKeys.filter((key) => !seenSectionKeysRef.current.has(key));
-    if (newlyVisible.length === 0) return;
-    for (const key of newlyVisible) seenSectionKeysRef.current.add(key);
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      for (const key of newlyVisible) next.add(key);
-      return [...next];
-    });
-  }, [sections]);
-
-  const allVisibleExpanded =
-    sections.length > 0 && sections.every((s) => openSections.includes(s.key));
+  const selectedSectionLabel = selectedSeries === "all"
+    ? "All courses"
+    : sections.find((section) => section.key === selectedSeries)?.label ?? STANDALONE_LABEL;
+  const seriesOptions = useMemo(() => sections.map((section) => ({ key: section.key, label: section.label, count: section.courses.length })), [sections]);
 
   const archiveCourse = useDeleteCourse();
   const deleteCourse = usePermanentDeleteCourse();
+
+  const openQuickEdit = (course: AdminCourse) => {
+    setQuickEditCourse(course);
+    setQuickEditTitle(course.title);
+    setQuickEditStatus(course.status ?? "draft");
+    setQuickEditSeries(course.webinar_series ?? "");
+  };
+
+  const saveQuickEdit = () => {
+    if (!quickEditCourse || !quickEditTitle.trim()) return;
+    updateCourse.mutate(
+      {
+        id: quickEditCourse.id,
+        data: {
+          title: quickEditTitle.trim(),
+          webinar_series: quickEditSeries.trim() || null,
+        },
+      },
+      { onSuccess: () => setQuickEditCourse(null) },
+    );
+  };
 
   const runBackfill = async () => {
     setBackfillRunning(true);
@@ -221,9 +271,9 @@ export default function AcademyBuilderLibrary() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="w-full px-4 py-6 sm:px-6 lg:px-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <GraduationCap className="h-6 w-6" style={{ color: "#7130A0" }} />
@@ -268,7 +318,7 @@ export default function AcademyBuilderLibrary() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search courses..."
@@ -298,11 +348,28 @@ export default function AcademyBuilderLibrary() {
           className="w-[240px]"
           maxSelectedDisplay={2}
         />
+        <Select value={sort} onValueChange={(value) => setSort(value as CourseSort)}>
+          <SelectTrigger className="w-[210px]">
+            <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {sortOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center rounded-md border p-1" style={{ borderColor: "hsl(var(--border))" }}>
+          <Button type="button" variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" aria-pressed={viewMode === "grid"} onClick={() => setViewMode("grid")}>
+            <LayoutGrid className="h-4 w-4 mr-1.5" /> Grid
+          </Button>
+          <Button type="button" variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" aria-pressed={viewMode === "list"} onClick={() => setViewMode("list")}>
+            <List className="h-4 w-4 mr-1.5" /> List
+          </Button>
+        </div>
       </div>
 
-      {/* Course sections */}
+      {/* Course groups and courses */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-48 rounded-xl" />
           ))}
@@ -318,51 +385,37 @@ export default function AcademyBuilderLibrary() {
           <p className="font-medium text-foreground">No courses match</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={() => {
-                if (allVisibleExpanded) {
-                  setOpenSections([]);
-                } else {
-                  setOpenSections(sections.map((s) => s.key));
-                }
-              }}
-            >
-              {allVisibleExpanded ? "Collapse all" : "Expand all"}
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-6 items-start">
+          <nav aria-label="Course groups" className="space-y-1 lg:sticky lg:top-4">
+            <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Course groups</p>
+            <Button type="button" variant={selectedSeries === "all" ? "secondary" : "ghost"} className="w-full justify-between" onClick={() => setSelectedSeries("all")}>
+              <span>All courses</span><span className="text-xs text-muted-foreground">{sortedCourses.length}</span>
             </Button>
-          </div>
-          <Accordion
-            type="multiple"
-            value={openSections}
-            onValueChange={setOpenSections}
-            className="space-y-3"
-          >
-            {sections.map((section) => (
-              <AccordionItem
-                key={section.key}
-                value={section.key}
-                className="border rounded-lg px-4"
-              >
-                <AccordionTrigger className="hover:no-underline py-3">
-                  <span className="text-sm font-semibold text-foreground">
-                    {section.label} ({section.courses.length})
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="pb-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {section.courses.map((course) => {
+            {seriesOptions.map((option) => (
+              <Button key={option.key} type="button" variant={selectedSeries === option.key ? "secondary" : "ghost"} className="w-full justify-between text-left" onClick={() => setSelectedSeries(option.key)}>
+                <span className="truncate">{option.label}</span><span className="text-xs text-muted-foreground">{option.count}</span>
+              </Button>
+            ))}
+          </nav>
+
+          <section className="min-w-0 space-y-4" aria-live="polite">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">{selectedSectionLabel}</h2>
+                <p className="text-sm text-muted-foreground">{selectedCourses.length} course{selectedCourses.length === 1 ? "" : "s"} · {sortOptions.find((option) => option.value === sort)?.label}</p>
+              </div>
+              {selectedSeries !== "all" && <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedSeries("all")}>Show all courses</Button>}
+            </div>
+
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
+                {selectedCourses.map((course) => {
                       const audiencePreview = formatAudiencePreview(course.target_audience);
                       return (
                         <Card
                           key={course.id}
-                          className="cursor-pointer hover:shadow-md transition-shadow"
+                          className="hover:shadow-md transition-shadow"
                           style={{ borderLeft: "4px solid #7130A0" }}
-                          onClick={() => navigate(`/superadmin/academy/builder/${course.id}`)}
                         >
                           <CardContent className="p-5 space-y-3">
                             <div className="flex items-start justify-between">
@@ -443,17 +496,62 @@ export default function AcademyBuilderLibrary() {
                                 </span>
                               )}
                             </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              <Button type="button" size="sm" className="flex-1" onClick={() => navigate(`/superadmin/academy/builder/${course.id}`)}>
+                                <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit course
+                              </Button>
+                              {canCreateCourse && <Button type="button" variant="outline" size="sm" onClick={() => openQuickEdit(course)}>Quick edit</Button>}
+                            </div>
                           </CardContent>
                         </Card>
                       );
                     })}
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-x-auto" style={{ borderColor: "hsl(var(--border))" }}>
+                <div className="min-w-[760px]">
+                  <div className="grid grid-cols-[minmax(260px,2fr)_minmax(130px,1fr)_100px_150px_auto] gap-4 px-4 py-3 text-xs font-medium text-muted-foreground border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                    <span>Course</span><span>Group</span><span>Status</span><span>Content</span><span>Actions</span>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+                  {selectedCourses.map((course) => (
+                    <div key={course.id} className="grid grid-cols-[minmax(260px,2fr)_minmax(130px,1fr)_100px_150px_auto] gap-4 items-center px-4 py-3 border-b last:border-b-0" style={{ borderColor: "hsl(var(--border))" }}>
+                      <div className="min-w-0"><p className="font-medium text-sm truncate">{course.title}</p><p className="text-xs text-muted-foreground truncate">{formatAudiencePreview(course.target_audience) ?? "No audience set"}</p></div>
+                      <span className="text-xs text-muted-foreground truncate">{seriesKeyForCourse(course) === STANDALONE_KEY ? STANDALONE_LABEL : course.webinar_series}</span>
+                      <Badge className={`w-fit text-[10px] ${statusColors[course.status ?? "draft"]}`}>{course.status ?? "draft"}</Badge>
+                      <span className="text-xs text-muted-foreground">{course.module_count} modules · {course.lesson_count} lessons</span>
+                      <div className="flex items-center gap-1">
+                        <Button type="button" size="sm" onClick={() => navigate(`/superadmin/academy/builder/${course.id}`)}><Pencil className="h-3.5 w-3.5 mr-1" /> Edit</Button>
+                        {canCreateCourse && <Button type="button" variant="ghost" size="icon" onClick={() => openQuickEdit(course)} aria-label={`Quick edit ${course.title}`}><MoreVertical className="h-4 w-4" /></Button>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       )}
+
+      <Sheet open={!!quickEditCourse} onOpenChange={(open) => !open && setQuickEditCourse(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Quick edit course</SheetTitle>
+            <SheetDescription>Update common details without leaving the course library.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-5 py-6">
+            <Field label="Course title"><Input value={quickEditTitle} onChange={(e) => setQuickEditTitle(e.target.value)} /></Field>
+            <Field label="Course group"><Input value={quickEditSeries} placeholder="Standalone course" onChange={(e) => setQuickEditSeries(e.target.value)} /></Field>
+            <div className="flex items-center justify-between rounded-md border px-3 py-2" style={{ borderColor: "hsl(var(--border))" }}>
+              <span className="text-sm">Current status</span><Badge className={`text-[10px] ${statusColors[quickEditStatus]}`}>{quickEditStatus}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">Use the full builder for publishing, structure, lessons, assessments, package rules, and image settings.</p>
+          </div>
+          <SheetFooter>
+            <Button variant="outline" onClick={() => setQuickEditCourse(null)}>Cancel</Button>
+            <Button onClick={saveQuickEdit} disabled={!quickEditTitle.trim() || updateCourse.isPending}>{updateCourse.isPending ? "Saving…" : "Save changes"}</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Backfill Confirmation */}
       <AlertDialog open={backfillConfirmOpen} onOpenChange={setBackfillConfirmOpen}>
