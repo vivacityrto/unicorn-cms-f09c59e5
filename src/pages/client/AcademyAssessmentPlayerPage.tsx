@@ -127,22 +127,6 @@ export default function AcademyAssessmentPlayerPage() {
     }
   }, [assessment?.time_limit_minutes, submitted]);
 
-  useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0 || submitted) return;
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev === null) return null;
-        if (prev <= 1) {
-          // Auto-submit
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timeLeft, submitted]);
-
   // Navigation blocker
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
     return !submitted && Object.keys(answers).length > 0 && currentLocation.pathname !== nextLocation.pathname;
@@ -208,11 +192,34 @@ export default function AcademyAssessmentPlayerPage() {
     },
   });
 
+  // Destructured because `submitMutation` (the mutation object) is a fresh
+  // object every render, but `.mutate` itself is a stable function
+  // reference — using the object directly in `handleSubmit`'s deps would
+  // make it (and the auto-submit timer effect below that depends on it)
+  // re-run on every unrelated render, not just when isPending/submitted
+  // actually change.
+  const { mutate: submitAssessment, isPending: isSubmitting } = submitMutation;
   const handleSubmit = useCallback(() => {
-    if (!submitMutation.isPending && !submitted) {
-      submitMutation.mutate();
+    if (!isSubmitting && !submitted) {
+      submitAssessment();
     }
-  }, [submitMutation, submitted]);
+  }, [isSubmitting, submitted, submitAssessment]);
+
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0 || submitted) return;
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          // Auto-submit
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timeLeft, submitted, handleSubmit]);
 
   const allAnswered = questions.length > 0 && questions.every(q => answers[q.id]);
   const currentQuestion = questions[currentIndex];
