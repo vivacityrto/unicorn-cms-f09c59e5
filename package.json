@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "lint:ratchet": "node scripts/lint-ratchet.mjs",
+    "lint:baseline": "node scripts/generate-lint-baseline.mjs",
     "lint:email-redirects": "node scripts/check-email-redirect-urls.mjs",
     "preview": "vite preview",
     "metrics": "node scripts/architecture-metrics.mjs",

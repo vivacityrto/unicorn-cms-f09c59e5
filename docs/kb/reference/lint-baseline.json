@@ -1,0 +1,3498 @@
+{
+  "generatedAt": "2026-09-03T03:27:39.177Z",
+  "baselineSha": "3f419e29e8af0339b54fceb3b5a53049e7911270",
+  "totals": {
+    "files": 1784,
+    "filesWithFindings": 647,
+    "errors": 3827,
+    "warnings": 191
+  },
+  "byRule": {
+    "@typescript-eslint/no-explicit-any": 3742,
+    "react-hooks/exhaustive-deps": 153,
+    "prefer-const": 37,
+    "react-refresh/only-export-components": 38,
+    "@typescript-eslint/no-unused-expressions": 7,
+    "no-case-declarations": 10,
+    "no-empty": 6,
+    "@typescript-eslint/no-empty-object-type": 2,
+    "@typescript-eslint/no-non-null-asserted-optional-chain": 8,
+    "no-useless-catch": 5,
+    "react-hooks/rules-of-hooks": 4,
+    "no-useless-escape": 3,
+    "no-control-regex": 1,
+    "@typescript-eslint/no-require-imports": 1,
+    "@typescript-eslint/ban-ts-comment": 1
+  },
+  "bySourceClass": {
+    "src": {
+      "errors": 3143,
+      "warnings": 191,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3074,
+        "react-hooks/exhaustive-deps": 153,
+        "prefer-const": 27,
+        "react-refresh/only-export-components": 38,
+        "@typescript-eslint/no-unused-expressions": 7,
+        "no-case-declarations": 10,
+        "no-empty": 6,
+        "@typescript-eslint/no-empty-object-type": 2,
+        "@typescript-eslint/no-non-null-asserted-optional-chain": 8,
+        "no-useless-catch": 5,
+        "react-hooks/rules-of-hooks": 4
+      }
+    },
+    "supabase/functions": {
+      "errors": 682,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 668,
+        "prefer-const": 10,
+        "no-useless-escape": 3,
+        "no-control-regex": 1
+      }
+    },
+    "tooling": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-require-imports": 1,
+        "@typescript-eslint/ban-ts-comment": 1
+      }
+    }
+  },
+  "byDirectory": {
+    "src/components": {
+      "errors": 63,
+      "warnings": 5,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 61,
+        "react-hooks/exhaustive-deps": 5,
+        "prefer-const": 2
+      }
+    },
+    "src/components/academy": {
+      "errors": 1,
+      "warnings": 4,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1,
+        "react-refresh/only-export-components": 4
+      }
+    },
+    "src/components/academy/admin": {
+      "errors": 10,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 8,
+        "@typescript-eslint/no-unused-expressions": 2
+      }
+    },
+    "src/components/academy/admin/rules": {
+      "errors": 1,
+      "warnings": 1,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/components/academy/builder": {
+      "errors": 27,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 26,
+        "@typescript-eslint/no-unused-expressions": 1
+      }
+    },
+    "src/components/admin": {
+      "errors": 20,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 20
+      }
+    },
+    "src/components/admin/reporting-obligations": {
+      "errors": 5,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    "src/components/admin/team-users": {
+      "errors": 6,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    "src/components/ask-viv": {
+      "errors": 7,
+      "warnings": 1,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 7,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/components/audit": {
+      "errors": 21,
+      "warnings": 5,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 20,
+        "react-refresh/only-export-components": 1,
+        "prefer-const": 1,
+        "react-hooks/exhaustive-deps": 4
+      }
+    },
+    "src/components/audit/workspace": {
+      "errors": 82,
+      "warnings": 4,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 82,
+        "react-hooks/exhaustive-deps": 2,
+        "react-refresh/only-export-components": 2
+      }
+    },
+    "src/components/calendar": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "src/components/clickup": {
+      "errors": 24,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 23,
+        "prefer-const": 1
+      }
+    },
+    "src/components/client-portal/support-tickets": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "src/components/client": {
+      "errors": 353,
+      "warnings": 25,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 350,
+        "@typescript-eslint/no-unused-expressions": 2,
+        "react-hooks/exhaustive-deps": 20,
+        "prefer-const": 1,
+        "react-refresh/only-export-components": 5
+      }
+    },
+    "src/components/communications": {
+      "errors": 10,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 9,
+        "@typescript-eslint/no-unused-expressions": 1
+      }
+    },
+    "src/components/compliance": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "src/components/csc": {
+      "errors": 2,
+      "warnings": 1,
+      "byRule": {
+        "react-hooks/exhaustive-deps": 1,
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "src/components/dashboard": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "src/components/document": {
+      "errors": 2,
+      "warnings": 1,
+      "byRule": {
+        "react-hooks/exhaustive-deps": 1,
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "src/components/documents": {
+      "errors": 6,
+      "warnings": 2,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 6,
+        "react-hooks/exhaustive-deps": 2
+      }
+    },
+    "src/components/documents/bulk-generate/targeted": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "src/components/documents/tabs": {
+      "errors": 7,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    "src/components/email-triage": {
+      "errors": 6,
+      "warnings": 1,
+      "byRule": {
+        "react-hooks/exhaustive-deps": 1,
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    "src/components/email": {
+      "errors": 2,
+      "warnings": 1,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/components/eos": {
+      "errors": 56,
+      "warnings": 9,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 52,
+        "react-hooks/exhaustive-deps": 9,
+        "no-case-declarations": 4
+      }
+    },
+    "src/components/eos/configurations": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "src/components/eos/flight-plan": {
+      "errors": 8,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    "src/components/eos/qc": {
+      "errors": 6,
+      "warnings": 3,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 6,
+        "react-hooks/exhaustive-deps": 3
+      }
+    },
+    "src/components/eos/rocks": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "src/components/executive": {
+      "errors": 33,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 33
+      }
+    },
+    "src/components/executive/ceo": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "src/components/governance": {
+      "errors": 14,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 14
+      }
+    },
+    "src/components/help-center": {
+      "errors": 36,
+      "warnings": 3,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 36,
+        "react-refresh/only-export-components": 1,
+        "react-hooks/exhaustive-deps": 2
+      }
+    },
+    "src/components/kpi-v2": {
+      "errors": 32,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 32
+      }
+    },
+    "src/components/kpi": {
+      "errors": 69,
+      "warnings": 1,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 67,
+        "react-hooks/exhaustive-deps": 1,
+        "prefer-const": 2
+      }
+    },
+    "src/components/layout": {
+      "errors": 3,
+      "warnings": 2,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3,
+        "react-refresh/only-export-components": 1,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/components/meetings": {
+      "errors": 8,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    "src/components/membership": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "src/components/notes": {
+      "errors": 7,
+      "warnings": 1,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5,
+        "no-empty": 2,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/components/package-builder": {
+      "errors": 78,
+      "warnings": 3,
+      "byRule": {
+        "react-hooks/exhaustive-deps": 2,
+        "@typescript-eslint/no-explicit-any": 77,
+        "@typescript-eslint/no-unused-expressions": 1,
+        "react-refresh/only-export-components": 1
+      }
+    },
+    "src/components/portfolio": {
+      "errors": 4,
+      "warnings": 1,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/components/profile": {
+      "errors": 16,
+      "warnings": 1,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 16,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/components/settings": {
+      "errors": 5,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    "src/components/stage": {
+      "errors": 24,
+      "warnings": 9,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 24,
+        "react-hooks/exhaustive-deps": 3,
+        "react-refresh/only-export-components": 6
+      }
+    },
+    "src/components/support-tickets": {
+      "errors": 14,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 14
+      }
+    },
+    "src/components/task-notes": {
+      "errors": 36,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 36
+      }
+    },
+    "src/components/tenant": {
+      "errors": 17,
+      "warnings": 2,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 17,
+        "react-refresh/only-export-components": 1,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/components/ui": {
+      "errors": 3,
+      "warnings": 10,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1,
+        "react-refresh/only-export-components": 8,
+        "react-hooks/exhaustive-deps": 2,
+        "@typescript-eslint/no-empty-object-type": 2
+      }
+    },
+    "src/components/workboard": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "src/contexts": {
+      "errors": 0,
+      "warnings": 7,
+      "byRule": {
+        "react-refresh/only-export-components": 6,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/contexts/__tests__": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "src/features/pdp/components": {
+      "errors": 0,
+      "warnings": 1,
+      "byRule": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    "src/features/pdp": {},
+    "src/hooks/academy": {
+      "errors": 153,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 153
+      }
+    },
+    "src/hooks/admin": {
+      "errors": 7,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    "src/hooks": {
+      "errors": 1221,
+      "warnings": 13,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1194,
+        "prefer-const": 16,
+        "no-empty": 2,
+        "react-hooks/exhaustive-deps": 12,
+        "react-refresh/only-export-components": 1,
+        "@typescript-eslint/no-non-null-asserted-optional-chain": 8,
+        "no-case-declarations": 1
+      }
+    },
+    "src/integrations/supabase": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "prefer-const": 1
+      }
+    },
+    "src/lib": {
+      "errors": 10,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 10
+      }
+    },
+    "src/lib/kpi-v2": {
+      "errors": 8,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    "src/lib/tga": {
+      "errors": 12,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 12
+      }
+    },
+    "src/pages": {
+      "errors": 471,
+      "warnings": 48,
+      "byRule": {
+        "react-hooks/exhaustive-deps": 48,
+        "@typescript-eslint/no-explicit-any": 456,
+        "no-useless-catch": 5,
+        "no-case-declarations": 5,
+        "no-empty": 2,
+        "prefer-const": 3
+      }
+    },
+    "src/pages/academy": {
+      "errors": 5,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    "src/pages/admin": {
+      "errors": 10,
+      "warnings": 10,
+      "byRule": {
+        "react-hooks/rules-of-hooks": 4,
+        "react-hooks/exhaustive-deps": 10,
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    "src/pages/admin/ai-insights": {
+      "errors": 0,
+      "warnings": 1,
+      "byRule": {
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/pages/client": {
+      "errors": 36,
+      "warnings": 4,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 36,
+        "react-hooks/exhaustive-deps": 4
+      }
+    },
+    "src/pages/internal": {
+      "errors": 0,
+      "warnings": 1,
+      "byRule": {
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    "src/pages/superadmin": {
+      "errors": 0,
+      "warnings": 10,
+      "byRule": {
+        "react-hooks/exhaustive-deps": 10
+      }
+    },
+    "src/services": {
+      "errors": 5,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    "src/test/rbac": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "src/test/tenant": {
+      "errors": 38,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 38
+      }
+    },
+    "src/types": {
+      "errors": 25,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 25
+      }
+    },
+    "supabase/functions/_shared/ai-brain": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/_shared": {
+      "errors": 5,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    "supabase/functions/_shared/ask-viv-fact-builder": {
+      "errors": 20,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 20
+      }
+    },
+    "supabase/functions/_shared/ask-viv-prompts": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/activate-ghost-user": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "supabase/functions/add-missing-packages": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/ai-orchestrator": {
+      "errors": 6,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    "supabase/functions/ai-suggest-rock": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "prefer-const": 1
+      }
+    },
+    "supabase/functions/analyse-evidence": {
+      "errors": 12,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 12
+      }
+    },
+    "supabase/functions/analyze-document": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "prefer-const": 1
+      }
+    },
+    "supabase/functions/ask-viv-assistant-client": {
+      "errors": 12,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 12
+      }
+    },
+    "supabase/functions/ask-viv-assistant": {
+      "errors": 77,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 76,
+        "prefer-const": 1
+      }
+    },
+    "supabase/functions/assistant-answer": {
+      "errors": 37,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 37
+      }
+    },
+    "supabase/functions/bulk-send-invitations": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/bulk-user-action": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/calculate-predictive-risk": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/capture-outlook-email": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/clickup-ai-search": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/client-ai-companion": {
+      "errors": 6,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    "supabase/functions/cohort-access-sender-worker": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/compliance-assistant": {
+      "errors": 7,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    "supabase/functions/consume-token": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/create-client-audit": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/create-tasks-from-minutes": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/dashboard-test-seed": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/delete-user": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/deliver-governance-document": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "supabase/functions/draft-executive-summary": {
+      "errors": 22,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 22
+      }
+    },
+    "supabase/functions/draft-finding": {
+      "errors": 13,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 13
+      }
+    },
+    "supabase/functions/embed-ask-viv-corpus": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/embed-ask-viv-documents": {
+      "errors": 7,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    "supabase/functions/export-client-timeline-pdf": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/export-pdp-audit-pack": {
+      "errors": 17,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 16,
+        "prefer-const": 1
+      }
+    },
+    "supabase/functions/extract-document-fields": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/fetch-clickup-comments": {
+      "errors": 8,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    "supabase/functions/generate-ask-viv-faqs": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "supabase/functions/generate-certificate-pdf": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/generate-client-audit-report-docx": {
+      "errors": 14,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 13,
+        "no-useless-escape": 1
+      }
+    },
+    "supabase/functions/generate-client-audit-report": {
+      "errors": 17,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 16,
+        "no-control-regex": 1
+      }
+    },
+    "supabase/functions/generate-meeting-recurrence": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "prefer-const": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/generate-membership-certificate": {
+      "errors": 6,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    "supabase/functions/generate-minutes-draft": {
+      "errors": 12,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 10,
+        "prefer-const": 2
+      }
+    },
+    "supabase/functions/generate-minutes-from-transcript": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/generate-notifications": {
+      "errors": 7,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 6,
+        "prefer-const": 1
+      }
+    },
+    "supabase/functions/generate-recovery-link": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/generate-release-documents": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/generate-staff-checklist": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/import-unicorn1-client": {
+      "errors": 32,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 31,
+        "prefer-const": 1
+      }
+    },
+    "supabase/functions/invite-or-reset-user": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/invite-user": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/issue-token": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/kpi-email-log-sync": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "prefer-const": 1
+      }
+    },
+    "supabase/functions/link-sharepoint-document": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/lookup-unicorn1-client": {
+      "errors": 9,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 9
+      }
+    },
+    "supabase/functions/mailgun-send": {
+      "errors": 7,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    "supabase/functions/mailgun-webhook": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/mark-token-used": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/process-notification-queue": {
+      "errors": 18,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 18
+      }
+    },
+    "supabase/functions/provision-m365-user": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/query-knowledge-graph": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "supabase/functions/record-executive-summary-decision": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/record-finding-decision": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "supabase/functions/regulator-watch-check": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/research-audit-intelligence": {
+      "errors": 7,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    "supabase/functions/research-enrich-tenant": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/research-evidence-gap-check": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/research-public-snapshot": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/research-tas-context": {
+      "errors": 5,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    "supabase/functions/research-template-gap-analysis": {
+      "errors": 5,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    "supabase/functions/resend-invite": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/resolve-sharepoint-folder-url": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "supabase/functions/risk-command-engine": {
+      "errors": 11,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 11
+      }
+    },
+    "supabase/functions/run-retention-forecast": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/run-stage-health-monitor": {
+      "errors": 16,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 16
+      }
+    },
+    "supabase/functions/run-strategic-signal-analysis": {
+      "errors": 9,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 9
+      }
+    },
+    "supabase/functions/run-tenant-risk-forecast": {
+      "errors": 6,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    "supabase/functions/run-workflow-optimisation": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/run-workload-forecast": {
+      "errors": 5,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    "supabase/functions/scan-risk-radar": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "supabase/functions/scorecard-refresh": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/search-organisations": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "supabase/functions/search-unicorn1-users": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/send-action-item-due-reminders": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "supabase/functions/send-automated-email": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "supabase/functions/send-composed-email": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "supabase/functions/send-email-graph": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/send-email": {
+      "errors": 10,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 10
+      }
+    },
+    "supabase/functions/send-invitation-email": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/send-password-reset": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/send-self-password-reset": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/send-staff-onboarding-email": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/send-stage-email": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "supabase/functions/set-invite-password": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "supabase/functions/strategic-orchestration": {
+      "errors": 13,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 13
+      }
+    },
+    "supabase/functions/sync-clickup-tasks": {
+      "errors": 11,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 11
+      }
+    },
+    "supabase/functions/sync-clickup-time": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "supabase/functions/sync-meeting-artifacts": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "no-useless-escape": 1,
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "supabase/functions/tga-fetch-scope": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/tga-rto-import": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/tga-rto-preview": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    "supabase/functions/tga-rto-sync": {
+      "errors": 43,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 43
+      }
+    },
+    "supabase/functions/tga-sync": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "no-useless-escape": 1
+      }
+    },
+    "supabase/functions/toggle-user-status": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/update-user-profile": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/update-user-role": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/upload-sharepoint-file": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/vector-index-rebuild": {
+      "errors": 12,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 12
+      }
+    },
+    "supabase/functions/vector-index-update": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "supabase/functions/vector-search": {
+      "errors": 3,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    "supabase/functions/xero-invoice-list": {
+      "errors": 5,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    "supabase/functions/xero-invoice-status": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/xero-invoice-sync-all": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    "supabase/functions/xero-webhook": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    ".": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-require-imports": 1,
+        "@typescript-eslint/ban-ts-comment": 1
+      }
+    }
+  },
+  "byFile": {
+    "src/components/AddClientTaskDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/AddExistingDocumentDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/AddExistingStageDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/AddPackageDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/AddStaffTaskDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/AddStageDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/AddTenantDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 10,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/AdminInviteUserDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/CreateDocumentDialog2.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/DashboardLayout.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 13
+    },
+    "src/components/EditPackageDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/InviteUserDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 4,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/StageNotesTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 3,
+      "prefer-const": 2
+    },
+    "src/components/Unicorn1ImportDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/academy/CourseLessonResources.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/academy/VimeoPlayer.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/academy/WorkshopSegmentSplit.tsx": {
+      "react-refresh/only-export-components": 3
+    },
+    "src/components/academy/admin/EnrolmentProgressDrawer.tsx": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/components/academy/admin/NewEnrolmentModal.tsx": {
+      "@typescript-eslint/no-unused-expressions": 2
+    },
+    "src/components/academy/admin/rules/RulesListTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/academy/admin/rules/RulesMatrixTab.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/academy/builder/AssessmentEditorTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/components/academy/builder/ImportVideosPanel.tsx": {
+      "@typescript-eslint/no-unused-expressions": 1,
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/academy/builder/LessonEditorPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/components/academy/builder/PackageRulesTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 10
+    },
+    "src/components/admin/AllStagesTable.tsx": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/components/admin/AppSettingsForm.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/admin/CodeRowDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/components/admin/CodeTableDataGrid.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/admin/ReInviteDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/admin/reporting-obligations/BroadcastPreviewDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/admin/reporting-obligations/ObligationDeleteDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/admin/reporting-obligations/ObligationFormDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/admin/reporting-obligations/ObligationsTable.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/admin/team-users/ProvisioningRunOverview.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/admin/team-users/TeamLeaderEmailDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/ask-viv/AskVivPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/components/ask-viv/AskVivScopeSelectorModal.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/audit/ActionCreateForm.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/audit/AuditQuestionCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/audit/AuditSectionNav.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/audit/DeleteAuditDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/audit/FindingCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/audit/NewAuditModal.tsx": {
+      "@typescript-eslint/no-explicit-any": 12,
+      "prefer-const": 1,
+      "react-hooks/exhaustive-deps": 4
+    },
+    "src/components/audit/workspace/ActionDrawer.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/audit/workspace/ActionsTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/audit/workspace/AddFindingForm.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/audit/workspace/AuditFormTab.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/components/audit/workspace/AuditSidebar.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/audit/workspace/ClosingMeetingPhase.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/audit/workspace/DocumentReviewPhase.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/audit/workspace/EvidencePanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 10
+    },
+    "src/components/audit/workspace/EvidenceRequestsSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/audit/workspace/OpeningMeetingPhase.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/audit/workspace/OverviewTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/audit/workspace/QuestionCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 9
+    },
+    "src/components/audit/workspace/QuestionGuidance.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/audit/workspace/ReportTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 18
+    },
+    "src/components/audit/workspace/SendEvidenceRequestDrawer.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/components/audit/workspace/SendPreliminarySummaryDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 10
+    },
+    "src/components/audit/workspace/UnsavedAuditWorkContext.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/audit/workspace/useDebouncedAutosave.ts": {},
+    "src/components/calendar/CalendarEventDetailDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/clickup/ClickUpTimeTransfer.tsx": {
+      "@typescript-eslint/no-explicit-any": 17
+    },
+    "src/components/clickup/PackageInstanceAssignment.tsx": {
+      "@typescript-eslint/no-explicit-any": 6,
+      "prefer-const": 1
+    },
+    "src/components/client-portal/support-tickets/ClientNewTicketModal.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/client-portal/support-tickets/useClientSubmitTicket.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/AddTimeDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 19
+    },
+    "src/components/client/AuditPreparationSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 5,
+      "@typescript-eslint/no-unused-expressions": 1
+    },
+    "src/components/client/AuditProgressCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/client/BulkReassignCscDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/client/BulkUploadDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/ClientActionItemsTab.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/client/ClientAddressSection.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/client/ClientAuditReportsSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/client/ClientAuditsTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/client/ClientEmailsTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/ClientGovernanceDocumentsPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 5,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/client/ClientIntegrationsTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 31,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/client/ClientMessagesTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 28
+    },
+    "src/components/client/ClientNotificationReview.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/client/ClientPackagesTab.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 11
+    },
+    "src/components/client/ClientProfileForm.tsx": {
+      "@typescript-eslint/no-explicit-any": 6,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/client/ClientStructuredNotesTab.tsx": {
+      "react-hooks/exhaustive-deps": 2,
+      "@typescript-eslint/no-explicit-any": 10
+    },
+    "src/components/client/ClientTimeSummaryCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/client/ClientTimeTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 71,
+      "react-hooks/exhaustive-deps": 4,
+      "prefer-const": 1
+    },
+    "src/components/client/ClientTimelineTab.tsx": {
+      "react-refresh/only-export-components": 1,
+      "@typescript-eslint/no-unused-expressions": 1
+    },
+    "src/components/client/ClientTopbar.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/ClientUpcomingAuditSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/components/client/ComposeEmailDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/client/CreateActionDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/EditTimeDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 12,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/client/LegacyDataDiagnostics.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/MembershipWeightsPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/NewConversationDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/client/PackageDataManager.tsx": {
+      "@typescript-eslint/no-explicit-any": 18,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/client/PackageStagesManager.tsx": {
+      "@typescript-eslint/no-explicit-any": 10,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/client/PackageTimeSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/client/PeriodSelector.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/ReassignConsultantDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/client/RenewalConfirmDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 24
+    },
+    "src/components/client/ScopeSelectorBadge.tsx": {
+      "react-refresh/only-export-components": 2
+    },
+    "src/components/client/SharePointFolderConfig.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/components/client/SharePointFolderDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/client/StaffTaskActionMenu.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/client/StageDetailSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/client/StageDocumentsSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/StartPackageDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 16
+    },
+    "src/components/client/TaskNotesPopover.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/client/TenantInviteDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 3,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/client/TenantTimeTrackerBar.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/client/TenantUsersPreviewCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/client/TenantUsersTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 14
+    },
+    "src/components/client/TimeLogDrawer.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/client/TimelineEventCard.tsx": {
+      "react-refresh/only-export-components": 2
+    },
+    "src/components/client/XeroCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/communications/BulkMessageDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/communications/BulkMessageHistory.tsx": {
+      "@typescript-eslint/no-explicit-any": 4,
+      "@typescript-eslint/no-unused-expressions": 1
+    },
+    "src/components/compliance/ComplianceScoreBreakdown.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/csc/CSCProfileCard.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/dashboard/WeekTasksTable.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/document/DocumentReadinessBadge.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/document/MergeFieldsEditor.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/documents/DocumentAdditionalStagesField.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/documents/LinkedDocumentsList.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/documents/SharePointTemplateBrowser.tsx": {
+      "@typescript-eslint/no-explicit-any": 2,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/documents/bulk-generate/targeted/TargetedMode.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/documents/tabs/GeneratedDocumentsTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/components/email-triage/TicketDetailPanel.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/email-triage/TriageSidePanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/email/ConvertEmailToNoteDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/email/EmailViewDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/eos/AgendaTemplateEditor.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/eos/ApplyTemplateDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/eos/AttendancePanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/components/eos/IDSDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/eos/LiveMeetingView.tsx": {
+      "@typescript-eslint/no-explicit-any": 10,
+      "react-hooks/exhaustive-deps": 2,
+      "no-case-declarations": 4
+    },
+    "src/components/eos/MeetingCloseValidationDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/eos/MeetingScheduler.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/eos/MeetingSummaryCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 14
+    },
+    "src/components/eos/RockFormDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 14,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/eos/RockProgressControl.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/eos/ScorecardEntryGrid.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/eos/TodoInlineForm.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/eos/configurations/EosConfigurationEditor.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/eos/flight-plan/QuarterlyRocksSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/components/eos/qc/QCScheduler.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/eos/qc/QCSectionCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 4,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/eos/qc/SaveStatusIndicator.tsx": {
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/components/eos/rocks/RockCard.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/executive/ClientRiskForecastWidget.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/executive/EvidenceReadinessWidget.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/executive/PortfolioHealthWidget.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/executive/TeamCapacityWidget.tsx": {
+      "@typescript-eslint/no-explicit-any": 14
+    },
+    "src/components/executive/WeeklyReviewNotesPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/components/executive/ceo/DiamondClientPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/governance/GovernanceDeliveryDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/governance/GovernanceDeliveryHistory.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/governance/GovernanceDocumentEditDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/governance/GovernanceMappingEditor.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/governance/GovernancePackageAssignments.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/governance/GovernancePublishDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/governance/GovernanceTailoringHealth.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/help-center/ChatTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/help-center/HelpCenterContext.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/help-center/MessageTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 35,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/components/kpi-v2/AssistantKpiCards.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/kpi-v2/KpiDrillDownSheet.tsx": {
+      "@typescript-eslint/no-explicit-any": 17
+    },
+    "src/components/kpi-v2/KpiTeamSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/kpi-v2/MiniKpiSummary.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/kpi/KpiDashboard.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/kpi/KpiDeveloperTicketQueue.tsx": {
+      "@typescript-eslint/no-explicit-any": 9,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/kpi/KpiEmailLogSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/kpi/KpiMonthlySummaryCards.tsx": {
+      "@typescript-eslint/no-explicit-any": 10
+    },
+    "src/components/kpi/KpiReporterTicketView.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/kpi/MyKpiSignOffSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 39,
+      "prefer-const": 2
+    },
+    "src/components/kpi/RaiseTicketSheet.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/layout/AcademyLayout.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/layout/ClientLayout.tsx": {
+      "react-refresh/only-export-components": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/layout/FloatingSuggestionsDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/meetings/MeetingAiSummaryPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/meetings/MeetingDetailDrawer.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/membership/StageCellEditor.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/notes/EditNoteDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/notes/NoteFormDialog.tsx": {
+      "no-empty": 2,
+      "@typescript-eslint/no-explicit-any": 4,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/package-builder/BulkGenerateDocumentsDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/components/package-builder/CreatePackageDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/package-builder/PackageBuilderEditor.tsx": {
+      "@typescript-eslint/no-explicit-any": 10
+    },
+    "src/components/package-builder/PackageBuilderOverview.tsx": {
+      "@typescript-eslint/no-explicit-any": 14
+    },
+    "src/components/package-builder/PackagePhasesTab.tsx": {
+      "@typescript-eslint/no-unused-expressions": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/package-builder/PackageReadinessIndicator.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/package-builder/StageDetailPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 19
+    },
+    "src/components/package-builder/StageDocumentsTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/components/package-builder/StageLibraryDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/package-builder/StagePreviewDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 16,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/portfolio/TenantDrawer.tsx": {
+      "@typescript-eslint/no-explicit-any": 4,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/profile/AdminActions.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/profile/CSCProfileFields.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/profile/ProfileForm.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/profile/ProfileHeader.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/profile/TeamProfileFields.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/settings/CalendarTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/settings/ProfileBanner.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/settings/ProfileTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/settings/TeamProfileTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/stage/EditStageEmailDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/components/stage/EmailAttachmentsManager.tsx": {
+      "@typescript-eslint/no-explicit-any": 8,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/stage/StageDocumentsPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/components/stage/StageFrameworkSelector.tsx": {
+      "react-refresh/only-export-components": 6
+    },
+    "src/components/stage/StageMessagesPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/stage/StageQualityIndicator.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/stage/StageSimulationDialog.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/support-tickets/AdminHelpThreadDetail.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/support-tickets/NewTicketModal.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/support-tickets/SupportTicketsList.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/support-tickets/useAdminHelpThreadMessages.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/support-tickets/useAdminHelpThreads.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/components/support-tickets/useSubmitSupportTicket.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/task-notes/useDailyNotes.ts": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/components/task-notes/useNoteMutations.ts": {
+      "@typescript-eslint/no-explicit-any": 26
+    },
+    "src/components/task-notes/useNotesSummary.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/tenant/CloseClientModal.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/tenant/EnrichTenantButton.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/tenant/RenameTenantDialog.tsx": {
+      "react-refresh/only-export-components": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/tenant/TenantClickUpAISearch.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/tenant/TenantLifecycleActions.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/tenant/TenantLogoUpload.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/components/tenant/TenantMergeWizard.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/tenant/TenantProgressTable.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/tenant/TenantRelationships.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/tenant/TenantStatusDropdown.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/ui/CreatableSelect.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/ui/badge.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/ui/button.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/ui/celebration.tsx": {
+      "react-refresh/only-export-components": 1,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/ui/command.tsx": {
+      "@typescript-eslint/no-empty-object-type": 1
+    },
+    "src/components/ui/form.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/ui/responsive-table.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/ui/rich-text-editor.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/ui/sonner.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/ui/text.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/ui/textarea.tsx": {
+      "@typescript-eslint/no-empty-object-type": 1
+    },
+    "src/components/ui/toggle.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/workboard/AddWorkboardItemDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/contexts/ClientPreviewContext.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/contexts/ClientTenantContext.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/contexts/PageTitleContext.tsx": {
+      "react-refresh/only-export-components": 2
+    },
+    "src/contexts/TenantTypeContext.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "react-refresh/only-export-components": 1
+    },
+    "src/contexts/ViewModeContext.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/contexts/__tests__/ClientTenantContext.test.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/features/pdp/components/StandardsPicker.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/features/pdp/workforce.ts": {},
+    "src/hooks/academy/useAcademyAssessmentBuilder.ts": {
+      "@typescript-eslint/no-explicit-any": 18
+    },
+    "src/hooks/academy/useAcademyCertificates.ts": {
+      "@typescript-eslint/no-explicit-any": 15
+    },
+    "src/hooks/academy/useAcademyCourseResources.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/academy/useAcademyEnrollments.ts": {
+      "@typescript-eslint/no-explicit-any": 48
+    },
+    "src/hooks/academy/useAcademyModulesLessons.ts": {
+      "@typescript-eslint/no-explicit-any": 19
+    },
+    "src/hooks/academy/useAcademyPackageRules.ts": {
+      "@typescript-eslint/no-explicit-any": 9
+    },
+    "src/hooks/academy/useAcademyTagManagement.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/academy/useAcademyWorkbooks.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/academy/useAdminAcademyCourses.ts": {
+      "@typescript-eslint/no-explicit-any": 13
+    },
+    "src/hooks/academy/useEnrolCourse.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/academy/useMyEnrolledCourses.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/academy/useTenantAcademyAccess.ts": {
+      "@typescript-eslint/no-explicit-any": 14
+    },
+    "src/hooks/admin/use-broadcast-obligation.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/admin/use-reporting-obligations.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/use-client-package-dashboard.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/use-client-package-stages.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/use-client-package-whats-next.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/use-ui-prefs.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useAISuggestions.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useAcademyCourses.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useAccountabilityChart.tsx": {
+      "prefer-const": 2
+    },
+    "src/hooks/useAlignmentSignals.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useAskVivAssistantChat.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useAuditActionPlan.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useAuditCompletion.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/useAuditPrep.ts": {
+      "@typescript-eslint/no-explicit-any": 23
+    },
+    "src/hooks/useAuditReferences.ts": {
+      "@typescript-eslint/no-explicit-any": 22
+    },
+    "src/hooks/useAuditReport.ts": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/hooks/useAuditSchedule.ts": {
+      "@typescript-eslint/no-explicit-any": 22,
+      "no-empty": 1
+    },
+    "src/hooks/useAuditScheduler.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useAuditTemplates.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useAuditWorkspace.ts": {
+      "@typescript-eslint/no-explicit-any": 49,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/hooks/useAuth.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/hooks/useCalendarShares.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useCeoDashboard.ts": {
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "src/hooks/useCheckpointPhasesEnabled.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useClientActivityTimeline.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useClientAllTasks.ts": {
+      "@typescript-eslint/no-explicit-any": 9
+    },
+    "src/hooks/useClientAuditPortal.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/useClientAudits.ts": {
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "src/hooks/useClientCommunications.ts": {
+      "@typescript-eslint/no-explicit-any": 42,
+      "no-empty": 1
+    },
+    "src/hooks/useClientImpact.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useClientManagement.tsx": {
+      "@typescript-eslint/no-explicit-any": 34
+    },
+    "src/hooks/useClientManagementData.tsx": {
+      "@typescript-eslint/no-explicit-any": 14
+    },
+    "src/hooks/useClientMessagesUnread.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useClientNotifications.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useClientPackageInstances.tsx": {
+      "@typescript-eslint/no-explicit-any": 36
+    },
+    "src/hooks/useClientProgress.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useClientReminders.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useClientTaskInstances.ts": {
+      "@typescript-eslint/no-explicit-any": 10
+    },
+    "src/hooks/useClientWorkboard.tsx": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/hooks/useCodeTables.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/useCompletionEligibility.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useCompliancePacks.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/hooks/useCompliancePlaybooks.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useComplianceScore.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useConsultantAssignment.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useCopilot.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useCscAssignments.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useDashboardProcesses.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useDashboardTriage.ts": {
+      "@typescript-eslint/no-explicit-any": 30
+    },
+    "src/hooks/useDocumentDeliveryGuards.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useDocumentRequests.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/hooks/useDocumentVersions.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/hooks/useEmailAttachments.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/hooks/useEmailTemplates.tsx": {
+      "@typescript-eslint/no-explicit-any": 3,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/hooks/useEmailTicketCategories.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/useEmailTickets.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/useEngagementAudit.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useEos.tsx": {
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "src/hooks/useEosAgendaTemplates.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useEosConfigMeetingActions.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useEosConfigV2Flag.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useEosConfigurations.tsx": {
+      "@typescript-eslint/no-explicit-any": 15
+    },
+    "src/hooks/useEosDrafts.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useEosHeadlines.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useEosHealth.tsx": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/hooks/useEosMeetingSegments.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useEosOptions.ts": {
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "src/hooks/useEosReadiness.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useEosRocksHierarchy.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useEosScorecardEntries.tsx": {
+      "@typescript-eslint/no-non-null-asserted-optional-chain": 1
+    },
+    "src/hooks/useEosSegueShares.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useEvidenceCategories.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useEvidenceRequests.tsx": {
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "src/hooks/useExcelBindings.tsx": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/hooks/useExcelDataSources.tsx": {
+      "@typescript-eslint/no-explicit-any": 11
+    },
+    "src/hooks/useExecutiveAnomalies.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useExecutiveData.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useExecutiveHealth.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useFacilitatorChange.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useFlightPlan.tsx": {
+      "@typescript-eslint/no-non-null-asserted-optional-chain": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useGWCTrends.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useKpiReview.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useKpiSummary.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useLifecycleChecklists.ts": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/hooks/useMeetingArtifacts.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useMeetingRealtime.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useMeetingSeries.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-non-null-asserted-optional-chain": 1
+    },
+    "src/hooks/useMeetingTodos.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useMembershipDashboard.tsx": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/hooks/useMembershipStateOptions.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useMergeFields.tsx": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/hooks/useMissingMergeFields.tsx": {
+      "@typescript-eslint/no-explicit-any": 9,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/hooks/useMomentumPanel.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useMomentumState.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useMyAssignedConversationsCount.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useMyWork.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useNextMeeting.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useNoteTags.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useNotes.tsx": {
+      "prefer-const": 1,
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useNotificationPrefs.ts": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/hooks/useNotifications.tsx": {
+      "@typescript-eslint/no-explicit-any": 5,
+      "prefer-const": 1
+    },
+    "src/hooks/useOnboardingHub.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useOperationsDashboard.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useOutlookCalendar.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/hooks/usePackageBuilder.tsx": {
+      "@typescript-eslint/no-explicit-any": 79
+    },
+    "src/hooks/usePackagePhases.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/usePackageStageOverrides.tsx": {
+      "@typescript-eslint/no-explicit-any": 18
+    },
+    "src/hooks/usePackageUsage.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/usePackageUsageQuery.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/usePageViewTracking.ts": {},
+    "src/hooks/usePeopleAnalyzer.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/usePhaseProgress.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/usePortalDocuments.tsx": {
+      "@typescript-eslint/no-explicit-any": 9
+    },
+    "src/hooks/usePortfolioCockpit.ts": {
+      "@typescript-eslint/no-explicit-any": 18
+    },
+    "src/hooks/usePortfolioTimeline.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/usePredictiveRisk.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useProcesses.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useProgressAnchors.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useQuarterlyConversations.tsx": {
+      "@typescript-eslint/no-explicit-any": 2,
+      "@typescript-eslint/no-non-null-asserted-optional-chain": 1
+    },
+    "src/hooks/useRBAC.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useReleasedAudits.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useResources.tsx": {
+      "@typescript-eslint/no-explicit-any": 17
+    },
+    "src/hooks/useRetentionForecast.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/hooks/useReviewMode.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useRisksOpportunities.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useRockAnalysis.tsx": {
+      "@typescript-eslint/no-explicit-any": 20,
+      "prefer-const": 1
+    },
+    "src/hooks/useRtoTips.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useScorecardMetrics.tsx": {
+      "@typescript-eslint/no-non-null-asserted-optional-chain": 4
+    },
+    "src/hooks/useSeatHealth.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useSeatScorecard.tsx": {
+      "prefer-const": 2,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useSharePointBrowser.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/hooks/useStaffOnboardingStatus.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/useStaffProvisioningRules.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useStaffTaskInstances.ts": {
+      "@typescript-eslint/no-explicit-any": 15
+    },
+    "src/hooks/useStageActiveUsage.tsx": {
+      "@typescript-eslint/no-explicit-any": 5,
+      "prefer-const": 1
+    },
+    "src/hooks/useStageAnalytics.tsx": {
+      "@typescript-eslint/no-explicit-any": 22,
+      "prefer-const": 6
+    },
+    "src/hooks/useStageAuditLink.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/hooks/useStageAuditLog.tsx": {
+      "@typescript-eslint/no-explicit-any": 5,
+      "prefer-const": 1
+    },
+    "src/hooks/useStageCertification.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useStageDependencies.tsx": {
+      "@typescript-eslint/no-explicit-any": 9
+    },
+    "src/hooks/useStageDocuments.ts": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useStageDuplication.tsx": {
+      "@typescript-eslint/no-explicit-any": 18
+    },
+    "src/hooks/useStageEmails.ts": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/useStageExportImport.tsx": {
+      "@typescript-eslint/no-explicit-any": 21
+    },
+    "src/hooks/useStageNotes.ts": {
+      "react-hooks/exhaustive-deps": 1,
+      "prefer-const": 1
+    },
+    "src/hooks/useStageQualityCheck.tsx": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/hooks/useStageReleases.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useStageReplacement.tsx": {
+      "@typescript-eslint/no-explicit-any": 14
+    },
+    "src/hooks/useStageReviews.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useStageSimulation.tsx": {
+      "@typescript-eslint/no-explicit-any": 14
+    },
+    "src/hooks/useStageTemplateContent.tsx": {
+      "@typescript-eslint/no-explicit-any": 34
+    },
+    "src/hooks/useStageVersions.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useStrategicCommand.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/useStrategicOrchestration.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useSuggestAttachments.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useSuggestDropdowns.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useSuggestItems.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/hooks/useSupportTicketsBadge.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useTeamInbox.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useTeamUnreadCount.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useTeamsMeetingMinutes.ts": {
+      "@typescript-eslint/no-explicit-any": 15
+    },
+    "src/hooks/useTenantContacts.ts": {
+      "@typescript-eslint/no-explicit-any": 10
+    },
+    "src/hooks/useTenantNotes.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useTenantPackages.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useTenantPacks.tsx": {
+      "@typescript-eslint/no-explicit-any": 6,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/hooks/useTenantsBasic.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useTgaRtoData.tsx": {
+      "@typescript-eslint/no-explicit-any": 15
+    },
+    "src/hooks/useTimeEntriesPaginated.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/hooks/useTimeInbox.tsx": {
+      "no-case-declarations": 1,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/hooks/useTriageStaffOptions.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useUserSetupLinks.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useWeeklyReview.ts": {
+      "@typescript-eslint/no-explicit-any": 20
+    },
+    "src/hooks/useWeeklyWins.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useWinBanner.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/hooks/useWorkCalendar.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/hooks/useWorkSubTypeLabels.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/useWorkflowOptimisation.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/hooks/useYouveGotMailToast.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/integrations/supabase/previewAuthStorage.ts": {
+      "prefer-const": 1
+    },
+    "src/lib/friendlyDbError.ts": {},
+    "src/lib/kpi-v2/fetchers.ts": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/lib/messageAttachments.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/lib/noteNotifications.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/lib/tga/lookupTargetRto.ts": {
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "src/pages/AcceptInvitation.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/pages/AdminCompliancePacks.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/pages/AdminManagePackages.tsx": {
+      "@typescript-eslint/no-explicit-any": 41,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/pages/AdminManageStages.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 9
+    },
+    "src/pages/AdminPackageTenantDetail.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/AdminStageAnalytics.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/AdminStageDetail.tsx": {
+      "@typescript-eslint/no-explicit-any": 52,
+      "no-useless-catch": 5
+    },
+    "src/pages/AuditTemplateBuilder.tsx": {
+      "@typescript-eslint/no-explicit-any": 21,
+      "react-hooks/exhaustive-deps": 1,
+      "no-case-declarations": 5
+    },
+    "src/pages/AuditWorkspace.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/Audits.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/pages/CalendarTimeCapture.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/ClickUpImport.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/ClientDetail.tsx": {
+      "react-hooks/exhaustive-deps": 2,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/ClientInboxPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 4,
+      "no-empty": 1
+    },
+    "src/pages/ClientPackageDetail.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/pages/Dashboard.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/EosIssues.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/EosQCSession.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/EosRocks.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/ExecutiveClientCommitments.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/ExecutiveDecisionQueue.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/ExecutiveFinancialControls.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/Login.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/pages/MainDashboard.tsx": {
+      "@typescript-eslint/no-explicit-any": 24
+    },
+    "src/pages/ManageCategories.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/pages/ManageDocuments.tsx": {
+      "@typescript-eslint/no-explicit-any": 42,
+      "react-hooks/exhaustive-deps": 2,
+      "prefer-const": 1,
+      "no-empty": 1
+    },
+    "src/pages/ManageEmailTemplates.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/pages/ManageInvites.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/ManageStages.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "src/pages/ManageTenants.tsx": {
+      "@typescript-eslint/no-explicit-any": 8,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/ManageUsers.tsx": {
+      "react-hooks/exhaustive-deps": 2,
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/pages/MyExitInterview.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/pages/MyOnboardingPage.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/OAuthConsent.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/pages/PackageDetail.tsx": {
+      "@typescript-eslint/no-explicit-any": 41,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/pages/ResetPassword.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/Settings.tsx": {
+      "@typescript-eslint/no-explicit-any": 3,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/StageBuilder.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/pages/TasksManagement.tsx": {
+      "@typescript-eslint/no-explicit-any": 42,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/pages/TeamCommunicationsPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 73
+    },
+    "src/pages/TeamSettings.tsx": {
+      "react-hooks/exhaustive-deps": 2,
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/pages/TeamUsers.tsx": {
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/pages/TenantDetail.tsx": {
+      "@typescript-eslint/no-explicit-any": 10,
+      "react-hooks/exhaustive-deps": 3
+    },
+    "src/pages/TenantDocumentDetail.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/pages/TenantDocuments.tsx": {
+      "@typescript-eslint/no-explicit-any": 9,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/TenantLogins.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/TenantMembers.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/pages/TenantNotes.tsx": {
+      "react-hooks/exhaustive-deps": 2,
+      "@typescript-eslint/no-explicit-any": 4,
+      "prefer-const": 2
+    },
+    "src/pages/TenantUsers.tsx": {
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/pages/UserProfile.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/pages/WorkCalendar.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/academy/AcademyCertificatesPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/pages/academy/AcademyWorkbooksPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/admin/BulkInvite.tsx": {
+      "react-hooks/rules-of-hooks": 4,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/pages/admin/ClickUpTenantMapping.tsx": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/pages/admin/CohortAccessSenderJob.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/admin/RolePermissionsEditor.tsx": {
+      "react-hooks/exhaustive-deps": 5
+    },
+    "src/pages/admin/StaffEngagementDetail.tsx": {
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/pages/admin/ai-insights/RecentDraftsTable.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/client/AcademyAssessmentPlayerPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 3,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/client/AcademyAssessmentResultPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/pages/client/AcademyCourseDetailPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/client/AcademyLessonViewerPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 23
+    },
+    "src/pages/client/ClientFilesPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/client/ClientProfilePage.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/client/ClientTgaDetailsPage.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/client/SupportTicketPortalDetailPage.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/pages/client/SupportTicketsPortalPage.tsx": {
+      "react-hooks/exhaustive-deps": 2,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/pages/internal/AskVivFlags.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/pages/superadmin/AcademyCertificatesPage.tsx": {
+      "react-hooks/exhaustive-deps": 3
+    },
+    "src/pages/superadmin/AcademyTenantAccessPage.tsx": {
+      "react-hooks/exhaustive-deps": 3
+    },
+    "src/pages/superadmin/workforce-pdp.tsx": {
+      "react-hooks/exhaustive-deps": 4
+    },
+    "src/services/codeTablesService.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "src/test/rbac/useRBAC.test.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/test/tenant/isolation.test.tsx": {
+      "@typescript-eslint/no-explicit-any": 38
+    },
+    "src/types/audit.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/types/eos.ts": {
+      "@typescript-eslint/no-explicit-any": 22
+    },
+    "src/types/eosAlerts.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/types/qc.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/_shared/ai-brain/confidence-scorer.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/_shared/ai-brain/escalation-detector.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/_shared/ask-viv-conversations.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/_shared/ask-viv-fact-builder/data-retrieval.ts": {
+      "@typescript-eslint/no-explicit-any": 18
+    },
+    "supabase/functions/_shared/ask-viv-fact-builder/freshness_test.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/_shared/ask-viv-prompts/response-validator-v2.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/_shared/emit-timeline-event.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/activate-ghost-user/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/add-missing-packages/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/ai-orchestrator/index.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "supabase/functions/ai-suggest-rock/index.ts": {
+      "prefer-const": 1
+    },
+    "supabase/functions/analyse-evidence/index.ts": {
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "supabase/functions/analyze-document/index.ts": {
+      "prefer-const": 1
+    },
+    "supabase/functions/ask-viv-assistant-client/index.ts": {
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "supabase/functions/ask-viv-assistant/index.ts": {
+      "@typescript-eslint/no-explicit-any": 76,
+      "prefer-const": 1
+    },
+    "supabase/functions/assistant-answer/index.ts": {
+      "@typescript-eslint/no-explicit-any": 37
+    },
+    "supabase/functions/bulk-send-invitations/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/bulk-user-action/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/calculate-predictive-risk/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/capture-outlook-email/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/clickup-ai-search/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/client-ai-companion/index.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "supabase/functions/cohort-access-sender-worker/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/compliance-assistant/index.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "supabase/functions/consume-token/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/create-client-audit/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/create-tasks-from-minutes/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/dashboard-test-seed/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/delete-user/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/deliver-governance-document/index.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/draft-executive-summary/_validation.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/draft-executive-summary/index.ts": {
+      "@typescript-eslint/no-explicit-any": 17
+    },
+    "supabase/functions/draft-executive-summary/validation_test.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/draft-finding/index.ts": {
+      "@typescript-eslint/no-explicit-any": 13
+    },
+    "supabase/functions/embed-ask-viv-corpus/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/embed-ask-viv-documents/index.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "supabase/functions/export-client-timeline-pdf/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/export-pdp-audit-pack/index.ts": {
+      "@typescript-eslint/no-explicit-any": 16,
+      "prefer-const": 1
+    },
+    "supabase/functions/extract-document-fields/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/fetch-clickup-comments/index.ts": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "supabase/functions/generate-ask-viv-faqs/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/generate-certificate-pdf/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/generate-client-audit-report-docx/index.ts": {
+      "@typescript-eslint/no-explicit-any": 13,
+      "no-useless-escape": 1
+    },
+    "supabase/functions/generate-client-audit-report/index.ts": {
+      "@typescript-eslint/no-explicit-any": 16,
+      "no-control-regex": 1
+    },
+    "supabase/functions/generate-meeting-recurrence/index.ts": {
+      "prefer-const": 1,
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/generate-membership-certificate/index.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "supabase/functions/generate-minutes-draft/index.ts": {
+      "@typescript-eslint/no-explicit-any": 10,
+      "prefer-const": 2
+    },
+    "supabase/functions/generate-minutes-from-transcript/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/generate-notifications/index.ts": {
+      "@typescript-eslint/no-explicit-any": 6,
+      "prefer-const": 1
+    },
+    "supabase/functions/generate-recovery-link/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/generate-release-documents/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/generate-staff-checklist/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/import-unicorn1-client/index.ts": {
+      "@typescript-eslint/no-explicit-any": 31,
+      "prefer-const": 1
+    },
+    "supabase/functions/invite-or-reset-user/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/invite-user/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/issue-token/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/kpi-email-log-sync/index.ts": {
+      "prefer-const": 1
+    },
+    "supabase/functions/link-sharepoint-document/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/lookup-unicorn1-client/index.ts": {
+      "@typescript-eslint/no-explicit-any": 9
+    },
+    "supabase/functions/mailgun-send/index.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "supabase/functions/mailgun-webhook/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/mark-token-used/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/process-notification-queue/index.ts": {
+      "@typescript-eslint/no-explicit-any": 18
+    },
+    "supabase/functions/provision-m365-user/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/query-knowledge-graph/index.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/record-executive-summary-decision/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/record-finding-decision/index.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/regulator-watch-check/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/research-audit-intelligence/index.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "supabase/functions/research-enrich-tenant/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/research-evidence-gap-check/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/research-public-snapshot/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/research-tas-context/index.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "supabase/functions/research-template-gap-analysis/index.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "supabase/functions/resend-invite/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/resolve-sharepoint-folder-url/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/risk-command-engine/index.ts": {
+      "@typescript-eslint/no-explicit-any": 11
+    },
+    "supabase/functions/run-retention-forecast/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/run-stage-health-monitor/index.ts": {
+      "@typescript-eslint/no-explicit-any": 16
+    },
+    "supabase/functions/run-strategic-signal-analysis/index.ts": {
+      "@typescript-eslint/no-explicit-any": 9
+    },
+    "supabase/functions/run-tenant-risk-forecast/index.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "supabase/functions/run-workflow-optimisation/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/run-workload-forecast/index.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "supabase/functions/scan-risk-radar/index.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/scorecard-refresh/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/search-organisations/index.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/search-unicorn1-users/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/send-action-item-due-reminders/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/send-automated-email/index.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/send-composed-email/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/send-email-graph/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/send-email/index.ts": {
+      "@typescript-eslint/no-explicit-any": 10
+    },
+    "supabase/functions/send-invitation-email/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/send-password-reset/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/send-self-password-reset/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/send-staff-onboarding-email/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/send-stage-email/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/set-invite-password/index.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/strategic-orchestration/index.ts": {
+      "@typescript-eslint/no-explicit-any": 13
+    },
+    "supabase/functions/sync-clickup-tasks/index.ts": {
+      "@typescript-eslint/no-explicit-any": 11
+    },
+    "supabase/functions/sync-clickup-time/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/sync-meeting-artifacts/index.ts": {
+      "no-useless-escape": 1,
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/tga-fetch-scope/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/tga-rto-import/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/tga-rto-preview/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "supabase/functions/tga-rto-sync/index.ts": {
+      "@typescript-eslint/no-explicit-any": 43
+    },
+    "supabase/functions/tga-sync/index.ts": {
+      "no-useless-escape": 1
+    },
+    "supabase/functions/toggle-user-status/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/update-user-profile/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/update-user-role/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/upload-sharepoint-file/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/vector-index-rebuild/index.ts": {
+      "@typescript-eslint/no-explicit-any": 12
+    },
+    "supabase/functions/vector-index-update/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/vector-search/index.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "supabase/functions/xero-invoice-list/index.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    },
+    "supabase/functions/xero-invoice-status/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/xero-invoice-sync-all/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "supabase/functions/xero-webhook/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "tailwind.config.ts": {
+      "@typescript-eslint/no-require-imports": 1
+    },
+    "vite.config.ts": {
+      "@typescript-eslint/ban-ts-comment": 1
+    }
+  },
+  "exceptions": [
+    {
+      "path": "src/integrations/supabase/types.ts",
+      "reason": "generated (Supabase CLI type generation, not hand-authored)"
+    }
+  ],
+  "exceptionPolicy": "docs/kb/reference/lint-exception-policy.md"
+}

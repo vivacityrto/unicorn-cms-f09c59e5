@@ -258,6 +258,15 @@ one homogeneous problem:
 | `prefer-const` | 37 | 0.9% | Low-risk correctness/readability cleanup; suitable for opportunistic batches |
 | All other rules | 55 | 1.4% | Triage individually; do not hide with broad disables |
 
+A committed, machine-readable baseline superseding the summary table above —
+broken down by rule, source class (`src`, `supabase/functions`, tooling),
+directory, and file, plus a reviewed exception list — now lives at
+[`lint-baseline.json`](lint-baseline.json) (regenerate with
+`npm run lint:baseline`); its exception criteria are in
+[`lint-exception-policy.md`](lint-exception-policy.md). See §22's Phase 2.5
+subsection for that baseline's own measured totals and drift from the table
+above.
+
 The council conclusion is to start this program **after the Phase 2 route and
 layout work has reached its exit gate**, once route boundaries and mount
 lifetime are stable. Starting earlier would make route extraction and hook
@@ -1148,3 +1157,15 @@ Phase 2 exit gate (from §8): route count and guards unchanged except intentiona
 **Known gap surfaced immediately after #489, tracked as its own child plan:** converting the *mechanical* `*Wrapper.tsx` files was only part of the picture. `grep -rl "<DashboardLayout" src/pages` still returns 122 files at the post-#490 tip — pages where `DashboardLayout` is woven directly into the page's own JSX rather than a retired wrapper file, so they still fully remount the staff shell on every navigation. This is materially larger and riskier than the wrapper conversions (51 of the 122 files render the layout across 2–4 branches, several routes need a corrected guard-tier architecture rather than a mechanical unwrap) and is tracked in its own document rather than as a single row here: [`dashboard-direct-layout-migration-plan-2026-09-01.md`](dashboard-direct-layout-migration-plan-2026-09-01.md), a council-reviewed 19-PR implementation plan. That document's own §22-equivalent (its "Completion outcome" section) is where that program's progress should be tracked going forward; this table gets one summary line once that program starts landing PRs, not a row per page batch.
 
 A full LOC re-measurement (per the methodology above — disposable detached worktree, `scripts/architecture-metrics.mjs`) has not been re-run since the P1.1 checkpoint; the mechanical-wrapper PRs' own descriptions record their individual file/line deltas, which is treated as sufficient until the next natural checkpoint (either Phase 2's close, or a specific request for an updated whole-repo table) rather than re-running the full measurement after every single merge.
+
+### Phase 2.5 — lint-debt retirement (starting)
+
+The DashboardLayout direct-composition migration (Phase 2's own prerequisite exit gate for this phase, tracked in [`dashboard-direct-layout-migration-plan-2026-09-01.md`](dashboard-direct-layout-migration-plan-2026-09-01.md)) completed at PR [#518](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/518), unblocking this phase per §8's ordering rule.
+
+| ID | Candidate | Status | PR | Notes |
+|---|---|---|---|---|
+| Phase 2.5 PR 1 | Publish committed, machine-readable rule/source-class/directory/file baseline and exception policy | ✅ Done | (this PR) | `scripts/generate-lint-baseline.mjs` → [`lint-baseline.json`](lint-baseline.json); policy at [`lint-exception-policy.md`](lint-exception-policy.md). Measured at this PR's branch-cut SHA: 647 files with findings, 3,827 errors, 191 warnings (rule-attributable) — a small, expected drift from PR #515's 2026-09-03 doc-table snapshot (4,059/651) since `main` moved between the two measurements. One exception recorded: `src/integrations/supabase/types.ts` (generated). |
+| Phase 2.5 PR 2 | Clear non-`any` correctness findings (`react-hooks/exhaustive-deps`, `rules-of-hooks`, etc.) with characterization coverage | ⏳ Not started | — | — |
+| Phase 2.5 PR 3+ | Retire `any` in bounded batches, shared contracts and data/auth boundaries first | ⏳ Not started | — | — |
+
+Later batches diff against `lint-baseline.json`'s `byFile`/`byRule` data, not against re-derived counts, so "no compensating increase elsewhere" is checkable per the plan's Phase 2.5 exit gate (§8).
