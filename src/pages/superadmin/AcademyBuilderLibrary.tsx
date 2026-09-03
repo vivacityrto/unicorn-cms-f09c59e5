@@ -116,7 +116,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     </div>
   );
 }
-
 function groupCoursesBySeries(courses: AdminCourse[]): CourseSection[] {
   const byKey = new Map<string, AdminCourse[]>();
   for (const course of courses) {
