@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T06:25:56.728Z",
-  "baselineSha": "48771b91e1fe455a812a9d08d5945e39047eb374",
+  "generatedAt": "2026-09-03T06:56:05.033Z",
+  "baselineSha": "bebdc832dbc7eb120d12919ecfe5bca6c85b3aff",
   "totals": {
     "files": 1785,
-    "filesWithFindings": 631,
+    "filesWithFindings": 629,
     "errors": 3744,
-    "warnings": 173
+    "warnings": 165
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 135,
+    "react-hooks/exhaustive-deps": 127,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 173,
+      "warnings": 165,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 135,
+        "react-hooks/exhaustive-deps": 127,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -227,10 +227,10 @@
     },
     "src/components/eos": {
       "errors": 52,
-      "warnings": 9,
+      "warnings": 4,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 52,
-        "react-hooks/exhaustive-deps": 9
+        "react-hooks/exhaustive-deps": 4
       }
     },
     "src/components/eos/configurations": {
@@ -249,10 +249,9 @@
     },
     "src/components/eos/qc": {
       "errors": 6,
-      "warnings": 3,
+      "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 6,
-        "react-hooks/exhaustive-deps": 3
+        "@typescript-eslint/no-explicit-any": 6
       }
     },
     "src/components/eos/rocks": {
@@ -1749,7 +1748,6 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/eos/ApplyTemplateDialog.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 5
     },
     "src/components/eos/AttendancePanel.tsx": {
@@ -1757,26 +1755,20 @@
       "react-hooks/exhaustive-deps": 2
     },
     "src/components/eos/IDSDialog.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/eos/LiveMeetingView.tsx": {
       "@typescript-eslint/no-explicit-any": 10,
       "react-hooks/exhaustive-deps": 2
     },
-    "src/components/eos/MeetingCloseValidationDialog.tsx": {
-      "react-hooks/exhaustive-deps": 1
-    },
     "src/components/eos/MeetingScheduler.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/components/eos/MeetingSummaryCard.tsx": {
       "@typescript-eslint/no-explicit-any": 14
     },
     "src/components/eos/RockFormDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 14,
-      "react-hooks/exhaustive-deps": 1
+      "@typescript-eslint/no-explicit-any": 14
     },
     "src/components/eos/RockProgressControl.tsx": {
       "@typescript-eslint/no-explicit-any": 1
@@ -1797,11 +1789,7 @@
       "@typescript-eslint/no-explicit-any": 2
     },
     "src/components/eos/qc/QCSectionCard.tsx": {
-      "@typescript-eslint/no-explicit-any": 4,
-      "react-hooks/exhaustive-deps": 1
-    },
-    "src/components/eos/qc/SaveStatusIndicator.tsx": {
-      "react-hooks/exhaustive-deps": 2
+      "@typescript-eslint/no-explicit-any": 4
     },
     "src/components/eos/rocks/RockCard.tsx": {
       "@typescript-eslint/no-explicit-any": 1

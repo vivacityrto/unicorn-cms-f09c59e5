@@ -56,7 +56,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
     } else {
       setTemplateId('');
     }
-  }, [meetingType, templates]);
+  }, [meetingType, templates, availableTemplates, getDefaultTemplate]);
 
   const handleSchedule = async () => {
     const missing: string[] = [];

@@ -58,7 +58,7 @@ export const ApplyTemplateDialog = ({
         setSelectedTemplateId(availableTemplates[0].id);
       }
     }
-  }, [open, meetingType, templates]);
+  }, [open, meetingType, templates, availableTemplates, getDefaultTemplate]);
 
   const selectedTemplate = templates?.find(t => t.id === selectedTemplateId);
 

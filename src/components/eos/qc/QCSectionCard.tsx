@@ -40,7 +40,7 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
       setSaveCount(c => c + 1);
       setIsDirty(false);
     }
-  }, [upsertAnswer.isPending, upsertAnswer.isError]);
+  }, [upsertAnswer.isPending, upsertAnswer.isError, isDirty]);
 
   useEffect(() => {
     const answerMap: Record<string, any> = {};
