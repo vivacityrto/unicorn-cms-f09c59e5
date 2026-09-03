@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { VIVACITY_STAFF_ROLES } from "@/lib/roles/vivacityRoles";
@@ -191,20 +191,6 @@ export default function TenantNotes() {
     return "No duration";
   };
 
-  useEffect(() => {
-    if (parsedTenantId) {
-      fetchTenantInfo();
-      getCurrentUser();
-      fetchVivacityTeam();
-    }
-  }, [parsedTenantId, urlPackageId]);
-
-  useEffect(() => {
-    if (noteSource === 'clickup' && parsedTenantId) {
-      fetchClickupTasks();
-    }
-  }, [noteSource, parsedTenantId]);
-
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -229,7 +215,7 @@ export default function TenantNotes() {
     }
   };
 
-  const fetchClickupTasks = async () => {
+  const fetchClickupTasks = useCallback(async () => {
     setClickupLoading(true);
     try {
       const { data, error } = await supabase
@@ -245,9 +231,9 @@ export default function TenantNotes() {
     } finally {
       setClickupLoading(false);
     }
-  };
+  }, [parsedTenantId]);
 
-  const fetchTenantInfo = async () => {
+  const fetchTenantInfo = useCallback(async () => {
     const pkgId = urlPackageId ? parseInt(urlPackageId) : null;
     // Fetch tenant name
     const { data: tenantData } = await supabase.from("tenants").select("name").eq("id", parsedTenantId).single();
@@ -271,7 +257,21 @@ export default function TenantNotes() {
         if (pkgData) setPackageAbbr(pkgData.name);
       }
     }
-  };
+  }, [parsedTenantId, urlPackageId]);
+
+  useEffect(() => {
+    if (parsedTenantId) {
+      fetchTenantInfo();
+      getCurrentUser();
+      fetchVivacityTeam();
+    }
+  }, [parsedTenantId, urlPackageId, fetchTenantInfo]);
+
+  useEffect(() => {
+    if (noteSource === 'clickup' && parsedTenantId) {
+      fetchClickupTasks();
+    }
+  }, [noteSource, parsedTenantId, fetchClickupTasks]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

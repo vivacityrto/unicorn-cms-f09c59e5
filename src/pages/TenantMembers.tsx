@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,11 +31,7 @@ export default function TenantMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [tenantName, setTenantName] = useState("");
 
-  useEffect(() => {
-    fetchData();
-  }, [tenantId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -85,7 +81,11 @@ export default function TenantMembers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filteredMembers = members.filter(member =>
     member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
