@@ -37,10 +37,13 @@ import {
 import { Sparkles, Loader2, Trash2, Video, Wand2, Save, AlertTriangle, Plus, ListPlus, ArrowLeft, GripVertical, ArrowUp, ArrowDown, WandSparkles } from "lucide-react";
 import { toast } from "sonner";
 import TagChipInput from "@/components/academy/TagChipInput";
+import ThumbnailPositionEditor from "@/components/academy/builder/ThumbnailPositionEditor";
+import { useAcademyThumbnailLibrary } from "@/hooks/academy/useAcademyBuilderPickers";
 import WorkshopSegmentSplit, {
   formatTimecode, validateSegments, type WorkshopSegment,
 } from "@/components/academy/WorkshopSegmentSplit";
 import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
+import { usePermission } from "@/hooks/usePermission";
 
 function todayLocalISODate(): string {
   const d = new Date();
@@ -380,6 +383,7 @@ function SortableShowcaseChip({
 
 export default function AcademyAddCoursePage() {
   const navigate = useNavigate();
+  const canPublish = usePermission("academy.builder.publish");
 
   // Step 1
   const [sourceType, setSourceType] = useState<SourceType>("video");
@@ -546,12 +550,83 @@ export default function AcademyAddCoursePage() {
   // Step 4
   const [availableToAll, setAvailableToAll] = useState(true);
   const [packageIds, setPackageIds] = useState<number[]>([]);
+  const [publishOnSave, setPublishOnSave] = useState(false);
+  const [thumbnailPosition, setThumbnailPosition] = useState("50% 50%");
+  const [thumbnailFit, setThumbnailFit] = useState<"cover" | "contain">("cover");
+  const [thumbnailZoom, setThumbnailZoom] = useState(1);
+  const [bannerThumbnailUrl, setBannerThumbnailUrl] = useState<string | null>(null);
+  const [bannerThumbnailPosition, setBannerThumbnailPosition] = useState("50% 50%");
+  const [bannerThumbnailFit, setBannerThumbnailFit] = useState<"cover" | "contain">("cover");
+  const [bannerThumbnailZoom, setBannerThumbnailZoom] = useState(1);
+  const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
+  const [isBannerThumbnailUploading, setIsBannerThumbnailUploading] = useState(false);
+  const { data: thumbnailLibrary = [] } = useAcademyThumbnailLibrary();
 
   // Step 5
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
 
   const [saving, setSaving] = useState(false);
+
+  const uploadThumbnailFile = async (file: File, prefix: string): Promise<string | null> => {
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    if (!allowedTypes.has(file.type)) {
+      toast.error("Choose a JPG, PNG, or WebP image");
+      return null;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Thumbnail images must be 5 MB or smaller");
+      return null;
+    }
+    try {
+      const extension = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
+      const path = `pending/${prefix}${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage
+        .from("academy-thumbnails")
+        .upload(path, file, { contentType: file.type, upsert: false, cacheControl: "3600" });
+      if (error) throw error;
+      return supabase.storage.from("academy-thumbnails").getPublicUrl(path).data.publicUrl;
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
+      return null;
+    }
+  };
+
+  const handleThumbnailUpload = async (file: File) => {
+    setIsThumbnailUploading(true);
+    try {
+      const url = await uploadThumbnailFile(file, "");
+      if (url) setThumbnailUrl(url);
+    } finally {
+      setIsThumbnailUploading(false);
+    }
+  };
+
+  const handleBannerThumbnailUpload = async (file: File) => {
+    setIsBannerThumbnailUploading(true);
+    try {
+      const url = await uploadThumbnailFile(file, "banner-");
+      if (url) setBannerThumbnailUrl(url);
+    } finally {
+      setIsBannerThumbnailUploading(false);
+    }
+  };
+
+  const finalizePublication = async (courseId: number, userId: string | null) => {
+    if (!publishOnSave) return;
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("academy_courses")
+      .update({
+        status: "published",
+        published_at: now,
+        published_by: userId,
+        ai_reviewed_by: userId,
+        ai_reviewed_at: now,
+      })
+      .eq("id", courseId);
+    if (error) throw error;
+  };
 
   const seriesCfg = useMemo(() => SERIES.find((s) => s.value === series), [series]);
   const sessionType = seriesCfg?.session_type ?? "webinar";
@@ -1155,6 +1230,13 @@ export default function AcademyAddCoursePage() {
         description: spec.description || null,
         short_description: spec.shortDescription || null,
         thumbnail_url: thumbnailUrl,
+        thumbnail_position: thumbnailPosition,
+        thumbnail_fit: thumbnailFit,
+        thumbnail_zoom: thumbnailZoom,
+        banner_thumbnail_url: bannerThumbnailUrl,
+        banner_thumbnail_position: bannerThumbnailPosition,
+        banner_thumbnail_fit: bannerThumbnailFit,
+        banner_thumbnail_zoom: bannerThumbnailZoom,
         target_audience: spec.targetAudience.length ? spec.targetAudience : null,
         difficulty_level: spec.difficulty,
         tags: spec.tags.length ? spec.tags : null,
@@ -1206,6 +1288,7 @@ export default function AcademyAddCoursePage() {
     if (lErr) throw lErr;
 
     await insertCompletionQuiz(courseId, spec.title.trim(), spec.questions, userId);
+    await finalizePublication(courseId, userId);
     return courseId;
   };
 
@@ -1227,6 +1310,13 @@ export default function AcademyAddCoursePage() {
         description: first?.description || null,
         short_description: first?.shortDescription || null,
         thumbnail_url: thumbnailUrl,
+        thumbnail_position: thumbnailPosition,
+        thumbnail_fit: thumbnailFit,
+        thumbnail_zoom: thumbnailZoom,
+        banner_thumbnail_url: bannerThumbnailUrl,
+        banner_thumbnail_position: bannerThumbnailPosition,
+        banner_thumbnail_fit: bannerThumbnailFit,
+        banner_thumbnail_zoom: bannerThumbnailZoom,
         target_audience: audience.length ? audience : null,
         difficulty_level: first?.difficulty || "beginner",
         tags: tagsUnion.length ? tagsUnion : null,
@@ -1285,6 +1375,7 @@ export default function AcademyAddCoursePage() {
       drafts.flatMap((d) => d.questions),
       userId,
     );
+    await finalizePublication(courseId, userId);
     return courseId;
   };
 
@@ -1315,7 +1406,14 @@ export default function AcademyAddCoursePage() {
         slug,
         description: first?.description || null,
         short_description: first?.shortDescription || null,
-        thumbnail_url: first?.thumbnailUrl ?? null,
+        thumbnail_url: thumbnailUrl ?? first?.thumbnailUrl ?? null,
+        thumbnail_position: thumbnailPosition,
+        thumbnail_fit: thumbnailFit,
+        thumbnail_zoom: thumbnailZoom,
+        banner_thumbnail_url: bannerThumbnailUrl,
+        banner_thumbnail_position: bannerThumbnailPosition,
+        banner_thumbnail_fit: bannerThumbnailFit,
+        banner_thumbnail_zoom: bannerThumbnailZoom,
         target_audience: audience.length ? audience : null,
         difficulty_level: first?.difficulty || "beginner",
         tags: tagsUnion.length ? tagsUnion : null,
@@ -1431,6 +1529,7 @@ export default function AcademyAddCoursePage() {
       sorted.flatMap((d) => d.questions),
       userId,
     );
+    await finalizePublication(courseId, userId);
     return courseId;
   };
 
@@ -1440,6 +1539,17 @@ export default function AcademyAddCoursePage() {
     if (!availableToAll && packageIds.length === 0) {
       toast.error("Select at least one package, or choose All clients");
       return;
+    }
+    if (publishOnSave) {
+      const publishAudience = sourceType === "showcase"
+        ? showcaseItems.flatMap((item) => item.targetAudience)
+        : workshopActive
+          ? drafts.flatMap((draft) => draft.targetAudience)
+          : targetAudience;
+      if (new Set(publishAudience).size === 0) {
+        toast.error("Select at least one target audience before publishing");
+        return;
+      }
     }
 
     if (sourceType === "showcase") {
@@ -1537,7 +1647,7 @@ export default function AcademyAddCoursePage() {
             }, videoId!, userId);
       }
 
-      toast.success("Draft course created — review and publish when ready");
+      toast.success(publishOnSave ? "Course created and published" : "Draft course created — review and publish when ready");
       navigate(`/superadmin/academy/builder/${courseId}`);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to save draft course");
@@ -2107,10 +2217,64 @@ export default function AcademyAddCoursePage() {
           </CardContent>
         </Card>
 
-        {/* Step 5 */}
+        {/* Step 5 — Settings applied when the course is created */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">5. Course settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 xl:grid-cols-2">
+              <ThumbnailPositionEditor
+                label="Course card image"
+                shape="square"
+                imageUrl={thumbnailUrl}
+                value={thumbnailPosition}
+                onChange={setThumbnailPosition}
+                fit={thumbnailFit}
+                onFitChange={setThumbnailFit}
+                zoom={thumbnailZoom}
+                onZoomChange={setThumbnailZoom}
+                onUpload={handleThumbnailUpload}
+                isUploading={isThumbnailUploading}
+                libraryItems={thumbnailLibrary}
+                libraryCategory="course"
+                onSelectLibraryImage={setThumbnailUrl}
+              />
+              <ThumbnailPositionEditor
+                label="Course page banner image"
+                shape="video"
+                imageUrl={bannerThumbnailUrl ?? thumbnailUrl}
+                value={bannerThumbnailPosition}
+                onChange={setBannerThumbnailPosition}
+                fit={bannerThumbnailFit}
+                onFitChange={setBannerThumbnailFit}
+                zoom={bannerThumbnailZoom}
+                onZoomChange={setBannerThumbnailZoom}
+                onUpload={handleBannerThumbnailUpload}
+                isUploading={isBannerThumbnailUploading}
+                libraryItems={thumbnailLibrary}
+                libraryCategory="banner"
+                onSelectLibraryImage={setBannerThumbnailUrl}
+                onRemove={bannerThumbnailUrl ? () => setBannerThumbnailUrl(null) : undefined}
+                removeLabel="Use course card image instead"
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Publish immediately</p>
+                <p className="text-xs text-muted-foreground">
+                  Publish after this course is created. The normal audience and lesson checks still apply.
+                </p>
+              </div>
+              <Switch checked={publishOnSave} onCheckedChange={setPublishOnSave} disabled={!canPublish} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Step 6 */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">5. Completion quiz</CardTitle>
+            <CardTitle className="text-base">6. Completion quiz</CardTitle>
             <Button variant="outline" size="sm" onClick={handleGenerateQuiz} disabled={generatingQuiz || !vTitle.trim()}>
               {generatingQuiz ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
               {vQuestions.length ? "Regenerate questions" : "Generate questions"}
@@ -2194,12 +2358,12 @@ export default function AcademyAddCoursePage() {
 
         <Separator />
 
-        {/* Step 6 */}
+        {/* Step 7 */}
         <div className="flex items-center justify-between pb-6">
           <p className="text-sm text-muted-foreground">
             {multiActive
-              ? "Saves one draft course with a lesson per segment — publish it from the course builder after review."
-              : "Saves as a draft course — publish it from the course builder after review."}
+              ? "Saves one course with a lesson per segment — publish it now or review it in the course builder first."
+              : "Saves a course — publish it now or review it in the course builder first."}
           </p>
           <Button
             onClick={handleSave}
@@ -2208,7 +2372,7 @@ export default function AcademyAddCoursePage() {
             style={{ backgroundColor: "#23c0dd" }}
           >
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            {multiActive ? "Save draft course" : "Save as draft"}
+            {publishOnSave ? "Create and publish" : multiActive ? "Save draft course" : "Save as draft"}
           </Button>
         </div>
         {!generated && (
