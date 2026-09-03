@@ -59,7 +59,7 @@ export function useAccountabilityChart() {
       if (!tenantId || !canView) return null;
 
       // Get or create chart
-      let { data: chartData, error } = await supabase
+      const { data: chartData, error } = await supabase
         .from('accountability_charts')
         .select('*')
         .eq('tenant_id', tenantId)

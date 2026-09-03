@@ -596,7 +596,7 @@ export default function ManageDocuments() {
 
         // Fetch creator info for documents with created_by
         const creatorIds = [...new Set((documentsData || []).filter(d => d.created_by).map(d => d.created_by))];
-        let creatorsMap: Record<string, { first_name: string | null; last_name: string | null; avatar_url: string | null }> = {};
+        const creatorsMap: Record<string, { first_name: string | null; last_name: string | null; avatar_url: string | null }> = {};
         
         if (creatorIds.length > 0) {
           const { data: usersData } = await supabase

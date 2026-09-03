@@ -29,7 +29,7 @@ export function useStageNotes({ tenantId, packageId }: UseStageNotesOptions) {
     setLoading(true);
     try {
       // Notes are stored at tenant level; filter by package_id if available
-      let query = supabase
+      const query = supabase
         .from('notes')
         .select('id, title, note_details, note_type, created_at, created_by, priority')
         .eq('tenant_id', tenantId)

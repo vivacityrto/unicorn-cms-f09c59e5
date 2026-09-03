@@ -99,7 +99,7 @@ function decodeXmlEntities(text: string | null): string | null {
 
 // Strip all namespace prefixes from XML to normalize tag names
 function stripXmlPrefixes(xml: string): string {
-  return xml.replace(/<(\/?)\s*[A-Za-z0-9_]+:([A-Za-z0-9_\-]+)/g, '<$1$2');
+  return xml.replace(/<(\/?)\s*[A-Za-z0-9_]+:([A-Za-z0-9_-]+)/g, '<$1$2');
 }
 
 // Generate unique correlation ID for request tracing

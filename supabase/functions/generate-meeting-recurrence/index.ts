@@ -32,7 +32,7 @@ function generateOccurrences(req: RecurrenceRequest): { rrule: string; occurrenc
     const rrule = `FREQ=WEEKLY;BYDAY=MO;INTERVAL=1${untilDate ? ';UNTIL=' + untilDate.toISOString().split('T')[0].replace(/-/g, '') : ''}`;
     
     // Generate next 12 weeks
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
     const maxOccurrences = 12;
     let count = 0;
 

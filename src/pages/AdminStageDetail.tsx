@@ -971,46 +971,26 @@ export default function AdminStageDetail() {
   // Document handlers - now using stage template content
   const handleAddDocument = async (documentId: number) => {
     if (!stageIdNum) return;
-    
-    try {
-      await addDocument(documentId);
-    } catch (error: any) {
-      throw error;
-    }
+
+    await addDocument(documentId);
   };
 
   const handleAddBulkDocuments = async (documentIds: number[]) => {
     if (!stageIdNum || documentIds.length === 0) return;
-    
-    try {
-      await addBulkDocuments(documentIds);
-    } catch (error: any) {
-      throw error;
-    }
+
+    await addBulkDocuments(documentIds);
   };
 
   const handleUpdateDocument = async (id: number, data: Record<string, any>) => {
-    try {
-      await updateDocument(id, data);
-    } catch (error: any) {
-      throw error;
-    }
+    await updateDocument(id, data);
   };
 
   const handleRemoveDocument = async (id: number) => {
-    try {
-      await deleteDocument(id);
-    } catch (error: any) {
-      throw error;
-    }
+    await deleteDocument(id);
   };
 
   const handleReorderDocuments = async (orderedIds: number[]) => {
-    try {
-      await reorderDocuments(orderedIds);
-    } catch (error: any) {
-      throw error;
-    }
+    await reorderDocuments(orderedIds);
   };
 
   const getStageTypeColor = (stageType: string) => {

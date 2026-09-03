@@ -32,6 +32,10 @@ const EXCEPTIONS = [
     path: "src/integrations/supabase/types.ts",
     reason: "generated (Supabase CLI type generation, not hand-authored)",
   },
+  {
+    path: "src/integrations/supabase/previewAuthStorage.ts",
+    reason: "generated (Lovable preview-auth brokering; file header says do not edit directly)",
+  },
 ];
 
 function sh(cmd, args) {

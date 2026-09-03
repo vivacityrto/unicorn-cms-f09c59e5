@@ -721,7 +721,7 @@ serve(async (req) => {
 
     let filePath = storage_path;
     let fileName = filename || '';
-    let docId = document_id;
+    const docId = document_id;
 
     // Fetch document info if ID provided
     if (document_id && !storage_path) {

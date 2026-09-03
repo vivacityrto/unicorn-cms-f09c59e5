@@ -241,7 +241,7 @@ async function generateMeetingNotifications(supabase: ReturnType<typeof createSe
     .in("meeting_id", meetingIds);
 
   const emails = [...new Set((participants || []).map((p) => p.participant_email?.toLowerCase()).filter(Boolean))];
-  let emailToUser: Record<string, string> = {};
+  const emailToUser: Record<string, string> = {};
   if (emails.length) {
     const { data: users } = await supabase
       .from("users")

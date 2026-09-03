@@ -222,7 +222,7 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
 
       // Batch fetch creator details (instead of loop)
       const creatorIds = [...new Set((data || []).map(n => n.created_by).filter(Boolean))];
-      let creatorsMap = new Map<string, { first_name: string | null; last_name: string | null; avatar_url: string | null; email: string | null }>();
+      const creatorsMap = new Map<string, { first_name: string | null; last_name: string | null; avatar_url: string | null; email: string | null }>();
       
       if (creatorIds.length > 0) {
         const { data: usersData } = await supabase

@@ -105,7 +105,7 @@ export function classifyArtifact(
  */
 export function extractSharePointLinks(htmlBody: string): string[] {
   const links: string[] = [];
-  const urlRegex = /https?:\/\/[a-zA-Z0-9.-]+\.sharepoint\.com\/[^\s"'<>]+|https?:\/\/[a-zA-Z0-9.-]+\-my\.sharepoint\.com\/[^\s"'<>]+|https?:\/\/onedrive\.live\.com\/[^\s"'<>]+/gi;
+  const urlRegex = /https?:\/\/[a-zA-Z0-9.-]+\.sharepoint\.com\/[^\s"'<>]+|https?:\/\/[a-zA-Z0-9.-]+-my\.sharepoint\.com\/[^\s"'<>]+|https?:\/\/onedrive\.live\.com\/[^\s"'<>]+/gi;
 
   let match;
   while ((match = urlRegex.exec(htmlBody)) !== null) {

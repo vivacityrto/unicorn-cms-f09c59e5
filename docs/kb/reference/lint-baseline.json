@@ -1,74 +1,52 @@
 {
-  "generatedAt": "2026-09-03T03:27:39.177Z",
-  "baselineSha": "3f419e29e8af0339b54fceb3b5a53049e7911270",
+  "generatedAt": "2026-09-03T03:54:02.200Z",
+  "baselineSha": "e503c538e534010320c044469a796ac05c9bec9c",
   "totals": {
-    "files": 1784,
-    "filesWithFindings": 647,
-    "errors": 3827,
+    "files": 1785,
+    "filesWithFindings": 637,
+    "errors": 3772,
     "warnings": 191
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3742,
+    "@typescript-eslint/no-explicit-any": 3737,
     "react-hooks/exhaustive-deps": 153,
-    "prefer-const": 37,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7,
     "no-case-declarations": 10,
     "no-empty": 6,
-    "@typescript-eslint/no-empty-object-type": 2,
     "@typescript-eslint/no-non-null-asserted-optional-chain": 8,
-    "no-useless-catch": 5,
-    "react-hooks/rules-of-hooks": 4,
-    "no-useless-escape": 3,
-    "no-control-regex": 1,
-    "@typescript-eslint/no-require-imports": 1,
-    "@typescript-eslint/ban-ts-comment": 1
+    "react-hooks/rules-of-hooks": 4
   },
   "bySourceClass": {
     "src": {
-      "errors": 3143,
+      "errors": 3104,
       "warnings": 191,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 3074,
+        "@typescript-eslint/no-explicit-any": 3069,
         "react-hooks/exhaustive-deps": 153,
-        "prefer-const": 27,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7,
         "no-case-declarations": 10,
         "no-empty": 6,
-        "@typescript-eslint/no-empty-object-type": 2,
         "@typescript-eslint/no-non-null-asserted-optional-chain": 8,
-        "no-useless-catch": 5,
         "react-hooks/rules-of-hooks": 4
       }
     },
     "supabase/functions": {
-      "errors": 682,
+      "errors": 668,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 668,
-        "prefer-const": 10,
-        "no-useless-escape": 3,
-        "no-control-regex": 1
-      }
-    },
-    "tooling": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-require-imports": 1,
-        "@typescript-eslint/ban-ts-comment": 1
+        "@typescript-eslint/no-explicit-any": 668
       }
     }
   },
   "byDirectory": {
     "src/components": {
-      "errors": 63,
+      "errors": 61,
       "warnings": 5,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 61,
-        "react-hooks/exhaustive-deps": 5,
-        "prefer-const": 2
+        "react-hooks/exhaustive-deps": 5
       }
     },
     "src/components/academy": {
@@ -133,12 +111,11 @@
       }
     },
     "src/components/audit": {
-      "errors": 21,
+      "errors": 20,
       "warnings": 5,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 20,
         "react-refresh/only-export-components": 1,
-        "prefer-const": 1,
         "react-hooks/exhaustive-deps": 4
       }
     },
@@ -159,11 +136,10 @@
       }
     },
     "src/components/clickup": {
-      "errors": 24,
+      "errors": 23,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 23,
-        "prefer-const": 1
+        "@typescript-eslint/no-explicit-any": 23
       }
     },
     "src/components/client-portal/support-tickets": {
@@ -174,13 +150,12 @@
       }
     },
     "src/components/client": {
-      "errors": 353,
+      "errors": 352,
       "warnings": 25,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 350,
         "@typescript-eslint/no-unused-expressions": 2,
         "react-hooks/exhaustive-deps": 20,
-        "prefer-const": 1,
         "react-refresh/only-export-components": 5
       }
     },
@@ -336,12 +311,11 @@
       }
     },
     "src/components/kpi": {
-      "errors": 69,
+      "errors": 67,
       "warnings": 1,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 67,
-        "react-hooks/exhaustive-deps": 1,
-        "prefer-const": 2
+        "react-hooks/exhaustive-deps": 1
       }
     },
     "src/components/layout": {
@@ -442,13 +416,12 @@
       }
     },
     "src/components/ui": {
-      "errors": 3,
+      "errors": 1,
       "warnings": 10,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1,
         "react-refresh/only-export-components": 8,
-        "react-hooks/exhaustive-deps": 2,
-        "@typescript-eslint/no-empty-object-type": 2
+        "react-hooks/exhaustive-deps": 2
       }
     },
     "src/components/workboard": {
@@ -496,23 +469,15 @@
       }
     },
     "src/hooks": {
-      "errors": 1221,
+      "errors": 1205,
       "warnings": 13,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1194,
-        "prefer-const": 16,
         "no-empty": 2,
         "react-hooks/exhaustive-deps": 12,
         "react-refresh/only-export-components": 1,
         "@typescript-eslint/no-non-null-asserted-optional-chain": 8,
         "no-case-declarations": 1
-      }
-    },
-    "src/integrations/supabase": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "prefer-const": 1
       }
     },
     "src/lib": {
@@ -537,15 +502,13 @@
       }
     },
     "src/pages": {
-      "errors": 471,
+      "errors": 458,
       "warnings": 48,
       "byRule": {
         "react-hooks/exhaustive-deps": 48,
-        "@typescript-eslint/no-explicit-any": 456,
-        "no-useless-catch": 5,
+        "@typescript-eslint/no-explicit-any": 451,
         "no-case-declarations": 5,
-        "no-empty": 2,
-        "prefer-const": 3
+        "no-empty": 2
       }
     },
     "src/pages/academy": {
@@ -670,25 +633,11 @@
         "@typescript-eslint/no-explicit-any": 6
       }
     },
-    "supabase/functions/ai-suggest-rock": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "prefer-const": 1
-      }
-    },
     "supabase/functions/analyse-evidence": {
       "errors": 12,
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 12
-      }
-    },
-    "supabase/functions/analyze-document": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "prefer-const": 1
       }
     },
     "supabase/functions/ask-viv-assistant-client": {
@@ -699,11 +648,10 @@
       }
     },
     "supabase/functions/ask-viv-assistant": {
-      "errors": 77,
+      "errors": 76,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 76,
-        "prefer-const": 1
+        "@typescript-eslint/no-explicit-any": 76
       }
     },
     "supabase/functions/assistant-answer": {
@@ -847,11 +795,10 @@
       }
     },
     "supabase/functions/export-pdp-audit-pack": {
-      "errors": 17,
+      "errors": 16,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 16,
-        "prefer-const": 1
+        "@typescript-eslint/no-explicit-any": 16
       }
     },
     "supabase/functions/extract-document-fields": {
@@ -883,26 +830,23 @@
       }
     },
     "supabase/functions/generate-client-audit-report-docx": {
-      "errors": 14,
+      "errors": 13,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 13,
-        "no-useless-escape": 1
+        "@typescript-eslint/no-explicit-any": 13
       }
     },
     "supabase/functions/generate-client-audit-report": {
-      "errors": 17,
+      "errors": 16,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 16,
-        "no-control-regex": 1
+        "@typescript-eslint/no-explicit-any": 16
       }
     },
     "supabase/functions/generate-meeting-recurrence": {
-      "errors": 2,
+      "errors": 1,
       "warnings": 0,
       "byRule": {
-        "prefer-const": 1,
         "@typescript-eslint/no-explicit-any": 1
       }
     },
@@ -914,11 +858,10 @@
       }
     },
     "supabase/functions/generate-minutes-draft": {
-      "errors": 12,
+      "errors": 10,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 10,
-        "prefer-const": 2
+        "@typescript-eslint/no-explicit-any": 10
       }
     },
     "supabase/functions/generate-minutes-from-transcript": {
@@ -929,11 +872,10 @@
       }
     },
     "supabase/functions/generate-notifications": {
-      "errors": 7,
+      "errors": 6,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 6,
-        "prefer-const": 1
+        "@typescript-eslint/no-explicit-any": 6
       }
     },
     "supabase/functions/generate-recovery-link": {
@@ -958,11 +900,10 @@
       }
     },
     "supabase/functions/import-unicorn1-client": {
-      "errors": 32,
+      "errors": 31,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 31,
-        "prefer-const": 1
+        "@typescript-eslint/no-explicit-any": 31
       }
     },
     "supabase/functions/invite-or-reset-user": {
@@ -984,13 +925,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/kpi-email-log-sync": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "prefer-const": 1
       }
     },
     "supabase/functions/link-sharepoint-document": {
@@ -1302,10 +1236,9 @@
       }
     },
     "supabase/functions/sync-meeting-artifacts": {
-      "errors": 4,
+      "errors": 3,
       "warnings": 0,
       "byRule": {
-        "no-useless-escape": 1,
         "@typescript-eslint/no-explicit-any": 3
       }
     },
@@ -1335,13 +1268,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 43
-      }
-    },
-    "supabase/functions/tga-sync": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "no-useless-escape": 1
       }
     },
     "supabase/functions/toggle-user-status": {
@@ -1420,14 +1346,6 @@
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
       }
-    },
-    ".": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-require-imports": 1,
-        "@typescript-eslint/ban-ts-comment": 1
-      }
     }
   },
   "byFile": {
@@ -1473,8 +1391,7 @@
       "react-hooks/exhaustive-deps": 1
     },
     "src/components/StageNotesTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 3,
-      "prefer-const": 2
+      "@typescript-eslint/no-explicit-any": 3
     },
     "src/components/Unicorn1ImportDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 2
@@ -1570,7 +1487,6 @@
     },
     "src/components/audit/NewAuditModal.tsx": {
       "@typescript-eslint/no-explicit-any": 12,
-      "prefer-const": 1,
       "react-hooks/exhaustive-deps": 4
     },
     "src/components/audit/workspace/ActionDrawer.tsx": {
@@ -1634,8 +1550,7 @@
       "@typescript-eslint/no-explicit-any": 17
     },
     "src/components/clickup/PackageInstanceAssignment.tsx": {
-      "@typescript-eslint/no-explicit-any": 6,
-      "prefer-const": 1
+      "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/client-portal/support-tickets/ClientNewTicketModal.tsx": {
       "@typescript-eslint/no-explicit-any": 2
@@ -1706,8 +1621,7 @@
     },
     "src/components/client/ClientTimeTab.tsx": {
       "@typescript-eslint/no-explicit-any": 71,
-      "react-hooks/exhaustive-deps": 4,
-      "prefer-const": 1
+      "react-hooks/exhaustive-deps": 4
     },
     "src/components/client/ClientTimelineTab.tsx": {
       "react-refresh/only-export-components": 1,
@@ -1999,8 +1913,7 @@
       "@typescript-eslint/no-explicit-any": 4
     },
     "src/components/kpi/MyKpiSignOffSection.tsx": {
-      "@typescript-eslint/no-explicit-any": 39,
-      "prefer-const": 2
+      "@typescript-eslint/no-explicit-any": 39
     },
     "src/components/kpi/RaiseTicketSheet.tsx": {
       "@typescript-eslint/no-explicit-any": 3
@@ -2192,9 +2105,6 @@
       "react-refresh/only-export-components": 1,
       "react-hooks/exhaustive-deps": 1
     },
-    "src/components/ui/command.tsx": {
-      "@typescript-eslint/no-empty-object-type": 1
-    },
     "src/components/ui/form.tsx": {
       "react-refresh/only-export-components": 1
     },
@@ -2209,9 +2119,6 @@
     },
     "src/components/ui/text.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/components/ui/textarea.tsx": {
-      "@typescript-eslint/no-empty-object-type": 1
     },
     "src/components/ui/toggle.tsx": {
       "react-refresh/only-export-components": 1
@@ -2301,9 +2208,6 @@
     },
     "src/hooks/useAcademyCourses.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useAccountabilityChart.tsx": {
-      "prefer-const": 2
     },
     "src/hooks/useAlignmentSignals.ts": {
       "@typescript-eslint/no-explicit-any": 1
@@ -2580,7 +2484,6 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/hooks/useNotes.tsx": {
-      "prefer-const": 1,
       "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -2588,8 +2491,7 @@
       "@typescript-eslint/no-explicit-any": 8
     },
     "src/hooks/useNotifications.tsx": {
-      "@typescript-eslint/no-explicit-any": 5,
-      "prefer-const": 1
+      "@typescript-eslint/no-explicit-any": 5
     },
     "src/hooks/useOnboardingHub.ts": {
       "@typescript-eslint/no-explicit-any": 7
@@ -2663,8 +2565,7 @@
       "@typescript-eslint/no-explicit-any": 2
     },
     "src/hooks/useRockAnalysis.tsx": {
-      "@typescript-eslint/no-explicit-any": 20,
-      "prefer-const": 1
+      "@typescript-eslint/no-explicit-any": 20
     },
     "src/hooks/useRtoTips.tsx": {
       "@typescript-eslint/no-explicit-any": 3
@@ -2676,7 +2577,6 @@
       "@typescript-eslint/no-explicit-any": 6
     },
     "src/hooks/useSeatScorecard.tsx": {
-      "prefer-const": 2,
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/hooks/useSharePointBrowser.tsx": {
@@ -2692,19 +2592,16 @@
       "@typescript-eslint/no-explicit-any": 15
     },
     "src/hooks/useStageActiveUsage.tsx": {
-      "@typescript-eslint/no-explicit-any": 5,
-      "prefer-const": 1
+      "@typescript-eslint/no-explicit-any": 5
     },
     "src/hooks/useStageAnalytics.tsx": {
-      "@typescript-eslint/no-explicit-any": 22,
-      "prefer-const": 6
+      "@typescript-eslint/no-explicit-any": 22
     },
     "src/hooks/useStageAuditLink.ts": {
       "@typescript-eslint/no-explicit-any": 5
     },
     "src/hooks/useStageAuditLog.tsx": {
-      "@typescript-eslint/no-explicit-any": 5,
-      "prefer-const": 1
+      "@typescript-eslint/no-explicit-any": 5
     },
     "src/hooks/useStageCertification.tsx": {
       "@typescript-eslint/no-explicit-any": 1
@@ -2727,8 +2624,7 @@
       "@typescript-eslint/no-explicit-any": 21
     },
     "src/hooks/useStageNotes.ts": {
-      "react-hooks/exhaustive-deps": 1,
-      "prefer-const": 1
+      "react-hooks/exhaustive-deps": 1
     },
     "src/hooks/useStageQualityCheck.tsx": {
       "@typescript-eslint/no-explicit-any": 8
@@ -2831,9 +2727,6 @@
     "src/hooks/useYouveGotMailToast.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "src/integrations/supabase/previewAuthStorage.ts": {
-      "prefer-const": 1
-    },
     "src/lib/friendlyDbError.ts": {},
     "src/lib/kpi-v2/fetchers.ts": {
       "@typescript-eslint/no-explicit-any": 8
@@ -2870,8 +2763,7 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/pages/AdminStageDetail.tsx": {
-      "@typescript-eslint/no-explicit-any": 52,
-      "no-useless-catch": 5
+      "@typescript-eslint/no-explicit-any": 47
     },
     "src/pages/AuditTemplateBuilder.tsx": {
       "@typescript-eslint/no-explicit-any": 21,
@@ -2936,7 +2828,6 @@
     "src/pages/ManageDocuments.tsx": {
       "@typescript-eslint/no-explicit-any": 42,
       "react-hooks/exhaustive-deps": 2,
-      "prefer-const": 1,
       "no-empty": 1
     },
     "src/pages/ManageEmailTemplates.tsx": {
@@ -3017,8 +2908,7 @@
     },
     "src/pages/TenantNotes.tsx": {
       "react-hooks/exhaustive-deps": 2,
-      "@typescript-eslint/no-explicit-any": 4,
-      "prefer-const": 2
+      "@typescript-eslint/no-explicit-any": 4
     },
     "src/pages/TenantUsers.tsx": {
       "react-hooks/exhaustive-deps": 2
@@ -3148,21 +3038,14 @@
     "supabase/functions/ai-orchestrator/index.ts": {
       "@typescript-eslint/no-explicit-any": 6
     },
-    "supabase/functions/ai-suggest-rock/index.ts": {
-      "prefer-const": 1
-    },
     "supabase/functions/analyse-evidence/index.ts": {
       "@typescript-eslint/no-explicit-any": 12
-    },
-    "supabase/functions/analyze-document/index.ts": {
-      "prefer-const": 1
     },
     "supabase/functions/ask-viv-assistant-client/index.ts": {
       "@typescript-eslint/no-explicit-any": 12
     },
     "supabase/functions/ask-viv-assistant/index.ts": {
-      "@typescript-eslint/no-explicit-any": 76,
-      "prefer-const": 1
+      "@typescript-eslint/no-explicit-any": 76
     },
     "supabase/functions/assistant-answer/index.ts": {
       "@typescript-eslint/no-explicit-any": 37
@@ -3231,8 +3114,7 @@
       "@typescript-eslint/no-explicit-any": 4
     },
     "supabase/functions/export-pdp-audit-pack/index.ts": {
-      "@typescript-eslint/no-explicit-any": 16,
-      "prefer-const": 1
+      "@typescript-eslint/no-explicit-any": 16
     },
     "supabase/functions/extract-document-fields/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
@@ -3247,30 +3129,25 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/generate-client-audit-report-docx/index.ts": {
-      "@typescript-eslint/no-explicit-any": 13,
-      "no-useless-escape": 1
+      "@typescript-eslint/no-explicit-any": 13
     },
     "supabase/functions/generate-client-audit-report/index.ts": {
-      "@typescript-eslint/no-explicit-any": 16,
-      "no-control-regex": 1
+      "@typescript-eslint/no-explicit-any": 16
     },
     "supabase/functions/generate-meeting-recurrence/index.ts": {
-      "prefer-const": 1,
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/generate-membership-certificate/index.ts": {
       "@typescript-eslint/no-explicit-any": 6
     },
     "supabase/functions/generate-minutes-draft/index.ts": {
-      "@typescript-eslint/no-explicit-any": 10,
-      "prefer-const": 2
+      "@typescript-eslint/no-explicit-any": 10
     },
     "supabase/functions/generate-minutes-from-transcript/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/generate-notifications/index.ts": {
-      "@typescript-eslint/no-explicit-any": 6,
-      "prefer-const": 1
+      "@typescript-eslint/no-explicit-any": 6
     },
     "supabase/functions/generate-recovery-link/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
@@ -3282,8 +3159,7 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/import-unicorn1-client/index.ts": {
-      "@typescript-eslint/no-explicit-any": 31,
-      "prefer-const": 1
+      "@typescript-eslint/no-explicit-any": 31
     },
     "supabase/functions/invite-or-reset-user/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
@@ -3293,9 +3169,6 @@
     },
     "supabase/functions/issue-token/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/kpi-email-log-sync/index.ts": {
-      "prefer-const": 1
     },
     "supabase/functions/link-sharepoint-document/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
@@ -3430,7 +3303,6 @@
       "@typescript-eslint/no-explicit-any": 2
     },
     "supabase/functions/sync-meeting-artifacts/index.ts": {
-      "no-useless-escape": 1,
       "@typescript-eslint/no-explicit-any": 3
     },
     "supabase/functions/tga-fetch-scope/index.ts": {
@@ -3444,9 +3316,6 @@
     },
     "supabase/functions/tga-rto-sync/index.ts": {
       "@typescript-eslint/no-explicit-any": 43
-    },
-    "supabase/functions/tga-sync/index.ts": {
-      "no-useless-escape": 1
     },
     "supabase/functions/toggle-user-status/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
@@ -3480,18 +3349,16 @@
     },
     "supabase/functions/xero-webhook/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "tailwind.config.ts": {
-      "@typescript-eslint/no-require-imports": 1
-    },
-    "vite.config.ts": {
-      "@typescript-eslint/ban-ts-comment": 1
     }
   },
   "exceptions": [
     {
       "path": "src/integrations/supabase/types.ts",
       "reason": "generated (Supabase CLI type generation, not hand-authored)"
+    },
+    {
+      "path": "src/integrations/supabase/previewAuthStorage.ts",
+      "reason": "generated (Lovable preview-auth brokering; file header says do not edit directly)"
     }
   ],
   "exceptionPolicy": "docs/kb/reference/lint-exception-policy.md"

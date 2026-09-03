@@ -1752,11 +1752,13 @@ Deno.serve(async (req) => {
 
     // Load + (if needed) refresh the conversation's summarized context before
     // building this turn's prompt, so the bound on raw history is correct.
-    let { contextSummary, summaryCoversTurns, recentTurns } = await loadConversationContext(
+    const conversationContext = await loadConversationContext(
       supabase,
       conversationId,
       KEEP_RECENT_TURNS * 2 // fetch a bit more than we'll keep, trimmed below
     );
+    let { contextSummary, summaryCoversTurns } = conversationContext;
+    const { recentTurns } = conversationContext;
     const summarized = await maybeSummarizeConversation(supabase, conversationId, contextSummary, summaryCoversTurns);
     contextSummary = summarized.contextSummary;
     summaryCoversTurns = summarized.summaryCoversTurns;

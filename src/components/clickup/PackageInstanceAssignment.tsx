@@ -76,7 +76,7 @@ export function PackageInstanceAssignment() {
 
       // Get time entry date ranges for these tasks
       const taskIds = (rawTasks || []).map((t: any) => t.task_id);
-      let entryRanges: Record<string, { earliest: string; latest: string }> = {};
+      const entryRanges: Record<string, { earliest: string; latest: string }> = {};
 
       if (taskIds.length > 0) {
         const { data: entries } = await supabase

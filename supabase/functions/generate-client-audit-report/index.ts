@@ -192,6 +192,9 @@ function sanitise(s: string | null | undefined): string {
     .replace(/[☑✓✔]/g, 'v')
     .replace(/[✗✘]/g, 'x')
     .replace(/[⚑⚐]/g, '!')
+    // Deliberately matches control characters -- this strips everything except tab/LF/CR,
+    // printable ASCII, and Latin-1 supplement, for a clean PDF-rendered report.
+    // eslint-disable-next-line no-control-regex
     .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '');
 }
 

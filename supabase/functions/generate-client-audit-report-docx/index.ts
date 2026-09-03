@@ -820,7 +820,7 @@ Deno.serve(async (req) => {
     // 6. Upload
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     const path = `${audit.subject_tenant_id}/${auditId}/report-${ts}.docx`;
-    const fileName = `${(audit.snapshot_rto_name || 'audit-report').replace(/[^\w\-]+/g, '_')}-${ts}.docx`;
+    const fileName = `${(audit.snapshot_rto_name || 'audit-report').replace(/[^\w-]+/g, '_')}-${ts}.docx`;
 
     const { error: upErr } = await admin.storage
       .from('audit-documents')
