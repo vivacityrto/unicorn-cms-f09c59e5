@@ -23,6 +23,10 @@ export const SaveStatusIndicator = ({ isSaving, isError, lastSavedKey }: SaveSta
       const timer = setTimeout(() => setState('idle'), 3000);
       return () => clearTimeout(timer);
     }
+    // Intentionally reads `state` as a guard without depending on it: adding it would
+    // make this effect re-fire on its own `setState('saved')` above, cancelling the
+    // idle-revert timer via the cleanup-then-rerun cycle before it ever fires.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSaving, isError]);
 
   // Also transition to saved when lastSavedKey changes
@@ -32,6 +36,10 @@ export const SaveStatusIndicator = ({ isSaving, isError, lastSavedKey }: SaveSta
       const timer = setTimeout(() => setState('idle'), 3000);
       return () => clearTimeout(timer);
     }
+    // Intentionally scoped to `lastSavedKey` only: this should fire when a save
+    // completes, not whenever `isSaving` toggles on its own (that's the other
+    // effect's job) -- adding it would double-fire/race the two idle-revert timers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastSavedKey]);
 
   if (state === 'idle') return null;

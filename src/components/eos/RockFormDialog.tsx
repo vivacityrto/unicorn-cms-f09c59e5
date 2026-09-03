@@ -146,7 +146,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       }
       setIsInitialized(true);
     }
-  }, [rock?.id, open]);
+  }, [rock?.id, open, rock, isInitialized]);
 
   useEffect(() => {
     if (!open) {

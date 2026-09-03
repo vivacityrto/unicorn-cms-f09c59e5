@@ -99,6 +99,10 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
       // Load existing discussion notes from outcome_note field
       setDiscussionNotes(issue.outcome_note || '');
     }
+    // Intentionally scoped to id/status, not the whole `issue` object: a background
+    // refetch that returns a new object reference with unchanged id/status must not
+    // reset the solution/notes fields out from under an in-progress edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issue?.id, issue?.status, open]);
 
   // Save discussion notes mutation

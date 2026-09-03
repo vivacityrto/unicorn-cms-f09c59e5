@@ -184,6 +184,11 @@ export function MeetingCloseValidationDialog({
         setSelectedRating(userRating);
       }
     }
+    // Intentionally scoped to `open` only: `validateClose` is a mutation object whose
+    // identity isn't stable across renders, and its mutateAsync() call above is a real
+    // server request -- adding it (or the derived `userRating`) would refire the
+    // validation call on every render while the dialog is open, not just on open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleConfirmationToggle = async (outcome: OutcomeCheckItem, checked: boolean) => {
