@@ -69,9 +69,10 @@ export function useTimeInbox() {
     switch (dateFilter) {
       case 'today':
         return { from: format(today, 'yyyy-MM-dd'), to: format(today, 'yyyy-MM-dd') };
-      case 'yesterday':
+      case 'yesterday': {
         const yesterday = subDays(today, 1);
         return { from: format(yesterday, 'yyyy-MM-dd'), to: format(yesterday, 'yyyy-MM-dd') };
+      }
       case 'last7days':
         return { from: format(subDays(today, 7), 'yyyy-MM-dd'), to: format(today, 'yyyy-MM-dd') };
       case 'custom':

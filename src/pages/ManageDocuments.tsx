@@ -2473,7 +2473,7 @@ export default function ManageDocuments() {
                         const d = data as any;
                         setDeleteImpact({ instances: d.instances, stageDocs: d.stage_docs, dataSources: d.data_sources, sourceMappings: d.source_mappings, versions: d.versions });
                       }
-                    } catch {}
+                    } catch { /* best-effort preview; dialog still opens without an impact summary */ }
                   }}>
                             <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                           </Button>

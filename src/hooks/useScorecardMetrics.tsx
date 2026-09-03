@@ -134,12 +134,15 @@ export function useScorecardMetrics(showArchived = false) {
 
   const createMetric = useMutation({
     mutationFn: async (payload: Partial<ScorecardMetric>) => {
+      if (!profile?.tenant_id) throw new Error('Unable to resolve tenant for scorecard metric');
+      const tenantId = profile.tenant_id;
+
       // Resolve or create default scorecard
       let scorecardId: string;
       const { data: existing } = await supabase
         .from('eos_scorecard')
         .select('id')
-        .eq('tenant_id', profile?.tenant_id!)
+        .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .maybeSingle();
 
@@ -149,7 +152,7 @@ export function useScorecardMetrics(showArchived = false) {
         const { data: newSc, error: scErr } = await supabase
           .from('eos_scorecard')
           .insert({
-            tenant_id: profile?.tenant_id!,
+            tenant_id: tenantId,
             name: 'Company Scorecard',
             is_active: true,
           })
@@ -163,7 +166,7 @@ export function useScorecardMetrics(showArchived = false) {
         .from('eos_scorecard_metrics')
         .insert({
           scorecard_id: scorecardId,
-          tenant_id: profile?.tenant_id!,
+          tenant_id: tenantId,
           name: payload.name!,
           metric_name: payload.name!,
           description: payload.description || null,
@@ -309,6 +312,7 @@ export function useScorecardMetrics(showArchived = false) {
         if (error) throw error;
         await auditLog('scorecard_entry.updated', existing.id, { metric_id: metric.id, value, status });
       } else {
+        if (!profile?.user_uuid) throw new Error('Unable to resolve current user for scorecard entry');
         const { data, error } = await supabase
           .from('eos_scorecard_entries')
           .insert({
@@ -318,7 +322,7 @@ export function useScorecardMetrics(showArchived = false) {
             value,
             actual_value: value,
             notes: notes || null,
-            entered_by: profile?.user_uuid!,
+            entered_by: profile.user_uuid,
             entry_source: 'manual',
             status,
             created_by: profile?.user_uuid,

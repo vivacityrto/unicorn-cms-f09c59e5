@@ -47,6 +47,7 @@ export const useEosScorecardEntries = (metricId?: string) => {
         tenantId = metric?.tenant_id ?? null;
       }
       if (!tenantId) throw new Error('Unable to resolve tenant for scorecard entry');
+      if (!profile?.user_uuid) throw new Error('Unable to resolve current user for scorecard entry');
 
       const { data, error } = await supabase
         .from('eos_scorecard_entries')
@@ -56,7 +57,7 @@ export const useEosScorecardEntries = (metricId?: string) => {
           value: entry.value!,
           notes: entry.notes,
           tenant_id: tenantId,
-          entered_by: profile?.user_uuid!,
+          entered_by: profile.user_uuid,
         }])
         .select()
         .single();

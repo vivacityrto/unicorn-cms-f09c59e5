@@ -286,7 +286,7 @@ export const useQCDetails = (qcId: string | undefined) => {
       const { data, error } = await supabase
         .from('eos_qc_templates')
         .select('*')
-        .eq('id', qc?.template_id!)
+        .eq('id', qc!.template_id)
         .maybeSingle();
       
       if (error) throw error;

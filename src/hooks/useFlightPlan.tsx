@@ -54,7 +54,7 @@ export function useFlightPlan(quarter: number, year: number) {
       const dueDate = getQuarterDueDate(quarter, year);
       
       const payload = {
-        tenant_id: profile?.tenant_id!,
+        tenant_id: profile?.tenant_id,
         quarter_number: quarter,
         quarter_year: year,
         due_date: dueDate,
@@ -68,6 +68,11 @@ export function useFlightPlan(quarter: number, year: number) {
       } else {
         (payload as any).id = flightPlan.id;
       }
+
+      // tenant_id defaults from the current user's profile above, but `updates`
+      // may override it (e.g. Vivacity staff saving on behalf of a tenant) --
+      // validate the final value actually going to the DB either way.
+      if (!payload.tenant_id) throw new Error('Unable to resolve tenant for flight plan');
 
       const { data, error } = await supabase
         .from('eos_flight_plans')

@@ -690,7 +690,7 @@ export const LiveMeetingView = () => {
           </div>
         );
 
-      case 'rocks':
+      case 'rocks': {
         const now = new Date();
         const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
         const currentYear = now.getFullYear();
@@ -804,6 +804,7 @@ export const LiveMeetingView = () => {
             </div>
           </Card>
         );
+      }
 
       case 'headlines':
         return (

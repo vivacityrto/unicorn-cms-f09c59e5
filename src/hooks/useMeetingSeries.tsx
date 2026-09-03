@@ -139,8 +139,9 @@ export const useMeetingSeries = () => {
       template_version_id?: string;
       weeks_ahead?: number;
     }) => {
+      if (!profile?.tenant_id) throw new Error('Unable to resolve tenant for meeting series');
       const { data, error } = await supabase.rpc('create_meeting_series', {
-        p_tenant_id: profile?.tenant_id!,
+        p_tenant_id: profile.tenant_id,
         p_meeting_type: params.meeting_type,
         p_title: params.title,
         p_recurrence_type: params.recurrence_type,

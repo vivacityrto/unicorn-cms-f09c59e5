@@ -128,7 +128,7 @@ interface DraftData {
 }
 
 function saveDraft(key: string, data: DraftData) {
-  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch { /* best-effort; storage unavailable (quota, private mode) */ }
 }
 
 function loadDraft(key: string): DraftData | null {
@@ -145,7 +145,7 @@ function loadDraft(key: string): DraftData | null {
 }
 
 function clearDraft(key: string) {
-  try { localStorage.removeItem(key); } catch {}
+  try { localStorage.removeItem(key); } catch { /* best-effort; storage unavailable (quota, private mode) */ }
 }
 
 export function NoteFormDialog({

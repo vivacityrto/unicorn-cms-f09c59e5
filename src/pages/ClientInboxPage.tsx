@@ -599,7 +599,7 @@ function resolveNotificationLink(n: ClientNotification): string {
       const url = new URL(n.link, window.location.origin);
       const convId = url.searchParams.get('conversation');
       if (convId) return `/client/inbox?tab=messages&thread=${convId}`;
-    } catch {}
+    } catch { /* malformed link; fall through to the default below */ }
   }
   return n.link || '/client/inbox?tab=notifications';
 }

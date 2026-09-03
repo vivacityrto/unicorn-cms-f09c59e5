@@ -488,7 +488,7 @@ function SortableQuestionCard({
         return <Input placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} value={actualResponseValue || ''} onChange={e => handleValueChange(e.target.value)} />;
       case 'number':
         return <Input type="number" placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed w-full", hasError && "border-destructive")} value={actualResponseValue || ''} onChange={e => handleValueChange(e.target.value)} />;
-      case 'checkbox':
+      case 'checkbox': {
         const checkboxOptions = question.options && question.options.length > 0 ? question.options : [{
           id: '1',
           label: 'Option 1'
@@ -538,6 +538,7 @@ function SortableQuestionCard({
               Add option
             </Button>
           </div>;
+      }
       case 'date_time':
         return <div className="grid grid-cols-2 gap-3">
           <Popover>
@@ -634,7 +635,7 @@ function SortableQuestionCard({
               <MapPin className="h-4 w-4" />
             </Button>
           </div>;
-      case 'multiple_choice':
+      case 'multiple_choice': {
         const colorMapPreview: Record<string, string> = {
           'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
           'bg-red-500': 'bg-red-500/15 text-red-600 border-red-500/30',
@@ -656,6 +657,7 @@ function SortableQuestionCard({
               </span>;
           })}
           </div>;
+      }
       case 'annotation':
         return <div className="border rounded-lg p-4 bg-muted/30">
             <Textarea value={actualResponseValue || ''} onChange={e => handleValueChange(e.target.value)} placeholder="Add notes or comments..." className="min-h-[100px] bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
