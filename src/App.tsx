@@ -37,10 +37,8 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const NotFound = lazy(() => import("./pages/NotFound"));
  const EosIssues = lazy(() => import("./pages/EosIssues"));
  const LiveMeetingView = lazy(() => import("./components/eos/LiveMeetingView").then(m => ({ default: m.LiveMeetingView })));
-const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const PostSignInRedirect = lazy(() => import("./pages/PostSignInRedirect"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
-const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
 const ClickUpTenantMapping = lazy(() => import("./pages/admin/ClickUpTenantMapping"));
 const AddinShell = lazy(() => import("./pages/addin/AddinShell"));
 const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
@@ -59,21 +57,16 @@ const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
  const ExecutiveDecisionQueue = lazy(() => import("./pages/ExecutiveDecisionQueue"));
  const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
 const OnboardingHubPage = lazy(() => import("./pages/admin/OnboardingHubPage"));
-const MyOnboardingPage = lazy(() => import("./pages/MyOnboardingPage"));
 const MyExitInterview = lazy(() => import("./pages/MyExitInterview"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
-const MyKpiDashboardPage = lazy(() => import("./pages/MyKpiDashboardPage"));
-const KpiPage = lazy(() => import("./pages/KpiPage"));
  const MyWork = lazy(() => import("./pages/MyWork"));
  const CalendarTimeCapture = lazy(() => import("./pages/CalendarTimeCapture"));
  const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
  const XeroCallback = lazy(() => import("./pages/XeroCallback"));
-const TimeInbox = lazy(() => import("./pages/TimeInbox"));
 const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
 const ProcessForm = lazy(() => import("./pages/ProcessForm"));
-const RoleReference = lazy(() => import("./pages/RoleReference"));
 const AskVivAssistant = lazy(() => import("./pages/AskVivAssistant"));
 const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
@@ -163,15 +156,7 @@ const App = () => (
               } 
             />
             <Route
-              path="/my-onboarding"
-              element={
-                <ProtectedRoute>
-                  <MyOnboardingPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/documents" 
+              path="/documents"
               element={
                 <ProtectedRoute>
                   <Dashboard />
@@ -183,14 +168,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/time-inbox" 
-              element={
-                <ProtectedRoute>
-                  <TimeInbox />
                 </ProtectedRoute>
               } 
             />
@@ -317,30 +294,6 @@ const App = () => (
               }
             />
             <Route
-              path="/settings/notifications" 
-              element={
-                <ProtectedRoute>
-                  <NotificationSettings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings/integrations"
-              element={
-                <ProtectedRoute>
-                  <IntegrationSettings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings/roles" 
-              element={
-                <ProtectedRoute>
-                  <RoleReference />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
               path="/audits/create-template"
               element={
                 <ProtectedRoute>
@@ -372,8 +325,6 @@ const App = () => (
             {/* Admin Stages */}
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
-            <Route path="/my/kpi" element={<ProtectedRoute><MyKpiDashboardPage /></ProtectedRoute>} />
-            <Route path="/kpi" element={<ProtectedRoute><KpiPage /></ProtectedRoute>} />
             {/* Ask Viv Assistant - new conversational RAG bot, Vivacity staff only (self-gated inside the page via canAccessAskViv() + rollout flags) */}
             <Route path="/ask-viv" element={<ProtectedRoute><AskVivAssistant /></ProtectedRoute>} />
             {/* QA Responsive Harness - SuperAdmin/VivacityTeam only */}

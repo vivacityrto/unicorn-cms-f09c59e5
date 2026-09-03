@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Inbox, Clock, Calendar, Check, X, Edit, ChevronDown, Filter, Users, Building2, DollarSign, FileText, Sparkles, AlertCircle, RefreshCw, Package, Wand2, AlarmClock, Settings } from 'lucide-react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -205,7 +204,7 @@ export default function TimeInbox() {
   };
 
   const fetchStagesForPackage = async (packageId: number) => {
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from('package_stages')
       .select('stage_id, stages(name)')
       .eq('package_id', packageId);
@@ -284,7 +283,6 @@ export default function TimeInbox() {
   };
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -834,6 +832,5 @@ export default function TimeInbox() {
           </SheetContent>
         </Sheet>
       </div>
-    </DashboardLayout>
   );
 }

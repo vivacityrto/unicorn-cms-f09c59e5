@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -70,7 +69,7 @@ export default function MyOnboardingPage() {
         .eq("lifecycle_type", "staff_onboarding");
       if (error) throw error;
       return (data ?? [])
-        .map((r: any) => ({
+        .map((r) => ({
           id: r.id,
           completed: !!r.completed,
           completed_at: r.completed_at,
@@ -94,8 +93,8 @@ export default function MyOnboardingPage() {
         .maybeSingle();
       if (error) throw error;
       return {
-        videoUrl: (data as any)?.staff_induction_video_url ?? null,
-        workbookUrl: (data as any)?.staff_onboarding_workbook_url ?? null,
+        videoUrl: data?.staff_induction_video_url ?? null,
+        workbookUrl: data?.staff_onboarding_workbook_url ?? null,
       };
     },
   });
@@ -104,7 +103,7 @@ export default function MyOnboardingPage() {
     mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
       const { error } = await supabase
         .from("lifecycle_checklist_instances")
-        .update({ notes } as any)
+        .update({ notes })
         .eq("id", id);
       if (error) throw error;
     },
@@ -135,36 +134,31 @@ export default function MyOnboardingPage() {
 
   if (runQuery.isLoading || instancesQuery.isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   if (!run) {
     return (
-      <DashboardLayout>
-        <div className="max-w-2xl mx-auto p-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>No onboarding checklist found</CardTitle>
-              <CardDescription>
-                You don't have an active onboarding checklist linked to your account.
-                If you think this is a mistake, please contact your team leader.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </DashboardLayout>
+      <div className="max-w-2xl mx-auto p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>No onboarding checklist found</CardTitle>
+            <CardDescription>
+              You don't have an active onboarding checklist linked to your account.
+              If you think this is a mistake, please contact your team leader.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
 
   const pct = total ? Math.round((completed / total) * 100) : 0;
 
   return (
-    <DashboardLayout>
       <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
         <div className="space-y-2">
           <h1 className="text-2xl md:text-3xl font-bold">
@@ -278,7 +272,6 @@ export default function MyOnboardingPage() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }
 

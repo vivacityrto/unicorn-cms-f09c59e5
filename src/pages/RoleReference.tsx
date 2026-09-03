@@ -1,4 +1,3 @@
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -39,7 +38,6 @@ export default function RoleReference() {
   const currentRole = profile?.unicorn_role || 'User';
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -217,6 +215,5 @@ export default function RoleReference() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }

@@ -137,6 +137,13 @@ const SuggestionDetail = lazy(() => import("@/pages/SuggestionDetail"));
 const RtoTips = lazy(() => import("@/pages/RtoTips"));
 const ClientActivityFeed = lazy(() => import("@/pages/ClientActivityFeed"));
 const ClientImpactPage = lazy(() => import("@/pages/ClientImpactPage"));
+const IntegrationSettings = lazy(() => import("@/pages/IntegrationSettings"));
+const NotificationSettings = lazy(() => import("@/pages/NotificationSettings"));
+const RoleReference = lazy(() => import("@/pages/RoleReference"));
+const KpiPage = lazy(() => import("@/pages/KpiPage"));
+const MyKpiDashboardPage = lazy(() => import("@/pages/MyKpiDashboardPage"));
+const MyOnboardingPage = lazy(() => import("@/pages/MyOnboardingPage"));
+const TimeInbox = lazy(() => import("@/pages/TimeInbox"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -436,8 +443,27 @@ const ClientImpactPage = lazy(() => import("@/pages/ClientImpactPage"));
  * checking the identical condition the surviving one already does.
  * This completes the Clients section of the migration
  * (docs/kb/reference/dashboard-direct-layout-migration-plan-2026-09-01.md,
- * PRs 12-14); remaining work is PR 15-16 (Work: utility-settings/
- * executive-personal), PR 17 (Dashboard.tsx aliases), and PR 18
+ * PRs 12-14). PR 15 (Work: utility/personal settings, first of two Work
+ * PRs) added 7 files to the plain group: IntegrationSettings,
+ * NotificationSettings, RoleReference, KpiPage, MyKpiDashboardPage,
+ * MyOnboardingPage, TimeInbox. None had a page-local access check --
+ * `MyKpiDashboardPage` also exports a named `MyKpiContent` (used only by
+ * itself; a stale doc-comment there claims `/kpi` composes it too, but
+ * `KpiPage.tsx` doesn't import it -- left alone, out of scope here).
+ * All 7 were single-root (IntegrationSettings/NotificationSettings/
+ * MyKpiDashboardPage used the content-component-merge pattern; the rest
+ * were direct-JSX). Fixed 12 pre-existing `any` errors across 4 files
+ * (IntegrationSettings, MyKpiDashboardPage, MyOnboardingPage, TimeInbox)
+ * -- all were casts around tables/columns that already have real
+ * generated Supabase types (`app_settings.staff_induction_video_url`/
+ * `staff_onboarding_workbook_url`, `kpi_tasks`, `kpi_tickets`,
+ * `lifecycle_checklist_instances`, `package_stages`), so the annotation
+ * was simply redundant once removed.
+ * Remaining work: PR 16 (Work: executive/personal -- AskVivAssistant,
+ * CalendarTimeCapture, MyWork, ExecutiveDashboard [plain] +
+ * ExecutiveClientCommitments/ExecutiveDecisionQueue/
+ * ExecutiveFinancialControls [SA, kept as a separate tier despite being
+ * one "Executive" section]), PR 17 (Dashboard.tsx aliases), and PR 18
  * (/dashboard itself, last).
  */
 export const dashboardLayoutRoutes = (
@@ -587,6 +613,13 @@ export const dashboardLayoutRoutes = (
       <Route path="/rto-tips" element={<RtoTips />} />
       <Route path="/client-activity" element={<ClientActivityFeed />} />
       <Route path="/tenant/:clientId/impact" element={<ClientImpactPage />} />
+      <Route path="/settings/integrations" element={<IntegrationSettings />} />
+      <Route path="/settings/notifications" element={<NotificationSettings />} />
+      <Route path="/settings/roles" element={<RoleReference />} />
+      <Route path="/kpi" element={<KpiPage />} />
+      <Route path="/my/kpi" element={<MyKpiDashboardPage />} />
+      <Route path="/my-onboarding" element={<MyOnboardingPage />} />
+      <Route path="/time-inbox" element={<TimeInbox />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />
