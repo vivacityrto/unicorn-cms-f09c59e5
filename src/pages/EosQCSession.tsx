@@ -142,7 +142,7 @@ export default function EosQCSession() {
       setSummaryCount(c => c + 1);
       setSummaryDirty(false);
     }
-  }, [upsertAnswer.isPending, upsertAnswer.isError]);
+  }, [upsertAnswer.isPending, upsertAnswer.isError, summaryDirty]);
 
   const handleSummaryChange = (value: string) => {
     setSummaryText(value);
