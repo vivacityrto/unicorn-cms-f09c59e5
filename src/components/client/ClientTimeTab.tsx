@@ -705,9 +705,13 @@ function BurndownCard({ row, selectedPeriodOverride }: { row: { package_instance
   // PeriodSelector above the table: use its own window/allowance instead of
   // the always-current-year renewalWindow, and bypass the "Show all" toggle
   // (an explicit period selection already says which window to show).
-  const effectiveWindow = selectedPeriodOverride
-    ? { start: selectedPeriodOverride.period_start, end: selectedPeriodOverride.period_end }
-    : row.renewalWindow;
+  const effectiveWindow = useMemo(
+    () =>
+      selectedPeriodOverride
+        ? { start: selectedPeriodOverride.period_start, end: selectedPeriodOverride.period_end }
+        : row.renewalWindow,
+    [selectedPeriodOverride, row.renewalWindow]
+  );
   const effectiveShowAll = selectedPeriodOverride ? false : showAll;
 
   // Filter to current membership period unless "Show All"
@@ -1340,7 +1344,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   }), [tenantId, packageFilterIds, workTypeFilterIds, dateFrom, dateTo]);
 
   const { data: entriesPage, isLoading: loading } = useTimeEntriesPaginated(timeEntriesFilters, page);
-  const pageEntries = entriesPage?.rows ?? [];
+  const pageEntries = useMemo(() => entriesPage?.rows ?? [], [entriesPage]);
   const totalCount = entriesPage?.count ?? 0;
   const [moveEntry, setMoveEntry] = useState<TimeEntry | null>(null);
   const [splitEntry, setSplitEntry] = useState<TimeEntry | null>(null);

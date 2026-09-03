@@ -225,6 +225,23 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     fetchPrimaryContactEmail();
   }, [tenantId]);
 
+  const resetForm = useCallback(() => {
+    setNoteType('general');
+    setTitle('');
+    setContent('');
+    setPriority('normal');
+    setNoteStatus('noted');
+    setDuration('');
+    setTags([]);
+    setIsPinned(false);
+    setSelectedPackageInstanceId('none');
+    setSelectedNote(null);
+    setTitleManuallyEdited(false);
+    setNotifyUserIds([]);
+    setNotifyClient(false);
+    setEmailMode(null);
+  }, []);
+
   // Auto-open note dialog when initNote=true is in URL params (e.g. from risk level change)
   useEffect(() => {
     if (searchParams.get('initNote') !== 'true') return;
@@ -241,7 +258,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setTitle(prefillTitle);
     setTitleManuallyEdited(true);
     setIsAddDialogOpen(true);
-  }, [searchParams]);
+  }, [searchParams, setSearchParams, resetForm]);
 
   // Auto-extract title from content using AI
   const extractTitle = useCallback(async (text: string) => {
@@ -516,23 +533,6 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     } else {
       setEmailMode(null);
     }
-  };
-
-  const resetForm = () => {
-    setNoteType('general');
-    setTitle('');
-    setContent('');
-    setPriority('normal');
-    setNoteStatus('noted');
-    setDuration('');
-    setTags([]);
-    setIsPinned(false);
-    setSelectedPackageInstanceId('none');
-    setSelectedNote(null);
-    setTitleManuallyEdited(false);
-    setNotifyUserIds([]);
-    setNotifyClient(false);
-    setEmailMode(null);
   };
 
   const handleOpenAdd = () => {
@@ -813,7 +813,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     } finally {
       setSaving(false);
     }
-  }, [activePackages, selectedNote, tenantId, updateNote, createNote, tags, resetForm]);
+  }, [activePackages, selectedNote, tenantId, updateNote, createNote, tags, resetForm, scopeTag, toast]);
 
 
 
