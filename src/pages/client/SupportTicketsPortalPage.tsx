@@ -38,7 +38,7 @@ export default function SupportTicketsPortalPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const all = tickets ?? [];
+  const all = useMemo(() => tickets ?? [], [tickets]);
 
   const tabCounts = useMemo(() => {
     const c: Record<TabKey, number> = { active: 0, new: 0, triaged: 0, in_progress: 0, resolved: 0, closed: 0 };

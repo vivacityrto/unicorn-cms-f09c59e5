@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T09:43:07.993Z",
-  "baselineSha": "5c59779281c440ee2a56e0e002cc6064ac55c4a2",
+  "generatedAt": "2026-09-03T11:01:43.262Z",
+  "baselineSha": "c89cb19ba2223028c8d17deda993ddee103b3bcb",
   "totals": {
     "files": 1785,
     "filesWithFindings": 617,
     "errors": 3744,
-    "warnings": 98
+    "warnings": 94
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 60,
+    "react-hooks/exhaustive-deps": 56,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 98,
+      "warnings": 94,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 60,
+        "react-hooks/exhaustive-deps": 56,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -506,10 +506,9 @@
     },
     "src/pages/client": {
       "errors": 36,
-      "warnings": 4,
+      "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 36,
-        "react-hooks/exhaustive-deps": 4
+        "@typescript-eslint/no-explicit-any": 36
       }
     },
     "src/pages/internal": {
@@ -2802,8 +2801,7 @@
       "@typescript-eslint/no-explicit-any": 6
     },
     "src/pages/client/AcademyAssessmentPlayerPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 3,
-      "react-hooks/exhaustive-deps": 1
+      "@typescript-eslint/no-explicit-any": 3
     },
     "src/pages/client/AcademyAssessmentResultPage.tsx": {
       "@typescript-eslint/no-explicit-any": 3
@@ -2821,14 +2819,12 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/pages/client/ClientTgaDetailsPage.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/pages/client/SupportTicketPortalDetailPage.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
     "src/pages/client/SupportTicketsPortalPage.tsx": {
-      "react-hooks/exhaustive-deps": 2,
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/pages/internal/AskVivFlags.tsx": {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
@@ -45,12 +45,7 @@ export default function ClientTgaDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!activeTenantId) return;
-    loadData();
-  }, [activeTenantId]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [tenantRes, reviewsRes] = await Promise.all([
@@ -74,7 +69,12 @@ export default function ClientTgaDetailsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [activeTenantId]);
+
+  useEffect(() => {
+    if (!activeTenantId) return;
+    loadData();
+  }, [activeTenantId, loadData]);
 
   async function handleConfirmReviewed() {
     if (!user?.id || !activeTenantId) return;
