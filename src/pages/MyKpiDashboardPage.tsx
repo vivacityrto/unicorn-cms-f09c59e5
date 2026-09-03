@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { KpiDashboard } from "@/components/kpi/KpiDashboard";
@@ -58,12 +57,12 @@ export function MyKpiContent({ showHeader = true }: { showHeader?: boolean }) {
     let cancelled = false;
     (async () => {
       const [tasksRes, ticketsRes] = await Promise.all([
-        (supabase as any)
+        supabase
           .from("kpi_tasks")
           .select("id", { count: "exact", head: true })
           .eq("assignee_uuid", uuid)
           .eq("status", "pending"),
-        (supabase as any)
+        supabase
           .from("kpi_tickets")
           .select("id", { count: "exact", head: true })
           .eq("assignee_uuid", uuid)
@@ -200,16 +199,14 @@ export function MyKpiContent({ showHeader = true }: { showHeader?: boolean }) {
 
 export default function MyKpiDashboardPage() {
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold">My KPI dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Your KPI rollup and role-specific activity.
-          </p>
-        </div>
-        <MyKpiContent showHeader={false} />
+    <div className="p-6 space-y-4">
+      <div>
+        <h1 className="text-2xl font-semibold">My KPI dashboard</h1>
+        <p className="text-sm text-muted-foreground">
+          Your KPI rollup and role-specific activity.
+        </p>
       </div>
-    </DashboardLayout>
+      <MyKpiContent showHeader={false} />
+    </div>
   );
 }

@@ -1,4 +1,3 @@
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Bell } from 'lucide-react';
 import { TeamsIntegrationCard } from '@/components/notifications/TeamsIntegrationCard';
@@ -7,14 +6,6 @@ import { QuietHoursCard } from '@/components/notifications/QuietHoursCard';
 import { RecentNotificationsCard } from '@/components/notifications/RecentNotificationsCard';
 
 export default function NotificationSettings() {
-  return (
-    <DashboardLayout>
-      <NotificationSettingsContent />
-    </DashboardLayout>
-  );
-}
-
-function NotificationSettingsContent() {
   return (
     <div className="space-y-6">
       <PageHeader

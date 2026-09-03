@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,14 +12,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function IntegrationSettings() {
-  return (
-    <DashboardLayout>
-      <IntegrationSettingsContent />
-    </DashboardLayout>
-  );
-}
-
-function IntegrationSettingsContent() {
   const { profile } = useAuth();
   const [slackEnabled, setSlackEnabled] = useState(false);
   const [teamsEnabled, setTeamsEnabled] = useState(false);
@@ -45,8 +36,8 @@ function IntegrationSettingsContent() {
       .single()
       .then(({ data }) => {
         if (data?.sharepoint_site_url) setSharepointSiteUrl(data.sharepoint_site_url);
-        if ((data as any)?.staff_induction_video_url) setInductionVideoUrl((data as any).staff_induction_video_url);
-        if ((data as any)?.staff_onboarding_workbook_url) setWorkbookUrl((data as any).staff_onboarding_workbook_url);
+        if (data?.staff_induction_video_url) setInductionVideoUrl(data.staff_induction_video_url);
+        if (data?.staff_onboarding_workbook_url) setWorkbookUrl(data.staff_onboarding_workbook_url);
       });
   }, []);
 
@@ -74,7 +65,7 @@ function IntegrationSettingsContent() {
         .update({
           staff_induction_video_url: inductionVideoUrl.trim() || null,
           staff_onboarding_workbook_url: workbookUrl.trim() || null,
-        } as any)
+        })
         .eq('id', 1);
       if (error) throw error;
       toast({ title: 'Staff onboarding URLs saved' });

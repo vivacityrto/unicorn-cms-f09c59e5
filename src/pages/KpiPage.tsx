@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useKpiAccess } from "@/hooks/useKpiAccess";
 import { Button } from "@/components/ui/button";
@@ -135,7 +134,6 @@ export default function KpiPage() {
   };
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6">
         {/* Compact page header row: role subtitle + welcome / last updated */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -253,6 +251,5 @@ export default function KpiPage() {
 
         <PerformanceGuide />
       </div>
-    </DashboardLayout>
   );
 }
