@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -91,53 +90,47 @@ export default function AuditWorkspaceNew() {
   useEffect(() => {
     const tid = audit?.subject_tenant_id;
     if (!tid) return;
-    (supabase as any)
+    supabase
       .from('tenants')
       .select('name')
       .eq('id', tid)
       .maybeSingle()
-      .then(({ data }: any) => {
+      .then(({ data }) => {
         if (data?.name) setPurchaserName(data.name);
       });
   }, [audit?.subject_tenant_id]);
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="space-y-4 p-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-[400px] w-full" />
-        </div>
-      </DashboardLayout>
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
     );
   }
 
   if (auditError) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-96 gap-4">
-          <p className="text-muted-foreground">Couldn't load this audit. {auditError instanceof Error ? auditError.message : 'Please try again.'}</p>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => refetchAudit()}>Retry</Button>
-            <Button variant="ghost" onClick={() => navigate('/audits')}>
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Audits
-            </Button>
-          </div>
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <p className="text-muted-foreground">Couldn't load this audit. {auditError instanceof Error ? auditError.message : 'Please try again.'}</p>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => refetchAudit()}>Retry</Button>
+          <Button variant="ghost" onClick={() => navigate('/audits')}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Audits
+          </Button>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (!audit) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-96 gap-4">
-          <p className="text-muted-foreground">Audit not found</p>
-          <Button variant="ghost" onClick={() => navigate('/audits')}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Audits
-          </Button>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <p className="text-muted-foreground">Audit not found</p>
+        <Button variant="ghost" onClick={() => navigate('/audits')}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Audits
+        </Button>
+      </div>
     );
   }
 
@@ -150,7 +143,6 @@ export default function AuditWorkspaceNew() {
 
   return (
     <UnsavedAuditWorkProvider>
-      <DashboardLayout>
         <div className="flex h-[calc(100vh-64px)]">
           {/* Sidebar - hidden on small screens */}
           <div className="hidden lg:block">
@@ -394,7 +386,6 @@ export default function AuditWorkspaceNew() {
           </div>
           </div>
         </div>
-      </DashboardLayout>
     </UnsavedAuditWorkProvider>
   );
 }

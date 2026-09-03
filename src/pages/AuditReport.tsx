@@ -1,6 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuditDetails } from '@/hooks/useAudits';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +13,9 @@ export default function AuditReport() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">Loading report...</p>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-96">
+        <p className="text-muted-foreground">Loading report...</p>
+      </div>
     );
   }
 
@@ -27,7 +24,6 @@ export default function AuditReport() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6 print:space-y-4">
         <div className="flex items-center justify-between print:hidden">
           <div className="flex items-center gap-4">
@@ -96,7 +92,7 @@ export default function AuditReport() {
           <div className="space-y-4 page-break-before">
             <h2 className="text-2xl font-bold">Findings</h2>
             {auditReport?.findings && auditReport.findings.length > 0 ? (
-              auditReport.findings.map((finding: any, idx: number) => (
+              auditReport.findings.map((finding, idx) => (
                 <Card key={finding.finding_id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -141,7 +137,7 @@ export default function AuditReport() {
             <h2 className="text-2xl font-bold">Actions</h2>
             {auditReport?.actions && auditReport.actions.length > 0 ? (
               <div className="space-y-3">
-                {auditReport.actions.map((action: any, idx: number) => (
+                {auditReport.actions.map((action, idx) => (
                   <Card key={action.action_id}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -168,6 +164,5 @@ export default function AuditReport() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
   );
 }

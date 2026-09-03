@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Plus, Search, X, Calendar, AlertTriangle, CheckCircle2, BarChart3, MoreVertical, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -81,7 +80,6 @@ export default function AuditsAssessments() {
   }).length;
 
   return (
-    <DashboardLayout>
     <div className="space-y-6">
       <PageHeader
         title="Audits & Assessments"
@@ -307,6 +305,5 @@ export default function AuditsAssessments() {
         />
       )}
     </div>
-    </DashboardLayout>
   );
 }

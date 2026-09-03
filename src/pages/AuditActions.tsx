@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuditDetails, useAudits } from '@/hooks/useAudits';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -35,11 +34,9 @@ export default function AuditActions() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">Loading actions...</p>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-96">
+        <p className="text-muted-foreground">Loading actions...</p>
+      </div>
     );
   }
 
@@ -55,7 +52,6 @@ export default function AuditActions() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -97,7 +93,7 @@ export default function AuditActions() {
               <CardContent>
                 <div className="space-y-3">
                   {auditReport?.actions && auditReport.actions.length > 0 ? (
-                    auditReport.actions.map((action: any) => (
+                    auditReport.actions.map((action) => (
                       <Card key={action.action_id}>
                         <CardContent className="p-4">
                           <div className="space-y-2">
@@ -125,6 +121,5 @@ export default function AuditActions() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
   );
 }
