@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate, useBlocker } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -127,10 +127,21 @@ export default function AcademyAssessmentPlayerPage() {
     }
   }, [assessment?.time_limit_minutes, submitted]);
 
-  // Navigation blocker
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    return !submitted && Object.keys(answers).length > 0 && currentLocation.pathname !== nextLocation.pathname;
-  });
+  // Warn on tab close/refresh while there's unsaved progress. `useBlocker`
+  // would also cover in-app navigation, but it requires a React Router data
+  // router (createBrowserRouter/RouterProvider) — this app runs a plain
+  // <BrowserRouter>, so calling it throws "useBlocker must be used within a
+  // data router" on every render, crashing this page outright. Until the
+  // app migrates to a data router, native beforeunload is the only
+  // navigation guard available here.
+  useEffect(() => {
+    if (submitted || Object.keys(answers).length === 0) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [submitted, answers]);
 
   // Submit mutation
   const submitMutation = useMutation({
@@ -254,20 +265,6 @@ export default function AcademyAssessmentPlayerPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Blocker dialog */}
-      {blocker.state === "blocked" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-card rounded-xl p-6 max-w-md mx-4 space-y-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-foreground">Leave Assessment?</h3>
-            <p className="text-sm text-muted-foreground">Your progress will be lost if you leave now. Are you sure?</p>
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" size="sm" onClick={() => blocker.reset()}>Stay</Button>
-              <Button size="sm" className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => blocker.proceed()}>Leave</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="rounded-xl p-6" style={{ background: "linear-gradient(135deg, #7130A0, #ed1878)" }}>
         <h1 className="text-xl font-bold text-white">{assessment.title}</h1>
