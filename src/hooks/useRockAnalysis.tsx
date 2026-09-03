@@ -151,7 +151,7 @@ export function useSeatRockAnalysis(quarterNumber?: number, quarterYear?: number
       
       // Fetch user names for owners
       const ownerIds = [...new Set((data || []).map((o: any) => o.owner_id).filter(Boolean))];
-      let userMap: Record<string, string> = {};
+      const userMap: Record<string, string> = {};
       
       if (ownerIds.length > 0) {
         const { data: users } = await supabase

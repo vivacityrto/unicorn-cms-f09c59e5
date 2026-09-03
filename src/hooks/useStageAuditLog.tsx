@@ -62,7 +62,7 @@ export function useStageAuditLog(options: UseStageAuditLogOptions) {
 
       // Get user info for each event
       const userIds = [...new Set((data || []).filter(e => e.user_id).map(e => e.user_id))];
-      let userMap: Record<string, { email: string; name: string }> = {};
+      const userMap: Record<string, { email: string; name: string }> = {};
 
       if (userIds.length > 0) {
         const { data: usersData } = await supabase

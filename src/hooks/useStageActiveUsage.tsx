@@ -35,7 +35,7 @@ export function useStageActiveUsage(stageId: number | null) {
         )) as number[];
 
         // Step 2: fetch tenant names separately (no FK relationship between client_packages and tenants)
-        let tenantNameMap = new Map<number, string>();
+        const tenantNameMap = new Map<number, string>();
         if (tenantIds.length > 0) {
           const { data: tenantsData, error: tErr } = await (supabase as any)
             .from('tenants')

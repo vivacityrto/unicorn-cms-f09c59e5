@@ -35,7 +35,7 @@ export function useSeatScorecard(seatId?: string) {
       if (!tenantId || !seatId) return null;
 
       // Get scorecard for this seat
-      let { data: scorecardData, error } = await supabase
+      const { data: scorecardData, error } = await supabase
         .from('seat_scorecards')
         .select('*')
         .eq('seat_id', seatId)

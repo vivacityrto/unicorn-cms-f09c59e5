@@ -4,7 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 import type { PluginOption } from "vite";
-// @ts-ignore - beasties types issue with package.json exports
+// @ts-expect-error - beasties types issue with package.json exports
 import Beasties from "beasties";
 import { writeFileSync, readFileSync, existsSync } from "fs";
 import { resolve, join } from "path";

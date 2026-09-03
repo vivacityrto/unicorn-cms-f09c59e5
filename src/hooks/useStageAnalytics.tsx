@@ -144,7 +144,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
       });
 
       // Try to get active client counts
-      let activeClientCountMap = new Map<number, number>();
+      const activeClientCountMap = new Map<number, number>();
       try {
         const { data: activeClientStages } = await supabase
           .from('client_package_stages')
@@ -218,7 +218,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       // Try to get certified_at from audit logs
       const stageIds = unusedStages.map(s => s.id.toString());
-      let certifiedAtMap = new Map<string, string>();
+      const certifiedAtMap = new Map<string, string>();
       
       if (stageIds.length > 0) {
         const { data: auditEvents } = await supabase
@@ -256,7 +256,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       // Get stages used by active clients
       let activeStageIds: number[] = [];
-      let stageActiveClientCount = new Map<number, number>();
+      const stageActiveClientCount = new Map<number, number>();
       
       try {
         const { data: activeClientStages } = await supabase
@@ -350,7 +350,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         data.editors.forEach((_, userId) => allUserIds.add(userId));
       });
 
-      let userEmailMap = new Map<string, string>();
+      const userEmailMap = new Map<string, string>();
       if (allUserIds.size > 0) {
         const { data: users } = await supabase
           .from('users')
@@ -409,7 +409,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       // Get stage titles
       const stageIds = [...new Set((events || []).map(e => parseInt(e.entity_id)))];
-      let stageTitleMap = new Map<number, string>();
+      const stageTitleMap = new Map<number, string>();
       if (stageIds.length > 0) {
         const { data: stages } = await supabase
           .from('stages')
@@ -421,7 +421,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       // Get user emails
       const userIds = [...new Set((events || []).filter(e => e.user_id).map(e => e.user_id!))];
-      let userEmailMap = new Map<string, string>();
+      const userEmailMap = new Map<string, string>();
       if (userIds.length > 0) {
         const { data: users } = await supabase
           .from('users')

@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
 
       // Audience labels
       const audienceCodes = Array.from(new Set((cycleRows || []).map((c: any) => c.audience_code).filter(Boolean)));
-      let audienceLabels: Record<string, string> = {};
+      const audienceLabels: Record<string, string> = {};
       if (audienceCodes.length > 0) {
         const { data: auds } = await supabase.from('pdp_audiences').select('code, label').in('code', audienceCodes);
         (auds || []).forEach((a: any) => (audienceLabels[a.code] = a.label));

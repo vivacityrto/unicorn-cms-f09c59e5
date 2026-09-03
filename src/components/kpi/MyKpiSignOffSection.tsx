@@ -528,14 +528,14 @@ export function MyKpiSignOffSection() {
       .order("period_start", { ascending: false });
 
     const ids = (reviews ?? []).map((r: any) => r.id);
-    let signoffsByReview: Record<number, SignoffRow[]> = {};
+    const signoffsByReview: Record<number, SignoffRow[]> = {};
     if (ids.length) {
       const { data: so } = await (supabase as any)
         .from("kpi_review_signoffs")
         .select("id, review_id, signoff_type, reviewer_user_id, signed_at, comment")
         .in("review_id", ids);
       const uuids = Array.from(new Set((so ?? []).map((s: any) => s.reviewer_user_id)));
-      let nameMap: Record<string, { name: string; role: string }> = {};
+      const nameMap: Record<string, { name: string; role: string }> = {};
       if (uuids.length) {
         const { data: us } = await (supabase as any)
           .from("users")

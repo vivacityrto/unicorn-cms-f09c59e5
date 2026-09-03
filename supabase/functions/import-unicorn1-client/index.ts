@@ -431,7 +431,7 @@ serve(async (req) => {
       }
 
       // ---- 4. Stage Instances ----
-      let stageBackfill = { created: 0, skipped: 0 };
+      const stageBackfill = { created: 0, skipped: 0 };
       if (opts.stage_instances) {
         let created = 0, skipped = 0, total = 0;
         const u1PiIds = Array.from(piIdMap.keys());

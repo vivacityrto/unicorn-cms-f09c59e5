@@ -274,7 +274,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       const ids = rows.map(r => r.id);
 
       // Enrich with tenant_profile (no FK to embed, so query separately)
-      let profileMap: Record<number, { org_type: string | null; cricos_number: string | null }> = {};
+      const profileMap: Record<number, { org_type: string | null; cricos_number: string | null }> = {};
       if (ids.length) {
         const { data: profiles } = await (supabase as any)
           .from('tenant_profile')
@@ -376,7 +376,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       setRtoName(''); setRtoNumber(''); setCricosCode('');
       setSiteAddress(''); setCeo(''); setPhone(''); setEmail(''); setWebsite('');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [isDueDiligence]);
 
   const resetForm = () => {

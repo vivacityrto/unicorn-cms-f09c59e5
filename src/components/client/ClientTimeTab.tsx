@@ -1553,7 +1553,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     try {
       const { rows, truncated } = await fetchAllMatchingTimeEntries(timeEntriesFilters);
       const exportUserIds = [...new Set(rows.map(e => e.user_id).filter(Boolean))];
-      let exportUserMap: Record<string, string> = {};
+      const exportUserMap: Record<string, string> = {};
       if (exportUserIds.length > 0) {
         const { data } = await (supabase as any)
           .from('users')

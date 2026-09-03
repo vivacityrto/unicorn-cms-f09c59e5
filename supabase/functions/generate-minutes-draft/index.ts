@@ -216,7 +216,7 @@ function parseAttendanceCsv(csvText: string): CalendarAttendee[] {
   if (lines.length < 2) return [];
 
   // Find header row (may have BOM or metadata rows before it)
-  let headerIdx = lines.findIndex((l) =>
+  const headerIdx = lines.findIndex((l) =>
     /name/i.test(l) && /email/i.test(l)
   );
   if (headerIdx === -1) return [];
@@ -409,7 +409,7 @@ Deno.serve(async (req) => {
     let meetingSubject = meeting.title || null;
     let meetingStart = meeting.start_time || null;
     let meetingEnd = meeting.end_time || null;
-    let msEventId = (meeting as any).ms_event_id || null;
+    const msEventId = (meeting as any).ms_event_id || null;
 
     // ── Step 1: Sync meeting metadata from Graph ────────────────────
     if (hasGraph && msEventId) {

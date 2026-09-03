@@ -351,7 +351,7 @@ serve(async (req) => {
     }
 
     let inserted = 0;
-    let updated = 0;
+    const updated = 0;
     // Upsert in chunks of 200
     for (let i = 0; i < rows.length; i += 200) {
       const chunk = rows.slice(i, i + 200);

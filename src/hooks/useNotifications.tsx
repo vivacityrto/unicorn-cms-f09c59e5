@@ -41,7 +41,7 @@ export const useNotifications = () => {
 
       // Fetch tenant names for notifications that have a tenant_id
       const tenantIds = [...new Set(rows.filter(r => r.tenant_id).map(r => r.tenant_id))];
-      let tenantMap = new Map<number, string>();
+      const tenantMap = new Map<number, string>();
       if (tenantIds.length > 0) {
         const { data: tenants } = await supabase
           .from('tenants')

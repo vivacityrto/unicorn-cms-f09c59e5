@@ -44,3 +44,4 @@ baseline so the program's totals don't quietly understate real debt.
 | Path | Reason | Approved by | Reconsider by |
 |---|---|---|---|
 | `src/integrations/supabase/types.ts` | Generated (Supabase CLI type generation, not hand-authored) | Carl (Phase 2.5 PR 1, 2026-09-03) | Re-check if the Supabase type generator ever supports lint-clean output natively |
+| `src/integrations/supabase/previewAuthStorage.ts` | Generated (Lovable preview-auth brokering; file header says do not edit directly) | Carl (Phase 2.5 PR 2, 2026-09-03 — discovered while scoping a mechanical batch, not hand-fixed) | Re-check if Lovable's generator ever supports lint-clean output natively |

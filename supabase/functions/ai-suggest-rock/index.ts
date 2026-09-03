@@ -51,7 +51,7 @@ serve(async (req) => {
     }
 
     // Build context based on rock level
-    let contextParts: string[] = [];
+    const contextParts: string[] = [];
 
     if (rock_level === "company") {
       // Fetch VTO

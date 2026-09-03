@@ -224,8 +224,8 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
         if (time.period === "AM" && hour === 12) hour = 0;
         return `${hour.toString().padStart(2, "0")}:${time.minute}`;
       };
-      let startedDateTime = startedDate ? `${format(startedDate, "yyyy-MM-dd")}T${convert12To24(startedTime)}:00` : undefined;
-      let completedDateTime = completedDate ? `${format(completedDate, "yyyy-MM-dd")}T${convert12To24(completedTime)}:00` : undefined;
+      const startedDateTime = startedDate ? `${format(startedDate, "yyyy-MM-dd")}T${convert12To24(startedTime)}:00` : undefined;
+      const completedDateTime = completedDate ? `${format(completedDate, "yyyy-MM-dd")}T${convert12To24(completedTime)}:00` : undefined;
       
       const remainingExistingFiles = existingFiles.filter(f => !filesToRemove.includes(f.path));
       const allFilePaths = [...remainingExistingFiles.map(f => f.path), ...fileUrls];
