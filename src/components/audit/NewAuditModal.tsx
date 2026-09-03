@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ShieldCheck, ClipboardList, Building2, ArrowRight, ArrowLeft, Loader2, Award, Globe, Info, Link2, Target } from 'lucide-react';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/modals';
 import { Button } from '@/components/ui/button';
@@ -311,7 +311,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       const match = auditors.find(a => a.user_uuid === session.user.id);
       if (match) setLeadAuditorId(match.user_uuid);
     }
-  }, [auditors, session?.user?.id]);
+  }, [auditors, session?.user?.id, leadAuditorId]);
 
   // Pre-select card from stageAuditType (resolved from stage or preselected)
   useEffect(() => {
@@ -322,7 +322,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
         if (isStageLinked) setStep(2); // Skip Step 1 when stage-linked
       }
     }
-  }, [stageAuditType, auditTypeCards]);
+  }, [stageAuditType, auditTypeCards, isStageLinked, selectedCard]);
 
   // Clear stale card selection when registration type changes — only on Step 1.
   // After the user has advanced to Step 2/3 the card has already passed the
@@ -335,7 +335,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       c => c.value === selectedCard.value && c.is_rto === selectedCard.is_rto && c.is_cricos === selectedCard.is_cricos
     );
     if (!stillValid) setSelectedCard(null);
-  }, [registrationType, auditTypeCards, step]);
+  }, [registrationType, auditTypeCards, step, selectedCard]);
 
   // Auto-fetch snapshot from TGA view when tenant selected.
   // For Due Diligence audits the snapshot describes the *Target RTO* (entered separately
@@ -379,7 +379,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
      
   }, [isDueDiligence]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setStep(hasPreselectedType ? 2 : 1);
     setSelectedCard(null);
     if (!preselectedTenantId) { setTenantId(null); setTenantName(''); }
@@ -388,9 +388,9 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     setRtoName(''); setRtoNumber(''); setCricosCode('');
     setSiteAddress(''); setCeo(''); setPhone(''); setEmail(''); setWebsite('');
     setOverseasStudentCount(''); setEducationAgents(''); setPrismsUsers(''); setDhaContact('');
-  };
+  }, [hasPreselectedType, preselectedTenantId]);
 
-  useEffect(() => { if (!open) resetForm(); }, [open]);
+  useEffect(() => { if (!open) resetForm(); }, [open, resetForm]);
 
   const handleSave = () => {
     if (!selectedCard || !tenantId) {

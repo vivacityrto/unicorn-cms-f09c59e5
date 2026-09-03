@@ -38,7 +38,7 @@ export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
       initSections.mutate({ templateId: audit.template_id });
       setInitialized(true);
     }
-  }, [sections, sectionsLoading, initialized, audit.template_id]);
+  }, [sections, sectionsLoading, initialized, audit.template_id, initSections]);
 
   // Auto-navigate to phase when section is selected
   useEffect(() => {
