@@ -180,7 +180,7 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
     },
   });
 
-  const rows = attachmentsQuery.data || [];
+  const rows = useMemo(() => attachmentsQuery.data || [], [attachmentsQuery.data]);
   const linkedIds = useMemo(() => new Set(rows.map((r) => r.document_id)), [rows]);
   const availableDocs = (coreDocsQuery.data || []).filter((d) => !linkedIds.has(d.id));
 
