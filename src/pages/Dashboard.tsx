@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,26 +54,21 @@ const Dashboard = () => {
 
   if (authLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   if (!isVivacityStaff) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="w-full min-w-0 min-h-full bg-background flex flex-col">
         <OverloadBanner show={isOverloaded} />
         <StaffOnboardingBanner />
@@ -176,7 +170,6 @@ const Dashboard = () => {
           onLogEvent={logDashboardEvent}
         />
       </div>
-    </DashboardLayout>
   );
 };
 
