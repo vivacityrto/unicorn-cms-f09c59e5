@@ -110,6 +110,10 @@ export const LiveMeetingView = () => {
     if (myExistingPhrase && !myPhraseDraft) {
       setMyPhraseDraft(myExistingPhrase);
     }
+    // Intentionally excludes `myPhraseDraft`: if the user deliberately clears the
+    // field, `!myPhraseDraft` becomes true again, and adding it as a dep would
+    // re-fire this effect and re-seed the just-cleared draft right back.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myExistingPhrase]);
   const { rocks } = useEosRocks();
   const { metrics } = useEosScorecardMetrics();
@@ -337,7 +341,7 @@ export const LiveMeetingView = () => {
         status: 'attended' 
       });
     }
-  }, [profile?.user_uuid, attendees, meetingStarted, meetingId]);
+  }, [profile?.user_uuid, attendees, meetingStarted, meetingId, addGuestSilent, updateAttendanceSilent]);
 
   // Hydrate segment notes from DB on load
   useEffect(() => {
