@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -80,13 +80,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
     allStandards
   );
 
-  useEffect(() => {
-    if (open && stage) {
-      fetchStageUsageData();
-    }
-  }, [open, stage]);
-
-  const fetchStageUsageData = async () => {
+  const fetchStageUsageData = useCallback(async () => {
     if (!stage) return;
     
     setLoading(true);
@@ -169,7 +163,13 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
     } finally {
       setLoading(false);
     }
-  };
+  }, [stage]);
+
+  useEffect(() => {
+    if (open && stage) {
+      fetchStageUsageData();
+    }
+  }, [open, stage, fetchStageUsageData]);
 
   const getStageTypeColor = (stageType: string) => {
     return getStageTypeColorHelper(stageType, stageTypes);
