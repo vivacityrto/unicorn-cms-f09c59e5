@@ -25,12 +25,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import {
-  buildFallbackParse,
   classifyVideos,
   distinctModuleNumbers,
   extractAlbumId,
   extractVimeoVideoId,
   findExistingModule,
+  parsePreviewVideos,
   type ExistingModule,
   type ShowcaseVideo,
 } from "./parse.ts";
@@ -142,11 +142,10 @@ Deno.serve(async (req) => {
   }
 
   if (!hasCourseId) {
-    // Preview mode (drafting a brand-new course) never requires the
-    // "M# - Lesson #" title convention — every video becomes one lesson,
-    // sequenced in the showcase's own order, using each video's own title.
-    // The Add Course review step lets staff reorder before drafting with AI.
-    const { parsed: previewParsed, unmatched: previewUnmatched } = buildFallbackParse(videos);
+    // Preview mode uses title numbering when available so the review list can
+    // auto-organise structured showcases. Unnumbered showcases still fall
+    // back to one flat module in their original Vimeo order.
+    const { parsed: previewParsed, unmatched: previewUnmatched } = parsePreviewVideos(videos);
 
     const { data: allVideos, error: videosLookupErr } = await supabase
       .from("training_videos")

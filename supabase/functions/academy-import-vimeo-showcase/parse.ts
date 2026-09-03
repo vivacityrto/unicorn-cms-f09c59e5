@@ -224,3 +224,16 @@ export function buildFallbackParse(videos: ShowcaseVideo[]): {
 
   return { parsed, unmatched };
 }
+
+/**
+ * Preview a showcase using title numbering when at least one title exposes a
+ * usable module/lesson number. Showcases without any structured titles keep
+ * their original flat showcase order instead of being discarded as unmatched.
+ */
+export function parsePreviewVideos(videos: ShowcaseVideo[]): {
+  parsed: ParsedVideo[];
+  unmatched: UnmatchedVideo[];
+} {
+  const structured = classifyVideos(videos);
+  return structured.parsed.length > 0 ? structured : buildFallbackParse(videos);
+}
