@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAdminAcademyCourses, useDeleteCourse, usePermanentDeleteCourse, useUpdateCourse, type AdminCourse } from "@/hooks/academy/useAdminAcademyCourses";
@@ -108,6 +108,14 @@ function sortCourses(courses: AdminCourse[], sort: CourseSort): AdminCourse[] {
   });
 }
 
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      {children}
+    </div>
+  );
+}
 function groupCoursesBySeries(courses: AdminCourse[]): CourseSection[] {
   const byKey = new Map<string, AdminCourse[]>();
   for (const course of courses) {
