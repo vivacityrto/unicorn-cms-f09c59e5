@@ -87,7 +87,7 @@ function RocksHierarchyContent() {
       const isMember = vivacityUsers.some(u => u.user_uuid === profile.user_uuid);
       if (isMember) setUserFilter(profile.user_uuid);
     }
-  }, [profile?.user_uuid, vivacityUsers]);
+  }, [profile?.user_uuid, vivacityUsers, userFilter]);
 
   const effectiveUserFilter = userFilter;
   // Helper functions
