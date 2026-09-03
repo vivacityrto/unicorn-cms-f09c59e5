@@ -34,7 +34,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Loader2, Trash2, Video, Wand2, Save, AlertTriangle, Plus, ListPlus, ArrowLeft, GripVertical } from "lucide-react";
+import { Sparkles, Loader2, Trash2, Video, Wand2, Save, AlertTriangle, Plus, ListPlus, ArrowLeft, GripVertical, ArrowUp, ArrowDown, WandSparkles } from "lucide-react";
 import { toast } from "sonner";
 import TagChipInput from "@/components/academy/TagChipInput";
 import WorkshopSegmentSplit, {
@@ -288,7 +288,17 @@ function humaniseVimeoError(msg: string): string {
 }
 
 /** One draggable row in the showcase review list — reordering here decides lesson order. */
-function SortableShowcaseRow({ item }: { item: ShowcaseParsedItem }) {
+function SortableShowcaseRow({
+  item,
+  index,
+  count,
+  onMove,
+}: {
+  item: ShowcaseParsedItem;
+  index: number;
+  count: number;
+  onMove: (index: number, direction: -1 | 1) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.vimeo_id,
   });
@@ -317,6 +327,12 @@ function SortableShowcaseRow({ item }: { item: ShowcaseParsedItem }) {
       <span className="flex-1 truncate">{item.title}</span>
       <span className="flex items-center gap-2 shrink-0">
         <span className="text-xs text-muted-foreground">{formatDuration(item.duration_seconds)}</span>
+        <button type="button" className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label={`Move ${item.title} up`} disabled={index === 0} onClick={() => onMove(index, -1)}>
+          <ArrowUp className="h-3.5 w-3.5" />
+        </button>
+        <button type="button" className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label={`Move ${item.title} down`} disabled={index === count - 1} onClick={() => onMove(index, 1)}>
+          <ArrowDown className="h-3.5 w-3.5" />
+        </button>
         {item.already_imported && (
           <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-800">
             already used by {item.existing_courses.map((c) => c.title).join(", ")}
@@ -444,29 +460,58 @@ export default function AcademyAddCoursePage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  const resequenceParsed = (items: ShowcaseParsedItem[]) => {
+    const nextLessonByModule = new Map<number, number>();
+    return items.map((item) => {
+      const lessonNumber = (nextLessonByModule.get(item.module_number) ?? 0) + 1;
+      nextLessonByModule.set(item.module_number, lessonNumber);
+      return { ...item, lesson_number: lessonNumber };
+    });
+  };
+
+  const applyShowcaseOrder = (ordered: ShowcaseParsedItem[]) => {
+    const resequenced = resequenceParsed(ordered);
+    setShowcasePreview((prev) => prev ? { ...prev, parsed: resequenced } : prev);
+    setShowcaseItems((prev) => {
+      if (prev.length === 0) return prev;
+      const byVimeoId = new Map(prev.map((item) => [item.vimeoId, item]));
+      return resequenced
+        .map((item) => {
+          const draft = byVimeoId.get(item.vimeo_id);
+          return draft ? { ...draft, lessonNumber: item.lesson_number } : null;
+        })
+        .filter((item): item is ShowcaseItemDraft => item !== null);
+    });
+  };
+
   // Reordering the review list decides lesson order — resequence lesson_number
   // to match, and keep any already-drafted items (showcaseItems) in step with
   // it so a reorder after drafting doesn't require a full AI redraft.
   const handleShowcaseReorder = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setShowcasePreview((prev) => {
-      if (!prev) return prev;
-      const oldIndex = prev.parsed.findIndex((p) => p.vimeo_id === active.id);
-      const newIndex = prev.parsed.findIndex((p) => p.vimeo_id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      const reordered = arrayMove(prev.parsed, oldIndex, newIndex).map((item, i) => ({
-        ...item,
-        lesson_number: i + 1,
-      }));
-      return { ...prev, parsed: reordered };
-    });
-    setShowcaseItems((prev) => {
-      const oldIndex = prev.findIndex((d) => d.vimeoId === active.id);
-      const newIndex = prev.findIndex((d) => d.vimeoId === over.id);
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      return arrayMove(prev, oldIndex, newIndex).map((d, i) => ({ ...d, lessonNumber: i + 1 }));
-    });
+    if (!over || active.id === over.id || !showcasePreview) return;
+    const oldIndex = showcasePreview.parsed.findIndex((p) => p.vimeo_id === active.id);
+    const newIndex = showcasePreview.parsed.findIndex((p) => p.vimeo_id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    applyShowcaseOrder(arrayMove(showcasePreview.parsed, oldIndex, newIndex));
+  };
+
+  const handleShowcaseMove = (index: number, direction: -1 | 1) => {
+    if (!showcasePreview) return;
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= showcasePreview.parsed.length) return;
+    const next = [...showcasePreview.parsed];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    applyShowcaseOrder(next);
+  };
+
+  const handleAutoOrganiseShowcase = () => {
+    if (!showcasePreview) return;
+    const ordered = [...showcasePreview.parsed].sort(
+      (a, b) => a.module_number - b.module_number || a.lesson_number - b.lesson_number,
+    );
+    applyShowcaseOrder(ordered);
+    toast.success("Showcase ordered by detected module and lesson numbers");
   };
 
   // Reordering the drafted-lessons strip (after AI drafting) — keeps the
@@ -479,19 +524,15 @@ export default function AcademyAddCoursePage() {
     const oldIndex = showcaseItems.findIndex((d) => d.key === active.id);
     const newIndex = showcaseItems.findIndex((d) => d.key === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(showcaseItems, oldIndex, newIndex).map((d, i) => ({ ...d, lessonNumber: i + 1 }));
-    setShowcaseItems(reordered);
+    const reordered = arrayMove(showcaseItems, oldIndex, newIndex);
     if (selectedShowcaseItem === oldIndex) setSelectedShowcaseItem(newIndex);
-    setShowcasePreview((prev) => {
-      if (!prev) return prev;
-      const byVimeoId = new Map(reordered.map((d, i) => [d.vimeoId, i + 1]));
-      return {
-        ...prev,
-        parsed: prev.parsed
-          .map((p) => ({ ...p, lesson_number: byVimeoId.get(p.vimeo_id) ?? p.lesson_number }))
-          .sort((a, b) => a.lesson_number - b.lesson_number),
-      };
-    });
+    const orderedParsed = showcasePreview
+      ? reordered
+          .map((draft) => showcasePreview.parsed.find((item) => item.vimeo_id === draft.vimeoId))
+          .filter((item): item is ShowcaseParsedItem => item !== undefined)
+      : [];
+    if (orderedParsed.length > 0) applyShowcaseOrder(orderedParsed);
+    else setShowcaseItems(reordered);
   };
 
   // Step 3 editable fields (single-video mode)
@@ -1825,8 +1866,14 @@ export default function AcademyAddCoursePage() {
                       strategy={verticalListSortingStrategy}
                     >
                       <ul className="text-sm space-y-1 max-h-[420px] overflow-y-auto">
-                        {showcasePreview.parsed.map((item) => (
-                          <SortableShowcaseRow key={item.vimeo_id} item={item} />
+                        {showcasePreview.parsed.map((item, index) => (
+                          <SortableShowcaseRow
+                            key={item.vimeo_id}
+                            item={item}
+                            index={index}
+                            count={showcasePreview.parsed.length}
+                            onMove={handleShowcaseMove}
+                          />
                         ))}
                       </ul>
                     </SortableContext>
@@ -1856,20 +1903,25 @@ export default function AcademyAddCoursePage() {
                 </p>
               )}
 
-              <Button
-                onClick={() => void handleConfirmShowcase()}
-                disabled={showcaseConfirming || showcasePreview.parsed.length === 0}
-                className="text-white hover:opacity-90"
-                style={{ backgroundColor: "#7130A0" }}
-              >
-                {showcaseConfirming ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Drafting…</>
-                ) : showcaseActive ? (
-                  "Redraft all with AI"
-                ) : (
-                  "Draft all with AI"
-                )}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={handleAutoOrganiseShowcase} disabled={showcaseConfirming || showcasePreview.parsed.length < 2}>
+                  <WandSparkles className="h-4 w-4 mr-2" /> Auto-organise by title numbers
+                </Button>
+                <Button
+                  onClick={() => void handleConfirmShowcase()}
+                  disabled={showcaseConfirming || showcasePreview.parsed.length === 0}
+                  className="text-white hover:opacity-90"
+                  style={{ backgroundColor: "#7130A0" }}
+                >
+                  {showcaseConfirming ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Drafting…</>
+                  ) : showcaseActive ? (
+                    "Redraft all with AI"
+                  ) : (
+                    "Draft all with AI"
+                  )}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
