@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T08:59:29.462Z",
-  "baselineSha": "6b2e42da163ef6977754e9ac022bb66427f9c5b1",
+  "generatedAt": "2026-09-03T09:21:49.416Z",
+  "baselineSha": "bc75c287ad69ea8e37556080b2404ef52fe2cedd",
   "totals": {
     "files": 1785,
-    "filesWithFindings": 622,
+    "filesWithFindings": 621,
     "errors": 3744,
-    "warnings": 121
+    "warnings": 110
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 83,
+    "react-hooks/exhaustive-deps": 72,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 121,
+      "warnings": 110,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 83,
+        "react-hooks/exhaustive-deps": 72,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -485,9 +485,9 @@
     },
     "src/pages": {
       "errors": 451,
-      "warnings": 37,
+      "warnings": 26,
       "byRule": {
-        "react-hooks/exhaustive-deps": 37,
+        "react-hooks/exhaustive-deps": 26,
         "@typescript-eslint/no-explicit-any": 451
       }
     },
@@ -2662,11 +2662,9 @@
       "@typescript-eslint/no-explicit-any": 2
     },
     "src/pages/AdminManagePackages.tsx": {
-      "@typescript-eslint/no-explicit-any": 41,
-      "react-hooks/exhaustive-deps": 2
+      "@typescript-eslint/no-explicit-any": 41
     },
     "src/pages/AdminManageStages.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 9
     },
     "src/pages/AdminPackageTenantDetail.tsx": {
@@ -2734,29 +2732,21 @@
       "@typescript-eslint/no-explicit-any": 24
     },
     "src/pages/ManageCategories.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 4
     },
     "src/pages/ManageDocuments.tsx": {
-      "@typescript-eslint/no-explicit-any": 42,
-      "react-hooks/exhaustive-deps": 2
+      "@typescript-eslint/no-explicit-any": 42
     },
     "src/pages/ManageEmailTemplates.tsx": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "src/pages/ManageInvites.tsx": {
-      "react-hooks/exhaustive-deps": 1
-    },
     "src/pages/ManageStages.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 12
     },
     "src/pages/ManageTenants.tsx": {
-      "@typescript-eslint/no-explicit-any": 8,
-      "react-hooks/exhaustive-deps": 1
+      "@typescript-eslint/no-explicit-any": 8
     },
     "src/pages/ManageUsers.tsx": {
-      "react-hooks/exhaustive-deps": 2,
       "@typescript-eslint/no-explicit-any": 6
     },
     "src/pages/MyExitInterview.tsx": {

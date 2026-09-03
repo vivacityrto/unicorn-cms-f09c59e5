@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -173,12 +173,7 @@ export default function AdminManageStages() {
   const [availablePackages, setAvailablePackages] = useState<{id: number; name: string}[]>([]);
   const [importSuccessId, setImportSuccessId] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetchStages();
-    fetchPackages();
-  }, []);
-
-  const fetchStages = async () => {
+  const fetchStages = useCallback(async () => {
     try {
       setIsLoading(true);
 
@@ -250,7 +245,7 @@ export default function AdminManageStages() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   const fetchPackages = async () => {
     try {
@@ -264,6 +259,11 @@ export default function AdminManageStages() {
       console.error('Failed to fetch packages:', error);
     }
   };
+
+  useEffect(() => {
+    fetchStages();
+    fetchPackages();
+  }, [fetchStages]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -147,17 +147,7 @@ export default function ManageUsers() {
     return 'all';
   };
 
-  useEffect(() => {
-    fetchUsers();
-    fetchCurrentUserRole();
-  }, [profile?.tenant_id, tenantIdParam]);
-
-  useEffect(() => {
-    applyFiltersAndSort();
-    setCurrentPage(1);
-  }, [users, searchQuery, userTypeFilter, statusFilter, sortField, sortDirection]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -240,7 +230,7 @@ export default function ManageUsers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantIdParam, profile?.unicorn_role, profile?.tenant_id, toast]);
 
   const fetchCurrentUserRole = async () => {
     try {
@@ -320,7 +310,7 @@ export default function ManageUsers() {
     }
   };
 
-  const applyFiltersAndSort = () => {
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = [...users];
 
     // Search filter
@@ -377,7 +367,17 @@ export default function ManageUsers() {
     });
 
     setFilteredUsers(filtered);
-  };
+  }, [users, searchQuery, userTypeFilter, statusFilter, sortField, sortDirection]);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchCurrentUserRole();
+  }, [fetchUsers]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+    setCurrentPage(1);
+  }, [applyFiltersAndSort]);
 
   const toggleSort = (field: typeof sortField) => {
     if (sortField === field) {
