@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { TablesUpdate } from '@/integrations/supabase/types';
@@ -61,9 +61,7 @@ export default function ExecutiveDecisionQueue() {
   const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState(defaultForm);
 
-  useEffect(() => { fetchRecords(); }, []);
-
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
@@ -78,7 +76,9 @@ export default function ExecutiveDecisionQueue() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
   const handleCreate = async () => {
     try {

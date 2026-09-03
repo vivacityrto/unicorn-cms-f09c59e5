@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T11:01:43.262Z",
-  "baselineSha": "c89cb19ba2223028c8d17deda993ddee103b3bcb",
+  "generatedAt": "2026-09-03T19:53:39.327Z",
+  "baselineSha": "061171ac338736f2d2b4f7e08e1e9fbee810e112",
   "totals": {
     "files": 1785,
-    "filesWithFindings": 617,
+    "filesWithFindings": 614,
     "errors": 3744,
-    "warnings": 94
+    "warnings": 91
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 56,
+    "react-hooks/exhaustive-deps": 53,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 94,
+      "warnings": 91,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 56,
+        "react-hooks/exhaustive-deps": 53,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -484,9 +484,9 @@
     },
     "src/pages": {
       "errors": 451,
-      "warnings": 26,
+      "warnings": 23,
       "byRule": {
-        "react-hooks/exhaustive-deps": 26,
+        "react-hooks/exhaustive-deps": 23,
         "@typescript-eslint/no-explicit-any": 451
       }
     },
@@ -2693,15 +2693,6 @@
       "react-hooks/exhaustive-deps": 1
     },
     "src/pages/EosRocks.tsx": {
-      "react-hooks/exhaustive-deps": 1
-    },
-    "src/pages/ExecutiveClientCommitments.tsx": {
-      "react-hooks/exhaustive-deps": 1
-    },
-    "src/pages/ExecutiveDecisionQueue.tsx": {
-      "react-hooks/exhaustive-deps": 1
-    },
-    "src/pages/ExecutiveFinancialControls.tsx": {
       "react-hooks/exhaustive-deps": 1
     },
     "src/pages/Login.tsx": {
