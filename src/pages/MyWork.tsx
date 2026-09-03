@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   Clock
 } from 'lucide-react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -95,18 +94,15 @@ export default function MyWork() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="p-6 space-y-6">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </DashboardLayout>
+      <div className="p-6 space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="border-b bg-card">
@@ -311,6 +307,5 @@ export default function MyWork() {
         </Card>
       </div>
       </div>
-    </DashboardLayout>
   );
 }

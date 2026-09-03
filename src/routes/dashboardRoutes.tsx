@@ -144,6 +144,13 @@ const KpiPage = lazy(() => import("@/pages/KpiPage"));
 const MyKpiDashboardPage = lazy(() => import("@/pages/MyKpiDashboardPage"));
 const MyOnboardingPage = lazy(() => import("@/pages/MyOnboardingPage"));
 const TimeInbox = lazy(() => import("@/pages/TimeInbox"));
+const AskVivAssistant = lazy(() => import("@/pages/AskVivAssistant"));
+const CalendarTimeCapture = lazy(() => import("@/pages/CalendarTimeCapture"));
+const MyWork = lazy(() => import("@/pages/MyWork"));
+const ExecutiveDashboard = lazy(() => import("@/pages/ExecutiveDashboard"));
+const ExecutiveClientCommitments = lazy(() => import("@/pages/ExecutiveClientCommitments"));
+const ExecutiveDecisionQueue = lazy(() => import("@/pages/ExecutiveDecisionQueue"));
+const ExecutiveFinancialControls = lazy(() => import("@/pages/ExecutiveFinancialControls"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -459,12 +466,37 @@ const TimeInbox = lazy(() => import("@/pages/TimeInbox"));
  * `staff_onboarding_workbook_url`, `kpi_tasks`, `kpi_tickets`,
  * `lifecycle_checklist_instances`, `package_stages`), so the annotation
  * was simply redundant once removed.
- * Remaining work: PR 16 (Work: executive/personal -- AskVivAssistant,
- * CalendarTimeCapture, MyWork, ExecutiveDashboard [plain] +
- * ExecutiveClientCommitments/ExecutiveDecisionQueue/
- * ExecutiveFinancialControls [SA, kept as a separate tier despite being
- * one "Executive" section]), PR 17 (Dashboard.tsx aliases), and PR 18
- * (/dashboard itself, last).
+ * PR 16 (Work: executive/personal, last of two Work PRs -- completes the
+ * Work section of the migration) added 7 files across 2 tiers: AskViv
+ * Assistant, CalendarTimeCapture, MyWork, ExecutiveDashboard to the plain
+ * group; ExecutiveClientCommitments, ExecutiveDecisionQueue,
+ * ExecutiveFinancialControls to the requireSuperAdmin group -- kept as
+ * the existing separate tier despite all 3 living under the same
+ * "Executive" section, since their routes were already
+ * ProtectedRoute-requireSuperAdmin in App.tsx while /executive itself
+ * (ExecutiveDashboard) was plain. None of the 7 are among the plan's 6
+ * flagged local-permission-gate pages: AskVivAssistant's `if
+ * (accessLoading) return null` is a loading-state guard, not an access
+ * check; ExecutiveDashboard's `if (!isSuperAdmin)` renders a shell-wrapped
+ * "Access Restricted" card, not a hard pre-shell Navigate -- both kept
+ * unchanged per the page-local-check preservation rule. The other 5 files
+ * have no page-local access check at all. Fixed 21 pre-existing `any`
+ * errors across 5 files: CalendarTimeCapture (3 -- a `package_stages`
+ * query/map cast, table already real-typed); ExecutiveDashboard (3 -- a new
+ * local `DiscussionItem` interface replacing `discussion_items as any[]`,
+ * matching real field types from `useAlignmentSignals`'s `AlignmentSignal`
+ * -- `useWeeklyReview.ts`'s own `any` usages were deliberately left
+ * untouched, out of scope for this page-migration PR);
+ * ExecutiveClientCommitments (5 -- a `.map` cast plus 4 `catch (err: any)`
+ * blocks, `client_commitments` table confirmed real); ExecutiveDecisionQueue
+ * (6 -- switched a `Record<string, any>` update payload to the generated
+ * `TablesUpdate<'ceo_decision_queue'>` helper type, plus 4 `catch (err:
+ * any)` blocks). ExecutiveFinancialControls (4 -- only its `catch (err:
+ * any)` blocks needed fixing, no `.map`/query-shape casts in this file).
+ * AskVivAssistant/MyWork had none. All 7
+ * were single-root, no Fragment needed. This completes the Work section
+ * of the migration. Remaining work: PR 17 (Dashboard.tsx aliases) and
+ * PR 18 (/dashboard itself, last).
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -501,6 +533,9 @@ export const dashboardLayoutRoutes = (
       <Route path="/admin/cohort-sender" element={<CohortAccessSender />} />
       <Route path="/admin/cohort-sender/jobs/:jobId" element={<CohortAccessSenderJob />} />
       <Route path="/admin/ai-insights" element={<AiInsightsPage />} />
+      <Route path="/executive/client-commitments" element={<ExecutiveClientCommitments />} />
+      <Route path="/executive/decision-queue" element={<ExecutiveDecisionQueue />} />
+      <Route path="/executive/financial-controls" element={<ExecutiveFinancialControls />} />
     </Route>
     <Route element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/superadmin/academy/enrollments" element={<AcademyEnrolmentsPage />} />
@@ -620,6 +655,10 @@ export const dashboardLayoutRoutes = (
       <Route path="/my/kpi" element={<MyKpiDashboardPage />} />
       <Route path="/my-onboarding" element={<MyOnboardingPage />} />
       <Route path="/time-inbox" element={<TimeInbox />} />
+      <Route path="/ask-viv" element={<AskVivAssistant />} />
+      <Route path="/calendar/time-capture" element={<CalendarTimeCapture />} />
+      <Route path="/my-work" element={<MyWork />} />
+      <Route path="/executive" element={<ExecutiveDashboard />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />
