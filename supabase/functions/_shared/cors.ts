@@ -8,7 +8,8 @@
  * - `APP_BASE_URL` (falls back to https://unicorn-cms.au)
  * - the www / apex sibling of that origin
  * - optional comma-separated `CORS_ALLOWED_ORIGINS`
- * - Vite dev origins from AGENTS.md (`http://localhost:8080` / 127.0.0.1)
+ * - Vite dev origins (`http://localhost:8080` / 127.0.0.1) plus the
+ *   alternate local verification port 4173
  *
  * The Outlook / Teams add-in is served from the same SPA (`/addin`), so it
  * does not need a separate host. Extra request headers used by a few
@@ -57,6 +58,8 @@ const CORS_ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
 const LOCAL_DEV_ORIGINS = [
   "http://localhost:8080",
   "http://127.0.0.1:8080",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
 ];
 
 export function originFromUrl(value: string | null | undefined): string | null {

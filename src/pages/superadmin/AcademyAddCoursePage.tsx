@@ -153,6 +153,9 @@ interface ShowcaseItemDraft {
   vimeoLink: string;
   transcript: string;
   title: string;
+  metadataFreeTitle: string;
+  originalTitle: string;
+  metadataFreeTitle: string;
   shortDescription: string;
   description: string;
   targetAudience: string[];
@@ -169,6 +172,8 @@ type ShowcaseParsedItem = {
   module_number: number;
   lesson_number: number;
   title: string;
+  lesson_title?: string;
+  original_title?: string;
   vimeo_id: string;
   link: string;
   duration_seconds: number | null;
@@ -201,6 +206,20 @@ function formatDuration(seconds: number | null): string {
   if (m < 60) return `${m} min`;
   const h = Math.floor(m / 60);
   return `${h}h ${m % 60}m`;
+}
+
+function groupShowcaseItems(items: ShowcaseParsedItem[]) {
+  const groups = new Map<number, ShowcaseParsedItem[]>();
+  for (const item of items) {
+    const group = groups.get(item.module_number) ?? [];
+    group.push(item);
+    groups.set(item.module_number, group);
+  }
+  return [...groups.entries()].sort(([a], [b]) => a - b);
+}
+
+function getShowcaseModuleNumbers(items: ShowcaseParsedItem[]) {
+  return [...new Set(items.map((item) => item.module_number))].sort((a, b) => a - b);
 }
 
 function normaliseOptions(raw: unknown): QuizOption[] {
@@ -295,12 +314,16 @@ function SortableShowcaseRow({
   item,
   index,
   count,
+  moduleNumbers,
   onMove,
+  onMoveToModule,
 }: {
   item: ShowcaseParsedItem;
   index: number;
   count: number;
+  moduleNumbers: number[];
   onMove: (index: number, direction: -1 | 1) => void;
+  onMoveToModule: (vimeoId: string, moduleNumber: number) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.vimeo_id,
@@ -328,6 +351,19 @@ function SortableShowcaseRow({
       </button>
       <span className="text-xs text-muted-foreground shrink-0 w-5 text-right">{item.lesson_number}.</span>
       <span className="flex-1 truncate">{item.title}</span>
+      <Select
+        value={String(item.module_number)}
+        onValueChange={(value) => onMoveToModule(item.vimeo_id, Number(value))}
+      >
+        <SelectTrigger className="h-7 w-[112px] text-xs shrink-0" aria-label={`Move ${item.title} to module`}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {moduleNumbers.map((moduleNumber) => (
+            <SelectItem key={moduleNumber} value={String(moduleNumber)}>Module {moduleNumber}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <span className="flex items-center gap-2 shrink-0">
         <span className="text-xs text-muted-foreground">{formatDuration(item.duration_seconds)}</span>
         <button type="button" className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label={`Move ${item.title} up`} disabled={index === 0} onClick={() => onMove(index, -1)}>
@@ -516,6 +552,70 @@ export default function AcademyAddCoursePage() {
     );
     applyShowcaseOrder(ordered);
     toast.success("Showcase ordered by detected module and lesson numbers");
+  };
+
+  const handleRemoveShowcaseMetadata = () => {
+    if (!showcasePreview) return;
+    const hasMetadata = showcasePreview.parsed.some(
+      (item) => item.lesson_title && item.lesson_title !== item.title,
+    ) || showcaseItems.some((item) => item.metadataFreeTitle !== item.title);
+    if (!hasMetadata) return;
+    const confirmed = window.confirm(
+      "Remove the Module/Lesson numbering from these titles? This changes the preview and drafted lesson titles, but keeps the Module sections and lesson order.",
+    );
+    if (!confirmed) return;
+
+    setShowcasePreview((prev) => prev ? {
+      ...prev,
+      parsed: prev.parsed.map((item) => ({
+        ...item,
+        title: item.lesson_title || item.title,
+      })),
+    } : prev);
+    setShowcaseItems((prev) => prev.map((item) => ({
+      ...item,
+      title: item.metadataFreeTitle,
+    })));
+    toast.success("Title numbering removed from the showcase lessons");
+  };
+
+  const handleRestoreShowcaseMetadata = () => {
+    if (!showcasePreview) return;
+    const hasCleanTitles = showcasePreview.parsed.some(
+      (item) => item.original_title && item.original_title !== item.title,
+    ) || showcaseItems.some((item) => item.originalTitle !== item.title);
+    if (!hasCleanTitles) return;
+    const confirmed = window.confirm(
+      "Restore the original Vimeo titles, including Module/Lesson numbering? This updates the preview and any drafted lesson titles.",
+    );
+    if (!confirmed) return;
+
+    setShowcasePreview((prev) => prev ? {
+      ...prev,
+      parsed: prev.parsed.map((item) => ({
+        ...item,
+        title: item.original_title || item.title,
+      })),
+    } : prev);
+    setShowcaseItems((prev) => prev.map((item) => ({
+      ...item,
+      title: item.originalTitle,
+    })));
+    toast.success("Original Vimeo titles restored");
+  };
+
+  const handleMoveShowcaseItemToModule = (vimeoId: string, moduleNumber: number) => {
+    if (!showcasePreview) return;
+    const item = showcasePreview.parsed.find((candidate) => candidate.vimeo_id === vimeoId);
+    if (!item || item.module_number === moduleNumber) return;
+    const withoutItem = showcasePreview.parsed.filter((candidate) => candidate.vimeo_id !== vimeoId);
+    const destinationIndex = withoutItem.reduce(
+      (lastIndex, candidate, candidateIndex) => candidate.module_number === moduleNumber ? candidateIndex : lastIndex,
+      -1,
+    );
+    withoutItem.splice(destinationIndex + 1, 0, { ...item, module_number: moduleNumber });
+    applyShowcaseOrder(withoutItem);
+    toast.success(`${item.title} moved to Module ${moduleNumber}`);
   };
 
   // Reordering the drafted-lessons strip (after AI drafting) — keeps the
@@ -932,7 +1032,14 @@ export default function AcademyAddCoursePage() {
       }
       if (data?.error) throw new Error(String(data.error));
 
-      const parsed: ShowcaseParsedItem[] = Array.isArray(data?.parsed) ? data.parsed : [];
+      const parsed: ShowcaseParsedItem[] = Array.isArray(data?.parsed)
+        ? data.parsed.map((item: ShowcaseParsedItem) => ({
+          ...item,
+          // Keep a client-side copy too so restore remains available when an
+          // older edge-function response does not include original_title.
+          original_title: item.original_title || item.title,
+        }))
+        : [];
       const unmatched: ShowcaseUnmatchedItem[] = Array.isArray(data?.unmatched) ? data.unmatched : [];
       if (parsed.length === 0 && unmatched.length === 0) {
         throw new Error("That showcase has no videos.");
@@ -1034,6 +1141,8 @@ export default function AcademyAddCoursePage() {
             vimeoLink: item.link,
             transcript: tx,
             title: item.title,
+            metadataFreeTitle: item.lesson_title || item.title,
+            originalTitle: item.original_title || item.title,
             shortDescription: desc?.short_description || "",
             description: desc?.description || "",
             targetAudience: audience,
@@ -1971,22 +2080,39 @@ export default function AcademyAddCoursePage() {
                     collisionDetection={closestCenter}
                     onDragEnd={handleShowcaseReorder}
                   >
-                    <SortableContext
-                      items={showcasePreview.parsed.map((item) => item.vimeo_id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <ul className="text-sm space-y-1 max-h-[420px] overflow-y-auto">
-                        {showcasePreview.parsed.map((item, index) => (
-                          <SortableShowcaseRow
-                            key={item.vimeo_id}
-                            item={item}
-                            index={index}
-                            count={showcasePreview.parsed.length}
-                            onMove={handleShowcaseMove}
-                          />
-                        ))}
-                      </ul>
-                    </SortableContext>
+                    <div className="max-h-[520px] overflow-y-auto space-y-3">
+                      {groupShowcaseItems(showcasePreview.parsed).map(([moduleNumber, moduleItems]) => (
+                        <section key={moduleNumber} className="rounded-lg border bg-muted/20 p-2">
+                          <div className="flex items-center justify-between px-2 pb-2">
+                            <h4 className="text-sm font-semibold">Module {moduleNumber}</h4>
+                            <span className="text-xs text-muted-foreground">
+                              {moduleItems.length} lesson{moduleItems.length === 1 ? "" : "s"}
+                            </span>
+                          </div>
+                          <SortableContext
+                            items={moduleItems.map((item) => item.vimeo_id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <ul className="text-sm space-y-1">
+                              {moduleItems.map((item) => {
+                                const index = showcasePreview.parsed.findIndex((candidate) => candidate.vimeo_id === item.vimeo_id);
+                                return (
+                                  <SortableShowcaseRow
+                                    key={item.vimeo_id}
+                                    item={item}
+                                    index={index}
+                                    count={showcasePreview.parsed.length}
+                                    moduleNumbers={getShowcaseModuleNumbers(showcasePreview.parsed)}
+                                    onMove={handleShowcaseMove}
+                                    onMoveToModule={handleMoveShowcaseItemToModule}
+                                  />
+                                );
+                              })}
+                            </ul>
+                          </SortableContext>
+                        </section>
+                      ))}
+                    </div>
                   </DndContext>
                 </>
               )}
@@ -2017,6 +2143,28 @@ export default function AcademyAddCoursePage() {
                 <Button type="button" variant="outline" onClick={handleAutoOrganiseShowcase} disabled={showcaseConfirming || showcasePreview.parsed.length < 2}>
                   <WandSparkles className="h-4 w-4 mr-2" /> Auto-organise by title numbers
                 </Button>
+                {(showcasePreview.parsed.some((item) => item.lesson_title && item.lesson_title !== item.title)
+                  || showcaseItems.some((item) => item.metadataFreeTitle !== item.title)) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRemoveShowcaseMetadata}
+                    disabled={showcaseConfirming}
+                  >
+                    Remove numbering from titles
+                  </Button>
+                )}
+                {(showcasePreview.parsed.some((item) => item.original_title && item.original_title !== item.title)
+                  || showcaseItems.some((item) => item.originalTitle !== item.title)) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRestoreShowcaseMetadata}
+                    disabled={showcaseConfirming}
+                  >
+                    Restore original titles
+                  </Button>
+                )}
                 <Button
                   onClick={() => void handleConfirmShowcase()}
                   disabled={showcaseConfirming || showcasePreview.parsed.length === 0}
