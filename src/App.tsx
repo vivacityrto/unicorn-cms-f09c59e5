@@ -57,8 +57,6 @@ const MyExitInterview = lazy(() => import("./pages/MyExitInterview"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
  const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
  const XeroCallback = lazy(() => import("./pages/XeroCallback"));
-const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
-const ProcessForm = lazy(() => import("./pages/ProcessForm"));
 const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
 
@@ -186,31 +184,6 @@ const App = () => (
                   <LiveMeetingView />
                 </ProtectedRoute>
               }
-            />
-            {/* Process Management Routes */}
-            <Route
-              path="/processes/new"
-              element={
-                <ProtectedRoute>
-                  <ProcessForm />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/processes/:id" 
-              element={
-                <ProtectedRoute>
-                  <ProcessDetail />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/processes/:id/edit" 
-              element={
-                <ProtectedRoute>
-                  <ProcessForm />
-                </ProtectedRoute>
-              } 
             />
             <Route
               path="/profile"

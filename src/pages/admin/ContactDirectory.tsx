@@ -78,7 +78,7 @@ export default function ContactDirectory() {
   const [rows, setRows] = useState<DirectoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
-  const [tenants, setTenants] = useState<TenantFilterOption[]>([]);
+  const [tenants, setTenants] = useState<Omit<TenantFilterOption, 'csc_user_id'>[]>([]);
   const [tenantStatusOptions, setTenantStatusOptions] = useState<TenantStatusOption[]>([]);
   const [cscFilterOptions, setCscFilterOptions] = useState<CscOption[]>([]);
 
