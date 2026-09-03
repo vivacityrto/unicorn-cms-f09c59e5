@@ -62,15 +62,7 @@ export default function TeamUsers() {
   const [resendingInvite, setResendingInvite] = useState<string | null>(null);
   const [cancellingInvite, setCancellingInvite] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTeamUsers();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [users, searchQuery, statusFilter]);
-
-  const fetchTeamUsers = async () => {
+  const fetchTeamUsers = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -172,9 +164,9 @@ export default function TeamUsers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...users];
 
     // Search filter
@@ -196,7 +188,15 @@ export default function TeamUsers() {
     }
 
     setFilteredUsers(filtered);
-  };
+  }, [users, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    fetchTeamUsers();
+  }, [fetchTeamUsers]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
   const handleResendInvite = async (user: TeamUser) => {
     if (!user.inviteId) return;

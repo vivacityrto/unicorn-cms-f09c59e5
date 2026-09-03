@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T19:53:39.327Z",
-  "baselineSha": "061171ac338736f2d2b4f7e08e1e9fbee810e112",
+  "generatedAt": "2026-09-03T20:04:57.757Z",
+  "baselineSha": "d0978d2063b0af518871132a7c575c4b8416f36e",
   "totals": {
     "files": 1785,
-    "filesWithFindings": 614,
+    "filesWithFindings": 613,
     "errors": 3744,
-    "warnings": 91
+    "warnings": 87
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 53,
+    "react-hooks/exhaustive-deps": 49,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 91,
+      "warnings": 87,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 53,
+        "react-hooks/exhaustive-deps": 49,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -484,9 +484,9 @@
     },
     "src/pages": {
       "errors": 451,
-      "warnings": 23,
+      "warnings": 19,
       "byRule": {
-        "react-hooks/exhaustive-deps": 23,
+        "react-hooks/exhaustive-deps": 19,
         "@typescript-eslint/no-explicit-any": 451
       }
     },
@@ -2751,11 +2751,7 @@
       "@typescript-eslint/no-explicit-any": 73
     },
     "src/pages/TeamSettings.tsx": {
-      "react-hooks/exhaustive-deps": 2,
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/TeamUsers.tsx": {
-      "react-hooks/exhaustive-deps": 2
     },
     "src/pages/TenantDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 10
