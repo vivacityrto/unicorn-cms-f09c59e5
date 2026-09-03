@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -76,18 +76,7 @@ export default function TeamSettings() {
   const { toast } = useToast();
   const { profile, user } = useAuth();
 
-  useEffect(() => {
-    if (profile?.tenant_id) {
-      fetchTenantInfo();
-      fetchTeamUsers();
-    }
-  }, [profile?.tenant_id]);
-
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [users, searchQuery, sortField]);
-
-  const fetchTenantInfo = async () => {
+  const fetchTenantInfo = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('tenants')
@@ -119,9 +108,9 @@ export default function TeamSettings() {
         variant: 'destructive',
       });
     }
-  };
+  }, [profile?.tenant_id, user?.id, toast]);
 
-  const fetchTeamUsers = async () => {
+  const fetchTeamUsers = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -151,9 +140,9 @@ export default function TeamSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.tenant_id, toast]);
 
-  const applyFiltersAndSort = () => {
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = [...users];
 
     // Apply search filter
@@ -179,7 +168,18 @@ export default function TeamSettings() {
     });
 
     setFilteredUsers(filtered);
-  };
+  }, [users, searchQuery, sortField]);
+
+  useEffect(() => {
+    if (profile?.tenant_id) {
+      fetchTenantInfo();
+      fetchTeamUsers();
+    }
+  }, [profile?.tenant_id, fetchTenantInfo, fetchTeamUsers]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [applyFiltersAndSort]);
 
   const handleDelete = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
