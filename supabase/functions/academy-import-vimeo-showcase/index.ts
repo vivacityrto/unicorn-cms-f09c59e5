@@ -208,7 +208,9 @@ Deno.serve(async (req) => {
         return {
           module_number: item.moduleNumber,
           lesson_number: item.lessonNumber,
-          title: item.title,
+          title: item.vimeoName || item.title,
+          lesson_title: item.title,
+          original_title: item.vimeoName || item.title,
           vimeo_id: item.vimeoId,
           link: item.link,
           duration_seconds: item.duration,
