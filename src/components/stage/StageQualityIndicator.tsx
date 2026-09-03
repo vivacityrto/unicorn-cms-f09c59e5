@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle2, AlertTriangle, XCircle, Loader2 } from 'lucide-react';
 import {
@@ -28,11 +28,7 @@ export function StageQualityIndicator({
   const [status, setStatus] = useState<QualityStatus>('loading');
   const [message, setMessage] = useState('');
 
-  useEffect(() => {
-    computeQuickQuality();
-  }, [stageId, stageType, isArchived]);
-
-  const computeQuickQuality = async () => {
+  const computeQuickQuality = useCallback(async () => {
     if (isArchived) {
       setStatus('fail');
       setMessage('Stage is archived');
@@ -108,7 +104,11 @@ export function StageQualityIndicator({
       setStatus('unknown');
       setMessage('Unable to check quality');
     }
-  };
+  }, [stageId, stageType, isArchived]);
+
+  useEffect(() => {
+    computeQuickQuality();
+  }, [computeQuickQuality]);
 
   const renderIcon = () => {
     switch (status) {

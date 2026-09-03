@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -69,19 +69,7 @@ export function StageSimulationDialog({
   const [loadingContext, setLoadingContext] = useState(false);
   const [activeTab, setActiveTab] = useState('summary');
 
-  useEffect(() => {
-    if (open && stageId) {
-      loadContextOptions();
-    } else {
-      // Reset state when closed
-      setStep('context');
-      setSelectedPackageId('');
-      setSelectedTenantId('');
-      clearSimulation();
-    }
-  }, [open, stageId]);
-
-  const loadContextOptions = async () => {
+  const loadContextOptions = useCallback(async () => {
     if (!stageId) return;
     
     setLoadingContext(true);
@@ -100,7 +88,19 @@ export function StageSimulationDialog({
     } finally {
       setLoadingContext(false);
     }
-  };
+  }, [stageId, fetchPackagesUsingStage, fetchTenantsForSimulation]);
+
+  useEffect(() => {
+    if (open && stageId) {
+      loadContextOptions();
+    } else {
+      // Reset state when closed
+      setStep('context');
+      setSelectedPackageId('');
+      setSelectedTenantId('');
+      clearSimulation();
+    }
+  }, [open, stageId, loadContextOptions, clearSimulation]);
 
   const handleRunSimulation = async () => {
     if (!stageId || !selectedPackageId) return;
