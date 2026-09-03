@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -99,21 +99,6 @@ export default function BulkInvite() {
   const [pollHandle, setPollHandle] = useState<number | null>(null);
 
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
-
-  // Access control — wait for the profile to resolve, then check ONLY unicorn_role.
-  // Do NOT add is_team / tenant_id / user_type checks; unicorn_role is authoritative.
-  // Render-time guard (not useEffect) so we never flash content or fire a redirect
-  // on the transient null-profile state while useAuth's deferred profile fetch runs.
-  if (authLoading || profile === null || profile === undefined) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-  if (profile.unicorn_role !== "Super Admin") {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   // Load Superhero membership tenants
   useEffect(() => {
@@ -227,7 +212,7 @@ export default function BulkInvite() {
     return () => { cancelled = true; };
   }, [isSuperAdmin, toast]);
 
-  const effectiveContact = (r: LaunchRow): {
+  const effectiveContact = useCallback((r: LaunchRow): {
     email: string;
     first_name: string;
     last_name: string;
@@ -253,7 +238,7 @@ export default function BulkInvite() {
       };
     }
     return null;
-  };
+  }, [overrides]);
 
   const selectedRows = useMemo(() => rows.filter((r) => selected.has(r.tenant_id)), [rows, selected]);
   const selectableCount = rows.filter((r) => effectiveContact(r) !== null).length;
@@ -293,7 +278,7 @@ export default function BulkInvite() {
       expiry_date: `${dd}/${mm}/${expiry.getFullYear()}`,
       invite_url: "https://unicorn-cms.au/accept-invitation?token=…",
     };
-  }, [selectedRows, profile, overrides]);
+  }, [selectedRows, profile, effectiveContact]);
 
   const handleSend = async () => {
     setSending(true);
@@ -385,6 +370,25 @@ export default function BulkInvite() {
   };
 
   useEffect(() => () => { if (pollHandle) window.clearInterval(pollHandle); }, [pollHandle]);
+
+  // Access control — wait for the profile to resolve, then check ONLY unicorn_role.
+  // Do NOT add is_team / tenant_id / user_type checks; unicorn_role is authoritative.
+  // Render-time guard (not useEffect) so we never flash content or fire a redirect
+  // on the transient null-profile state while useAuth's deferred profile fetch runs.
+  // (Placed after all hook calls above -- not before -- so hook call order never
+  // changes between renders; every effect/memo above already no-ops internally via
+  // `isSuperAdmin` for a non-Super-Admin profile, so deferring this check changes
+  // no observable behavior.)
+  if (authLoading || profile === null || profile === undefined) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (profile.unicorn_role !== "Super Admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   if (authLoading || loading) {
     return (
@@ -681,6 +685,11 @@ function OverrideModal({
         setLoading(false);
       }
     })();
+    // Intentionally scoped to tenant identity, not the full `row`/`existingOverride`
+    // objects: this resets the form when the modal opens for a *different* tenant,
+    // not on every parent re-render that produces a new object reference for the
+    // same tenant -- which would otherwise wipe in-progress edits mid-keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row?.tenant_id]);
 
   if (!row) return null;
