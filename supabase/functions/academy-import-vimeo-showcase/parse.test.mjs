@@ -69,6 +69,21 @@ describe("parseShowcaseTitle", () => {
     );
   });
 
+  it("recognises common module-only, lesson-only, and numeric prefixes", () => {
+    assert.deepEqual(
+      parseShowcaseTitle("Module 2 - Managing Unconscious Bias"),
+      { moduleNumber: 2, lessonNumber: 0, title: "Managing Unconscious Bias" },
+    );
+    assert.deepEqual(
+      parseShowcaseTitle("Lesson 3: Applying the framework"),
+      { moduleNumber: 1, lessonNumber: 3, title: "Applying the framework" },
+    );
+    assert.deepEqual(
+      parseShowcaseTitle("2.4 - Evidence requirements"),
+      { moduleNumber: 2, lessonNumber: 4, title: "Evidence requirements" },
+    );
+  });
+
   it("does not guess unmatched titles", () => {
     assert.equal(parseShowcaseTitle("Introduction to the course"), null);
     assert.equal(parseShowcaseTitle("Module 1 Lesson 1 Understanding Cultural Safety"), null);
@@ -93,6 +108,19 @@ describe("classifyVideos", () => {
     assert.equal(unmatched.length, 1);
     assert.equal(unmatched[0].title, "Welcome / trailer");
     assert.equal(unmatched[0].vimeo_id, "10");
+  });
+
+  it("infers lesson numbers in showcase order for module-only titles", () => {
+    const { parsed } = classifyVideos([
+      { uri: "/videos/2", name: "Module 2 - Second topic", link: "https://vimeo.com/2" },
+      { uri: "/videos/1", name: "Module 1 - First topic", link: "https://vimeo.com/1" },
+      { uri: "/videos/3", name: "Module 2 - Third topic", link: "https://vimeo.com/3" },
+    ]);
+
+    assert.deepEqual(
+      parsed.map((item) => `${item.moduleNumber}.${item.lessonNumber}:${item.title}`),
+      ["1.1:First topic", "2.1:Second topic", "2.2:Third topic"],
+    );
   });
 });
 

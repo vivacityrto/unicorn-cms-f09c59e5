@@ -1,7 +1,17 @@
 /** Shared parse helpers for academy-import-vimeo-showcase (no Deno APIs). */
 
-export const SHOWCASE_TITLE_RE =
-  /^M(\d+)\s*[-–]\s*Lesson\s*(\d+)\s*[:\-]?\s*(.+)$/i;
+/**
+ * Common title conventions used by Vimeo showcases. The lesson number is 0
+ * when the title only identifies a module; classifyVideos fills that number
+ * from the video's order within the module.
+ */
+export const SHOWCASE_TITLE_RES = [
+  /^M(\d+)\s*[-–:]\s*Lesson\s*(\d+)\s*[:-]?\s*(.+)$/i,
+  /^Module\s*(\d+)\s*[-–:]\s*Lesson\s*(\d+)\s*[:-]?\s*(.+)$/i,
+  /^(\d+)\s*[.:/-]\s*(\d+)\s*[:-]?\s*(.+)$/i,
+  /^Module\s*(\d+)\s*[-–:]\s*(.+)$/i,
+  /^Lesson\s*(\d+)\s*[:-]\s*(.+)$/i,
+];
 
 export type ParsedShowcaseTitle = {
   moduleNumber: number;
@@ -78,15 +88,20 @@ function extractAlbumIdFromString(raw: string): string | null {
 }
 
 export function parseShowcaseTitle(name: string): ParsedShowcaseTitle | null {
-  const m = String(name ?? "").trim().match(SHOWCASE_TITLE_RE);
-  if (!m) return null;
-  const title = m[3].trim();
-  if (!title) return null;
-  return {
-    moduleNumber: Number(m[1]),
-    lessonNumber: Number(m[2]),
-    title,
-  };
+  const raw = String(name ?? "").trim();
+  for (const [index, re] of SHOWCASE_TITLE_RES.entries()) {
+    const m = raw.match(re);
+    if (!m) continue;
+    const hasModuleAndLesson = index < 3;
+    const title = (hasModuleAndLesson ? m[3] : m[2]).trim();
+    if (!title) return null;
+    return {
+      moduleNumber: hasModuleAndLesson ? Number(m[1]) : index === 4 ? 1 : Number(m[1]),
+      lessonNumber: hasModuleAndLesson ? Number(m[2]) : index === 3 ? 0 : Number(m[1]),
+      title,
+    };
+  }
+  return null;
 }
 
 /** Numeric Vimeo clip id from a /videos/{id} URI or vimeo.com URL. */
@@ -122,6 +137,7 @@ export function classifyVideos(videos: ShowcaseVideo[]): {
   const parsed: ParsedVideo[] = [];
   const unmatched: UnmatchedVideo[] = [];
 
+  const nextLessonByModule = new Map<number, number>();
   for (const video of videos) {
     const name = video.name ?? "";
     const vimeoId = extractVimeoVideoId(video.uri) ?? extractVimeoVideoId(video.link);
@@ -135,9 +151,11 @@ export function classifyVideos(videos: ShowcaseVideo[]): {
       continue;
     }
 
+    const nextLesson = (nextLessonByModule.get(parsedTitle.moduleNumber) ?? 0) + 1;
+    nextLessonByModule.set(parsedTitle.moduleNumber, nextLesson);
     parsed.push({
       moduleNumber: parsedTitle.moduleNumber,
-      lessonNumber: parsedTitle.lessonNumber,
+      lessonNumber: parsedTitle.lessonNumber || nextLesson,
       title: parsedTitle.title,
       vimeoId,
       vimeoName: name,
