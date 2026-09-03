@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T20:29:22.603Z",
-  "baselineSha": "756b8a21b4012f410c07d406b21b128612da8341",
+  "generatedAt": "2026-09-03T22:54:06.501Z",
+  "baselineSha": "5e35c180c35425ff66e1a07a2eb5152b72f815e7",
   "totals": {
     "files": 1785,
     "filesWithFindings": 610,
     "errors": 3744,
-    "warnings": 82
+    "warnings": 80
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 44,
+    "react-hooks/exhaustive-deps": 42,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 82,
+      "warnings": 80,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 44,
+        "react-hooks/exhaustive-deps": 42,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -337,9 +337,8 @@
     },
     "src/components/package-builder": {
       "errors": 78,
-      "warnings": 3,
+      "warnings": 1,
       "byRule": {
-        "react-hooks/exhaustive-deps": 2,
         "@typescript-eslint/no-explicit-any": 77,
         "@typescript-eslint/no-unused-expressions": 1,
         "react-refresh/only-export-components": 1
@@ -1869,7 +1868,6 @@
       "react-hooks/exhaustive-deps": 1
     },
     "src/components/package-builder/BulkGenerateDocumentsDialog.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/package-builder/CreatePackageDialog.tsx": {
@@ -1898,8 +1896,7 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/package-builder/StagePreviewDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 16,
-      "react-hooks/exhaustive-deps": 1
+      "@typescript-eslint/no-explicit-any": 16
     },
     "src/components/portfolio/TenantDrawer.tsx": {
       "@typescript-eslint/no-explicit-any": 4,

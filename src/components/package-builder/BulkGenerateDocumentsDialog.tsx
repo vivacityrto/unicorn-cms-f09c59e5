@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -59,13 +59,7 @@ export function BulkGenerateDocumentsDialog({
   const [results, setResults] = useState<GenerationResult[]>([]);
 
   // Fetch tenants that have this package
-  useEffect(() => {
-    if (open) {
-      fetchTenants();
-    }
-  }, [open, packageId]);
-
-  const fetchTenants = async () => {
+  const fetchTenants = useCallback(async () => {
     setIsLoadingTenants(true);
     try {
       // Get tenants with this package through client_package_stage_state
@@ -110,7 +104,13 @@ export function BulkGenerateDocumentsDialog({
     } finally {
       setIsLoadingTenants(false);
     }
-  };
+  }, [packageId, toast]);
+
+  useEffect(() => {
+    if (open) {
+      fetchTenants();
+    }
+  }, [open, fetchTenants]);
 
   const handleReset = () => {
     setStep('scope');
