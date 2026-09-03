@@ -132,6 +132,11 @@ const AuditActions = lazy(() => import("@/pages/AuditActions"));
 const AuditFindings = lazy(() => import("@/pages/AuditFindings"));
 const AuditReport = lazy(() => import("@/pages/AuditReport"));
 const AuditWorkspaceNew = lazy(() => import("@/pages/AuditWorkspaceNew"));
+const NewSupportTicketPage = lazy(() => import("@/pages/NewSupportTicketPage"));
+const SuggestionDetail = lazy(() => import("@/pages/SuggestionDetail"));
+const RtoTips = lazy(() => import("@/pages/RtoTips"));
+const ClientActivityFeed = lazy(() => import("@/pages/ClientActivityFeed"));
+const ClientImpactPage = lazy(() => import("@/pages/ClientImpactPage"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -399,9 +404,41 @@ const AuditWorkspaceNew = lazy(() => import("@/pages/AuditWorkspaceNew"));
  * layout) which stays outside the removed DashboardLayout and still
  * wraps a single child, so the page is still single-root end to end --
  * no Fragment needed anywhere in this batch.
- * Remaining Clients PR: PR 14 (support/activity/impact:
- * NewSupportTicketPage, SuggestionDetail, RtoTips, ClientActivityFeed,
- * ClientImpactPage).
+ * PR 14 (Clients: support/activity/impact, last of three Clients PRs --
+ * completes the Clients section of the migration) added 6 routes across
+ * 5 files: NewSupportTicketPage, SuggestionDetail (2 routes -- its
+ * /support-tickets/:id and /suggestions/:id aliases move together, per
+ * the plan), RtoTips, ClientActivityFeed, ClientImpactPage. None had a
+ * page-local access check. NewSupportTicketPage needed a Fragment (its
+ * header div and NewTicketModal are siblings); SuggestionDetail needed
+ * one too (its main content div and the Lovable-prompt-preview Dialog
+ * are siblings across all 3 return branches); ClientActivityFeed needed
+ * one (content div + TenantFilterDialog); RtoTips and ClientImpactPage
+ * were single-root despite RtoTips's initially-alarming indentation --
+ * traced with an actual div-depth counter rather than eyeballing it,
+ * confirming every apparent "sibling" (the delete-confirmation
+ * AlertDialog, the search bar, the tips grid) is really nested inside
+ * the one outer content div that spans the whole return.
+ * `SuggestionDetail`/`NewSupportTicketPage` were previously routed from
+ * `src/routes/supportTicketsRoutes.tsx` (a small route-module extraction
+ * from an earlier program, P1.2) rather than DashboardLayoutRoute --
+ * that module now holds only the plain `<Navigate>` legacy-redirect
+ * routes it always also had, with the two real pages moved here.
+ * `RtoTips` was previously reached through `RtoTipsWrapper.tsx`, a
+ * non-mechanical adapter that added a second, fully redundant
+ * `<ProtectedRoute>` around the exact same plain-tier check the shared
+ * parent already performs -- exactly the "redundant second plain guard"
+ * the migration plan's own inventory flagged for explicit normalization
+ * rather than silent disappearance. Deleted the wrapper (same precedent
+ * as ManageInvitesWrapper/Processes.tsx from earlier PRs in this
+ * program) and pointed the route directly at RtoTips; verified this
+ * doesn't change effective access at all, since the removed guard was
+ * checking the identical condition the surviving one already does.
+ * This completes the Clients section of the migration
+ * (docs/kb/reference/dashboard-direct-layout-migration-plan-2026-09-01.md,
+ * PRs 12-14); remaining work is PR 15-16 (Work: utility-settings/
+ * executive-personal), PR 17 (Dashboard.tsx aliases), and PR 18
+ * (/dashboard itself, last).
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -544,6 +581,12 @@ export const dashboardLayoutRoutes = (
       <Route path="/audits/:id/findings" element={<AuditFindings />} />
       <Route path="/audits/:id/actions" element={<AuditActions />} />
       <Route path="/audits/:id/report" element={<AuditReport />} />
+      <Route path="/support-tickets/new" element={<NewSupportTicketPage />} />
+      <Route path="/support-tickets/:id" element={<SuggestionDetail />} />
+      <Route path="/suggestions/:id" element={<SuggestionDetail />} />
+      <Route path="/rto-tips" element={<RtoTips />} />
+      <Route path="/client-activity" element={<ClientActivityFeed />} />
+      <Route path="/tenant/:clientId/impact" element={<ClientImpactPage />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />

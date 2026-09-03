@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Lightbulb, Search, FileText, Pencil, Trash2, User, Loader2, Calendar, CheckCircle, XCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import {
   Dialog,
   DialogContent,
@@ -120,7 +119,6 @@ export default function RtoTips() {
 
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -441,6 +439,5 @@ export default function RtoTips() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }

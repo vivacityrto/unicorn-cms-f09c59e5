@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { usePortfolioTimeline } from '@/hooks/usePortfolioTimeline';
 import { groupedEventHref } from '@/hooks/portfolioTimelineGrouping';
@@ -62,8 +61,8 @@ async function fetchCscFilterOptions(): Promise<CscOption[]> {
     .order('first_name', { ascending: true });
   if (error) throw error;
   return (data ?? [])
-    .filter((u: any) => u.staff_teams?.includes('client_success') || u.staff_team === 'client_success')
-    .map((u: any) => ({
+    .filter((u) => u.staff_teams?.includes('client_success') || u.staff_team === 'client_success')
+    .map((u) => ({
       user_uuid: u.user_uuid,
       first_name: u.first_name,
       last_name: u.last_name,
@@ -168,7 +167,7 @@ export default function ClientActivityFeed() {
   const dateGroups = useMemo(() => groupByDate(events), [events]);
 
   return (
-    <DashboardLayout>
+    <Fragment>
       <div className="space-y-4 p-4 max-w-screen-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -334,6 +333,6 @@ export default function ClientActivityFeed() {
         selected={selectedTenantIds}
         onApply={(ids) => { setSelectedTenantIds(ids); resetPaging(); }}
       />
-    </DashboardLayout>
+    </Fragment>
   );
 }

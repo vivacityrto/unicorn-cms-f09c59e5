@@ -1,5 +1,4 @@
 import { useParams } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,42 +23,37 @@ export default function ClientImpactPage() {
   
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="space-y-6">
-          <Skeleton className="h-12 w-64" />
-          <Skeleton className="h-48" />
-          <Skeleton className="h-32" />
-        </div>
-      </DashboardLayout>
+      <div className="space-y-6">
+        <Skeleton className="h-12 w-64" />
+        <Skeleton className="h-48" />
+        <Skeleton className="h-32" />
+      </div>
     );
   }
-  
+
   if (!latestReport || !reportData) {
     return (
-      <DashboardLayout>
-        <div className="space-y-6">
-          <PageHeader
-            title="Impact & Outcomes"
-            description="Quarterly summaries of improvements and outcomes delivered"
-            icon={TrendingUp}
-          />
-          
-          <Card>
-            <CardContent className="py-12 text-center">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="font-medium text-lg mb-2">No Reports Available</h3>
-              <p className="text-sm text-muted-foreground">
-                Impact reports will appear here once they are published by our team.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
+      <div className="space-y-6">
+        <PageHeader
+          title="Impact & Outcomes"
+          description="Quarterly summaries of improvements and outcomes delivered"
+          icon={TrendingUp}
+        />
+
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="font-medium text-lg mb-2">No Reports Available</h3>
+            <p className="text-sm text-muted-foreground">
+              Impact reports will appear here once they are published by our team.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
-  
+
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         <PageHeader
           title="Impact & Outcomes"
@@ -85,6 +79,5 @@ export default function ClientImpactPage() {
           isVivacityUser={false}
         />
       </div>
-    </DashboardLayout>
   );
 }
