@@ -58,8 +58,9 @@ export default function AcademyTenantAccessPage() {
   const [rulePackageId, setRulePackageId] = useState<string>("");
   const [ruleCourseId, setRuleCourseId] = useState<string>("");
 
-  const now = new Date();
-  const thirtyDaysFromNow = addDays(now, 30);
+  // Snapshot once per mount (not per render) so the memos below actually memoize.
+  const now = useMemo(() => new Date(), []);
+  const thirtyDaysFromNow = useMemo(() => addDays(now, 30), [now]);
 
   // ── Data hooks ──
   const { data: tenants = [], isLoading } = useTenantSummaries();
@@ -90,7 +91,7 @@ export default function AcademyTenantAccessPage() {
       return isAfter(exp, now) && isBefore(exp, thirtyDaysFromNow);
     }).length;
     return { withAccess, withoutAccess, expiring };
-  }, [tenants]);
+  }, [tenants, now, thirtyDaysFromNow]);
 
   // ── Filter logic ──
   const filtered = useMemo(() => {
@@ -115,7 +116,7 @@ export default function AcademyTenantAccessPage() {
       });
     }
     return list;
-  }, [tenants, search, statusTab, timelineMonth]);
+  }, [tenants, search, statusTab, timelineMonth, now, thirtyDaysFromNow]);
 
   // ── Expiry timeline (next 6 months) ──
   const expiryTimeline = useMemo(() => {
@@ -132,7 +133,7 @@ export default function AcademyTenantAccessPage() {
       if (count > 0) months.push({ key, label: format(mStart, "MMMM yyyy"), count });
     }
     return months;
-  }, [tenants]);
+  }, [tenants, now]);
 
   // ── Access status badge ──
   const getAccessBadge = (t: TenantRow) => {

@@ -182,7 +182,7 @@ export default function SuperAdminWorkforcePdp() {
     setParams(next, { replace: true });
   }
 
-  const rows = data ?? [];
+  const rows = useMemo(() => data ?? [], [data]);
 
   const tenantOptions = useMemo(() => {
     const map = new Map<string, string>();

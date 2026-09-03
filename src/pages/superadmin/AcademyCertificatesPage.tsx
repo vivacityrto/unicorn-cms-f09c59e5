@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,10 @@ export default function AcademyCertificatesPage() {
 
   
 
-  const now = new Date();
+  // Snapshot once per mount (not per render) so the memos below actually memoize
+  // instead of recomputing on every render; "now" as of page load is precise
+  // enough for a day-granularity expiry check.
+  const now = useMemo(() => new Date(), []);
 
   // ── Data hooks ──
   const { data: certs = [], isLoading } = useAdminCertificates();
@@ -96,14 +99,14 @@ export default function AcademyCertificatesPage() {
     }).length;
     const revoked = certs.filter((c) => !!c.revoked_at).length;
     return { totalIssued, issuedThisMonth, revoked };
-  }, [certs]);
+  }, [certs, now]);
 
   // ── Status helper ──
-  const getCertStatus = (c: CertRow): "active" | "revoked" | "expired" => {
+  const getCertStatus = useCallback((c: CertRow): "active" | "revoked" | "expired" => {
     if (c.revoked_at) return "revoked";
     if (c.expires_at && isBefore(new Date(c.expires_at), now)) return "expired";
     return "active";
-  };
+  }, [now]);
 
   // ── Filtering ──
   const filtered = useMemo(() => {
@@ -122,7 +125,7 @@ export default function AcademyCertificatesPage() {
     if (dateFrom) list = list.filter((c) => c.issued_at && !isBefore(new Date(c.issued_at), dateFrom));
     if (dateTo) list = list.filter((c) => c.issued_at && !isAfter(new Date(c.issued_at), dateTo));
     return list;
-  }, [certs, search, courseFilter, tenantFilter, statusFilter, dateFrom, dateTo]);
+  }, [certs, search, courseFilter, tenantFilter, statusFilter, dateFrom, dateTo, getCertStatus]);
 
   // ── Users search for manual issue ──
   const { data: searchedUsers = [] } = useQuery({
@@ -160,7 +163,7 @@ export default function AcademyCertificatesPage() {
     const counts = { all: certs.length, active: 0, revoked: 0, expired: 0 };
     for (const c of certs) counts[getCertStatus(c)]++;
     return counts;
-  }, [certs]);
+  }, [certs, getCertStatus]);
 
   const statusTabs: { value: StatusFilter; label: string }[] = [
     { value: "all", label: "All" },

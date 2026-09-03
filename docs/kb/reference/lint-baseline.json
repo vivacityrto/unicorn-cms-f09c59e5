@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T05:04:55.120Z",
-  "baselineSha": "5c43e19f61b0867f4d1b7182a6b30f19b232a597",
+  "generatedAt": "2026-09-03T05:49:38.004Z",
+  "baselineSha": "f6c98edaffdf667991e461648d6c2c182a4b345b",
   "totals": {
     "files": 1785,
-    "filesWithFindings": 634,
+    "filesWithFindings": 631,
     "errors": 3744,
-    "warnings": 189
+    "warnings": 179
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 151,
+    "react-hooks/exhaustive-deps": 141,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 189,
+      "warnings": 179,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 151,
+        "react-hooks/exhaustive-deps": 141,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -531,13 +531,6 @@
       "warnings": 1,
       "byRule": {
         "react-hooks/exhaustive-deps": 1
-      }
-    },
-    "src/pages/superadmin": {
-      "errors": 0,
-      "warnings": 10,
-      "byRule": {
-        "react-hooks/exhaustive-deps": 10
       }
     },
     "src/services": {
@@ -2940,15 +2933,6 @@
     },
     "src/pages/internal/AskVivFlags.tsx": {
       "react-hooks/exhaustive-deps": 1
-    },
-    "src/pages/superadmin/AcademyCertificatesPage.tsx": {
-      "react-hooks/exhaustive-deps": 3
-    },
-    "src/pages/superadmin/AcademyTenantAccessPage.tsx": {
-      "react-hooks/exhaustive-deps": 3
-    },
-    "src/pages/superadmin/workforce-pdp.tsx": {
-      "react-hooks/exhaustive-deps": 4
     },
     "src/services/codeTablesService.ts": {
       "@typescript-eslint/no-explicit-any": 5
