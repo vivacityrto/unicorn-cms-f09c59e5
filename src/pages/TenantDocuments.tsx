@@ -96,11 +96,7 @@ export default function TenantDocuments() {
     setCheckingFields(false);
   }, [parsedTenantId, detectMissingFields]);
 
-  useEffect(() => {
-    fetchData();
-  }, [tenantId, urlPackageId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -151,7 +147,11 @@ export default function TenantDocuments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, toast, checkAllMissingFields]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, urlPackageId]);
 
   const handleOpenMissingFields = (doc: Document, e: React.MouseEvent) => {
     e.stopPropagation();

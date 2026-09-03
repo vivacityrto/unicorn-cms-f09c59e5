@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -133,19 +133,15 @@ export default function TenantDetail() {
   } = useViewMode();
   const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
 
-  // Fetch tenant packages on mount
+  // Fetch tenant packages on mount. Deliberately narrow to tenantId only —
+  // fetchTenantPackages is a plain function recreated every render, and
+  // this should only run once per tenant, not on every unrelated re-render.
   useEffect(() => {
     if (tenantId) {
       fetchTenantPackages();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
-
-  // Fetch data when active package changes
-  useEffect(() => {
-    if (tenantId && activePackageId !== null) {
-      fetchTenantData(activePackageId);
-    }
-  }, [tenantId, activePackageId]);
   const fetchTenantPackages = async () => {
     if (!tenantId) return;
     try {
@@ -220,28 +216,7 @@ export default function TenantDetail() {
     }
   };
 
-  // Real-time subscription for documents
-  useEffect(() => {
-    if (!tenantId) return;
-    const channel = supabase.channel('documents-realtime').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'documents_tenants',
-      filter: `tenant_id=eq.${tenantId}`
-    }, () => {
-      fetchTenantData();
-    }).on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'package_documents'
-    }, () => {
-      fetchTenantData();
-    }).subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [tenantId]);
-  const fetchTenantData = async (packageIdOverride?: number | null) => {
+  const fetchTenantData = useCallback(async (packageIdOverride?: number | null) => {
     if (!tenantId) return;
     // Use override if provided, otherwise use activePackageId state
     const currentPackageId = packageIdOverride !== undefined ? packageIdOverride : activePackageId;
@@ -544,7 +519,36 @@ export default function TenantDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, activePackageId, navigate, toast]);
+
+  // Fetch data when active package changes
+  useEffect(() => {
+    if (tenantId && activePackageId !== null) {
+      fetchTenantData(activePackageId);
+    }
+  }, [tenantId, activePackageId, fetchTenantData]);
+
+  // Real-time subscription for documents
+  useEffect(() => {
+    if (!tenantId) return;
+    const channel = supabase.channel('documents-realtime').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'documents_tenants',
+      filter: `tenant_id=eq.${tenantId}`
+    }, () => {
+      fetchTenantData();
+    }).on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'package_documents'
+    }, () => {
+      fetchTenantData();
+    }).subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tenantId, fetchTenantData]);
   const handleAddNote = async () => {
     if (!newNote.trim() || !tenantId) return;
     try {

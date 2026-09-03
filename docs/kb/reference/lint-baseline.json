@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T08:16:42.674Z",
-  "baselineSha": "220935c642f15116fe2738ab13cc8ab105262204",
+  "generatedAt": "2026-09-03T08:55:43.213Z",
+  "baselineSha": "f838b3bdb18f774503980682c6377b768a1b994f",
   "totals": {
     "files": 1785,
-    "filesWithFindings": 623,
+    "filesWithFindings": 622,
     "errors": 3744,
-    "warnings": 138
+    "warnings": 127
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 100,
+    "react-hooks/exhaustive-deps": 89,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 138,
+      "warnings": 127,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 100,
+        "react-hooks/exhaustive-deps": 89,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -486,9 +486,9 @@
     },
     "src/pages": {
       "errors": 451,
-      "warnings": 48,
+      "warnings": 37,
       "byRule": {
-        "react-hooks/exhaustive-deps": 48,
+        "react-hooks/exhaustive-deps": 37,
         "@typescript-eslint/no-explicit-any": 451
       }
     },
@@ -2801,31 +2801,22 @@
       "react-hooks/exhaustive-deps": 2
     },
     "src/pages/TenantDetail.tsx": {
-      "@typescript-eslint/no-explicit-any": 10,
-      "react-hooks/exhaustive-deps": 3
+      "@typescript-eslint/no-explicit-any": 10
     },
     "src/pages/TenantDocumentDetail.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/pages/TenantDocuments.tsx": {
-      "@typescript-eslint/no-explicit-any": 9,
-      "react-hooks/exhaustive-deps": 1
+      "@typescript-eslint/no-explicit-any": 9
     },
     "src/pages/TenantLogins.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/pages/TenantMembers.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/pages/TenantNotes.tsx": {
-      "react-hooks/exhaustive-deps": 2,
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/TenantUsers.tsx": {
-      "react-hooks/exhaustive-deps": 2
     },
     "src/pages/UserProfile.tsx": {
       "react-hooks/exhaustive-deps": 1,
