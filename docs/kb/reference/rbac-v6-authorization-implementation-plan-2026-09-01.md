@@ -1,8 +1,8 @@
 # RBAC v6 — Authorization Implementation and Gate-Streamlining Plan
 
-> **Last updated:** 2026-09-01 · **Reconsider by:** 2026-12-01 · **Confidence:** high on the current-code and live-database findings; medium on the target capability catalogue until Vivacity validates each job seat; low on delivery estimates until the characterization and route-manifest prerequisites are complete.
+> **Last updated:** 2026-09-03 · **Reconsider by:** 2026-12-01 · **Confidence:** high on the current-code and live-database findings; medium on the target capability catalogue until Vivacity validates each job seat; low on delivery estimates until the characterization and route-manifest prerequisites are complete.
 >
-> **Reflects:** `origin/main@853c9e18`, read-only production metadata queries on 2026-09-01, the historical [RBAC v6 gate-closure handoff](../handoffs/rbac-v6-gate-closure-plan.md), and the assumed completed target state of the [codebase optimization plan](codebase-optimization-plan-2026-08-28.md).
+> **Reflects:** the original `origin/main@853c9e18` and read-only production metadata snapshot from 2026-09-01; a fresh operational-regression council review against `origin/main@73a61b2f9` on 2026-09-03; the historical [RBAC v6 gate-closure handoff](../handoffs/rbac-v6-gate-closure-plan.md); the [tenant operating-model architecture plan](tenant-operating-model-data-architecture-plan-2026-09-02.md); and the assumed completed target state of the [codebase optimization plan](codebase-optimization-plan-2026-08-28.md).
 >
 > **Status:** Implementation plan only. It authorizes no production migration, Edge Function deployment, permission grant, or user-role change. Execute as small PRs. Every schema, RLS, RPC, trigger, or data-backfill PR also requires an audit entry under `docs/audit-log/entries/`.
 
@@ -291,6 +291,29 @@ legacy_enforce_v6_shadow -> v6_enforce_legacy_shadow -> v6_only
 
 Each capability ships as a vertical slice: inventory every backing path, implement and probe server enforcement, observe parity, then switch route/navigation UX last.
 
+### 5.11 Operational compatibility and feature-boundary contract
+
+Authorization cutover must preserve legitimate operations as rigorously as it prevents privilege escalation. The tenant operating-model plan records current broad internal-staff tenant visibility as an intentional product behavior, while client users remain restricted to their authorized tenant. Assignment currently organizes work; it is not silently an authorization boundary. RBAC v6 may change that policy only after the decision in section 13 is approved and the affected workflow is proven in shadow mode.
+
+Every slice must classify more than routes. Maintain a versioned feature-boundary manifest with one row per protected read, write, side effect, or subscription:
+
+```text
+route + tab/query/action
+  -> component/hook
+  -> PostgREST table/view, RPC, Edge Function, storage path, realtime feed, trigger/job
+  -> current allowed/denied personas
+  -> proposed capability, scope, relationship, and authority mode
+```
+
+Tabs, dialogs, background refreshes, generated links, notifications, and realtime subscriptions are first-class feature entry points even when they do not have their own route. A feature is not classified until every backing read and write path and every transitive side effect has a disposition.
+
+Each shadow report must treat both mismatch directions as release risks:
+
+- `legacy deny / v6 allow` is a potential privilege escalation;
+- `legacy allow / v6 deny` is a potential operational lockout.
+
+Both require explicit approval or correction before cutover. No risk class may use a standing allowance for unexplained lockout mismatches.
+
 ## 6. Assumed post-optimization prerequisites
 
 This plan assumes Claude has implemented the relevant outcomes of the optimization plan. Before RBAC implementation, verify rather than assume that these artifacts exist:
@@ -319,6 +342,7 @@ Work:
 - **P0.3 active-principal rollout:** add a versioned/shadow `is_active_principal_v6()` decision first. Compare it with existing helpers, classify disabled humans and intentional machine/system principals, then cut over one policy/RPC/helper family at a time. Do not replace a helper referenced by hundreds of policies in one uncharacterized deployment.
 - **P0.4 session and frontend state:** implement the approved disable/archive session response, while recognizing that already issued JWTs may remain valid until expiry. Sensitive server decisions still live-check principal state. Frontend lookup failure becomes `access_unavailable`, not “enabled,” a denial redirect, or a dashboard redirect.
 - **P0.5 role/matrix decisions:** explicitly seed the six `admin.documents.bulk_generate` gaps as `none`/inactive until separately approved. Decide `Team Member` and the inactive automation grant before filtering. Matrix completeness never means granting access.
+- **P0.6 operational and feature-boundary baseline:** generate the feature-boundary manifest from section 5.11 and freeze positive and negative behavior for Manage Tenants/tenant detail, document generation, Packages/Stages, Academy/course builder, and client/staff messaging. Record current staff-wide versus assignment-scoped behavior explicitly; do not infer the future policy from route names or UI labels.
 - Add regression tests for disabled Super Admin, disabled internal role, archived user, old token after disable, unknown feature, inactive supplemental role, expired grant, duplicate audit prevention, forced audit failure rollback, concurrent edits, retry idempotency, and each active-principal canary family.
 
 Blast radius:
@@ -328,6 +352,7 @@ Blast radius:
 - Edge Functions using `requireCaller`;
 - background jobs intentionally using system identities;
 - role-permission admin UI and change-log consumers.
+- operational staff/client workflows, notifications, links, realtime feeds, generated documents, background workers, and external delivery side effects.
 
 Exit gate:
 
@@ -335,7 +360,8 @@ Exit gate:
 - one permission mutation produces exactly one complete audit record, and a forced audit failure rolls back the mutation and version bump;
 - machine/system paths remain available only through explicitly classified principal types and workflow gates;
 - role-registry drift has a recorded product decision and migration path;
-- `npm run test:edge-functions`, targeted Vitest, typecheck/build, and direct authenticated allow/deny probes pass.
+- every named operational baseline has at least one positive and one negative executable characterization, or is explicitly Inconclusive with an owner and environment plan;
+- `npm run test:edge`, `node scripts/report-edge-test-inventory.mjs`, targeted Vitest, typecheck/build, and direct authenticated allow/deny probes pass. Relevant Deno-excluded tests run in the approved Deno or disposable environment.
 
 ### P1 — Approve the policy model and compatibility mapping
 
@@ -358,6 +384,8 @@ Work:
 - Define the job-role defaults with the product owner and a representative of each operating seat.
 - Approve the normative composition/precedence rules, machine-principal rules, hard-SA versus true break-glass decision, and self-approval prohibition.
 - Create a separately reviewed, versioned golden access matrix owned by product/security. This is the test oracle; generated catalogues prove completeness but do not define their own expected authorization.
+- Add an operational workflow matrix alongside the atomic decision matrix. At minimum it covers Manage Tenants/tenant detail, document generation and delivery, Stage/Package management and client consumption, Academy learning and course-builder administration, and client/staff messaging.
+- Define a communications capability family covering conversation view/create/reply/assign/resolve, participant administration, attachments, read state, and broadcast create/send. Names are approved in the ADR; implementation must not borrow document-generation or unrelated admin capabilities.
 - Define an expand/contract mapping and per-capability authority state so legacy `usePermission(feature, level)` continues working while callers migrate. Never adapt `owner_only` without target context.
 
 Blast radius:
@@ -370,9 +398,9 @@ Blast radius:
 Exit gate:
 
 - every current feature has an owner, action/scope mapping, and disposition;
-- every route and mutation endpoint has a proposed capability;
+- every route, layout guard, tab/query action, protected read/write boundary, RPC, Edge branch, storage operation, realtime feed, trigger side effect, and machine job has a proposed capability or an explicitly reviewed non-authorization classification;
 - no automatic legacy conversion remains ambiguous;
-- the golden access matrix and break-glass operating decision have named owners and approval evidence.
+- the golden access matrix, operational workflow matrix, communications privacy model, and break-glass operating decision have named owners and approval evidence.
 
 ### P2 — Build one server-side decision core
 
@@ -440,7 +468,7 @@ Exit gate:
 - route and nav inventories are generated, with CI failing on unclassified protected routes;
 - route tests use the separately approved golden matrix as their oracle, not copied production metadata;
 - deterministic browser tests cover deep link, refresh, back/forward, unavailable/retry, logout/account switch, and all current special-case personas;
-- no route has been widened in P3.
+- no route or protected feature has been widened or unintentionally narrowed in P3.
 
 ### P4 — Deliver Stage capabilities and the AJ/CSC pilot
 
@@ -479,11 +507,13 @@ Exit gate:
 Work:
 
 - Generate an endpoint authorization manifest covering repository/live deployment parity, deployed state, `verify_jwt`, auth mode, every action branch, action, resource, target-ID source, tenant resolver, relationship rule, machine/human caller, risk class, and first privileged read/write. CI rejects an unclassified new or changed function.
-- Prioritize mutations, exports, staff/user administration, Academy/package/stage controls, tenant lifecycle, and functions touching secrets or external systems.
+- Prioritize mutations, exports, staff/user administration, Academy/package/stage controls, document generation/delivery, tenant lifecycle, messaging/broadcast/attachment paths, and functions touching secrets or external systems.
 - Replace broad role checks with capability plus target validation.
 - Replace generic `orAllow`, `allowTenantMember`, and `allowClientAdmin` use with named, tested relationship policies such as `tenant_admin_of_target` or `assigned_consultant_for_tenant`. A resolver verifies active principal, active membership, correct target tenant role, and canonical resource-to-tenant binding together; existence in `tenant_users` or a global `Admin` string is insufficient.
 - Validate all branches/modes of multi-action functions.
 - Keep machine-to-machine secret gates separate from human authorization and assign machine-principal capability profiles.
+- For messaging and attachments, resolve `message -> conversation -> tenant` inside the trusted boundary, then verify participant/sender or approved staff relationship. Never authorize a service-role upload or signed URL from a caller-supplied tenant ID or storage-path prefix alone.
+- For document generation, prove the complete human launcher -> job/RPC -> worker/system principal -> generated output -> delivery chain. The worker receives a fixed job capability and target scope rather than inheriting the launching user's general role.
 - Update each function's `*.test.mjs` in the same PR and run the configured Edge suite.
 
 Exit gate:
@@ -510,6 +540,8 @@ Work:
 - Benchmark empty, representative, large-tenant, and bulk-mutation queries with `EXPLAIN (ANALYZE, BUFFERS)` before and after policy changes; index every membership/grant/scope/tenant predicate.
 - Sweep all frontend, RPC, function-body, and trigger write paths before constraints or schema changes, per `AGENTS.md`.
 - Verify grants as real `authenticated` and tenant personas, never only postgres/service role.
+- Treat messaging as one coordinated RLS slice across conversations, messages, participants, attachment metadata/storage, read-state RPCs, notification/audit/timeline triggers, broadcasts, and realtime publication. Conversation headers, previews, timeline text, attachment metadata, and notifications must follow the approved tenant-shared-versus-participant-private decision rather than leak around the message-row policy.
+- Bind message tenant and sender attributes to server-resolved facts. Test participant INSERT/UPDATE/DELETE, sender identity/type, conversation/tenant target swaps, and immutable fields explicitly.
 
 Exit gate:
 
@@ -624,6 +656,12 @@ Require test-sensitivity evidence: deliberately remove or bypass a guard in a co
 - client Admin in tenant A;
 - client User in tenant A;
 - client user in tenant B for cross-tenant negatives;
+- client primary contact and secondary contact in tenant A;
+- academy-only client user;
+- multi-tenant client with no selected/default tenant;
+- active assigned CSC and active unassigned internal staff;
+- representative BGT and CET seats where their defaults differ from CSC/Integrator/Team Leader;
+- read-only staff client-preview context, which is never accepted as client-RLS proof;
 - dedicated machine/system principal.
 
 The repository has no local backend and no guaranteed seeded credentials. Split execution into:
@@ -633,7 +671,7 @@ The repository has no local backend and no guaranteed seeded credentials. Split 
 3. gated real-backend, real-JWT, preferably read-only smoke tests for personas actually available;
 4. production mutation probes only with fresh explicit authority, approved QA tenants/accounts, bounded cleanup, and an audit trail.
 
-Never commit credentials/tokens or rely on staff “View as Client” as proof of client RLS behavior. A missing persona, credential, disposable environment, or required boundary produces an **Inconclusive** result, never Pass. A Supabase branch proves migration mechanics with synthetic data; it does not prove production-data parity, so pair it with read-only production preflight and shadow comparison.
+Never commit credentials/tokens or rely on staff “View as Client” as proof of client RLS behavior. A missing persona, credential, disposable environment, or required boundary produces an **Inconclusive** result, never Pass. A required authorization suite that silently skips in CI is a failing verification gate; intentional non-required skips must be reported by the inventory. A Supabase branch proves migration mechanics with synthetic data; it does not prove production-data parity, so pair it with read-only production preflight and shadow comparison.
 
 ### 8.4 Observability and go/no-go controls
 
@@ -645,17 +683,47 @@ Every enforcement slice defines before rollout:
 - allow/deny counts by action, risk, and reason without high-cardinality resource IDs or unnecessary PII;
 - old/new mismatch classes;
 - stale-policy-version responses, frontend access-unavailable states, and downstream 401/403 rates;
-- zero unexpected v6-only allows, an approved bound for expected-denial mismatches, and explicit stop/rollback thresholds;
+- zero unexpected v6-only allows, zero unapproved legacy-allow/v6-deny lockouts, and explicit stop/rollback thresholds for both mismatch directions;
 - a correlation/request ID carried across UI decision, Edge/RPC, mutation audit, and diagnostic log where applicable;
 - the exact rollback or forward-fix command/procedure.
 
 Sample routine allow decisions if volume requires it. Retain high-risk mutation decisions and unexpected denies according to the approved audit/observability policy. Failure to write a configuration-change audit rolls back that change; loss of ordinary decision telemetry should alert but must not automatically cause a system-wide authorization outage unless explicitly required.
+
+### 8.5 Required operational workflow verification
+
+Atomic authorization decisions are necessary but do not prove that the business can operate. Each affected slice must execute the applicable positive workflow and its paired direct negative probes.
+
+| Operational family | Required positive evidence | Required negative evidence |
+|---|---|---|
+| Manage Tenants and tenant detail | approved staff can load the live cohort, search/filter/sort, follow tenant links, view contacts/CSC/packages/notes/integration state, and complete approved mutations | client personas cannot access the staff directory or another tenant; restricted staff cannot perform unapproved lifecycle, assignment, export, or administration actions |
+| Document generation and delivery | approved staff can preview/dry-run, launch, observe progress, produce the correct tenant-bound output, deliver it, and use approved retry/cancel paths; the declared worker principal completes its step | client/direct calls, wrong capability, wrong tenant/resource, disabled caller, replay, and worker use outside the declared job deny without orphaned output or duplicate delivery |
+| Packages and Stages | existing authorized staff operations and client-owned package/stage reads continue; the AJ pilot completes only its exact approved actions and scope | other-tenant targets, unapproved publish/archive/assignment/destructive actions, hidden-page direct RPC/Edge calls, expiry, revocation, and stale-cache use deny |
+| Academy and course builder | client learning/enrolment/progress behavior and approved Team Leader/Integrator/CSC/Super Admin builder workflows continue, including the separately permissioned package-course mapping path | BGT/CET/client personas cannot enter builder administration unless explicitly approved; direct create/edit/publish/delete/import/tenant-access calls enforce the same rule |
+| Client/staff messaging | client creates/sends/reads; approved staff receives notification, opens, replies, assigns/resolves where allowed; client receives REST/realtime update; unread/read, attachment, audit, timeline, and broadcast effects reconcile | same-tenant nonparticipant and tenant-B access, participant self-add/add-other/move, spoofed sender/type, tenant/conversation mismatch, unauthorized update/delete/read-RPC/attachment/broadcast, and prior-identity realtime/cache reuse deny |
+
+For each active internal role, run at least one representative positive workflow in every capability family it is expected to use and one sensitive negative workflow it must not use. Super Admin success does not stand in for ordinary staff success. Client Admin success does not stand in for Client User or Academy-only behavior.
+
+### 8.6 Messaging-specific verification packet
+
+Before any communications or staff-scope cutover, attach evidence for:
+
+1. the approved privacy model: whether same-tenant conversation existence, subject, last-message preview, timeline content, notifications, and attachments are tenant-shared or participant-private;
+2. conversation and participant SELECT/INSERT/UPDATE/DELETE, including self-add, add-other, row-move, inactive membership, assignment and status changes;
+3. message SELECT/INSERT/UPDATE/DELETE with server-derived sender identity/type and verified conversation-to-tenant binding;
+4. attachment metadata plus storage upload/download/delete, including service-role Edge target resolution and unregistered/path-tamper negatives;
+5. `fn_mark_conversation_read`, unread counts, broadcast-recipient read state, notification and timeline/audit effects, with exactly-once/idempotency assertions where applicable;
+6. realtime delivery and teardown: an authorized subscriber receives the expected event, unauthorized subscribers receive none, and logout/account/tenant/preview changes remove channels and cached data;
+7. staff notification fanout, generated links, list/read/reply rights, and assignment scope as one coordinated policy. Narrowing access must not create dead links or missed client messages;
+8. broadcast authorization, partial-failure cleanup, retry/idempotency, tenant isolation, participant creation, attachment resolution, and academy-only recipient treatment;
+9. cross-feature references: a message, preview, timeline event, notification, or Ask Viv recent-communications fact must not reveal a Package, Stage, document, Academy, or tenant resource denied at its source boundary;
+10. test-sensitivity proof showing that bypassing participant validation, conversation/tenant binding, attachment target binding, or notification recipient resolution makes the corresponding test fail.
 
 ## 9. Blast-radius checklist for every implementation PR
 
 Before editing:
 
 - identify route, nav, component, hook, Edge, RPC, RLS, trigger, storage, cron, queue, add-in, and external integration paths;
+- identify tab/query entry points, realtime publications/channels, notifications and generated links, background workers, and transitive audit/timeline side effects;
 - query current live policies/functions/grants when the DB boundary changes;
 - identify direct browser calls and service-role calls separately;
 - record current allowed and denied personas;
@@ -666,6 +734,7 @@ Before merging:
 
 - test disabled, archived, expired, inactive-role, unknown-capability, missing-context, and cross-tenant cases;
 - test direct API calls, not only UI flows;
+- run applicable positive operational workflows from section 8.5 as every affected non-SA role; do not use Super Admin as the only success persona;
 - prove every backing path in a delegated capability is classified and server-enforced before changing its route/nav gate;
 - verify every multi-action Edge branch crosses auth before mutation;
 - verify the deployed Edge auth mode, not only repository source;
@@ -677,6 +746,7 @@ Before merging:
 - verify grants, owners, search paths, overload count, and Data API exposure for new/changed SQL objects;
 - verify legacy permissive RLS policies are removed atomically with v6 cutover and policy recursion/performance checks pass;
 - verify current and legacy roles still in production assignments;
+- fail the verification gate when a required authorization suite or persona is skipped; otherwise record the missing boundary as Inconclusive with an owner and completion plan;
 - record unavailable personas/environments as Inconclusive rather than silently reducing the matrix;
 - update the route/endpoint/policy inventory and KB;
 - attach the evidence packet and rollback/forward-fix notes.
@@ -742,6 +812,9 @@ LOC reduction is a secondary benefit expected in P8. Do not trade visible duplic
 8. Who owns quarterly access review and role-catalogue approval?
 9. What disposable Supabase environment and persona-credential process is approved for write, expiry, disable, and cross-tenant tests?
 10. What mismatch observation window and go/no-go thresholds are acceptable for each risk class?
+11. Are client conversations tenant-shared or participant-private for conversation existence, subject/preview, message body, attachments, notifications, timeline and realtime? Who may add or remove participants?
+12. If staff messaging becomes portfolio-scoped, which roles/relationships receive notifications and retain list/read/reply/assign/resolve rights, and how are dead links prevented during cutover?
+13. Are Academy-only client users excluded from ordinary messaging and broadcast recipients, or included for named communications?
 
 No phase should silently answer these through code. Record approved answers in the policy ADR and relevant KB procedure.
 
@@ -751,12 +824,15 @@ RBAC v6 is complete when:
 
 - Unicorn has one documented authorization vocabulary and one canonical server decision path;
 - every protected route and navigation item is classified from canonical metadata;
+- every protected tab/action/read/write/subscription/side effect is classified in the feature-boundary manifest;
 - every high-risk Edge/RPC/RLS path independently enforces subject, action, target tenant/resource, and required relationship;
 - each migrated capability has one authoritative evaluator, zero unapproved shadow mismatches, and a tested rollback/forward-fix procedure;
 - disabled, archived, expired, inactive, unknown, missing-context, and cross-tenant cases fail closed;
 - Vivacity job roles are reviewed default bundles, not scattered string checks;
 - narrow, time-bound exceptions can be granted, explained, audited, reviewed, and revoked without assigning Super Admin or an unrelated whole role;
 - the AJ/CSC workflow succeeds only within its approved capabilities and scope;
+- approved staff and client workflows for Manage Tenants, document generation, Packages/Stages, Academy/course builder, and messaging pass with zero unapproved operational lockouts;
+- the messaging privacy model is explicit and consistently enforced across conversations, messages, participants, attachments/storage, previews, notifications, timeline/audit, read state, broadcasts and realtime;
 - direct API and RLS negative tests accompany Playwright UX verification;
 - permission/grant/profile changes are concurrency-safe and atomically produce one audit row plus one policy-version change;
 - duplicate static RBAC sources and ambiguous legacy levels are retired;
@@ -781,5 +857,11 @@ RBAC v6 is complete when:
 | Mutable profiles, retries, and concurrent admins can silently amplify/overwrite access | High | Sections 5.8/P2/P7 require immutable versions, fan-out preview, idempotency, optimistic concurrency, and atomic version/audit updates |
 | Daily SA versus true break-glass was ambiguous | High | Sections 5.3/5.7/P1 require an explicit operating decision, non-daily controls if used, and no self-grant/self-approval |
 | Rollout lacked stop criteria and usable diagnostics | Medium-high | Section 8.4 defines correlation, mismatch/latency/error signals, thresholds, owners, observation windows, and exact recovery procedures |
+| Denial-focused gates could ship operational staff/client lockouts | High | Sections 5.11, P0.6, 8.4 and 8.5 require symmetric mismatch handling and positive day-in-the-life workflows for every affected role |
+| Route inventory misses tabs, direct reads, subscriptions and side effects | High | Sections 5.11 and P1 require a feature-boundary manifest spanning UI entry points through server/storage/realtime/trigger paths |
+| Messaging was absent as an explicit authorization slice | High | P1, P5, P6 and section 8.6 add a coordinated communications capability, privacy and verification contract |
+| Required messaging/RLS tests can silently skip | High | Section 8.3 makes skipped required authorization suites a failing gate and requires the disposable environment before cutover |
+| Service-role attachment access was not bound to message/conversation/tenant | High | P5 and section 8.6 require trusted target resolution plus participant/sender or approved staff relationship proof |
+| Existing operating surfaces lacked named parity workflows | High | Section 8.5 covers Manage Tenants, documents, Packages/Stages, Academy/course builder and messaging with paired positive/negative evidence |
 
 Council approval means these safeguards are present in the plan. It does not waive phase-specific review, production authorization, or direct negative-path evidence.
