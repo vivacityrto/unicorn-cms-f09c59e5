@@ -1,5 +1,4 @@
 import { useParams, Link } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuditDetails } from '@/hooks/useAudits';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +13,9 @@ export default function AuditFindings() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">Loading findings...</p>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-96">
+        <p className="text-muted-foreground">Loading findings...</p>
+      </div>
     );
   }
 
@@ -36,7 +33,6 @@ export default function AuditFindings() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -96,7 +92,7 @@ export default function AuditFindings() {
 
         <div className="space-y-4">
           {auditReport?.findings && auditReport.findings.length > 0 ? (
-            auditReport.findings.map((finding: any) => (
+            auditReport.findings.map((finding) => (
               <FindingCard
                 key={finding.finding_id}
                 finding={finding}
@@ -114,6 +110,5 @@ export default function AuditFindings() {
           )}
         </div>
       </div>
-    </DashboardLayout>
   );
 }

@@ -49,12 +49,7 @@ const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
   const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));
  const Audits = lazy(() => import("./pages/Audits"));
  const AuditWorkspace = lazy(() => import("./pages/AuditWorkspace"));
- const AuditWorkspaceNew = lazy(() => import("./pages/AuditWorkspaceNew"));
- const AuditsAssessments = lazy(() => import("./pages/AuditsAssessments"));
  const AuditWorkspacePlaceholder = lazy(() => import("./pages/AuditWorkspacePlaceholder"));
- const AuditFindings = lazy(() => import("./pages/AuditFindings"));
- const AuditActions = lazy(() => import("./pages/AuditActions"));
- const AuditReport = lazy(() => import("./pages/AuditReport"));
  const AuditTemplateBuilder = lazy(() => import("./pages/AuditTemplateBuilder"));
  const TasksManagementWrapper = lazy(() => import("./pages/TasksManagementWrapper"));
  const ClickUpImport = lazy(() => import("./pages/ClickUpImport"));
@@ -364,16 +359,8 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/audits" 
-              element={
-                <ProtectedRoute>
-                  <AuditsAssessments />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/audits/create-template" 
+            <Route
+              path="/audits/create-template"
               element={
                 <ProtectedRoute>
                   <AuditTemplateBuilder />
@@ -387,38 +374,6 @@ const App = () => (
                   <AuditTemplateBuilder />
                 </ProtectedRoute>
               }
-            />
-            <Route 
-              path="/audits/:id" 
-              element={
-                <ProtectedRoute>
-                  <AuditWorkspaceNew />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/audits/:id/findings" 
-              element={
-                <ProtectedRoute>
-                  <AuditFindings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/audits/:id/actions" 
-              element={
-                <ProtectedRoute>
-                  <AuditActions />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/audits/:id/report" 
-              element={
-                <ProtectedRoute>
-                  <AuditReport />
-                </ProtectedRoute>
-              } 
             />
             {/* Membership Dashboard */}
             <Route path="/membership-dashboard" element={<ProtectedRoute><MembershipDashboardWrapper /></ProtectedRoute>} />

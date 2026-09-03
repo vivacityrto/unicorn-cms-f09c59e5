@@ -127,6 +127,11 @@ const EosLeadershipDashboard = lazy(() => import("@/pages/EosLeadershipDashboard
 const BulkDocumentJobsList = lazy(() => import("@/pages/BulkDocumentJobsList"));
 const BulkDocumentJobProgress = lazy(() => import("@/pages/BulkDocumentJobProgress"));
 const BulkGenerateNew = lazy(() => import("@/pages/BulkGenerateNew"));
+const AuditsAssessments = lazy(() => import("@/pages/AuditsAssessments"));
+const AuditActions = lazy(() => import("@/pages/AuditActions"));
+const AuditFindings = lazy(() => import("@/pages/AuditFindings"));
+const AuditReport = lazy(() => import("@/pages/AuditReport"));
+const AuditWorkspaceNew = lazy(() => import("@/pages/AuditWorkspaceNew"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -382,11 +387,21 @@ const BulkGenerateNew = lazy(() => import("@/pages/BulkGenerateNew"));
  * looked like it might need a Fragment (RetryDialog/SkippedDocumentsDialog
  * appear right before the closing wrapper tag) but both dialogs are
  * actually nested inside the outer content div, not siblings of it.
- * Remaining Clients PRs: PR 13 (audit workspace: AuditsAssessments,
- * AuditWorkspaceNew, AuditActions, AuditFindings, AuditReport, excluding
- * AuditTemplateBuilder pending its full-screen-mode design decision) and
- * PR 14 (support/activity/impact: NewSupportTicketPage, SuggestionDetail,
- * RtoTips, ClientActivityFeed, ClientImpactPage).
+ * PR 13 (Clients: audit workspace, second of three Clients PRs) added 5
+ * more files to the plain group: AuditsAssessments, AuditWorkspaceNew,
+ * AuditActions, AuditFindings, AuditReport -- `AuditTemplateBuilder`
+ * deliberately excluded, still pending its own full-screen-mode design
+ * decision PR. None of these 5 have a page-local access/permission
+ * check (AuditsAssessments's `usePermission('audits.setup')` only gates
+ * a button, not the route). AuditWorkspaceNew has 4 return branches
+ * (loading/error/not-found/main) all single-root; its main branch is
+ * wrapped in `UnsavedAuditWorkProvider` (a context provider, not a
+ * layout) which stays outside the removed DashboardLayout and still
+ * wraps a single child, so the page is still single-root end to end --
+ * no Fragment needed anywhere in this batch.
+ * Remaining Clients PR: PR 14 (support/activity/impact:
+ * NewSupportTicketPage, SuggestionDetail, RtoTips, ClientActivityFeed,
+ * ClientImpactPage).
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -524,6 +539,11 @@ export const dashboardLayoutRoutes = (
       <Route path="/manage-documents/bulk-generate/new" element={<BulkGenerateNew />} />
       <Route path="/manage-documents/bulk-jobs" element={<BulkDocumentJobsList />} />
       <Route path="/manage-documents/bulk-jobs/:id" element={<BulkDocumentJobProgress />} />
+      <Route path="/audits" element={<AuditsAssessments />} />
+      <Route path="/audits/:id" element={<AuditWorkspaceNew />} />
+      <Route path="/audits/:id/findings" element={<AuditFindings />} />
+      <Route path="/audits/:id/actions" element={<AuditActions />} />
+      <Route path="/audits/:id/report" element={<AuditReport />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />
