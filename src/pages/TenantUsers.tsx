@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -133,17 +133,6 @@ export default function TenantUsers() {
   const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
   const [bulkActionType, setBulkActionType] = useState<'activate' | 'deactivate' | null>(null);
   const [processingBulk, setProcessingBulk] = useState(false);
-
-  useEffect(() => {
-    fetchData();
-    fetchPositionTypeOptions();
-    fetchTenantStatusOptions();
-    fetchCscFilterOptions();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [users, searchQuery, tenantFilters, roleFilter, statusFilter, positionFilter, sortField, sortDirection, positionTypeOptions]);
 
   // Clear selection when filters change
   useEffect(() => {
@@ -288,7 +277,7 @@ export default function TenantUsers() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -354,9 +343,16 @@ export default function TenantUsers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const applyFilters = () => {
+  useEffect(() => {
+    fetchData();
+    fetchPositionTypeOptions();
+    fetchTenantStatusOptions();
+    fetchCscFilterOptions();
+  }, [fetchData]);
+
+  const applyFilters = useCallback(() => {
     let filtered = [...users];
 
     // Search filter
@@ -434,7 +430,11 @@ export default function TenantUsers() {
     });
 
     setFilteredUsers(filtered);
-  };
+  }, [users, searchQuery, tenantFilters, roleFilter, statusFilter, positionFilter, sortField, sortDirection, positionTypeOptions]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'U';

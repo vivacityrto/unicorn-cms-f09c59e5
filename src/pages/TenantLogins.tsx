@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,11 +29,7 @@ export default function TenantLogins() {
   const [loginRecords, setLoginRecords] = useState<LoginRecord[]>([]);
   const [tenantName, setTenantName] = useState("");
 
-  useEffect(() => {
-    fetchData();
-  }, [tenantId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -90,7 +86,11 @@ export default function TenantLogins() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filteredRecords = loginRecords.filter(record =>
     record.user_email.toLowerCase().includes(searchQuery.toLowerCase()) ||

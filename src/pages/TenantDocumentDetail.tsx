@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -37,11 +37,7 @@ export default function TenantDocumentDetail() {
   // Get packageId from URL params if provided
   const urlPackageId = searchParams.get('packageId');
 
-  useEffect(() => {
-    fetchData();
-  }, [tenantId, documentId, urlPackageId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -54,7 +50,7 @@ export default function TenantDocumentDetail() {
 
       if (tenantData) {
         setTenantName(tenantData.name);
-        
+
         // Fetch the document
         const { data: packageDocData, error } = await supabase
           .from("documents")
@@ -75,7 +71,11 @@ export default function TenantDocumentDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, documentId, toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, urlPackageId]);
 
   const handleDownload = async (filePath: string) => {
     try {
