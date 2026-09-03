@@ -138,7 +138,7 @@ export const AttendancePanel = ({
       console.log('[AttendancePanel] Auto-seeding attendees from participants');
       seedFromRoles.mutate();
     }
-  }, [attendees, attendeesLoading, meetingId]);
+  }, [attendees, attendeesLoading, meetingId, seedFromRoles]);
 
   // Track which online users we've already processed to avoid duplicate mutations
   const processedOnlineUsersRef = useRef<Set<string>>(new Set());
@@ -169,7 +169,7 @@ export const AttendancePanel = ({
         }
       }
     }
-  }, [isLive, onlineUsers, attendees, attendeesLoading, participants]);
+  }, [isLive, onlineUsers, attendees, attendeesLoading, participants, addAttendee, addGuestSilent, updateAttendanceSilent]);
 
   const { data: vivacityUsers } = useVivacityTeamUsers();
   const availableUsers = vivacityUsers?.map(u => ({
