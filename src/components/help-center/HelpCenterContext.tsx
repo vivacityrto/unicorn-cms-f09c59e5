@@ -52,7 +52,9 @@ export function HelpCenterProvider({ children }: { children: ReactNode }) {
   const effectiveLoading = isPreviewMode ? false : accessLoading;
 
   const canAccess =
-    effectiveRole === "primary_contact" || effectiveRole === "secondary_contact";
+    effectiveRole === "primary_contact" ||
+    effectiveRole === "secondary_contact" ||
+    effectiveRole === "user";
 
 
   const openHelpCenter = useCallback(
