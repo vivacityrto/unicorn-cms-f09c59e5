@@ -152,6 +152,7 @@ const ExecutiveClientCommitments = lazy(() => import("@/pages/ExecutiveClientCom
 const ExecutiveDecisionQueue = lazy(() => import("@/pages/ExecutiveDecisionQueue"));
 const ExecutiveFinancialControls = lazy(() => import("@/pages/ExecutiveFinancialControls"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const MainDashboard = lazy(() => import("@/pages/MainDashboard"));
 
 /**
  * Staff (DashboardLayout) pages that previously each used a dedicated
@@ -509,8 +510,39 @@ const Dashboard = lazy(() => import("@/pages/Dashboard"));
  * spinner (not a hard Navigate) and an unrelated `isAdminOrUser` redirect
  * to /client/home -- both preserved unchanged. Single-root across all 3
  * return branches (authLoading/!isVivacityStaff/main), no Fragment
- * needed. No pre-existing `any` lint errors in this file. Remaining
- * work: PR 18 (/dashboard itself, last).
+ * needed. No pre-existing `any` lint errors in this file. PR 18
+ * (/dashboard itself, last core PR of the migration) moved MainDashboard.tsx
+ * to the plain group. This is the plan's own flagged L3/highest-traffic/
+ * client-safe-path file, migrated last per its explicit instruction.
+ * MainDashboard.tsx has no page-local hard-redirect access check --
+ * `!isStaff` renders a shell-wrapped loading spinner (not a Navigate),
+ * preserved unchanged, same shape as every other "not flagged" page in
+ * this program. It's one of the plan's 17-file AST inventory of pages
+ * needing an explicit Fragment/container-preservation pass (more than one
+ * direct JSX child under DashboardLayout): its main return branch has a
+ * content div AND a sibling `NewTicketModal`, wrapped in a Fragment;
+ * the two loading/auth branches were already single-child, no Fragment
+ * needed there. Of 25 pre-existing `any` lint errors in this file, fixed
+ * only the one safe, established pattern (a `catch (e: any)` block) --
+ * left the other 24 untouched. Those are a deliberate `const sb =
+ * supabase as any` escape hatch reused across roughly 15 heterogeneous
+ * ad-hoc queries (tasks_tenants/client_action_items/ops_work_items/
+ * tenant_conversations/calendar_events/etc.), each with its own shape;
+ * fully typing every one of those call sites and callback params would
+ * mean re-typing this page's entire data-fetching layer, which is real
+ * scope creep and unwarranted risk for the highest-traffic, last PR of
+ * the migration -- same precedent as leaving `useWeeklyReview.ts`'s own
+ * `any` fields untouched in PR 16. lint-ratchet confirms no regression
+ * (24 errors both before and after; the one fixed catch-block moved it
+ * from 25 -> 24).
+ *
+ * This completes the core dashboard-direct-layout migration (PRs 1-18):
+ * all ~122 staff pages that self-wrapped DashboardLayout now render
+ * under this file's shared, sibling-guard-tier DashboardLayoutRoute
+ * architecture. Two standalone design-decision PRs remain unscoped
+ * (AuditTemplateBuilder's full-screen-mode split, and the orphaned
+ * /client/settings route), plus one optional dead-code cleanup PR --
+ * none of the three block this migration's own completion.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -674,6 +706,7 @@ export const dashboardLayoutRoutes = (
       <Route path="/my-work" element={<MyWork />} />
       <Route path="/executive" element={<ExecutiveDashboard />} />
       <Route path="/triage-dashboard" element={<Dashboard />} />
+      <Route path="/dashboard" element={<MainDashboard />} />
       <Route path="/documents" element={<Dashboard />} />
       <Route path="/reports" element={<Dashboard />} />
       <Route path="/messages" element={<Dashboard />} />

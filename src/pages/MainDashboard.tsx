@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
@@ -745,30 +744,26 @@ export default function MainDashboard() {
         if (error) throw error;
       }
       toast({ title: "Task completed" });
-    } catch (e: any) {
+    } catch (e) {
       // Revert
       setTasks((prev) => [t, ...prev]);
-      toast({ title: "Failed to update task", description: e.message, variant: "destructive" });
+      toast({ title: "Failed to update task", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     }
   };
 
   if (authLoading || !profile) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   if (!isStaff) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
@@ -793,7 +788,7 @@ export default function MainDashboard() {
   const todayLabel = format(new Date(), "EEE, d MMM");
 
   return (
-    <DashboardLayout>
+    <Fragment>
       <div className="p-4 md:p-6 space-y-3">
         {/* Header band */}
         <div className="relative overflow-hidden bg-card rounded-xl border border-border shadow-elevated">
@@ -1276,6 +1271,6 @@ export default function MainDashboard() {
 
 
       <NewTicketModal open={ticketOpen} onOpenChange={setTicketOpen} />
-    </DashboardLayout>
+    </Fragment>
   );
 }

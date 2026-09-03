@@ -27,7 +27,6 @@ import { dashboardLayoutRoutes } from "./routes/dashboardRoutes";
  // Lazy load all page components for code splitting
  const Index = lazy(() => import("./pages/Index"));
  const Login = lazy(() => import("./pages/Login"));
-const MainDashboard = lazy(() => import("./pages/MainDashboard"));
 
  // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
  const TenantDocumentDetailWrapper = lazy(() => import("./pages/TenantDocumentDetailWrapper"));
@@ -131,14 +130,6 @@ const App = () => (
             <Route path="/oauth/consent" element={<OAuthConsent />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <MainDashboard />
-                </ProtectedRoute>
-              } 
-            />
             <Route
               path="/calendar/outlook-callback"
               element={<OutlookCallback />}
