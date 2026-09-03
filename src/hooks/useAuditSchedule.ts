@@ -207,7 +207,7 @@ export function useCancelAuditAppointment(auditId: string | undefined) {
           await supabase.functions.invoke('sync-outlook-calendar', {
             body: { event_id: appointment.calendar_event_id, action: 'cancel' },
           });
-        } catch {}
+        } catch { /* best-effort; the appointment is already cancelled above regardless of calendar sync */ }
       }
     },
     onSuccess: () => {

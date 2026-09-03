@@ -331,7 +331,7 @@ export function useClientCommunications() {
           .eq("user_id", currentUserId!)
           .eq("source_id", conversationId)
           .eq("is_read", false) as any);
-      } catch (_) {}
+      } catch { /* best-effort; the conversation is already marked read via RPC above */ }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-conversations"] });
