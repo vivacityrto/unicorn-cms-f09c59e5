@@ -243,6 +243,58 @@ First-wave clone target: 800–1,500 net lines removed with parity tests. Simila
 
 The pilot succeeds if the page becomes easier to read, domain behavior is independently testable, direct data access moves behind a small adapter, and total feature LOC does not grow materially. If it produces ceremony without simplification, revise the convention before rolling it out.
 
+### Post-Phase 2 — lint-debt retirement (planned)
+
+The full ESLint baseline was re-measured on 2026-09-03 from the clean shared
+checkout with `npx eslint . --format json`: **4,059 findings across 651 files**
+(3,861 errors and 198 warnings). This is real maintenance debt, but it is not
+one homogeneous problem:
+
+| Rule family | Findings | Share | Initial interpretation |
+|---|---:|---:|---|
+| `@typescript-eslint/no-explicit-any` | 3,776 | 93.0% | Type-contract debt; concentrated across frontend and Edge Function code, and often needs schema/RPC knowledge rather than mechanical replacement |
+| `react-hooks/exhaustive-deps` | 153 | 3.8% | Behavior-sensitive; fix with characterization tests and browser checks, not blanket dependency insertion |
+| `react-refresh/only-export-components` | 38 | 0.9% | Module-boundary cleanup; mostly low risk but should be handled alongside affected component/module changes |
+| `prefer-const` | 37 | 0.9% | Low-risk correctness/readability cleanup; suitable for opportunistic batches |
+| All other rules | 55 | 1.4% | Triage individually; do not hide with broad disables |
+
+The council conclusion is to start this program **after the Phase 2 route and
+layout work has reached its exit gate**, once route boundaries and mount
+lifetime are stable. Starting earlier would make route extraction and hook
+dependency fixes compete for the same files and would blur whether a change is
+structural or purely lint-driven. The existing P0.4 ratchet remains the guard
+through Phase 2; it prevents new debt but is not a retirement plan.
+
+Retirement should be a small, measured program rather than a global autofix:
+
+1. Produce a committed, machine-readable baseline by rule, source class
+   (`src`, tooling, and `supabase/functions`), directory, and file; record
+   intentional generated/external/runtime-boundary exceptions explicitly.
+2. Clear the 253 non-`any` findings first, prioritizing hook dependency and
+   rules-of-hooks findings with behavior tests. This removes the signal most
+   likely to indicate a real defect before tackling the large type-contract
+   population.
+3. Replace `any` by bounded domain batches, beginning with high-churn or
+   security/data-boundary files and shared types. Use generated Supabase types,
+   Zod/runtime validation at external boundaries, and explicit `unknown`
+   narrowing where the input is genuinely dynamic. Do not replace `any` with
+   `unknown` without adding the narrowing that makes the code safe.
+4. Treat frontend and Deno/Edge code as separate workstreams with their own
+   supported checks. A frontend type improvement must not silently assume that
+   Deno runtime types, generated database types, or RPC contracts are current.
+5. Expand the existing `no-unused-vars` pilot and other strict rules by
+   directory only after each batch has a zero-regression result. Keep the
+   diff-scoped ratchet active throughout.
+
+Suggested acceptance gates per batch are: the targeted rule count decreases;
+no other rule count increases; focused behavior tests and the relevant
+frontend/Edge suite pass; the diff-scoped ratchet passes; and before/after
+files, findings, LOC, and any new assertions or boundary types are recorded.
+The eventual program exit is a zero-finding `npm run lint` (or a documented,
+reviewed exception baseline) plus ratchets that prevent reintroduction. This
+is a quality/type-safety program, not an excuse to refactor unrelated modules
+or to make the route-composition work wait on a global cleanup.
+
 ### P3 — central platform responsibilities
 
 | ID | Candidate | Evidence | Intended result | Notes |
@@ -412,6 +464,21 @@ Regenerate rather than patch around stale paragraphs:
 **Exit gate:** route count and guards unchanged except intentional cleanup; wrapper LOC reduced; route inventory check passes.
 
 Do not combine route-module extraction, nested layouts, auth-provider splitting, or metadata consolidation. Preserve a last-known-good normalized route manifest and browser evidence so each family can roll back with one revert.
+
+### Phase 2.5 — lint-debt retirement (after Phase 2; several small PRs)
+
+1. Publish the rule/source-class baseline and exception policy.
+2. Remove non-`any` correctness findings, with characterization coverage for
+   hook dependency and rules-of-hooks changes.
+3. Retire `any` in bounded frontend and Edge batches, starting at shared
+   contracts and high-risk data/auth boundaries.
+4. Ratchet strict rules by directory as each batch reaches zero regressions.
+
+**Exit gate:** the targeted baseline is lower with no compensating increase in
+other rules; supported frontend and Edge checks pass; the lint ratchet passes;
+and each batch has before/after metrics and reviewed exceptions. Route/layout
+work is not considered blocked by residual lint debt, and this phase does not
+begin until Phase 2's route/composition exit gate is met.
 
 ### Phase 3 — boundary pilot and platform seams (3–5 PRs)
 
