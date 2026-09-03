@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useSuggestItem, useUpdateSuggestItem } from '@/hooks/useSuggestItems';
 import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
@@ -234,7 +233,7 @@ export default function SuggestionDetail() {
       is_client_visible: newValue,
       updated_by: user.id,
     });
-    const { error: auditErr } = await (supabase.from('audit_events' as any) as any).insert({
+    const { error: auditErr } = await supabase.from('audit_events').insert({
       entity: 'suggest_item',
       entity_id: id,
       action: 'visibility_toggled',
@@ -284,7 +283,7 @@ export default function SuggestionDetail() {
         link: `/client/support-tickets/${id}`,
         created_by: user.id,
         source_id: id,
-      } as any);
+      });
       if (notifyErr) console.error('ticket-resolved notification insert failed', notifyErr);
     }
 
@@ -318,24 +317,20 @@ export default function SuggestionDetail() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   if (!item) {
     return (
-      <DashboardLayout>
-        <div className="text-center py-20 text-muted-foreground">Item not found.</div>
-      </DashboardLayout>
+      <div className="text-center py-20 text-muted-foreground">Item not found.</div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <Fragment>
       <div className="max-w-4xl mx-auto space-y-6" onPaste={handlePaste}>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/suggestions')}>
@@ -564,6 +559,6 @@ export default function SuggestionDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </Fragment>
   );
 }

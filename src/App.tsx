@@ -44,7 +44,6 @@ const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
 const ClickUpTenantMapping = lazy(() => import("./pages/admin/ClickUpTenantMapping"));
 const AddinShell = lazy(() => import("./pages/addin/AddinShell"));
 const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
- const ClientImpactPage = lazy(() => import("./pages/ClientImpactPage"));
   const ResetPassword = lazy(() => import("./pages/ResetPassword"));
   const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));
  const Audits = lazy(() => import("./pages/Audits"));
@@ -53,7 +52,6 @@ const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
  const AuditTemplateBuilder = lazy(() => import("./pages/AuditTemplateBuilder"));
  const TasksManagementWrapper = lazy(() => import("./pages/TasksManagementWrapper"));
  const ClickUpImport = lazy(() => import("./pages/ClickUpImport"));
- const RtoTipsWrapper = lazy(() => import("./pages/RtoTipsWrapper"));
  const MembershipDashboardWrapper = lazy(() => import("./pages/MembershipDashboardWrapper"));
  const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
  const ExecutiveFinancialControls = lazy(() => import("./pages/ExecutiveFinancialControls"));
@@ -79,7 +77,6 @@ const RoleReference = lazy(() => import("./pages/RoleReference"));
 const AskVivAssistant = lazy(() => import("./pages/AskVivAssistant"));
 const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
- const ClientActivityFeed = lazy(() => import("./pages/ClientActivityFeed"));
 
 
 // Academy pages (placeholder)
@@ -264,14 +261,6 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/rto-tips" 
-              element={
-                <ProtectedRoute>
-                  <RtoTipsWrapper />
-                </ProtectedRoute>
-              } 
-            />
             <Route
               path="/eos/issues"
               element={
@@ -283,14 +272,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <LiveMeetingView />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tenant/:clientId/impact"
-              element={
-                <ProtectedRoute>
-                  <ClientImpactPage />
                 </ProtectedRoute>
               }
             />
@@ -401,7 +382,6 @@ const App = () => (
             <Route path="/admin/qa/smoke" element={<ProtectedRoute requireSuperAdmin><QASmokeTest /></ProtectedRoute>} />
             <Route path="/admin/clickup-mapping" element={<ProtectedRoute requireSuperAdmin><ClickUpTenantMapping /></ProtectedRoute>} />
             <Route path="/admin/clickup-import" element={<ProtectedRoute requireSuperAdmin><ClickUpImport /></ProtectedRoute>} />
-            <Route path="/client-activity" element={<ProtectedRoute><ClientActivityFeed /></ProtectedRoute>} />
             {supportTicketsRoutes}
             {/* Academy Routes */}
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCoursesListPage /></ProtectedRoute>} />
