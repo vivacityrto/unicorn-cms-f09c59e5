@@ -156,9 +156,9 @@ export default function RolePermissionsEditor() {
     },
   });
 
-  const features = featuresQ.data ?? [];
-  const matrix = matrixQ.data ?? [];
-  const roles = rolesQ.data ?? [];
+  const features = useMemo(() => featuresQ.data ?? [], [featuresQ.data]);
+  const matrix = useMemo(() => matrixQ.data ?? [], [matrixQ.data]);
+  const roles = useMemo(() => rolesQ.data ?? [], [rolesQ.data]);
 
   // Build lookup: feature_key -> role -> level
   const matrixMap = useMemo(() => {

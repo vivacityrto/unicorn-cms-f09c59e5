@@ -244,7 +244,7 @@ export default function StaffEngagementDetail() {
   });
 
   const engagement = engagementQuery.data;
-  const completions = completionsQuery.data ?? [];
+  const completions = useMemo(() => completionsQuery.data ?? [], [completionsQuery.data]);
 
   const exitInterviewQuery = useQuery({
     queryKey: ["engagement_exit_interview", id],

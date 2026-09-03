@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T07:22:49.269Z",
-  "baselineSha": "922512bbc765b7c81e3a30c22fc01d4d61b7e615",
+  "generatedAt": "2026-09-03T07:51:09.637Z",
+  "baselineSha": "0c39e15e3e54049db23672ea095a6ee0c9f1c3ec",
   "totals": {
     "files": 1785,
-    "filesWithFindings": 629,
+    "filesWithFindings": 625,
     "errors": 3744,
-    "warnings": 161
+    "warnings": 152
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 123,
+    "react-hooks/exhaustive-deps": 114,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 161,
+      "warnings": 152,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 123,
+        "react-hooks/exhaustive-deps": 114,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -501,17 +501,9 @@
     },
     "src/pages/admin": {
       "errors": 6,
-      "warnings": 8,
+      "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 6,
-        "react-hooks/exhaustive-deps": 8
-      }
-    },
-    "src/pages/admin/ai-insights": {
-      "errors": 0,
-      "warnings": 1,
-      "byRule": {
-        "react-hooks/exhaustive-deps": 1
+        "@typescript-eslint/no-explicit-any": 6
       }
     },
     "src/pages/client": {
@@ -2868,18 +2860,6 @@
     },
     "src/pages/admin/ClickUpTenantMapping.tsx": {
       "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/pages/admin/CohortAccessSenderJob.tsx": {
-      "react-hooks/exhaustive-deps": 1
-    },
-    "src/pages/admin/RolePermissionsEditor.tsx": {
-      "react-hooks/exhaustive-deps": 5
-    },
-    "src/pages/admin/StaffEngagementDetail.tsx": {
-      "react-hooks/exhaustive-deps": 2
-    },
-    "src/pages/admin/ai-insights/RecentDraftsTable.tsx": {
-      "react-hooks/exhaustive-deps": 1
     },
     "src/pages/client/AcademyAssessmentPlayerPage.tsx": {
       "@typescript-eslint/no-explicit-any": 3,
