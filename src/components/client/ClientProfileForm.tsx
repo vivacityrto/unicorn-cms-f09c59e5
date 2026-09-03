@@ -77,21 +77,21 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
   const { options: LMS_OPTIONS, refresh: refreshLms } = useLookupTable('dd_lms');
   const { options: ACCOUNTING_OPTIONS, refresh: refreshAccounting } = useLookupTable('dd_accounting_system');
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setSaving(true);
     const success = await onSave(formData);
     setSaving(false);
     if (success) {
       setHasChanges(false);
     }
-  };
+  }, [onSave, formData]);
 
   // Notify parent of state changes
   useEffect(() => {
     if (onStateChange) {
       onStateChange(hasChanges, saving, handleSave);
     }
-  }, [hasChanges, saving, onStateChange]);
+  }, [hasChanges, saving, onStateChange, handleSave]);
 
   useEffect(() => {
     if (profile) {

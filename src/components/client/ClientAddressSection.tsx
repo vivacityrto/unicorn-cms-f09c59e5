@@ -99,6 +99,12 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
     if (tenantId) {
       fetchAddresses();
     }
+    // `fetchAddresses` and `seedFromTga` (called from inside it) mutually recurse and
+    // both close over `tenantId`; memoizing one without the other via useCallback hits
+    // a temporal-dead-zone ordering issue (each would need the other in its own deps
+    // before it's declared). The effect already correctly fires once per tenantId
+    // change, which is the only reactive value either function actually depends on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   const fetchAddressTypes = async () => {

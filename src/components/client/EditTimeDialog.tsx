@@ -232,7 +232,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
       setSelectedUserId(entry.user_id || user?.id || '');
       setNotifyUserId('');
     }
-  }, [entry, open]);
+  }, [entry, open, user?.id]);
 
   const isParentDefined = entry?.work_type === 'parent_defined';
   const isKickstartTas = entry?.work_type === 'kickstart_tas';

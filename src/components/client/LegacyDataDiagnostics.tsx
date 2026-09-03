@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -28,15 +28,7 @@ export function LegacyDataDiagnostics({ tenantId, packageId, stageInstanceIds }:
   // Only show for SuperAdmin / Vivacity team
   const isSuperAdmin = profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin';
 
-  useEffect(() => {
-    if (open && results.length === 0 && isSuperAdmin) {
-      runDiagnostics();
-    }
-  }, [open]);
-
-  if (!isSuperAdmin) return null;
-
-  const runDiagnostics = async () => {
+  const runDiagnostics = useCallback(async () => {
     setLoading(true);
     const diags: DiagResult[] = [];
 
@@ -89,7 +81,15 @@ export function LegacyDataDiagnostics({ tenantId, packageId, stageInstanceIds }:
 
     setResults(diags);
     setLoading(false);
-  };
+  }, [tenantId, stageInstanceIds]);
+
+  useEffect(() => {
+    if (open && results.length === 0 && isSuperAdmin) {
+      runDiagnostics();
+    }
+  }, [open, results.length, isSuperAdmin, runDiagnostics]);
+
+  if (!isSuperAdmin) return null;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mt-4">

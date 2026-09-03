@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format, differenceInMonths, differenceInDays } from 'date-fns';
@@ -581,13 +581,13 @@ function DatePickerCell({
   onChange: (v: string | null) => void;
   clearable?: boolean;
 }) {
-  const date = value ? new Date(value + 'T00:00:00') : undefined;
+  const date = useMemo(() => (value ? new Date(value + 'T00:00:00') : undefined), [value]);
   const [displayMonth, setDisplayMonth] = useState<Date>(date ?? new Date());
 
   // Sync display month when the value changes externally
   useEffect(() => {
     if (date) setDisplayMonth(date);
-  }, [value]);
+  }, [date]);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 20 }, (_, i) => currentYear - 10 + i);

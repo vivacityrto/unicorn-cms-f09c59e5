@@ -145,6 +145,10 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
       setSiteDriveId(primarySite.drive_id || '');
       setEditingSiteId(primarySite.id);
     }
+    // Intentionally scoped to the site id, not the whole `primarySite` object: a
+    // background refetch that returns a new object reference for the same site
+    // must not reset the graph/drive id fields out from under an in-progress edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [primarySite?.id]);
 
   const handleSaveSiteConfig = async () => {

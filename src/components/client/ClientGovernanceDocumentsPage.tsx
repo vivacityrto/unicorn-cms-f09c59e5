@@ -153,7 +153,7 @@ export function ClientGovernanceDocumentsPage() {
     },
   });
 
-  const rows = data?.rows ?? [];
+  const rows = useMemo(() => data?.rows ?? [], [data]);
   const frameworkOptions = data?.frameworks ?? [];
 
   // Build a lowercase {fileName: webUrl} map by browsing tenant SharePoint

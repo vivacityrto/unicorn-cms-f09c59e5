@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useClientActionItems, ActionItem } from '@/hooks/useClientManagementData';
 import { supabase } from '@/integrations/supabase/client';
 import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
@@ -131,11 +131,6 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     relationship_role: string | null;
   }>>([]);
 
-  useEffect(() => {
-    fetchTeamMembers();
-    fetchTenantUsers();
-  }, [tenantId]);
-
   const fetchTeamMembers = async () => {
     const { data } = await supabase
       .from('users')
@@ -147,7 +142,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setTeamMembers(data || []);
   };
 
-  const fetchTenantUsers = async () => {
+  const fetchTenantUsers = useCallback(async () => {
     if (!tenantId) return;
     const { data } = await supabase
       .from('tenant_users')
@@ -163,7 +158,12 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
       .map((row: any) => row.users ? { ...row.users, relationship_role: row.relationship_role } : null)
       .filter(Boolean);
     setTenantUsers(rows);
-  };
+  }, [tenantId]);
+
+  useEffect(() => {
+    fetchTeamMembers();
+    fetchTenantUsers();
+  }, [tenantId, fetchTenantUsers]);
 
   const resetForm = () => {
     setTitle('');

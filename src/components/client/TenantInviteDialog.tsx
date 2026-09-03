@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { checkSeatAvailability, UPGRADE_PATHS } from '@/hooks/useSeatLimits';
@@ -122,14 +122,7 @@ export function TenantInviteDialog({
     return () => { cancelled = true; };
   }, [open, tenantId, isClientTenant]);
 
-  // Check seat availability when dialog opens
-  useEffect(() => {
-    if (open && tenantId) {
-      checkSeats();
-    }
-  }, [open, tenantId]);
-
-  const checkSeats = async () => {
+  const checkSeats = useCallback(async () => {
     setCheckingSeats(true);
     try {
       // Get tenant type first
@@ -138,9 +131,9 @@ export function TenantInviteDialog({
         .select("tenant_type")
         .eq("id", tenantId)
         .single();
-      
+
       setTenantType(tenant?.tenant_type as TenantType || null);
-      
+
       const result = await checkSeatAvailability(tenantId);
       setCanInvite(result.canInvite);
       setCurrentUsers(result.currentUsers);
@@ -151,7 +144,14 @@ export function TenantInviteDialog({
     } finally {
       setCheckingSeats(false);
     }
-  };
+  }, [tenantId]);
+
+  // Check seat availability when dialog opens
+  useEffect(() => {
+    if (open && tenantId) {
+      checkSeats();
+    }
+  }, [open, tenantId, checkSeats]);
 
   const handleClose = () => {
     setFirstName('');
