@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -82,8 +82,6 @@ export default function ExecutiveClientCommitments() {
     label: t.name,
   }));
 
-  useEffect(() => { fetchRecords(); fetchTenants(); }, []);
-
   const fetchTenants = async () => {
     try {
       const { data, error } = await supabase
@@ -100,7 +98,7 @@ export default function ExecutiveClientCommitments() {
     }
   };
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
@@ -118,7 +116,9 @@ export default function ExecutiveClientCommitments() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => { fetchRecords(); fetchTenants(); }, [fetchRecords]);
 
   const handleCreate = async () => {
     try {
