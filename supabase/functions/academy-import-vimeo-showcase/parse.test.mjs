@@ -11,6 +11,7 @@ import {
   extractAlbumId,
   extractVimeoVideoId,
   findExistingModule,
+  parsePreviewVideos,
   parseShowcaseTitle,
 } from "./parse.ts";
 
@@ -153,6 +154,40 @@ describe("buildFallbackParse", () => {
     assert.equal(unmatched.length, 1);
     assert.equal(unmatched[0].title, "Untitled with no id");
     assert.equal(unmatched[0].vimeo_id, null);
+  });
+});
+
+describe("parsePreviewVideos", () => {
+  it("uses module and lesson numbers when the showcase has structured titles", () => {
+    const { parsed, unmatched } = parsePreviewVideos([
+      { uri: "/videos/5", name: "Module 5 - Lesson 2 Who Should Conduct Pre-use Testing" },
+      { uri: "/videos/1", name: "Module 1 - Conclusion" },
+      { uri: "/videos/4", name: "Module 4 - Lesson 1 Understanding Validation Documentation" },
+      { uri: "/videos/6", name: "Module 5 - Lesson 3 How Many Testers are Enough" },
+    ]);
+
+    assert.deepEqual(
+      parsed.map((item) => `${item.moduleNumber}.${item.lessonNumber}:${item.title}`),
+      [
+        "1.1:Conclusion",
+        "4.1:Understanding Validation Documentation",
+        "5.2:Who Should Conduct Pre-use Testing",
+        "5.3:How Many Testers are Enough",
+      ],
+    );
+    assert.equal(unmatched.length, 0);
+  });
+
+  it("keeps unnumbered showcases in their original flat order", () => {
+    const { parsed } = parsePreviewVideos([
+      { uri: "/videos/2", name: "Welcome" },
+      { uri: "/videos/1", name: "Course overview" },
+    ]);
+
+    assert.deepEqual(parsed.map((item) => `${item.lessonNumber}:${item.title}`), [
+      "1:Welcome",
+      "2:Course overview",
+    ]);
   });
 });
 
