@@ -554,12 +554,36 @@ Proceed only after Carl approves PR 0's guard architecture and persona plan. The
 
 ## 12. Completion outcome
 
-When all approved conversion rows are complete, active compatible routes will share a persistent staff shell within their exact guard tier, direct page-owned `DashboardLayout` sites will fall from 199 to only explicitly decided exceptions, and adding a new staff page will have one discoverable route-composition path. The program will reduce repeated JSX/import noise and eliminate avoidable shell remounts without claiming that LOC reduction is more important than permission correctness.
+**Verified 2026-09-03, retroactively — the "final documentation PR" below was never actually run as its own PR; this section fills that gap after the fact rather than leaving it as an unfilled template.**
 
-The final documentation PR should:
+All 19 core slices (orders 0–18) landed as planned, one PR per slice, in the exact sequence from §6:
 
-- regenerate the 122-file/199-site baseline and report the remaining exceptions;
-- update §22 of the parent optimization plan with PR links and measured outcomes;
-- update route-composition conventions if guard-tier composition adds a reusable rule;
-- record bundle before/after and the routes/personas actually verified;
-- leave historical audit entries unchanged.
+| Order | Slice | PR |
+|---:|---|---|
+| 0 | Guard/verification foundation | [#492](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/492) |
+| 1 | System Config: package/stage cohort | [#493](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/493) |
+| 2 | Strategic Intelligence: SA cohort | [#494](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/494) |
+| 3 | Academy Builder | [#495](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/495) |
+| 4 | System Config: remaining SA cohort | [#496](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/496) |
+| 5 | Resource Management | [#497](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/497) |
+| 6 | Strategic/administration VT cohort | [#498](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/498) |
+| 7 | Administration: SA cohort | [#499](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/499) |
+| 8 | Administration: plain cohort | [#500](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/500) |
+| 9 | Remaining System Config plain cohort | [#501](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/501) |
+| 10 | EOS: overview/read-only cohort | [#502](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/502) |
+| 11 | EOS: interactive/detail cohort | [#503](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/503) |
+| 12 | Clients: document jobs | [#505](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/505) |
+| 13 | Clients: audit workspace | [#508](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/508) |
+| 14 | Clients: support/activity/impact | [#510](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/510) |
+| 15 | Work: utility/personal settings | [#514](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/514) |
+| 16 | Work: executive and personal work | [#516](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/516) |
+| 17 | Legacy dashboard aliases | [#517](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/517) |
+| 18 | Main dashboard | [#518](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/518) |
+
+`grep -rl "<DashboardLayout" src/pages` fell from 122 files (§1 baseline) to **9** at `main@ab356c7c`:
+
+- **2 explicit decision exceptions, correctly untouched:** `AuditTemplateBuilder.tsx` (builder full-screen vs. inspection-in-shell decision never made) and `SettingsWrapper.tsx`/`/client/settings` (portal/shell decision never made). Both still need the design decision this plan deferred them for — still open, not newly discovered.
+- **5 dead/unrouted candidates from §5.10, correctly untouched:** `Audits.tsx`, `AuditWorkspace.tsx`, `eos/EosIssues.tsx`, `NewSuggestionForm.tsx`, `SuggestionRegister.tsx` — re-confirmed unrouted (no import/caller in `src/routes/*.tsx` or `src/App.tsx`) as of this date. Still awaiting the "separate cleanup PR" §5.10 always required before deletion; not done here either, consistent with never claiming a file is dead from one snapshot alone.
+- **2 genuinely missed, not a decision exception:** `ProcessDetail.tsx` and `ProcessForm.tsx` (§5.3, part of the planned 26-file EOS/processes inventory, live-routed at `/processes/:id`, `/processes/:id/edit`, `/processes/new`) landed in neither PR #502 nor #503 and still compose `DashboardLayout` directly. This is the one place the "115-file executable backlog... accounted for by orders 1–18" claim (§6) doesn't hold — 113 of 115 executable files converted, not 115. Left as a follow-up PR rather than fixed as part of this retroactive documentation pass, per this plan's own §14-inherited discipline against mixing a docs correction with a code change.
+
+Not done, and still open follow-ups: route-composition conventions doc update (no new reusable guard-tier rule emerged beyond what individual PRs already documented inline), bundle before/after measurement, and the ProcessDetail/ProcessForm fix-up PR itself. Historical audit entries were not touched by this correction.
