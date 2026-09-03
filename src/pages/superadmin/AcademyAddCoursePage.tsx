@@ -155,7 +155,6 @@ interface ShowcaseItemDraft {
   title: string;
   metadataFreeTitle: string;
   originalTitle: string;
-  metadataFreeTitle: string;
   shortDescription: string;
   description: string;
   targetAudience: string[];
