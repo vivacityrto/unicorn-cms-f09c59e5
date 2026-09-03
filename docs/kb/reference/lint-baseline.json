@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T05:49:38.004Z",
-  "baselineSha": "f6c98edaffdf667991e461648d6c2c182a4b345b",
+  "generatedAt": "2026-09-03T06:25:56.728Z",
+  "baselineSha": "48771b91e1fe455a812a9d08d5945e39047eb374",
   "totals": {
     "files": 1785,
     "filesWithFindings": 631,
     "errors": 3744,
-    "warnings": 179
+    "warnings": 173
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 141,
+    "react-hooks/exhaustive-deps": 135,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 179,
+      "warnings": 173,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 141,
+        "react-hooks/exhaustive-deps": 135,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -104,19 +104,17 @@
     },
     "src/components/audit": {
       "errors": 20,
-      "warnings": 5,
+      "warnings": 1,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 20,
-        "react-refresh/only-export-components": 1,
-        "react-hooks/exhaustive-deps": 4
+        "react-refresh/only-export-components": 1
       }
     },
     "src/components/audit/workspace": {
       "errors": 82,
-      "warnings": 4,
+      "warnings": 2,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 82,
-        "react-hooks/exhaustive-deps": 2,
         "react-refresh/only-export-components": 2
       }
     },
@@ -1463,8 +1461,7 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/audit/NewAuditModal.tsx": {
-      "@typescript-eslint/no-explicit-any": 12,
-      "react-hooks/exhaustive-deps": 4
+      "@typescript-eslint/no-explicit-any": 12
     },
     "src/components/audit/workspace/ActionDrawer.tsx": {
       "@typescript-eslint/no-explicit-any": 1
@@ -1476,7 +1473,6 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/audit/workspace/AuditFormTab.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/audit/workspace/AuditSidebar.tsx": {
@@ -1510,7 +1506,6 @@
       "@typescript-eslint/no-explicit-any": 18
     },
     "src/components/audit/workspace/SendEvidenceRequestDrawer.tsx": {
-      "react-hooks/exhaustive-deps": 1,
       "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/audit/workspace/SendPreliminarySummaryDialog.tsx": {

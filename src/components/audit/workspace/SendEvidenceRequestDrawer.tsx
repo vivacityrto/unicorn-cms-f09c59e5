@@ -43,6 +43,10 @@ export function SendEvidenceRequestDrawer({ open, onOpenChange, audit }: SendEvi
       setIntroMessage('');
       setItems([{ item_name: '', guidance_text: '', is_required: true, section_id: null }]);
     }
+    // Intentionally scoped to `open`, not `audit.title`: resets the form when the
+    // drawer opens, not on every `audit` object-reference change while it's already
+    // open, which would otherwise wipe an in-progress edit to the title field.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const addItem = () => {
