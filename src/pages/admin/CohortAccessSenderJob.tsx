@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,7 +61,7 @@ export default function CohortAccessSenderJob() {
   const [autoDrain, setAutoDrain] = useState(true);
   const drainAbortRef = useRef(false);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (!jobId) return;
     const [{ data: j }, { data: it }] = await Promise.all([
       supabase.from("cohort_send_jobs").select("*").eq("id", jobId).maybeSingle(),
@@ -84,9 +84,9 @@ export default function CohortAccessSenderJob() {
         setTenantNames(new Map());
       }
     }
-  };
+  }, [jobId]);
 
-  useEffect(() => { refresh(); }, [jobId]);
+  useEffect(() => { refresh(); }, [jobId, refresh]);
 
   // Drain loop: invoke worker repeatedly while job is running and tab is open.
   useEffect(() => {
