@@ -515,7 +515,7 @@ export function ClientIntegrationsTab({
     };
     
     fetchDebugInfo();
-  }, [isSuperAdmin, profile?.tenant_id, showDebug, syncCounter]);
+  }, [isSuperAdmin, profile?.tenant_id, profile?.rto_number, showDebug, syncCounter]);
 
   // Fetch TGA data when linked - use the new dataset-based approach
   // Note: We pass tenant_id as a string identifier since that's what we have

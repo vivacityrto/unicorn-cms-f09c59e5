@@ -56,7 +56,7 @@ export function ClientNotificationReview({ isPreview }: { isPreview: boolean }) 
       setCurrentIndex(0);
       setOpen(true);
     }
-  }, [activeTenantId, isLoading, isPreview, profile?.user_uuid, unreadNotifications.length]);
+  }, [activeTenantId, isLoading, isPreview, profile?.user_uuid, unreadNotifications]);
 
   const notification = queue[currentIndex];
 

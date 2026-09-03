@@ -145,7 +145,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
       const activeIds = new Set(activePackages.map(p => parseInt(p.id, 10)));
       setExpandedPackages(activeIds);
     }
-  }, [packages]);
+  }, [packages, activePackages, autoExpandPackageInstanceId, expandedPackages.size]);
 
   useEffect(() => {
     const fetchPackages = async () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { format } from 'date-fns';
@@ -402,18 +402,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
     });
   };
 
-  useEffect(() => {
-    fetchStages();
-  }, [tenantId, packageId]);
-
-  // Auto-expand stage when navigated via deep link
-  useEffect(() => {
-    if (autoExpandStageInstanceId && rawStages.length > 0) {
-      setExpandedStages(prev => new Set(prev).add(autoExpandStageInstanceId));
-    }
-  }, [autoExpandStageInstanceId, rawStages]);
-
-  const fetchStages = async () => {
+  const fetchStages = useCallback(async () => {
     setLoading(true);
     try {
       let resolvedInstanceId = propInstanceId ?? null;
@@ -503,7 +492,18 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, packageId, propInstanceId, toast]);
+
+  useEffect(() => {
+    fetchStages();
+  }, [tenantId, packageId, fetchStages]);
+
+  // Auto-expand stage when navigated via deep link
+  useEffect(() => {
+    if (autoExpandStageInstanceId && rawStages.length > 0) {
+      setExpandedStages(prev => new Set(prev).add(autoExpandStageInstanceId));
+    }
+  }, [autoExpandStageInstanceId, rawStages]);
 
   // Resolve each stage's raw status against the current `statuses` list.
   // Kept separate from the fetch above so a cold load (statuses not yet

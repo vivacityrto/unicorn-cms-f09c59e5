@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -66,13 +66,7 @@ export function StartPackageDialog({
   const [hoursUsed, setHoursUsed] = useState<string>('');
   const [loadingData, setLoadingData] = useState(true);
 
-  useEffect(() => {
-    if (open) {
-      fetchData();
-    }
-  }, [open]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoadingData(true);
     try {
       // Fetch active packages
@@ -137,7 +131,13 @@ export function StartPackageDialog({
     } finally {
       setLoadingData(false);
     }
-  };
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (open) {
+      fetchData();
+    }
+  }, [open, fetchData]);
 
   // Compute duplicate-type conflict for the selected package, only for stand-alone starts.
   const selectedPackage = useMemo(
