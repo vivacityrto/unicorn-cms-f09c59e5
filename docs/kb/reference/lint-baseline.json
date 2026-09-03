@@ -1,29 +1,27 @@
 {
-  "generatedAt": "2026-09-03T04:13:48.897Z",
-  "baselineSha": "73a61b2f9b7372cd358100e10201ff3fcb0c12ba",
+  "generatedAt": "2026-09-03T04:38:41.299Z",
+  "baselineSha": "ab356c7cc7740b6267e5ba3d58b03b9a772a7a2d",
   "totals": {
-    "files": 1784,
-    "filesWithFindings": 635,
-    "errors": 3748,
-    "warnings": 191
+    "files": 1785,
+    "filesWithFindings": 634,
+    "errors": 3744,
+    "warnings": 189
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 153,
+    "react-hooks/exhaustive-deps": 151,
     "react-refresh/only-export-components": 38,
-    "@typescript-eslint/no-unused-expressions": 7,
-    "react-hooks/rules-of-hooks": 4
+    "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 3080,
-      "warnings": 191,
+      "errors": 3076,
+      "warnings": 189,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 153,
+        "react-hooks/exhaustive-deps": 151,
         "react-refresh/only-export-components": 38,
-        "@typescript-eslint/no-unused-expressions": 7,
-        "react-hooks/rules-of-hooks": 4
+        "@typescript-eslint/no-unused-expressions": 7
       }
     },
     "supabase/functions": {
@@ -506,12 +504,11 @@
       }
     },
     "src/pages/admin": {
-      "errors": 10,
-      "warnings": 10,
+      "errors": 6,
+      "warnings": 8,
       "byRule": {
-        "react-hooks/rules-of-hooks": 4,
-        "react-hooks/exhaustive-deps": 10,
-        "@typescript-eslint/no-explicit-any": 6
+        "@typescript-eslint/no-explicit-any": 6,
+        "react-hooks/exhaustive-deps": 8
       }
     },
     "src/pages/admin/ai-insights": {
@@ -2895,10 +2892,6 @@
     },
     "src/pages/academy/AcademyWorkbooksPage.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/pages/admin/BulkInvite.tsx": {
-      "react-hooks/rules-of-hooks": 4,
-      "react-hooks/exhaustive-deps": 2
     },
     "src/pages/admin/ClickUpTenantMapping.tsx": {
       "@typescript-eslint/no-explicit-any": 6
