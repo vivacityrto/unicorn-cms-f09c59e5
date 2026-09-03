@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-03T08:16:42.674Z",
-  "baselineSha": "220935c642f15116fe2738ab13cc8ab105262204",
+  "generatedAt": "2026-09-03T08:34:05.960Z",
+  "baselineSha": "f838b3bdb18f774503980682c6377b768a1b994f",
   "totals": {
     "files": 1785,
     "filesWithFindings": 623,
     "errors": 3744,
-    "warnings": 138
+    "warnings": 132
   },
   "byRule": {
     "@typescript-eslint/no-explicit-any": 3737,
-    "react-hooks/exhaustive-deps": 100,
+    "react-hooks/exhaustive-deps": 94,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
       "errors": 3076,
-      "warnings": 138,
+      "warnings": 132,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3069,
-        "react-hooks/exhaustive-deps": 100,
+        "react-hooks/exhaustive-deps": 94,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -141,11 +141,10 @@
     },
     "src/components/client": {
       "errors": 352,
-      "warnings": 11,
+      "warnings": 5,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 350,
         "@typescript-eslint/no-unused-expressions": 2,
-        "react-hooks/exhaustive-deps": 6,
         "react-refresh/only-export-components": 5
       }
     },
@@ -1564,15 +1563,13 @@
       "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/client/ClientStructuredNotesTab.tsx": {
-      "react-hooks/exhaustive-deps": 2,
       "@typescript-eslint/no-explicit-any": 10
     },
     "src/components/client/ClientTimeSummaryCard.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
     "src/components/client/ClientTimeTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 71,
-      "react-hooks/exhaustive-deps": 4
+      "@typescript-eslint/no-explicit-any": 71
     },
     "src/components/client/ClientTimelineTab.tsx": {
       "react-refresh/only-export-components": 1,
