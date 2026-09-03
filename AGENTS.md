@@ -193,6 +193,45 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   actual tables; that reconciliation is out of scope for a Phase 0 tooling
   change. Run it manually, or make it a CI gate once Phase 1 lands.
 
+## Workflow efficiency checkpoints (standing practice, added 2026-09-04)
+
+When starting a new phase of a multi-batch plan (e.g. a new sub-phase of
+`docs/kb/reference/codebase-optimization-plan-2026-08-28.md`), or after
+~5-10 batches of the same repetitive pattern within a phase, pause and
+actively look for ways to cut *overhead* before continuing — never by
+cutting a verification step. Every shipped change still gets the full
+sequence: `lint:ratchet`, `typecheck`, `test:frontend`, `test:edge`, and a
+live Playwright check. The things worth reviewing each time:
+
+- **Worktree reuse.** A fresh `EnterWorktree` + `npm install` per tiny
+  batch pays a full dependency install every time. When doing a run of
+  several small, same-shaped fixes back to back, do them in one
+  persistent worktree (rebase onto `origin/main` between merges) instead
+  of a fresh worktree per PR.
+- **Parallel verification.** `typecheck`, `test:frontend`, and `test:edge`
+  are independent — run them concurrently (background one or two, block
+  on all three) instead of one after another. Wall-clock cost becomes
+  roughly the slowest of the three, not the sum.
+- **Batch sizing.** If remaining work in a phase has degraded into
+  scattered single-file findings with no shared feature area (no more
+  natural clusters), the per-PR overhead (worktree setup, PR creation,
+  merge, doc updates) starts costing more than the actual fix. Group
+  several unrelated small fixes into one PR instead of one PR each —
+  every file still gets its own lint check and live verification, just
+  under fewer total PR cycles.
+- **Build caches.** Check whether a slow verification step has an
+  available incremental/cache mode before assuming its cost is fixed.
+  Example: `npm run typecheck` cold-compiled the whole project on every
+  run (~2m45s) until `tsconfig.app.json`/`tsconfig.node.json` gained
+  `incremental: true` + an explicit `tsBuildInfoFile` (PR #548) — a pure
+  build-cache change, verified to produce an identical result, that cut
+  repeat runs to ~15s (~11x). Re-check this kind of thing doesn't already
+  exist before optimizing some other part of the pipeline instead.
+
+The bar for any of these: does it reduce repeated overhead without
+skipping, weakening, or reordering-around a verification step? If yes,
+it's fair game to apply proactively, not just when asked.
+
 ## Local dev server troubleshooting (Windows)
 
 **`npm run dev` hangs forever at `[optimizer] scanning dependencies...`**
