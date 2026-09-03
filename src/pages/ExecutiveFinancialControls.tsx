@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -77,8 +76,8 @@ export default function ExecutiveFinancialControls() {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setRecords(data ?? []);
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -99,8 +98,8 @@ export default function ExecutiveFinancialControls() {
       setIsCreateOpen(false);
       setFormData(defaultForm);
       fetchRecords();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
   };
 
@@ -121,8 +120,8 @@ export default function ExecutiveFinancialControls() {
       setSelected(null);
       setFormData(defaultForm);
       fetchRecords();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
   };
 
@@ -135,8 +134,8 @@ export default function ExecutiveFinancialControls() {
       setIsDeleteOpen(false);
       setSelected(null);
       fetchRecords();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
   };
 
@@ -194,7 +193,6 @@ export default function ExecutiveFinancialControls() {
   );
 
   return (
-    <DashboardLayout>
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate('/executive')} className="gap-2">
@@ -312,6 +310,5 @@ export default function ExecutiveFinancialControls() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </DashboardLayout>
   );
 }

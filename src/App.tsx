@@ -51,23 +51,16 @@ const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
  const TasksManagementWrapper = lazy(() => import("./pages/TasksManagementWrapper"));
  const ClickUpImport = lazy(() => import("./pages/ClickUpImport"));
  const MembershipDashboardWrapper = lazy(() => import("./pages/MembershipDashboardWrapper"));
- const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
- const ExecutiveFinancialControls = lazy(() => import("./pages/ExecutiveFinancialControls"));
- const ExecutiveClientCommitments = lazy(() => import("./pages/ExecutiveClientCommitments"));
- const ExecutiveDecisionQueue = lazy(() => import("./pages/ExecutiveDecisionQueue"));
  const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
 const OnboardingHubPage = lazy(() => import("./pages/admin/OnboardingHubPage"));
 const MyExitInterview = lazy(() => import("./pages/MyExitInterview"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
- const MyWork = lazy(() => import("./pages/MyWork"));
- const CalendarTimeCapture = lazy(() => import("./pages/CalendarTimeCapture"));
  const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
  const XeroCallback = lazy(() => import("./pages/XeroCallback"));
 const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
 const ProcessForm = lazy(() => import("./pages/ProcessForm"));
-const AskVivAssistant = lazy(() => import("./pages/AskVivAssistant"));
 const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
 
@@ -172,14 +165,6 @@ const App = () => (
               } 
             />
             <Route
-              path="/calendar/time-capture"
-              element={
-                <ProtectedRoute>
-                  <CalendarTimeCapture />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
               path="/calendar/outlook-callback"
               element={<OutlookCallback />}
             />
@@ -215,15 +200,7 @@ const App = () => (
               } 
             />
             <Route
-              path="/my-work" 
-              element={
-                <ProtectedRoute>
-                  <MyWork />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/tasks" 
+              path="/tasks"
               element={
                 <ProtectedRoute>
                   <TasksManagementWrapper />
@@ -311,11 +288,6 @@ const App = () => (
             />
             {/* Membership Dashboard */}
             <Route path="/membership-dashboard" element={<ProtectedRoute><MembershipDashboardWrapper /></ProtectedRoute>} />
-            {/* Executive Dashboard – Internal Only */}
-            <Route path="/executive" element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
-            <Route path="/executive/financial-controls" element={<ProtectedRoute requireSuperAdmin><ExecutiveFinancialControls /></ProtectedRoute>} />
-            <Route path="/executive/client-commitments" element={<ProtectedRoute requireSuperAdmin><ExecutiveClientCommitments /></ProtectedRoute>} />
-            <Route path="/executive/decision-queue" element={<ProtectedRoute requireSuperAdmin><ExecutiveDecisionQueue /></ProtectedRoute>} />
             {/* Client Detail route removed — consolidated into /tenant/:tenantId above */}
             {/* Admin User Audit */}
             <Route path="/admin/user-audit" element={<ProtectedRoute><AdminUserAudit /></ProtectedRoute>} />
@@ -325,8 +297,6 @@ const App = () => (
             {/* Admin Stages */}
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
-            {/* Ask Viv Assistant - new conversational RAG bot, Vivacity staff only (self-gated inside the page via canAccessAskViv() + rollout flags) */}
-            <Route path="/ask-viv" element={<ProtectedRoute><AskVivAssistant /></ProtectedRoute>} />
             {/* QA Responsive Harness - SuperAdmin/VivacityTeam only */}
             <Route path="/admin/qa/responsive" element={<ProtectedRoute requireSuperAdmin><QAResponsiveHarness /></ProtectedRoute>} />
             {/* QA Smoke Test - SuperAdmin/VivacityTeam only */}

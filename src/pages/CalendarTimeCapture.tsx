@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, subDays, addDays } from 'date-fns';
 import { Calendar, Clock, Users, Video, Plus, RefreshCw, Check, X, Sparkles, Link2, Loader2, Bug, CheckCircle, XCircle, AlertCircle, Bot } from 'lucide-react';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -261,21 +260,21 @@ export default function CalendarTimeCapture() {
 
   const fetchStagesForPackage = async (packageId: number) => {
     // Load stages via package_stages
-    const { data: psData } = await (supabase
+    const { data: psData } = await supabase
       .from('package_stages')
       .select('stage_id')
-      .eq('package_id', packageId) as any);
-    
+      .eq('package_id', packageId);
+
     if (psData && psData.length > 0) {
-      const stageIds = psData.map((ps: any) => ps.stage_id);
-      
+      const stageIds = psData.map((ps) => ps.stage_id);
+
       if (stageIds.length > 0) {
         const { data: dsData } = await supabase
           .from('stages')
           .select('id, name')
           .in('id', stageIds);
-        
-        setStages((dsData || []).map((ds: any) => ({ id: ds.id, name: ds.name })));
+
+        setStages((dsData || []).map((ds) => ({ id: ds.id, name: ds.name })));
       } else {
         setStages([]);
       }
@@ -388,97 +387,92 @@ export default function CalendarTimeCapture() {
   // Show loading state while checking connection
   if (initializing) {
     return (
-      <DashboardLayout>
-        <div className="p-6 flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground">Loading calendar...</p>
-          </div>
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading calendar...</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (!connected) {
     return (
-      <DashboardLayout>
-        <div className="p-6 space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Time Capture</h1>
-            <p className="text-muted-foreground">Log time from your calendar meetings</p>
-          </div>
-          <Card className="max-w-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Connect Outlook Calendar
-              </CardTitle>
-              <CardDescription>
-                Connect your Microsoft Outlook calendar to import meetings and create time entries.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {awaitingOAuthReturn ? (
-                <>
-                  <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Complete the Microsoft login in the new tab, then click below.
-                  </p>
-                  <Button onClick={handleRefreshConnection} disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Checking...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Refresh Connection
-                      </>
-                    )}
-                  </Button>
-                </>
-              ) : pendingAuthUrl ? (
-                <>
-                  <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Popup was blocked. Click the link below to open Microsoft login:
-                  </p>
-                  <a 
-                    href={pendingAuthUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary underline text-sm"
-                    onClick={() => setAwaitingOAuthReturn(true)}
-                  >
-                    Open Microsoft Login
-                  </a>
-                  <Button onClick={handleRefreshConnection} variant="outline" size="sm" disabled={loading}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    I've completed login
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={handleConnect} disabled={loading}>
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Time Capture</h1>
+          <p className="text-muted-foreground">Log time from your calendar meetings</p>
+        </div>
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Connect Outlook Calendar
+            </CardTitle>
+            <CardDescription>
+              Connect your Microsoft Outlook calendar to import meetings and create time entries.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {awaitingOAuthReturn ? (
+              <>
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  Complete the Microsoft login in the new tab, then click below.
+                </p>
+                <Button onClick={handleRefreshConnection} disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Connecting...
+                      Checking...
                     </>
                   ) : (
-                    'Connect Outlook'
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh Connection
+                    </>
                   )}
                 </Button>
-              )}
-              
-              {canAccessAdmin && <AdminDebugPanel />}
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
+              </>
+            ) : pendingAuthUrl ? (
+              <>
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  Popup was blocked. Click the link below to open Microsoft login:
+                </p>
+                <a
+                  href={pendingAuthUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline text-sm"
+                  onClick={() => setAwaitingOAuthReturn(true)}
+                >
+                  Open Microsoft Login
+                </a>
+                <Button onClick={handleRefreshConnection} variant="outline" size="sm" disabled={loading}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  I've completed login
+                </Button>
+              </>
+            ) : (
+              <Button onClick={handleConnect} disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  'Connect Outlook'
+                )}
+              </Button>
+            )}
+
+            {canAccessAdmin && <AdminDebugPanel />}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -809,6 +803,5 @@ export default function CalendarTimeCapture() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
   );
 }

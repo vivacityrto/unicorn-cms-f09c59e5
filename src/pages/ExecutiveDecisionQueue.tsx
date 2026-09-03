@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,8 +73,8 @@ export default function ExecutiveDecisionQueue() {
         .order('submitted_at', { ascending: false });
       if (error) throw error;
       setRecords(data ?? []);
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -99,15 +99,15 @@ export default function ExecutiveDecisionQueue() {
       setIsCreateOpen(false);
       setFormData(defaultForm);
       fetchRecords();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
   };
 
   const handleEdit = async () => {
     if (!selected) return;
     try {
-      const updates: Record<string, any> = {
+      const updates: TablesUpdate<'ceo_decision_queue'> = {
         title: formData.title,
         description: formData.description || null,
         impact_level: formData.impact_level,
@@ -120,15 +120,15 @@ export default function ExecutiveDecisionQueue() {
         updates.decided_at = new Date().toISOString();
         updates.decided_by = user?.id ?? null;
       }
-      const { error } = await supabase.from('ceo_decision_queue').update(updates as any).eq('id', selected.id);
+      const { error } = await supabase.from('ceo_decision_queue').update(updates).eq('id', selected.id);
       if (error) throw error;
       toast({ title: 'Success', description: 'Decision item updated' });
       setIsEditOpen(false);
       setSelected(null);
       setFormData(defaultForm);
       fetchRecords();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
   };
 
@@ -141,8 +141,8 @@ export default function ExecutiveDecisionQueue() {
       setIsDeleteOpen(false);
       setSelected(null);
       fetchRecords();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
   };
 
@@ -207,7 +207,6 @@ export default function ExecutiveDecisionQueue() {
   );
 
   return (
-    <DashboardLayout>
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate('/executive')} className="gap-2">
@@ -340,6 +339,5 @@ export default function ExecutiveDecisionQueue() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </DashboardLayout>
   );
 }

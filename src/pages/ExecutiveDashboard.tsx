@@ -8,7 +8,6 @@
 
 import { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useAuth } from '@/hooks/useAuth';
 import { useExecutiveHealth, type ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
@@ -50,6 +49,16 @@ import { Loader2, Eye, ShieldAlert, Search } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const VIVACITY_TENANT_UUID = '00000000-0000-0000-0000-000000006372';
+
+interface DiscussionItem {
+  source_key: string;
+  client_name: string | null;
+  title: string;
+  detail: string;
+  severity: 'critical' | 'warning' | 'info';
+  suggested_discussion: string;
+  deep_link_href: string;
+}
 
 export default function ExecutiveDashboard() {
   const { isSuperAdmin } = useRBAC();
@@ -116,8 +125,8 @@ export default function ExecutiveDashboard() {
       toast({ title: 'Review finalised', description: 'Cannot add to a finalised review.', variant: 'destructive' });
       return;
     }
-    const existing = (currentReview.discussion_items as any[]) ?? [];
-    const alreadyAdded = existing.some((item: any) => item.source_key === signal.source_key);
+    const existing = (currentReview.discussion_items as DiscussionItem[]) ?? [];
+    const alreadyAdded = existing.some((item) => item.source_key === signal.source_key);
     if (alreadyAdded) {
       toast({ title: 'Already added', description: 'This signal is already in the notes.' });
       return;
@@ -132,7 +141,7 @@ export default function ExecutiveDashboard() {
       deep_link_href: signal.deep_link_href,
     };
     try {
-      await updateReview({ discussion_items: [...existing, newItem] } as any);
+      await updateReview({ discussion_items: [...existing, newItem] });
       toast({ title: 'Added to notes', description: signal.title });
     } catch {
       // error handled by mutation
@@ -141,18 +150,16 @@ export default function ExecutiveDashboard() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
-          <p className="text-sm text-muted-foreground text-center max-w-md">
-            The Visionary &amp; Integrator Dashboard is available to Super Admins only.
-          </p>
-          <Button variant="outline" onClick={() => navigate('/dashboard')}>
-            Return to Dashboard
-          </Button>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
+        <p className="text-sm text-muted-foreground text-center max-w-md">
+          The Visionary &amp; Integrator Dashboard is available to Super Admins only.
+        </p>
+        <Button variant="outline" onClick={() => navigate('/dashboard')}>
+          Return to Dashboard
+        </Button>
+      </div>
     );
   }
 
@@ -169,16 +176,13 @@ export default function ExecutiveDashboard() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="space-y-3 p-3 md:p-4 max-w-screen-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -324,6 +328,5 @@ export default function ExecutiveDashboard() {
         />
         <CopilotPanel context={{ context_mode: 'executive' }} />
       </div>
-    </DashboardLayout>
   );
 }

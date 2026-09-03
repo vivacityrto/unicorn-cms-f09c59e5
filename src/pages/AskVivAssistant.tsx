@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,18 +68,16 @@ export default function AskVivAssistant() {
 
   if (!enabled) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-[calc(100vh-120px)]">
-          <Card className="max-w-md">
-            <CardHeader>
-              <CardTitle>Ask Viv Assistant isn't available yet</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              This is a new feature being rolled out gradually. Check back soon, or ask an admin about access.
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-[calc(100vh-120px)]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Ask Viv Assistant isn't available yet</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            This is a new feature being rolled out gradually. Check back soon, or ask an admin about access.
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -123,7 +120,6 @@ export default function AskVivAssistant() {
   };
 
   return (
-    <DashboardLayout>
       <div className="flex h-[calc(100vh-120px)] gap-4 p-4">
         {/* Left panel — conversation history */}
         <Card className="w-80 flex flex-col">
@@ -253,6 +249,5 @@ export default function AskVivAssistant() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }
