@@ -120,6 +120,8 @@ const EosQC = lazy(() => import("@/pages/EosQC"));
 const EosQCSession = lazy(() => import("@/pages/EosQCSession"));
 const EosPeopleAnalyzer = lazy(() => import("@/pages/EosPeopleAnalyzer"));
 const EosClientImpactDetail = lazy(() => import("@/pages/EosClientImpactDetail"));
+const ProcessDetail = lazy(() => import("@/pages/ProcessDetail"));
+const ProcessForm = lazy(() => import("@/pages/ProcessForm"));
 const EosClientImpact = lazy(() => import("@/pages/EosClientImpact"));
 const EosGWCTrends = lazy(() => import("@/pages/EosGWCTrends"));
 const EosRockAnalysis = lazy(() => import("@/pages/EosRockAnalysis"));
@@ -543,6 +545,19 @@ const MainDashboard = lazy(() => import("@/pages/MainDashboard"));
  * (AuditTemplateBuilder's full-screen-mode split, and the orphaned
  * /client/settings route), plus one optional dead-code cleanup PR --
  * none of the three block this migration's own completion.
+ *
+ * Follow-up correction (found 2026-09-03, during Phase 2.5 lint-debt work,
+ * not part of the original 18-PR sequence): ProcessDetail.tsx and
+ * ProcessForm.tsx were part of the plan's original 26-file EOS/processes
+ * inventory but were dropped between PR 10 (EOS overview/read-only) and
+ * PR 11 (EOS interactive/detail) and never converted -- the "~122 staff
+ * pages" claim above was 113/115, not 115/115. Fixed here: both files had
+ * no page-local hard redirect (only display-only isSuperAdmin/isAdmin role
+ * checks, same as several PR 11 files), so this is the same mechanical
+ * plain-tier conversion as every other file in this block. Both needed a
+ * Fragment (each has a sibling AlertDialog/Dialog alongside its main
+ * content div across all return branches), same as NewStarterWizard and
+ * BulkInvite in the Administration cohorts.
  */
 export const dashboardLayoutRoutes = (
   <>
@@ -710,6 +725,9 @@ export const dashboardLayoutRoutes = (
       <Route path="/documents" element={<Dashboard />} />
       <Route path="/reports" element={<Dashboard />} />
       <Route path="/messages" element={<Dashboard />} />
+      <Route path="/processes/new" element={<ProcessForm />} />
+      <Route path="/processes/:id" element={<ProcessDetail />} />
+      <Route path="/processes/:id/edit" element={<ProcessForm />} />
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />

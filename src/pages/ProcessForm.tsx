@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useProcess, useProcesses, ProcessCategory, ProcessStatus, ProcessAppliesTo, getCategoryLabel, CreateProcessInput, UpdateProcessInput } from '@/hooks/useProcesses';
 import { useAuth } from '@/hooks/useAuth';
 import { useTenantTeamUsers, getUserDisplayName as getTenantUserDisplayName } from '@/hooks/useTenantTeamUsers';
@@ -224,17 +223,15 @@ export default function ProcessForm() {
 
   if (processLoading && isEditing) {
     return (
-      <DashboardLayout>
-        <div className="space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </DashboardLayout>
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-96 w-full" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6 max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -522,6 +519,6 @@ export default function ProcessForm() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </>
   );
 }

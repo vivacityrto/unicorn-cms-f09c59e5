@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { useProcess, useProcessVersions, useProcessAuditLog, useProcesses, getCategoryLabel, getStatusLabel, ProcessStatus } from '@/hooks/useProcesses';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -58,29 +57,25 @@ export default function ProcessDetail() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-48 w-full" />
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </DashboardLayout>
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
     );
   }
 
   if (!process) {
     return (
-      <DashboardLayout>
-        <div className="text-center py-16">
-          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Process not found</h2>
-          <p className="text-muted-foreground mb-4">The process you're looking for doesn't exist or you don't have access.</p>
-          <Button onClick={() => navigate('/processes')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Processes
-          </Button>
-        </div>
-      </DashboardLayout>
+      <div className="text-center py-16">
+        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Process not found</h2>
+        <p className="text-muted-foreground mb-4">The process you're looking for doesn't exist or you don't have access.</p>
+        <Button onClick={() => navigate('/processes')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Processes
+        </Button>
+      </div>
     );
   }
 
@@ -122,7 +117,7 @@ export default function ProcessDetail() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -434,6 +429,6 @@ export default function ProcessDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </>
   );
 }
