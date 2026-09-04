@@ -137,7 +137,7 @@ Admin starts an audit for a client
   → Report generated (/audits/:id/report)
 ```
 
-Hooks: [src/hooks/useAudits.tsx](../../../src/hooks/useAudits.tsx), [src/hooks/useAuditTemplates.tsx](../../../src/hooks/useAuditTemplates.tsx), [src/hooks/useReusableAuditTemplates.tsx](../../../src/hooks/useReusableAuditTemplates.tsx).
+Hooks: the active audit flow uses [src/hooks/useAuditTemplates.tsx](../../../src/hooks/useAuditTemplates.tsx) and [src/hooks/useReusableAuditTemplates.tsx](../../../src/hooks/useReusableAuditTemplates.tsx); the legacy `useAudits` hook was retired in Phase 2.6 PR #588.
 
 **Note:** `generate-audit-report` edge function is still not found. The AI drafting stack (finding drafter, evidence analyser, executive summary drafter) shipped 29–30 April 2026 and lives in this codebase — see flows below.
 

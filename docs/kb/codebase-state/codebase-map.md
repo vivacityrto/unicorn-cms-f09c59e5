@@ -174,7 +174,7 @@ Client-facing Ask Viv panel (`ClientAskVivPanel.tsx`, calls `ask-viv-assistant-c
 |---|---|
 | [useAuth.tsx](../../../src/hooks/useAuth.tsx) | Session + profile; `AuthProvider` context |
 | useAISuggestions | Wraps `ai-generate-suggestions` edge function |
-| useAudits, useClientAudits, useClientAuditPortal, useAuditWorkspace, useAuditTemplates, useReusableAuditTemplates, useAuditPrep, useAuditSchedule, useAuditScheduler, useAuditActionPlan, useAuditReferences, useAuditReport, useComplianceAudits, useEngagementAudit, useDocumentSyncAudit, useStageAuditLink, useStageAuditLog, useUserAudit | Audits domain (17 hooks). `useClientAudits` and `useAuditWorkspace` carry the workspace-page reads/writes; mutations go direct against `client_audits` / related tables (no edge function). |
+| useClientAudits, useClientAuditPortal, useAuditWorkspace, useAuditTemplates, useReusableAuditTemplates, useAuditPrep, useAuditSchedule, useAuditScheduler, useAuditActionPlan, useAuditReferences, useAuditReport, useComplianceAudits, useEngagementAudit, useDocumentSyncAudit, useStageAuditLink, useStageAuditLog, useUserAudit | Audits domain (16 active hooks). `useClientAudits` and `useAuditWorkspace` carry the workspace-page reads/writes; mutations go direct against `client_audits` / related tables (no edge function). The retired legacy `useAudits` hook was removed in Phase 2.6 PR #588. |
 | useDashboardData | Dashboard aggregates |
 | useEos | Top-level EOS data |
 | useEosAgendaTemplates, useEosDrafts, useEosHeadlines, useEosMeetingRecurrences, useEosMeetingSegments, useEosScorecardEntries, useEosScorecardMetrics | EOS subdomain hooks |
@@ -196,7 +196,7 @@ Client-facing Ask Viv panel (`ClientAskVivPanel.tsx`, calls `ask-viv-assistant-c
 
 ### Types — [src/types/](../../../src/types/)
 
-- [audit.ts](../../../src/types/audit.ts) — Audit domain types
+- Legacy `audit.ts` types were retired with the disconnected Audit island in Phase 2.6 PR #588.
 - [auditWorkspace.ts](../../../src/types/auditWorkspace.ts) — Workspace-specific types (tabs, phases, autosave payloads)
 - [auditReferences.ts](../../../src/types/auditReferences.ts) — Reference / evidence types
 - [eos.ts](../../../src/types/eos.ts) — EOS domain types

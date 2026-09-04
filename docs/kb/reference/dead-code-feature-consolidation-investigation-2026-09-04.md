@@ -44,7 +44,7 @@ These have replacement and isolation evidence strong enough to enter the first i
 
 The immediately actionable first-wave potential was about **6,627 lines**, already above the parent plan's original 3,000–6,000 conservative target. That was a reason to split it into domain PRs, not to raise deletion scope automatically. **Update 2026-09-04:** four retired cohorts account for about 6,442 lines; the remaining first-wave candidates (orphaned document-version hook and unused landing-page alias) total about 185 lines.
 
-`src/pages/Audits.tsx` (396 LOC), `src/pages/AuditWorkspace.tsx` (152), and `src/pages/AuditWorkspacePlaceholder.tsx` (66) are also unused by current route rendering, but they are deliberately excluded from the immediate first-wave total. Treat them with the Audit convergence slice below so the complete legacy URL behavior is characterized together before any Audit deletion.
+The formerly unused Audit shells and their exclusive legacy dependencies were characterized with the UUID route-convergence slice in [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586), then retired in [#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588) after authenticated parity evidence. The active replacements remain `AuditsAssessments` and `AuditWorkspaceNew`.
 
 ### 3.2 Cohesive second-wave islands
 
@@ -102,7 +102,7 @@ Treat this as a Phase 2.6 consolidation slice:
 
 1. Characterize the current workspace tabs, the three legacy deep links, generated links, browser refresh, permission behavior, and failure states.
 2. Add canonical UUID-aware tab/deep-link behavior or deliberate redirects into `AuditWorkspaceNew`.
-3. Only after parity, retire the self-contained legacy frontend island (`Audits`, `AuditWorkspace`, placeholder, legacy subpages, `useAudits`, legacy audit types, and exclusive components), estimated at about 1,485 LOC.
+3. After parity, retire the self-contained legacy frontend island (`Audits`, `AuditWorkspace`, placeholder, legacy subpages, `useAudits`, legacy audit types, and exclusive components). This shipped in [#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588), removing 1,607 exact physical LOC with no database or policy changes.
 4. Treat any old table, RPC, function, or policy retirement as a later audited database slice with live dependency, row, grant, deployed-caller, and observation evidence.
 
 Do not delete the three currently routed subpages merely because their contract looks stale; they remain reachable until the route convergence lands.
@@ -194,9 +194,9 @@ No plan or council approval authorizes a production migration/deployment, extern
 | Item | Status | Evidence |
 |---|---|---|
 | Three-seat council investigation | Complete 2026-09-04 | dead-code/import graph, feature/database consolidation, and RBAC/tenant alignment seats |
-| Phase 2.6 plan insertion | Implementation underway | All 6 §3.1 highest-confidence cohorts are retired: [#570](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/570), [#571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571), [#574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574), [#577](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/577), and [#579](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/579), all merged 2026-09-04. Remaining: Audit convergence and broader consolidation candidates. |
+| Phase 2.6 plan insertion | Implementation underway | All highest-confidence dead-code cohorts are retired: [#570](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/570), [#571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571), [#574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574), [#577](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/577), [#579](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/579), and Audit work [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586)/[#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588). Remaining work is bounded consolidation candidates. |
 | High-confidence cohorts | 6 of 6 retired | Audit convergence is a separate source-proven slice intentionally gated on UUID/deep-link characterization; broader consolidation remains investigative |
-| Audit route convergence | Implemented in [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586), merged 2026-09-04 | Legacy `/audits/:id/findings`, `/actions`, and `/report` now redirect via history replacement to the canonical UUID workspace with the matching `?tab=` selected. Authenticated Super Admin verification passed with real data, refresh/back/forward, zero console errors, and zero writes. The legacy standalone pages remain candidates for the next deletion PR. |
+| Audit route convergence and island retirement | Implemented in [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586) and [#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588) | Legacy deep links redirect via history replacement to the canonical UUID workspace with matching `?tab=` selection. Authenticated verification passed with real data, refresh/back/forward, zero console errors, and zero writes. The unreachable legacy island and exclusive dependencies were removed in #588; active canonical flow is unchanged. |
 | Clone consolidation | Candidate register complete | parity fixtures not started |
 | RBAC v6 implementation | Not started | P0.1/P0.6/P1 design may overlap; P0.2–P0.5 and P2–P4 form the implementation gate |
 | Tenant P0/P1+ implementation | Not started | P0.1/P0.3 may read production; P0.2 is disposable-only; P1+ awaits RBAC gate |
