@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T15:18:55.792Z",
-  "baselineSha": "1863b6c6e8b67a09a7d4d7c40040f334e28b8a22",
+  "generatedAt": "2026-09-04T15:32:20.915Z",
+  "baselineSha": "dfeeb3eb365e10117914e06a823dd16f52bab14d",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 447,
-    "errors": 2257,
+    "filesWithFindings": 446,
+    "errors": 2218,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2250,
+    "@typescript-eslint/no-explicit-any": 2211,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1589,
+      "errors": 1550,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1582,
+        "@typescript-eslint/no-explicit-any": 1543,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -241,10 +241,10 @@
       }
     },
     "src/components/kpi": {
-      "errors": 67,
+      "errors": 28,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 67
+        "@typescript-eslint/no-explicit-any": 28
       }
     },
     "src/components/layout": {
@@ -1481,9 +1481,6 @@
     },
     "src/components/kpi/KpiReporterTicketView.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/components/kpi/MyKpiSignOffSection.tsx": {
-      "@typescript-eslint/no-explicit-any": 39
     },
     "src/components/kpi/RaiseTicketSheet.tsx": {
       "@typescript-eslint/no-explicit-any": 3
