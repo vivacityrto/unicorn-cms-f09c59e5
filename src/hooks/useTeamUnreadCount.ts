@@ -14,6 +14,12 @@ import { supabase } from "@/integrations/supabase/client";
  * participant are deliberately excluded — they have no `last_read_at` and
  * would otherwise inflate the badge for every staff user.
  */
+interface UnreadRow {
+  conversation_id: string;
+  last_read_at: string | null;
+  tenant_conversations: { last_message_at: string | null } | null;
+}
+
 export function useTeamUnreadCount() {
   const qc = useQueryClient();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -35,7 +41,7 @@ export function useTeamUnreadCount() {
     const convoChannel = supabase
       .channel("team-unread-badge-convos")
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         { event: "UPDATE", schema: "public", table: "tenant_conversations" },
         invalidate
       )
@@ -44,7 +50,7 @@ export function useTeamUnreadCount() {
     const participantChannel = supabase
       .channel("team-unread-badge-participants")
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
@@ -69,17 +75,18 @@ export function useTeamUnreadCount() {
       // Drive the count from participation. `!inner` enforces the join so
       // rows with no parent conversation are dropped, and the embedded
       // `.not(...)` keeps only conversations that have any messages.
-      const { data: rows, error } = await (supabase
-        .from("conversation_participants" as any)
-        .select(
-          "conversation_id, last_read_at, tenant_conversations!inner(last_message_at)"
-        )
+      const { data: rows, error } = await supabase
+        .from("conversation_participants")
+        .select<
+          "conversation_id, last_read_at, tenant_conversations!inner(last_message_at)",
+          UnreadRow
+        >("conversation_id, last_read_at, tenant_conversations!inner(last_message_at)")
         .eq("user_id", currentUserId)
-        .not("tenant_conversations.last_message_at", "is", null)) as any;
+        .not("tenant_conversations.last_message_at", "is", null);
 
       if (error || !rows?.length) return 0;
 
-      return (rows as any[]).filter((r: any) => {
+      return rows.filter((r) => {
         const lastMessageAt = r.tenant_conversations?.last_message_at;
         if (!lastMessageAt) return false;
         if (!r.last_read_at) return true;

@@ -28,7 +28,7 @@ export function useStaffRoles() {
     queryKey: ["dd_staff_role"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("dd_staff_role" as any)
+        .from("dd_staff_role")
         .select("*")
         .eq("is_active", true)
         .order("sort_order");
@@ -44,7 +44,7 @@ export function useStaffLocations() {
     queryKey: ["dd_staff_location"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("dd_staff_location" as any)
+        .from("dd_staff_location")
         .select("*")
         .eq("is_active", true)
         .order("sort_order");
@@ -60,7 +60,7 @@ export function useResolvedRule(roleCode: string | null, locationCode: string | 
     queryKey: ["staff_provisioning_rule", roleCode, locationCode],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("staff_provisioning_rules" as any)
+        .from("staff_provisioning_rules")
         .select("*")
         .eq("role_code", roleCode!)
         .eq("location_code", locationCode!)
@@ -79,7 +79,7 @@ export function useStaffProvisioningRules() {
     queryKey: ["staff_provisioning_rules"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("staff_provisioning_rules" as any)
+        .from("staff_provisioning_rules")
         .select("*")
         .order("role_code")
         .order("location_code");
@@ -89,10 +89,10 @@ export function useStaffProvisioningRules() {
   });
 
   const upsert = useMutation({
-    mutationFn: async (rule: Partial<StaffProvisioningRule>) => {
+    mutationFn: async (rule: Partial<StaffProvisioningRule> & Pick<StaffProvisioningRule, 'role_code' | 'location_code'>) => {
       const { data, error } = await supabase
-        .from("staff_provisioning_rules" as any)
-        .upsert(rule as any, { onConflict: "role_code,location_code" })
+        .from("staff_provisioning_rules")
+        .upsert(rule, { onConflict: "role_code,location_code" })
         .select()
         .single();
       if (error) throw error;
