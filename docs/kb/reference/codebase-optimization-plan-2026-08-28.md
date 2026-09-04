@@ -1256,6 +1256,16 @@ Baseline dropped 3090→2954 (136 targeted, no compensating increase, confirmed 
 
 ### Phase 2.6 — verified retirement and bounded consolidation (council-planned 2026-09-04)
 
+**Parallel preparation checkpoint (2026-09-04):** while Phase 2.5 remains
+active, read-only characterization for the next boundary and reliability
+phases is recorded in [`phase-3-5-parallel-preparation-packets-2026-09-04.md`](phase-3-5-parallel-preparation-packets-2026-09-04.md).
+It covers the Lifecycle Checklists Phase 3 pilot, auth/permission seam
+inventory, package/messaging/document reliability design gates, and the
+authenticated Edge title-extraction clone candidate. These packets do not
+authorize runtime, schema, RLS, RPC, trigger, grant, or public-contract
+changes; they exist to keep the CPU-heavy implementation lane focused while
+Claude completes Phase 2.5.
+
 The three-seat council investigation is complete and recorded in [`dead-code-feature-consolidation-investigation-2026-09-04.md`](dead-code-feature-consolidation-investigation-2026-09-04.md). **Checkpoint 2026-09-04:** all six original highest-confidence cohorts are now implemented and merged through #570, #571, #574, #577, #579, and #588; #586 supplied the required Audit UUID route convergence before #588 removed the legacy island. The remaining Phase 2.6 queue is therefore bounded consolidation and redesign candidates, not proven dead-code deletion. Phase 2.5 remains the active lane while Claude completes its declared batches (latest merged checkpoint: #590); declare its exit only after the final baseline, full verification contract, and Playwright evidence are recorded. Each future implementation PR must still regenerate import-graph, route, and metrics evidence from its own fresh branch-cut SHA; the register is evidence, not standing deletion authority, and `origin/main` continues to advance past any snapshot.
 
 **Concrete post-Phase-2.5 execution order:** (1) Codex characterizes `AddClientTaskDialog`/`AddStaffTaskDialog` without editing; (2) after the Phase 2.5 exit checkpoint, add focused parity fixtures for create/edit, validation, date offsets, reset/close, failures, owner behavior, and permissions; (3) extract a shared form/controller with thin client/staff adapters while preserving separate `package_client_tasks` and `package_staff_tasks` contracts; (4) run the full lint/type/test/build/Playwright contract and open one PR; (5) only after that cohort merges, evaluate the title-extraction pair, then `useStageQualityCheck`, then the SeatCard presentation core. Any RBAC, tenant-scope, schema, RLS, RPC, trigger, grant, or Edge-contract change exits Phase 2.6 and requires its own aligned vertical slice.

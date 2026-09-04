@@ -151,6 +151,8 @@ or "2x" as a settled number from this data.
    record that finding here too — a tried-and-inconclusive result is still
    worth keeping so it isn't re-tried blind later.
 
+| 2026-09-04 | Prepared Phase 3–5 characterization packets while Claude's Phase 2.5 lane remained active | Read-only source/history work completed without taking the heavy-job mutex, starting a competing Vite server, or changing runtime/schema state. One packet now captures Lifecycle Checklists, auth/RBAC seams, package/messaging/document reliability gates, and authenticated Edge title-extraction contracts. | `phase-3-5-parallel-preparation-packets-2026-09-04.md` |
+
 ## Adding a new entry
 
 1. After a batch merges, run `gh pr view <N> --json mergedAt` for this
