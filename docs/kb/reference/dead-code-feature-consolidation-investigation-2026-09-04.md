@@ -194,8 +194,8 @@ No plan or council approval authorizes a production migration/deployment, extern
 | Item | Status | Evidence |
 |---|---|---|
 | Three-seat council investigation | Complete 2026-09-04 | dead-code/import graph, feature/database consolidation, and RBAC/tenant alignment seats |
-| Phase 2.6 plan insertion | Implementation underway | 3 of 6 §3.1 highest-confidence cohorts merged: [#570](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/570) (legacy admin package island), [#571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571) (legacy tenant-detail island), [#574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574) (stale EOS page), all merged 2026-09-04. Remaining: legacy suggestion pages, orphaned document-version hook, unused landing-page alias. |
-| High-confidence cohorts | 3 of 6 retired, 3 pending | fresh validation still required at each branch cut for the remaining three |
+| Phase 2.6 plan insertion | Implementation underway | 4 of 6 §3.1 highest-confidence cohorts merged: [#570](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/570) (legacy admin package island), [#571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571) (legacy tenant-detail island), [#574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574) (stale EOS page), [#577](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/577) (legacy suggestion pages), all merged 2026-09-04. Remaining: orphaned document-version hook, unused landing-page alias. |
+| High-confidence cohorts | 4 of 6 retired, 2 pending | fresh validation still required at each branch cut for the remaining two |
 | Audit route convergence | Source-proven candidate | characterization not started |
 | Clone consolidation | Candidate register complete | parity fixtures not started |
 | RBAC v6 implementation | Not started | P0.1/P0.6/P1 design may overlap; P0.2–P0.5 and P2–P4 form the implementation gate |
