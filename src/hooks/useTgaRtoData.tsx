@@ -1,12 +1,44 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { Tables } from '@/integrations/supabase/types';
+
+// tenant_rto_scope.tga_data is a Json column; this is the real shape the sync
+// writer populates and every consumer below reads (mixed snake_case/camelCase
+// is pre-existing, not introduced here).
+interface TgaScopeMetadata {
+  scope_state?: string | null;
+  trainingPackageCode?: string | null;
+  statusLabel?: string | null;
+  extentLabel?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  endDate_raw?: string | null;
+  usageRecommendation_raw?: string | null;
+}
+
+type TenantRtoScopeRow = Omit<Tables<'tenant_rto_scope'>, 'tga_data'> & {
+  tga_data: TgaScopeMetadata | null;
+};
+
+// tga_rest_sync_jobs.payload is a Json column; this is the real shape the
+// sync writer populates and the mapper below reads.
+interface TgaSyncJobPayload {
+  started_at?: string;
+  completed_at?: string;
+  scope_counts?: {
+    qualification?: number;
+    skillSet?: number;
+    unit?: number;
+    accreditedCourse?: number;
+  };
+}
 
 // --- Paginated fetch helper to avoid Supabase's 1,000-row default limit ---
 const PAGE_SIZE = 1000;
 
-async function fetchAllTenantScopeRows(tenantId: number) {
-  let all: any[] = [];
+async function fetchAllTenantScopeRows(tenantId: number): Promise<TenantRtoScopeRow[]> {
+  let all: TenantRtoScopeRow[] = [];
   let from = 0;
 
   while (true) {
@@ -19,7 +51,7 @@ async function fetchAllTenantScopeRows(tenantId: number) {
       .range(from, to);
 
     if (error) throw error;
-    const batch = data ?? [];
+    const batch = (data ?? []) as unknown as TenantRtoScopeRow[];
     all = all.concat(batch);
     if (batch.length < PAGE_SIZE) break;
     from += PAGE_SIZE;
@@ -369,7 +401,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           supabase.from('tga_rest_sync_jobs').select('*').eq('tenant_id', tenantId).eq('rto_id', rtoCode).order('created_at', { ascending: false }).limit(1).maybeSingle()
         ]);
 
-        const scopeItems = scopeRes as any[];
+        const scopeItems = scopeRes;
 
         // Fetch exact DB counts and compare with loaded rows
         try {
@@ -400,21 +432,21 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setDeliveryLocations((locationsRes.data || []) as TGADeliveryLocation[]);
 
         // Show Current + teach-out items — DB stores both after sync
-        const isOnScope = (item: any) => {
+        const isOnScope = (item: TenantRtoScopeRow) => {
           const scopeState = item.tga_data?.scope_state;
           if (scopeState === 'current' || scopeState === 'teach_out') return true;
           // Fallback for items persisted before scope_state was added
           const status = (item.status || '').trim().toLowerCase();
           return status === 'current';
         };
-        
+
         // Helper: resolve TGA end date with priority: end_date column > endDate_raw > endDate
-        const resolveEndDate = (item: any) =>
-          item.end_date ?? item.tga_data?.endDate_raw ?? item.tga_data?.endDate ?? null;
+        const resolveEndDate = (item: TenantRtoScopeRow) =>
+          item.tga_data?.endDate_raw ?? item.tga_data?.endDate ?? null;
 
         const quals = scopeItems
-          .filter((item: any) => item.scope_type === 'qualification' && isOnScope(item))
-          .map((item: any) => ({
+          .filter((item) => item.scope_type === 'qualification' && isOnScope(item))
+          .map((item) => ({
             id: item.id,
             qualification_code: item.code,
             qualification_title: item.title,
@@ -432,8 +464,8 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setQualifications(quals);
 
         const unitItems = scopeItems
-          .filter((item: any) => item.scope_type === 'unit' && isOnScope(item))
-          .map((item: any) => ({
+          .filter((item) => item.scope_type === 'unit' && isOnScope(item))
+          .map((item) => ({
             id: item.id,
             unit_code: item.code,
             unit_title: item.title,
@@ -451,8 +483,8 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setUnits(unitItems);
 
         const skillItems = scopeItems
-          .filter((item: any) => item.scope_type === 'skillset' && isOnScope(item))
-          .map((item: any) => ({
+          .filter((item) => item.scope_type === 'skillset' && isOnScope(item))
+          .map((item) => ({
             id: item.id,
             skillset_code: item.code,
             skillset_title: item.title,
@@ -470,8 +502,8 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setSkillsets(skillItems);
 
         const courseItems = scopeItems
-          .filter((item: any) => item.scope_type === 'accreditedCourse' && isOnScope(item))
-          .map((item: any) => ({
+          .filter((item) => item.scope_type === 'accreditedCourse' && isOnScope(item))
+          .map((item) => ({
             id: item.id,
             course_code: item.code,
             course_title: item.title,
@@ -488,8 +520,8 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setCourses(courseItems);
 
         const tpItems = scopeItems
-          .filter((item: any) => item.scope_type === 'trainingPackage' && isOnScope(item))
-          .map((item: any) => ({
+          .filter((item) => item.scope_type === 'trainingPackage' && isOnScope(item))
+          .map((item) => ({
             id: item.id,
             package_code: item.code,
             package_title: item.title,
@@ -506,8 +538,8 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         
         // Map job to legacy format
         if (jobRes.data) {
-          const job = jobRes.data as any;
-          const payload = job.payload || {};
+          const job = jobRes.data;
+          const payload = (job.payload as unknown as TgaSyncJobPayload | null) || {};
           setLatestJob({
             id: job.id,
             status: job.status,
