@@ -1,4 +1,5 @@
 // Types for EOS Quarterly Conversations
+import type { Json } from '@/integrations/supabase/types';
 
 export type QCStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 export type QCVisibility = 'private' | 'hr_only';
@@ -54,7 +55,7 @@ export interface QCAnswer {
   qc_id: string;
   section_key: string;
   prompt_key: string;
-  value_json: Record<string, any>;
+  value_json: Json;
   respondent_role: 'manager' | 'reviewee';
   created_by: string | null;
   created_at: string;

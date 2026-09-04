@@ -71,7 +71,8 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
 
   const getOtherValue = (promptKey: string) => {
     const otherAnswer = otherAnswers.find(a => a.prompt_key === promptKey);
-    return otherAnswer?.value_json?.value || '';
+    const valueJson = otherAnswer?.value_json as { value?: string } | undefined;
+    return valueJson?.value || '';
   };
 
   const renderPromptInput = (prompt: QCPrompt, value: any, isDisabled: boolean, idPrefix: string = '') => {

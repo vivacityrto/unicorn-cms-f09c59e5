@@ -57,7 +57,7 @@ function getAnswerValue(answers: QCAnswer[], sectionKey: string, promptKey: stri
   const a = answers.find(
     ans => ans.section_key === sectionKey && ans.prompt_key === promptKey && ans.respondent_role === role
   );
-  return a?.value_json?.value ?? '';
+  return (a?.value_json as { value?: string } | undefined)?.value ?? '';
 }
 
 function renderSectionHtml(

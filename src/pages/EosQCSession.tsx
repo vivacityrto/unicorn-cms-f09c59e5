@@ -130,8 +130,9 @@ export default function EosQCSession() {
     if (answers) {
       const respondent = profile?.user_uuid === qc?.reviewee_id ? 'reviewee' : 'manager';
       const summaryAnswer = answers.find(a => a.section_key === 'summary' && a.prompt_key === 'conversation_summary' && a.respondent_role === respondent);
-      if (summaryAnswer?.value_json?.value) {
-        setSummaryText(summaryAnswer.value_json.value);
+      const summaryValue = (summaryAnswer?.value_json as { value?: string } | undefined)?.value;
+      if (summaryValue) {
+        setSummaryText(summaryValue);
       }
     }
   }, [answers, profile?.user_uuid, qc?.reviewee_id]);
