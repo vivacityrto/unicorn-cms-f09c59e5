@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T23:07:52.706Z",
-  "baselineSha": "2ee4bf3038a70b3e9eb5e87b7b6f81fa16b38df8",
+  "generatedAt": "2026-09-04T23:17:25.836Z",
+  "baselineSha": "cf321f96713804fd13ced37b9ae119934f4bf728",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 385,
-    "errors": 1390,
+    "filesWithFindings": 383,
+    "errors": 1378,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1383,
+    "@typescript-eslint/no-explicit-any": 1371,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 722,
+      "errors": 710,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 715,
+        "@typescript-eslint/no-explicit-any": 703,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -61,10 +61,10 @@
       }
     },
     "src/components/academy/builder": {
-      "errors": 16,
+      "errors": 10,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 15,
+        "@typescript-eslint/no-explicit-any": 9,
         "@typescript-eslint/no-unused-expressions": 1
       }
     },
@@ -372,10 +372,10 @@
       }
     },
     "src/hooks": {
-      "errors": 264,
+      "errors": 258,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 264,
+        "@typescript-eslint/no-explicit-any": 258,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1262,9 +1262,6 @@
       "@typescript-eslint/no-unused-expressions": 1,
       "@typescript-eslint/no-explicit-any": 2
     },
-    "src/components/academy/builder/LessonEditorPanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
-    },
     "src/components/admin/AppSettingsForm.tsx": {
       "@typescript-eslint/no-explicit-any": 4
     },
@@ -1612,9 +1609,6 @@
     },
     "src/hooks/use-client-package-whats-next.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/use-ui-prefs.ts": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/hooks/useAISuggestions.tsx": {
       "@typescript-eslint/no-explicit-any": 2

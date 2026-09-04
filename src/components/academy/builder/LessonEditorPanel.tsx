@@ -98,7 +98,7 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
     if (!folderId) {
       const { data: newFolder, error: fInsErr } = await supabase
         .from("training_folders")
-        .insert({ folder_name: folderName } as any)
+        .insert({ folder_name: folderName })
         .select("id")
         .single();
       if (fInsErr) throw fInsErr;
@@ -115,7 +115,7 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
         duration_seconds: durationSeconds,
         thumbnail,
         added_by: userId,
-      } as any)
+      })
       .select("id")
       .single();
     if (vInsErr) throw vInsErr;
@@ -144,8 +144,8 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
       }
       try {
         resolvedVideoId = await resolveVimeoVideoId(url, user?.id ?? null);
-      } catch (e: any) {
-        setLinkError(e?.message || "Could not save that Vimeo link.");
+      } catch (e) {
+        setLinkError(e instanceof Error ? e.message : "Could not save that Vimeo link.");
         return;
       }
     }
@@ -250,7 +250,7 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
           {/* Estimated Minutes */}
           {(() => {
             const isVideoLesson = lessonType === "video";
-            const selectedVideo = isVideoLesson && videoId ? (videos as any[]).find((v) => v.id === videoId) : null;
+            const selectedVideo = isVideoLesson && videoId ? videos.find((v) => v.id === videoId) : null;
             const autoMin = selectedVideo?.duration_seconds != null ? Math.ceil(selectedVideo.duration_seconds / 60) : null;
             const readOnly = isVideoLesson && !!videoId;
             return (
@@ -354,7 +354,7 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
                       <div className="flex items-center justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
                     ) : videos.length === 0 ? (
                       <p className="text-xs text-muted-foreground p-3">No videos found</p>
-                    ) : videos.map((v: any) => (
+                    ) : videos.map((v) => (
                       <button
                         key={v.id}
                         onClick={() => setVideoId(v.id)}
@@ -424,7 +424,7 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
                   <div className="flex items-center justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
                 ) : resources.length === 0 ? (
                   <p className="text-xs text-muted-foreground p-3">No resources found</p>
-                ) : resources.map((r: any) => (
+                ) : resources.map((r) => (
                   <button
                     key={r.id}
                     onClick={() => setResourceId(r.id)}
