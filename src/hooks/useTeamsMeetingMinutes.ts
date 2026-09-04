@@ -94,13 +94,19 @@ export const EMPTY_CONTENT: MinutesContent = {
   next_meeting: '',
 };
 
+// supabaseUrl/supabaseKey are real runtime properties of the SupabaseClient
+// instance (used internally by supabase-js itself) but aren't part of its
+// public TS type, hence this narrow, documented cast rather than a blanket
+// `any` on `supabase` itself.
+const supabaseInternals = supabase as unknown as { supabaseUrl: string; supabaseKey: string };
+
 async function fetchFromTable(table: string, params: Record<string, string>, token: string) {
-  const url = new URL(`${(supabase as any).supabaseUrl}/rest/v1/${table}`);
+  const url = new URL(`${supabaseInternals.supabaseUrl}/rest/v1/${table}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  
+
   const res = await fetch(url.toString(), {
     headers: {
-      'apikey': (supabase as any).supabaseKey,
+      'apikey': supabaseInternals.supabaseKey,
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
@@ -110,11 +116,11 @@ async function fetchFromTable(table: string, params: Record<string, string>, tok
 }
 
 async function patchTable(table: string, id: string, data: Record<string, unknown>, token: string) {
-  const url = `${(supabase as any).supabaseUrl}/rest/v1/${table}?id=eq.${id}`;
+  const url = `${supabaseInternals.supabaseUrl}/rest/v1/${table}?id=eq.${id}`;
   const res = await fetch(url, {
     method: 'PATCH',
     headers: {
-      'apikey': (supabase as any).supabaseKey,
+      'apikey': supabaseInternals.supabaseKey,
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'Prefer': 'return=representation',
@@ -201,10 +207,10 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       });
 
       if (error) throw new Error(error.message);
-      if (data && 'error' in data) throw new Error((data as any).error);
-      return data;
+      if (data && 'error' in data) throw new Error((data as { error?: string }).error);
+      return data as { regenerated?: boolean; version?: number } | null;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       const msg = data?.regenerated
         ? `Minutes regenerated (v${data.version}) and published to client portal`
         : 'Minutes published to client portal';
@@ -228,7 +234,7 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       });
 
       if (error) throw new Error(error.message);
-      if (data && 'error' in data) throw new Error((data as any).error);
+      if (data && 'error' in data) throw new Error((data as { error?: string }).error);
       return data as {
         success: boolean;
         minutes_id: string;
@@ -274,7 +280,7 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       });
 
       if (error) throw new Error(error.message);
-      if (data && 'error' in data) throw new Error((data as any).error);
+      if (data && 'error' in data) throw new Error((data as { error?: string }).error);
       return data as { success: boolean; run_id: string; proposed: AiProposedMinutes };
     },
     onError: (error) => {
@@ -306,7 +312,7 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       updated_at: now,
     }, session.access_token);
 
-    await supabase.from('audit_events' as any).insert({
+    await supabase.from('audit_events').insert({
       entity: 'meeting_minutes',
       entity_id: minutesId,
       action: 'minutes_ai_applied_to_draft',
@@ -323,7 +329,7 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    await supabase.from('audit_events' as any).insert({
+    await supabase.from('audit_events').insert({
       entity: 'meeting_minutes',
       entity_id: minutesId,
       action: 'minutes_ai_discarded',
@@ -352,7 +358,7 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       });
 
       if (error) throw new Error(error.message);
-      if (data && 'error' in data) throw new Error((data as any).error);
+      if (data && 'error' in data) throw new Error((data as { error?: string }).error);
       return data as { success: boolean; created: number; skipped: number; total: number; tasks: Array<{ task_id: string; action_id: string }>; errors: Array<{ action_id: string; error: string }> };
     },
     onSuccess: (data) => {
@@ -379,7 +385,7 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
     queryFn: async () => {
       if (!meetingId) return [];
       const { data } = await supabase
-        .from('meeting_action_tasks' as any)
+        .from('meeting_action_tasks')
         .select('*')
         .eq('meeting_id', meetingId)
         .order('created_at', { ascending: true });
@@ -409,7 +415,7 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       });
 
       if (error) throw new Error(error.message);
-      if (data && 'error' in data) throw new Error((data as any).error);
+      if (data && 'error' in data) throw new Error((data as { error?: string }).error);
       return data as { success: boolean; extracted: CopilotExtracted; store_raw: boolean };
     },
     onError: (error) => {
@@ -450,7 +456,7 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       updated_at: now,
     }, session.access_token);
 
-    await supabase.from('audit_events' as any).insert({
+    await supabase.from('audit_events').insert({
       entity: 'meeting_minutes',
       entity_id: minutesId,
       action: 'minutes_copilot_applied_to_draft',
@@ -474,7 +480,7 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    await supabase.from('audit_events' as any).insert({
+    await supabase.from('audit_events').insert({
       entity: 'meeting_minutes',
       entity_id: minutesId,
       action: 'minutes_copilot_discarded',

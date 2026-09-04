@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T17:59:47.512Z",
-  "baselineSha": "a3cc0aef94a53585d39090234574d68f5dc3b948",
+  "generatedAt": "2026-09-04T18:13:31.821Z",
+  "baselineSha": "bc1a736ec02496354870fd66658f59a4f9d64ef7",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 431,
-    "errors": 1879,
+    "filesWithFindings": 429,
+    "errors": 1849,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1872,
+    "@typescript-eslint/no-explicit-any": 1842,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1211,
+      "errors": 1181,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1204,
+        "@typescript-eslint/no-explicit-any": 1174,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -380,10 +380,10 @@
       }
     },
     "src/hooks": {
-      "errors": 482,
+      "errors": 452,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 482,
+        "@typescript-eslint/no-explicit-any": 452,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1951,9 +1951,6 @@
     "src/hooks/useStaffProvisioningRules.tsx": {
       "@typescript-eslint/no-explicit-any": 6
     },
-    "src/hooks/useStaffTaskInstances.ts": {
-      "@typescript-eslint/no-explicit-any": 15
-    },
     "src/hooks/useStrategicCommand.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
@@ -1977,9 +1974,6 @@
     },
     "src/hooks/useTeamUnreadCount.ts": {
       "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/hooks/useTeamsMeetingMinutes.ts": {
-      "@typescript-eslint/no-explicit-any": 15
     },
     "src/hooks/useTenantContacts.ts": {
       "@typescript-eslint/no-explicit-any": 10
