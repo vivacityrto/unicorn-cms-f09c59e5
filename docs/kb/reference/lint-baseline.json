@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T16:50:42.176Z",
-  "baselineSha": "d64873e123aec7ea8e63adedcb81a69509e87baf",
+  "generatedAt": "2026-09-04T17:04:29.230Z",
+  "baselineSha": "88b2818236b20dfd75f22fe08ab5fed48038ac74",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 439,
-    "errors": 2016,
+    "filesWithFindings": 437,
+    "errors": 1976,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2009,
+    "@typescript-eslint/no-explicit-any": 1969,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1348,
+      "errors": 1308,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1341,
+        "@typescript-eslint/no-explicit-any": 1301,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -380,10 +380,10 @@
       }
     },
     "src/hooks": {
-      "errors": 593,
+      "errors": 553,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 593,
+        "@typescript-eslint/no-explicit-any": 553,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1954,9 +1954,6 @@
     "src/hooks/useRisksOpportunities.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
-    "src/hooks/useRockAnalysis.tsx": {
-      "@typescript-eslint/no-explicit-any": 20
-    },
     "src/hooks/useRtoTips.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -2028,9 +2025,6 @@
     },
     "src/hooks/useUserSetupLinks.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useWeeklyReview.ts": {
-      "@typescript-eslint/no-explicit-any": 20
     },
     "src/hooks/useWeeklyWins.ts": {
       "@typescript-eslint/no-explicit-any": 1
