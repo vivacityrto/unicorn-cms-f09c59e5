@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowRight, CheckCircle2, Clock, ArrowLeft, Package, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import type { TablesInsert } from "@/integrations/supabase/types";
 
 interface TaskWithTime {
   task_id: string;
@@ -60,13 +61,13 @@ export function ClickUpTimeTransfer() {
   useEffect(() => {
     setTenantsLoading(true);
     Promise.all([
-      (supabase as any)
+      supabase
         .from("clickup_time_entries")
         .select("tenant_id")
         .eq("imported_to_time_entries", false),
       supabase.from("tenants").select("id, name").order("name"),
       supabase.from("users").select("user_uuid, email"),
-    ]).then(([timeRes, tenantRes, userRes]: any[]) => {
+    ]).then(([timeRes, tenantRes, userRes]) => {
       // Build set of tenant IDs with transferable data
       const tenantIdsWithData = new Set<number>();
       for (const row of (timeRes.data ?? [])) {
@@ -75,8 +76,8 @@ export function ClickUpTimeTransfer() {
       if (tenantRes.data) {
         setTenants(
           tenantRes.data
-            .filter((t: any) => tenantIdsWithData.has(t.id))
-            .map((t: any) => ({ ...t, name: t.name?.trim() ?? "" }))
+            .filter((t) => tenantIdsWithData.has(t.id))
+            .map((t) => ({ ...t, name: t.name?.trim() ?? "" }))
         );
       }
       if (userRes.data) {
@@ -96,7 +97,7 @@ export function ClickUpTimeTransfer() {
     setPackagesLoading(true);
     (async () => {
       try {
-        const { data: instances } = await (supabase as any)
+        const { data: instances } = await supabase
           .from("package_instances")
           .select("id, package_id, start_date, end_date, is_active")
           .eq("tenant_id", selectedTenantId)
@@ -109,30 +110,31 @@ export function ClickUpTimeTransfer() {
         }
 
         // Fetch package names and existing time totals in parallel
-        const instanceIds = instances.map((i: any) => i.id);
-        const packageIds = [...new Set(instances.map((i: any) => i.package_id).filter(Boolean))];
-        
+        const instanceIds = instances.map((i) => i.id);
+        const packageIds = [...new Set(instances.map((i) => i.package_id))];
+
         const [pkgRes, timeRes] = await Promise.all([
-          (supabase as any).from("packages").select("id, name").in("id", packageIds),
-          (supabase as any).from("time_entries").select("package_instance_id, duration_minutes").eq("tenant_id", selectedTenantId).in("package_instance_id", instanceIds),
+          supabase.from("packages").select("id, name").in("id", packageIds),
+          supabase.from("time_entries").select("package_instance_id, duration_minutes").eq("tenant_id", selectedTenantId).in("package_instance_id", instanceIds),
         ]);
 
-        const pkgMap = new Map<number, string>();
+        const pkgMap = new Map<number, string | null>();
         for (const p of (pkgRes.data ?? [])) pkgMap.set(p.id, p.name);
 
         // Sum logged minutes per package instance
         const loggedMap = new Map<number, number>();
         for (const te of (timeRes.data ?? [])) {
+          if (te.package_instance_id == null) continue;
           loggedMap.set(te.package_instance_id, (loggedMap.get(te.package_instance_id) ?? 0) + (te.duration_minutes ?? 0));
         }
 
-        setPackageInstances(instances.map((i: any) => ({
+        setPackageInstances(instances.map((i) => ({
           id: i.id,
           package_id: i.package_id,
           package_name: pkgMap.get(i.package_id) ?? `Package #${i.package_id}`,
           start_date: i.start_date,
           end_date: i.end_date,
-          is_active: i.is_active ?? false,
+          is_active: i.is_active,
           logged_minutes: loggedMap.get(i.id) ?? 0,
         })));
       } catch (err) {
@@ -151,7 +153,7 @@ export function ClickUpTimeTransfer() {
     setIntervals([]);
     try {
       // Get tasks for this tenant that have time entries
-      const { data: timeEntries, error } = await (supabase as any)
+      const { data: timeEntries, error } = await supabase
         .from("clickup_time_entries")
         .select("task_id, imported_to_time_entries")
         .eq("tenant_id", selectedTenantId);
@@ -174,12 +176,12 @@ export function ClickUpTimeTransfer() {
 
       // Fetch task details
       const taskIds = Array.from(taskMap.keys());
-      const { data: taskDetails } = await (supabase as any)
+      const { data: taskDetails } = await supabase
         .from("clickup_tasks_api")
         .select("task_id, custom_id, name, packageinstance_id")
         .in("task_id", taskIds);
 
-      const detailMap = new Map<string, any>();
+      const detailMap = new Map<string, NonNullable<typeof taskDetails>[number]>();
       for (const t of (taskDetails ?? [])) detailMap.set(t.task_id, t);
 
       const result: TaskWithTime[] = taskIds.map(tid => {
@@ -210,7 +212,7 @@ export function ClickUpTimeTransfer() {
     setIntervalsLoading(true);
     setSelectedIds(new Set());
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("clickup_time_entries")
         .select("id, clickup_interval_id, task_id, user_name, user_email, duration_ms, duration_minutes, start_at, end_at, description, billable, imported_to_time_entries")
         .eq("task_id", selectedTaskId)
@@ -291,22 +293,23 @@ export function ClickUpTimeTransfer() {
       }));
 
       // Filter out any with null user_id
-      const validRows = rows.filter(r => r.user_id !== null);
+      const validRows = rows.filter((r): r is typeof r & { user_id: string } => r.user_id !== null);
       if (validRows.length === 0) {
         toast({ title: "No valid entries", description: "All entries have unmapped users.", variant: "destructive" });
         setTransferring(false);
         return;
       }
 
-      const { error: insertError } = await (supabase as any)
+      const insertRows: TablesInsert<'time_entries'>[] = validRows;
+      const { error: insertError } = await supabase
         .from("time_entries")
-        .insert(validRows);
+        .insert(insertRows);
 
       if (insertError) throw insertError;
 
       // Mark as imported in clickup_time_entries
       const importedIds = toTransfer.filter(i => userMap.has(i.user_email?.toLowerCase() ?? "")).map(i => i.id);
-      await (supabase as any)
+      await supabase
         .from("clickup_time_entries")
         .update({ imported_to_time_entries: true })
         .in("id", importedIds);
@@ -508,7 +511,7 @@ export function ClickUpTimeTransfer() {
                           value={task.packageinstance_id?.toString() ?? "none"}
                           onValueChange={async (val) => {
                             const newId = val === "none" ? null : Number(val);
-                            const { error } = await (supabase as any)
+                            const { error } = await supabase
                               .from("clickup_tasks_api")
                               .update({ packageinstance_id: newId })
                               .eq("task_id", task.task_id);

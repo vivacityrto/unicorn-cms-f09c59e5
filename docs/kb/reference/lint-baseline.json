@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T18:13:31.821Z",
-  "baselineSha": "bc1a736ec02496354870fd66658f59a4f9d64ef7",
+  "generatedAt": "2026-09-04T18:35:33.778Z",
+  "baselineSha": "a32e5fea6ed2a955c455f2b9d4d7e95a7bd8b433",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 429,
-    "errors": 1849,
+    "filesWithFindings": 427,
+    "errors": 1817,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1842,
+    "@typescript-eslint/no-explicit-any": 1810,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1181,
+      "errors": 1149,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1174,
+        "@typescript-eslint/no-explicit-any": 1142,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -119,10 +119,10 @@
       }
     },
     "src/components/clickup": {
-      "errors": 23,
+      "errors": 6,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 23
+        "@typescript-eslint/no-explicit-any": 6
       }
     },
     "src/components/client-portal/support-tickets": {
@@ -380,10 +380,10 @@
       }
     },
     "src/hooks": {
-      "errors": 452,
+      "errors": 437,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 452,
+        "@typescript-eslint/no-explicit-any": 437,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1345,9 +1345,6 @@
     "src/components/calendar/CalendarEventDetailDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/components/clickup/ClickUpTimeTransfer.tsx": {
-      "@typescript-eslint/no-explicit-any": 17
-    },
     "src/components/clickup/PackageInstanceAssignment.tsx": {
       "@typescript-eslint/no-explicit-any": 6
     },
@@ -1989,9 +1986,6 @@
     },
     "src/hooks/useTenantsBasic.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useTgaRtoData.tsx": {
-      "@typescript-eslint/no-explicit-any": 15
     },
     "src/hooks/useTimeEntriesPaginated.tsx": {
       "@typescript-eslint/no-explicit-any": 3
