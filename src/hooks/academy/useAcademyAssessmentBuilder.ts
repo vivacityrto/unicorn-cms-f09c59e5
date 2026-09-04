@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { Json } from "@/integrations/supabase/types";
 
 const ASSESSMENT_KEY = "academy-assessment-builder";
 const QUESTIONS_KEY = "academy-assessment-questions-builder";
@@ -63,9 +64,9 @@ export function useBuilderQuestions(assessmentId: number | null) {
         .eq("assessment_id", assessmentId!)
         .order("sort_order");
       if (error) throw error;
-      return (data ?? []).map((q: any) => ({
+      return (data ?? []).map((q) => ({
         ...q,
-        options: (q.options as QuestionOption[]) || [],
+        options: (q.options as unknown as QuestionOption[]) || [],
       }));
     },
   });
@@ -74,11 +75,14 @@ export function useBuilderQuestions(assessmentId: number | null) {
 export function useCreateAssessment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ courseId, data }: { courseId: number; data: Record<string, any> }) => {
+    mutationFn: async ({ courseId, data }: {
+      courseId: number;
+      data: Partial<Omit<BuilderAssessment, "id" | "course_id" | "created_by">> & { title: string };
+    }) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { data: row, error } = await supabase
         .from("academy_assessments")
-        .insert({ course_id: courseId, created_by: user?.id, ...data } as any)
+        .insert({ course_id: courseId, created_by: user?.id, ...data })
         .select()
         .single();
       if (error) throw error;
@@ -88,35 +92,43 @@ export function useCreateAssessment() {
       toast.success("Assessment created");
       qc.invalidateQueries({ queryKey: [ASSESSMENT_KEY, vars.courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to create assessment"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to create assessment"),
   });
 }
 
 export function useUpdateAssessment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, courseId, data }: { id: number; courseId: number; data: Record<string, any> }) => {
-      const { error } = await supabase.from("academy_assessments").update(data as any).eq("id", id);
+    mutationFn: async ({ id, courseId, data }: {
+      id: number;
+      courseId: number;
+      data: Partial<Omit<BuilderAssessment, "id" | "course_id">>;
+    }) => {
+      const { error } = await supabase.from("academy_assessments").update(data).eq("id", id);
       if (error) throw error;
       return courseId;
     },
     onSuccess: (courseId) => {
       qc.invalidateQueries({ queryKey: [ASSESSMENT_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update assessment"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to update assessment"),
   });
 }
 
 export function useUpsertQuestion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ assessmentId, data }: { assessmentId: number; data: Record<string, any> }) => {
-      if (data.id) {
-        const { id, ...rest } = data;
-        const { error } = await supabase.from("academy_assessment_questions").update(rest as any).eq("id", id);
+    mutationFn: async ({ assessmentId, data }: {
+      assessmentId: number;
+      data: Partial<BuilderQuestion> & { question_text: string };
+    }) => {
+      const { id, options, ...rest } = data;
+      const payload = { ...rest, options: options ? (options as unknown as Json) : undefined };
+      if (id) {
+        const { error } = await supabase.from("academy_assessment_questions").update(payload).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("academy_assessment_questions").insert({ assessment_id: assessmentId, ...data } as any);
+        const { error } = await supabase.from("academy_assessment_questions").insert({ assessment_id: assessmentId, ...payload });
         if (error) throw error;
       }
       return assessmentId;
@@ -124,7 +136,7 @@ export function useUpsertQuestion() {
     onSuccess: (assessmentId) => {
       qc.invalidateQueries({ queryKey: [QUESTIONS_KEY, assessmentId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to save question"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to save question"),
   });
 }
 
@@ -140,7 +152,7 @@ export function useDeleteQuestion() {
       toast.success("Question deleted");
       qc.invalidateQueries({ queryKey: [QUESTIONS_KEY, assessmentId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to delete question"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to delete question"),
   });
 }
 
@@ -149,7 +161,7 @@ export function useReorderQuestions() {
   return useMutation({
     mutationFn: async ({ assessmentId, orderedIds }: { assessmentId: number; orderedIds: number[] }) => {
       const updates = orderedIds.map((id, i) =>
-        supabase.from("academy_assessment_questions").update({ sort_order: i + 1 } as any).eq("id", id)
+        supabase.from("academy_assessment_questions").update({ sort_order: i + 1 }).eq("id", id)
       );
       await Promise.all(updates);
       return assessmentId;
@@ -157,7 +169,7 @@ export function useReorderQuestions() {
     onSuccess: (assessmentId) => {
       qc.invalidateQueries({ queryKey: [QUESTIONS_KEY, assessmentId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to reorder questions"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to reorder questions"),
   });
 }
 
@@ -166,19 +178,19 @@ export function useSaveAllQuestions() {
   return useMutation({
     mutationFn: async ({ assessmentId, questions }: { assessmentId: number; questions: BuilderQuestion[] }) => {
       for (const q of questions) {
-        const payload: Record<string, any> = {
+        const payload = {
           question_text: q.question_text,
           question_type: q.question_type || "multiple_choice",
-          options: q.options,
+          options: q.options as unknown as Json,
           points: q.points ?? 1,
           sort_order: q.sort_order,
           explanation: q.explanation,
         };
         if (q.id > 0) {
-          const { error } = await supabase.from("academy_assessment_questions").update(payload as any).eq("id", q.id);
+          const { error } = await supabase.from("academy_assessment_questions").update(payload).eq("id", q.id);
           if (error) throw error;
         } else {
-          const { error } = await supabase.from("academy_assessment_questions").insert({ assessment_id: assessmentId, ...payload } as any);
+          const { error } = await supabase.from("academy_assessment_questions").insert({ assessment_id: assessmentId, ...payload });
           if (error) throw error;
         }
       }
@@ -188,6 +200,6 @@ export function useSaveAllQuestions() {
       toast.success("All questions saved");
       qc.invalidateQueries({ queryKey: [QUESTIONS_KEY, assessmentId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to save questions"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to save questions"),
   });
 }

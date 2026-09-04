@@ -2,8 +2,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 const ENROL_KEY = "academy-enrolments";
+
+interface EnrollmentStats {
+  total: number;
+  active: number;
+  completed: number;
+  expired: number;
+  revoked: number;
+  auto_lifetime: number;
+}
+
+type EnrollmentTenantRow = Pick<Tables<"tenants">, "id" | "name" | "tenant_type">;
 
 export interface EnrichedEnrollment {
   id: number;
@@ -42,23 +54,23 @@ export function useAdminEnrollments(filters?: EnrollmentFilters) {
       if (error) throw error;
       if (!data?.length) return [];
 
-      const courseIds = [...new Set(data.map((e: any) => e.course_id))];
-      const userIds = [...new Set(data.map((e: any) => e.user_id))];
-      const tenantIds = [...new Set(data.map((e: any) => e.tenant_id).filter(Boolean))] as number[];
+      const courseIds = [...new Set(data.map((e) => e.course_id))];
+      const userIds = [...new Set(data.map((e) => e.user_id))];
+      const tenantIds = [...new Set(data.map((e) => e.tenant_id).filter(Boolean))] as number[];
 
       const [coursesRes, usersRes, tenantsRes] = await Promise.all([
         supabase.from("academy_courses").select("id, title, slug, thumbnail_url").in("id", courseIds),
         supabase.from("users").select("user_uuid, first_name, last_name, email, avatar_url").in("user_uuid", userIds),
         tenantIds.length > 0
           ? supabase.from("tenants").select("id, name, tenant_type").in("id", tenantIds)
-          : Promise.resolve({ data: [] as any[] }),
+          : Promise.resolve({ data: [] as EnrollmentTenantRow[] }),
       ]);
 
-      const courseMap = new Map((coursesRes.data ?? []).map((c: any) => [c.id, c]));
-      const userMap = new Map((usersRes.data ?? []).map((u: any) => [u.user_uuid, u]));
-      const tenantMap = new Map(((tenantsRes as any).data ?? []).map((t: any) => [t.id, t]));
+      const courseMap = new Map((coursesRes.data ?? []).map((c) => [c.id, c]));
+      const userMap = new Map((usersRes.data ?? []).map((u) => [u.user_uuid, u]));
+      const tenantMap = new Map((tenantsRes.data ?? []).map((t) => [t.id, t]));
 
-      return data.map((e: any) => ({
+      return data.map((e) => ({
         ...e,
         course: courseMap.get(e.course_id) || null,
         user: userMap.get(e.user_id) || null,
@@ -78,8 +90,8 @@ export function useEnrollmentProgress() {
         .select("*");
       if (error) throw error;
 
-      const map = new Map<number, any>();
-      (data ?? []).forEach((p: any) => {
+      const map = new Map<number, Tables<"v_academy_course_progress">>();
+      (data ?? []).forEach((p) => {
         if (p.enrollment_id) map.set(p.enrollment_id, p);
       });
       return map;
@@ -93,9 +105,9 @@ export function useEnrollmentStats() {
   return useQuery({
     queryKey: ["academy-enrollment-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("fn_academy_enrollment_stats" as any);
+      const { data, error } = await supabase.rpc("fn_academy_enrollment_stats");
       if (error) throw error;
-      return (data as any) || { total: 0, active: 0, completed: 0, expired: 0, revoked: 0, auto_lifetime: 0 };
+      return (data as unknown as EnrollmentStats | null) ?? { total: 0, active: 0, completed: 0, expired: 0, revoked: 0, auto_lifetime: 0 };
     },
     staleTime: 30_000,
   });
@@ -112,7 +124,7 @@ export function useBulkEnroll() {
       notes?: string | null;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const rows: any[] = [];
+      const rows: TablesInsert<"academy_enrollments">[] = [];
       for (const learner of params.learners) {
         for (const courseId of params.courseIds) {
           rows.push({
@@ -132,7 +144,7 @@ export function useBulkEnroll() {
       // Use upsert with ignoreDuplicates to skip existing (course_id, user_id) pairs
       const { data, error } = await supabase
         .from("academy_enrollments")
-        .upsert(rows as any, { onConflict: "course_id,user_id", ignoreDuplicates: true })
+        .upsert(rows, { onConflict: "course_id,user_id", ignoreDuplicates: true })
         .select("id");
       if (error) throw error;
 
@@ -146,7 +158,7 @@ export function useBulkEnroll() {
       qc.invalidateQueries({ queryKey: [ENROL_KEY] });
       qc.invalidateQueries({ queryKey: ["academy-enrollment-stats"] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to bulk enrol"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to bulk enrol"),
   });
 }
 
@@ -167,14 +179,14 @@ export function useEnrollUser() {
           source: options?.source ?? "manual",
           expires_at: options?.expires_at ?? null,
           notes: options?.notes ?? null,
-        } as any);
+        });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("User enrolled");
       qc.invalidateQueries({ queryKey: [ENROL_KEY] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to enrol user"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to enrol user"),
   });
 }
 
@@ -192,7 +204,7 @@ export function useEnrollTenant() {
       if (tuErr) throw tuErr;
       if (!tenantUsers?.length) throw new Error("No users found in this tenant");
 
-      const rows = tenantUsers.map((tu: any) => ({
+      const rows: TablesInsert<"academy_enrollments">[] = tenantUsers.map((tu) => ({
         course_id: courseId,
         user_id: tu.user_id,
         tenant_id: tenantId,
@@ -201,14 +213,14 @@ export function useEnrollTenant() {
         expires_at: options?.expires_at ?? null,
       }));
 
-      const { error } = await supabase.from("academy_enrollments").insert(rows as any);
+      const { error } = await supabase.from("academy_enrollments").insert(rows);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Tenant users enrolled");
       qc.invalidateQueries({ queryKey: [ENROL_KEY] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to enrol tenant"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to enrol tenant"),
   });
 }
 
@@ -217,7 +229,7 @@ export function useRevokeEnrollment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, reason }: { id: number; reason?: string }) => {
-      const { error } = await supabase.rpc("fn_academy_admin_revoke_enrollment" as any, {
+      const { error } = await supabase.rpc("fn_academy_admin_revoke_enrollment", {
         p_enrollment_id: id,
         p_reason: reason ?? null,
       });
@@ -228,7 +240,7 @@ export function useRevokeEnrollment() {
       qc.invalidateQueries({ queryKey: [ENROL_KEY] });
       qc.invalidateQueries({ queryKey: ["academy-enrollment-stats"] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to revoke enrolment"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to revoke enrolment"),
   });
 }
 
@@ -236,7 +248,7 @@ export function useReactivateEnrollment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
-      const { error } = await supabase.rpc("fn_academy_admin_reactivate_enrollment" as any, {
+      const { error } = await supabase.rpc("fn_academy_admin_reactivate_enrollment", {
         p_enrollment_id: id,
       });
       if (error) throw error;
@@ -246,7 +258,7 @@ export function useReactivateEnrollment() {
       qc.invalidateQueries({ queryKey: [ENROL_KEY] });
       qc.invalidateQueries({ queryKey: ["academy-enrollment-stats"] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to reactivate"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to reactivate"),
   });
 }
 
@@ -254,7 +266,7 @@ export function useExtendEnrollment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, date }: { id: number; date: string }) => {
-      const { error } = await supabase.rpc("fn_academy_admin_extend_expiry" as any, {
+      const { error } = await supabase.rpc("fn_academy_admin_extend_expiry", {
         p_enrollment_id: id,
         p_new_expiry: date,
       });
@@ -264,7 +276,7 @@ export function useExtendEnrollment() {
       toast.success("Expiry extended");
       qc.invalidateQueries({ queryKey: [ENROL_KEY] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to extend expiry"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to extend expiry"),
   });
 }
 
@@ -291,11 +303,11 @@ export function useLessonDetail(enrollmentId: number | null) {
     enabled: !!enrollmentId,
     queryFn: async () => {
       const { data, error } = await supabase.rpc(
-        "fn_academy_enrollment_lesson_detail" as any,
-        { p_enrollment_id: enrollmentId! } as any
+        "fn_academy_enrollment_lesson_detail",
+        { p_enrollment_id: enrollmentId! }
       );
       if (error) throw error;
-      return (data as any[]) ?? [];
+      return data ?? [];
     },
     staleTime: 15_000,
   });
@@ -306,7 +318,7 @@ export function useMarkLessonComplete() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ enrollmentId, lessonId }: { enrollmentId: number; lessonId: number }) => {
-      const { error } = await supabase.rpc("fn_academy_admin_mark_lesson_complete" as any, {
+      const { error } = await supabase.rpc("fn_academy_admin_mark_lesson_complete", {
         p_enrollment_id: enrollmentId,
         p_lesson_id: lessonId,
       });
@@ -318,7 +330,7 @@ export function useMarkLessonComplete() {
       qc.invalidateQueries({ queryKey: [ENROL_KEY] });
       qc.invalidateQueries({ queryKey: ["academy-progress"] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to mark complete"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to mark complete"),
   });
 }
 
@@ -326,7 +338,7 @@ export function useResetLesson() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ enrollmentId, lessonId }: { enrollmentId: number; lessonId: number }) => {
-      const { error } = await supabase.rpc("fn_academy_admin_reset_lesson" as any, {
+      const { error } = await supabase.rpc("fn_academy_admin_reset_lesson", {
         p_enrollment_id: enrollmentId,
         p_lesson_id: lessonId,
       });
@@ -337,7 +349,7 @@ export function useResetLesson() {
       qc.invalidateQueries({ queryKey: ["academy-lesson-detail", vars.enrollmentId] });
       qc.invalidateQueries({ queryKey: ["academy-progress"] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to reset lesson"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to reset lesson"),
   });
 }
 
@@ -345,17 +357,17 @@ export function useIssueCertificate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (enrollmentId: number) => {
-      const { data, error } = await supabase.rpc("fn_academy_admin_issue_certificate" as any, {
+      const { data, error } = await supabase.rpc("fn_academy_admin_issue_certificate", {
         p_enrollment_id: enrollmentId,
       });
       if (error) throw error;
-      return data as any;
+      return data as unknown as { created?: boolean };
     },
     onSuccess: (data, enrollmentId) => {
       toast.success(data?.created ? "Certificate issued" : "Certificate already exists");
       qc.invalidateQueries({ queryKey: ["enrolment-certificate", enrollmentId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to issue certificate"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to issue certificate"),
   });
 }
 
@@ -363,7 +375,7 @@ export function useRevokeCertificate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ certificateId, reason }: { certificateId: number; reason?: string }) => {
-      const { error } = await supabase.rpc("fn_academy_admin_revoke_certificate" as any, {
+      const { error } = await supabase.rpc("fn_academy_admin_revoke_certificate", {
         p_certificate_id: certificateId,
         p_reason: reason ?? null,
       });
@@ -373,7 +385,7 @@ export function useRevokeCertificate() {
       toast.success("Certificate revoked");
       qc.invalidateQueries({ queryKey: ["enrolment-certificate"] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to revoke certificate"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to revoke certificate"),
   });
 }
 
@@ -451,29 +463,29 @@ export function useEnrollableLearners() {
       if (tuErr) throw tuErr;
       if (!tu?.length) return [];
 
-      const userIds = [...new Set(tu.map((r: any) => r.user_id))];
-      const tenantIds = [...new Set(tu.map((r: any) => r.tenant_id).filter(Boolean))] as number[];
+      const userIds = [...new Set(tu.map((r) => r.user_id))];
+      const tenantIds = [...new Set(tu.map((r) => r.tenant_id).filter(Boolean))] as number[];
 
       const [usersRes, tenantsRes] = await Promise.all([
         supabase.from("users").select("user_uuid, first_name, last_name, email").in("user_uuid", userIds),
         tenantIds.length
           ? supabase.from("tenants").select("id, name").in("id", tenantIds)
-          : Promise.resolve({ data: [] as any[] }),
+          : Promise.resolve({ data: [] as Pick<Tables<"tenants">, "id" | "name">[] }),
       ]);
 
-      const userMap = new Map((usersRes.data ?? []).map((u: any) => [u.user_uuid, u]));
-      const tenantMap = new Map(((tenantsRes as any).data ?? []).map((t: any) => [t.id, t]));
+      const userMap = new Map((usersRes.data ?? []).map((u) => [u.user_uuid, u]));
+      const tenantMap = new Map((tenantsRes.data ?? []).map((t) => [t.id, t]));
 
       // Deduplicate: one row per (user_id, tenant_id)
       const seen = new Set<string>();
       const out: Array<{ user_id: string; tenant_id: number | null; first_name: string; last_name: string; email: string; tenant_name: string }> = [];
-      for (const r of tu as any[]) {
+      for (const r of tu) {
         const k = `${r.user_id}::${r.tenant_id ?? "null"}`;
         if (seen.has(k)) continue;
         seen.add(k);
-        const u: any = userMap.get(r.user_id);
+        const u = userMap.get(r.user_id);
         if (!u) continue;
-        const t: any = r.tenant_id ? tenantMap.get(r.tenant_id) : null;
+        const t = r.tenant_id ? tenantMap.get(r.tenant_id) : null;
         out.push({
           user_id: r.user_id,
           tenant_id: r.tenant_id ?? null,
