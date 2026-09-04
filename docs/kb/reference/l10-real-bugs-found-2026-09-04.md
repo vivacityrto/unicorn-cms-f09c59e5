@@ -245,8 +245,30 @@ rediscovered by hand tonight. Reinforces #3's recommendation: add a real
 default/sequence to `stages.id` (and audit `packages.id` too) so this class
 of bug stops resurfacing every time someone touches a nearby insert.
 
-**Not yet verified live** — pending this batch's live Playwright check
-(will update this entry with the result once that lands).
+**Verified live**: created a real test stage via the UI ("New Phase" →
+"ZZTEST_batch36_verification"), got id 1149, no error toast. Cleaned up
+both ways — deleted via the UI's own trash-icon delete, then confirmed via
+direct SQL that no row with that name remains.
+
+## KPI v2 — Developer ticket queue (`KpiMonthlySummaryCards.tsx`, `KpiDeveloperTicketQueue.tsx`)
+
+### 13. Developer "Comms compliance" KPI metric has always shown as fully non-compliant — FIXED
+`KpiMonthlySummaryCards.tsx`'s `DevSummary` computed a "Comms compliance"
+metric by querying `kpi_ticket_comms` for `ticket_id,comm_key` — but that
+column doesn't exist; the real column (confirmed against the table that
+actually writes to it, `KpiDeveloperTicketQueue.tsx`, which correctly uses
+`comm_type`) is `comm_type`. The failed select's error was never checked,
+so `commRows` silently came back empty on every load, `byTicket` stayed
+empty, and every ticket's required communications (`received_ack`,
+`in_progress_notify`, etc.) always read as "not logged" — meaning this
+metric has always shown close to 0% regardless of how diligently a
+developer actually logged their communication touchpoints.
+
+Found during batch 38 of the `no-explicit-any` retirement: typing the
+query's result forced a check of the real `kpi_ticket_comms` columns,
+which surfaced the mismatch immediately (the column plainly wasn't there).
+Fixed by correcting the select/field references to `comm_type`, matching
+the schema and the sibling file that writes this data.
 
 ## Also found this session, outside Package Builder (for completeness)
 
