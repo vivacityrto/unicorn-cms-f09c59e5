@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T22:17:07.942Z",
-  "baselineSha": "f451d918534dfe0bbe01e3c5590937554372ae65",
+  "generatedAt": "2026-09-04T21:36:08.336Z",
+  "baselineSha": "867e8bdb4906bb005dc7ad3e34720c59ebeafa9b",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 393,
-    "errors": 1443,
+    "filesWithFindings": 399,
+    "errors": 1496,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1436,
+    "@typescript-eslint/no-explicit-any": 1489,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 775,
+      "errors": 828,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 768,
+        "@typescript-eslint/no-explicit-any": 821,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -87,6 +87,13 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    "src/components/ask-viv": {
+      "errors": 7,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 7
       }
     },
     "src/components/audit": {
@@ -372,25 +379,32 @@
       }
     },
     "src/hooks": {
-      "errors": 310,
+      "errors": 333,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 310,
+        "@typescript-eslint/no-explicit-any": 333,
         "react-refresh/only-export-components": 1
       }
     },
     "src/lib": {
-      "errors": 3,
+      "errors": 10,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
+        "@typescript-eslint/no-explicit-any": 10
+      }
+    },
+    "src/lib/kpi-v2": {
+      "errors": 8,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 8
       }
     },
     "src/pages": {
-      "errors": 108,
+      "errors": 116,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 108
+        "@typescript-eslint/no-explicit-any": 116
       }
     },
     "src/pages/academy": {
@@ -1295,6 +1309,9 @@
     "src/components/admin/team-users/TeamLeaderEmailDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
+    "src/components/ask-viv/AskVivPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
     "src/components/audit/DeleteAuditDialog.tsx": {
       "react-refresh/only-export-components": 1
     },
@@ -1685,6 +1702,9 @@
     "src/hooks/useCompliancePacks.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
+    "src/hooks/useCompliancePlaybooks.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
     "src/hooks/useComplianceScore.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -1754,14 +1774,14 @@
     "src/hooks/useMeetingArtifacts.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
+    "src/hooks/useMeetingRealtime.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
     "src/hooks/useMeetingSeries.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/hooks/useMeetingTodos.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useMembershipDashboard.tsx": {
-      "@typescript-eslint/no-explicit-any": 8
     },
     "src/hooks/useMembershipStateOptions.ts": {
       "@typescript-eslint/no-explicit-any": 3
@@ -1790,9 +1810,6 @@
     "src/hooks/useNotes.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/hooks/useNotificationPrefs.ts": {
-      "@typescript-eslint/no-explicit-any": 8
-    },
     "src/hooks/useNotifications.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
@@ -1817,6 +1834,9 @@
     },
     "src/hooks/usePhaseProgress.ts": {
       "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/hooks/usePortfolioCockpit.ts": {
+      "@typescript-eslint/no-explicit-any": 18
     },
     "src/hooks/usePortfolioTimeline.tsx": {
       "@typescript-eslint/no-explicit-any": 1
@@ -1872,6 +1892,9 @@
     "src/hooks/useSuggestDropdowns.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
+    "src/hooks/useSuggestItems.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
     "src/hooks/useSupportTicketsBadge.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1921,6 +1944,12 @@
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/lib/friendlyDbError.ts": {},
+    "src/lib/kpi-v2/fetchers.ts": {
+      "@typescript-eslint/no-explicit-any": 8
+    },
+    "src/lib/messageAttachments.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
     "src/lib/noteNotifications.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -1953,6 +1982,9 @@
     },
     "src/pages/ManageEmailTemplates.tsx": {
       "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/pages/ManageTenants.tsx": {
+      "@typescript-eslint/no-explicit-any": 8
     },
     "src/pages/ManageUsers.tsx": {
       "@typescript-eslint/no-explicit-any": 6

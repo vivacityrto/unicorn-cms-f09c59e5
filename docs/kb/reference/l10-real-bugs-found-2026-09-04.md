@@ -384,6 +384,27 @@ edit) and is a pre-existing production bug on a page most tenants happen
 not to exercise, not something to silently patch as a side effect of a
 type-retirement batch.
 
+## Notification preferences (`useNotificationPrefs.ts`)
+
+### 18. Saving notification preferences has never worked — FIXED
+`updateMutation` called `update_user_notification_prefs` with five separate
+`p_`-prefixed arguments (`p_email_enabled`, `p_inapp_enabled`,
+`p_digest_enabled`, `p_quiet_hours`, `p_event_settings`) — but the real
+function only accepts a single `p_prefs jsonb` argument (confirmed via
+`select pg_get_function_identity_arguments(oid) from pg_proc where proname
+= 'update_user_notification_prefs'` → `p_prefs jsonb`; confirmed via
+`pg_get_functiondef` that the body reads
+`COALESCE((p_prefs->>'email_enabled')::boolean, true)` etc. from that one
+JSON argument). PostgREST has no overload matching the five-argument call
+shape, so every attempt to toggle a notification category (Tasks, Meetings,
+Obligations, Events) and save has always failed silently at the RPC layer —
+the row was never written.
+
+Found during batch 45 of the `no-explicit-any` retirement: typing the RPC's
+`Args` against the generated Supabase types surfaced the shape mismatch
+immediately. Fixed by wrapping the five fields into a single `p_prefs`
+object matching the function's real signature.
+
 ## Also found this session, outside Package Builder (for completeness)
 
 These were found and either fixed or documented in earlier batches tonight,

@@ -127,8 +127,8 @@ export function useMembershipDashboard() {
 
       // Get stage progress from RPC (uses stage-state table as source of truth)
       const { data: stageProgress } = await supabase.rpc('get_stage_progress');
-      const progressMap = new Map<string, any>();
-      (stageProgress || []).forEach((r: any) => {
+      const progressMap = new Map<string, NonNullable<typeof stageProgress>[number]>();
+      (stageProgress || []).forEach((r) => {
         progressMap.set(`${r.tenant_id}-${r.package_id}`, r);
       });
 
@@ -233,17 +233,17 @@ export function useMembershipDashboard() {
           risk_flags: riskFlags,
           // Deterministic stage fields from stage-state table
           current_stage_name: progress?.current_stage_name || null,
-          current_stage_status: progress?.current_stage_status || null,
+          current_stage_status: (progress?.current_stage_status as StageStatus | undefined) || null,
           progress_percent: progress?.percent_complete || 0,
           phase: null, // Not applicable for memberships
         });
       }
 
       setMemberships(membershipList);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error loading memberships',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
@@ -444,10 +444,10 @@ export function useMembershipDashboard() {
       });
 
       fetchMemberships();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
@@ -475,10 +475,10 @@ export function useMembershipDashboard() {
       });
 
       fetchMemberships();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
@@ -522,10 +522,10 @@ export function useMembershipDashboard() {
 
       fetchMemberships();
       fetchActivities();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
@@ -574,10 +574,10 @@ export function useMembershipDashboard() {
 
       fetchMemberships();
       fetchActivities();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
@@ -616,10 +616,10 @@ export function useMembershipDashboard() {
 
       fetchTasks();
       fetchActivities();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
