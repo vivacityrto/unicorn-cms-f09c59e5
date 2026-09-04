@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T18:35:33.778Z",
-  "baselineSha": "a32e5fea6ed2a955c455f2b9d4d7e95a7bd8b433",
+  "generatedAt": "2026-09-04T18:48:41.102Z",
+  "baselineSha": "b01dcf4e06d1b90cc8eefb00aa8675188e967d95",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 427,
-    "errors": 1817,
+    "filesWithFindings": 425,
+    "errors": 1786,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1810,
+    "@typescript-eslint/no-explicit-any": 1779,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1149,
+      "errors": 1118,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1142,
+        "@typescript-eslint/no-explicit-any": 1111,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -234,10 +234,10 @@
       }
     },
     "src/components/kpi-v2": {
-      "errors": 32,
+      "errors": 15,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 32
+        "@typescript-eslint/no-explicit-any": 15
       }
     },
     "src/components/kpi": {
@@ -380,10 +380,10 @@
       }
     },
     "src/hooks": {
-      "errors": 437,
+      "errors": 423,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 437,
+        "@typescript-eslint/no-explicit-any": 423,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1452,9 +1452,6 @@
     "src/components/kpi-v2/AssistantKpiCards.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/components/kpi-v2/KpiDrillDownSheet.tsx": {
-      "@typescript-eslint/no-explicit-any": 17
-    },
     "src/components/kpi-v2/KpiTeamSection.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
@@ -1721,9 +1718,6 @@
     },
     "src/hooks/useClientImpact.tsx": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useClientManagementData.tsx": {
-      "@typescript-eslint/no-explicit-any": 14
     },
     "src/hooks/useClientMessagesUnread.ts": {
       "@typescript-eslint/no-explicit-any": 7
