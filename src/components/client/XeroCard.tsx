@@ -75,8 +75,8 @@ export function XeroCard({ tenantId }: XeroCardProps) {
         .single();
 
       if (data) {
-        setContactUrl((data as any).xero_contact_url || '');
-        setInvoiceUrl((data as any).xero_repeating_invoice_url || '');
+        setContactUrl(data.xero_contact_url || '');
+        setInvoiceUrl(data.xero_repeating_invoice_url || '');
       }
       setLoaded(true);
     };
@@ -95,7 +95,7 @@ export function XeroCard({ tenantId }: XeroCardProps) {
         .update({
           xero_contact_url: contactValue,
           xero_repeating_invoice_url: invoiceValue,
-        } as any)
+        })
         .eq('id', tenantId);
 
       if (error) throw error;

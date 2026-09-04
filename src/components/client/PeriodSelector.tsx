@@ -47,7 +47,7 @@ export function PeriodSelector({ packageInstanceId, value, onChange, triggerClas
   const { data: periods = [], isLoading } = useQuery({
     queryKey: ['package-renewal-periods', packageInstanceId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('package_renewal_periods')
         .select('period_number, period_start, period_end, closed_at')
         .eq('package_instance_id', packageInstanceId)

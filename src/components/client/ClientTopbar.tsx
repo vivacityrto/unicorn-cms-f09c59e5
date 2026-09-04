@@ -251,7 +251,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
                   {notifFilter ? 'No notifications of this type' : 'No notifications'}
                 </p>
               ) : (
-                filteredClientNotifications.slice(0, 5).map((n: any) => (
+                filteredClientNotifications.slice(0, 5).map((n) => (
                   <Link
                     key={n.id}
                     to={n.link || '/client/inbox?tab=notifications'}

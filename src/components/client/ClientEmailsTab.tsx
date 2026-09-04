@@ -36,8 +36,8 @@ export function ClientEmailsTab({ tenantId, clientName }: ClientEmailsTabProps) 
       // Extract domains from all user emails, excluding common free providers
       const freeProviders = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com', 'icloud.com', 'aol.com'];
       const domains = data
-        .map((row: any) => {
-          const email = row.users?.email as string | undefined;
+        .map((row: { users: { email: string | null } | null }) => {
+          const email = row.users?.email ?? undefined;
           if (!email) return null;
           const domain = email.split('@')[1]?.toLowerCase();
           return domain && !freeProviders.includes(domain) ? domain : null;

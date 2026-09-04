@@ -33,17 +33,29 @@ export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPrevi
         .select('*', { count: 'exact', head: true })
         .eq('tenant_id', tenantId);
 
-      // Get first 6 users with details
-      const { data: members, error } = await (supabase as any)
+      // Get first 6 users with details. The result type is passed explicitly
+      // as a generic argument to .select() because this nested-embed shape
+      // otherwise makes the Supabase client's automatic embed-inference
+      // recurse too deep ("Type instantiation is excessively deep and
+      // possibly infinite").
+      type TenantUserRow = {
+        user_id: string;
+        relationship_role: string | null;
+        users: { first_name: string | null; last_name: string | null; email: string; avatar_url: string | null; job_title: string | null; phone: string | null } | null;
+      };
+      const { data: members, error } = await supabase
         .from('tenant_users')
-        .select('user_id, relationship_role, users:user_id(first_name, last_name, email, avatar_url, job_title, phone)')
+        .select<
+          'user_id, relationship_role, users:user_id(first_name, last_name, email, avatar_url, job_title, phone)',
+          TenantUserRow
+        >('user_id, relationship_role, users:user_id(first_name, last_name, email, avatar_url, job_title, phone)')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: true })
         .limit(6);
 
       if (error) throw error;
 
-      const users: PreviewUser[] = (members || []).map((m: any) => ({
+      const users: PreviewUser[] = (members || []).map((m) => ({
         user_id: m.user_id,
         relationship_role: m.relationship_role || 'user',
         first_name: m.users?.first_name ?? null,

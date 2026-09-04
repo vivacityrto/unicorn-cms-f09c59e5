@@ -66,8 +66,8 @@ export function NewConversationDialog({
       try {
         validateAttachment(f);
         accepted.push(f);
-      } catch (err: any) {
-        toast.error(err?.message ?? "Invalid file");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Invalid file");
       }
     }
     if (accepted.length) setQueuedFiles((prev) => [...prev, ...accepted]);
@@ -88,19 +88,19 @@ export function NewConversationDialog({
 
     if (conversationId && tenantId != null && filesToUpload.length > 0) {
       try {
-        const { data: firstMsg } = await (supabase
-          .from("tenant_messages" as any)
+        const { data: firstMsg } = await supabase
+          .from("tenant_messages")
           .select("id")
           .eq("conversation_id", conversationId)
           .order("created_at", { ascending: true })
           .limit(1)
-          .maybeSingle()) as any;
+          .maybeSingle();
         if (firstMsg?.id) {
           for (const f of filesToUpload) {
             try {
               await uploadMessageAttachment(supabase, f, tenantId, conversationId, firstMsg.id);
-            } catch (err: any) {
-              toast.warning(`Attachment "${f.name}" failed to upload: ${err?.message ?? "unknown error"}`);
+            } catch (err) {
+              toast.warning(`Attachment "${f.name}" failed to upload: ${err instanceof Error ? err.message : "unknown error"}`);
             }
           }
         } else {

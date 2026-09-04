@@ -222,7 +222,7 @@ export function PackageTimeSection({
             ))}
           </SelectContent>
         </Select>
-        <Select value={billableFilter} onValueChange={(v) => setBillableFilter(v as any)}>
+        <Select value={billableFilter} onValueChange={(v) => setBillableFilter(v as 'all' | 'billable' | 'non-billable')}>
           <SelectTrigger className="w-[130px]">
             <SelectValue placeholder="Billable" />
           </SelectTrigger>
@@ -277,9 +277,9 @@ export function PackageTimeSection({
                         <Badge variant="secondary" className="capitalize">
                           {entry.work_type.replace('_', ' ')}
                         </Badge>
-                        {(entry as any).work_sub_type && (
+                        {entry.work_sub_type && (
                           <Badge variant="outline" className="text-xs">
-                            {getSubTypeLabel((entry as any).work_sub_type)}
+                            {getSubTypeLabel(entry.work_sub_type)}
                           </Badge>
                         )}
                       </div>

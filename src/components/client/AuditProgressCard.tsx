@@ -22,12 +22,12 @@ export function AuditProgressCard({ linkedAuditId }: AuditProgressCardProps) {
     queryKey: ['linked-audit-progress', linkedAuditId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_audits' as any)
+        .from('client_audits')
         .select('id, title, status, score_pct, score_total, score_max, risk_rating, audit_type, opening_meeting_at, closing_meeting_at, document_deadline_at')
         .eq('id', linkedAuditId)
         .single();
       if (error) throw error;
-      return data as any;
+      return data;
     },
   });
 

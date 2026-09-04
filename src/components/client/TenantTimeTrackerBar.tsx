@@ -88,12 +88,12 @@ export function TenantTimeTrackerBar({ tenantId, tenantName, unicorn1Id }: Tenan
   const { data: burndownTotals } = useQuery({
     queryKey: ['burndown-header-totals', tenantId],
     queryFn: async () => {
-      const { data: activeInstances } = await (supabase as any)
+      const { data: activeInstances } = await supabase
         .from('package_instances')
         .select('id')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false);
-      const activeIds = (activeInstances || []).map((r: any) => r.id);
+      const activeIds = (activeInstances || []).map((r) => r.id);
       if (activeIds.length === 0) return { used: 0, included: 0 };
       const { data: bd } = await supabase
         .from('v_package_burndown')
@@ -101,7 +101,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName, unicorn1Id }: Tenan
         .eq('tenant_id', tenantId)
         .in('package_instance_id', activeIds);
       let used = 0, included = 0;
-      (bd || []).forEach((r: any) => { used += r.used_minutes ?? 0; included += r.included_minutes ?? 0; });
+      (bd || []).forEach((r) => { used += r.used_minutes ?? 0; included += r.included_minutes ?? 0; });
       return { used, included };
     },
     enabled: !!tenantId,

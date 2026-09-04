@@ -46,7 +46,7 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
       if (instanceIds.length === 0) return;
 
       const { data } = await supabase
-        .from('stage_instances' as any)
+        .from('stage_instances')
         .select('id, stage_id, linked_audit_id, packageinstance_id')
         .in('stage_id', AUDIT_STAGE_IDS)
         .in('packageinstance_id', instanceIds)
@@ -54,8 +54,8 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
         .not('status', 'in', '(completed,core_complete)')
         .order('id', { ascending: false });
 
-      if (data && (data as any[]).length > 0) {
-        setActiveStageInstanceId((data as any[])[0].id);
+      if (data && data.length > 0) {
+        setActiveStageInstanceId(data[0].id);
       }
     };
     detectActiveStage();

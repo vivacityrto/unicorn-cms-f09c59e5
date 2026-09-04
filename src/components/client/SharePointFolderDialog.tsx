@@ -167,8 +167,8 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
       if (error) throw error;
       toast({ title: 'Site config saved', description: 'SharePoint site IDs updated.' });
       refetchSites();
-    } catch (err: any) {
-      toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Save failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setSavingSiteConfig(false);
     }
@@ -184,8 +184,8 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
       if (data?.error) throw new Error(data.error);
       toast({ title: 'Folder provisioned', description: `SharePoint folder created for ${tenant?.name}.` });
       refetch();
-    } catch (err: any) {
-      toast({ title: 'Provisioning failed', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Provisioning failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setProvisioning(false);
     }
@@ -205,10 +205,10 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
       });
       refetch();
       queryClient.invalidateQueries({ queryKey: ['tenant-sharepoint-liveness'] });
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: 'Governance provisioning failed',
-        description: err.message,
+        description: err instanceof Error ? err.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {

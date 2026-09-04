@@ -125,11 +125,11 @@ export function StaffTaskActionMenu({
 
       // Stage name + package name via stage_instances → package_instances → packages
       if (stageInstanceId) {
-        const { data: si } = await (supabase
-          .from('stage_instances' as any)
+        const { data: si } = await supabase
+          .from('stage_instances')
           .select('stage_id, packageinstance_id')
           .eq('id', stageInstanceId)
-          .maybeSingle()) as { data: { stage_id: number | null; packageinstance_id: number | null } | null; error: any };
+          .maybeSingle();
 
         if (si?.stage_id) {
           const { data: stage } = await supabase
@@ -141,11 +141,11 @@ export function StaffTaskActionMenu({
         }
 
         if (si?.packageinstance_id) {
-          const { data: pi } = await (supabase
-            .from('package_instances' as any)
+          const { data: pi } = await supabase
+            .from('package_instances')
             .select('package_id')
             .eq('id', si.packageinstance_id)
-            .maybeSingle()) as { data: { package_id: number } | null; error: any };
+            .maybeSingle();
           if (pi?.package_id) {
             const { data: pkg } = await supabase
               .from('packages')

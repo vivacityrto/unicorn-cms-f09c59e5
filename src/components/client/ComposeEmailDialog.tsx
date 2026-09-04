@@ -123,8 +123,8 @@ export function ComposeEmailDialog({
       } else {
         toast({ title: 'Preview failed', description: result.error || 'Unknown error', variant: 'destructive' });
       }
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } catch (e) {
+      toast({ title: 'Error', description: e instanceof Error ? e.message : 'Preview failed', variant: 'destructive' });
     } finally {
       setPreviewing(false);
     }
@@ -145,8 +145,8 @@ export function ComposeEmailDialog({
       } else {
         toast({ title: 'Send failed', description: result.error || 'Unknown error', variant: 'destructive' });
       }
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } catch (e) {
+      toast({ title: 'Error', description: e instanceof Error ? e.message : 'Send failed', variant: 'destructive' });
     } finally {
       setSending(false);
     }
