@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T22:44:46.164Z",
-  "baselineSha": "15e19427436ec4c7042f252382ecc489b94a937d",
+  "generatedAt": "2026-09-04T22:54:11.366Z",
+  "baselineSha": "6c29f432abb6ed2ac04522bc07971c31a0c85712",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 389,
-    "errors": 1415,
+    "filesWithFindings": 387,
+    "errors": 1402,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1408,
+    "@typescript-eslint/no-explicit-any": 1395,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 747,
+      "errors": 734,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 740,
+        "@typescript-eslint/no-explicit-any": 727,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -298,10 +298,10 @@
       }
     },
     "src/components/stage": {
-      "errors": 16,
+      "errors": 9,
       "warnings": 6,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 16,
+        "@typescript-eslint/no-explicit-any": 9,
         "react-refresh/only-export-components": 6
       }
     },
@@ -372,10 +372,10 @@
       }
     },
     "src/hooks": {
-      "errors": 282,
+      "errors": 276,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 282,
+        "@typescript-eslint/no-explicit-any": 276,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1491,9 +1491,6 @@
     "src/components/stage/EditStageEmailDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 7
     },
-    "src/components/stage/StageDocumentsPanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/components/stage/StageFrameworkSelector.tsx": {
       "react-refresh/only-export-components": 6
     },
@@ -1835,9 +1832,6 @@
     },
     "src/hooks/useRtoTips.tsx": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/hooks/useSeatHealth.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/hooks/useSeatScorecard.tsx": {
       "@typescript-eslint/no-explicit-any": 1

@@ -11,6 +11,7 @@ import type {
   RecommendationStatus 
 } from '@/types/seatHealth';
 import { HEALTH_THRESHOLDS, SCORE_WEIGHTS } from '@/types/seatHealth';
+import type { Json } from '@/integrations/supabase/types';
 
 // Get current quarter info
 function getCurrentQuarter() {
@@ -349,21 +350,21 @@ export function useSeatHealth() {
           .order('created_at', { ascending: false })
           .limit(4);
         
-        const gwcCapacityNo = (fitData?.[0] as any)?.capacity === false;
-        
+        const gwcCapacityNo = fitData?.[0]?.capacity === false;
+
         // Count consecutive No for capacity
         let consecutiveNo = 0;
         for (const fit of fitData || []) {
-          if ((fit as any).capacity === false) {
+          if (fit.capacity === false) {
             consecutiveNo++;
           } else {
             break;
           }
         }
-        
+
         // Check for declining trend
-        const gwcDeclining = fitData && fitData.length >= 2 && 
-          (fitData[0] as any)?.capacity === false && (fitData[1] as any)?.capacity === true;
+        const gwcDeclining = fitData && fitData.length >= 2 &&
+          fitData[0]?.capacity === false && fitData[1]?.capacity === true;
         
         // Legacy data fetching (kept for backward compatibility)
         const { data: todos } = await supabase
@@ -434,7 +435,7 @@ export function useSeatHealth() {
             gwc_score: healthData.gwc_score,
             total_score: healthData.total_score,
             health_band: healthData.health_band,
-            contributing_factors: healthData.contributing_factors as unknown as any,
+            contributing_factors: healthData.contributing_factors as unknown as Json,
             quarter_year,
             quarter_number,
             calculated_at: new Date().toISOString(),
@@ -595,7 +596,7 @@ export function useSeatHealth() {
     // can race. See docs/audit-log/entries/2026-08-11-seat-health-recommendation-race.md.
     for (const rec of recommendations) {
       const { data: insertedId, error } = await supabase.rpc(
-        'insert_seat_recommendation_if_absent' as any,
+        'insert_seat_recommendation_if_absent',
         {
           p_tenant_id: VIVACITY_TENANT_ID,
           p_seat_id: seatId,
