@@ -149,7 +149,7 @@ export function StageDocumentsPanel({
 
   // Fetch stage usage counts for linked documents
   const fetchDocumentStageCounts = useCallback(async () => {
-    const docIds = documents.map(d => d.document_id || (d as any).id);
+    const docIds = documents.map(d => d.document_id || d.id);
     if (docIds.length === 0) return;
     
     try {
@@ -179,10 +179,10 @@ export function StageDocumentsPanel({
     setLoadingLibrary(true);
     try {
       // Get already linked document IDs
-      const linkedIds = new Set(documents.map(d => d.document_id || (d as any).id));
-      
+      const linkedIds = new Set(documents.map(d => d.document_id || d.id));
+
       // Fetch all documents (no limit) so every doc is available for linking
-      let allDocs: any[] = [];
+      let allDocs: Document[] = [];
       let from = 0;
       const PAGE = 1000;
       while (true) {
@@ -305,10 +305,10 @@ export function StageDocumentsPanel({
 
       onRefresh();
       setLinkDialogOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to link documents',
+        description: error instanceof Error ? error.message : 'Failed to link documents',
         variant: 'destructive'
       });
     } finally {
@@ -330,10 +330,10 @@ export function StageDocumentsPanel({
       });
       
       toast({ title: 'Document unlinked from stage' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to unlink document',
+        description: error instanceof Error ? error.message : 'Failed to unlink document',
         variant: 'destructive'
       });
     }
@@ -397,13 +397,13 @@ export function StageDocumentsPanel({
   const getDocumentData = (doc: StageDocumentItem) => {
     if (doc.document) return doc.document;
     // Flat shape from useStageTemplateContent - the doc itself IS the document
-    const flat = doc as any;
+    const flat = doc as unknown as Document;
     if (flat.title) return { id: flat.id, title: flat.title, format: flat.format, category: flat.category, description: flat.description, document_status: flat.document_status, ai_status: flat.ai_status, ai_confidence_score: flat.ai_confidence_score, ai_category_confidence: flat.ai_category_confidence, ai_description_confidence: flat.ai_description_confidence, ai_reasoning: flat.ai_reasoning } as Document;
     return null;
   };
-  
+
   const getDocumentId = (doc: StageDocumentItem) => {
-    return doc.document_id || (doc as any).id;
+    return doc.document_id || doc.id;
   };
   
   // Handle document edit with reuse warning
