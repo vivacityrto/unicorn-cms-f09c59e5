@@ -122,7 +122,7 @@ export interface EosRock {
   description?: string;
   issue?: string | null;
   outcome?: string | null;
-  milestones?: unknown; // JSON in database, parsed as Milestone[] in UI
+  milestones?: Json; // JSON in database, parsed as Milestone[] in UI
   owner_id?: string;
   seat_id?: string | null;
   seat_owner_user_id?: string | null;
@@ -132,7 +132,6 @@ export interface EosRock {
   due_date: string;
   completed_date?: string;
   priority?: number;
-  progress?: number;
   level?: string;
   // Hierarchy fields
   rock_level?: RockLevel;
@@ -178,7 +177,10 @@ export interface EosIssue {
   title: string;
   description?: string;
   status: string; // USER-DEFINED enum
-  priority?: number | IssuePriority;
+  // Real DB column is purely numeric (checked: no real caller ever sets a
+  // string priority here, unlike similarly-named-but-unrelated priority
+  // fields elsewhere in the codebase that do use string enums).
+  priority?: number;
   category?: IssueCategory;
   created_by?: string;
   assigned_to?: string;

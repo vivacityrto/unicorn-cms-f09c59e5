@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T01:42:47.525Z",
-  "baselineSha": "a04996d7848d60c6a22d1f8a83d0427835149d14",
+  "generatedAt": "2026-09-04T02:10:07.889Z",
+  "baselineSha": "09b91efeef3ee5d7f846669aef2c8f93b0cedcb4",
   "totals": {
     "files": 1784,
-    "filesWithFindings": 593,
-    "errors": 3703,
+    "filesWithFindings": 591,
+    "errors": 3679,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3696,
+    "@typescript-eslint/no-explicit-any": 3672,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 3035,
+      "errors": 3011,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 3028,
+        "@typescript-eslint/no-explicit-any": 3004,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -433,10 +433,10 @@
       }
     },
     "src/hooks": {
-      "errors": 1178,
+      "errors": 1154,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1178,
+        "@typescript-eslint/no-explicit-any": 1154,
         "react-refresh/only-export-components": 1
       }
     },
@@ -2197,9 +2197,6 @@
     "src/hooks/useEngagementAudit.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
-    "src/hooks/useEos.tsx": {
-      "@typescript-eslint/no-explicit-any": 12
-    },
     "src/hooks/useEosAgendaTemplates.tsx": {
       "@typescript-eslint/no-explicit-any": 6
     },
@@ -2220,9 +2217,6 @@
     },
     "src/hooks/useEosMeetingSegments.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useEosOptions.ts": {
-      "@typescript-eslint/no-explicit-any": 12
     },
     "src/hooks/useEosReadiness.tsx": {
       "@typescript-eslint/no-explicit-any": 3
