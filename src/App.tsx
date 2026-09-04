@@ -33,7 +33,6 @@ import { dashboardLayoutRoutes } from "./routes/dashboardRoutes";
 
  const AcceptInvitationWrapper = lazy(() => import("./pages/AcceptInvitationWrapper"));
  const NotFound = lazy(() => import("./pages/NotFound"));
- const EosIssues = lazy(() => import("./pages/EosIssues"));
  const LiveMeetingView = lazy(() => import("./components/eos/LiveMeetingView").then(m => ({ default: m.LiveMeetingView })));
 const PostSignInRedirect = lazy(() => import("./pages/PostSignInRedirect"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
