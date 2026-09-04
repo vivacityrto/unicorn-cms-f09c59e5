@@ -54,9 +54,39 @@ interface StageUsageData {
   }>;
   documents: Array<{
     id: number;
-    doc_name: string;
+    title: string;
     package_name?: string;
   }>;
+}
+
+// Result-row shapes for the nested `packages:package_id (name)` embeds below —
+// typed explicitly to avoid the "excessively deep" inference error Supabase's
+// query builder otherwise hits on this join shape.
+interface TeamTaskQueryRow {
+  id: string;
+  name: string;
+  owner_role: string;
+  estimated_hours: number | null;
+  is_mandatory: boolean | null;
+  packages: { name: string } | null;
+}
+interface ClientTaskQueryRow {
+  id: string;
+  name: string;
+  instructions: string | null;
+  packages: { name: string } | null;
+}
+interface EmailQueryRow {
+  id: number;
+  trigger_type: string;
+  recipient_type: string;
+  packages: { name: string } | null;
+  email_templates: { internal_name: string } | null;
+}
+interface DocumentQueryRow {
+  id: number;
+  title: string;
+  packages: { name: string } | null;
 }
 
 // Stage types loaded dynamically via useStageTypeOptions hook
@@ -76,7 +106,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
   
   // Resolve standards codes to full references
   const resolvedStandards = resolveStandardCodes(
-    (stage as any)?.covers_standards || null,
+    stage?.covers_standards || null,
     allStandards
   );
 
@@ -94,10 +124,10 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
         new Set(((linkRows ?? []) as { document_id: number }[]).map((r) => r.document_id)),
       );
 
-      let documentsQuery: any = (supabase as any)
+      let documentsQuery = supabase
         .from('documents')
-        .select(`
-          id, doc_name,
+        .select<string, DocumentQueryRow>(`
+          id, title,
           packages:package_id (name)
         `);
       if (additionalIds.length > 0) {
@@ -111,49 +141,49 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
 
       // Fetch team tasks for this stage across all packages
       const [teamTasksResult, clientTasksResult, emailsResult, documentsResult] = await Promise.all([
-        (supabase as any)
+        supabase
           .from('package_staff_tasks')
-          .select(`
+          .select<string, TeamTaskQueryRow>(`
             id, name, owner_role, estimated_hours, is_mandatory,
             packages:package_id (name)
           `)
           .eq('stage_id', stage.id)
           .order('order_number', { ascending: true }),
-        (supabase as any)
+        supabase
           .from('package_client_tasks')
-          .select(`
+          .select<string, ClientTaskQueryRow>(`
             id, name, instructions,
             packages:package_id (name)
           `)
           .eq('stage_id', stage.id)
           .order('order_number', { ascending: true }),
         supabase
-          .from('package_stage_emails' as any)
-          .select(`
+          .from('package_stage_emails')
+          .select<string, EmailQueryRow>(`
             id, trigger_type, recipient_type,
             packages:package_id (name),
             email_templates:email_template_id (internal_name)
           `)
           .eq('stage_id', stage.id)
-          .order('sort_order', { ascending: true }) as any,
+          .order('sort_order', { ascending: true }),
         documentsQuery,
       ]);
 
       setUsageData({
-        teamTasks: (teamTasksResult.data || []).map((t: any) => ({
+        teamTasks: (teamTasksResult.data || []).map((t) => ({
           ...t,
           package_name: t.packages?.name
         })),
-        clientTasks: (clientTasksResult.data || []).map((t: any) => ({
+        clientTasks: (clientTasksResult.data || []).map((t) => ({
           ...t,
           package_name: t.packages?.name
         })),
-        emails: (emailsResult.data || []).map((e: any) => ({
+        emails: (emailsResult.data || []).map((e) => ({
           ...e,
           template_name: e.email_templates?.internal_name,
           package_name: e.packages?.name
         })),
-        documents: (documentsResult.data || []).map((d: any) => ({
+        documents: (documentsResult.data || []).map((d) => ({
           ...d,
           package_name: d.packages?.name
         }))
@@ -211,17 +241,17 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
                 )}
               </div>
               
-              {(stage as any).version_label && (
+              {stage.version_label && (
                 <p className="text-sm font-medium">
-                  Version: <span className="text-muted-foreground">{(stage as any).version_label}</span>
+                  Version: <span className="text-muted-foreground">{stage.version_label}</span>
                 </p>
               )}
-              
+
               <p className="text-sm">
                 <span className="font-medium">Frameworks: </span>
                 <span className="text-muted-foreground">
-                  {(stage as any).frameworks && (stage as any).frameworks.length > 0 
-                    ? (stage as any).frameworks.join(', ') 
+                  {stage.frameworks && stage.frameworks.length > 0
+                    ? stage.frameworks.join(', ')
                     : 'Shared'}
                 </span>
               </p>
@@ -428,7 +458,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
                     <div className="space-y-2 pl-6">
                       {usageData.documents.slice(0, 5).map((doc) => (
                         <div key={doc.id} className="p-2 rounded-md bg-muted/30 text-sm">
-                          <span>{doc.doc_name}</span>
+                          <span>{doc.title}</span>
                         </div>
                       ))}
                       {usageData.documents.length > 5 && (

@@ -39,6 +39,51 @@ interface StageDetailPanelProps {
   onClose: () => void;
 }
 
+// The task/email/document lists rendered below can come from either the
+// per-package override tables (typed hooks) or useResolvedStageContent's
+// generic Record<string, unknown>[] (template-resolved content, which can
+// carry either the current or a legacy field name for the same value) —
+// these interfaces cover every field actually read across both sources.
+interface DisplayTeamTask {
+  id: string | number;
+  name: string;
+  description?: string | null;
+  owner_role?: string | null;
+  estimated_hours?: number | null;
+  is_mandatory?: boolean;
+  is_recurring?: boolean;
+  source_stage_task_id?: number | string | null;
+}
+
+interface DisplayClientTask {
+  id: string | number;
+  name: string;
+  description?: string | null;
+  due_date_offset?: number | null;
+}
+
+interface DisplayEmail {
+  id: string | number;
+  email_template?: { internal_name: string } | null;
+  email_templates?: { internal_name: string } | null;
+  name?: string | null;
+  email_template_id?: string | null;
+  trigger_type?: string | null;
+  recipient_type?: string | null;
+  subject?: string | null;
+}
+
+interface DisplayDocument {
+  id: string | number;
+  document?: { title: string } | null;
+  documents?: { doc_name: string } | null;
+  doc_name?: string | null;
+  title?: string | null;
+  visibility?: string | null;
+  delivery_type?: string | null;
+  framework_type?: string | null;
+}
+
 // Stage types loaded dynamically via useStageTypeOptions hook
 
 export function StageDetailPanel({ packageId, stageId, stage, allStages = [], onClose }: StageDetailPanelProps) {
@@ -142,31 +187,31 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
   const isReadOnly = !useOverrides;
 
   // Toggle is_recurring on the appropriate table
-  const handleToggleRecurring = async (task: any) => {
+  const handleToggleRecurring = async (task: DisplayTeamTask) => {
     const newVal = !task.is_recurring;
     try {
       if (useOverrides) {
         await supabase
           .from('package_staff_tasks')
-          .update({ is_recurring: newVal } as any)
-          .eq('id', task.id);
+          .update({ is_recurring: newVal })
+          .eq('id', task.id as string);
       } else {
         await supabase
           .from('stage_team_tasks')
-          .update({ is_recurring: newVal } as any)
-          .eq('id', task.id);
+          .update({ is_recurring: newVal })
+          .eq('id', task.id as number);
       }
       // Also sync to staff_tasks if source link exists
       if (task.source_stage_task_id) {
         await supabase
           .from('staff_tasks')
-          .update({ is_recurring: newVal } as any)
-          .eq('id', task.source_stage_task_id);
+          .update({ is_recurring: newVal })
+          .eq('id', task.source_stage_task_id as number);
       }
       toast({ title: 'Updated', description: `Task marked as ${newVal ? 'recurring' : 'once-off'}` });
       refetchResolved();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update task', variant: 'destructive' });
     }
   };
 
@@ -183,10 +228,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
     try {
       await updateStage(stage.id, updates);
       toast({ title: 'Stage Updated' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update stage',
+        description: error instanceof Error ? error.message : 'Failed to update stage',
         variant: 'destructive'
       });
     }
@@ -199,10 +244,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       try {
         await updateStage(stage!.id, pendingUpdate);
         toast({ title: 'Stage Updated' });
-      } catch (error: any) {
+      } catch (error) {
         toast({
           title: 'Error',
-          description: error.message || 'Failed to update stage',
+          description: error instanceof Error ? error.message : 'Failed to update stage',
           variant: 'destructive'
         });
       }
@@ -227,12 +272,12 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       });
         toast({
           title: 'Stage Duplicated',
-          description: `Created "${(newStage as any).name || (newStage as any).title}" in the library.`
+          description: `Created "${newStage.name}" in the library.`
         });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to duplicate stage',
+        description: error instanceof Error ? error.message : 'Failed to duplicate stage',
         variant: 'destructive'
       });
     } finally {
@@ -247,10 +292,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       await copyTemplate(packageId, stageId);
       await refetchResolved();
       await refetchOverrides();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to enable overrides',
+        description: error instanceof Error ? error.message : 'Failed to enable overrides',
         variant: 'destructive'
       });
     } finally {
@@ -264,10 +309,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       await resetToTemplate();
       await refetchResolved();
       setShowResetConfirm(false);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to reset to template',
+        description: error instanceof Error ? error.message : 'Failed to reset to template',
         variant: 'destructive'
       });
     } finally {
@@ -296,10 +341,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       toast({ title: 'Task Added' });
       setTaskForm({ name: '', description: '', owner_role: 'Admin', estimated_hours: '', is_mandatory: true });
       setIsAddingTask(false);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add task',
+        description: error instanceof Error ? error.message : 'Failed to add task',
         variant: 'destructive'
       });
     }
@@ -325,10 +370,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       toast({ title: 'Client Task Added' });
       setClientTaskForm({ name: '', description: '', instructions: '', due_date_offset: '' });
       setIsAddingClientTask(false);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add client task',
+        description: error instanceof Error ? error.message : 'Failed to add client task',
         variant: 'destructive'
       });
     }
@@ -349,10 +394,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       toast({ title: 'Email Added' });
       setEmailForm({ email_template_id: '', trigger_type: 'manual', recipient_type: 'tenant' });
       setIsAddingEmail(false);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add email',
+        description: error instanceof Error ? error.message : 'Failed to add email',
         variant: 'destructive'
       });
     }
@@ -685,7 +730,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {displayTeamTasks.map((task: any, index: number) => (
+                    {(displayTeamTasks as unknown as DisplayTeamTask[]).map((task) => (
                       <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                         <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
                         <div className="flex-1 min-w-0">
@@ -732,7 +777,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
-                            onClick={() => deleteStaffTask(task.id)}
+                            onClick={() => deleteStaffTask(task.id as string)}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -772,7 +817,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {displayEmails.map((email: any) => {
+                    {(displayEmails as unknown as DisplayEmail[]).map((email) => {
                       const templateName = email.email_template?.internal_name || 
                         email.email_templates?.internal_name || 
                         emailTemplates.find(t => t.id === email.email_template_id)?.internal_name ||
@@ -808,7 +853,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7"
-                              onClick={() => removeStageEmail(email.id)}
+                              onClick={() => removeStageEmail(email.id as number)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -849,7 +894,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {displayClientTasks.map((task: any) => (
+                    {(displayClientTasks as unknown as DisplayClientTask[]).map((task) => (
                       <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                         <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
                         <div className="flex-1 min-w-0">
@@ -868,7 +913,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
-                            onClick={() => deleteClientTask(task.id)}
+                            onClick={() => deleteClientTask(task.id as string)}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -915,7 +960,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {displayDocuments.map((doc: any) => (
+                      {(displayDocuments as unknown as DisplayDocument[]).map((doc) => (
                         <div key={doc.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                           <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
                           <div className="flex-1 min-w-0">

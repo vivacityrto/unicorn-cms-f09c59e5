@@ -1,24 +1,24 @@
 {
-  "generatedAt": "2026-09-04T12:16:29.863Z",
-  "baselineSha": "931bf931262f5185523a4a789ad1645070e2c0e1",
+  "generatedAt": "2026-09-04T12:37:59.465Z",
+  "baselineSha": "0a214ece4aeb6afb3ccd21681f5c398eabca1bd2",
   "totals": {
-    "files": 1769,
-    "filesWithFindings": 464,
-    "errors": 2637,
-    "warnings": 38
+    "files": 1757,
+    "filesWithFindings": 459,
+    "errors": 2594,
+    "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2630,
-    "react-refresh/only-export-components": 38,
+    "@typescript-eslint/no-explicit-any": 2587,
+    "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1969,
-      "warnings": 38,
+      "errors": 1926,
+      "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1962,
-        "react-refresh/only-export-components": 38,
+        "@typescript-eslint/no-explicit-any": 1919,
+        "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
     },
@@ -98,10 +98,9 @@
       }
     },
     "src/components/audit": {
-      "errors": 4,
+      "errors": 0,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 4,
         "react-refresh/only-export-components": 1
       }
     },
@@ -278,10 +277,10 @@
       }
     },
     "src/components/package-builder": {
-      "errors": 78,
+      "errors": 43,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 77,
+        "@typescript-eslint/no-explicit-any": 42,
         "@typescript-eslint/no-unused-expressions": 1,
         "react-refresh/only-export-components": 1
       }
@@ -411,10 +410,10 @@
       }
     },
     "src/pages": {
-      "errors": 399,
+      "errors": 395,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 399
+        "@typescript-eslint/no-explicit-any": 395
       }
     },
     "src/pages/academy": {
@@ -436,6 +435,13 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 36
+      }
+    },
+    "src/routes": {
+      "errors": 0,
+      "warnings": 1,
+      "byRule": {
+        "react-refresh/only-export-components": 1
       }
     },
     "src/services": {
@@ -1327,12 +1333,6 @@
     "src/components/ask-viv/AskVivPanel.tsx": {
       "@typescript-eslint/no-explicit-any": 7
     },
-    "src/components/audit/AuditQuestionCard.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/components/audit/AuditSectionNav.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
     "src/components/audit/DeleteAuditDialog.tsx": {
       "react-refresh/only-export-components": 1
     },
@@ -1530,17 +1530,11 @@
     "src/components/package-builder/PackageReadinessIndicator.tsx": {
       "react-refresh/only-export-components": 1
     },
-    "src/components/package-builder/StageDetailPanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 19
-    },
     "src/components/package-builder/StageDocumentsTab.tsx": {
       "@typescript-eslint/no-explicit-any": 7
     },
     "src/components/package-builder/StageLibraryDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/package-builder/StagePreviewDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 16
     },
     "src/components/portfolio/TenantDrawer.tsx": {
       "@typescript-eslint/no-explicit-any": 4
@@ -2140,12 +2134,6 @@
     "src/pages/AuditTemplateBuilder.tsx": {
       "@typescript-eslint/no-explicit-any": 21
     },
-    "src/pages/AuditWorkspace.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/pages/Audits.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "src/pages/ClientDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -2262,6 +2250,9 @@
     },
     "src/pages/client/SupportTicketsPortalPage.tsx": {
       "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/routes/dashboardRoutes.tsx": {
+      "react-refresh/only-export-components": 1
     },
     "src/services/codeTablesService.ts": {
       "@typescript-eslint/no-explicit-any": 5
