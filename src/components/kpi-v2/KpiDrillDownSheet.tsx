@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Loader2, Check, X, Minus, Inbox } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -37,6 +38,33 @@ export type KpiDrillDownKind =
   | "communication"
   | "csc_tasks"
   | "assistant_tasks";
+
+// Normalized display row shared across all 4 drill-down kinds — each kind's
+// branch below populates only the subset of fields its own table component
+// reads (see RetentionTable/CommunicationTable/CscTasksTable/AssistantTasksTable).
+interface DrillDownRow {
+  id: string;
+  tenant_id?: number;
+  tenant_name?: string;
+  assigned_since?: string;
+  ended_at?: string | null;
+  subject?: string | null;
+  client_body?: string | null;
+  reply_body?: string | null;
+  received_at?: string | null;
+  responded_at?: string | null;
+  response_minutes?: number | null;
+  sla_met?: boolean | null;
+  conversation_id?: string | null;
+  title?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  completed_at?: string | null;
+  due_at?: string | null;
+  source_ref?: string;
+  metadata?: { package_name?: string; package_title?: string; package?: string };
+  source?: string;
+}
 
 interface Props {
   open: boolean;
@@ -93,7 +121,7 @@ export function KpiDrillDownSheet({
   label,
 }: Props) {
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<DrillDownRow[]>([]);
 
   // Half-open [startTs, endTs) window matching the KPI RPCs.
   const { startTs, endTs } = useMemo(() => {
@@ -109,17 +137,16 @@ export function KpiDrillDownSheet({
     let cancelled = false;
     setLoading(true);
     (async () => {
-      let data: any[] = [];
-      const sb = supabase as any;
+      let data: DrillDownRow[] = [];
       try {
         if (kind === "retention") {
-          const { data: rpcRows, error } = await sb.rpc("kpi_csc_retention_rows", {
+          const { data: rpcRows, error } = await supabase.rpc("kpi_csc_retention_rows", {
             p_csc_user_id: subjectUuid,
             p_start: startTs,
             p_end: endTs,
           });
           if (error) throw error;
-          data = (rpcRows ?? []).map((r: any) => ({
+          data = (rpcRows ?? []).map((r) => ({
             id: `${r.tenant_id}:${r.assigned_since}`,
             tenant_id: r.tenant_id,
             tenant_name: r.tenant_name ?? `Tenant #${r.tenant_id}`,
@@ -129,13 +156,13 @@ export function KpiDrillDownSheet({
             ended_at: r.churned_in_period ? r.churned_at : null,
           }));
         } else if (kind === "communication") {
-          const { data: rpcRows, error } = await sb.rpc("kpi_csc_communication_rows", {
+          const { data: rpcRows, error } = await supabase.rpc("kpi_csc_communication_rows", {
             p_csc_user_id: subjectUuid,
             p_start: startTs,
             p_end: endTs,
           });
           if (error) throw error;
-          data = (rpcRows ?? []).map((r: any) => ({
+          data = (rpcRows ?? []).map((r) => ({
             id: r.message_id,
             conversation_id: r.conversation_id,
             subject: r.subject,
@@ -149,13 +176,13 @@ export function KpiDrillDownSheet({
               r.sla_status === "met" ? true : r.sla_status === "missed" ? false : null,
           }));
         } else if (kind === "csc_tasks") {
-          const { data: rpcRows, error } = await sb.rpc("kpi_csc_tasks_rows", {
+          const { data: rpcRows, error } = await supabase.rpc("kpi_csc_tasks_rows", {
             p_csc_user_id: subjectUuid,
             p_start: startTs,
             p_end: endTs,
           });
           if (error) throw error;
-          data = (rpcRows ?? []).map((r: any) => ({
+          data = (rpcRows ?? []).map((r) => ({
             id: r.task_id,
             title: r.task_name,
             status: r.status,
@@ -168,27 +195,27 @@ export function KpiDrillDownSheet({
           }));
         } else if (kind === "assistant_tasks") {
           const [ttCreated, ttFollowers, cai, ops] = await Promise.all([
-            sb.from("tasks_tenants")
+            supabase.from("tasks_tenants")
               .select("id, task_name, status, due_date, completed_at, created_at")
               .gte("created_at", startTs).lt("created_at", endTs)
               .eq("created_by", subjectUuid),
-            sb.from("tasks_tenants")
+            supabase.from("tasks_tenants")
               .select("id, task_name, status, due_date, completed_at, created_at")
               .gte("created_at", startTs).lt("created_at", endTs)
               .contains("followers", [subjectUuid]),
-            sb.from("client_action_items")
+            supabase.from("client_action_items")
               .select("id, title, status, due_date, completed_at, created_at")
               .gte("created_at", startTs).lt("created_at", endTs)
               .eq("assignee_user_id", subjectUuid),
-            sb.from("ops_work_items")
+            supabase.from("ops_work_items")
               .select("id, title, status, due_at, completed_at, created_at")
               .gte("created_at", startTs).lt("created_at", endTs)
               .eq("owner_user_uuid", subjectUuid),
           ]);
 
-          const merged: any[] = [];
+          const merged: DrillDownRow[] = [];
           const seenTt = new Set<string>();
-          const pushTt = (r: any) => {
+          const pushTt = (r: { id: string; task_name: string; status: string; due_date: string; completed_at: string | null; created_at: string }) => {
             if (seenTt.has(r.id)) return;
             seenTt.add(r.id);
             merged.push({
@@ -203,7 +230,7 @@ export function KpiDrillDownSheet({
           };
           (ttCreated.data ?? []).forEach(pushTt);
           (ttFollowers.data ?? []).forEach(pushTt);
-          (cai.data ?? []).forEach((r: any) => merged.push({
+          (cai.data ?? []).forEach((r) => merged.push({
             id: `cai:${r.id}`,
             title: r.title,
             source: "client_action_items",
@@ -212,7 +239,7 @@ export function KpiDrillDownSheet({
             completed_at: r.completed_at,
             created_at: r.created_at,
           }));
-          (ops.data ?? []).forEach((r: any) => merged.push({
+          (ops.data ?? []).forEach((r) => merged.push({
             id: `ops:${r.id}`,
             title: r.title,
             source: "ops_work_items",
@@ -288,7 +315,7 @@ export function KpiDrillDownSheet({
 
 /* ------------------------------- Tables ---------------------------------- */
 
-function RetentionTable({ rows }: { rows: any[] }) {
+function RetentionTable({ rows }: { rows: DrillDownRow[] }) {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -340,8 +367,8 @@ function fmtDateTimeCompact(iso?: string | null) {
   }
 }
 
-function CommunicationTable({ rows }: { rows: any[] }) {
-  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+function CommunicationTable({ rows }: { rows: DrillDownRow[] }) {
+  const [selectedRow, setSelectedRow] = useState<DrillDownRow | null>(null);
   return (
     <>
       <Table>
@@ -404,12 +431,12 @@ function MessageSnippetDialog({
   row,
   onClose,
 }: {
-  row: any | null;
+  row: DrillDownRow | null;
   onClose: () => void;
 }) {
   const [showFullThread, setShowFullThread] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Pick<Tables<'tenant_messages'>, 'sender_type' | 'body' | 'created_at'>[]>([]);
 
   // Reset when the selected row changes.
   useEffect(() => {
@@ -560,7 +587,7 @@ function taskStatusTone(status?: string | null, completedAt?: string | null, due
   return "bg-[#23C0DD]/10 text-[#0e6b7c] border-[#23C0DD]/40";
 }
 
-function CscTasksTable({ rows }: { rows: any[] }) {
+function CscTasksTable({ rows }: { rows: DrillDownRow[] }) {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -605,7 +632,7 @@ function CscTasksTable({ rows }: { rows: any[] }) {
   );
 }
 
-function AssistantTasksTable({ rows }: { rows: any[] }) {
+function AssistantTasksTable({ rows }: { rows: DrillDownRow[] }) {
   const SOURCE_LABEL: Record<string, string> = {
     client_task: "Client Task",
     action_item: "Action Item",

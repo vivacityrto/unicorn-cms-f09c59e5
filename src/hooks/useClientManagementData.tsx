@@ -221,7 +221,7 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
       if (error) throw error;
 
       // Fetch creator info
-      const creatorIds = [...new Set((data || []).map((e: any) => e.created_by).filter(Boolean))];
+      const creatorIds = [...new Set((data || []).map((e) => e.created_by).filter(Boolean))];
       let creatorsMap = new Map();
       
       if (creatorIds.length > 0) {
@@ -233,11 +233,11 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
         creatorsMap = new Map(users?.map(u => [u.user_uuid, u]) || []);
       }
 
-      const eventsWithCreators = (data || []).map((event: any) => ({
+      const eventsWithCreators = (data || []).map((event) => ({
         ...event,
         metadata: event.metadata as Record<string, unknown>,
         creator: creatorsMap.get(event.created_by)
-      })) as TimelineEvent[];
+      })) as unknown as TimelineEvent[];
 
       rawEventsRef.current = offset === 0
         ? eventsWithCreators
@@ -264,7 +264,7 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
       setEvents(groupedEvents);
 
       setHasMore((data?.length || 0) === limit);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching timeline:', error);
       toast({
         title: 'Error',
@@ -302,10 +302,10 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
       toast({ title: 'Note added' });
       fetchEvents();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
       return false;
@@ -330,10 +330,10 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
       fetchEvents();
       fetchPinnedNotes();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
       return false;
@@ -405,7 +405,7 @@ export function useClientNotes(tenantId: number | null, clientId: string | null)
       })) as ClientNote[];
 
       setNotes(notesWithCreators);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching notes:', error);
       toast({
         title: 'Error',
@@ -451,10 +451,10 @@ export function useClientNotes(tenantId: number | null, clientId: string | null)
       toast({ title: 'Note created' });
       fetchNotes();
       return res.note_id;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
       return null;
@@ -477,10 +477,10 @@ export function useClientNotes(tenantId: number | null, clientId: string | null)
 
       toast({ title: 'Note updated' });
       fetchNotes();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
     }
@@ -497,10 +497,10 @@ export function useClientNotes(tenantId: number | null, clientId: string | null)
 
       toast({ title: 'Note deleted' });
       fetchNotes();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
     }
@@ -589,7 +589,7 @@ export function useClientActionItems(tenantId: number | null, clientId: string |
       }
 
       setItems(itemsWithUsers);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching action items:', error);
       toast({
         title: 'Error',
@@ -641,10 +641,10 @@ export function useClientActionItems(tenantId: number | null, clientId: string |
       toast({ title: 'Action item created' });
       fetchItems();
       return res.action_item_id;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
       return null;
@@ -667,10 +667,10 @@ export function useClientActionItems(tenantId: number | null, clientId: string |
 
       toast({ title: status === 'done' ? 'Action item completed' : 'Status updated' });
       fetchItems();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
     }
@@ -690,10 +690,10 @@ export function useClientActionItems(tenantId: number | null, clientId: string |
 
       toast({ title: 'Action item updated' });
       fetchItems();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
     }
@@ -710,10 +710,10 @@ export function useClientActionItems(tenantId: number | null, clientId: string |
 
       toast({ title: 'Action item deleted' });
       fetchItems();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
     }
