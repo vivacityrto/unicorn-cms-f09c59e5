@@ -66,7 +66,7 @@ export function useClientAllTasks(includeArchived: boolean = false) {
       }
       const aiRes = await aiQuery;
       if (aiRes.error) throw aiRes.error;
-      const actionItems = (aiRes.data as any[]) || [];
+      const actionItems = aiRes.data || [];
 
       const packageIdSet = new Set<number>();
       const stageIdSet = new Set<number>();
@@ -89,26 +89,26 @@ export function useClientAllTasks(includeArchived: boolean = false) {
       const [packageRes, stageRes, usersRes] = await Promise.all([
         packageIds.length > 0
           ? supabase.from("packages").select("id, name").in("id", packageIds)
-          : Promise.resolve({ data: [], error: null } as any),
+          : Promise.resolve({ data: [], error: null }),
         stageIds.length > 0
           ? supabase.from("stages").select("id, name").in("id", stageIds)
-          : Promise.resolve({ data: [], error: null } as any),
+          : Promise.resolve({ data: [], error: null }),
         assigneeIds.length > 0
           ? supabase
               .from("users")
               .select("user_uuid, first_name, last_name, full_name, email")
               .in("user_uuid", assigneeIds)
-          : Promise.resolve({ data: [], error: null } as any),
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       const packageMap = new Map(
-        ((packageRes.data || []) as any[]).map((p: any) => [p.id, p.name]),
+        (packageRes.data || []).map((p): [number, string | null] => [p.id, p.name]),
       );
       const stageMap = new Map(
-        ((stageRes.data || []) as any[]).map((s: any) => [s.id, s.name]),
+        (stageRes.data || []).map((s): [number, string] => [s.id, s.name]),
       );
       const userMap = new Map<string, string>();
-      for (const u of (usersRes.data || []) as any[]) {
+      for (const u of usersRes.data || []) {
         const name =
           (u.full_name && u.full_name.trim()) ||
           [u.first_name, u.last_name].filter(Boolean).join(" ").trim() ||
