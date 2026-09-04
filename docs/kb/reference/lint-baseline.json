@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T14:05:29.715Z",
-  "baselineSha": "8e4eae515456a92fc77ed307ecac84b3bc6feeb4",
+  "generatedAt": "2026-09-04T14:21:32.681Z",
+  "baselineSha": "d5419e3f5bba347fd72e0d69160519ed578ea9a4",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 451,
-    "errors": 2430,
+    "filesWithFindings": 450,
+    "errors": 2383,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2423,
+    "@typescript-eslint/no-explicit-any": 2376,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1762,
+      "errors": 1715,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1755,
+        "@typescript-eslint/no-explicit-any": 1708,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -409,10 +409,10 @@
       }
     },
     "src/pages": {
-      "errors": 322,
+      "errors": 275,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 322
+        "@typescript-eslint/no-explicit-any": 275
       }
     },
     "src/pages/academy": {
@@ -2104,9 +2104,6 @@
     },
     "src/pages/AdminStageAnalytics.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/pages/AdminStageDetail.tsx": {
-      "@typescript-eslint/no-explicit-any": 47
     },
     "src/pages/AuditTemplateBuilder.tsx": {
       "@typescript-eslint/no-explicit-any": 21

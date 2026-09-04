@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useStageActiveUsage } from '@/hooks/useStageActiveUsage';
 import { useStageCertification } from '@/hooks/useStageCertification';
@@ -299,14 +300,14 @@ export default function AdminStageDetail() {
     try {
       // Get package_stages for this stage
       const { data: psData, error: psError } = await supabase
-        .from('package_stages' as any)
+        .from('package_stages')
         .select('package_id')
-        .eq('stage_id', stageIdNum) as any;
+        .eq('stage_id', stageIdNum);
 
       if (psError) throw psError;
 
       const packageIdsSet = new Set<number>();
-      (psData || []).forEach((ps: any) => packageIdsSet.add(ps.package_id));
+      (psData || []).forEach((ps) => packageIdsSet.add(ps.package_id));
       const packageIds = Array.from(packageIdsSet);
       setUsageCount(packageIds.length);
 
@@ -328,7 +329,7 @@ export default function AdminStageDetail() {
         .eq('is_archived', false)
         .order('name', { ascending: true });
       
-      setAllStages((allStagesRaw || []).map((s: any) => ({
+      setAllStages((allStagesRaw || []).map((s) => ({
         ...s,
         title: s.name,
         short_name: s.shortname,
@@ -364,14 +365,14 @@ export default function AdminStageDetail() {
   // Sync local frameworks state with stage
   useEffect(() => {
     if (stage) {
-      setLocalFrameworks((stage as any).frameworks || []);
+      setLocalFrameworks(stage.frameworks || []);
       setSettingsDraft({
         title: stage.title || '',
         description: stage.description || '',
         short_name: stage.short_name || '',
         video_url: stage.video_url || '',
         ai_hint: stage.ai_hint || '',
-        version_label: (stage as any).version_label || '',
+        version_label: stage.version_label || '',
         stage_type: stage.stage_type || 'delivery',
       });
     }
@@ -384,7 +385,7 @@ export default function AdminStageDetail() {
     settingsDraft.short_name !== (stage.short_name || '') ||
     settingsDraft.video_url !== (stage.video_url || '') ||
     settingsDraft.ai_hint !== (stage.ai_hint || '') ||
-    settingsDraft.version_label !== ((stage as any).version_label || '') ||
+    settingsDraft.version_label !== (stage.version_label || '') ||
     settingsDraft.stage_type !== (stage.stage_type || 'delivery')
   );
 
@@ -399,7 +400,7 @@ export default function AdminStageDetail() {
         video_url: settingsDraft.video_url,
         ai_hint: settingsDraft.ai_hint,
         stage_type: settingsDraft.stage_type,
-        ...(settingsDraft.version_label !== ((stage as any).version_label || '') ? { version_label: settingsDraft.version_label || null } as any : {}),
+        ...(settingsDraft.version_label !== (stage.version_label || '') ? { version_label: settingsDraft.version_label || null } : {}),
       });
       setEditConfirmationOpen(true);
       return;
@@ -416,13 +417,13 @@ export default function AdminStageDetail() {
       };
       await updateStage(stage.id, updates);
       // version_label uses dedicated handler (separate column + audit)
-      if (settingsDraft.version_label !== ((stage as any).version_label || '')) {
+      if (settingsDraft.version_label !== (stage.version_label || '')) {
         await handleUpdateVersionLabel(settingsDraft.version_label);
       }
       setStage(prev => prev ? { ...prev, ...updates } : null);
       toast({ title: 'Stage saved' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to save stage', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to save stage', variant: 'destructive' });
     } finally {
       setIsSavingSettings(false);
     }
@@ -436,7 +437,7 @@ export default function AdminStageDetail() {
       short_name: stage.short_name || '',
       video_url: stage.video_url || '',
       ai_hint: stage.ai_hint || '',
-      version_label: (stage as any).version_label || '',
+      version_label: stage.version_label || '',
       stage_type: stage.stage_type || 'delivery',
     });
   };
@@ -456,10 +457,10 @@ export default function AdminStageDetail() {
       await updateStage(stage.id, updates);
       setStage(prev => prev ? { ...prev, ...updates } : null);
       toast({ title: 'Stage Updated' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update stage',
+        description: error instanceof Error ? error.message : 'Failed to update stage',
         variant: 'destructive'
       });
     }
@@ -467,37 +468,37 @@ export default function AdminStageDetail() {
 
   const handleUpdateVersionLabel = async (version_label: string) => {
     if (!stage) return;
-    
-    const oldLabel = (stage as any).version_label || null;
+
+    const oldLabel = stage.version_label || null;
     const newLabel = version_label.trim() || null;
-    
+
     try {
-      const { error } = await (supabase
+      const { error } = await supabase
         .from('stages')
-        .update({ version_label: newLabel } as any)
-        .eq('id', stage.id) as any);
-      
+        .update({ version_label: newLabel })
+        .eq('id', stage.id);
+
       if (error) throw error;
-      
-      setStage(prev => prev ? { ...prev, version_label: newLabel } as any : null);
-      
+
+      setStage(prev => prev ? { ...prev, version_label: newLabel } : null);
+
       // Log audit event
       if (oldLabel !== newLabel) {
         await supabase.from('audit_events').insert({
           entity: 'stage',
           entity_id: crypto.randomUUID(),
           action: 'stage.version_updated',
-          details: { stage_id: stage.id, 
+          details: { stage_id: stage.id,
             old_version_label: oldLabel,
             new_version_label: newLabel,
             stage_title: stage.title
           }
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update version label',
+        description: error instanceof Error ? error.message : 'Failed to update version label',
         variant: 'destructive'
       });
     }
@@ -520,8 +521,8 @@ export default function AdminStageDetail() {
 
   const handleUpdateFrameworks = async (frameworks: string[]) => {
     if (!stage) return;
-    
-    const oldFrameworks = (stage as any).frameworks || null;
+
+    const oldFrameworks = stage.frameworks || null;
     
     // Check if narrowing scope on a certified stage
     if (stage.is_certified && isFrameworksNarrowed(oldFrameworks, frameworks)) {
@@ -535,13 +536,13 @@ export default function AdminStageDetail() {
 
   const applyFrameworksUpdate = async (frameworks: string[]) => {
     if (!stage) return;
-    
-    const oldFrameworks = (stage as any).frameworks || null;
+
+    const oldFrameworks = stage.frameworks || null;
     setLocalFrameworks(frameworks);
-    
+
     const success = await updateStageFrameworks(stage.id, frameworks, stage.title, oldFrameworks);
     if (success) {
-      setStage(prev => prev ? { ...prev, frameworks } as any : null);
+      setStage(prev => prev ? { ...prev, frameworks } : null);
       
       // Log if certified stage was narrowed
       if (stage.is_certified && isFrameworksNarrowed(oldFrameworks, frameworks)) {
@@ -594,10 +595,10 @@ export default function AdminStageDetail() {
         await updateStage(stage.id, pendingUpdate);
         setStage(prev => prev ? { ...prev, ...pendingUpdate } : null);
         toast({ title: 'Stage Updated' });
-      } catch (error: any) {
+      } catch (error) {
         toast({
           title: 'Error',
-          description: error.message || 'Failed to update stage',
+          description: error instanceof Error ? error.message : 'Failed to update stage',
           variant: 'destructive'
         });
       }
@@ -634,7 +635,7 @@ export default function AdminStageDetail() {
       const warningMessages: string[] = [];
       
       // Check for version label warning (soft, non-blocking)
-      if (!(stage as any).version_label) {
+      if (!stage.version_label) {
         warningMessages.push('Consider setting a version label before certifying this stage.');
       }
       
@@ -697,10 +698,10 @@ export default function AdminStageDetail() {
         
         setCertWarningMessages([]);
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update certification. SuperAdmin access required.',
+        description: error instanceof Error ? error.message : 'Failed to update certification. SuperAdmin access required.',
         variant: 'destructive'
       });
     }
@@ -826,8 +827,8 @@ export default function AdminStageDetail() {
       toast({ title: 'Task Added' });
       setTaskForm({ name: '', description: '', owner_role: 'Admin', estimated_hours: '', is_mandatory: true });
       setIsAddingTask(false);
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to add task', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to add task', variant: 'destructive' });
     }
   };
 
@@ -835,8 +836,8 @@ export default function AdminStageDetail() {
     try {
       await deleteTeamTask(taskId);
       toast({ title: 'Task Deleted' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to delete task', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete task', variant: 'destructive' });
     }
   };
 
@@ -857,8 +858,8 @@ export default function AdminStageDetail() {
       toast({ title: 'Client Task Added' });
       setClientTaskForm({ name: '', description: '', instructions: '', due_date_offset: '' });
       setIsAddingClientTask(false);
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to add client task', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to add client task', variant: 'destructive' });
     }
   };
 
@@ -866,8 +867,8 @@ export default function AdminStageDetail() {
     try {
       await deleteClientTask(taskId);
       toast({ title: 'Client Task Deleted' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to delete client task', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete client task', variant: 'destructive' });
     }
   };
 
@@ -885,8 +886,8 @@ export default function AdminStageDetail() {
       toast({ title: 'Email Added' });
       setEmailForm({ email_template_id: '', trigger_type: 'manual', recipient_type: 'tenant' });
       setIsAddingEmail(false);
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to add email', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to add email', variant: 'destructive' });
     }
   };
 
@@ -894,8 +895,8 @@ export default function AdminStageDetail() {
     try {
       await deleteEmail(emailId);
       toast({ title: 'Email Removed' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to remove email', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to remove email', variant: 'destructive' });
     }
   };
 
@@ -922,11 +923,11 @@ export default function AdminStageDetail() {
         is_core: editTaskForm.is_core,
         is_key_event: editTaskForm.is_key_event,
         due_date_offset: editTaskForm.due_date_offset ? parseInt(editTaskForm.due_date_offset) : null
-      } as any);
+      });
       toast({ title: 'Task Updated' });
       setEditingTeamTask(null);
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to update task', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to update task', variant: 'destructive' });
     }
   };
 
@@ -953,8 +954,8 @@ export default function AdminStageDetail() {
       });
       toast({ title: 'Client Task Updated' });
       setEditingClientTask(null);
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to update client task', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to update client task', variant: 'destructive' });
     }
   };
 
@@ -981,7 +982,7 @@ export default function AdminStageDetail() {
     await addBulkDocuments(documentIds);
   };
 
-  const handleUpdateDocument = async (id: number, data: Record<string, any>) => {
+  const handleUpdateDocument = async (id: number, data: Record<string, Json | undefined>) => {
     await updateDocument(id, data);
   };
 
@@ -1080,9 +1081,9 @@ export default function AdminStageDetail() {
                 <p className="text-sm text-muted-foreground font-mono">Key: {stage.stage_key}</p>
               )}
 
-              {(stage as any).version_label && (
+              {stage.version_label && (
                 <p className="text-sm font-medium text-muted-foreground">
-                  Version: <span className="text-foreground">{(stage as any).version_label}</span>
+                  Version: <span className="text-foreground">{stage.version_label}</span>
                 </p>
               )}
 
@@ -1403,7 +1404,7 @@ export default function AdminStageDetail() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Switch
-                      checked={(stage as any)?.is_recurring ?? false}
+                      checked={stage?.is_recurring ?? false}
                       onCheckedChange={async (checked) => {
                         try {
                           const { data, error } = await supabase.rpc('cascade_stage_recurring', {
@@ -1411,16 +1412,16 @@ export default function AdminStageDetail() {
                             p_is_recurring: checked,
                           });
                           if (error) throw error;
-                          const result = data as any;
-                          setStage(prev => prev ? { ...prev, is_recurring: checked } as any : null);
+                          const result = data as { package_stages_updated?: number; stage_instances_updated?: number } | null;
+                          setStage(prev => prev ? { ...prev, is_recurring: checked } : null);
                           toast({
                             title: 'Recurring updated',
                             description: `${stage.title} is now ${checked ? 'recurring' : 'non-recurring'}. Updated ${result?.package_stages_updated ?? 0} package stages and ${result?.stage_instances_updated ?? 0} active instances.`,
                           });
-                        } catch (error: any) {
+                        } catch (error) {
                           toast({
                             title: 'Error',
-                            description: error.message,
+                            description: error instanceof Error ? error.message : 'Failed to update recurring',
                             variant: 'destructive',
                           });
                         }
@@ -1511,13 +1512,13 @@ export default function AdminStageDetail() {
                       <div className="space-y-2">
                         <SortableStaffTaskList
                           tasks={teamTasks}
-                          isRecurring={!!(stage as any)?.is_recurring}
+                          isRecurring={!!stage?.is_recurring}
                           onReorder={(ids) => reorderTeamTasks(ids)}
                           onEdit={(task) => wrapCertifiedAction(() => openEditTeamTask(task))}
                           onDelete={(taskId) => wrapCertifiedAction(() => handleDeleteStaffTask(taskId))}
                           onToggleKeyEvent={(task) => wrapCertifiedAction(async () => {
                             const newVal = !task.is_key_event;
-                            await updateTeamTask(task.id, { is_key_event: newVal } as any);
+                            await updateTeamTask(task.id, { is_key_event: newVal });
                             toast({ title: newVal ? 'Marked as key event' : 'Removed key event flag' });
                           })}
                         />
@@ -1665,11 +1666,11 @@ export default function AdminStageDetail() {
             <DocumentSyncAuditPanel stageId={stageIdNum!} />
             <StageDocumentsPanel
               stageId={stageIdNum!}
-              documents={stageDocuments as any}
+              documents={stageDocuments}
               loading={loadingTemplateContent}
               onRefresh={refetchTemplateContent}
               onDelete={deleteDocument}
-              onUpdate={updateDocument as any}
+              onUpdate={updateDocument}
               isCertified={stage?.is_certified ?? false}
               wrapCertifiedAction={wrapCertifiedAction}
             />
@@ -2093,7 +2094,7 @@ export default function AdminStageDetail() {
                 <Switch checked={editTaskForm.is_core} onCheckedChange={(c) => setEditTaskForm({ ...editTaskForm, is_core: c })} />
                 <Label>Core task</Label>
               </div>
-              {(stage as any)?.is_recurring && (
+              {stage?.is_recurring && (
                 <div className="flex items-center gap-3 pt-2">
                   <Switch checked={editTaskForm.is_key_event} onCheckedChange={(c) => setEditTaskForm({ ...editTaskForm, is_key_event: c })} />
                   <Label className="flex items-center gap-1.5">
@@ -2619,7 +2620,7 @@ export default function AdminStageDetail() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4 space-y-2">
-            {!(stage as any)?.version_label && (
+            {!stage?.version_label && (
               <div className="flex items-start gap-2 text-sm text-amber-700">
                 <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <span>Consider setting a version label before certifying this stage.</span>
@@ -2658,7 +2659,7 @@ export default function AdminStageDetail() {
           <div className="py-4 space-y-2">
             <div className="flex items-start gap-2 text-sm">
               <span className="font-medium">Current frameworks:</span>
-              <StageFrameworkBadges frameworks={(stage as any)?.frameworks} size="sm" />
+              <StageFrameworkBadges frameworks={stage?.frameworks} size="sm" />
             </div>
             {pendingFrameworks && (
               <div className="flex items-start gap-2 text-sm">
