@@ -23,6 +23,7 @@ import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useQuery } from '@tanstack/react-query';
 import { useReusableAuditTemplates, ResponseOption } from '@/hooks/useReusableAuditTemplates';
 import { Label } from '@/components/ui/label';
@@ -242,13 +243,31 @@ const questionTypes: QuestionType[] = [{
   color: 'text-indigo-500',
   category: 'other_responses'
 }];
+// Question option shape. `_scoring_enabled` is a sentinel object appended to
+// (and filtered back out of) the options array to persist the scoring toggle
+// through the `options` Json column, rather than adding a dedicated column.
+interface QuestionOption {
+  id?: string;
+  label?: string;
+  color?: string;
+  _scoring_enabled?: boolean;
+}
+
+type SimpleResponseValue = string | number | boolean | null | undefined;
+interface WrappedResponseValue {
+  value?: SimpleResponseValue;
+  notes?: string;
+  media_files?: { name: string; url: string }[];
+}
+type QuestionResponseValue = SimpleResponseValue | WrappedResponseValue;
+
 interface CanvasQuestion {
   id: string;
   tempId?: string;
   question_type: string;
   label: string;
   order_index: number;
-  options?: any[];
+  options?: QuestionOption[];
   category: string;
   placeholder?: string;
   description?: string;
@@ -262,7 +281,7 @@ interface CanvasQuestion {
 }
 
 // Check if a question has compliance-related options (Compliant/Non-Compliant)
-const hasComplianceOptions = (options?: any[]) => {
+const hasComplianceOptions = (options?: QuestionOption[]) => {
   if (!options || options.length === 0) return false;
   const labels = options.map(o => o.label?.toLowerCase() || '');
   // Check for various formats: "non-compliant", "noncompliant", "non compliant"
@@ -271,16 +290,16 @@ const hasComplianceOptions = (options?: any[]) => {
 
 // Calculate compliance score based on responses
 // Helper to extract the actual value from a response (handles both simple values and object format)
-const getResponseActualValue = (response: any): any => {
+const getResponseActualValue = (response: QuestionResponseValue): SimpleResponseValue => {
   if (response && typeof response === 'object' && 'value' in response) {
     return response.value;
   }
-  return response;
+  return response as SimpleResponseValue;
 };
 
 const calculateComplianceScore = (
   questions: CanvasQuestion[],
-  responses: Record<string, any>
+  responses: Record<string, QuestionResponseValue>
 ): number => {
   // Filter to only scoring-enabled questions with compliance options
   const scorableQuestions = questions.filter(
@@ -335,8 +354,8 @@ function SortableQuestionCard({
   onUpdate: (id: string, updates: Partial<CanvasQuestion>) => void;
   previewMode?: boolean;
   questionNumber?: number;
-  responseValue?: any;
-  onResponseChange?: (questionId: string, value: any) => void;
+  responseValue?: QuestionResponseValue;
+  onResponseChange?: (questionId: string, value: QuestionResponseValue) => void;
   hasError?: boolean;
 }) {
   const {
@@ -367,11 +386,11 @@ function SortableQuestionCard({
 
   // In preview mode, responseValue can be an object with { value, notes, media_files }
   // Or a simple value for backward compatibility
-  const getResponseValue = () => {
+  const getResponseValue = (): SimpleResponseValue => {
     if (responseValue && typeof responseValue === 'object' && 'value' in responseValue) {
       return responseValue.value;
     }
-    return responseValue;
+    return responseValue as SimpleResponseValue;
   };
   
   const getResponseNotes = useCallback(() => {
@@ -399,7 +418,7 @@ function SortableQuestionCard({
   }, [responseValue, getResponseNotes, getResponseMediaFiles]);
 
   // Update response with notes/files in preview mode
-  const updatePreviewResponse = (newValue?: any, newNotes?: string, newMediaFiles?: { name: string; url: string }[]) => {
+  const updatePreviewResponse = (newValue?: SimpleResponseValue, newNotes?: string, newMediaFiles?: { name: string; url: string }[]) => {
     if (!previewMode || !onResponseChange) return;
     
     const currentValue = newValue !== undefined ? newValue : getResponseValue();
@@ -435,7 +454,12 @@ function SortableQuestionCard({
     data: vivacityTeamData
   } = useVivacityTeamUsers();
   const actualResponseValue = getResponseValue();
-  const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(actualResponseValue !== undefined && question.options?.length ? question.options.findIndex((opt: any) => opt.label === actualResponseValue) : null);
+  // Dropdown previews (clients/documents/vivacity_team) and text/textarea inputs only ever
+  // store string ids or free text; the checkbox/multiple_choice branches are the only ones
+  // that can leave actualResponseValue as a boolean, so those two narrow it defensively.
+  const stringResponseValue = typeof actualResponseValue === 'string' ? actualResponseValue : undefined;
+  const textResponseValue = typeof actualResponseValue === 'boolean' ? '' : (actualResponseValue ?? '');
+  const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(actualResponseValue !== undefined && question.options?.length ? question.options.findIndex((opt) => opt.label === actualResponseValue) : null);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
@@ -467,7 +491,7 @@ function SortableQuestionCard({
     }
   };
   // Helper to handle value change while preserving notes/media
-  const handleValueChange = (value: any) => {
+  const handleValueChange = (value: SimpleResponseValue) => {
     if (previewMode) {
       updatePreviewResponse(value, undefined, undefined);
     } else {
@@ -478,16 +502,16 @@ function SortableQuestionCard({
   const renderInputPreview = () => {
     switch (question.question_type) {
       case 'clients':
-        return <ClientsDropdownPreview value={actualResponseValue} onValueChange={handleValueChange} hasError={hasError} />;
+        return <ClientsDropdownPreview value={stringResponseValue} onValueChange={handleValueChange} hasError={hasError} />;
       case 'documents':
-        return <DocumentsDropdownPreview value={actualResponseValue} onValueChange={handleValueChange} hasError={hasError} />;
+        return <DocumentsDropdownPreview value={stringResponseValue} onValueChange={handleValueChange} hasError={hasError} />;
       case 'vivacity_team':
-        return <VivacityTeamDropdownPreview value={actualResponseValue} onValueChange={handleValueChange} hasError={hasError} />;
+        return <VivacityTeamDropdownPreview value={stringResponseValue} onValueChange={handleValueChange} hasError={hasError} />;
       case 'text_answer':
       case 'asset':
-        return <Input placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} value={actualResponseValue || ''} onChange={e => handleValueChange(e.target.value)} />;
+        return <Input placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} value={textResponseValue} onChange={e => handleValueChange(e.target.value)} />;
       case 'number':
-        return <Input type="number" placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed w-full", hasError && "border-destructive")} value={actualResponseValue || ''} onChange={e => handleValueChange(e.target.value)} />;
+        return <Input type="number" placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed w-full", hasError && "border-destructive")} value={textResponseValue} onChange={e => handleValueChange(e.target.value)} />;
       case 'checkbox': {
         const checkboxOptions = question.options && question.options.length > 0 ? question.options : [{
           id: '1',
@@ -646,7 +670,7 @@ function SortableQuestionCard({
           'bg-muted': 'bg-muted/80 text-muted-foreground border-border'
         };
         return <div className="flex flex-wrap gap-2">
-            {question.options?.map((opt: any, idx: number) => {
+            {question.options?.map((opt, idx) => {
             const isSelected = selectedOptionIdx === idx;
             const badgeClassPreview = isSelected ? colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted'] : 'bg-muted/50 text-muted-foreground border-border/50';
             return <span key={idx} onClick={() => {
@@ -660,7 +684,7 @@ function SortableQuestionCard({
       }
       case 'annotation':
         return <div className="border rounded-lg p-4 bg-muted/30">
-            <Textarea value={actualResponseValue || ''} onChange={e => handleValueChange(e.target.value)} placeholder="Add notes or comments..." className="min-h-[100px] bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
+            <Textarea value={textResponseValue} onChange={e => handleValueChange(e.target.value)} placeholder="Add notes or comments..." className="min-h-[100px] bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
           </div>;
       default:
         return null;
@@ -1163,7 +1187,7 @@ export default function AuditTemplateBuilder() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
   const [isLoading, setIsLoading] = useState(!!templateIdParam);
-  const [previewResponses, setPreviewResponses] = useState<Record<string, any>>({});
+  const [previewResponses, setPreviewResponses] = useState<Record<string, QuestionResponseValue>>({});
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
 
   // Create response set dialog state
@@ -1209,15 +1233,15 @@ export default function AuditTemplateBuilder() {
         if (questionsError) throw questionsError;
         if (questions && questions.length > 0) {
           const loadedQuestions: CanvasQuestion[] = questions.map(q => {
-            const options = q.options as any[] || [];
+            const options = (q.options as unknown as QuestionOption[]) || [];
             // Extract scoring_enabled from options metadata if present
-            const scoringMeta = options.find((opt: any) => opt._scoring_enabled !== undefined);
+            const scoringMeta = options.find((opt) => opt._scoring_enabled !== undefined);
             return {
               id: q.id.toString(),
               question_type: q.question_type,
               label: q.label,
               order_index: q.order_index,
-              options: options.filter((opt: any) => opt._scoring_enabled === undefined),
+              options: options.filter((opt) => opt._scoring_enabled === undefined),
               required: q.required,
               category: q.category,
               description: '',
@@ -1226,8 +1250,8 @@ export default function AuditTemplateBuilder() {
           });
           setCanvasQuestions(loadedQuestions);
         }
-      } catch (error: any) {
-        toast.error('Failed to load template: ' + error.message);
+      } catch (error) {
+        toast.error('Failed to load template: ' + (error instanceof Error ? error.message : String(error)));
         navigate('/audits');
       } finally {
         setIsLoading(false);
@@ -1253,9 +1277,9 @@ export default function AuditTemplateBuilder() {
         if (inspection && inspection.responses) {
           // Populate previewResponses with existing inspection data
           const responses = typeof inspection.responses === 'object' ? inspection.responses : {};
-          setPreviewResponses(responses as Record<string, any>);
+          setPreviewResponses(responses as unknown as Record<string, QuestionResponseValue>);
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('Failed to load inspection:', error);
         toast.error('Failed to load inspection data');
       }
@@ -1378,13 +1402,13 @@ export default function AuditTemplateBuilder() {
           });
         } else if (question.id) {
           // Existing question - update it (include scoring_enabled in options)
-          const optionsWithScoring = question.scoring_enabled 
-            ? [...(question.options || []).filter((opt: any) => opt._scoring_enabled === undefined), { _scoring_enabled: true }]
-            : (question.options || []).filter((opt: any) => opt._scoring_enabled === undefined);
+          const optionsWithScoring = question.scoring_enabled
+            ? [...(question.options || []).filter((opt) => opt._scoring_enabled === undefined), { _scoring_enabled: true }]
+            : (question.options || []).filter((opt) => opt._scoring_enabled === undefined);
           await supabase.from('audit_template_questions').update({
             label: question.label,
             order_index: question.order_index,
-            options: optionsWithScoring,
+            options: optionsWithScoring as unknown as Json,
             required: question.required || false,
             updated_at: new Date().toISOString()
           }).eq('id', parseInt(question.id));
@@ -1392,8 +1416,8 @@ export default function AuditTemplateBuilder() {
       }
       toast.success('Template saved successfully!');
       navigate('/audits');
-    } catch (error: any) {
-      toast.error('Failed to save template: ' + error.message);
+    } catch (error) {
+      toast.error('Failed to save template: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsSaving(false);
     }
@@ -1474,11 +1498,12 @@ export default function AuditTemplateBuilder() {
           let documentId: number | null = null;
           if (documentsQuestion && previewResponses[documentsQuestion.id]) {
             const selectedDocId = previewResponses[documentsQuestion.id];
-            documentId = parseInt(selectedDocId, 10) || null;
+            const selectedDocIdStr = typeof selectedDocId === 'string' ? selectedDocId : String(selectedDocId ?? '');
+            documentId = parseInt(selectedDocIdStr, 10) || null;
             const { data: docData } = await supabase
               .from('documents')
               .select('title')
-              .eq('id', selectedDocId)
+              .eq('id', documentId ?? -1)
               .single();
             docNumber = docData?.title || null;
           }
@@ -1499,7 +1524,7 @@ export default function AuditTemplateBuilder() {
                   document_id: documentId,
                   selected_tenant_id: selectedTenantId,
                   compliance_score: hasScoringQuestions ? score : null,
-                  responses: previewResponses,
+                  responses: previewResponses as unknown as Json,
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', parseInt(inspectionIdParam));
@@ -1524,7 +1549,7 @@ export default function AuditTemplateBuilder() {
                   compliance_score: hasScoringQuestions ? score : null,
                   conducted_by: profile.user_uuid,
                   started_at: new Date().toISOString(),
-                  responses: previewResponses,
+                  responses: previewResponses as unknown as Json,
                 });
               
               if (insertError) {
@@ -1592,11 +1617,12 @@ export default function AuditTemplateBuilder() {
                       let documentId: number | null = null;
                       if (documentsQuestion && previewResponses[documentsQuestion.id]) {
                         const selectedDocId = previewResponses[documentsQuestion.id];
-                        documentId = parseInt(selectedDocId, 10) || null;
+                        const selectedDocIdStr = typeof selectedDocId === 'string' ? selectedDocId : String(selectedDocId ?? '');
+                        documentId = parseInt(selectedDocIdStr, 10) || null;
                         const { data: docData } = await supabase
                           .from('documents')
                           .select('title')
-                          .eq('id', selectedDocId)
+                          .eq('id', documentId ?? -1)
                           .single();
                         docNumber = docData?.title || null;
                       }
@@ -1615,7 +1641,7 @@ export default function AuditTemplateBuilder() {
                           document_id: documentId,
                           selected_tenant_id: selectedTenantId,
                           compliance_score: hasScoringQuestions ? score : null,
-                          responses: previewResponses,
+                          responses: previewResponses as unknown as Json,
                           updated_at: new Date().toISOString(),
                         })
                         .eq('id', parseInt(inspectionIdParam));
