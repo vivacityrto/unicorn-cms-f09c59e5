@@ -203,18 +203,18 @@ export default function AdminManageStages() {
 
       // Build usage count map
       const usageCountMap: Record<number, number> = {};
-      (usageData || []).forEach((item: any) => {
+      (usageData || []).forEach((item) => {
         usageCountMap[item.stage_id] = (usageCountMap[item.stage_id] || 0) + 1;
       });
 
       // Build active client count map
       const activeClientCountMap: Record<number, number> = {};
-      (activeClientData || []).forEach((item: any) => {
+      (activeClientData || []).forEach((item) => {
         activeClientCountMap[item.stage_id] = (activeClientCountMap[item.stage_id] || 0) + 1;
       });
 
       // Merge data
-      const stagesWithUsage: StageWithUsage[] = (stagesData || []).map((stage: any) => ({
+      const stagesWithUsage: StageWithUsage[] = (stagesData || []).map((stage) => ({
         id: stage.id,
         title: stage.name,
         short_name: stage.shortname,
@@ -236,10 +236,10 @@ export default function AdminManageStages() {
       }));
 
       setStages(stagesWithUsage);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch stages',
+        description: error instanceof Error ? error.message : 'Failed to fetch stages',
         variant: 'destructive',
       });
     } finally {
@@ -410,10 +410,10 @@ export default function AdminManageStages() {
   const toggleArchive = async (stage: StageWithUsage) => {
     try {
       const newArchived = !stage.is_archived;
-      const { error } = await (supabase
+      const { error } = await supabase
         .from('stages')
-        .update({ is_archived: newArchived } as any)
-        .eq('id', stage.id) as any);
+        .update({ is_archived: newArchived })
+        .eq('id', stage.id);
 
       if (error) throw error;
 
@@ -433,10 +433,10 @@ export default function AdminManageStages() {
       });
       
       fetchStages();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update stage',
+        description: error instanceof Error ? error.message : 'Failed to update stage',
         variant: 'destructive',
       });
     }
@@ -451,7 +451,7 @@ export default function AdminManageStages() {
 
       if (error) throw error;
 
-      const result = data as any;
+      const result = data as unknown as { package_stages_updated?: number; stage_instances_updated?: number } | null;
 
       // Update local state
       setStages(prev => prev.map(s => s.id === stage.id ? { ...s, is_recurring: checked } : s));
@@ -460,10 +460,10 @@ export default function AdminManageStages() {
         title: 'Recurring updated',
         description: `${stage.title} is now ${checked ? 'recurring' : 'non-recurring'}. Updated ${result?.package_stages_updated ?? 0} package stages and ${result?.stage_instances_updated ?? 0} instances.`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error updating recurring flag',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
       fetchStages();
