@@ -44,7 +44,7 @@ export function useStageReviews() {
   }) => {
     setLoading(true);
     try {
-      let query = (supabase as any)
+      let query = supabase
         .from('stage_release_reviews')
         .select(`
           *,
@@ -70,7 +70,7 @@ export function useStageReviews() {
       const { data, error } = await query;
       if (error) throw error;
       setReviews((data || []) as unknown as StageReleaseReview[]);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch reviews:', error);
     } finally {
       setLoading(false);
@@ -79,7 +79,7 @@ export function useStageReviews() {
 
   const fetchReviewForRelease = useCallback(async (stageReleaseId: string): Promise<StageReleaseReview | null> => {
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('stage_release_reviews')
         .select(`
           *,
@@ -92,7 +92,7 @@ export function useStageReviews() {
 
       if (error) throw error;
       return data as unknown as StageReleaseReview | null;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch review:', error);
       return null;
     }
@@ -114,10 +114,10 @@ export function useStageReviews() {
         description: 'The reviewer has been notified'
       });
       return true;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to request review',
+        description: error instanceof Error ? error.message : 'Failed to request review',
         variant: 'destructive'
       });
       return false;
@@ -152,10 +152,10 @@ export function useStageReviews() {
         description: status === 'approved' ? 'Release can now proceed' : undefined
       });
       return true;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update review',
+        description: error instanceof Error ? error.message : 'Failed to update review',
         variant: 'destructive'
       });
       return false;

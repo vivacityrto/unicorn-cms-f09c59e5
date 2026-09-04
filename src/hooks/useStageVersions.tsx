@@ -118,7 +118,7 @@ export function useStageVersions(stageId: number | null) {
       queryClient.invalidateQueries({ queryKey: ['stage-versions', stageId] });
       toast({ title: 'Version Published', description: 'New stage version has been published.' });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({ title: 'Publish Failed', description: error.message, variant: 'destructive' });
     },
   });
@@ -169,7 +169,7 @@ export function useStageVersions(stageId: number | null) {
         description: `Updated ${stats.updated_team_tasks} tasks, ${stats.updated_client_tasks} client tasks. ${stats.skipped_overrides} overrides skipped.` 
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({ title: 'Apply Failed', description: error.message, variant: 'destructive' });
     },
   });

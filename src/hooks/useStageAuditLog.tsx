@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface AuditEvent {
   id: string;
@@ -7,10 +8,28 @@ export interface AuditEvent {
   entity_id: string;
   action: string;
   user_id: string | null;
-  details: any;
+  details: Json;
   created_at: string;
   user_email?: string;
   user_name?: string;
+}
+
+// Known shape of audit_events.details for stage-audit-log entries - the
+// column is genuinely polymorphic Json across all audit_events rows, but
+// stage.* actions only ever write these fields.
+interface StageAuditEventDetails {
+  stage_id?: number | string;
+  source_stage_id?: number | string;
+  content_copied?: boolean;
+  new_stage_id?: number | string;
+  updated_count?: number;
+  packages_using?: number;
+  task_count?: number;
+  email_count?: number;
+  document_count?: number;
+  package_id?: number;
+  source_package_id?: number;
+  changes?: Record<string, unknown>;
 }
 
 interface UseStageAuditLogOptions {
@@ -70,7 +89,7 @@ export function useStageAuditLog(options: UseStageAuditLogOptions) {
           .select('user_uuid, email, first_name, last_name')
           .in('user_uuid', userIds);
 
-        (usersData || []).forEach((u: any) => {
+        (usersData || []).forEach((u) => {
           userMap[u.user_uuid] = {
             email: u.email,
             name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email
@@ -82,8 +101,8 @@ export function useStageAuditLog(options: UseStageAuditLogOptions) {
       let filteredData = data || [];
       if (packageIdFilter) {
         filteredData = filteredData.filter(e => {
-          const details = e.details as Record<string, any> | null;
-          return details?.package_id === packageIdFilter || 
+          const details = e.details as unknown as StageAuditEventDetails | null;
+          return details?.package_id === packageIdFilter ||
                  details?.source_package_id === packageIdFilter;
         });
       }
@@ -96,9 +115,9 @@ export function useStageAuditLog(options: UseStageAuditLogOptions) {
       }));
 
       setEvents(eventsWithUsers);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to fetch audit events:', err);
-      setError(err.message || 'Failed to load audit events');
+      setError(err instanceof Error ? err.message : 'Failed to load audit events');
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +156,8 @@ export function formatActionName(action: string): string {
 }
 
 // Helper to generate a summary from details
-export function generateAuditSummary(action: string, details: Record<string, any> | null): string {
+export function generateAuditSummary(action: string, detailsJson: Json | null): string {
+  const details = detailsJson as unknown as StageAuditEventDetails | null;
   if (!details) return '';
 
   switch (action) {

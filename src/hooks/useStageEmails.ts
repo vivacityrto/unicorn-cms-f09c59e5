@@ -38,18 +38,18 @@ export function useStageEmails({ stageInstanceId }: UseStageEmailsOptions) {
       const { data: emailMeta } = emailIds.length > 0
         ? await supabase.from('emails').select('id, description, content, subject, to').in('id', emailIds)
         : { data: [] };
-      const metaMap = new Map((emailMeta || []).map((e: any) => [e.id, e]));
+      const metaMap = new Map((emailMeta || []).map((e) => [e.id, e]));
 
       setTotalCount(data?.length || 0);
 
       // Fetch sender names for sent emails
-      const senderUuids = [...new Set((data || []).map((e: any) => e.sender_uuid).filter(Boolean))] as string[];
+      const senderUuids = [...new Set((data || []).map((e) => e.sender_uuid).filter(Boolean))] as string[];
       const { data: senderUsers } = senderUuids.length > 0
         ? await supabase.from('users').select('user_uuid, first_name, last_name').in('user_uuid', senderUuids)
         : { data: [] };
-      const senderMap = new Map((senderUsers || []).map((u: any) => [u.user_uuid, `${u.first_name || ''} ${u.last_name || ''}`.trim()]));
+      const senderMap = new Map((senderUsers || []).map((u) => [u.user_uuid, `${u.first_name || ''} ${u.last_name || ''}`.trim()]));
 
-      const result: StageEmail[] = (data || []).map((e: any) => {
+      const result: StageEmail[] = (data || []).map((e) => {
         const meta = metaMap.get(e.email_id);
         return {
           id: e.id,

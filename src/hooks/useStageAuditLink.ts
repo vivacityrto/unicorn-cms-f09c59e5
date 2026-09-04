@@ -27,30 +27,29 @@ export function useStageAuditLink(stageInstanceId: number | undefined) {
     enabled: !!stageInstanceId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('stage_instances' as any)
+        .from('stage_instances')
         .select('id, stage_id, linked_audit_id, packageinstance_id')
         .eq('id', stageInstanceId)
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
 
-      const row = data as any;
       let linkedAudit = null;
 
-      if (row.linked_audit_id) {
+      if (data.linked_audit_id) {
         const { data: audit } = await supabase
-          .from('client_audits' as any)
+          .from('client_audits')
           .select('id, title, status, score_pct, risk_rating, opening_meeting_at, closing_meeting_at, audit_type')
-          .eq('id', row.linked_audit_id)
+          .eq('id', data.linked_audit_id)
           .maybeSingle();
         linkedAudit = audit;
       }
 
       return {
-        stageInstanceId: row.id as number,
-        stageId: row.stage_id as number,
-        linkedAuditId: row.linked_audit_id as string | null,
-        packageInstanceId: row.packageinstance_id as number,
+        stageInstanceId: data.id,
+        stageId: data.stage_id,
+        linkedAuditId: data.linked_audit_id,
+        packageInstanceId: data.packageinstance_id,
         linkedAudit,
       };
     },
@@ -64,11 +63,11 @@ export function useStageAuditLink(stageInstanceId: number | undefined) {
 export async function autoCompleteStageTasks(auditId: string, milestone: string): Promise<number> {
   try {
     const { data: count, error } = await supabase.rpc(
-      'complete_audit_stage_tasks' as any,
-      { p_audit_id: auditId, p_milestone: milestone } as any
+      'complete_audit_stage_tasks',
+      { p_audit_id: auditId, p_milestone: milestone }
     );
     if (error) throw error;
-    const n = (count as number) || 0;
+    const n = count || 0;
     if (n > 0) {
       toast.success(`✓ ${n} stage task${n > 1 ? 's' : ''} auto-completed`);
     }
