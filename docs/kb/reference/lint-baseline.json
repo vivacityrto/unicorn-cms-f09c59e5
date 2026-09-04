@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T18:48:41.102Z",
-  "baselineSha": "b01dcf4e06d1b90cc8eefb00aa8675188e967d95",
+  "generatedAt": "2026-09-04T19:10:08.612Z",
+  "baselineSha": "a624f0ebb8e017f1c2aa299d7af920c3825055b9",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 425,
-    "errors": 1786,
+    "filesWithFindings": 423,
+    "errors": 1760,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1779,
+    "@typescript-eslint/no-explicit-any": 1753,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1118,
+      "errors": 1092,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1111,
+        "@typescript-eslint/no-explicit-any": 1085,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -205,10 +205,10 @@
       }
     },
     "src/components/executive": {
-      "errors": 33,
+      "errors": 19,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 33
+        "@typescript-eslint/no-explicit-any": 19
       }
     },
     "src/components/executive/ceo": {
@@ -399,13 +399,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 8
-      }
-    },
-    "src/lib/tga": {
-      "errors": 12,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 12
       }
     },
     "src/pages": {
@@ -1413,9 +1406,6 @@
     "src/components/executive/PortfolioHealthWidget.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/components/executive/TeamCapacityWidget.tsx": {
-      "@typescript-eslint/no-explicit-any": 14
-    },
     "src/components/executive/WeeklyReviewNotesPanel.tsx": {
       "@typescript-eslint/no-explicit-any": 7
     },
@@ -2017,9 +2007,6 @@
     },
     "src/lib/noteNotifications.ts": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/lib/tga/lookupTargetRto.ts": {
-      "@typescript-eslint/no-explicit-any": 12
     },
     "src/pages/AcceptInvitation.tsx": {
       "@typescript-eslint/no-explicit-any": 4

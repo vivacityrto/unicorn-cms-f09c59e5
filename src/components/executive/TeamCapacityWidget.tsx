@@ -7,6 +7,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,21 +24,24 @@ const STATUS_BADGE: Record<string, string> = {
   critical: 'bg-red-100 text-red-800',
 };
 
+type WorkloadSnapshot = Tables<'workload_snapshots'>;
+type EnrichedConsultant = WorkloadSnapshot & { consultant_name: string };
+
 export function TeamCapacityWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ['team-capacity-overview'],
     queryFn: async () => {
       // Get latest snapshot per user
       const { data: snapshots, error } = await supabase
-        .from('workload_snapshots' as any)
+        .from('workload_snapshots')
         .select('*')
         .order('snapshot_date', { ascending: false })
         .limit(500);
       if (error) throw error;
 
       const seen = new Set<string>();
-      const latest: any[] = [];
-      for (const row of ((snapshots as any[]) || [])) {
+      const latest: WorkloadSnapshot[] = [];
+      for (const row of (snapshots || [])) {
         if (!seen.has(row.user_id)) {
           seen.add(row.user_id);
           latest.push(row);
@@ -45,32 +49,32 @@ export function TeamCapacityWidget() {
       }
 
       // Get user names
-      const userIds = latest.map((s: any) => s.user_id);
+      const userIds = latest.map((s) => s.user_id);
       const { data: users } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name')
         .in('user_uuid', userIds);
 
       const userMap = new Map(
-        (users || []).map((u: any) => [u.user_uuid, `${u.first_name || ''} ${u.last_name || ''}`.trim()])
+        (users || []).map((u) => [u.user_uuid, `${u.first_name || ''} ${u.last_name || ''}`.trim()])
       );
 
-      const enriched = latest.map((s: any) => ({
+      const enriched: EnrichedConsultant[] = latest.map((s) => ({
         ...s,
         consultant_name: userMap.get(s.user_id) || 'Unknown',
       }));
 
-      enriched.sort((a: any, b: any) =>
+      enriched.sort((a, b) =>
         (STATUS_ORDER[a.overload_risk_status] ?? 3) - (STATUS_ORDER[b.overload_risk_status] ?? 3)
       );
 
       // Get burn risk client count per consultant (approximate via tenant assignments)
       const { data: burnData } = await supabase
-        .from('tenant_package_burn_forecast' as any)
+        .from('tenant_package_burn_forecast')
         .select('tenant_id, burn_risk_status')
         .eq('burn_risk_status', 'critical');
 
-      const criticalBurnCount = new Set(((burnData as any[]) || []).map((b: any) => b.tenant_id)).size;
+      const criticalBurnCount = new Set((burnData || []).map((b) => b.tenant_id)).size;
 
       return { consultants: enriched, criticalBurnCount };
     },
@@ -78,8 +82,8 @@ export function TeamCapacityWidget() {
   });
 
   const consultants = data?.consultants || [];
-  const critOver100 = consultants.filter((c: any) => c.capacity_utilisation_percentage > 100).length;
-  const critOver120 = consultants.filter((c: any) => c.capacity_utilisation_percentage > 120).length;
+  const critOver100 = consultants.filter((c) => c.capacity_utilisation_percentage > 100).length;
+  const critOver120 = consultants.filter((c) => c.capacity_utilisation_percentage > 120).length;
   const showAlert = critOver100 >= 2 || critOver120 >= 1 || (data?.criticalBurnCount || 0) >= 3;
 
   return (
@@ -122,7 +126,7 @@ export function TeamCapacityWidget() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {consultants.slice(0, 15).map((c: any) => (
+                  {consultants.slice(0, 15).map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="text-xs font-medium">{c.consultant_name}</TableCell>
                       <TableCell className={cn(
