@@ -139,7 +139,7 @@ export function useExcelBindings(documentId: number | null) {
       } else {
         setBinding(null);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching excel bindings:', error);
     } finally {
       setLoading(false);
@@ -158,7 +158,7 @@ export function useExcelBindings(documentId: number | null) {
       
       if (error) throw error;
       setLookupLists((data || []) as LookupList[]);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching lookup lists:', error);
     }
   }, []);
@@ -190,10 +190,10 @@ export function useExcelBindings(documentId: number | null) {
 
       await fetchBinding();
       return data;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Scan Failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
       return null;
@@ -231,10 +231,10 @@ export function useExcelBindings(documentId: number | null) {
 
       await fetchBinding();
       toast({ title: 'Token binding updated' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Update failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     }
@@ -269,10 +269,10 @@ export function useExcelBindings(documentId: number | null) {
 
       await fetchBinding();
       toast({ title: 'Dropdown binding updated' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Update failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     }
@@ -307,10 +307,10 @@ export function useExcelBindings(documentId: number | null) {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Validation failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
       return null;
@@ -357,10 +357,10 @@ export function useExcelBindings(documentId: number | null) {
       await fetchLookupLists();
       toast({ title: 'Lookup list created' });
       return list as LookupList;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Failed to create list',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
       return null;
@@ -392,10 +392,10 @@ export function useExcelBindings(documentId: number | null) {
 
       await fetchLookupLists();
       toast({ title: 'Items added' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Failed to add items',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     }
