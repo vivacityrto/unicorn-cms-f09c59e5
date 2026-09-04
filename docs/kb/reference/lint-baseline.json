@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T13:19:38.973Z",
-  "baselineSha": "38f105db9cbc695b8693d6d7b1373b2a4cc23e53",
+  "generatedAt": "2026-09-04T13:51:19.296Z",
+  "baselineSha": "237d7de9b915f277c11a74552f5f249b3c94d476",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 453,
-    "errors": 2552,
+    "filesWithFindings": 452,
+    "errors": 2479,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2545,
+    "@typescript-eslint/no-explicit-any": 2472,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1884,
+      "errors": 1811,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1877,
+        "@typescript-eslint/no-explicit-any": 1804,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -409,10 +409,10 @@
       }
     },
     "src/pages": {
-      "errors": 395,
+      "errors": 322,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 395
+        "@typescript-eslint/no-explicit-any": 322
       }
     },
     "src/pages/academy": {
@@ -2167,9 +2167,6 @@
     },
     "src/pages/TasksManagement.tsx": {
       "@typescript-eslint/no-explicit-any": 42
-    },
-    "src/pages/TeamCommunicationsPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 73
     },
     "src/pages/TeamSettings.tsx": {
       "@typescript-eslint/no-explicit-any": 4
