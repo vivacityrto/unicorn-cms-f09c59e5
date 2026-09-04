@@ -14,13 +14,13 @@ interface UseRealtimeOptions {
   userId?: string;
   userName?: string;
   avatarUrl?: string;
-  onSegmentChange?: (payload: any) => void;
-  onHeadlineChange?: (payload: any) => void;
-  onTodoChange?: (payload: any) => void;
-  onSegueChange?: (payload: any) => void;
-  onIssueChange?: (payload: any) => void;
-  onOnePhraseCloseChange?: (payload: any) => void;
-  onPresenceChange?: (payload: any) => void;
+  onSegmentChange?: (payload: unknown) => void;
+  onHeadlineChange?: (payload: unknown) => void;
+  onTodoChange?: (payload: unknown) => void;
+  onSegueChange?: (payload: unknown) => void;
+  onIssueChange?: (payload: unknown) => void;
+  onOnePhraseCloseChange?: (payload: unknown) => void;
+  onPresenceChange?: (payload: OnlineUser[]) => void;
 }
 
 export const useMeetingRealtime = ({

@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T22:00:50.689Z",
-  "baselineSha": "b20adb03613799fbf30da1bdd6ba011ac2b32331",
+  "generatedAt": "2026-09-04T22:08:03.046Z",
+  "baselineSha": "95ed9e5a9aff278c2d111f88fe35c534597f5375",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 397,
-    "errors": 1471,
+    "filesWithFindings": 395,
+    "errors": 1457,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1464,
+    "@typescript-eslint/no-explicit-any": 1450,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 803,
+      "errors": 789,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 796,
+        "@typescript-eslint/no-explicit-any": 782,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -372,18 +372,18 @@
       }
     },
     "src/hooks": {
-      "errors": 331,
+      "errors": 324,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 331,
+        "@typescript-eslint/no-explicit-any": 324,
         "react-refresh/only-export-components": 1
       }
     },
     "src/lib": {
-      "errors": 10,
+      "errors": 3,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 10
+        "@typescript-eslint/no-explicit-any": 3
       }
     },
     "src/pages": {
@@ -1757,9 +1757,6 @@
     "src/hooks/useMeetingArtifacts.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/hooks/useMeetingRealtime.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/hooks/useMeetingSeries.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1930,9 +1927,6 @@
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/lib/friendlyDbError.ts": {},
-    "src/lib/messageAttachments.ts": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/lib/noteNotifications.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },

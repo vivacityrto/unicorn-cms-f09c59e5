@@ -32,6 +32,15 @@ export interface MessageAttachmentRow {
   created_at: string;
 }
 
+interface UploadAttachmentResponse extends Partial<MessageAttachmentRow> {
+  error?: string;
+}
+
+interface GetAttachmentUrlResponse {
+  error?: string;
+  signedUrl?: string;
+}
+
 export function isImageMime(mime: string | null | undefined): boolean {
   return !!mime && mime.startsWith("image/");
 }
@@ -94,7 +103,7 @@ export async function uploadMessageAttachment(
   formData.append("conversation_id", conversationId);
   formData.append("message_id", messageId);
 
-  const { data, error } = await supabase.functions.invoke(
+  const { data, error } = await supabase.functions.invoke<UploadAttachmentResponse>(
     "upload-message-attachment",
     { body: formData },
   );
@@ -102,7 +111,7 @@ export async function uploadMessageAttachment(
   if (error) {
     // Try to surface the server-provided error message
     let serverMessage: string | undefined;
-    const ctx = (error as any)?.context;
+    const ctx = (error as { context?: Response })?.context;
     if (ctx && typeof ctx.json === "function") {
       try {
         const body = await ctx.json();
@@ -112,8 +121,8 @@ export async function uploadMessageAttachment(
     throw new Error(serverMessage || error.message || "Attachment upload failed");
   }
 
-  if (data && typeof (data as any).error === "string") {
-    throw new Error((data as any).error);
+  if (data && typeof data.error === "string") {
+    throw new Error(data.error);
   }
 
   return data as MessageAttachmentRow;
@@ -123,14 +132,14 @@ export async function getAttachmentUrl(
   supabase: SupabaseClient,
   storagePath: string,
 ): Promise<string> {
-  const { data, error } = await supabase.functions.invoke(
+  const { data, error } = await supabase.functions.invoke<GetAttachmentUrlResponse>(
     "get-message-attachment-url",
     { body: { storage_path: storagePath } },
   );
 
   if (error) {
     let serverMessage: string | undefined;
-    const ctx = (error as any)?.context;
+    const ctx = (error as { context?: Response })?.context;
     if (ctx && typeof ctx.json === "function") {
       try {
         const b = await ctx.json();
@@ -140,12 +149,12 @@ export async function getAttachmentUrl(
     throw new Error(serverMessage || error.message || "Failed to get attachment URL");
   }
 
-  if (data && typeof (data as any).error === "string") {
-    throw new Error((data as any).error);
+  if (data && typeof data.error === "string") {
+    throw new Error(data.error);
   }
 
-  const signedUrl = (data as any)?.signedUrl;
+  const signedUrl = data?.signedUrl;
   if (!signedUrl) throw new Error("Failed to create signed URL");
-  return signedUrl as string;
+  return signedUrl;
 }
 
