@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T01:03:25.265Z",
-  "baselineSha": "24db112b718fba842a5df497b76333c9e852ad57",
+  "generatedAt": "2026-09-04T01:17:57.552Z",
+  "baselineSha": "32f88b14df2b1ba05bac845433605e4b4ffd346f",
   "totals": {
     "files": 1784,
-    "filesWithFindings": 595,
-    "errors": 3720,
+    "filesWithFindings": 594,
+    "errors": 3718,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3713,
+    "@typescript-eslint/no-explicit-any": 3711,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 3052,
+      "errors": 3050,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 3045,
+        "@typescript-eslint/no-explicit-any": 3043,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -433,10 +433,10 @@
       }
     },
     "src/hooks": {
-      "errors": 1194,
+      "errors": 1193,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1194,
+        "@typescript-eslint/no-explicit-any": 1193,
         "react-refresh/only-export-components": 1
       }
     },
@@ -508,13 +508,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 38
-      }
-    },
-    "src/types": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
       }
     },
     "supabase/functions/_shared/ai-brain": {
@@ -2380,7 +2373,7 @@
       "@typescript-eslint/no-explicit-any": 7
     },
     "src/hooks/useQuarterlyConversations.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
+      "@typescript-eslint/no-explicit-any": 1
     },
     "src/hooks/useRBAC.tsx": {
       "@typescript-eslint/no-explicit-any": 1
@@ -2721,9 +2714,6 @@
     },
     "src/test/tenant/isolation.test.tsx": {
       "@typescript-eslint/no-explicit-any": 38
-    },
-    "src/types/qc.ts": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/_shared/ai-brain/confidence-scorer.ts": {
       "@typescript-eslint/no-explicit-any": 2

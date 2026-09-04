@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { QuarterlyConversation, QCTemplate, QCAnswer, QCFit, QCSignoff, QCFormData, QCLinkCreate } from '@/types/qc';
+import type { Json } from '@/integrations/supabase/types';
 
 export const useQuarterlyConversations = () => {
   const { profile, isSuperAdmin } = useAuth();
@@ -83,7 +84,7 @@ export const useQuarterlyConversations = () => {
       qc_id: string;
       section_key: string;
       prompt_key: string;
-      value_json: Record<string, any>;
+      value_json: Json;
       respondent_role: 'manager' | 'reviewee';
     }) => {
       const { data, error } = await supabase.rpc('qc_upsert_answer', {
