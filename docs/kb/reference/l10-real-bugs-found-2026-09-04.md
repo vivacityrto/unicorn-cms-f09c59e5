@@ -160,6 +160,20 @@ mapped to the closest active-work bucket (`completed`/`in_progress`
 respectively) with an inline comment flagging this for a product decision
 if either status ever needs its own distinct badge/behavior in this page.
 
+**Verified live (SuperAdmin, subagent) against a real record** — Demo RTO's
+"M-RR" package instance (id 15201), confirmed via direct SQL to have 9 real
+`stage_instances` rows before testing: `/admin/client-packages/15201` now
+renders all 9 stages correctly (Setup Client, Professional Development,
+Vivacity Training, RTO Documentation - 2025, Consultation Hours, Compliance
+Health Check, Assessment Validation, Finalise client, Compliance Health
+Check 2025), each with a correct status badge derived from the real
+`status` column. Expanded one stage and confirmed its Team Tasks (25 real
+items) and Documents (17 real items) sections render with real content.
+The `stage_instances` request itself confirmed 200 (previously 400) via
+network inspection. Zero console errors tied to this fix (two pre-existing,
+unrelated errors were observed — an "Ask Viv" feature-flag lookup returning
+406/PGRST116 — confirmed unrelated to this hook or page).
+
 ## Also found this session, outside Package Builder (for completeness)
 
 These were found and either fixed or documented in earlier batches tonight,
@@ -194,12 +208,10 @@ on unrelated features:
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
-had been hidden behind `any`. Seven real, previously-silently-broken features got fixed tonight, six
-verified live so far (item 9 — a staff-facing admin page for viewing a
-client's package instance, see the correction in that item about who's
-actually affected — was verified for its type-safety/lint/test contract;
-its live browser check needed a staff persona and is being re-run). Five
-more (items 3,
+had been hidden behind `any`. Seven real, previously-silently-broken
+features got fixed and verified live tonight (item 9 is a staff-facing
+admin page for viewing a client's package instance, not client-facing as
+first assumed — see the correction in that item). Five more (items 3,
 4, 5, 8 above, plus the two `tenant_users`→`users` FK gaps outside Package
 Builder) are confirmed real and written up with enough detail to scope a
 fix, deliberately left
