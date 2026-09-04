@@ -26,17 +26,19 @@ interface LookupOption {
   label: string;
 }
 
-function useLookupTable(tableName: string) {
+type LookupTableName = 'dd_org_type' | 'dd_sms' | 'dd_lms' | 'dd_accounting_system';
+
+function useLookupTable(tableName: LookupTableName) {
   const [options, setOptions] = useState<LookupOption[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase
-        .from(tableName as any)
+        .from(tableName)
         .select('value, label')
         .eq('is_active', true)
         .order('sort_order');
-      if (data) setOptions((data as any[]).map(d => ({ value: d.value, label: d.label })));
+      if (data) setOptions(data.map(d => ({ value: d.value, label: d.label })));
     };
     fetch();
   }, [tableName, refreshKey]);
@@ -101,7 +103,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
   }, [profile]);
 
   const handleSyncContact = async (role: 'primary' | 'secondary') => {
-    const tid = (formData as any).tenant_id;
+    const tid = formData.tenant_id;
     if (!tid) return;
     setSyncing(true);
     try {
@@ -140,8 +142,8 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
       }));
       setHasChanges(true);
       toast({ title: 'Contact synced', description: `Loaded details from ${roleLabel}.` });
-    } catch (err: any) {
-      toast({ title: 'Sync failed', description: err?.message || 'Unable to sync contact.', variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Sync failed', description: err instanceof Error ? err.message : 'Unable to sync contact.', variant: 'destructive' });
     } finally {
       setSyncing(false);
     }
@@ -177,7 +179,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
 
   // Check if a field is synced from TGA and should be read-only
   const isTgaField = (field: string) => {
-    return tgaLinked && TGA_SYNCED_FIELDS.includes(field as any);
+    return tgaLinked && (TGA_SYNCED_FIELDS as readonly string[]).includes(field);
   };
 
   return (
@@ -386,7 +388,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
               <Button
                 variant="outline"
                 size="sm"
-                disabled={syncing || loading || !(formData as any).tenant_id}
+                disabled={syncing || loading || !formData.tenant_id}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
                 Sync Contact Details

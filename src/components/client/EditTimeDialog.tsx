@@ -91,20 +91,20 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   // Fetch work types
   useEffect(() => {
     (async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('dd_work_types')
         .select('code, label')
         .eq('is_active', true)
         .order('sort_order');
-      if (data) setWorkTypes(data as WorkTypeOption[]);
+      if (data) setWorkTypes(data);
     })();
     (async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('dd_work_sub_type')
         .select('code, label, category')
         .eq('is_active', true)
         .order('sort_order');
-      if (data) setWorkSubTypes(data as WorkSubTypeOption[]);
+      if (data) setWorkSubTypes(data);
     })();
   }, []);
 
@@ -112,7 +112,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   useEffect(() => {
     if (!open || !entry) return;
     (async () => {
-      const { data: staffData } = await (supabase as any)
+      const { data: staffData } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name, avatar_url')
         .eq('disabled', false)
@@ -120,20 +120,31 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         .order('first_name')
         .limit(200);
 
-      setVivacityStaff((staffData || []) as TeamMember[]);
+      setVivacityStaff(staffData || []);
 
       let tenantUsers: TeamMember[] = [];
       if (entry.tenant_id) {
-        const { data: tuData } = await (supabase as any)
+        // The result type is passed explicitly as a generic argument to
+        // .select() because this nested-embed shape otherwise makes the
+        // Supabase client's automatic embed-inference recurse too deep
+        // ("Type instantiation is excessively deep and possibly infinite").
+        type TenantUserWithProfile = {
+          user_uuid: string;
+          users: { user_uuid: string; first_name: string | null; last_name: string | null; avatar_url: string | null; disabled: boolean | null } | null;
+        };
+        const { data: tuData } = await supabase
           .from('tenant_users')
-          .select('user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)')
+          .select<
+            'user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)',
+            TenantUserWithProfile
+          >('user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)')
           .eq('tenant_id', entry.tenant_id)
           .limit(200);
         if (tuData) {
           tenantUsers = tuData
-            .map((tu: any) => tu.users)
-            .filter((u: any) => u && !u.disabled)
-            .map((u: any) => ({
+            .map((tu) => tu.users)
+            .filter((u): u is NonNullable<typeof u> => !!u && !u.disabled)
+            .map((u) => ({
               user_uuid: u.user_uuid,
               first_name: u.first_name,
               last_name: u.last_name,
@@ -142,7 +153,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         }
       }
 
-      const allMembers = [...(staffData || []), ...tenantUsers] as TeamMember[];
+      const allMembers = [...(staffData || []), ...tenantUsers];
       const seen = new Set<string>();
       const deduped = allMembers.filter(m => {
         if (seen.has(m.user_uuid) || m.user_uuid === user?.id) return false;
@@ -174,9 +185,9 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         ? await supabase.from('packages').select('id, name, package_type').in('id', pkgIds)
         : { data: [] };
 
-      const pkgMap = new Map((pkgData || []).map((p: any) => [Number(p.id), p]));
+      const pkgMap = new Map((pkgData || []).map((p) => [Number(p.id), p]));
 
-      const instances: PackageInstance[] = piData.map((pi: any) => {
+      const instances: PackageInstance[] = piData.map((pi) => {
         const pkg = pkgMap.get(Number(pi.package_id));
         const name = pkg?.name || `Package #${pi.id}`;
         const startStr = pi.start_date ? format(new Date(pi.start_date + 'T00:00:00'), 'dd/MM/yyyy') : '?';
@@ -224,7 +235,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           : format(new Date(entry.created_at), 'yyyy-MM-dd')
       );
       setWorkType(entry.work_type);
-      setWorkSubType((entry as any).work_sub_type || '');
+      setWorkSubType(entry.work_sub_type || '');
       setNotes(entry.notes || '');
       setIsBillable(entry.is_billable);
       setScopeTag((entry.scope_tag as ScopeTag) || 'both');
@@ -275,7 +286,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           package_instance_id: selectedInstanceId,
           user_id: selectedUserId || entry.user_id,
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', entry.id)
         .select()
         .single();
@@ -310,8 +321,8 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
       toast({ title: 'Time entry updated' });
       onOpenChange(false);
       onSuccess?.();
-    } catch (err: any) {
-      toast({ title: 'Failed to update', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Failed to update', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setSaving(false);
     }

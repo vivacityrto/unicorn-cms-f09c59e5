@@ -442,10 +442,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         .order('date_created', { ascending: false });
       if (data && Array.isArray(data)) {
         const grouped: Record<string, ApiComment[]> = {};
-        for (const c of data as any[]) {
+        for (const c of data as (ApiComment & { task_id: string })[]) {
           const tid = c.task_id;
           if (!grouped[tid]) grouped[tid] = [];
-          grouped[tid].push(c as ApiComment);
+          grouped[tid].push(c);
         }
         setApiComments(grouped);
       }
@@ -669,23 +669,24 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 source: 'manual',
                 package_id: instanceIdForSave,
                 package_instance_id: instanceIdForSave,
-              } as any)
+              })
               .select('id')
               .single();
             if (error) throw error;
             if (inserted?.id) {
-              await supabase.from('notes').update({ timeentry_id: inserted.id } as any).eq('id', noteId);
+              await supabase.from('notes').update({ timeentry_id: inserted.id }).eq('id', noteId);
               toast({ title: 'Note and time entry saved', description: `${parsedDur} minutes logged` });
             }
           }
-        } catch (err: any) {
+        } catch (err) {
           console.error('[NoteTimeEntry] insert error:', err);
-          setTimeEntryError(err?.message || 'Unknown error');
-          toast({ title: 'Note saved — time entry failed', description: err?.message || 'Check the error banner above the note list.', variant: 'destructive', duration: 10000 });
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          setTimeEntryError(message);
+          toast({ title: 'Note saved — time entry failed', description: message, variant: 'destructive', duration: 10000 });
         }
       }
 
-      
+
       resetForm();
     } finally {
       setSaving(false);
@@ -792,18 +793,19 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               source: 'manual',
               package_id: instanceId,
               package_instance_id: instanceId,
-            } as any)
+            })
             .select('id')
             .single();
           if (error) throw error;
           if (inserted?.id) {
-            await supabase.from('notes').update({ timeentry_id: inserted.id } as any).eq('id', createdNoteId);
+            await supabase.from('notes').update({ timeentry_id: inserted.id }).eq('id', createdNoteId);
             toast({ title: 'Note and time entry saved', description: `${parseInt(data.timeDuration, 10)} min logged` });
           }
-        } catch (err: any) {
+        } catch (err) {
           console.error('[NoteTimeEntry] insert error:', err);
-          setTimeEntryError(err?.message || 'Unknown error');
-          toast({ title: 'Note saved — time entry failed', description: err?.message || 'Check the error banner above the note list.', variant: 'destructive', duration: 10000 });
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          setTimeEntryError(message);
+          toast({ title: 'Note saved — time entry failed', description: message, variant: 'destructive', duration: 10000 });
         }
       }
 
@@ -1186,7 +1188,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                         } catch { /* fallback */ }
                       }
                       // Determine task_id for API comment lookup
-                      const rawTaskId = (task as any).task_id as string | undefined;
+                      const rawTaskId = task.task_id;
                       const taskApiComments = rawTaskId ? (apiComments[rawTaskId] || []) : [];
                       const hasApiComments = taskApiComments.length > 0;
 
@@ -1199,7 +1201,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                               const obj = c as Record<string, unknown>;
                               return {
                                 text: (obj.text as string) || (obj.comment_text as string) || String(c),
-                                by: (obj.by as string) || (obj.user as any)?.username || undefined,
+                                by: (obj.by as string) || (obj.user as { username?: string } | undefined)?.username || undefined,
                               };
                             }
                             return { text: String(c) };
@@ -1790,7 +1792,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         open={emailViewOpen}
         onOpenChange={setEmailViewOpen}
         externalMessageId={emailViewTarget?.external_message_id}
-        bodyHtml={(emailViewTarget as any)?.body_html ?? null}
+        bodyHtml={emailViewTarget?.body_html ?? null}
         subject={emailViewTarget?.subject}
         senderName={emailViewTarget?.sender_name}
         senderEmail={emailViewTarget?.sender_email}

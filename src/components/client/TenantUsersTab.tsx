@@ -254,9 +254,9 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       } else {
         toast.success(`Account activated for ${data.email} — welcome email could not be sent`);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('activate-ghost-user failed', err);
-      toast.error(err?.message || 'Activation failed');
+      toast.error(err instanceof Error ? err.message : 'Activation failed');
     } finally {
       setActivatingUserId(null);
     }
@@ -291,11 +291,11 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         body: { user_uuid: member.user_id },
       });
       // supabase-js sets `error` on any non-2xx; the JSON body lives on error.context.
-      let payload: any = data;
-      if (error && (error as any).context?.json) {
-        try { payload = await (error as any).context.json(); } catch { /* ignore */ }
-      } else if (error && (error as any).context?.text) {
-        try { payload = JSON.parse(await (error as any).context.text()); } catch { /* ignore */ }
+      let payload = data;
+      if (error && error.context?.json) {
+        try { payload = await error.context.json(); } catch { /* ignore */ }
+      } else if (error && error.context?.text) {
+        try { payload = JSON.parse(await error.context.text()); } catch { /* ignore */ }
       }
       if (payload?.ok) {
         toast.success(`Password reset email sent to ${payload.email}`);
@@ -310,7 +310,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         return;
       }
       toast.error(mapAuthActionError(payload?.code, "Couldn't send reset email — please try again") ?? "Couldn't send reset email — please try again");
-    } catch (err: any) {
+    } catch (err) {
       console.error('send-password-reset failed', err);
       toast.error("Couldn't send reset email — please try again");
     } finally {
@@ -327,11 +327,11 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       const { data, error } = await supabase.functions.invoke('generate-recovery-link', {
         body: { user_uuid: member.user_id },
       });
-      let payload: any = data;
-      if (error && (error as any).context?.json) {
-        try { payload = await (error as any).context.json(); } catch { /* ignore */ }
-      } else if (error && (error as any).context?.text) {
-        try { payload = JSON.parse(await (error as any).context.text()); } catch { /* ignore */ }
+      let payload = data;
+      if (error && error.context?.json) {
+        try { payload = await error.context.json(); } catch { /* ignore */ }
+      } else if (error && error.context?.text) {
+        try { payload = JSON.parse(await error.context.text()); } catch { /* ignore */ }
       }
       if (payload?.ok && payload.action_link) {
         let activateUrl: string;
@@ -358,7 +358,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         return;
       }
       toast.error(mapAuthActionError(payload?.code, "Couldn't generate recovery link — please try again") ?? "Couldn't generate recovery link — please try again");
-    } catch (err: any) {
+    } catch (err) {
       console.error('generate-recovery-link failed', err);
       toast.error("Couldn't generate recovery link — please try again");
     } finally {
@@ -504,7 +504,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       setBulkResults({ action, rows: [...localSkips, ...serverRows], partial });
       // Refresh members + ghost set so the UI reflects new state.
       fetchMembers();
-    } catch (err: any) {
+    } catch (err) {
       console.error('bulk-account-actions failed', err);
       toast.error("Bulk action failed — please try again");
     } finally {

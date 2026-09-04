@@ -282,9 +282,9 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
       }
       toast({ title: 'Link saved (unvalidated)', description: 'This link has not been checked — Microsoft hasn’t confirmed it exists or that it belongs to this client. Use "Validate & Save" to verify both.' });
       await fetchSettings();
-    } catch (err: any) {
+    } catch (err) {
       console.error('SharePoint save error:', err);
-      const message = err?.message || err?.details || err?.hint || 'An unexpected error occurred.';
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
       toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -759,7 +759,7 @@ function GovernanceFolderSection({
         },
       });
       if (error || data?.error) throw new Error(data?.error || error?.message);
-      const folders = (data.items || []).filter((i: any) => i.is_folder);
+      const folders = (data.items || []).filter((i) => i.is_folder);
       setGovernanceBrowseItems(folders);
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load folders', variant: 'destructive' });
@@ -1104,8 +1104,8 @@ function SharedFolderSection({
       });
       if (error || data?.error) throw new Error(data?.error || error?.message);
       const folders = (data.items || [])
-        .filter((i: any) => i.is_folder)
-        .map((i: any) => ({ id: i.id, name: i.name, is_folder: true, web_url: i.web_url ?? null }));
+        .filter((i) => i.is_folder)
+        .map((i) => ({ id: i.id, name: i.name, is_folder: true, web_url: i.web_url ?? null }));
       setSharedFolderBrowseItems(folders);
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load folders', variant: 'destructive' });
@@ -1143,7 +1143,7 @@ function SharedFolderSection({
           shared_folder_name: folderName,
           shared_folder_url: webUrl,
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', settings.id);
       if (error) throw error;
       toast({ title: 'Shared folder set', description: `"${folderName}" is now the shared folder for document linking.` });
@@ -1166,7 +1166,7 @@ function SharedFolderSection({
           shared_folder_name: null,
           shared_folder_url: null,
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', settings.id);
       if (error) throw error;
       toast({ title: 'Shared folder cleared' });
