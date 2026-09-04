@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T11:10:56.763Z",
-  "baselineSha": "285494f92847d08381733bd057a3746e91a91b1a",
+  "generatedAt": "2026-09-04T12:16:29.863Z",
+  "baselineSha": "931bf931262f5185523a4a789ad1645070e2c0e1",
   "totals": {
     "files": 1769,
-    "filesWithFindings": 465,
-    "errors": 2716,
+    "filesWithFindings": 464,
+    "errors": 2637,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2709,
+    "@typescript-eslint/no-explicit-any": 2630,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2048,
+      "errors": 1969,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2041,
+        "@typescript-eslint/no-explicit-any": 1962,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -382,10 +382,10 @@
       }
     },
     "src/hooks": {
-      "errors": 930,
+      "errors": 851,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 930,
+        "@typescript-eslint/no-explicit-any": 851,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1954,9 +1954,6 @@
     },
     "src/hooks/useOperationsDashboard.tsx": {
       "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/hooks/usePackageBuilder.tsx": {
-      "@typescript-eslint/no-explicit-any": 79
     },
     "src/hooks/usePackagePhases.ts": {
       "@typescript-eslint/no-explicit-any": 6

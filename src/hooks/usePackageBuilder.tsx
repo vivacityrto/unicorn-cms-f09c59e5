@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+
+type DocumentRow = Tables<'documents'>;
 
 export interface Package {
   id: number;
@@ -109,13 +112,13 @@ export function usePackageBuilder() {
     try {
       const [packagesResult, stageCounts] = await Promise.all([
         supabase.from('packages').select('*').order('created_at', { ascending: false }),
-        supabase.from('package_stages' as any).select('package_id') as any
+        supabase.from('package_stages').select('package_id')
       ]);
 
       if (packagesResult.error) throw packagesResult.error;
 
       const countMap = new Map<number, number>();
-      ((stageCounts.data || []) as any[]).forEach((stage: any) => {
+      (stageCounts.data || []).forEach((stage) => {
         countMap.set(stage.package_id, (countMap.get(stage.package_id) || 0) + 1);
       });
 
@@ -125,10 +128,10 @@ export function usePackageBuilder() {
       }));
 
       setPackages(packagesWithCounts);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch packages',
+        description: error instanceof Error ? error.message : 'Failed to fetch packages',
         variant: 'destructive'
       });
     }
@@ -139,17 +142,17 @@ export function usePackageBuilder() {
       // Get stages with usage count
       const [stagesResult, usageCounts] = await Promise.all([
         supabase.from('stages').select('*').order('name', { ascending: true }),
-        supabase.from('package_stages' as any).select('stage_id') as any
+        supabase.from('package_stages').select('stage_id')
       ]);
 
       if (stagesResult.error) throw stagesResult.error;
 
       const countMap = new Map<number, number>();
-      ((usageCounts.data || []) as any[]).forEach((ps: any) => {
+      (usageCounts.data || []).forEach((ps) => {
         countMap.set(ps.stage_id, (countMap.get(ps.stage_id) || 0) + 1);
       });
 
-      const stagesWithCounts: Stage[] = (stagesResult.data || []).map((s: any) => ({
+      const stagesWithCounts: Stage[] = (stagesResult.data || []).map((s) => ({
         id: s.id,
         title: s.name,
         short_name: s.shortname,
@@ -172,10 +175,10 @@ export function usePackageBuilder() {
       }));
 
       setStages(stagesWithCounts);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch stages',
+        description: error instanceof Error ? error.message : 'Failed to fetch stages',
         variant: 'destructive'
       });
     }
@@ -190,7 +193,7 @@ export function usePackageBuilder() {
 
       if (error) throw error;
       setEmailTemplates(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch email templates:', error);
     }
   }, []);
@@ -205,9 +208,21 @@ export function usePackageBuilder() {
   }, [fetchPackages, fetchStages, fetchEmailTemplates]);
 
   const createPackage = async (data: Partial<Package>) => {
+    // packages.id has no default/identity/sequence in the DB — every insert
+    // must supply the next available id explicitly (same approach as
+    // duplicatePackage below).
+    const { data: maxIdRow } = await supabase
+      .from('packages')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1)
+      .single();
+    const nextId = (maxIdRow?.id ?? 0) + 1;
+
     const { data: newPackage, error } = await supabase
       .from('packages')
       .insert([{
+        id: nextId,
         name: data.name,
         full_text: data.full_text,
         details: data.details,
@@ -215,7 +230,7 @@ export function usePackageBuilder() {
         duration_months: data.duration_months,
         package_type: data.package_type,
         total_hours: data.total_hours
-      }] as any)
+      }])
       .select()
       .single();
 
@@ -225,7 +240,7 @@ export function usePackageBuilder() {
   };
 
   const updatePackage = async (id: number, data: Partial<Package>) => {
-    const { id: _id, ...updateData } = data as any;
+    const { id: _id, stages_count: _stagesCount, ...updateData } = data;
     const { error } = await supabase
       .from('packages')
       .update(updateData)
@@ -267,20 +282,20 @@ export function usePackageBuilder() {
         package_type: original.package_type,
         total_hours: original.total_hours,
         progress_mode: original.progress_mode
-      }] as any)
+      }])
       .select()
       .single();
 
     if (createError) throw createError;
 
     // Copy package stages
-    const { data: originalStages } = await (supabase
-      .from('package_stages' as any)
+    const { data: originalStages } = await supabase
+      .from('package_stages')
       .select('*')
-      .eq('package_id', packageId) as any);
+      .eq('package_id', packageId);
 
     if (originalStages && originalStages.length > 0) {
-      const newStages = originalStages.map((stage: any) => ({
+      const newStages = originalStages.map((stage) => ({
         package_id: newPackage.id,
         stage_id: stage.stage_id,
         sort_order: stage.sort_order,
@@ -288,7 +303,7 @@ export function usePackageBuilder() {
         dashboard_group: stage.dashboard_group
       }));
 
-      await (supabase.from('package_stages' as any).insert(newStages) as any);
+      await supabase.from('package_stages').insert(newStages);
     }
 
     // Copy staff tasks
@@ -305,9 +320,9 @@ export function usePackageBuilder() {
         description: task.description,
         due_date_offset: task.due_date_offset,
         order_number: task.order_number,
-        owner_role: (task as any).owner_role,
-        estimated_hours: (task as any).estimated_hours,
-        is_mandatory: (task as any).is_mandatory
+        owner_role: task.owner_role,
+        estimated_hours: task.estimated_hours,
+        is_mandatory: task.is_mandatory
       }));
 
       await supabase.from('package_staff_tasks').insert(newTasks);
@@ -327,8 +342,8 @@ export function usePackageBuilder() {
         description: task.description,
         due_date_offset: task.due_date_offset,
         order_number: task.order_number,
-        instructions: (task as any).instructions,
-        required_documents: (task as any).required_documents
+        instructions: task.instructions,
+        required_documents: task.required_documents
       }));
 
       await supabase.from('package_client_tasks').insert(newTasks);
@@ -363,11 +378,22 @@ export function usePackageBuilder() {
     const stageKey = (data.title || 'stage').toLowerCase()
       .replace(/[^a-zA-Z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') + '-' + Date.now();
-    
-    const { data: newStage, error } = await (supabase
+
+    // stages.id has no default/identity/sequence in the DB either — same
+    // "must supply the next available id explicitly" requirement as packages.
+    const { data: maxIdRow } = await supabase
+      .from('stages')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1)
+      .single();
+    const nextId = (maxIdRow?.id ?? 0) + 1;
+
+    const { data: newStage, error } = await supabase
       .from('stages')
       .insert({
-        name: data.title,
+        id: nextId,
+        name: data.title || 'Untitled Stage',
         shortname: data.short_name,
         description: data.description,
         videourl: data.video_url,
@@ -378,9 +404,9 @@ export function usePackageBuilder() {
         is_certified: data.is_certified ?? false,
         certified_notes: data.is_certified ? data.certified_notes : null,
         stage_key: stageKey
-      } as any)
+      })
       .select()
-      .single());
+      .single();
 
     if (error) throw error;
     await fetchStages();
@@ -388,23 +414,23 @@ export function usePackageBuilder() {
   };
 
   const updateStage = async (id: number, data: Partial<Stage>) => {
-    const { id: _id, ...updateData } = data as any;
+    const { id: _id, ...updateData } = data;
     // If updating certified status to false, clear notes
     if (updateData.is_certified === false) {
       updateData.certified_notes = null;
     }
     // Remap field names for stages table
-    const remapped: any = {};
+    const remapped: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(updateData)) {
       if (key === 'title') remapped.name = val;
       else if (key === 'short_name') remapped.shortname = val;
       else if (key === 'video_url') remapped.videourl = val;
       else remapped[key] = val;
     }
-    const { error } = await (supabase
+    const { error } = await supabase
       .from('stages')
-      .update(remapped)
-      .eq('id', id) as any);
+      .update(remapped as TablesUpdate<'stages'>)
+      .eq('id', id);
 
     if (error) throw error;
     await fetchStages();
@@ -445,10 +471,10 @@ export function usePackageDetail(packageId: number | null) {
 
       if (error) throw error;
       setPackageData(data);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch package',
+        description: error instanceof Error ? error.message : 'Failed to fetch package',
         variant: 'destructive'
       });
     }
@@ -459,23 +485,23 @@ export function usePackageDetail(packageId: number | null) {
 
     try {
       // Fetch package stages with stage details
-      const { data: psData, error: psError } = await (supabase
-        .from('package_stages' as any)
+      const { data: psData, error: psError } = await supabase
+        .from('package_stages')
         .select('*')
         .eq('package_id', packageId)
-        .order('sort_order', { ascending: true }) as any);
+        .order('sort_order', { ascending: true });
 
       if (psError) throw psError;
 
       // Fetch stage details for each
-      const stageIds = (psData || []).map((ps: any) => ps.stage_id);
-      
+      const stageIds = (psData || []).map((ps) => ps.stage_id);
+
       if (stageIds.length > 0) {
         // Fetch from stages table (single source of truth now)
         const { data: stagesData } = await supabase.from('stages').select('*').in('id', stageIds);
 
         const stageMap = new Map<number, Stage>();
-        (stagesData || []).forEach((s: any) => {
+        (stagesData || []).forEach((s) => {
           stageMap.set(s.id, {
             id: s.id,
             title: s.name,
@@ -498,7 +524,7 @@ export function usePackageDetail(packageId: number | null) {
           });
         });
         
-        const enrichedStages = (psData || []).map((ps: any) => ({
+        const enrichedStages = (psData || []).map((ps) => ({
           ...ps,
           stage: stageMap.get(ps.stage_id)
         }));
@@ -507,10 +533,10 @@ export function usePackageDetail(packageId: number | null) {
       } else {
         setPackageStages([]);
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch package stages',
+        description: error instanceof Error ? error.message : 'Failed to fetch package stages',
         variant: 'destructive'
       });
     }
@@ -531,24 +557,24 @@ export function usePackageDetail(packageId: number | null) {
 
     const maxOrder = packageStages.reduce((max, ps) => Math.max(max, ps.sort_order), -1);
 
-    const { error } = await (supabase
-      .from('package_stages' as any)
+    const { error } = await supabase
+      .from('package_stages')
       .insert({
         package_id: packageId,
         stage_id: stageId,
         sort_order: maxOrder + 1,
         is_required: true
-      }) as any);
+      });
 
     if (error) throw error;
     await fetchPackageStages();
   };
 
   const removeStageFromPackage = async (packageStageId: number) => {
-    const { error } = await (supabase
-      .from('package_stages' as any)
+    const { error } = await supabase
+      .from('package_stages')
       .delete()
-      .eq('id', packageStageId) as any);
+      .eq('id', packageStageId);
 
     if (error) throw error;
     await fetchPackageStages();
@@ -557,11 +583,11 @@ export function usePackageDetail(packageId: number | null) {
   const reorderStages = async (stageIds: number[]) => {
     if (!packageId) return;
 
-    const updates = stageIds.map((id, index) => 
-      (supabase
-        .from('package_stages' as any)
+    const updates = stageIds.map((id, index) =>
+      supabase
+        .from('package_stages')
         .update({ sort_order: index })
-        .eq('id', id) as any)
+        .eq('id', id)
     );
 
     await Promise.all(updates);
@@ -571,7 +597,7 @@ export function usePackageDetail(packageId: number | null) {
   const updatePackageData = async (data: Partial<Package>) => {
     if (!packageId) return;
 
-    const { id: _id, ...updateData } = data as any;
+    const { id: _id, stages_count: _stagesCount, ...updateData } = data;
     const { error } = await supabase
       .from('packages')
       .update(updateData)
@@ -599,7 +625,7 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
   const [staffTasks, setStaffTasks] = useState<StaffTask[]>([]);
   const [clientTasks, setClientTasks] = useState<ClientTask[]>([]);
   const [stageEmails, setStageEmails] = useState<StageEmail[]>([]);
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchStageData = useCallback(async () => {
@@ -629,11 +655,11 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
           .eq('stage_id', stageId)
           .order('order_number', { ascending: true }),
         supabase
-          .from('package_stage_emails' as any)
+          .from('package_stage_emails')
           .select('*')
           .eq('package_id', packageId)
           .eq('stage_id', stageId)
-          .order('sort_order', { ascending: true }) as any,
+          .order('sort_order', { ascending: true }),
         supabase
           .from('documents')
           .select('*')
@@ -646,25 +672,25 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
               .select('*')
               .in('id', additionalIds)
               .order('id', { ascending: true })
-          : Promise.resolve({ data: [] as any[] } as any),
+          : Promise.resolve({ data: [] as DocumentRow[] }),
       ]);
 
       setStaffTasks((staffResult.data || []) as StaffTask[]);
       setClientTasks((clientResult.data || []) as ClientTask[]);
       setStageEmails((emailsResult.data || []) as StageEmail[]);
       // Merge and dedupe documents by id
-      const mergedDocs = [...(docsResult.data || []), ...((linkedDocsResult as any)?.data || [])];
+      const mergedDocs = [...(docsResult.data || []), ...(linkedDocsResult?.data || [])];
       const seen = new Set<number>();
-      const dedupedDocs = mergedDocs.filter((d: any) => {
+      const dedupedDocs = mergedDocs.filter((d) => {
         if (seen.has(d.id)) return false;
         seen.add(d.id);
         return true;
       });
       setDocuments(dedupedDocs);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch stage data',
+        description: error instanceof Error ? error.message : 'Failed to fetch stage data',
         variant: 'destructive'
       });
     }
@@ -728,10 +754,10 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
 
     const maxOrder = clientTasks.reduce((max, t) => Math.max(max, t.order_number), -1);
 
-    const insertData: any = {
+    const insertData: TablesInsert<'package_client_tasks'> = {
       package_id: packageId,
       stage_id: stageId,
-      name: data.name,
+      name: data.name || '',
       description: data.description || null,
       order_number: maxOrder + 1
     };
@@ -774,8 +800,8 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
 
     const maxOrder = stageEmails.reduce((max, e) => Math.max(max, e.sort_order), -1);
 
-    const { error } = await (supabase
-      .from('package_stage_emails' as any)
+    const { error } = await supabase
+      .from('package_stage_emails')
       .insert({
         package_id: packageId,
         stage_id: stageId,
@@ -784,17 +810,17 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
         recipient_type: recipientType,
         sort_order: maxOrder + 1,
         is_active: true
-      }) as any);
+      });
 
     if (error) throw error;
     await fetchStageData();
   };
 
   const removeStageEmail = async (emailId: number) => {
-    const { error } = await (supabase
-      .from('package_stage_emails' as any)
+    const { error } = await supabase
+      .from('package_stage_emails')
       .delete()
-      .eq('id', emailId) as any);
+      .eq('id', emailId);
 
     if (error) throw error;
     await fetchStageData();
@@ -807,14 +833,14 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
     if (!packageId || !stageId) return;
 
     const { data, error } = await supabase
-      .from('package_stage_documents' as any)
-      .select(`
+      .from('package_stage_documents')
+      .select<string, StageDocument>(`
         *,
         document:documents(id, title, format, category, is_team_only, is_tenant_downloadable, is_auto_generated, source_template_url, uploaded_files)
       `)
       .eq('package_id', packageId)
       .eq('stage_id', stageId)
-      .order('sort_order', { ascending: true }) as any;
+      .order('sort_order', { ascending: true });
 
     if (error) {
       console.error('Error fetching stage documents:', error);
@@ -834,8 +860,8 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
 
     const maxOrder = stageDocuments.reduce((max, d) => Math.max(max, d.sort_order), -1);
 
-    const { error } = await (supabase
-      .from('package_stage_documents' as any)
+    const { error } = await supabase
+      .from('package_stage_documents')
       .insert({
         package_id: packageId,
         stage_id: stageId,
@@ -843,7 +869,7 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
         visibility,
         delivery_type: deliveryType,
         sort_order: maxOrder + 1
-      }) as any);
+      });
 
     if (error) {
       if (error.code === '23505') {
@@ -853,15 +879,15 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
     }
 
     // Log to audit
-    await (supabase
-      .from('package_builder_audit_log' as any)
+    await supabase
+      .from('package_builder_audit_log')
       .insert({
         package_id: packageId,
         action: 'link',
         entity_type: 'stage_document',
         entity_id: documentId.toString(),
         after_data: { stage_id: stageId, document_id: documentId, visibility, delivery_type: deliveryType }
-      }) as any);
+      });
 
     await fetchStageDocuments();
   };
@@ -880,9 +906,9 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
       sort_order: startOrder + idx
     }));
 
-    const { error } = await (supabase
-      .from('package_stage_documents' as any)
-      .insert(inserts) as any);
+    const { error } = await supabase
+      .from('package_stage_documents')
+      .insert(inserts);
 
     if (error) {
       if (error.code === '23505') {
@@ -892,15 +918,15 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
     }
 
     // Log to audit
-    await (supabase
-      .from('package_builder_audit_log' as any)
+    await supabase
+      .from('package_builder_audit_log')
       .insert({
         package_id: packageId,
         action: 'bulk_link',
         entity_type: 'stage_documents',
         entity_id: stageId.toString(),
         after_data: { stage_id: stageId, document_ids: documentIds, count: documentIds.length }
-      }) as any);
+      });
 
     await fetchStageDocuments();
   };
@@ -908,17 +934,17 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
   const updateStageDocument = async (id: string, data: { visibility?: string; delivery_type?: string }) => {
     // Get before state for audit
     const existing = stageDocuments.find(d => d.id === id);
-    
-    const { error } = await (supabase
-      .from('package_stage_documents' as any)
+
+    const { error } = await supabase
+      .from('package_stage_documents')
       .update(data)
-      .eq('id', id) as any);
+      .eq('id', id);
 
     if (error) throw error;
 
     // Log to audit
-    await (supabase
-      .from('package_builder_audit_log' as any)
+    await supabase
+      .from('package_builder_audit_log')
       .insert({
         package_id: packageId,
         action: 'update',
@@ -926,29 +952,29 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
         entity_id: id,
         before_data: existing ? { visibility: existing.visibility, delivery_type: existing.delivery_type } : null,
         after_data: data
-      }) as any);
+      });
 
     await fetchStageDocuments();
   };
 
   const removeStageDocument = async (id: string, documentId: number) => {
-    const { error } = await (supabase
-      .from('package_stage_documents' as any)
+    const { error } = await supabase
+      .from('package_stage_documents')
       .delete()
-      .eq('id', id) as any);
+      .eq('id', id);
 
     if (error) throw error;
 
     // Log to audit
-    await (supabase
-      .from('package_builder_audit_log' as any)
+    await supabase
+      .from('package_builder_audit_log')
       .insert({
         package_id: packageId,
         action: 'unlink',
         entity_type: 'stage_document',
         entity_id: documentId.toString(),
         before_data: { stage_id: stageId, document_id: documentId }
-      }) as any);
+      });
 
     await fetchStageDocuments();
   };
@@ -962,22 +988,22 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
     }));
 
     for (const update of updates) {
-      await (supabase
-        .from('package_stage_documents' as any)
+      await supabase
+        .from('package_stage_documents')
         .update({ sort_order: update.sort_order })
-        .eq('id', update.id) as any);
+        .eq('id', update.id);
     }
 
     // Log to audit
-    await (supabase
-      .from('package_builder_audit_log' as any)
+    await supabase
+      .from('package_builder_audit_log')
       .insert({
         package_id: packageId,
         action: 'reorder',
         entity_type: 'stage_documents',
         entity_id: stageId.toString(),
         after_data: { new_order: orderedIds }
-      }) as any);
+      });
 
     await fetchStageDocuments();
   };
@@ -1026,6 +1052,6 @@ export interface StageDocument {
     is_tenant_downloadable: boolean | null;
     is_auto_generated: boolean | null;
     source_template_url: string | null;
-    uploaded_files: any[] | null;
+    uploaded_files: string[] | null;
   };
 }
