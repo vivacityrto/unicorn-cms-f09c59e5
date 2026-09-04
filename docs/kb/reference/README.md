@@ -1,6 +1,6 @@
 # KB Lifecycle Registry
 
-> **Last updated:** 2026-09-01 · **Reconsider by:** 2026-12-01 · **Confidence:** medium — status is read from each doc's own header where one exists, and inferred from content/dates otherwise; inferred rows are marked and should be treated as a starting point, not a final call.
+> **Last updated:** 2026-09-04 · **Reconsider by:** 2026-12-01 · **Confidence:** medium — status is read from each doc's own header where one exists, and inferred from content/dates otherwise; inferred rows are marked and should be treated as a starting point, not a final call.
 
 Every long-form plan, handoff, and codebase-state doc in `docs/kb/` gets a lifecycle status here, so a reader (human or AI) can tell **"is this current instruction, or evidence of something that already happened / was decided differently / hasn't been decided yet"** without reading the whole thing.
 
@@ -23,8 +23,9 @@ This mirrors — and doesn't replace — the KB's own precedence rule (`referenc
 | `cadence.md` | active | Needs a content refresh (cites stale `05-product-decisions.md`-era cross-references, now fixed to `decisions.md`) but the cadence description itself isn't wrong. |
 | `clean-architecture-refactor.md` | superseded | Says so explicitly: "superseded as the active plan" by `codebase-optimization-plan-2026-08-28.md`. |
 | `client-portal-qa-protocol.md` | active | Living QA protocol reference. |
-| `codebase-optimization-plan-2026-08-28.md` | planning | Says so explicitly: "Planning only." Phase 0 and part of Phase 1 have since been executed as of this registry's date — see the plan's own Council-checkpoint C0 for what "accepted" means; this registry doesn't re-litigate that. |
+| `codebase-optimization-plan-2026-08-28.md` | active | Phases 0, 1, and 2 are complete; Phase 2.5 is actively retiring lint/type debt and Phase 2.6 is now a council-reviewed retirement/consolidation proposal. The plan remains the live execution ledger and authorizes no production mutation or merge by itself. |
 | `dashboard-overhaul-mockup.md` | historical | One-off analysis snapshot (2026-07-03); its companion `.html` mockup is missing from the repo (noted in the doc itself). |
+| `dead-code-feature-consolidation-investigation-2026-09-04.md` | planning | Council-reviewed candidate register and cross-program Phase 2.6 proposal; explicitly authorizes no deletion, database mutation, permission change, deployment, or merge. |
 | `decision-trail.md` | active | Living ADR log — individual ADRs carry their own Decided/Superseded/Reversed status inline; the doc as a whole is the current canonical decision record. |
 | `dev-guardrails.md` | active | Standing guardrails. |
 | `flow-patterns.md` | active | Living pattern reference. |
