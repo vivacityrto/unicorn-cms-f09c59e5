@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T10:52:24.810Z",
-  "baselineSha": "5c7c58dbed0e506f0b14f799136d8cbeddc17549",
+  "generatedAt": "2026-09-04T11:10:56.763Z",
+  "baselineSha": "285494f92847d08381733bd057a3746e91a91b1a",
   "totals": {
     "files": 1769,
-    "filesWithFindings": 473,
-    "errors": 2740,
+    "filesWithFindings": 465,
+    "errors": 2716,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2733,
+    "@typescript-eslint/no-explicit-any": 2709,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2072,
+      "errors": 2048,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2065,
+        "@typescript-eslint/no-explicit-any": 2041,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -98,18 +98,17 @@
       }
     },
     "src/components/audit": {
-      "errors": 8,
+      "errors": 4,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 8,
+        "@typescript-eslint/no-explicit-any": 4,
         "react-refresh/only-export-components": 1
       }
     },
     "src/components/audit/workspace": {
-      "errors": 20,
+      "errors": 0,
       "warnings": 2,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 20,
         "react-refresh/only-export-components": 2
       }
     },
@@ -1328,9 +1327,6 @@
     "src/components/ask-viv/AskVivPanel.tsx": {
       "@typescript-eslint/no-explicit-any": 7
     },
-    "src/components/audit/ActionCreateForm.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
     "src/components/audit/AuditQuestionCard.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -1338,32 +1334,10 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/audit/DeleteAuditDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 1,
       "react-refresh/only-export-components": 1
-    },
-    "src/components/audit/FindingCard.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/audit/workspace/ActionDrawer.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/audit/workspace/ActionsTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/components/audit/workspace/AuditSidebar.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/components/audit/workspace/EvidenceRequestsSection.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/components/audit/workspace/OverviewTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
     },
     "src/components/audit/workspace/QuestionGuidance.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/components/audit/workspace/SendEvidenceRequestDrawer.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/audit/workspace/UnsavedAuditWorkContext.tsx": {
       "react-refresh/only-export-components": 1

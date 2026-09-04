@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, ChevronDown, ChevronUp, Check, RotateCcw, Download, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useAuditEvidenceRequests, useReviewEvidenceItem } from '@/hooks/useAuditPrep';
+import { useAuditEvidenceRequests, useReviewEvidenceItem, type EvidenceRequest, type EvidenceRequestItem } from '@/hooks/useAuditPrep';
 import { SendEvidenceRequestDrawer } from './SendEvidenceRequestDrawer';
 import type { ClientAudit } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
@@ -29,13 +29,13 @@ export function EvidenceRequestsSection({ audit }: EvidenceRequestsSectionProps)
   const reviewItem = useReviewEvidenceItem();
   const [revisionNotes, setRevisionNotes] = useState<Record<string, string>>({});
 
-  const getRequestProgress = (req: any) => {
+  const getRequestProgress = (req: EvidenceRequest) => {
     const items = req.items || req.evidence_request_items || [];
-    const received = items.filter((i: any) => ['received', 'accepted'].includes(i.status)).length;
+    const received = items.filter((i) => ['received', 'accepted'].includes(i.status)).length;
     return { received, total: items.length };
   };
 
-  const getRequestStatus = (req: any) => {
+  const getRequestStatus = (req: EvidenceRequest) => {
     const { received, total } = getRequestProgress(req);
     if (received === 0) return { label: 'Pending', color: 'bg-gray-100 text-gray-600' };
     if (received < total) return { label: 'Partially received', color: 'bg-amber-100 text-amber-700' };
@@ -61,7 +61,7 @@ export function EvidenceRequestsSection({ audit }: EvidenceRequestsSectionProps)
           </p>
         ) : (
           requests.map(req => {
-            const items = (req as any).evidence_request_items || req.items || [];
+            const items = req.evidence_request_items || req.items || [];
             const { received, total } = getRequestProgress(req);
             const status = getRequestStatus(req);
             const isExpanded = expandedRequest === req.id;
@@ -93,7 +93,7 @@ export function EvidenceRequestsSection({ audit }: EvidenceRequestsSectionProps)
 
                   {isExpanded && (
                     <div className="space-y-2 pt-2 border-t">
-                      {items.map((item: any) => (
+                      {items.map((item: EvidenceRequestItem) => (
                         <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-md bg-muted/30">
                           <div className="flex items-center gap-2 flex-1">
                             <FileText className="h-4 w-4 text-muted-foreground" />

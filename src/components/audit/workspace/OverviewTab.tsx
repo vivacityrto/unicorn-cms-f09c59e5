@@ -35,8 +35,13 @@ export function OverviewTab({ audit }: OverviewTabProps) {
     snapshot_website: audit.snapshot_website || '',
   });
 
-  const handleBlur = (field: string, value: any) => {
-    updateAudit.mutate({ [field]: value || null } as any);
+  type OverviewTextField =
+    | 'title' | 'doc_number' | 'conducted_at' | 'next_audit_due'
+    | 'lead_auditor_id' | 'assisted_by_id' | 'report_prepared_by_id'
+    | 'executive_summary' | 'overall_finding';
+
+  const handleBlur = (field: OverviewTextField, value: string | null) => {
+    updateAudit.mutate({ [field]: value || null } as Partial<ClientAudit>);
   };
 
   // Native <input type="date"> renders its placeholder/value in the
@@ -48,7 +53,7 @@ export function OverviewTab({ audit }: OverviewTabProps) {
   const [nextAuditDuePreview, setNextAuditDuePreview] = useState(audit.next_audit_due || '');
 
   const saveSnapshot = () => {
-    updateAudit.mutate(snapshot as any);
+    updateAudit.mutate(snapshot);
     setShowSnapshot(false);
   };
 

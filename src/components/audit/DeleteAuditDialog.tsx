@@ -67,12 +67,12 @@ export function DeleteAuditDialog({
     setInlineError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke(
+      const { data, error } = await supabase.functions.invoke<{ error?: string }>(
         'delete-incomplete-audit',
         { body: { audit_id: audit.id, reason: trimmed } },
       );
 
-      const serverError = (data as any)?.error as string | undefined;
+      const serverError = data?.error;
 
       if (error || serverError) {
         const msg =
