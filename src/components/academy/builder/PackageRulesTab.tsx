@@ -33,52 +33,52 @@ export default function PackageRulesTab({ courseId }: { courseId: number }) {
     mutationFn: async (enable: boolean) => {
       const { error } = await supabase
         .from("academy_courses")
-        .update({ available_to_all_clients: enable } as any)
+        .update({ available_to_all_clients: enable })
         .eq("id", courseId);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["academy-course-availability", courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update availability"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update availability"),
   });
 
   const autoEnrolMutation = useMutation({
     mutationFn: async (enable: boolean) => {
       const { error } = await supabase
         .from("academy_courses")
-        .update({ auto_enrol_all_clients: enable } as any)
+        .update({ auto_enrol_all_clients: enable })
         .eq("id", courseId);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["academy-course-availability", courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update auto-enrol"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update auto-enrol"),
   });
 
 
   const toggleMutation = useMutation({
     mutationFn: async ({ packageId, enable }: { packageId: number; enable: boolean }) => {
-      const existing = rules.find((r: any) => r.package_id === packageId);
+      const existing = rules.find((r) => r.package_id === packageId);
       if (existing) {
         const { error } = await supabase
           .from("academy_package_course_rules")
-          .update({ is_active: enable } as any)
+          .update({ is_active: enable })
           .eq("id", existing.id);
         if (error) throw error;
       } else if (enable) {
         const { data: { user } } = await supabase.auth.getUser();
         const { error } = await supabase
           .from("academy_package_course_rules")
-          .insert({ package_id: packageId, course_id: courseId, is_active: true, created_by: user?.id } as any);
+          .insert({ package_id: packageId, course_id: courseId, is_active: true, created_by: user?.id });
         if (error) throw error;
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["academy-package-course-rules", courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update"),
   });
 
   const isLoading = pkgLoading || rulesLoading || courseLoading;
@@ -166,8 +166,8 @@ export default function PackageRulesTab({ courseId }: { courseId: number }) {
       </p>
 
       <div className="space-y-2">
-        {packages.map((pkg: any) => {
-          const rule = rules.find((r: any) => r.package_id === pkg.id);
+        {packages.map((pkg) => {
+          const rule = rules.find((r) => r.package_id === pkg.id);
           const isActive = rule?.is_active ?? false;
           return (
             <div

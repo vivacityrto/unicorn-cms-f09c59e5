@@ -250,6 +250,47 @@ of bug stops resurfacing every time someone touches a nearby insert.
 both ways — deleted via the UI's own trash-icon delete, then confirmed via
 direct SQL that no row with that name remains.
 
+## Manage Stages — audit trail (`AdminManageStages.tsx`)
+
+### 14. Stage archive/restore has never recorded an audit trail entry — DOCUMENTED, NOT FIXED (compliance-relevant)
+`AdminManageStages.tsx`'s `toggleArchive` writes to `audit_events` after
+every archive/restore action:
+```ts
+await supabase.from('audit_events').insert({
+  entity: 'stage',
+  entity_id: stage.id.toString(),
+  action: newArchived ? 'stage.archived' : 'stage.restored',
+  details: { stage_title: stage.title },
+});
+```
+`audit_events.entity_id` is a **`uuid`** column, but `stages.id` is a plain
+integer (this table predates the rest of the schema's UUID convention —
+see items #2/#3/#12 in this doc for its other integer-PK quirks). Every
+call sends a bare-integer string (e.g. `"11"`) into a `uuid` column, which
+Postgres rejects outright: `22P02: invalid input syntax for type uuid`,
+surfaced to the browser as an HTTP 400. Confirmed directly via SQL
+(impersonating the real SuperAdmin test account's JWT claims) — the insert
+fails with that exact error, independent of RLS (the `is_super_admin()`
+check in the INSERT policy correctly recognizes this account; the failure
+is purely the UUID type mismatch).
+
+Net effect: **every stage archive/restore action has silently failed to
+create an audit trail entry**, with zero indication to the user — the
+insert's own error is never checked (fire-and-forget), and the
+archive/restore action itself succeeds and shows a success toast
+regardless. Found during batch 39's live verification (console showed two
+400s on `audit_events` — one per archive, one per restore) while
+confirming the archive/restore UI flow itself works correctly (which it
+does).
+
+**Why not fixed here**: `stage.id` has no UUID representation to give —
+fixing this properly needs a decision (a new integer/text audit-events
+variant column, a lookup table, or accepting that stage-entity audit
+events use a different logging path) rather than a type-only patch.
+Flagged to Carl given this is specifically an **audit-trail** gap on a
+compliance platform, even though it doesn't block the underlying
+archive/restore feature.
+
 ## KPI v2 — Developer ticket queue (`KpiMonthlySummaryCards.tsx`, `KpiDeveloperTicketQueue.tsx`)
 
 ### 13. Developer "Comms compliance" KPI metric has always shown as fully non-compliant — FIXED

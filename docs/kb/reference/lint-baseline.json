@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T20:27:11.169Z",
-  "baselineSha": "8e016b6ca75efff6c36a228997b968eba4089e41",
+  "generatedAt": "2026-09-04T20:40:05.118Z",
+  "baselineSha": "6a26566559b18866189f7d69cdbd4e0b82096101",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 411,
-    "errors": 1598,
+    "filesWithFindings": 409,
+    "errors": 1579,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1591,
+    "@typescript-eslint/no-explicit-any": 1572,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 930,
+      "errors": 911,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 923,
+        "@typescript-eslint/no-explicit-any": 904,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -62,10 +62,10 @@
       }
     },
     "src/components/academy/builder": {
-      "errors": 26,
+      "errors": 16,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 25,
+        "@typescript-eslint/no-explicit-any": 15,
         "@typescript-eslint/no-unused-expressions": 1
       }
     },
@@ -380,10 +380,10 @@
       }
     },
     "src/hooks": {
-      "errors": 392,
+      "errors": 383,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 392,
+        "@typescript-eslint/no-explicit-any": 383,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1283,9 +1283,6 @@
     "src/components/academy/builder/LessonEditorPanel.tsx": {
       "@typescript-eslint/no-explicit-any": 6
     },
-    "src/components/academy/builder/PackageRulesTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 10
-    },
     "src/components/admin/AppSettingsForm.tsx": {
       "@typescript-eslint/no-explicit-any": 4
     },
@@ -1687,9 +1684,6 @@
     },
     "src/hooks/useClientActivityTimeline.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useClientAllTasks.ts": {
-      "@typescript-eslint/no-explicit-any": 9
     },
     "src/hooks/useClientAuditPortal.ts": {
       "@typescript-eslint/no-explicit-any": 4
