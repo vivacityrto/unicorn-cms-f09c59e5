@@ -67,9 +67,9 @@ export function useMissingMergeFields(tenantId: number | null) {
 
       // Fetch resolved values from the unified view
       const { data: viewData, error: viewError } = await supabase
-        .from('v_tenant_merge_fields' as any)
+        .from('v_tenant_merge_fields')
         .select('field_tag, value')
-        .eq('tenant_id', tenantId) as any;
+        .eq('tenant_id', tenantId);
 
       if (viewError) {
         console.warn('Could not fetch merge field values:', viewError);
@@ -77,8 +77,8 @@ export function useMissingMergeFields(tenantId: number | null) {
 
       // Build a map of tag -> value
       const valueMap: Record<string, string> = {};
-      (viewData || []).forEach((row: { field_tag: string; value: string }) => {
-        valueMap[row.field_tag] = row.value || '';
+      (viewData || []).forEach((row) => {
+        if (row.field_tag) valueMap[row.field_tag] = row.value || '';
       });
 
       setTenantMergeData(valueMap);
@@ -112,7 +112,7 @@ export function useMissingMergeFields(tenantId: number | null) {
 
       setMissingFields(missing);
       return missing;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error detecting missing fields:', error);
       toast({
         title: 'Error',
@@ -185,11 +185,11 @@ export function useMissingMergeFields(tenantId: number | null) {
       } else {
         throw new Error(data.error || 'Generation failed');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error retrying document generation:', error);
       toast({
         title: 'Generation Failed',
-        description: error.message || 'Failed to generate document',
+        description: error instanceof Error ? error.message : 'Failed to generate document',
         variant: 'destructive'
       });
       return false;
@@ -219,15 +219,15 @@ export function useMissingMergeFields(tenantId: number | null) {
       // Upsert tenant_merge_data
       const mergedData = { ...tenantMergeData, ...data };
       
-      const { error: upsertError } = await (supabase
-        .from('tenant_merge_data' as any)
+      const { error: upsertError } = await supabase
+        .from('tenant_merge_data')
         .upsert({
           tenant_id: tenantId,
           data: mergedData,
           updated_by: user.id
         }, {
           onConflict: 'tenant_id'
-        }) as any);
+        });
 
       if (upsertError) throw upsertError;
 
@@ -276,11 +276,11 @@ export function useMissingMergeFields(tenantId: number | null) {
       }
 
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving merge data:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save information',
+        description: error instanceof Error ? error.message : 'Failed to save information',
         variant: 'destructive'
       });
       return false;
@@ -295,13 +295,13 @@ export function useMissingMergeFields(tenantId: number | null) {
 
     try {
       const { data } = await supabase
-        .from('v_tenant_merge_fields' as any)
+        .from('v_tenant_merge_fields')
         .select('field_tag, value')
-        .eq('tenant_id', tenantId) as any;
+        .eq('tenant_id', tenantId);
 
       const values: Record<string, string> = {};
-      (data || []).forEach((row: { field_tag: string; value: string }) => {
-        values[row.field_tag] = row.value || '';
+      (data || []).forEach((row) => {
+        if (row.field_tag) values[row.field_tag] = row.value || '';
       });
       return values;
     } catch (error) {

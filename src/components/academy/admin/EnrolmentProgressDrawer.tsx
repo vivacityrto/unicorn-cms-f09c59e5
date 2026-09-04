@@ -61,7 +61,7 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
   const issueCert = useIssueCertificate();
   const revokeCert = useRevokeCertificate();
 
-  const { data: enrolment, isLoading: loadingEnrolment } = useQuery<any>({
+  const { data: enrolment, isLoading: loadingEnrolment } = useQuery({
     queryKey: ["enrolment-detail", enrolmentId],
     enabled: open,
     queryFn: async () => {
@@ -84,7 +84,7 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
         ...enr,
         course: courseRes.data,
         user: userRes.data,
-        tenant: (tenantRes as any).data,
+        tenant: tenantRes.data,
       };
     },
   });
@@ -153,8 +153,8 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
 
   // Group lessons by module
   const groupedLessons = useMemo(() => {
-    const groups: Record<string, { module_id: number; module_title: string; module_sort_order: number; items: any[] }> = {};
-    for (const l of lessons as any[]) {
+    const groups: Record<string, { module_id: number; module_title: string; module_sort_order: number; items: (typeof lessons)[number][] }> = {};
+    for (const l of lessons) {
       const k = String(l.module_id);
       if (!groups[k]) {
         groups[k] = { module_id: l.module_id, module_title: l.module_title, module_sort_order: l.module_sort_order, items: [] };
@@ -315,7 +315,7 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
                         {group.module_title}
                       </div>
                       <div className="space-y-1.5 pt-1">
-                        {group.items.map((l: any) => {
+                        {group.items.map((l) => {
                           const status =
                             l.is_completed ? "completed" :
                             (l.completion_percentage ?? 0) > 0 || (l.watch_seconds ?? 0) > 0 ? "in-progress" :
@@ -397,8 +397,8 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
                 <Separator />
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm">Assessments</h4>
-                  {assessments.map((a: any) => {
-                    const myAttempts = (attempts as any[]).filter((at) => at.assessment_id === a.id);
+                  {assessments.map((a) => {
+                    const myAttempts = attempts.filter((at) => at.assessment_id === a.id);
                     return (
                       <div key={a.id} className="rounded-md border p-3 space-y-2">
                         <div className="flex items-center justify-between">
@@ -411,7 +411,7 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
                           <p className="text-xs text-muted-foreground">No attempts yet.</p>
                         ) : (
                           <div className="space-y-1">
-                            {myAttempts.map((at: any) => (
+                            {myAttempts.map((at) => (
                               <div key={at.id} className="flex items-center gap-2 text-xs">
                                 <Badge variant={at.passed ? "default" : "destructive"} className="text-[10px]">
                                   {at.passed ? "Pass" : "Fail"}

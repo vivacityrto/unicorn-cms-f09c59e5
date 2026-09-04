@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T20:52:03.084Z",
-  "baselineSha": "2e5afca5bc73e110fb00c70c89df64eefb27de9b",
+  "generatedAt": "2026-09-04T21:01:59.567Z",
+  "baselineSha": "1be4dd33c02d048fc323ca73afe2f1ad88fcdfd0",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 407,
-    "errors": 1561,
+    "filesWithFindings": 405,
+    "errors": 1544,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1554,
+    "@typescript-eslint/no-explicit-any": 1537,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 893,
+      "errors": 876,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 886,
+        "@typescript-eslint/no-explicit-any": 869,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -47,10 +47,9 @@
       }
     },
     "src/components/academy/admin": {
-      "errors": 10,
+      "errors": 2,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 8,
         "@typescript-eslint/no-unused-expressions": 2
       }
     },
@@ -380,10 +379,10 @@
       }
     },
     "src/hooks": {
-      "errors": 374,
+      "errors": 365,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 374,
+        "@typescript-eslint/no-explicit-any": 365,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1264,9 +1263,6 @@
     "src/components/academy/WorkshopSegmentSplit.tsx": {
       "react-refresh/only-export-components": 3
     },
-    "src/components/academy/admin/EnrolmentProgressDrawer.tsx": {
-      "@typescript-eslint/no-explicit-any": 8
-    },
     "src/components/academy/admin/NewEnrolmentModal.tsx": {
       "@typescript-eslint/no-unused-expressions": 2
     },
@@ -1807,9 +1803,6 @@
     },
     "src/hooks/useMergeFields.tsx": {
       "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/hooks/useMissingMergeFields.tsx": {
-      "@typescript-eslint/no-explicit-any": 9
     },
     "src/hooks/useMomentumPanel.ts": {
       "@typescript-eslint/no-explicit-any": 2
