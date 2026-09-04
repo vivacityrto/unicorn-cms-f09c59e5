@@ -94,9 +94,9 @@ export function StageDetailSection({
 
       toast({ title: 'Stage details saved' });
       onUpdate();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving stage details:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to save stage details', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -130,9 +130,9 @@ export function StageDetailSection({
 
       toast({ title: 'Event date saved' });
       onUpdate();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving event date:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to save event date', variant: 'destructive' });
     } finally {
       setSavingEvent(false);
     }

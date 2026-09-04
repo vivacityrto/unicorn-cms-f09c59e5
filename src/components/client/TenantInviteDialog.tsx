@@ -108,11 +108,11 @@ export function TenantInviteDialog({
         .eq('tenant_id', tenantId);
       if (cancelled || error) return;
       const rows = data ?? [];
-      const hasPrimary = rows.some((r: any) =>
+      const hasPrimary = rows.some((r) =>
         r.relationship_role === 'primary_contact' ||
         (!r.relationship_role && (r.primary_contact === true || r.role === 'parent')),
       );
-      const hasSecondary = rows.some((r: any) =>
+      const hasSecondary = rows.some((r) =>
         r.relationship_role === 'secondary_contact' ||
         (!r.relationship_role && r.secondary_contact === true),
       );
@@ -287,9 +287,9 @@ export function TenantInviteDialog({
       } else {
         toast.error(data?.detail || 'Failed to send invitation');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error sending invite:', error);
-      toast.error(error?.message || 'Failed to send invitation');
+      toast.error(error instanceof Error ? error.message : 'Failed to send invitation');
     } finally {
       setIsSending(false);
     }

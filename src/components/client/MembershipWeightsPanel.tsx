@@ -86,8 +86,8 @@ export function MembershipWeightsPanel({ tenantId }: MembershipWeightsPanelProps
       queryClient.invalidateQueries({ queryKey: ['membership-weights', tenantId] });
       toast({ title: 'Allocation weights saved' });
       setDirty(false);
-    } catch (err: any) {
-      toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Save failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setSaving(false);
     }

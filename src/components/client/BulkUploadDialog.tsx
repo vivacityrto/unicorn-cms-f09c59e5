@@ -154,11 +154,12 @@ export function BulkUploadDialog({
           idx === i ? { ...f, status: 'success' } : f
         ));
         results.success++;
-      } catch (error: any) {
+      } catch (error) {
         console.error('Upload error:', error);
+        const message = error instanceof Error ? error.message : 'Upload failed';
         // Update status to error
-        setFiles(prev => prev.map((f, idx) => 
-          idx === i ? { ...f, status: 'error', error: error.message } : f
+        setFiles(prev => prev.map((f, idx) =>
+          idx === i ? { ...f, status: 'error', error: message } : f
         ));
         results.failed++;
       }

@@ -79,8 +79,8 @@ export function ReassignConsultantDialog({
               </SelectTrigger>
               <SelectContent>
                 {consultants
-                  .filter((c: any) => !c.allocation_paused)
-                  .map((c: any) => (
+                  .filter((c) => !c.allocation_paused)
+                  .map((c) => (
                     <SelectItem key={c.user_uuid} value={c.user_uuid}>
                       {c.first_name} {c.last_name}
                       {c.job_title ? ` — ${c.job_title}` : ''}

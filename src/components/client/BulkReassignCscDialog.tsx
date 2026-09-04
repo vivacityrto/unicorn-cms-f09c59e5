@@ -64,7 +64,7 @@ export function BulkReassignCscDialog({ open, onOpenChange, fromUserId, fromUser
     let cancelled = false;
     (async () => {
       setLoadingCscs(true);
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("users")
         .select("user_uuid, first_name, last_name, email, job_title")
         .eq("is_csc", true)
@@ -93,8 +93,8 @@ export function BulkReassignCscDialog({ open, onOpenChange, fromUserId, fromUser
     (async () => {
       setLoadingCapacity(true);
       const [loadRes, capRes] = await Promise.all([
-        (supabase as any).rpc("compute_consultant_current_load", { p_user_uuid: toId }),
-        (supabase as any).rpc("compute_consultant_weekly_capacity", { p_user_uuid: toId }),
+        supabase.rpc("compute_consultant_current_load", { p_user_uuid: toId }),
+        supabase.rpc("compute_consultant_weekly_capacity", { p_user_uuid: toId }),
       ]);
       if (cancelled) return;
       setToLoad(typeof loadRes.data === "number" ? loadRes.data : null);

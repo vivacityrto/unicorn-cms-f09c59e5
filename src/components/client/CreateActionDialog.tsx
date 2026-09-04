@@ -119,9 +119,9 @@ export function CreateActionDialog({
       }
 
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error creating action:', err);
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to create action', variant: 'destructive' });
     } finally {
       setSaving(false);
     }

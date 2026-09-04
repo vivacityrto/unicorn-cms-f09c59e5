@@ -154,9 +154,13 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
       `)
       .eq('tenant_id', tenantId);
 
-    const rows = (data || [])
-      .map((row: any) => row.users ? { ...row.users, relationship_role: row.relationship_role } : null)
-      .filter(Boolean);
+    type TenantUserWithProfile = {
+      relationship_role: string | null;
+      users: { user_uuid: string; first_name: string | null; last_name: string | null; email: string | null; avatar_url: string | null } | null;
+    };
+    const rows = ((data || []) as TenantUserWithProfile[])
+      .map((row) => row.users ? { ...row.users, relationship_role: row.relationship_role } : null)
+      .filter((row): row is NonNullable<typeof row> => Boolean(row));
     setTenantUsers(rows);
   }, [tenantId]);
 
@@ -596,14 +600,14 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                                     .from('staff_task_instances')
                                     .select('stageinstance_id')
                                     .eq('id', parseInt(item.related_entity_id!, 10))
-                                    .maybeSingle() as { data: { stageinstance_id: number } | null; error: any };
-                                  
+                                    .maybeSingle();
+
                                   if (taskData?.stageinstance_id) {
                                     const { data: stageData } = await supabase
                                       .from('stage_instances')
                                       .select('packageinstance_id')
                                       .eq('id', taskData.stageinstance_id)
-                                      .maybeSingle() as { data: { packageinstance_id: number } | null; error: any };
+                                      .maybeSingle();
                                     
                                     if (stageData?.packageinstance_id) {
                                       navigate(`/tenant/${tenantId}?tab=packages&packageInstance=${stageData.packageinstance_id}&stageInstance=${taskData.stageinstance_id}`);

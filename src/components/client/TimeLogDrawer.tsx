@@ -364,9 +364,9 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                       <Badge variant="outline" className="text-xs w-fit">
                         {WORK_TYPE_LABELS[entry.work_type] || entry.work_type}
                       </Badge>
-                      {(entry as any).work_sub_type && (
+                      {entry.work_sub_type && (
                         <Badge variant="secondary" className="text-xs w-fit">
-                          {getSubTypeLabel((entry as any).work_sub_type)}
+                          {getSubTypeLabel(entry.work_sub_type)}
                         </Badge>
                       )}
                     </div>

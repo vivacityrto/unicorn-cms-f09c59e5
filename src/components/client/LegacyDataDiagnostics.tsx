@@ -75,8 +75,8 @@ export function LegacyDataDiagnostics({ tenantId, packageId, stageInstanceIds }:
         detail: notesErr?.message,
       });
 
-    } catch (err: any) {
-      diags.push({ table: 'diagnostics', count: 0, joinPath: 'N/A', status: 'error', detail: err.message });
+    } catch (err) {
+      diags.push({ table: 'diagnostics', count: 0, joinPath: 'N/A', status: 'error', detail: err instanceof Error ? err.message : 'Unknown error' });
     }
 
     setResults(diags);

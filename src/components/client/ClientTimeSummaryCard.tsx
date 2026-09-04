@@ -42,22 +42,22 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
   useEffect(() => {
     async function fetchKeyEvents() {
       // Get active (non-complete) package instances for this tenant
-      const { data: pkgInstances } = await (supabase
-        .from('package_instances' as any)
+      const { data: pkgInstances } = await supabase
+        .from('package_instances')
         .select('id')
         .eq('tenant_id', clientId)
-        .eq('is_complete', false)) as { data: { id: number }[] | null };
+        .eq('is_complete', false);
 
       if (!pkgInstances?.length) return;
 
       const pkgInstanceIds = pkgInstances.map(p => p.id);
 
       // Get recurring stage_instances (with or without event_conducted_date)
-      const { data: stageData } = await (supabase
-        .from('stage_instances' as any)
+      const { data: stageData } = await supabase
+        .from('stage_instances')
         .select('id, stage_id, event_conducted_date, is_recurring')
         .in('packageinstance_id', pkgInstanceIds)
-        .eq('is_recurring', true)) as { data: { id: number; stage_id: number; event_conducted_date: string | null; is_recurring: boolean }[] | null };
+        .eq('is_recurring', true);
 
       if (!stageData?.length) {
         setKeyEvents([]);

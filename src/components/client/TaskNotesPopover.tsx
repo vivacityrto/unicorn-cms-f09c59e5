@@ -81,9 +81,9 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, packageIn
       } else {
         onSaved();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving task notes:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to save notes', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
