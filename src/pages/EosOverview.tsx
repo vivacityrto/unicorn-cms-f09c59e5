@@ -36,7 +36,7 @@ export default function EosOverview() {
       icon: AlertCircle, 
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      link: '/eos/issues'
+      link: '/eos/risks-opportunities'
     },
     { 
       title: 'Pending To-Dos', 
@@ -86,10 +86,10 @@ export default function EosOverview() {
       color: 'bg-gradient-to-br from-orange-500 to-orange-600'
     },
     {
-      title: 'Issues List',
-      description: 'Identify, discuss, and solve organizational issues',
+      title: 'Risks & Opportunities',
+      description: 'Track organizational risks and opportunities',
       icon: AlertCircle,
-      link: '/eos/issues',
+      link: '/eos/risks-opportunities',
       color: 'bg-gradient-to-br from-red-500 to-red-600'
     },
     {
@@ -125,7 +125,7 @@ export default function EosOverview() {
             onClick={() => {}}
           />
         </Link>
-        <Link to="/eos/issues">
+        <Link to="/eos/risks-opportunities">
           <StatCard
             label="Open Issues"
             value={openIssues}
