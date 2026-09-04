@@ -280,7 +280,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
           .insert([{ tenant_id: tenantId, root_folder_url: trimmedUrl, validation_status: 'unvalidated', is_enabled: true, created_by: profile.user_uuid, setup_mode: 'manual', manual_folder_url: trimmedUrl }]);
         if (error) throw error;
       }
-      toast({ title: 'Link saved', description: 'SharePoint folder link stored. Use "Validate" to verify access via Microsoft.' });
+      toast({ title: 'Link saved (unvalidated)', description: 'This link has not been checked — Microsoft hasn’t confirmed it exists or that it belongs to this client. Use "Validate & Save" to verify both.' });
       await fetchSettings();
     } catch (err: any) {
       console.error('SharePoint save error:', err);

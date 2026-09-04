@@ -1,7 +1,7 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
-import { graphGet, getAppToken, _clearTokenCache, type DriveItem } from '../_shared/graph-app-client.ts';
+import { graphGet, getAppToken, _clearTokenCache, buildClientFolderName, type DriveItem } from '../_shared/graph-app-client.ts';
 import { emitTimelineEvent } from '../_shared/emit-timeline-event.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -530,6 +530,35 @@ Deno.serve(async (req: Request) => {
 
     console.log('[validate-sp] Resolved folder:', { driveId, rootItemId, rootName, webUrl });
 
+    // Guard: refuse to link a folder that matches another tenant's expected client-folder
+    // name. The pasted-URL flow otherwise trusts whatever folder the caller points at with
+    // no check that it's actually this tenant's folder — this catches the case where a
+    // staff member pastes/validates a different client's already-provisioned folder link.
+    if (!test_site_access) {
+      const parentPath = (driveItem! as DriveItem & { parentReference?: { path?: string } })
+        .parentReference?.path || '';
+      const conflictingTenant = await findConflictingTenant(
+        supabaseAdmin,
+        tenant_id,
+        rootName,
+        parentPath,
+      );
+      if (conflictingTenant) {
+        const errorMessage = `This folder appears to belong to a different client — "${
+          conflictingTenant.legal_name || conflictingTenant.name
+        }"${conflictingTenant.rto_id ? ` (RTO ID ${conflictingTenant.rto_id})` : ''}. Refusing to link it to this tenant.`;
+        console.warn('[validate-sp] Tenant-folder mismatch:', { tenant_id, conflictingTenant, rootName, parentPath });
+        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+          validation_status: 'invalid',
+          validation_error: errorMessage,
+        });
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Upsert settings and emit timeline — only for real tenant validations
     if (!test_site_access) {
       await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
@@ -576,6 +605,48 @@ Deno.serve(async (req: Request) => {
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+interface TenantIdentity {
+  id: number;
+  name: string;
+  legal_name: string | null;
+  rto_id: string | null;
+}
+
+/**
+ * Checks whether the resolved folder (its own name plus its ancestor path) matches
+ * another tenant's deterministic client-folder name (see buildClientFolderName). Only
+ * flags a real name match against a tenant OTHER than the one being validated — it does
+ * not require the folder to match the current tenant's own naming convention, since a
+ * manually created folder legitimately won't always follow it.
+ */
+async function findConflictingTenant(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  currentTenantId: number,
+  resolvedName: string,
+  resolvedParentPath: string,
+): Promise<TenantIdentity | null> {
+  const { data: otherTenants } = await supabaseAdmin
+    .from('tenants')
+    .select('id, name, legal_name, rto_id')
+    .neq('id', currentTenantId);
+
+  if (!otherTenants?.length) return null;
+
+  const haystack = `${resolvedParentPath} ${resolvedName}`.toLowerCase();
+
+  for (const tenant of otherTenants as TenantIdentity[]) {
+    if (!tenant.rto_id && !tenant.legal_name) continue;
+    const expectedName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name)
+      .trim()
+      .toLowerCase();
+    if (expectedName && haystack.includes(expectedName)) {
+      return tenant;
+    }
+  }
+
+  return null;
+}
 
 async function upsertSettings(
   supabaseAdmin: ReturnType<typeof createClient>,
