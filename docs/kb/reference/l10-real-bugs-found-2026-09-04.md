@@ -104,6 +104,19 @@ has no `status` column at all (the real fields are `is_active`/
 correctly elsewhere in the codebase (`is_active = true AND is_complete =
 false`).
 
+### 8. "Bulk Generate Documents" tenant list has never loaded — DOCUMENTED, NOT FIXED
+Found during live verification of the fixes above. The Bulk Generate Documents
+dialog's "which tenants have this package" query embeds
+`client_package_stage_state:tenant_id, tenants(id, name)` — but
+`client_package_stage_state` has **no foreign key to `tenants` at all**
+(confirmed via `pg_constraint`; its only real FK is `stage_id →
+documents_stages`). Every real invocation 400s with "could not find a
+relationship." Confirmed this is not something introduced tonight — the exact
+same query string existed before any of tonight's changes; the type-safety
+fix only added a compile-time generic, never touched the runtime request.
+Same root cause and same fix options as item 5 above (two-step fetch, or an
+actual FK via migration).
+
 ## Also found this session, outside Package Builder (for completeness)
 
 These were found and either fixed or documented in earlier batches tonight,
@@ -139,7 +152,8 @@ Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
 had been hidden behind `any`. Six real, previously-silently-broken features
-got fixed and verified live tonight. Four more are confirmed real and
-written up above with enough detail to scope a fix, deliberately left
+got fixed and verified live tonight. Five more (items 3, 4, 5, 8 above, plus
+the two `tenant_users`→`users` FK gaps outside Package Builder) are confirmed
+real and written up with enough detail to scope a fix, deliberately left
 alone because the correct fix is a schema/migration decision, not a
 type-only code change.
