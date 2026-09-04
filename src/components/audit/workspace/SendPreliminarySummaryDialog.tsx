@@ -96,15 +96,15 @@ export function SendPreliminarySummaryDialog({
     if (!open || !audit.id) return;
     (async () => {
       const { data: sections } = await supabase
-        .from('client_audit_sections' as any)
+        .from('client_audit_sections')
         .select('id, title, template_section_id')
         .eq('audit_id', audit.id)
         .order('sort_order', { ascending: true });
 
-      const sectionRows = (sections || []) as any[];
+      const sectionRows = sections || [];
       const templateSectionIds = sectionRows
         .map(s => s.template_section_id)
-        .filter(Boolean);
+        .filter((id): id is string => !!id);
 
       if (templateSectionIds.length === 0) {
         setCompletion(null);
@@ -115,18 +115,18 @@ export function SendPreliminarySummaryDialog({
 
       const [{ data: questions }, { data: responses }] = await Promise.all([
         supabase
-          .from('compliance_template_questions' as any)
+          .from('compliance_template_questions')
           .select('id, section_id, audit_statement')
           .in('section_id', templateSectionIds)
           .eq('is_active', true),
         supabase
-          .from('client_audit_responses' as any)
+          .from('client_audit_responses')
           .select('question_id, section_id, rating, evidence_urls')
           .eq('audit_id', audit.id),
       ]);
 
-      const allQuestions = (questions || []) as any[];
-      const allResponses = (responses || []) as any[];
+      const allQuestions = questions || [];
+      const allResponses = responses || [];
       const total = allQuestions.length;
       const questionIds = new Set(allQuestions.map(q => q.id));
       const answered = allResponses.filter(
@@ -181,18 +181,14 @@ export function SendPreliminarySummaryDialog({
       sectionRows.forEach(s => sectionTitleByClientId.set(s.id, s.title));
       const outstanding: OutstandingEvidenceItem[] = allResponses
         .filter(r => {
-          const r2 = r as any;
-          const hasEvidence = Array.isArray(r2.evidence_urls) && r2.evidence_urls.length > 0;
-          return (r2.rating === 'at_risk' || r2.rating === 'non_compliant') && !hasEvidence && r2.question_id;
+          const hasEvidence = r.evidence_urls.length > 0;
+          return (r.rating === 'at_risk' || r.rating === 'non_compliant') && !hasEvidence && r.question_id;
         })
-        .map(r => {
-          const r2 = r as any;
-          return {
-            questionText: questionTextById.get(r2.question_id) || 'Question',
-            sectionTitle: r2.section_id ? sectionTitleByClientId.get(r2.section_id) || '—' : '—',
-            rating: r2.rating,
-          };
-        })
+        .map(r => ({
+          questionText: questionTextById.get(r.question_id!) || 'Question',
+          sectionTitle: r.section_id ? sectionTitleByClientId.get(r.section_id) || '—' : '—',
+          rating: r.rating!,
+        }))
         .slice(0, 5);
       setOutstandingEvidence(outstanding);
     })();
@@ -217,7 +213,7 @@ export function SendPreliminarySummaryDialog({
         .select('user_uuid, first_name, last_name, email')
         .in('user_uuid', ownerIds);
       const map: Record<string, string> = {};
-      ((data || []) as any[]).forEach(u => {
+      (data || []).forEach(u => {
         const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || '';
         if (name) map[u.user_uuid] = name;
       });
@@ -299,8 +295,8 @@ export function SendPreliminarySummaryDialog({
           variant: 'destructive',
         });
       }
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } catch (e) {
+      toast({ title: 'Error', description: e instanceof Error ? e.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setSending(false);
       setConfirmOpen(false);
