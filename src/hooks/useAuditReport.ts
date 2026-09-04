@@ -50,7 +50,7 @@ export function useDraftExecutiveSummary(auditId: string | undefined) {
       });
       if (error) {
         // FunctionsHttpError exposes structured response — try to surface server message.
-        const ctx: any = (error as any).context;
+        const ctx = (error as { context?: Response }).context;
         let serverMsg = error.message;
         try {
           if (ctx && typeof ctx.json === 'function') {
@@ -102,6 +102,15 @@ function formatReleasedAt(iso: string | undefined | null): string {
   }
 }
 
+// Shape of the JSON body returned by the release/generate-report/generate-docx
+// edge functions — a loose union of every field any of them may send back.
+interface ReportActionResponseBody {
+  error?: string;
+  released_at?: string;
+  pages?: number;
+  download_url?: string;
+}
+
 const SUPABASE_URL = 'https://yxkgdalkbrriasiyyrwk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4a2dkYWxrYnJyaWFzaXl5cndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc2MjQwMzEsImV4cCI6MjA2MzIwMDAzMX0.bBFTaO-6Afko1koQqx-PWdzl2mu5qmE0xWNTvneqyqY';
 
@@ -144,7 +153,7 @@ export function useReleaseReport(auditId: string | undefined) {
         throw new Error('NETWORK');
       }
 
-      let body: any = {};
+      let body: ReportActionResponseBody = {};
       try { body = await response.json(); } catch { /* empty body */ }
 
       if (response.status === 200) {
@@ -213,7 +222,7 @@ export function useGenerateClientAuditReport(auditId: string | undefined) {
         throw new Error('NETWORK');
       }
 
-      let body: any = {};
+      let body: ReportActionResponseBody = {};
       try { body = await response.json(); } catch { /* empty body */ }
 
       if (response.status === 200) {
@@ -250,7 +259,7 @@ export function useAcknowledgeReport(auditId: string | undefined) {
     mutationFn: async () => {
       if (!auditId) throw new Error('No audit ID');
       const { error } = await supabase
-        .rpc('acknowledge_audit_report', { p_audit_id: auditId } as any);
+        .rpc('acknowledge_audit_report', { p_audit_id: auditId });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -268,8 +277,8 @@ export function useRevokeReport(auditId: string | undefined) {
     mutationFn: async () => {
       if (!auditId) throw new Error('No audit ID');
       const { error } = await supabase
-        .from('client_audits' as any)
-        .update({ report_client_visible: false } as any)
+        .from('client_audits')
+        .update({ report_client_visible: false })
         .eq('id', auditId);
       if (error) throw error;
     },
@@ -310,7 +319,7 @@ export function useGenerateClientAuditReportDocx(auditId: string | undefined) {
         throw new Error('NETWORK');
       }
 
-      let body: any = {};
+      let body: ReportActionResponseBody = {};
       try { body = await response.json(); } catch { /* empty body */ }
 
       if (response.status === 200) {
