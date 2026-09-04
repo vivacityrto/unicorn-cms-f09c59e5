@@ -56,6 +56,43 @@ const ROLE_LABEL: Record<string, string> = {
 
 const EXPECTED_SIGNOFFS = ["subject", "reviewer", "manager"];
 
+type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
+
+interface KpiEmailLogRow {
+  id: number;
+  received_at: string | null;
+  responded_at: string | null;
+  response_minutes: number | null;
+  sla_met: boolean | null;
+  email_type: string;
+  subject: string | null;
+}
+
+interface KpiTaskRow {
+  id: number;
+  title: string;
+  due_at: string | null;
+  status: string;
+  assigned_by: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+interface EosRockRow {
+  id: string;
+  title: string;
+  status: string | null;
+  quarter_year: number;
+  quarter_number: number;
+}
+
+interface KpiDevMilestoneRow {
+  id: number;
+  title: string;
+  planned_date: string;
+  delivered_date: string | null;
+}
+
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return "—";
   try { return format(parseISO(iso), "dd/MM/yyyy"); } catch { return iso; }
@@ -116,20 +153,20 @@ function TrafficLight({ pct, target, label }: { pct: number | null; target: numb
 
 function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: string }) {
   const [summary, setSummary] = useState<{ email_total: number; email_sla_met: number; email_sla_pct: number | null } | null>(null);
-  const [emails, setEmails] = useState<any[]>([]);
+  const [emails, setEmails] = useState<KpiEmailLogRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       const [{ data: sumRows }, { data: log }] = await Promise.all([
-        (supabase as any)
+        supabase
           .from("v_kpi_csc_summary")
           .select("email_total, email_sla_met")
           .eq("subject_uuid", uuid)
           .gte("period_start", start)
           .lte("period_start", end),
-        (supabase as any)
+        supabase
           .from("kpi_email_log")
           .select("id, received_at, responded_at, response_minutes, sla_met, email_type, subject")
           .eq("user_uuid", uuid)
@@ -138,8 +175,8 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           .order("received_at", { ascending: false })
           .limit(10),
       ]);
-      const total = (sumRows ?? []).reduce((a: number, r: any) => a + Number(r.email_total ?? 0), 0);
-      const met = (sumRows ?? []).reduce((a: number, r: any) => a + Number(r.email_sla_met ?? 0), 0);
+      const total = (sumRows ?? []).reduce((a, r) => a + Number(r.email_total ?? 0), 0);
+      const met = (sumRows ?? []).reduce((a, r) => a + Number(r.email_sla_met ?? 0), 0);
       setSummary({
         email_total: total,
         email_sla_met: met,
@@ -176,7 +213,7 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
                 </tr>
               </thead>
               <tbody>
-                {emails.map((e: any) => (
+                {emails.map((e) => (
                   <tr key={e.id} className="border-t">
                     <td className="px-2 py-1">{fmtDateTime(e.received_at)}</td>
                     <td className="px-2 py-1" title={e.subject ?? ""}>{fmtSubject(e.subject)}</td>
@@ -210,10 +247,16 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
   );
 }
 
+interface CstSummary {
+  sla1_total: number; sla1_met: number;
+  sla2_total: number; sla2_met: number;
+  tasks_total: number; tasks_on_time: number;
+}
+
 function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: string }) {
-  const [summary, setSummary] = useState<any>(null);
-  const [emails, setEmails] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [summary, setSummary] = useState<CstSummary | null>(null);
+  const [emails, setEmails] = useState<KpiEmailLogRow[]>([]);
+  const [tasks, setTasks] = useState<KpiTaskRow[]>([]);
   const [assignedByNames, setAssignedByNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
@@ -221,13 +264,13 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
     (async () => {
       setLoading(true);
       const [{ data: sumRows }, { data: log }, { data: tk }] = await Promise.all([
-        (supabase as any)
+        supabase
           .from("v_kpi_cst_summary")
           .select("sla1_total, sla1_met, sla2_total, sla2_met, tasks_total, tasks_completed, tasks_on_time")
           .eq("subject_uuid", uuid)
           .gte("period_start", start)
           .lte("period_start", end),
-        (supabase as any)
+        supabase
           .from("kpi_email_log")
           .select("id, received_at, responded_at, response_minutes, sla_met, email_type, subject")
           .eq("user_uuid", uuid)
@@ -235,7 +278,7 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           .lte("received_at", `${end}T23:59:59`)
           .order("received_at", { ascending: false })
           .limit(10),
-        (supabase as any)
+        supabase
           .from("kpi_tasks")
           .select("id, title, due_at, status, assigned_by, completed_at, created_at")
           .eq("assignee_uuid", uuid)
@@ -244,8 +287,8 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           .order("due_at", { ascending: true }),
       ]);
 
-      const sum = (sumRows ?? []).reduce(
-        (acc: any, r: any) => {
+      const sum = (sumRows ?? []).reduce<CstSummary>(
+        (acc, r) => {
           acc.sla1_total += Number(r.sla1_total ?? 0);
           acc.sla1_met += Number(r.sla1_met ?? 0);
           acc.sla2_total += Number(r.sla2_total ?? 0);
@@ -260,14 +303,14 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
       setEmails(log ?? []);
       setTasks(tk ?? []);
 
-      const ids = Array.from(new Set((tk ?? []).map((t: any) => t.assigned_by).filter(Boolean)));
+      const ids = Array.from(new Set((tk ?? []).map((t) => t.assigned_by).filter(Boolean)));
       if (ids.length) {
-        const { data: us } = await (supabase as any)
+        const { data: us } = await supabase
           .from("users")
           .select("user_uuid, first_name, last_name")
           .in("user_uuid", ids);
         const map: Record<string, string> = {};
-        (us ?? []).forEach((u: any) => {
+        (us ?? []).forEach((u) => {
           map[u.user_uuid] = `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || "—";
         });
         setAssignedByNames(map);
@@ -277,13 +320,13 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
   }, [uuid, start, end]);
 
   if (loading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
-  const s = summary;
+  const s = summary!;
   const sla1Pct = s.sla1_total > 0 ? (s.sla1_met / s.sla1_total) * 100 : null;
   const sla2Pct = s.sla2_total > 0 ? (s.sla2_met / s.sla2_total) * 100 : null;
   const tasksPct = s.tasks_total > 0 ? (s.tasks_on_time / s.tasks_total) * 100 : null;
 
   const taskBadge = (status: string) => {
-    const map: Record<string, { label: string; v: any }> = {
+    const map: Record<string, { label: string; v: BadgeVariant }> = {
       done_on_time: { label: "Done on time", v: "default" },
       rectified: { label: "Rectified", v: "secondary" },
       delayed: { label: "Delayed", v: "destructive" },
@@ -324,7 +367,7 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
                 </tr>
               </thead>
               <tbody>
-                {emails.map((e: any) => (
+                {emails.map((e) => (
                   <tr key={e.id} className="border-t">
                     <td className="px-2 py-1">{fmtDateTime(e.received_at)}</td>
                     <td className="px-2 py-1" title={e.subject ?? ""}>{fmtSubject(e.subject)}</td>
@@ -362,12 +405,12 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
                 </tr>
               </thead>
               <tbody>
-                {tasks.map((t: any) => (
+                {tasks.map((t) => (
                   <tr key={t.id} className="border-t">
                     <td className="px-2 py-1">{t.title}</td>
                     <td className="px-2 py-1">{fmtDateTime(t.due_at)}</td>
                     <td className="px-2 py-1">{taskBadge(t.status)}</td>
-                    <td className="px-2 py-1">{assignedByNames[t.assigned_by] ?? "—"}</td>
+                    <td className="px-2 py-1">{assignedByNames[t.assigned_by ?? ""] ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -381,10 +424,15 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
   );
 }
 
+interface DevSummary {
+  tickets_opened: number; tickets_resolved: number; reopen_count: number;
+  avg_first_response_minutes: number | null;
+}
+
 function DevDetail({ uuid, start, end }: { uuid: string; start: string; end: string }) {
-  const [summary, setSummary] = useState<any>(null);
-  const [rocks, setRocks] = useState<any[]>([]);
-  const [milestones, setMilestones] = useState<any[]>([]);
+  const [summary, setSummary] = useState<DevSummary | null>(null);
+  const [rocks, setRocks] = useState<EosRockRow[]>([]);
+  const [milestones, setMilestones] = useState<KpiDevMilestoneRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -394,19 +442,19 @@ function DevDetail({ uuid, start, end }: { uuid: string; start: string; end: str
       const qYear = startD.getFullYear();
       const qNum = Math.floor(startD.getMonth() / 3) + 1;
       const [{ data: sumRows }, { data: rk }, { data: ms }] = await Promise.all([
-        (supabase as any)
+        supabase
           .from("v_kpi_dev_summary")
           .select("tickets_opened, tickets_resolved, reopen_count, avg_first_response_minutes")
           .eq("subject_uuid", uuid)
           .gte("period_start", start)
           .lte("period_start", end),
-        (supabase as any)
+        supabase
           .from("eos_rocks")
           .select("id, title, status, quarter_year, quarter_number")
           .eq("owner_id", uuid)
           .eq("quarter_year", qYear)
           .eq("quarter_number", qNum),
-        (supabase as any)
+        supabase
           .from("kpi_dev_milestones")
           .select("id, title, planned_date, delivered_date")
           .eq("owner_uuid", uuid)
@@ -415,8 +463,8 @@ function DevDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           .order("planned_date", { ascending: true }),
       ]);
 
-      const sum = (sumRows ?? []).reduce(
-        (acc: any, r: any) => {
+      const rawSum = (sumRows ?? []).reduce(
+        (acc, r) => {
           acc.tickets_opened += Number(r.tickets_opened ?? 0);
           acc.tickets_resolved += Number(r.tickets_resolved ?? 0);
           acc.reopen_count += Number(r.reopen_count ?? 0);
@@ -428,8 +476,12 @@ function DevDetail({ uuid, start, end }: { uuid: string; start: string; end: str
         },
         { tickets_opened: 0, tickets_resolved: 0, reopen_count: 0, _frSum: 0, _frN: 0 }
       );
-      sum.avg_first_response_minutes = sum._frN ? sum._frSum / sum._frN : null;
-      setSummary(sum);
+      setSummary({
+        tickets_opened: rawSum.tickets_opened,
+        tickets_resolved: rawSum.tickets_resolved,
+        reopen_count: rawSum.reopen_count,
+        avg_first_response_minutes: rawSum._frN ? rawSum._frSum / rawSum._frN : null,
+      });
       setRocks(rk ?? []);
       setMilestones(ms ?? []);
       setLoading(false);
@@ -437,7 +489,7 @@ function DevDetail({ uuid, start, end }: { uuid: string; start: string; end: str
   }, [uuid, start, end]);
 
   if (loading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
-  const s = summary;
+  const s = summary!;
 
   return (
     <div className="space-y-4">
@@ -455,7 +507,7 @@ function DevDetail({ uuid, start, end }: { uuid: string; start: string; end: str
         <h4 className="text-sm font-semibold mb-2">Rocks this quarter</h4>
         {rocks.length > 0 ? (
           <ul className="text-sm space-y-1">
-            {rocks.map((r: any) => (
+            {rocks.map((r) => (
               <li key={r.id} className="flex items-center justify-between border rounded px-2 py-1">
                 <span>{r.title}</span>
                 <Badge variant="outline">{r.status ?? "—"}</Badge>
@@ -481,7 +533,7 @@ function DevDetail({ uuid, start, end }: { uuid: string; start: string; end: str
                 </tr>
               </thead>
               <tbody>
-                {milestones.map((m: any) => {
+                {milestones.map((m) => {
                   const onTime = m.delivered_date && m.planned_date && m.delivered_date <= m.planned_date;
                   return (
                     <tr key={m.id} className="border-t">
@@ -521,34 +573,34 @@ export function MyKpiSignOffSection() {
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
-    const { data: reviews } = await (supabase as any)
+    const { data: reviews } = await supabase
       .from("kpi_reviews")
       .select("id, kpi_role, period_type, period_start, period_end, overall_status, notes, locked_at, updated_at")
       .eq("subject_uuid", user.id)
       .order("period_start", { ascending: false });
 
-    const ids = (reviews ?? []).map((r: any) => r.id);
+    const ids = (reviews ?? []).map((r) => r.id);
     const signoffsByReview: Record<number, SignoffRow[]> = {};
     if (ids.length) {
-      const { data: so } = await (supabase as any)
+      const { data: so } = await supabase
         .from("kpi_review_signoffs")
         .select("id, review_id, signoff_type, reviewer_user_id, signed_at, comment")
         .in("review_id", ids);
-      const uuids = Array.from(new Set((so ?? []).map((s: any) => s.reviewer_user_id)));
+      const uuids = Array.from(new Set((so ?? []).map((s) => s.reviewer_user_id)));
       const nameMap: Record<string, { name: string; role: string }> = {};
       if (uuids.length) {
-        const { data: us } = await (supabase as any)
+        const { data: us } = await supabase
           .from("users")
           .select("user_uuid, first_name, last_name, kpi_role")
           .in("user_uuid", uuids);
-        (us ?? []).forEach((u: any) => {
+        (us ?? []).forEach((u) => {
           nameMap[u.user_uuid] = {
             name: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || "—",
             role: u.kpi_role ?? "",
           };
         });
       }
-      (so ?? []).forEach((s: any) => {
+      (so ?? []).forEach((s) => {
         (signoffsByReview[s.review_id] ??= []).push({
           ...s,
           reviewer_name: nameMap[s.reviewer_user_id]?.name,
@@ -557,7 +609,7 @@ export function MyKpiSignOffSection() {
       });
     }
     setRows(
-      (reviews ?? []).map((r: any) => ({ ...r, signoffs: signoffsByReview[r.id] ?? [] }))
+      (reviews ?? []).map((r) => ({ ...r, signoffs: signoffsByReview[r.id] ?? [] })) as unknown as ReviewRow[]
     );
     setLoading(false);
   }, [user?.id]);
@@ -567,7 +619,7 @@ export function MyKpiSignOffSection() {
   const handleSignOff = async (reviewId: number) => {
     if (!user?.id) return;
     setBusyId(reviewId);
-    const { error } = await (supabase as any).from("kpi_review_signoffs").insert({
+    const { error } = await supabase.from("kpi_review_signoffs").insert({
       review_id: reviewId,
       reviewer_user_id: user.id,
       signoff_type: "subject",
