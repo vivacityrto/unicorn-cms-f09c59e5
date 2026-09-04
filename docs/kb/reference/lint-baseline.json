@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T22:54:11.366Z",
-  "baselineSha": "6c29f432abb6ed2ac04522bc07971c31a0c85712",
+  "generatedAt": "2026-09-04T23:07:52.706Z",
+  "baselineSha": "2ee4bf3038a70b3e9eb5e87b7b6f81fa16b38df8",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 387,
-    "errors": 1402,
+    "filesWithFindings": 385,
+    "errors": 1390,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1395,
+    "@typescript-eslint/no-explicit-any": 1383,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 734,
+      "errors": 722,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 727,
+        "@typescript-eslint/no-explicit-any": 715,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -372,10 +372,10 @@
       }
     },
     "src/hooks": {
-      "errors": 276,
+      "errors": 264,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 276,
+        "@typescript-eslint/no-explicit-any": 264,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1839,9 +1839,6 @@
     "src/hooks/useStaffOnboardingStatus.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "src/hooks/useStaffProvisioningRules.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
-    },
     "src/hooks/useStrategicCommand.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
@@ -1859,9 +1856,6 @@
     },
     "src/hooks/useTeamInbox.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useTeamUnreadCount.ts": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/hooks/useTenantNotes.ts": {
       "@typescript-eslint/no-explicit-any": 3
