@@ -102,6 +102,10 @@ export function AskVivScopeSelectorModal({
     if (open) {
       loadClients();
     }
+    // selectedClientId is intentionally excluded: this effect only seeds an
+    // initial default client on open, and must not re-run every time the
+    // user picks a different client from the dropdown below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tenantId]);
 
   // Load packages when client changes

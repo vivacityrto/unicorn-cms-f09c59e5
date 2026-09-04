@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -443,7 +443,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     }
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setLegalName('');
     setTradingName('');
     setAbn('');
@@ -461,11 +461,11 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     setTgaLookupError(null);
     setTgaLooking(false);
     setLinkStep('idle');
-  };
+  }, [preSelectedPackageId]);
 
   useEffect(() => {
     if (!open) resetForm();
-  }, [open]);
+  }, [open, resetForm]);
 
   const matchTypeLabel = (type: string) => {
     switch (type) {

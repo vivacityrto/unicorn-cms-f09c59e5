@@ -33,7 +33,7 @@ export function DocumentReadinessBadge({
       setLoading(false);
     };
     check();
-  }, [documentId, tenantId]);
+  }, [documentId, tenantId, validateDocument]);
 
   if (loading) {
     return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;

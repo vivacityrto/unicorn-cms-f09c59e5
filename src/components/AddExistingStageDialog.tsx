@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogPortal, DialogOverlay, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Input } from "@/components/ui/input";
@@ -39,16 +39,9 @@ export function AddExistingStageDialog({
   const [confirmStage, setConfirmStage] = useState<ExistingStage | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      fetchCurrentTenantStages();
-      fetchExistingStages();
-    }
-  }, [open, tenantId]);
-
-  const fetchCurrentTenantStages = async () => {
+  const fetchCurrentTenantStages = useCallback(async () => {
     if (!tenantId) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('tenants')
@@ -61,12 +54,12 @@ export function AddExistingStageDialog({
     } catch (error: any) {
       console.error('Error fetching current tenant stages:', error);
     }
-  };
+  }, [tenantId]);
 
-  const fetchExistingStages = async () => {
+  const fetchExistingStages = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Fetch all stages from stages registry
       const { data: stagesData, error } = await supabase
         .from('stages')
@@ -91,7 +84,14 @@ export function AddExistingStageDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (open) {
+      fetchCurrentTenantStages();
+      fetchExistingStages();
+    }
+  }, [open, fetchCurrentTenantStages, fetchExistingStages]);
 
   const handleStageClick = (stage: ExistingStage) => {
     // Check if stage is already added to this tenant

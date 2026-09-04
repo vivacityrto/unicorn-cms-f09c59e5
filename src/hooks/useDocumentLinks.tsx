@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -219,8 +219,10 @@ export function useDocumentLinks(options?: UseDocumentLinksOptions) {
     },
   });
 
+  const stableDocuments = useMemo(() => documents || [], [documents]);
+
   return {
-    documents: documents || [],
+    documents: stableDocuments,
     isLoading,
     error,
     refetch,

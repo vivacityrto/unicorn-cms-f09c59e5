@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Check, Copy, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -77,10 +77,10 @@ export default function RulesMatrixTab({ readOnly = false }: { readOnly?: boolea
     return m;
   }, [rules]);
 
-  const isCellActive = (pkgId: number, courseId: number) => {
+  const isCellActive = useCallback((pkgId: number, courseId: number) => {
     const r = ruleMap.get(`${pkgId}:${courseId}`);
     return !!r?.is_active;
-  };
+  }, [ruleMap]);
 
   // Filter packages
   const filteredPackages = useMemo(() => {
@@ -106,7 +106,7 @@ export default function RulesMatrixTab({ readOnly = false }: { readOnly?: boolea
         const hasAny = filteredPackages.some((p) => isCellActive(p.id, c.id));
         return show === "mapped" ? hasAny : !hasAny;
       });
-  }, [courses, audienceFilter, search, show, filteredPackages, ruleMap]);
+  }, [courses, audienceFilter, search, show, filteredPackages, isCellActive]);
 
   // Group packages by type for column header bands
   const packagesByType = useMemo(() => {

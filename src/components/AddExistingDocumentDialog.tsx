@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogPortal, DialogOverlay, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
@@ -49,31 +49,7 @@ export function AddExistingDocumentDialog({
   const { categories: ddCategories, valueLabelMap } = useDocumentCategories();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  useEffect(() => {
-    if (open) {
-      fetchDocuments();
-    }
-  }, [open]);
-  useEffect(() => {
-    let filtered = documents;
-
-    // Filter by search query
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(doc => doc.title.toLowerCase().includes(query) || doc.id.toString().includes(query) || doc.description?.toLowerCase().includes(query));
-    }
-
-    // Filter by selected category
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(doc => doc.category === selectedCategory);
-    }
-
-    // Sort by name
-    filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
-    
-    setFilteredDocuments(filtered);
-  }, [searchQuery, documents, selectedCategory]);
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       setLoadingDocuments(true);
       const {
@@ -96,7 +72,31 @@ export function AddExistingDocumentDialog({
     } finally {
       setLoadingDocuments(false);
     }
-  };
+  }, [toast]);
+  useEffect(() => {
+    if (open) {
+      fetchDocuments();
+    }
+  }, [open, fetchDocuments]);
+  useEffect(() => {
+    let filtered = documents;
+
+    // Filter by search query
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(doc => doc.title.toLowerCase().includes(query) || doc.id.toString().includes(query) || doc.description?.toLowerCase().includes(query));
+    }
+
+    // Filter by selected category
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(doc => doc.category === selectedCategory);
+    }
+
+    // Sort by name
+    filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+    
+    setFilteredDocuments(filtered);
+  }, [searchQuery, documents, selectedCategory]);
   const toggleDocumentSelection = (doc: Document) => {
     setSelectedDocuments(prev => {
       const isSelected = prev.some(d => d.id === doc.id);

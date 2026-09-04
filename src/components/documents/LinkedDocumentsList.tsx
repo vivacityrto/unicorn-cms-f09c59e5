@@ -130,7 +130,7 @@ export function LinkedDocumentsList({
     if (documents.length > 0) {
       checkVersions();
     }
-  }, [documents.length]); // Only on doc count change to prevent loop
+  }, [documents, checkVersion]);
 
   const handleConfirmVersion = (docId: string) => {
     confirmVersion(docId, {

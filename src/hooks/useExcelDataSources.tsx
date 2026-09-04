@@ -251,7 +251,7 @@ export function useExcelDataSources(documentId: number | null) {
 export function useDocumentReadiness() {
   const { toast } = useToast();
 
-  const validateDocument = async (
+  const validateDocument = useCallback(async (
     documentId: number,
     tenantId?: number
   ): Promise<DocumentReadiness | null> => {
@@ -260,16 +260,16 @@ export function useDocumentReadiness() {
         p_document_id: documentId,
         p_tenant_id: tenantId || null
       });
-      
+
       if (error) throw error;
       return data as unknown as DocumentReadiness;
     } catch (error: any) {
       toast({ title: 'Validation failed', description: error.message, variant: 'destructive' });
       return null;
     }
-  };
+  }, [toast]);
 
-  const validateReleaseReadiness = async (
+  const validateReleaseReadiness = useCallback(async (
     documentIds: number[],
     tenantId?: number
   ): Promise<ReleaseReadiness | null> => {
@@ -278,14 +278,14 @@ export function useDocumentReadiness() {
         p_document_ids: documentIds,
         p_tenant_id: tenantId || null
       });
-      
+
       if (error) throw error;
       return data as unknown as ReleaseReadiness;
     } catch (error: any) {
       toast({ title: 'Validation failed', description: error.message, variant: 'destructive' });
       return null;
     }
-  };
+  }, [toast]);
 
   return {
     validateDocument,
