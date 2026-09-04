@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useTaskStatusOptions, getStatusLabel } from '@/hooks/useTaskStatusOptions';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 
 export interface StaffTaskInstance {
   id: number;
@@ -46,16 +47,11 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
     setLoading(true);
     try {
       // Fetch staff_task_instances for this stage_instance
-      const taskResult = await (supabase
-        .from('staff_task_instances' as any)
+      const { data: instanceData, error: instanceError } = await supabase
+        .from('staff_task_instances')
         .select('id, stafftask_id, status, status_id, is_core, due_date, completion_date, completed_by, assignee_id, notes, updated_at')
         .eq('stageinstance_id', stageInstanceId)
-        .order('id')) as { data: Array<{ id: number; stafftask_id: number | null; status: string | null; status_id: number | null; is_core: boolean | null; due_date: string | null; completion_date: string | null; completed_by: string | null; assignee_id: string | null; notes: string | null; updated_at: string | null }> | null; error: any };
-      
-      const instanceData = taskResult.data;
-      const instanceError = taskResult.error;
-
-      if (instanceError) throw instanceError;
+        .order('id');
 
       if (instanceError) throw instanceError;
 
@@ -139,7 +135,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       });
 
       setTasks(transformed);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching staff task instances:', error);
       toast({ title: 'Error', description: 'Failed to load staff tasks', variant: 'destructive' });
     } finally {
@@ -159,7 +155,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       const oldStatusId = oldTask?.status_id;
       const statusOption = statuses.find(s => s.code === newStatusId);
 
-      const updateData: Record<string, any> = {
+      const updateData: TablesUpdate<'staff_task_instances'> = {
         status_id: newStatusId,
         status: statusOption?.value || 'not_started',
       };
@@ -175,13 +171,18 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
 
       const { error } = await supabase
         .from('staff_task_instances')
-        .update(updateData as never)
+        .update(updateData)
         .eq('id', taskId);
 
       if (error) throw error;
 
       // Compute structured AI signals
-      const aiSignals: Record<string, any> = {
+      const aiSignals: {
+        package_id: number;
+        stage_instance_id: number;
+        completion_latency_days?: number;
+        completed_on_time?: boolean;
+      } = {
         package_id: packageId,
         stage_instance_id: stageInstanceId,
       };
@@ -217,7 +218,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
           .eq('id', stageInstanceId)
           .single();
 
-        const currentStatus = (stageData as any)?.status;
+        const currentStatus = stageData?.status;
         const isNotStarted =
           currentStatus === 'not_started' ||
           currentStatus === '0' ||
@@ -254,7 +255,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
         const stageStatusOption = statuses.find(s => s.code === newStageStatus);
         const newStageStatusValue =
           stageStatusOption?.value || (hasNaTasks ? 'core_complete' : 'completed');
-        const stageUpdateData: Record<string, any> = {
+        const stageUpdateData: TablesUpdate<'stage_instances'> = {
           status: newStageStatusValue,
         };
         if (newStageStatusValue === 'completed' || newStageStatusValue === 'core_complete') {
@@ -263,7 +264,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
 
         await supabase
           .from('stage_instances')
-          .update(stageUpdateData as never)
+          .update(stageUpdateData)
           .eq('id', stageInstanceId);
 
         await supabase.from('client_audit_log').insert({
@@ -283,9 +284,9 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       }
       
       fetchTasks();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating staff task instance:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setUpdating(null);
     }
@@ -330,22 +331,22 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
           let packageName = '';
           let stageName = '';
           try {
-            const { data: si } = await (supabase
-              .from('stage_instances' as any)
+            const { data: si } = await supabase
+              .from('stage_instances')
               .select('stage_id, packageinstance_id')
               .eq('id', stageInstanceId)
-              .maybeSingle()) as { data: { stage_id: number | null; packageinstance_id: number | null } | null; error: any };
+              .maybeSingle();
 
             if (si?.stage_id) {
               const { data: stage } = await supabase.from('stages').select('name').eq('id', si.stage_id).maybeSingle();
               if (stage) stageName = stage.name || '';
             }
             if (si?.packageinstance_id) {
-              const { data: pi } = await (supabase
-                .from('package_instances' as any)
+              const { data: pi } = await supabase
+                .from('package_instances')
                 .select('package_id')
                 .eq('id', si.packageinstance_id)
-                .maybeSingle()) as { data: { package_id: number } | null; error: any };
+                .maybeSingle();
               if (pi?.package_id) {
                 const { data: pkg } = await supabase.from('packages').select('name').eq('id', pi.package_id).maybeSingle();
                 if (pkg) packageName = pkg.name || '';
@@ -370,7 +371,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
             p_related_entity_type: 'staff_task_instance',
             p_related_entity_id: taskId.toString(),
           });
-        } catch (actionErr: any) {
+        } catch (actionErr: unknown) {
           console.error('Auto-create action failed:', actionErr);
           // Non-blocking — assignment still succeeded
         }
@@ -378,9 +379,9 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
 
       toast({ title: 'Task Updated', description: 'Assignee changed' });
       fetchTasks();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating staff task assignee:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setUpdating(null);
     }
@@ -414,9 +415,9 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
 
       toast({ title: 'Task Updated', description: `Task marked as ${isCore ? 'core' : 'non-core'}` });
       fetchTasks();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating staff task core status:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setUpdating(null);
     }
