@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -56,6 +56,8 @@ function SaveIndicator() {
 export default function AuditWorkspaceNew() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
   const { data: audit, isLoading, error: auditError, refetch: refetchAudit } = useAudit(id);
   const { data: sections } = useAuditSections(id);
   const { data: responses } = useAuditResponses(id);
@@ -64,11 +66,21 @@ export default function AuditWorkspaceNew() {
   const { data: users } = useInternalUsers();
   const statusTransition = useAuditStatusTransition(id);
   const [selectedSection, setSelectedSection] = useState(0);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => (
+    ['overview', 'schedule', 'form', 'documents', 'findings', 'actions', 'report'].includes(requestedTab || '')
+      ? requestedTab!
+      : 'overview'
+  ));
   const [purchaserName, setPurchaserName] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   usePageTitle(audit?.title);
+
+  useEffect(() => {
+    if (requestedTab && ['overview', 'schedule', 'form', 'documents', 'findings', 'actions', 'report'].includes(requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [requestedTab]);
 
   const findingCount = findings?.length || 0;
   const actionCount = actions?.length || 0;
