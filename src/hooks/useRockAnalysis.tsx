@@ -11,6 +11,11 @@ import type {
   RockOutcomeType 
 } from '@/types/rockAnalysis';
 import { formatQuarter, getCurrentQuarter, getPreviousQuarter } from '@/types/rockAnalysis';
+import type { Tables } from '@/integrations/supabase/types';
+
+type RockOutcomeWithSeat = Tables<'rock_outcomes'> & {
+  seat: { id: string; seat_name: string } | null;
+};
 
 // Hook to fetch rock outcomes for analysis
 export function useRockOutcomes(quarterNumber?: number, quarterYear?: number) {
@@ -71,15 +76,16 @@ export function useQuarterlySummary(quarterNumber?: number, quarterYear?: number
       if (error) throw error;
       
       // Group by quarter
-      const quarterMap = new Map<string, RockOutcome[]>();
-      (data || []).forEach((outcome: any) => {
+      type QuarterlySummaryRow = { outcome_type: string; quarter_number: number; quarter_year: number };
+      const quarterMap = new Map<string, QuarterlySummaryRow[]>();
+      (data || []).forEach((outcome) => {
         const key = formatQuarter(outcome.quarter_number, outcome.quarter_year);
         if (!quarterMap.has(key)) {
           quarterMap.set(key, []);
         }
         quarterMap.get(key)!.push(outcome);
       });
-      
+
       // Calculate summaries
       const summaries: QuarterSummary[] = [];
       quarterMap.forEach((outcomes, quarterKey) => {
@@ -88,8 +94,8 @@ export function useQuarterlySummary(quarterNumber?: number, quarterYear?: number
         const completed_late = outcomes.filter(o => o.outcome_type === 'completed_late').length;
         const rolled_forward = outcomes.filter(o => o.outcome_type === 'rolled_forward').length;
         const dropped = outcomes.filter(o => o.outcome_type === 'dropped').length;
-        
-        const firstOutcome = outcomes[0] as any;
+
+        const firstOutcome = outcomes[0];
         
         summaries.push({
           quarter: quarterKey,
@@ -129,12 +135,13 @@ export function useSeatRockAnalysis(quarterNumber?: number, quarterYear?: number
     queryKey: ['rock-seat-analysis', tenantId, quarterNumber, quarterYear],
     queryFn: async () => {
       // Fetch outcomes with seat info
-      let query = supabase
-        .from('rock_outcomes')
-        .select(`
+      const seatEmbedSelect = `
           *,
           seat:accountability_seats(id, seat_name)
-        `);
+        `;
+      let query = supabase
+        .from('rock_outcomes')
+        .select<typeof seatEmbedSelect, RockOutcomeWithSeat>(seatEmbedSelect);
       
       if (!isSuper && tenantId) {
         query = query.eq('tenant_id', tenantId);
@@ -150,7 +157,7 @@ export function useSeatRockAnalysis(quarterNumber?: number, quarterYear?: number
       if (error) throw error;
       
       // Fetch user names for owners
-      const ownerIds = [...new Set((data || []).map((o: any) => o.owner_id).filter(Boolean))];
+      const ownerIds = [...new Set((data || []).map((o) => o.owner_id).filter(Boolean))];
       const userMap: Record<string, string> = {};
       
       if (ownerIds.length > 0) {
@@ -159,7 +166,7 @@ export function useSeatRockAnalysis(quarterNumber?: number, quarterYear?: number
           .select('user_uuid, first_name, last_name')
           .in('user_uuid', ownerIds);
         
-        (users || []).forEach((u: any) => {
+        (users || []).forEach((u) => {
           userMap[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim();
         });
       }
@@ -171,8 +178,8 @@ export function useSeatRockAnalysis(quarterNumber?: number, quarterYear?: number
         .eq('tenant_id', tenantId || 0);
       
       // Group by seat
-      const seatMap = new Map<string, any[]>();
-      (data || []).forEach((outcome: any) => {
+      const seatMap = new Map<string, RockOutcomeWithSeat[]>();
+      (data || []).forEach((outcome) => {
         const seatId = outcome.seat_id || 'unassigned';
         if (!seatMap.has(seatId)) {
           seatMap.set(seatId, []);
@@ -186,10 +193,10 @@ export function useSeatRockAnalysis(quarterNumber?: number, quarterYear?: number
       seatMap.forEach((outcomes, seatId) => {
         const firstOutcome = outcomes[0];
         const total = outcomes.length;
-        const completed_on_time = outcomes.filter((o: any) => o.outcome_type === 'completed_on_time').length;
-        const completed_late = outcomes.filter((o: any) => o.outcome_type === 'completed_late').length;
-        const rolled_forward = outcomes.filter((o: any) => o.outcome_type === 'rolled_forward').length;
-        const dropped = outcomes.filter((o: any) => o.outcome_type === 'dropped').length;
+        const completed_on_time = outcomes.filter((o) => o.outcome_type === 'completed_on_time').length;
+        const completed_late = outcomes.filter((o) => o.outcome_type === 'completed_late').length;
+        const rolled_forward = outcomes.filter((o) => o.outcome_type === 'rolled_forward').length;
+        const dropped = outcomes.filter((o) => o.outcome_type === 'dropped').length;
         
         const roll_rate = total > 0 ? Math.round((rolled_forward / total) * 100) : 0;
         const drop_rate = total > 0 ? Math.round((dropped / total) * 100) : 0;
@@ -207,10 +214,10 @@ export function useSeatRockAnalysis(quarterNumber?: number, quarterYear?: number
         }
         
         // Check for repeated drops across quarters
-        const seatHistoricalOutcomes = (allOutcomes || []).filter((o: any) => o.seat_id === seatId);
+        const seatHistoricalOutcomes = (allOutcomes || []).filter((o) => o.seat_id === seatId);
         const dropQuarters = seatHistoricalOutcomes
-          .filter((o: any) => o.outcome_type === 'dropped')
-          .map((o: any) => formatQuarter(o.quarter_number, o.quarter_year));
+          .filter((o) => o.outcome_type === 'dropped')
+          .map((o) => formatQuarter(o.quarter_number, o.quarter_year));
         
         if (dropQuarters.length >= 2) {
           flags.push({
@@ -276,8 +283,8 @@ export function useRockTrends(numQuarters: number = 6) {
       if (error) throw error;
       
       // Group by quarter
-      const quarterMap = new Map<string, any[]>();
-      (data || []).forEach((outcome: any) => {
+      const quarterMap = new Map<string, { outcome_type: string; quarter_number: number; quarter_year: number }[]>();
+      (data || []).forEach((outcome) => {
         const key = `${outcome.quarter_year}-${outcome.quarter_number}`;
         if (!quarterMap.has(key)) {
           quarterMap.set(key, []);
@@ -306,10 +313,10 @@ export function useRockTrends(numQuarters: number = 6) {
         const [year, quarter] = key.split('-').map(Number);
         const total = outcomes.length;
         
-        const completed_on_time = outcomes.filter((o: any) => o.outcome_type === 'completed_on_time').length;
-        const completed_late = outcomes.filter((o: any) => o.outcome_type === 'completed_late').length;
-        const rolled = outcomes.filter((o: any) => o.outcome_type === 'rolled_forward').length;
-        const dropped = outcomes.filter((o: any) => o.outcome_type === 'dropped').length;
+        const completed_on_time = outcomes.filter((o) => o.outcome_type === 'completed_on_time').length;
+        const completed_late = outcomes.filter((o) => o.outcome_type === 'completed_late').length;
+        const rolled = outcomes.filter((o) => o.outcome_type === 'rolled_forward').length;
+        const dropped = outcomes.filter((o) => o.outcome_type === 'dropped').length;
         
         trendData.quarters.push(formatQuarter(quarter, year));
         trendData.completion_rates.push(total > 0 ? Math.round(((completed_on_time + completed_late) / total) * 100) : 0);
@@ -375,7 +382,7 @@ export function useAvailableQuarters() {
       
       // Get unique quarters
       const quarters = new Set<string>();
-      (data || []).forEach((o: any) => {
+      (data || []).forEach((o) => {
         quarters.add(formatQuarter(o.quarter_number, o.quarter_year));
       });
       

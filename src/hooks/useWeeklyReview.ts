@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCallback, useMemo } from 'react';
 import { toast } from '@/hooks/use-toast';
+import type { Json, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 // Monday of the current week in Australia/Sydney
 function getCurrentWeekStart(): string {
@@ -47,11 +48,11 @@ export interface WeeklyReviewRecord {
   integrator_user_uuid: string | null;
   status: string;
   headline: string | null;
-  portfolio_summary: Record<string, any>;
-  discussion_items: any[];
+  portfolio_summary: Record<string, unknown>;
+  discussion_items: unknown[];
   decisions: DecisionItem[];
   next_actions: NextActionItem[];
-  risks: any[];
+  risks: unknown[];
   created_by_user_uuid: string;
   created_at: string;
   updated_by_user_uuid: string;
@@ -77,7 +78,7 @@ export function useWeeklyReview(tenantUuid?: string) {
     queryFn: async (): Promise<WeeklyReviewRecord | null> => {
       if (!tenantUuid) return null;
       const { data, error } = await supabase
-        .from('exec_weekly_reviews' as any)
+        .from('exec_weekly_reviews')
         .select('*')
         .eq('tenant_uuid', tenantUuid)
         .eq('week_start_date', weekStart)
@@ -95,7 +96,7 @@ export function useWeeklyReview(tenantUuid?: string) {
     queryFn: async (): Promise<WeeklyReviewRecord[]> => {
       if (!tenantUuid) return [];
       const { data, error } = await supabase
-        .from('exec_weekly_reviews' as any)
+        .from('exec_weekly_reviews')
         .select('*')
         .eq('tenant_uuid', tenantUuid)
         .order('week_start_date', { ascending: false })
@@ -109,18 +110,19 @@ export function useWeeklyReview(tenantUuid?: string) {
 
   // Auto-create draft
   const createDraftMutation = useMutation({
-    mutationFn: async (portfolioSnapshot: Record<string, any>) => {
+    mutationFn: async (portfolioSnapshot: Record<string, unknown>) => {
       if (!tenantUuid || !userId) throw new Error('Missing context');
+      const insertPayload: TablesInsert<'exec_weekly_reviews'> = {
+        tenant_uuid: tenantUuid,
+        week_start_date: weekStart,
+        status: 'draft',
+        portfolio_summary: portfolioSnapshot as Json,
+        created_by_user_uuid: userId,
+        updated_by_user_uuid: userId,
+      };
       const { data, error } = await supabase
-        .from('exec_weekly_reviews' as any)
-        .insert({
-          tenant_uuid: tenantUuid,
-          week_start_date: weekStart,
-          status: 'draft',
-          portfolio_summary: portfolioSnapshot,
-          created_by_user_uuid: userId,
-          updated_by_user_uuid: userId,
-        } as any)
+        .from('exec_weekly_reviews')
+        .insert(insertPayload)
         .select()
         .single();
       if (error) {
@@ -130,12 +132,13 @@ export function useWeeklyReview(tenantUuid?: string) {
       }
       // Audit log
       if (data) {
-        await supabase.from('exec_weekly_review_audit_log' as any).insert({
-          review_id: (data as any).id,
+        const auditInsert: TablesInsert<'exec_weekly_review_audit_log'> = {
+          review_id: data.id,
           action: 'create',
           user_id: userId,
           details: { auto_created: true },
-        } as any);
+        };
+        await supabase.from('exec_weekly_review_audit_log').insert(auditInsert);
       }
       return data as unknown as WeeklyReviewRecord;
     },
@@ -149,21 +152,23 @@ export function useWeeklyReview(tenantUuid?: string) {
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<WeeklyReviewRecord>) => {
       if (!currentReview || !userId) throw new Error('No review to update');
+      const updatePayload = {
+        ...updates,
+        updated_by_user_uuid: userId,
+      } as unknown as TablesUpdate<'exec_weekly_reviews'>;
       const { error } = await supabase
-        .from('exec_weekly_reviews' as any)
-        .update({
-          ...updates,
-          updated_by_user_uuid: userId,
-        } as any)
+        .from('exec_weekly_reviews')
+        .update(updatePayload)
         .eq('id', currentReview.id);
       if (error) throw error;
       // Audit
-      await supabase.from('exec_weekly_review_audit_log' as any).insert({
+      const auditInsert: TablesInsert<'exec_weekly_review_audit_log'> = {
         review_id: currentReview.id,
         action: 'update',
         user_id: userId,
         details: { fields: Object.keys(updates) },
-      } as any);
+      };
+      await supabase.from('exec_weekly_review_audit_log').insert(auditInsert);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weekly-review', tenantUuid, weekStart] });
@@ -181,23 +186,24 @@ export function useWeeklyReview(tenantUuid?: string) {
       if (!hasDecision && !hasAction) throw new Error('At least one decision or action required');
 
       const { error } = await supabase
-        .from('exec_weekly_reviews' as any)
-        .update({ status: 'final', updated_by_user_uuid: userId } as any)
+        .from('exec_weekly_reviews')
+        .update({ status: 'final', updated_by_user_uuid: userId })
         .eq('id', currentReview.id);
       if (error) throw error;
-      await supabase.from('exec_weekly_review_audit_log' as any).insert({
+      const auditInsert: TablesInsert<'exec_weekly_review_audit_log'> = {
         review_id: currentReview.id,
         action: 'finalise',
         user_id: userId,
-      } as any);
+      };
+      await supabase.from('exec_weekly_review_audit_log').insert(auditInsert);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weekly-review', tenantUuid, weekStart] });
       queryClient.invalidateQueries({ queryKey: ['weekly-review-history', tenantUuid] });
       toast({ title: 'Weekly review finalised', description: 'Record is now locked.' });
     },
-    onError: (err: any) => {
-      toast({ title: 'Cannot finalise', description: err.message, variant: 'destructive' });
+    onError: (err: unknown) => {
+      toast({ title: 'Cannot finalise', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     },
   });
 
