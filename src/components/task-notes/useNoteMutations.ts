@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { sanitizeNoteHtml } from './sanitizeNoteHtml';
 import { ChecklistItem, DailyNote, NoteColor, newItemId } from './types';
 import { noteQueryKeys } from './useDailyNotes';
+import type { Json, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 const TABLE = 'user_daily_notes';
 
@@ -45,16 +46,16 @@ export function useNoteMutations(userId: string | undefined) {
       if (isEmpty(input.title, input.body, input.items)) {
         return { skipped: true as const };
       }
-      const payload = {
+      const payload: TablesInsert<'user_daily_notes'> = {
         user_id: input.userId,
         note_date: format(input.date, 'yyyy-MM-dd'),
         title: input.title.trim(),
         color: input.color,
         body: sanitizeNoteHtml(input.body),
-        items: normalizeItems(input.items),
+        items: normalizeItems(input.items) as unknown as Json,
         content: '',
       };
-      const { error } = await supabase.from(TABLE as any).insert(payload as any);
+      const { error } = await supabase.from(TABLE).insert(payload);
       if (error) throw error;
       return { skipped: false as const };
     },
@@ -62,24 +63,24 @@ export function useNoteMutations(userId: string | undefined) {
       invalidate(format(vars.date, 'yyyy-MM-dd'));
       if (!res.skipped) toast.success('Note added');
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Failed to add note'),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Failed to add note'),
   });
 
   const updateNote = useMutation({
     mutationFn: async (input: UpdateInput) => {
       const dateStr = format(input.date, 'yyyy-MM-dd');
       if (isEmpty(input.title, input.body, input.items)) {
-        const { error } = await supabase.from(TABLE as any).delete().eq('id', input.id);
+        const { error } = await supabase.from(TABLE).delete().eq('id', input.id);
         if (error) throw error;
         return { deleted: true as const };
       }
-      const payload = {
+      const payload: TablesUpdate<'user_daily_notes'> = {
         title: input.title.trim(),
         color: input.color,
         body: sanitizeNoteHtml(input.body),
-        items: normalizeItems(input.items),
+        items: normalizeItems(input.items) as unknown as Json,
       };
-      const { error } = await supabase.from(TABLE as any).update(payload as any).eq('id', input.id);
+      const { error } = await supabase.from(TABLE).update(payload).eq('id', input.id);
       if (error) throw error;
       return { deleted: false as const, dateStr };
     },
@@ -87,12 +88,12 @@ export function useNoteMutations(userId: string | undefined) {
       invalidate(format(vars.date, 'yyyy-MM-dd'));
       toast.success(res.deleted ? 'Empty note discarded' : 'Note updated');
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Failed to update note'),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Failed to update note'),
   });
 
   const deleteNote = useMutation({
     mutationFn: async (note: Pick<DailyNote, 'id' | 'note_date'>) => {
-      const { error } = await supabase.from(TABLE as any).delete().eq('id', note.id);
+      const { error } = await supabase.from(TABLE).delete().eq('id', note.id);
       if (error) throw error;
       return note.note_date;
     },
@@ -100,28 +101,29 @@ export function useNoteMutations(userId: string | undefined) {
       invalidate(dateStr);
       toast.success('Note deleted');
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Failed to delete note'),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Failed to delete note'),
   });
 
   const patchItems = useMutation({
     mutationFn: async ({ note, items }: { note: DailyNote; items: ChecklistItem[] }) => {
       // Persist the hydrated structured fields alongside items so legacy notes
       // (whose title/items were derived from `content`) don't revert to "Untitled".
+      const payload: TablesUpdate<'user_daily_notes'> = {
+        items: normalizeItems(items) as unknown as Json,
+        title: note.title.trim(),
+        color: note.color,
+        body: sanitizeNoteHtml(note.body ?? ''),
+        content: '',
+      };
       const { error } = await supabase
-        .from(TABLE as any)
-        .update({
-          items: normalizeItems(items),
-          title: note.title.trim(),
-          color: note.color,
-          body: sanitizeNoteHtml(note.body ?? ''),
-          content: '',
-        } as any)
+        .from(TABLE)
+        .update(payload)
         .eq('id', note.id);
       if (error) throw error;
       return note.note_date;
     },
     onSuccess: (dateStr) => invalidate(dateStr),
-    onError: (e: any) => toast.error(e?.message ?? 'Failed to update checklist'),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Failed to update checklist'),
   });
 
 
@@ -148,18 +150,19 @@ export function useNoteMutations(userId: string | undefined) {
         const remaining = n.items.filter((it) => !it.done);
         if (remaining.length === n.items.length) continue;
         if (remaining.length === 0 && !n.title.trim() && !n.body.replace(/<[^>]*>/g, '').trim()) {
-          const { error } = await supabase.from(TABLE as any).delete().eq('id', n.id);
+          const { error } = await supabase.from(TABLE).delete().eq('id', n.id);
           if (error) throw error;
         } else {
+          const payload: TablesUpdate<'user_daily_notes'> = {
+            items: remaining as unknown as Json,
+            title: n.title.trim(),
+            color: n.color,
+            body: sanitizeNoteHtml(n.body ?? ''),
+            content: '',
+          };
           const { error } = await supabase
-            .from(TABLE as any)
-            .update({
-              items: remaining,
-              title: n.title.trim(),
-              color: n.color,
-              body: sanitizeNoteHtml(n.body ?? ''),
-              content: '',
-            } as any)
+            .from(TABLE)
+            .update(payload)
             .eq('id', n.id);
           if (error) throw error;
         }
@@ -171,14 +174,14 @@ export function useNoteMutations(userId: string | undefined) {
       invalidate(dateStr);
       toast.success('Completed items cleared');
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Failed to clear completed items'),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Failed to clear completed items'),
   });
 
   const clearAll = useMutation({
     mutationFn: async ({ notes, dateStr }: { notes: DailyNote[]; dateStr: string }) => {
       const ids = notes.map((n) => n.id);
       if (!ids.length) return dateStr;
-      const { error } = await supabase.from(TABLE as any).delete().in('id', ids);
+      const { error } = await supabase.from(TABLE).delete().in('id', ids);
       if (error) throw error;
       return dateStr;
     },
@@ -186,7 +189,7 @@ export function useNoteMutations(userId: string | undefined) {
       invalidate(dateStr);
       toast.success('All notes cleared for this day');
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Failed to clear notes'),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Failed to clear notes'),
   });
 
   const carryOver = useMutation({
@@ -212,21 +215,23 @@ export function useNoteMutations(userId: string | undefined) {
       );
       if (existing) {
         const merged = [...existing.items, ...unfinished];
+        const updatePayload: TablesUpdate<'user_daily_notes'> = { items: normalizeItems(merged) as unknown as Json };
         const { error } = await supabase
-          .from(TABLE as any)
-          .update({ items: normalizeItems(merged) } as any)
+          .from(TABLE)
+          .update(updatePayload)
           .eq('id', existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from(TABLE as any).insert({
+        const insertPayload: TablesInsert<'user_daily_notes'> = {
           user_id: sourceNotes[0]?.user_id,
           note_date: targetStr,
           title: 'Carried Over',
           color: 'macaron' as NoteColor,
           body: '',
-          items: unfinished,
+          items: unfinished as unknown as Json,
           content: '',
-        } as any);
+        };
+        const { error } = await supabase.from(TABLE).insert(insertPayload);
         if (error) throw error;
       }
 
@@ -239,18 +244,19 @@ export function useNoteMutations(userId: string | undefined) {
           !n.title.trim() &&
           !n.body.replace(/<[^>]*>/g, '').trim()
         ) {
-          const { error } = await supabase.from(TABLE as any).delete().eq('id', n.id);
+          const { error } = await supabase.from(TABLE).delete().eq('id', n.id);
           if (error) throw error;
         } else {
+          const payload: TablesUpdate<'user_daily_notes'> = {
+            items: doneOnly as unknown as Json,
+            title: n.title.trim(),
+            color: n.color,
+            body: sanitizeNoteHtml(n.body ?? ''),
+            content: '',
+          };
           const { error } = await supabase
-            .from(TABLE as any)
-            .update({
-              items: doneOnly,
-              title: n.title.trim(),
-              color: n.color,
-              body: sanitizeNoteHtml(n.body ?? ''),
-              content: '',
-            } as any)
+            .from(TABLE)
+            .update(payload)
             .eq('id', n.id);
           if (error) throw error;
         }
@@ -263,7 +269,7 @@ export function useNoteMutations(userId: string | undefined) {
       qc.invalidateQueries({ queryKey: ['user_daily_notes', userId ?? ''] });
       if (res.moved > 0) toast.success(`${res.moved} item${res.moved === 1 ? '' : 's'} carried over`);
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Failed to carry over items'),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Failed to carry over items'),
   });
 
   return {

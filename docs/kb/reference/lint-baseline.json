@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T17:04:29.230Z",
-  "baselineSha": "88b2818236b20dfd75f22fe08ab5fed48038ac74",
+  "generatedAt": "2026-09-04T17:12:46.198Z",
+  "baselineSha": "00665b46be849f78bd123223b6b1a463ac5281b5",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 437,
-    "errors": 1976,
+    "filesWithFindings": 436,
+    "errors": 1950,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1969,
+    "@typescript-eslint/no-explicit-any": 1943,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1308,
+      "errors": 1282,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1301,
+        "@typescript-eslint/no-explicit-any": 1275,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -321,10 +321,10 @@
       }
     },
     "src/components/task-notes": {
-      "errors": 36,
+      "errors": 10,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 36
+        "@typescript-eslint/no-explicit-any": 10
       }
     },
     "src/components/tenant": {
@@ -1578,9 +1578,6 @@
     },
     "src/components/task-notes/useDailyNotes.ts": {
       "@typescript-eslint/no-explicit-any": 8
-    },
-    "src/components/task-notes/useNoteMutations.ts": {
-      "@typescript-eslint/no-explicit-any": 26
     },
     "src/components/task-notes/useNotesSummary.ts": {
       "@typescript-eslint/no-explicit-any": 2
