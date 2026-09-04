@@ -12,6 +12,7 @@ import {
 import { ChevronDown, Loader2, CheckCircle2, Clock, MinusCircle } from "lucide-react";
 import { format, parseISO, differenceInMinutes, addHours } from "date-fns";
 import { toast } from "sonner";
+import type { Json, TablesUpdate } from "@/integrations/supabase/types";
 
 const PLATFORM_LABEL: Record<string, string> = { unicorn: "Unicorn CMS", complyhub_ai: "ComplyHub AI" };
 const PRIORITY_LABEL: Record<string, string> = { critical: "Critical", high: "High", standard: "Standard" };
@@ -33,7 +34,7 @@ interface Ticket {
   first_response_at: string | null;
   resolved_at: string | null;
   reopen_count: number;
-  metadata: any;
+  metadata: Json;
 }
 
 interface Comm { id: number; ticket_id: number; comm_type: string; occurred_at: string; }
@@ -70,31 +71,31 @@ export function KpiDeveloperTicketQueue() {
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
-    const { data: t } = await (supabase as any)
+    const { data: t } = await supabase
       .from("kpi_tickets")
       .select("id, ticket_number, title, platform, priority, status, reporter_uuid, assignee_uuid, opened_at, first_response_at, resolved_at, reopen_count, metadata")
       .eq("assignee_uuid", user.id)
       .order("opened_at", { ascending: false });
-    const rows: Ticket[] = (t ?? []) as Ticket[];
+    const rows: Ticket[] = t ?? [];
     setTickets(rows);
 
     if (rows.length) {
       const ids = rows.map((r) => r.id);
-      const { data: c } = await (supabase as any)
+      const { data: c } = await supabase
         .from("kpi_ticket_comms")
         .select("id, ticket_id, comm_type, occurred_at")
         .in("ticket_id", ids);
       const cMap: Record<number, Comm[]> = {};
-      (c ?? []).forEach((x: Comm) => { (cMap[x.ticket_id] ||= []).push(x); });
+      (c ?? []).forEach((x) => { (cMap[x.ticket_id] ||= []).push(x); });
       setCommsByTicket(cMap);
 
       const reporterIds = Array.from(new Set(rows.map((r) => r.reporter_uuid).filter(Boolean) as string[]));
       if (reporterIds.length) {
-        const { data: u } = await (supabase as any)
+        const { data: u } = await supabase
           .from("users").select("user_uuid, first_name, last_name, email")
           .in("user_uuid", reporterIds);
         const m: Record<string, UserRow> = {};
-        (u ?? []).forEach((x: UserRow) => { m[x.user_uuid] = x; });
+        (u ?? []).forEach((x) => { m[x.user_uuid] = x; });
         setReporters(m);
       }
     }
@@ -106,19 +107,19 @@ export function KpiDeveloperTicketQueue() {
   const updateStatus = async (t: Ticket, next: string) => {
     setBusy(true);
     try {
-      const patch: any = { status: next };
+      const patch: TablesUpdate<"kpi_tickets"> = { status: next };
       const now = new Date().toISOString();
       if (next === "in_progress") {
         if (!t.first_response_at) patch.first_response_at = now;
         if (t.status === "solved") patch.reopen_count = (t.reopen_count ?? 0) + 1;
       }
       if (next === "solved") patch.resolved_at = now;
-      const { error } = await (supabase as any).from("kpi_tickets").update(patch).eq("id", t.id);
+      const { error } = await supabase.from("kpi_tickets").update(patch).eq("id", t.id);
       if (error) throw error;
       toast.success(`Status updated to ${STATUS_LABEL[next] ?? next}`);
       load();
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed to update status");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update status");
     } finally {
       setBusy(false);
     }
@@ -128,7 +129,7 @@ export function KpiDeveloperTicketQueue() {
     if (!confirm || !user?.id) return;
     setBusy(true);
     try {
-      const { error } = await (supabase as any).from("kpi_ticket_comms").insert({
+      const { error } = await supabase.from("kpi_ticket_comms").insert({
         ticket_id: confirm.ticketId,
         comm_type: confirm.commKey,
         direction: "outbound",
@@ -139,8 +140,8 @@ export function KpiDeveloperTicketQueue() {
       toast.success("Communication logged");
       setConfirm(null);
       load();
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed to log communication");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to log communication");
     } finally {
       setBusy(false);
     }
@@ -225,7 +226,7 @@ function TicketDetail({
   onAdvance: (status: string) => void;
   onLog: (commKey: string) => void;
 }) {
-  const description = ticket.metadata?.description ?? "—";
+  const description = (ticket.metadata as unknown as { description?: string } | null)?.description ?? "—";
   const commByKey = useMemo(() => {
     const m: Record<string, Comm> = {};
     comms.forEach((c) => { if (!m[c.comm_type] || parseISO(c.occurred_at) < parseISO(m[c.comm_type].occurred_at)) m[c.comm_type] = c; });

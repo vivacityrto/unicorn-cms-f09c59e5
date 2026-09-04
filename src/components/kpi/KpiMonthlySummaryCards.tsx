@@ -201,13 +201,13 @@ function CscSummary({ subjectUuid, period }: { subjectUuid: string; period: Peri
     (async () => {
       const since = new Date();
       since.setDate(since.getDate() - PERIOD_DAYS[period]);
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("v_kpi_csc_summary")
         .select("email_total,email_sla_met")
         .eq("subject_uuid", subjectUuid)
         .gte("period_start", since.toISOString().slice(0, 10));
       if (cancelled) return;
-      const rows = (data ?? []) as Array<{ email_total: number; email_sla_met: number }>;
+      const rows = data ?? [];
       const total = rows.reduce((s, r) => s + (r.email_total ?? 0), 0);
       const met = rows.reduce((s, r) => s + (r.email_sla_met ?? 0), 0);
       setEmailPct(total > 0 ? (met / total) * 100 : null);
@@ -266,14 +266,14 @@ function CstSummary({ subjectUuid, period }: { subjectUuid: string; period: Peri
     (async () => {
       const since = new Date();
       since.setDate(since.getDate() - PERIOD_DAYS[period]);
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("v_kpi_cst_summary")
         .select("sla1_total,sla1_met,sla2_total,sla2_met,tasks_total,tasks_on_time")
         .eq("subject_uuid", subjectUuid)
         .gte("period_start", since.toISOString().slice(0, 10));
       if (cancelled) return;
-      const rows = (data ?? []) as Array<any>;
-      const sum = (k: string) => rows.reduce((s, r) => s + (r[k] ?? 0), 0);
+      const rows = data ?? [];
+      const sum = (k: keyof NonNullable<typeof data>[number]) => rows.reduce((s, r) => s + (r[k] ?? 0), 0);
       const s1t = sum("sla1_total"), s1m = sum("sla1_met");
       const s2t = sum("sla2_total"), s2m = sum("sla2_met");
       const tt = sum("tasks_total"), tot = sum("tasks_on_time");
@@ -344,12 +344,12 @@ function DevSummary({ subjectUuid, period }: { subjectUuid: string; period: Peri
       const sincePrior = new Date(); sincePrior.setDate(sincePrior.getDate() - 2 * days);
       const stallThreshold = new Date(); stallThreshold.setDate(stallThreshold.getDate() - 2);
 
-      const { data: devRows } = await (supabase as any)
+      const { data: devRows } = await supabase
         .from("v_kpi_dev_summary")
         .select("tickets_opened,avg_first_response_minutes")
         .eq("subject_uuid", subjectUuid)
         .gte("period_start", since.toISOString().slice(0, 10));
-      const rows = (devRows ?? []) as Array<{ tickets_opened: number; avg_first_response_minutes: number | null }>;
+      const rows = devRows ?? [];
       let wsum = 0, wcount = 0, anyOver = false;
       for (const r of rows) {
         if (r.avg_first_response_minutes == null) continue;
@@ -361,42 +361,46 @@ function DevSummary({ subjectUuid, period }: { subjectUuid: string; period: Peri
       }
       const avg = wcount > 0 ? wsum / wcount : null;
 
-      const { count: stalledCount } = await (supabase as any)
+      const { count: stalledCount } = await supabase
         .from("kpi_tickets")
         .select("id", { count: "exact", head: true })
         .eq("assignee_uuid", subjectUuid)
         .eq("status", "in_progress")
         .lt("opened_at", stallThreshold.toISOString());
 
-      const { count: curCount } = await (supabase as any)
+      const { count: curCount } = await supabase
         .from("kpi_tickets")
         .select("id", { count: "exact", head: true })
         .eq("assignee_uuid", subjectUuid)
         .gte("opened_at", since.toISOString());
-      const { count: priorCount } = await (supabase as any)
+      const { count: priorCount } = await supabase
         .from("kpi_tickets")
         .select("id", { count: "exact", head: true })
         .eq("assignee_uuid", subjectUuid)
         .gte("opened_at", sincePrior.toISOString())
         .lt("opened_at", since.toISOString());
 
-      const { data: ticketRows } = await (supabase as any)
+      const { data: ticketRows } = await supabase
         .from("kpi_tickets")
         .select("id,status,reopen_count")
         .eq("assignee_uuid", subjectUuid)
         .gte("opened_at", since.toISOString());
-      const tickets = (ticketRows ?? []) as Array<{ id: string; status: string; reopen_count: number | null }>;
+      const tickets = ticketRows ?? [];
       let commsPctVal: number | null = null;
       if (tickets.length > 0) {
         const ids = tickets.map((t) => t.id);
-        const { data: commRows } = await (supabase as any)
+        // NOTE: this previously selected a nonexistent `comm_key` column (the real
+        // column is `comm_type`, as written by KpiDeveloperTicketQueue.tsx) — the
+        // failed select was silently swallowed (no error check), so `commRows` was
+        // always empty and this metric always showed as fully non-compliant.
+        const { data: commRows } = await supabase
           .from("kpi_ticket_comms")
-          .select("ticket_id,comm_key")
+          .select("ticket_id,comm_type")
           .in("ticket_id", ids);
-        const byTicket = new Map<string, Set<string>>();
-        for (const c of (commRows ?? []) as Array<{ ticket_id: string; comm_key: string }>) {
+        const byTicket = new Map<number, Set<string>>();
+        for (const c of commRows ?? []) {
           if (!byTicket.has(c.ticket_id)) byTicket.set(c.ticket_id, new Set());
-          byTicket.get(c.ticket_id)!.add(c.comm_key);
+          byTicket.get(c.ticket_id)!.add(c.comm_type);
         }
         let compliant = 0;
         for (const t of tickets) {
@@ -428,13 +432,13 @@ function DevSummary({ subjectUuid, period }: { subjectUuid: string; period: Peri
     (async () => {
       const since = new Date();
       since.setDate(since.getDate() - PERIOD_DAYS.quarterly);
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("v_kpi_dev_summary")
         .select("milestones_total,milestones_on_time")
         .eq("subject_uuid", subjectUuid)
         .gte("period_start", since.toISOString().slice(0, 10));
       if (cancelled) return;
-      const rows = (data ?? []) as Array<{ milestones_total: number | null; milestones_on_time: number | null }>;
+      const rows = data ?? [];
       const total = rows.reduce((s, r) => s + (r.milestones_total ?? 0), 0);
       const onTime = rows.reduce((s, r) => s + (r.milestones_on_time ?? 0), 0);
       setDeliveryTotal(total);

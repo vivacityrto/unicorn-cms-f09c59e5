@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T20:09:58.025Z",
-  "baselineSha": "685ff61e686eed8ad630d41c61046f3788ef3caf",
+  "generatedAt": "2026-09-04T20:18:56.963Z",
+  "baselineSha": "80e87c74b621d9ae4cdb3907b7472c45ef1cf271",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 415,
-    "errors": 1637,
+    "filesWithFindings": 413,
+    "errors": 1618,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1630,
+    "@typescript-eslint/no-explicit-any": 1611,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 969,
+      "errors": 950,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 962,
+        "@typescript-eslint/no-explicit-any": 943,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -241,10 +241,10 @@
       }
     },
     "src/components/kpi": {
-      "errors": 28,
+      "errors": 9,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 28
+        "@typescript-eslint/no-explicit-any": 9
       }
     },
     "src/components/layout": {
@@ -1445,14 +1445,8 @@
     "src/components/kpi/KpiDashboard.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/components/kpi/KpiDeveloperTicketQueue.tsx": {
-      "@typescript-eslint/no-explicit-any": 9
-    },
     "src/components/kpi/KpiEmailLogSection.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/kpi/KpiMonthlySummaryCards.tsx": {
-      "@typescript-eslint/no-explicit-any": 10
     },
     "src/components/kpi/KpiReporterTicketView.tsx": {
       "@typescript-eslint/no-explicit-any": 4
