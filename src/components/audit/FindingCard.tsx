@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react';
+import type { AuditReport } from '@/types/audit';
 
 interface FindingCardProps {
-  finding: any;
+  finding: AuditReport['findings'][number];
   auditId: number;
 }
 

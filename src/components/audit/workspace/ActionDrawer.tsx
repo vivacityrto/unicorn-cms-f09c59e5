@@ -41,7 +41,7 @@ export function ActionDrawer({ open, onOpenChange, action, finding, users, audit
   const [assignedTo, setAssignedTo] = useState<string>('__none__');
   const [clientNotes, setClientNotes] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [priority, setPriority] = useState<string>('medium');
+  const [priority, setPriority] = useState<AuditAction['priority']>('medium');
   const [evidenceRequired, setEvidenceRequired] = useState(true);
   const [internalNotes, setInternalNotes] = useState('');
   const [description, setDescription] = useState('');
@@ -104,7 +104,7 @@ export function ActionDrawer({ open, onOpenChange, action, finding, users, audit
       assigned_to: assignedTo === '__none__' ? null : assignedTo,
       client_notes: clientNotes.trim() || null,
       due_date: dueDate || null,
-      priority: priority as any,
+      priority,
       evidence_required: evidenceRequired,
       internal_notes: internalNotes.trim() || null,
       description: description.trim() || null,
@@ -223,7 +223,7 @@ export function ActionDrawer({ open, onOpenChange, action, finding, users, audit
               </div>
               <div>
                 <Label className="text-xs">Priority</Label>
-                <Select value={priority} onValueChange={setPriority}>
+                <Select value={priority} onValueChange={(v) => setPriority(v as AuditAction['priority'])}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PRIORITY_OPTIONS.map(o => (

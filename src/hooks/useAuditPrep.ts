@@ -17,6 +17,9 @@ export interface EvidenceRequest {
   completed_at: string | null;
   created_at: string;
   items?: EvidenceRequestItem[];
+  /** Raw PostgREST embed key from `.select('*, evidence_request_items(*)')` —
+   * present instead of (or alongside) `items` depending on the call site. */
+  evidence_request_items?: EvidenceRequestItem[];
 }
 
 export interface EvidenceRequestItem {

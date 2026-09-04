@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import type { AuditReport } from '@/types/audit';
 
 interface ActionCreateFormProps {
-  findings: any[];
-  tenantUsers: any[];
+  findings: AuditReport['findings'];
+  tenantUsers: { user_uuid: string; first_name: string; last_name: string }[];
 }
 
 export const ActionCreateForm = ({ findings, tenantUsers }: ActionCreateFormProps) => {

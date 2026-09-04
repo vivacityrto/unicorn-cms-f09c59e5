@@ -67,23 +67,23 @@ export function SendEvidenceRequestDrawer({ open, onOpenChange, audit }: SendEvi
     try {
       // Load sections for this template
       const { data: tplSections } = await supabase
-        .from('compliance_template_sections' as any)
+        .from('compliance_template_sections')
         .select('id')
         .eq('template_id', audit.template_id);
-      const sectionIds = (tplSections as any[] || []).map((s: any) => s.id);
+      const sectionIds = (tplSections || []).map((s) => s.id);
 
       if (sectionIds.length === 0) return;
 
       const { data: questions } = await supabase
-        .from('compliance_template_questions' as any)
+        .from('compliance_template_questions')
         .select('id, clause, audit_statement, evidence_to_sight, section_id')
         .eq('is_active', true)
         .in('section_id', sectionIds)
         .not('evidence_to_sight', 'is', null)
         .order('display_order', { ascending: true });
 
-      if (questions && (questions as any[]).length > 0) {
-        const generated = (questions as any[]).map(q => ({
+      if (questions && questions.length > 0) {
+        const generated = questions.map(q => ({
           item_name: q.audit_statement || q.clause,
           guidance_text: q.evidence_to_sight || '',
           is_required: true,

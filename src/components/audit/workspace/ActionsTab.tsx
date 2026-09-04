@@ -85,7 +85,7 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
   };
 
   const handleSaveAction = (data: Partial<AuditAction> & { audit_id: string }) => {
-    const { id, ...rest } = data as any;
+    const { id, ...rest } = data;
     if (id) {
       updateAction.mutate({ id, ...rest });
     } else {
@@ -95,7 +95,7 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
 
   const handleVerify = async (actionId: string, decision: 'verified' | 'rejected' | 'waived', notes: string) => {
     const user = (await supabase.auth.getUser()).data.user;
-    const updates: any = {
+    const updates: Partial<AuditAction> = {
       verification_status: decision,
       verification_notes: notes || null,
       verified_by: user?.id,
@@ -331,7 +331,7 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
                     )}
                     <Select
                       value={action.status}
-                      onValueChange={(v) => updateAction.mutate({ id: action.id, status: v as any })}
+                      onValueChange={(v) => updateAction.mutate({ id: action.id, status: v as AuditAction['status'] })}
                     >
                       <SelectTrigger className="h-7 w-28 text-xs ml-auto">
                         <SelectValue />

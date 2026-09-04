@@ -62,12 +62,12 @@ export function AuditSidebar({
     enabled: !!audit.linked_stage_instance_id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('stage_instances' as any)
+        .from('stage_instances')
         .select('id, stage_id')
         .eq('id', audit.linked_stage_instance_id)
         .maybeSingle();
       if (error) throw error;
-      return data as any;
+      return data;
     },
   });
 
