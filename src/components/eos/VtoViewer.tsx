@@ -187,7 +187,11 @@ export function VtoViewer({ vto }: VtoViewerProps) {
                 ))}
               </ul>
             ) : (
-              <p className="text-foreground whitespace-pre-wrap">{vto.proven_process}</p>
+              <p className="text-foreground whitespace-pre-wrap">
+                {typeof vto.proven_process === 'string'
+                  ? vto.proven_process
+                  : JSON.stringify(vto.proven_process, null, 2)}
+              </p>
             )
           ) : (
             <p className="text-muted-foreground">Not defined</p>

@@ -22,7 +22,7 @@ export default function EosMeetingSummary() {
         .single();
       
       if (error) throw error;
-      return data as EosMeetingSummary;
+      return data as unknown as EosMeetingSummary;
     },
     enabled: !!meetingId,
   });

@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T00:27:22.732Z",
-  "baselineSha": "20acece9ee7ac09a41b904ebc585a8738e5a4b68",
+  "generatedAt": "2026-09-04T01:03:25.265Z",
+  "baselineSha": "24db112b718fba842a5df497b76333c9e852ad57",
   "totals": {
     "files": 1784,
-    "filesWithFindings": 598,
-    "errors": 3744,
+    "filesWithFindings": 595,
+    "errors": 3720,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3737,
+    "@typescript-eslint/no-explicit-any": 3713,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 3076,
+      "errors": 3052,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 3069,
+        "@typescript-eslint/no-explicit-any": 3045,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -511,10 +511,10 @@
       }
     },
     "src/types": {
-      "errors": 25,
+      "errors": 1,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 25
+        "@typescript-eslint/no-explicit-any": 1
       }
     },
     "supabase/functions/_shared/ai-brain": {
@@ -2721,15 +2721,6 @@
     },
     "src/test/tenant/isolation.test.tsx": {
       "@typescript-eslint/no-explicit-any": 38
-    },
-    "src/types/audit.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/types/eos.ts": {
-      "@typescript-eslint/no-explicit-any": 22
-    },
-    "src/types/eosAlerts.ts": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "src/types/qc.ts": {
       "@typescript-eslint/no-explicit-any": 1
