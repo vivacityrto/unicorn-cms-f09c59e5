@@ -88,9 +88,9 @@ export function useOperationsDashboard() {
       }));
 
       setFailedGenerations(enriched);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch failed generations:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -121,7 +121,7 @@ export function useOperationsDashboard() {
       }));
 
       setFailedEmails(enriched);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch failed emails:', error);
     }
   }, []);
@@ -136,7 +136,7 @@ export function useOperationsDashboard() {
 
       if (error) throw error;
       setSettings(data as AppSettings);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch settings:', error);
     }
   }, []);
@@ -172,7 +172,7 @@ export function useOperationsDashboard() {
         pending_generations: pending.count || 0,
         average_generation_time_ms: null
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch stats:', error);
     }
   }, []);
@@ -188,8 +188,8 @@ export function useOperationsDashboard() {
       
       setSettings(prev => prev ? { ...prev, ...updates } : null);
       toast({ title: 'Settings updated' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     }
   };
 
@@ -209,8 +209,8 @@ export function useOperationsDashboard() {
 
       toast({ title: 'Retry queued' });
       return true;
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
       return false;
     }
   };
