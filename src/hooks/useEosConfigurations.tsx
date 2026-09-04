@@ -21,7 +21,7 @@ export const useEosConfigurations = () => {
   const { data: configurations, isLoading } = useQuery({
     queryKey: ['eos-configurations', VIVACITY_TENANT_ID],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('eos_configurations')
         .select('*')
         .eq('tenant_id', VIVACITY_TENANT_ID)
@@ -38,7 +38,7 @@ export const useEosConfigurations = () => {
 
   const updateConfiguration = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<EosConfiguration> & { id: number }) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('eos_configurations')
         .update(updates)
         .eq('id', id)
@@ -71,7 +71,7 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
   const { data: segments, isLoading } = useQuery({
     queryKey: ['eos-configuration-segments', configurationId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('eos_configuration_segments')
         .select('*')
         .eq('configuration_id', configurationId)
@@ -85,7 +85,7 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
 
   const updateSegment = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<EosConfigurationSegment> & { id: number }) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('eos_configuration_segments')
         .update(updates)
         .eq('id', id)
@@ -117,7 +117,7 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
       const nextOrder = (segments?.length
         ? Math.max(...segments.map((s) => s.sequence_order))
         : 0) + 1;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('eos_configuration_segments')
         .insert({
           configuration_id: configurationId,
@@ -143,7 +143,7 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
 
   const removeSegment = useMutation({
     mutationFn: async (id: number) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('eos_configuration_segments')
         .delete()
         .eq('id', id);
@@ -177,7 +177,7 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
       const offset = currentMax + 1000;
       const phase1 = await Promise.all(
         orderedIds.map((id, index) =>
-          (supabase as any)
+          supabase
             .from('eos_configuration_segments')
             .update({ sequence_order: offset + index })
             .eq('id', id),
@@ -188,7 +188,7 @@ export const useEosConfigurationSegments = (configurationId?: number) => {
 
       const phase2 = await Promise.all(
         orderedIds.map((id, index) =>
-          (supabase as any)
+          supabase
             .from('eos_configuration_segments')
             .update({ sequence_order: index + 1 })
             .eq('id', id),
@@ -224,14 +224,14 @@ export const useEosSeatOptions = () => {
   const { data: seats, isLoading } = useQuery({
     queryKey: ['eos-seat-options', VIVACITY_TENANT_ID],
     queryFn: async (): Promise<SeatOption[]> => {
-      const { data: seatRows, error: seatError } = await (supabase as any)
+      const { data: seatRows, error: seatError } = await supabase
         .from('accountability_seats')
         .select('id, seat_name')
         .eq('tenant_id', VIVACITY_TENANT_ID)
         .order('seat_name');
       if (seatError) throw seatError;
 
-      const { data: assignmentRows, error: assignmentError } = await (supabase as any)
+      const { data: assignmentRows, error: assignmentError } = await supabase
         .from('accountability_seat_assignments')
         .select('seat_id, user_id')
         .eq('tenant_id', VIVACITY_TENANT_ID)
@@ -239,25 +239,25 @@ export const useEosSeatOptions = () => {
         .is('end_date', null);
       if (assignmentError) throw assignmentError;
 
-      const userIds = (assignmentRows ?? []).map((a: any) => a.user_id);
+      const userIds = (assignmentRows ?? []).map((a) => a.user_id);
       const { data: userRows, error: userError } = userIds.length
-        ? await (supabase as any)
+        ? await supabase
             .from('users')
             .select('user_uuid, first_name, last_name')
             .in('user_uuid', userIds)
         : { data: [], error: null };
       if (userError) throw userError;
 
-      const userMap = new Map((userRows ?? []).map((u: any) => [u.user_uuid, u]));
+      const userMap = new Map((userRows ?? []).map((u) => [u.user_uuid, u]));
       const holderBySeat = new Map(
-        (assignmentRows ?? []).map((a: any) => {
-          const user = userMap.get(a.user_id) as { first_name?: string; last_name?: string } | undefined;
+        (assignmentRows ?? []).map((a) => {
+          const user = userMap.get(a.user_id);
           const name = user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : null;
           return [a.seat_id, name];
         }),
       );
 
-      return (seatRows ?? []).map((s: any) => ({
+      return (seatRows ?? []).map((s) => ({
         id: s.id,
         seat_name: s.seat_name,
         holder_name: (holderBySeat.get(s.id) as string | null) ?? null,

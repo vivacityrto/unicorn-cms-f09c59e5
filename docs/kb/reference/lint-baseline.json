@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T01:17:57.552Z",
-  "baselineSha": "32f88b14df2b1ba05bac845433605e4b4ffd346f",
+  "generatedAt": "2026-09-04T01:42:47.525Z",
+  "baselineSha": "a04996d7848d60c6a22d1f8a83d0427835149d14",
   "totals": {
     "files": 1784,
-    "filesWithFindings": 594,
-    "errors": 3718,
+    "filesWithFindings": 593,
+    "errors": 3703,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3711,
+    "@typescript-eslint/no-explicit-any": 3696,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 3050,
+      "errors": 3035,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 3043,
+        "@typescript-eslint/no-explicit-any": 3028,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -433,10 +433,10 @@
       }
     },
     "src/hooks": {
-      "errors": 1193,
+      "errors": 1178,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1193,
+        "@typescript-eslint/no-explicit-any": 1178,
         "react-refresh/only-export-components": 1
       }
     },
@@ -2208,9 +2208,6 @@
     },
     "src/hooks/useEosConfigV2Flag.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useEosConfigurations.tsx": {
-      "@typescript-eslint/no-explicit-any": 15
     },
     "src/hooks/useEosDrafts.tsx": {
       "@typescript-eslint/no-explicit-any": 2
