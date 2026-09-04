@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T15:43:41.264Z",
-  "baselineSha": "af036409eb094d83ae1142f391fa01f36a25b7e6",
+  "generatedAt": "2026-09-04T16:02:51.519Z",
+  "baselineSha": "e24e7a9855bc2ef3f187dba2e103c281acea060f",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 445,
-    "errors": 2182,
+    "filesWithFindings": 444,
+    "errors": 2147,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2175,
+    "@typescript-eslint/no-explicit-any": 2140,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1514,
+      "errors": 1479,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1507,
+        "@typescript-eslint/no-explicit-any": 1472,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -226,10 +226,10 @@
       }
     },
     "src/components/help-center": {
-      "errors": 36,
+      "errors": 1,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 36,
+        "@typescript-eslint/no-explicit-any": 1,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1451,9 +1451,6 @@
     },
     "src/components/help-center/HelpCenterContext.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/components/help-center/MessageTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 35
     },
     "src/components/kpi-v2/AssistantKpiCards.tsx": {
       "@typescript-eslint/no-explicit-any": 5
