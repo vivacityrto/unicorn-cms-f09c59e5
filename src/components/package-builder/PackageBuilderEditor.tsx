@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { usePackageDetail, usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
+import { usePackageDetail, usePackageBuilder, Stage, PackageStage } from '@/hooks/usePackageBuilder';
 import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
 import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
 import { PackagePhasesTab } from './PackagePhasesTab';
@@ -56,7 +56,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface SortableStageItemProps {
   id: number;
-  stage: any;
+  stage: PackageStage;
   index: number;
   isSelected: boolean;
   packageId: number;
@@ -329,7 +329,7 @@ export function PackageBuilderEditor() {
         full_text: packageData.full_text || '',
         details: packageData.details || '',
         package_type: packageData.package_type || 'project',
-        progress_mode: (packageData as any).progress_mode || 'stage_completion',
+        progress_mode: packageData.progress_mode || 'stage_completion',
         duration_months: packageData.duration_months || 12,
         total_hours: packageData.total_hours || 0,
         status: packageData.status || 'inactive'
@@ -351,10 +351,10 @@ export function PackageBuilderEditor() {
         setPendingTotalHours(formData.total_hours);
         setShowPropagateDialog(true);
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save package',
+        description: error instanceof Error ? error.message : 'Failed to save package',
         variant: 'destructive'
       });
     } finally {
@@ -365,21 +365,21 @@ export function PackageBuilderEditor() {
   const handlePropagateToInstances = async () => {
     if (!packageId) return;
     try {
-      const client: any = supabase;
-      const { error } = await client
+      const { error } = await supabase
         .from('package_instances')
         .update({ included_minutes: pendingTotalHours * 60 })
         .eq('package_id', packageId)
-        .eq('status', 'active');
+        .eq('is_active', true)
+        .eq('is_complete', false);
       if (error) throw error;
       toast({
         title: 'Instances Updated',
         description: `Active instances updated to ${pendingTotalHours}h included.`
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update instances',
+        description: error instanceof Error ? error.message : 'Failed to update instances',
         variant: 'destructive'
       });
     } finally {
@@ -397,10 +397,10 @@ export function PackageBuilderEditor() {
         description: 'A copy of this package has been created.'
       });
       navigate(`/admin/package-builder/${newPackage.id}`);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to duplicate package',
+        description: error instanceof Error ? error.message : 'Failed to duplicate package',
         variant: 'destructive'
       });
     } finally {
@@ -418,10 +418,10 @@ export function PackageBuilderEditor() {
         description: 'This package has been archived.'
       });
       navigate('/admin/manage-packages');
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to archive package',
+        description: error instanceof Error ? error.message : 'Failed to archive package',
         variant: 'destructive'
       });
     } finally {
@@ -460,10 +460,10 @@ export function PackageBuilderEditor() {
                         title: 'Stage Added',
                         description: 'Stage has been added to the package.'
                       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add stage',
+        description: error instanceof Error ? error.message : 'Failed to add stage',
         variant: 'destructive'
       });
     }
@@ -481,10 +481,10 @@ export function PackageBuilderEditor() {
                         title: 'Stage Removed',
                         description: 'Stage has been removed from the package.'
                       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to remove stage',
+        description: error instanceof Error ? error.message : 'Failed to remove stage',
         variant: 'destructive'
       });
     } finally {
@@ -504,10 +504,10 @@ export function PackageBuilderEditor() {
       
       try {
         await reorderStages(stageIds);
-      } catch (error: any) {
+      } catch (error) {
         toast({
           title: 'Error',
-          description: error.message || 'Failed to reorder stages',
+          description: error instanceof Error ? error.message : 'Failed to reorder stages',
           variant: 'destructive'
         });
       }

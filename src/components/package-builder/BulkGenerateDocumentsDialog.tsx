@@ -30,6 +30,11 @@ interface Tenant {
 
 type GenerationStep = 'scope' | 'review' | 'progress' | 'complete';
 
+interface TenantPackageStageStateRow {
+  tenant_id: number;
+  tenants: { id: number; name: string } | null;
+}
+
 interface GenerationResult {
   tenantId: number;
   tenantName: string;
@@ -63,20 +68,20 @@ export function BulkGenerateDocumentsDialog({
     setIsLoadingTenants(true);
     try {
       // Get tenants with this package through client_package_stage_state
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('client_package_stage_state')
-        .select('tenant_id, tenants(id, name)')
+        .select<'tenant_id, tenants(id, name)', TenantPackageStageStateRow>('tenant_id, tenants(id, name)')
         .eq('package_id', packageId)
-        .order('tenant_id') as any;
+        .order('tenant_id');
 
       if (error) throw error;
 
       // Get unique tenants and their client_legacy references
-      const uniqueTenantIds = [...new Set((data || []).map((d: any) => d.tenant_id))] as number[];
-      
+      const uniqueTenantIds = [...new Set((data || []).map((d) => d.tenant_id))];
+
       const tenantsWithLegacy = await Promise.all(
         uniqueTenantIds.map(async (tenantId) => {
-          const tenantData = (data || []).find((d: any) => d.tenant_id === tenantId);
+          const tenantData = (data || []).find((d) => d.tenant_id === tenantId);
           
           // Try to find client_legacy_id
           const { data: clientData } = await supabase
@@ -95,10 +100,10 @@ export function BulkGenerateDocumentsDialog({
 
       setTenants(tenantsWithLegacy.filter(t => t.client_legacy_id !== null));
       setSelectedTenantIds(new Set(tenantsWithLegacy.filter(t => t.client_legacy_id !== null).map(t => t.id)));
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch tenants',
+        description: error instanceof Error ? error.message : 'Failed to fetch tenants',
         variant: 'destructive'
       });
     } finally {
@@ -182,14 +187,14 @@ export function BulkGenerateDocumentsDialog({
             documentTitle: stageDoc.document.title,
             success: true
           });
-        } catch (error: any) {
+        } catch (error) {
           newResults.push({
             tenantId: tenant.id,
             tenantName: tenant.name,
             documentId: stageDoc.document_id,
             documentTitle: stageDoc.document.title,
             success: false,
-            error: error.message || 'Generation failed'
+            error: error instanceof Error ? error.message : 'Generation failed'
           });
         }
 

@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T12:37:59.465Z",
-  "baselineSha": "0a214ece4aeb6afb3ccd21681f5c398eabca1bd2",
+  "generatedAt": "2026-09-04T13:19:38.973Z",
+  "baselineSha": "38f105db9cbc695b8693d6d7b1373b2a4cc23e53",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 459,
-    "errors": 2594,
+    "filesWithFindings": 453,
+    "errors": 2552,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2587,
+    "@typescript-eslint/no-explicit-any": 2545,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1926,
+      "errors": 1884,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1919,
+        "@typescript-eslint/no-explicit-any": 1877,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -277,10 +277,9 @@
       }
     },
     "src/components/package-builder": {
-      "errors": 43,
+      "errors": 1,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 42,
         "@typescript-eslint/no-unused-expressions": 1,
         "react-refresh/only-export-components": 1
       }
@@ -1511,30 +1510,11 @@
     "src/components/notes/NoteFormDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "src/components/package-builder/BulkGenerateDocumentsDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/components/package-builder/CreatePackageDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/package-builder/PackageBuilderEditor.tsx": {
-      "@typescript-eslint/no-explicit-any": 10
-    },
-    "src/components/package-builder/PackageBuilderOverview.tsx": {
-      "@typescript-eslint/no-explicit-any": 14
-    },
     "src/components/package-builder/PackagePhasesTab.tsx": {
-      "@typescript-eslint/no-unused-expressions": 1,
-      "@typescript-eslint/no-explicit-any": 3
+      "@typescript-eslint/no-unused-expressions": 1
     },
     "src/components/package-builder/PackageReadinessIndicator.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/components/package-builder/StageDocumentsTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
-    "src/components/package-builder/StageLibraryDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/portfolio/TenantDrawer.tsx": {
       "@typescript-eslint/no-explicit-any": 4

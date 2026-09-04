@@ -136,10 +136,10 @@ export function StageLibraryDialog({
         certified_notes: ''
       });
       setActiveTab('library');
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create stage',
+        description: error instanceof Error ? error.message : 'Failed to create stage',
         variant: 'destructive'
       });
     } finally {

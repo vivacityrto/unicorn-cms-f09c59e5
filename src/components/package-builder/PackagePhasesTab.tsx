@@ -76,8 +76,8 @@ export function PackagePhasesTab({ packageId, packageStageIds, stageMap }: Packa
       toast.success('Phase created');
       setShowCreateDialog(false);
       setNewPhase({ phase_key: '', title: '', description: '', gate_type: 'none', allow_parallel: false });
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to create phase');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to create phase');
     }
   };
 
@@ -90,11 +90,11 @@ export function PackagePhasesTab({ packageId, packageStageIds, stageMap }: Packa
         sortOrder: existingStages.length,
       });
       toast.success('Stage assigned to phase');
-    } catch (e: any) {
-      if (e.message?.includes('duplicate')) {
+    } catch (e) {
+      if (e instanceof Error && e.message.includes('duplicate')) {
         toast.error('Stage already assigned to this phase');
       } else {
-        toast.error(e.message || 'Failed to assign stage');
+        toast.error(e instanceof Error ? e.message : 'Failed to assign stage');
       }
     }
   };
@@ -103,8 +103,8 @@ export function PackagePhasesTab({ packageId, packageStageIds, stageMap }: Packa
     try {
       await removeStageFromPhase.mutateAsync(phaseStageId);
       toast.success('Stage removed from phase');
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to remove stage');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to remove stage');
     }
   };
 

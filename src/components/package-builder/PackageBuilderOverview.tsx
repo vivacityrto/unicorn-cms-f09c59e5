@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, usePackageBuilder, PackageStage } from '@/hooks/usePackageBuilder';
+import { Package, usePackageBuilder } from '@/hooks/usePackageBuilder';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,20 @@ import {
 import { CreatePackageDialog } from './CreatePackageDialog';
 import { computePackageReadiness, PackageReadinessBadge, ReadinessResult } from './PackageReadinessIndicator';
 import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
+
+interface PackageStageWithStageRow {
+  id: number;
+  package_id: number;
+  stage_id: number;
+  sort_order: number;
+  is_required: boolean;
+  dashboard_group: string | null;
+  // stage_type/stage_key are read by computePackageReadiness()'s onboarding/
+  // documentation-stage checks (PackageReadinessIndicator.tsx) — the original
+  // `as any` query never selected them, so those checks have always silently
+  // evaluated against undefined. Selecting them now to fix that honestly.
+  stage: { id: number; name: string; shortname: string | null; stage_type: string | null; stage_key: string | null } | null;
+}
 
 const PACKAGE_TYPE_ICONS: Record<string, React.ReactNode> = {
   'project': <Briefcase className="h-4 w-4" />,
@@ -41,7 +55,7 @@ export function PackageBuilderOverview() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
-  const [packageStagesMap, setPackageStagesMap] = useState<Map<number, PackageStage[]>>(new Map());
+  const [packageStagesMap, setPackageStagesMap] = useState<Map<number, PackageStageWithStageRow[]>>(new Map());
 
   const [stageDocumentCounts, setStageDocumentCounts] = useState<Map<number, number>>(new Map());
   const [phaseCountsMap, setPhaseCountsMap] = useState<Map<number, number>>(new Map());
@@ -52,40 +66,40 @@ export function PackageBuilderOverview() {
       if (packages.length === 0) return;
       
       const { data, error } = await supabase
-        .from('package_stages' as any)
-        .select(`
+        .from('package_stages')
+        .select<string, PackageStageWithStageRow>(`
           id,
           package_id,
           stage_id,
           sort_order,
           is_required,
           dashboard_group,
-          stage:stages(id, name, shortname)
+          stage:stages(id, name, shortname, stage_type, stage_key)
         `)
-        .in('package_id', packages.map(p => p.id)) as any;
+        .in('package_id', packages.map(p => p.id));
 
       if (!error && data) {
-        const map = new Map<number, PackageStage[]>();
+        const map = new Map<number, PackageStageWithStageRow[]>();
         const stageIds = new Set<number>();
-        
-        (data as any[]).forEach((ps: any) => {
+
+        data.forEach((ps) => {
           const existing = map.get(ps.package_id) || [];
           existing.push(ps);
           map.set(ps.package_id, existing);
           if (ps.stage_id) stageIds.add(ps.stage_id);
         });
         setPackageStagesMap(map);
-        
+
         // Fetch document counts for stages
         if (stageIds.size > 0) {
           const { data: docData } = await supabase
-            .from('stage_documents' as any)
+            .from('stage_documents')
             .select('stage_id')
-            .in('stage_id', Array.from(stageIds)) as any;
-          
+            .in('stage_id', Array.from(stageIds));
+
           if (docData) {
             const docCounts = new Map<number, number>();
-            (docData as any[]).forEach((d: any) => {
+            docData.forEach((d) => {
               docCounts.set(d.stage_id, (docCounts.get(d.stage_id) || 0) + 1);
             });
             setStageDocumentCounts(docCounts);
@@ -101,13 +115,13 @@ export function PackageBuilderOverview() {
   useEffect(() => {
     const fetchPhaseCounts = async () => {
       if (packages.length === 0) return;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('phase_stages')
         .select('package_id, phase_id')
         .in('package_id', packages.map(p => p.id));
       if (!error && data) {
         const map = new Map<number, Set<string>>();
-        (data as any[]).forEach((row: any) => {
+        data.forEach((row) => {
           if (!map.has(row.package_id)) map.set(row.package_id, new Set());
           map.get(row.package_id)!.add(row.phase_id);
         });
@@ -166,10 +180,10 @@ export function PackageBuilderOverview() {
         description: `Created "${newPackage.name}". You can now edit it.`
       });
       navigate(`/admin/package-builder/${newPackage.id}`);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to duplicate package',
+        description: error instanceof Error ? error.message : 'Failed to duplicate package',
         variant: 'destructive'
       });
     }
@@ -182,10 +196,10 @@ export function PackageBuilderOverview() {
         title: 'Package Archived',
         description: `"${pkg.name}" has been archived.`
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to archive package',
+        description: error instanceof Error ? error.message : 'Failed to archive package',
         variant: 'destructive'
       });
     }
@@ -199,10 +213,10 @@ export function PackageBuilderOverview() {
         title: 'Package Deleted',
         description: `"${packageToDelete.name}" has been deleted.`
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to delete package',
+        description: error instanceof Error ? error.message : 'Failed to delete package',
         variant: 'destructive'
       });
     } finally {
