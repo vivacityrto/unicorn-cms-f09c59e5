@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useCallback, useEffect, useRef } from 'react';
 import type { AuditSection, AuditResponse, AuditFinding, AuditAction, AuditDocument, TemplateQuestion } from '@/types/auditWorkspace';
 import type { ClientAudit } from '@/types/clientAudits';
+import type { TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 // ─── Audit Sections ───
 export function useAuditSections(auditId: string | undefined) {
@@ -13,7 +14,7 @@ export function useAuditSections(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_audit_sections' as any)
+        .from('client_audit_sections')
         .select('*')
         .eq('audit_id', auditId)
         .order('sort_order', { ascending: true });
@@ -37,7 +38,7 @@ export function useInitializeSections(auditId: string | undefined) {
       // sections (and any responses already entered against them) each time
       // it re-fired. Re-check for existing rows here, where it's authoritative.
       const { count: existingCount, error: existingErr } = await supabase
-        .from('client_audit_sections' as any)
+        .from('client_audit_sections')
         .select('id', { count: 'exact', head: true })
         .eq('audit_id', auditId);
       if (existingErr) throw existingErr;
@@ -46,14 +47,14 @@ export function useInitializeSections(auditId: string | undefined) {
       if (templateId) {
         // Template-driven: load template sections
         const { data: tplSections, error: tplErr } = await supabase
-          .from('compliance_template_sections' as any)
+          .from('compliance_template_sections')
           .select('*')
           .eq('template_id', templateId)
           .order('sort_order', { ascending: true });
         if (tplErr) throw tplErr;
 
         if (tplSections && tplSections.length > 0) {
-          const inserts = (tplSections as any[]).map((s, i) => ({
+          const inserts = tplSections.map((s, i) => ({
             audit_id: auditId,
             template_section_id: s.id,
             standard_code: s.title,
@@ -63,8 +64,8 @@ export function useInitializeSections(auditId: string | undefined) {
           }));
 
           const { error } = await supabase
-            .from('client_audit_sections' as any)
-            .insert(inserts as any);
+            .from('client_audit_sections')
+            .insert(inserts);
           if (error) throw error;
         }
       } else {
@@ -77,8 +78,8 @@ export function useInitializeSections(auditId: string | undefined) {
         }));
 
         const { error } = await supabase
-          .from('client_audit_sections' as any)
-          .insert(standards as any);
+          .from('client_audit_sections')
+          .insert(standards);
         if (error) throw error;
       }
     },
@@ -95,7 +96,7 @@ export function useAuditQuestions(templateSectionId: string | null | undefined) 
     enabled: !!templateSectionId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('compliance_template_questions' as any)
+        .from('compliance_template_questions')
         .select('*')
         .eq('section_id', templateSectionId)
         .eq('is_active', true)
@@ -114,12 +115,12 @@ export function useAuditTemplateFramework(templateId: string | null | undefined)
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('compliance_templates' as any)
+        .from('compliance_templates')
         .select('framework')
         .eq('id', templateId)
         .maybeSingle();
       if (error) throw error;
-      return ((data as any)?.framework ?? null) as string | null;
+      return data?.framework ?? null;
     },
   });
 }
@@ -133,7 +134,7 @@ export function useAuditResponses(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_audit_responses' as any)
+        .from('client_audit_responses')
         .select('*')
         .eq('audit_id', auditId);
       if (error) throw error;
@@ -157,7 +158,7 @@ export function useAuditResponses(auditId: string | undefined) {
       // save landing next to a rating click) and could silently fork a question
       // into duplicate rows. See docs/audit-log/entries/2026-08-11-audit-response-duplicate-race.md.
       const { error } = await supabase
-        .from('client_audit_responses' as any)
+        .from('client_audit_responses')
         .upsert(
           {
             audit_id: response.audit_id,
@@ -169,7 +170,7 @@ export function useAuditResponses(auditId: string | undefined) {
             is_flagged: response.is_flagged ?? false,
             responded_by: response.responded_by,
             responded_at: new Date().toISOString(),
-          } as any,
+          },
           { onConflict: 'audit_id,question_id' },
         );
       if (error) throw error;
@@ -191,7 +192,7 @@ export function useAuditFindings(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_audit_findings' as any)
+        .from('client_audit_findings')
         .select('*')
         .eq('audit_id', auditId)
         .order('created_at', { ascending: false });
@@ -204,10 +205,13 @@ export function useAuditFindings(auditId: string | undefined) {
     mutationFn: async (finding: Partial<AuditFinding> & { audit_id: string }) => {
       // Strip server-managed fields. finding_code is auto-generated by DB trigger;
       // standard_reference is legacy and replaced by regulatory_reference.
-      const { finding_code: _fc, standard_reference: _sr, ...payload } = finding as any;
+      const { finding_code: _fc, standard_reference: _sr, ...payload } = finding;
+      // Insert requires `summary`; the shared AddFindingInput contract (Partial<AuditFinding>)
+      // leaves it optional at the type level, but every real caller (AddFindingForm) already
+      // guards on a non-empty summary before calling this — same runtime contract as before.
       const { error } = await supabase
-        .from('client_audit_findings' as any)
-        .insert(payload as any);
+        .from('client_audit_findings')
+        .insert(payload as TablesInsert<'client_audit_findings'>);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -219,8 +223,8 @@ export function useAuditFindings(auditId: string | undefined) {
   const updateFinding = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<AuditFinding>) => {
       const { error } = await supabase
-        .from('client_audit_findings' as any)
-        .update(updates as any)
+        .from('client_audit_findings')
+        .update(updates)
         .eq('id', id);
       if (error) throw error;
     },
@@ -233,7 +237,7 @@ export function useAuditFindings(auditId: string | undefined) {
   const deleteFinding = useMutation({
     mutationFn: async (findingId: string) => {
       const { error } = await supabase
-        .from('client_audit_findings' as any)
+        .from('client_audit_findings')
         .delete()
         .eq('id', findingId);
       if (error) throw error;
@@ -256,7 +260,7 @@ export function useAuditActions(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_audit_actions' as any)
+        .from('client_audit_actions')
         .select('*')
         .eq('audit_id', auditId)
         .order('created_at', { ascending: false });
@@ -267,9 +271,11 @@ export function useAuditActions(auditId: string | undefined) {
 
   const createAction = useMutation({
     mutationFn: async (action: Partial<AuditAction> & { audit_id: string }) => {
+      // Insert requires `title`; same runtime contract as before — see the
+      // matching note on createFinding above.
       const { error } = await supabase
-        .from('client_audit_actions' as any)
-        .insert(action as any);
+        .from('client_audit_actions')
+        .insert(action as TablesInsert<'client_audit_actions'>);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -281,8 +287,8 @@ export function useAuditActions(auditId: string | undefined) {
   const updateAction = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<AuditAction>) => {
       const { error } = await supabase
-        .from('client_audit_actions' as any)
-        .update(updates as any)
+        .from('client_audit_actions')
+        .update(updates)
         .eq('id', id);
       if (error) throw error;
     },
@@ -294,7 +300,7 @@ export function useAuditActions(auditId: string | undefined) {
   const deleteAction = useMutation({
     mutationFn: async (actionId: string) => {
       const { error } = await supabase
-        .from('client_audit_actions' as any)
+        .from('client_audit_actions')
         .delete()
         .eq('id', actionId);
       if (error) throw error;
@@ -322,7 +328,7 @@ export function useAuditDocuments(auditId: string | undefined) {
     },
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_audit_documents' as any)
+        .from('client_audit_documents')
         .select('*')
         .eq('audit_id', auditId)
         .order('created_at', { ascending: false });
@@ -346,7 +352,7 @@ export function useAuditDocuments(auditId: string | undefined) {
       if (uploadErr) throw uploadErr;
 
       const { error: insertErr } = await supabase
-        .from('client_audit_documents' as any)
+        .from('client_audit_documents')
         .insert({
           audit_id: auditId,
           file_name: file.name,
@@ -357,15 +363,15 @@ export function useAuditDocuments(auditId: string | undefined) {
           qualification_code: qualificationCode || null,
           ai_status: 'pending',
           uploaded_by: (await supabase.auth.getUser()).data.user?.id,
-        } as any);
+        });
       if (insertErr) throw insertErr;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['audit-documents', auditId] });
       toast.success('Document uploaded');
     },
-    onError: (err: any) => {
-      toast.error('Upload failed: ' + (err.message || 'Unknown error'));
+    onError: (err) => {
+      toast.error('Upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
     },
   });
 
@@ -373,7 +379,7 @@ export function useAuditDocuments(auditId: string | undefined) {
     mutationFn: async ({ id, filePath }: { id: string; filePath: string }) => {
       await supabase.storage.from('audit-documents').remove([filePath]);
       const { error } = await supabase
-        .from('client_audit_documents' as any)
+        .from('client_audit_documents')
         .delete()
         .eq('id', id);
       if (error) throw error;
@@ -395,18 +401,18 @@ export function useUpdateAudit(auditId: string | undefined) {
     mutationFn: async (updates: Partial<ClientAudit>) => {
       if (!auditId) throw new Error('No audit ID');
       // risk_rating is derived server-side from finding priorities — never write it from the client.
-      const { risk_rating: _rr, ...safeUpdates } = updates as any;
+      const { risk_rating: _rr, ...safeUpdates } = updates;
       const { error } = await supabase
-        .from('client_audits' as any)
-        .update(safeUpdates as any)
+        .from('client_audits')
+        .update(safeUpdates)
         .eq('id', auditId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-audit', auditId] });
     },
-    onError: (error: any) => {
-      toast.error(`Failed to save: ${error?.message || 'Unknown error'}`);
+    onError: (error) => {
+      toast.error(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
     },
   });
 }
@@ -430,23 +436,23 @@ export function useAuditStatusTransition(auditId: string | undefined) {
         // idempotent per audit, so retrying "Mark Complete" after a failure
         // here is safe.)
         const { data, error: syncError } = await supabase
-          .rpc('sync_audit_actions_to_client_items', { p_audit_id: auditId } as any);
+          .rpc('sync_audit_actions_to_client_items', { p_audit_id: auditId });
         if (syncError) throw syncError;
-        syncCount = (data as number) || 0;
+        syncCount = data || 0;
       }
 
-      const updates: any = { status };
+      const updates: TablesUpdate<'client_audits'> = { status };
       if (status === 'complete') updates.closed_at = new Date().toISOString();
 
       const { error } = await supabase
-        .from('client_audits' as any)
+        .from('client_audits')
         .update(updates)
         .eq('id', auditId);
       if (error) throw error;
 
       if (status === 'complete') {
         try {
-          await supabase.from('client_timeline_events' as any).insert({
+          await supabase.from('client_timeline_events').insert({
             tenant_id: audit.subject_tenant_id,
             client_id: String(audit.subject_tenant_id),
             event_type: 'audit_completed',
@@ -463,7 +469,7 @@ export function useAuditStatusTransition(auditId: string | undefined) {
               risk_rating: audit.risk_rating,
               score_pct: audit.score_pct,
             },
-          } as any);
+          });
         } catch (err) {
           // Non-critical (a missing Timeline entry, not client-facing data) —
           // logged so drift like a missing event_type in the CHECK constraint
@@ -485,13 +491,14 @@ export function useAuditStatusTransition(auditId: string | undefined) {
         toast.success('Status updated');
       }
     },
-    onError: (err: any, { status }) => {
+    onError: (err, { status }) => {
+      const message = err instanceof Error ? err.message : 'unknown error';
       if (status === 'complete') {
         toast.error(
-          `Could not mark the audit complete (${err?.message || 'unknown error'}). The audit was not marked complete — please retry.`,
+          `Could not mark the audit complete (${message}). The audit was not marked complete — please retry.`,
         );
       } else {
-        toast.error(`Failed to update status: ${err?.message || 'Unknown error'}`);
+        toast.error(`Failed to update status: ${message}`);
       }
     },
   });
@@ -530,7 +537,7 @@ export function useAuditScore(
         score_total: scoreTotal,
         score_max: scoreMax,
         score_pct: scorePct,
-      } as any);
+      });
     }, 1000);
   }, [responses, questions, auditId, updateAuditMutate]);
 
@@ -549,8 +556,8 @@ export function useUpdateSectionSummary(auditId: string | undefined) {
   return useMutation({
     mutationFn: async ({ sectionId, summary }: { sectionId: string; summary: string }) => {
       const { error } = await supabase
-        .from('client_audit_sections' as any)
-        .update({ section_summary: summary } as any)
+        .from('client_audit_sections')
+        .update({ section_summary: summary })
         .eq('id', sectionId);
       if (error) throw error;
     },
@@ -566,8 +573,8 @@ export function useUpdateSectionRiskLevel(auditId: string | undefined) {
   return useMutation({
     mutationFn: async ({ sectionId, riskLevel }: { sectionId: string; riskLevel: string }) => {
       const { error } = await supabase
-        .from('client_audit_sections' as any)
-        .update({ risk_level: riskLevel } as any)
+        .from('client_audit_sections')
+        .update({ risk_level: riskLevel })
         .eq('id', sectionId);
       if (error) throw error;
     },
@@ -583,7 +590,7 @@ export function useInternalUsers() {
     queryKey: ['internal-users'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('users' as any)
+        .from('users')
         .select('user_uuid, first_name, last_name, avatar_url')
         .eq('is_vivacity_internal', true)
         .eq('is_system_account', false);
@@ -616,7 +623,7 @@ export function useFindingsWithoutActions(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('v_client_audit_findings_without_actions' as any)
+        .from('v_client_audit_findings_without_actions')
         .select('*')
         .eq('audit_id', auditId);
       if (error) throw error;
