@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { Json } from "@/integrations/supabase/types";
 
 const TENANT_KEY = "academy-tenant-access";
 
@@ -10,7 +11,7 @@ export interface TenantRow {
   academy_access_enabled: boolean;
   academy_max_users: number | null;
   academy_subscription_expires_at: string | null;
-  metadata: Record<string, any> | null;
+  metadata: Json | null;
   enrolled_count: number;
 }
 
@@ -39,17 +40,18 @@ export function useTenantSummaries() {
         .eq("status", "active");
 
       const countMap = new Map<number, number>();
-      (enrolData ?? []).forEach((e: any) => {
+      (enrolData ?? []).forEach((e) => {
+        if (e.tenant_id == null) return;
         countMap.set(e.tenant_id, (countMap.get(e.tenant_id) || 0) + 1);
       });
 
-      return (tenantData ?? []).map((t: any) => ({
+      return (tenantData ?? []).map((t) => ({
         id: t.id,
         name: t.name ?? `Tenant ${t.id}`,
         academy_access_enabled: t.academy_access_enabled ?? false,
         academy_max_users: t.academy_max_users,
         academy_subscription_expires_at: t.academy_subscription_expires_at,
-        metadata: t.metadata as Record<string, any> | null,
+        metadata: t.metadata,
         enrolled_count: countMap.get(t.id) || 0,
       }));
     },
@@ -63,7 +65,7 @@ export function useToggleTenantAccess() {
     mutationFn: async ({ id, enabled }: { id: number; enabled: boolean }) => {
       const { error } = await supabase
         .from("tenants")
-        .update({ academy_access_enabled: enabled } as any)
+        .update({ academy_access_enabled: enabled })
         .eq("id", id);
       if (error) throw error;
     },
@@ -84,12 +86,12 @@ export function useUpdateTenantAccess() {
         academy_access_enabled?: boolean;
         academy_max_users?: number | null;
         academy_subscription_expires_at?: string | null;
-        metadata?: Record<string, any>;
+        metadata?: Json;
       };
     }) => {
       const { error } = await supabase
         .from("tenants")
-        .update(data as any)
+        .update(data)
         .eq("id", tenantId);
       if (error) throw error;
     },
@@ -113,18 +115,18 @@ export function usePackageCourseRules(enabled: boolean) {
 
       if (!rules?.length) return [];
 
-      const packageIds = [...new Set(rules.map((r: any) => r.package_id))];
-      const courseIds = [...new Set(rules.map((r: any) => r.course_id))];
+      const packageIds = [...new Set(rules.map((r) => r.package_id))];
+      const courseIds = [...new Set(rules.map((r) => r.course_id))];
 
       const [{ data: pkgs }, { data: courses }] = await Promise.all([
         supabase.from("packages").select("id, name").in("id", packageIds),
         supabase.from("academy_courses").select("id, title").in("id", courseIds),
       ]);
 
-      const pkgMap = new Map((pkgs ?? []).map((p: any) => [p.id, p.name]));
-      const courseMap = new Map((courses ?? []).map((c: any) => [c.id, c.title]));
+      const pkgMap = new Map((pkgs ?? []).map((p) => [p.id, p.name]));
+      const courseMap = new Map((courses ?? []).map((c) => [c.id, c.title]));
 
-      return rules.map((r: any) => ({
+      return rules.map((r) => ({
         id: r.id,
         package_id: r.package_id,
         course_id: r.course_id,
@@ -145,7 +147,7 @@ export function useAddPackageCourseRule() {
         package_id: packageId,
         course_id: courseId,
         is_active: true,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -162,7 +164,7 @@ export function useRemovePackageCourseRule() {
     mutationFn: async (ruleId: number) => {
       const { error } = await supabase
         .from("academy_package_course_rules")
-        .update({ is_active: false } as any)
+        .update({ is_active: false })
         .eq("id", ruleId);
       if (error) throw error;
     },

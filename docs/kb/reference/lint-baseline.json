@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T04:03:11.678Z",
-  "baselineSha": "0b31f3497e202a448528f76b034609044bcf0634",
+  "generatedAt": "2026-09-04T04:25:38.414Z",
+  "baselineSha": "e9051b27df0bfd9c707150c6a0bc2b9bf31e86c3",
   "totals": {
     "files": 1787,
-    "filesWithFindings": 557,
-    "errors": 3537,
+    "filesWithFindings": 552,
+    "errors": 3422,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3530,
+    "@typescript-eslint/no-explicit-any": 3415,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2869,
+      "errors": 2754,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2862,
+        "@typescript-eslint/no-explicit-any": 2747,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -62,10 +62,10 @@
       }
     },
     "src/components/academy/builder": {
-      "errors": 27,
+      "errors": 26,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 26,
+        "@typescript-eslint/no-explicit-any": 25,
         "@typescript-eslint/no-unused-expressions": 1
       }
     },
@@ -383,13 +383,6 @@
       }
     },
     "src/features/pdp": {},
-    "src/hooks/academy": {
-      "errors": 114,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 114
-      }
-    },
     "src/hooks/admin": {
       "errors": 7,
       "warnings": 0,
@@ -1308,7 +1301,7 @@
       "@typescript-eslint/no-explicit-any": 2
     },
     "src/components/academy/builder/LessonEditorPanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
+      "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/academy/builder/PackageRulesTab.tsx": {
       "@typescript-eslint/no-explicit-any": 10
@@ -1910,21 +1903,6 @@
       "react-refresh/only-export-components": 1
     },
     "src/features/pdp/workforce.ts": {},
-    "src/hooks/academy/useAcademyAssessmentBuilder.ts": {
-      "@typescript-eslint/no-explicit-any": 18
-    },
-    "src/hooks/academy/useAcademyCertificates.ts": {
-      "@typescript-eslint/no-explicit-any": 15
-    },
-    "src/hooks/academy/useAcademyEnrollments.ts": {
-      "@typescript-eslint/no-explicit-any": 48
-    },
-    "src/hooks/academy/useAcademyModulesLessons.ts": {
-      "@typescript-eslint/no-explicit-any": 19
-    },
-    "src/hooks/academy/useTenantAcademyAccess.ts": {
-      "@typescript-eslint/no-explicit-any": 14
-    },
     "src/hooks/admin/use-broadcast-obligation.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },

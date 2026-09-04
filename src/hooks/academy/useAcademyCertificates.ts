@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { Json } from "@/integrations/supabase/types";
 
 const CERT_KEY = "academy-certificates-admin";
 
@@ -21,7 +22,7 @@ export interface CertRow {
   public_url: string | null;
   storage_path: string | null;
   enrollment_id: number;
-  metadata: Record<string, any> | null;
+  metadata: Json | null;
 }
 
 export function useAdminCertificates() {
@@ -35,9 +36,9 @@ export function useAdminCertificates() {
       if (error) throw error;
       if (!certData?.length) return [];
 
-      const userIds = [...new Set(certData.map((c: any) => c.user_id))];
-      const courseIds = [...new Set(certData.map((c: any) => c.course_id))];
-      const tenantIds = [...new Set(certData.map((c: any) => c.tenant_id).filter(Boolean))] as number[];
+      const userIds = [...new Set(certData.map((c) => c.user_id))];
+      const courseIds = [...new Set(certData.map((c) => c.course_id))];
+      const tenantIds = [...new Set(certData.map((c) => c.tenant_id).filter(Boolean))] as number[];
 
       const [{ data: users }, { data: courses }, { data: tenantsList }] = await Promise.all([
         supabase.from("users").select("user_uuid, first_name, last_name, email").in("user_uuid", userIds),
@@ -47,12 +48,12 @@ export function useAdminCertificates() {
           : Promise.resolve({ data: [] }),
       ]);
 
-      const userMap = new Map((users ?? []).map((u: any) => [u.user_uuid, u]));
-      const courseMap = new Map((courses ?? []).map((c: any) => [c.id, c.title]));
-      const tenantMap = new Map((tenantsList ?? []).map((t: any) => [t.id, t.name]));
+      const userMap = new Map((users ?? []).map((u) => [u.user_uuid, u]));
+      const courseMap = new Map((courses ?? []).map((c) => [c.id, c.title]));
+      const tenantMap = new Map((tenantsList ?? []).map((t) => [t.id, t.name]));
 
-      return certData.map((c: any) => {
-        const user: any = userMap.get(c.user_id);
+      return certData.map((c) => {
+        const user = userMap.get(c.user_id);
         const email = user?.email ?? "";
         const fullName = user
           ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
@@ -74,7 +75,7 @@ export function useAdminCertificates() {
           public_url: c.public_url,
           storage_path: c.storage_path,
           enrollment_id: c.enrollment_id,
-          metadata: c.metadata as Record<string, any> | null,
+          metadata: c.metadata,
         };
       });
     },
@@ -89,7 +90,7 @@ export function useIssueCertificate() {
       userId: string;
       courseId: number;
       tenantId?: number | null;
-      metadata?: Record<string, any> | null;
+      metadata?: Json | null;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -113,7 +114,7 @@ export function useIssueCertificate() {
             tenant_id: tenantId ?? null,
             status: "completed",
             completed_at: new Date().toISOString(),
-          } as any)
+          })
           .select("id")
           .single();
         if (enrolErr) throw enrolErr;
@@ -133,14 +134,14 @@ export function useIssueCertificate() {
         issued_by: user?.id ?? null,
         tenant_id: tenantId ?? null,
         metadata: metadata ?? null,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Certificate issued successfully");
       qc.invalidateQueries({ queryKey: [CERT_KEY] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to issue certificate"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to issue certificate"),
   });
 }
 
@@ -155,7 +156,7 @@ export function useRevokeCertificate() {
           revoked_at: new Date().toISOString(),
           revoked_by: user?.id ?? null,
           revoke_reason: reason,
-        } as any)
+        })
         .eq("id", id);
       if (error) throw error;
     },

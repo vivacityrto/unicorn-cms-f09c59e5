@@ -65,13 +65,13 @@ export function useModulesWithLessons(courseId: number | null, opts?: { admin?: 
       if (lErr) throw lErr;
 
       const lessonsByModule = new Map<number, AcademyLesson[]>();
-      (lessons ?? []).forEach((l: any) => {
+      (lessons ?? []).forEach((l) => {
         const arr = lessonsByModule.get(l.module_id) || [];
-        arr.push(l);
+        arr.push(l as AcademyLesson);
         lessonsByModule.set(l.module_id, arr);
       });
 
-      return (modules ?? []).map((m: any) => ({
+      return (modules ?? []).map((m) => ({
         ...m,
         lessons: lessonsByModule.get(m.id) || [],
       }));
@@ -87,7 +87,7 @@ export function useCreateModule() {
     mutationFn: async ({ courseId, data }: { courseId: number; data: { title: string; description?: string; sort_order?: number } }) => {
       const { data: row, error } = await supabase
         .from("academy_modules")
-        .insert({ course_id: courseId, ...data } as any)
+        .insert({ course_id: courseId, ...data })
         .select()
         .single();
       if (error) throw error;
@@ -97,15 +97,15 @@ export function useCreateModule() {
       toast.success("Module created");
       qc.invalidateQueries({ queryKey: [MODULES_KEY, vars.courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to create module"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to create module"),
   });
 }
 
 export function useUpdateModule() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, courseId, data }: { id: number; courseId: number; data: Record<string, any> }) => {
-      const { error } = await supabase.from("academy_modules").update(data as any).eq("id", id);
+    mutationFn: async ({ id, courseId, data }: { id: number; courseId: number; data: Partial<Omit<AcademyModule, "id" | "course_id" | "lessons">> }) => {
+      const { error } = await supabase.from("academy_modules").update(data).eq("id", id);
       if (error) throw error;
       return courseId;
     },
@@ -113,7 +113,7 @@ export function useUpdateModule() {
       toast.success("Module updated");
       qc.invalidateQueries({ queryKey: [MODULES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update module"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to update module"),
   });
 }
 
@@ -129,7 +129,7 @@ export function useDeleteModule() {
       toast.success("Module deleted");
       qc.invalidateQueries({ queryKey: [MODULES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to delete module"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to delete module"),
   });
 }
 
@@ -138,7 +138,7 @@ export function useReorderModules() {
   return useMutation({
     mutationFn: async ({ courseId, orderedIds }: { courseId: number; orderedIds: number[] }) => {
       const updates = orderedIds.map((id, i) =>
-        supabase.from("academy_modules").update({ sort_order: i + 1 } as any).eq("id", id)
+        supabase.from("academy_modules").update({ sort_order: i + 1 }).eq("id", id)
       );
       await Promise.all(updates);
       return courseId;
@@ -146,17 +146,21 @@ export function useReorderModules() {
     onSuccess: (courseId) => {
       qc.invalidateQueries({ queryKey: [MODULES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to reorder modules"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to reorder modules"),
   });
 }
 
 export function useCreateLesson() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ moduleId, courseId, data }: { moduleId: number; courseId: number; data: Record<string, any> }) => {
+    mutationFn: async ({ moduleId, courseId, data }: {
+      moduleId: number;
+      courseId: number;
+      data: Partial<Omit<AcademyLesson, "id" | "module_id" | "course_id">> & { title: string };
+    }) => {
       const { data: row, error } = await supabase
         .from("academy_lessons")
-        .insert({ module_id: moduleId, course_id: courseId, ...data } as any)
+        .insert({ module_id: moduleId, course_id: courseId, ...data })
         .select()
         .single();
       if (error) throw error;
@@ -166,15 +170,15 @@ export function useCreateLesson() {
       toast.success("Lesson created");
       qc.invalidateQueries({ queryKey: [MODULES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to create lesson"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to create lesson"),
   });
 }
 
 export function useUpdateLesson() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, courseId, data }: { id: number; courseId: number; data: Record<string, any> }) => {
-      const { error } = await supabase.from("academy_lessons").update(data as any).eq("id", id);
+    mutationFn: async ({ id, courseId, data }: { id: number; courseId: number; data: Partial<Omit<AcademyLesson, "id" | "module_id" | "course_id">> }) => {
+      const { error } = await supabase.from("academy_lessons").update(data).eq("id", id);
       if (error) throw error;
       return courseId;
     },
@@ -182,7 +186,7 @@ export function useUpdateLesson() {
       toast.success("Lesson updated");
       qc.invalidateQueries({ queryKey: [MODULES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update lesson"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to update lesson"),
   });
 }
 
@@ -198,7 +202,7 @@ export function useDeleteLesson() {
       toast.success("Lesson deleted");
       qc.invalidateQueries({ queryKey: [MODULES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to delete lesson"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to delete lesson"),
   });
 }
 
@@ -207,7 +211,7 @@ export function useReorderLessons() {
   return useMutation({
     mutationFn: async ({ moduleId, courseId, orderedIds }: { moduleId: number; courseId: number; orderedIds: number[] }) => {
       const updates = orderedIds.map((id, i) =>
-        supabase.from("academy_lessons").update({ sort_order: i + 1 } as any).eq("id", id)
+        supabase.from("academy_lessons").update({ sort_order: i + 1 }).eq("id", id)
       );
       await Promise.all(updates);
       return courseId;
@@ -215,6 +219,6 @@ export function useReorderLessons() {
     onSuccess: (courseId) => {
       qc.invalidateQueries({ queryKey: [MODULES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to reorder lessons"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to reorder lessons"),
   });
 }

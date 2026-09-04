@@ -150,7 +150,20 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
       }
     }
 
-    const payload: Record<string, any> = {
+    const payload: {
+      title: string;
+      description: string | null;
+      lesson_type: LessonType;
+      estimated_minutes: number | null;
+      is_preview: boolean;
+      is_published: boolean;
+      video_id: string | null;
+      resource_id: string | null;
+      content_markdown: string | null;
+      completion_threshold: number | null;
+      sort_order?: number;
+      created_by?: string;
+    } = {
       title: title.trim(),
       description: description || null,
       lesson_type: lessonType,
