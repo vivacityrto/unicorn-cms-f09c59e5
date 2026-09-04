@@ -27,24 +27,24 @@ export const useFacilitatorChange = (meetingId: string | undefined) => {
     queryFn: async () => {
       if (!meetingId) return [];
 
-      const { data: rows, error } = await (supabase
-        .from('eos_meeting_participants') as any)
+      const { data: rows, error } = await supabase
+        .from('eos_meeting_participants')
         .select('*')
         .eq('meeting_id', meetingId);
 
       if (error) throw error;
 
-      const userIds = (rows ?? []).map((p: any) => p.user_id);
+      const userIds = (rows ?? []).map((p) => p.user_id);
       const { data: userRows, error: userError } = userIds.length
-        ? await (supabase as any)
+        ? await supabase
             .from('users')
             .select('user_uuid, first_name, last_name')
             .in('user_uuid', userIds)
         : { data: [], error: null };
       if (userError) throw userError;
 
-      const userMap = new Map((userRows ?? []).map((u: any) => [u.user_uuid, u]));
-      return (rows ?? []).map((p: any) => ({ ...p, users: userMap.get(p.user_id) ?? null })) as Participant[];
+      const userMap = new Map((userRows ?? []).map((u) => [u.user_uuid, u]));
+      return (rows ?? []).map((p) => ({ ...p, users: userMap.get(p.user_id) ?? null })) as Participant[];
     },
     enabled: !!meetingId,
   });
@@ -55,8 +55,7 @@ export const useFacilitatorChange = (meetingId: string | undefined) => {
   // Mutation to change facilitator
   const changeFacilitator = useMutation({
     mutationFn: async (newFacilitatorId: string) => {
-      // Type assertion needed - RPC exists but types.ts not regenerated
-      const { data, error } = await (supabase.rpc as any)('change_meeting_facilitator', {
+      const { data, error } = await supabase.rpc('change_meeting_facilitator', {
         p_meeting_id: meetingId!,
         p_new_facilitator_id: newFacilitatorId
       });

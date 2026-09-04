@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T22:39:39.886Z",
-  "baselineSha": "93ce61e5b9a69aebf0ce0e0292517ca95b856739",
+  "generatedAt": "2026-09-04T22:44:46.164Z",
+  "baselineSha": "15e19427436ec4c7042f252382ecc489b94a937d",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 391,
-    "errors": 1427,
+    "filesWithFindings": 389,
+    "errors": 1415,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1420,
+    "@typescript-eslint/no-explicit-any": 1408,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 759,
+      "errors": 747,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 752,
+        "@typescript-eslint/no-explicit-any": 740,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -372,10 +372,10 @@
       }
     },
     "src/hooks": {
-      "errors": 294,
+      "errors": 282,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 294,
+        "@typescript-eslint/no-explicit-any": 282,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1733,9 +1733,6 @@
     "src/hooks/useExecutiveHealth.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "src/hooks/useFacilitatorChange.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
-    },
     "src/hooks/useFlightPlan.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -1792,9 +1789,6 @@
     },
     "src/hooks/useOnboardingHub.ts": {
       "@typescript-eslint/no-explicit-any": 7
-    },
-    "src/hooks/useOperationsDashboard.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/hooks/usePackagePhases.ts": {
       "@typescript-eslint/no-explicit-any": 6
