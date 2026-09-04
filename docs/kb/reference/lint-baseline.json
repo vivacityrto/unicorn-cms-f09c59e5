@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T04:25:38.414Z",
-  "baselineSha": "e9051b27df0bfd9c707150c6a0bc2b9bf31e86c3",
+  "generatedAt": "2026-09-04T04:45:49.914Z",
+  "baselineSha": "105a4c1566d5bf4dfb7044010a464245fea26ab3",
   "totals": {
     "files": 1787,
-    "filesWithFindings": 552,
-    "errors": 3422,
+    "filesWithFindings": 543,
+    "errors": 3380,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3415,
+    "@typescript-eslint/no-explicit-any": 3373,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2754,
+      "errors": 2712,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2747,
+        "@typescript-eslint/no-explicit-any": 2705,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -391,10 +391,10 @@
       }
     },
     "src/hooks": {
-      "errors": 1120,
+      "errors": 1078,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1120,
+        "@typescript-eslint/no-explicit-any": 1078,
         "react-refresh/only-export-components": 1
       }
     },
@@ -2249,32 +2249,14 @@
     "src/hooks/useStaffTaskInstances.ts": {
       "@typescript-eslint/no-explicit-any": 15
     },
-    "src/hooks/useStageActiveUsage.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
     "src/hooks/useStageAnalytics.tsx": {
       "@typescript-eslint/no-explicit-any": 22
-    },
-    "src/hooks/useStageAuditLink.ts": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/hooks/useStageAuditLog.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/hooks/useStageCertification.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "src/hooks/useStageDependencies.tsx": {
       "@typescript-eslint/no-explicit-any": 9
     },
-    "src/hooks/useStageDocuments.ts": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/hooks/useStageDuplication.tsx": {
       "@typescript-eslint/no-explicit-any": 18
-    },
-    "src/hooks/useStageEmails.ts": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/hooks/useStageExportImport.tsx": {
       "@typescript-eslint/no-explicit-any": 21
@@ -2282,23 +2264,14 @@
     "src/hooks/useStageQualityCheck.tsx": {
       "@typescript-eslint/no-explicit-any": 8
     },
-    "src/hooks/useStageReleases.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/hooks/useStageReplacement.tsx": {
       "@typescript-eslint/no-explicit-any": 14
-    },
-    "src/hooks/useStageReviews.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/hooks/useStageSimulation.tsx": {
       "@typescript-eslint/no-explicit-any": 14
     },
     "src/hooks/useStageTemplateContent.tsx": {
       "@typescript-eslint/no-explicit-any": 34
-    },
-    "src/hooks/useStageVersions.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "src/hooks/useStrategicCommand.ts": {
       "@typescript-eslint/no-explicit-any": 4

@@ -75,7 +75,7 @@ export function useStageReleases(tenantId?: number) {
     if (!tenantId) return;
     setLoading(true);
     try {
-      let query = (supabase as any)
+      let query = supabase
         .from('stage_releases')
         .select(`
           *,
@@ -90,7 +90,7 @@ export function useStageReleases(tenantId?: number) {
       const { data, error } = await query;
       if (error) throw error;
       setReleases(data as StageRelease[] ?? []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch releases:', error);
     } finally {
       setLoading(false);
@@ -117,10 +117,10 @@ export function useStageReleases(tenantId?: number) {
       if (!result?.success) throw new Error(result?.error || 'Failed to create release');
 
       return { id: result.release_id } as StageRelease;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create release',
+        description: error instanceof Error ? error.message : 'Failed to create release',
         variant: 'destructive'
       });
       return null;
@@ -164,10 +164,10 @@ export function useStageReleases(tenantId?: number) {
       });
 
       return true;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Generation Failed',
-        description: error.message || 'Failed to generate documents',
+        description: error instanceof Error ? error.message : 'Failed to generate documents',
         variant: 'destructive'
       });
       return false;
@@ -266,7 +266,7 @@ export function useStageReleases(tenantId?: number) {
       results.requires_override = results.summary.fail > 0;
 
       return results;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Readiness check failed:', error);
       return {
         can_release: false,
@@ -276,7 +276,7 @@ export function useStageReleases(tenantId?: number) {
           document_id: 0,
           document_name: 'Error',
           status: 'fail',
-          issues: [error.message || 'Failed to check readiness']
+          issues: [error instanceof Error ? error.message : 'Failed to check readiness']
         }]
       };
     }
@@ -343,10 +343,10 @@ export function useStageReleases(tenantId?: number) {
       });
 
       return true;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Release Failed',
-        description: error.message || 'Failed to release documents',
+        description: error instanceof Error ? error.message : 'Failed to release documents',
         variant: 'destructive'
       });
       return false;
@@ -361,9 +361,9 @@ export function useStageReleases(tenantId?: number) {
     failed: number;
     pending: number;
   }> => {
-    const { data: items } = await (supabase
+    const { data: items } = await supabase
       .from('stage_release_items')
-      .select('generation_status') as any)
+      .select('generation_status')
       .eq('stage_release_id', releaseId);
 
     const statuses = items || [];

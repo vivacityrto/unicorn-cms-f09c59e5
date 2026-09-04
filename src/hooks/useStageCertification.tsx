@@ -62,10 +62,10 @@ export function useStageCertification(): UseStageCertificationResult {
         description: isCertified ? 'Stage marked as certified.' : 'Certification removed.'
       });
       return true;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update certification',
+        description: error instanceof Error ? error.message : 'Failed to update certification',
         variant: 'destructive'
       });
       return false;

@@ -20,7 +20,7 @@ export function useStageActiveUsage(stageId: number | null) {
       setLoading(true);
       try {
         // Step 1: client_package_stages → client_packages (active)
-        const { data: cpsRows, error: cpsError } = await (supabase as any)
+        const { data: cpsRows, error: cpsError } = await supabase
           .from('client_package_stages')
           .select('id, client_packages!inner(id, status, tenant_id)')
           .eq('stage_id', stageId)
@@ -30,19 +30,19 @@ export function useStageActiveUsage(stageId: number | null) {
 
         const tenantIds = Array.from(new Set(
           (cpsRows || [])
-            .map((r: any) => r.client_packages?.tenant_id)
-            .filter((v: any) => v != null)
+            .map((r) => r.client_packages?.tenant_id)
+            .filter((v) => v != null)
         )) as number[];
 
         // Step 2: fetch tenant names separately (no FK relationship between client_packages and tenants)
         const tenantNameMap = new Map<number, string>();
         if (tenantIds.length > 0) {
-          const { data: tenantsData, error: tErr } = await (supabase as any)
+          const { data: tenantsData, error: tErr } = await supabase
             .from('tenants')
-            .select('tenant_id, name')
-            .in('tenant_id', tenantIds);
+            .select('id, name')
+            .in('id', tenantIds);
           if (tErr) throw tErr;
-          (tenantsData || []).forEach((t: any) => tenantNameMap.set(t.tenant_id, t.name));
+          (tenantsData || []).forEach((t) => tenantNameMap.set(t.id, t.name));
         }
 
         const clients = tenantIds.map(id => ({
