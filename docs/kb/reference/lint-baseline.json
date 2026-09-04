@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T06:36:01.099Z",
-  "baselineSha": "b97cd2ed3ab94cdde757adbd787c73d8304f2966",
+  "generatedAt": "2026-09-04T07:58:14.929Z",
+  "baselineSha": "12169da8f4924014744e82f8b4868375981bb6c3",
   "totals": {
     "files": 1787,
-    "filesWithFindings": 499,
-    "errors": 3097,
+    "filesWithFindings": 493,
+    "errors": 2961,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3090,
+    "@typescript-eslint/no-explicit-any": 2954,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2429,
+      "errors": 2293,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2422,
+        "@typescript-eslint/no-explicit-any": 2286,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -135,11 +135,11 @@
       }
     },
     "src/components/client": {
-      "errors": 209,
+      "errors": 73,
       "warnings": 5,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 207,
         "@typescript-eslint/no-unused-expressions": 2,
+        "@typescript-eslint/no-explicit-any": 71,
         "react-refresh/only-export-components": 5
       }
     },
@@ -1428,17 +1428,8 @@
     "src/components/client-portal/support-tickets/useClientSubmitTicket.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/components/client/AddTimeDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 19
-    },
     "src/components/client/AuditPreparationSection.tsx": {
       "@typescript-eslint/no-unused-expressions": 1
-    },
-    "src/components/client/ClientIntegrationsTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 31
-    },
-    "src/components/client/ClientMessagesTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 28
     },
     "src/components/client/ClientTimeTab.tsx": {
       "@typescript-eslint/no-explicit-any": 71
@@ -1447,17 +1438,8 @@
       "react-refresh/only-export-components": 1,
       "@typescript-eslint/no-unused-expressions": 1
     },
-    "src/components/client/PackageDataManager.tsx": {
-      "@typescript-eslint/no-explicit-any": 18
-    },
-    "src/components/client/RenewalConfirmDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 24
-    },
     "src/components/client/ScopeSelectorBadge.tsx": {
       "react-refresh/only-export-components": 2
-    },
-    "src/components/client/StartPackageDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 16
     },
     "src/components/client/TimelineEventCard.tsx": {
       "react-refresh/only-export-components": 2

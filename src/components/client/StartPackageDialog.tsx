@@ -79,18 +79,18 @@ export function StartPackageDialog({
       setPackages((packagesData || []) as Package[]);
 
       // Fetch CSC users (users flagged as is_csc)
-      const usersResult = await (supabase
-        .from('users' as any)
+      const { data: usersData } = await supabase
+        .from('users')
         .select('user_uuid, first_name, last_name')
         .eq('is_csc', true)
         .eq('disabled', false)
         .eq('archived', false)
-        .order('first_name')) as { data: CscUser[] | null; error: any };
-      setCscUsers(usersResult.data || []);
+        .order('first_name');
+      setCscUsers(usersData || []);
 
       // Fetch active (non-complete, non-child) package instances for this tenant.
       // Excludes cancelled membership instances so they don't block re-starts.
-      const { data: instancesData } = await (supabase as any)
+      const { data: instancesData } = await supabase
         .from('package_instances')
         .select('id, package_id, manager_id, membership_state')
         .eq('tenant_id', tenantId)
@@ -99,27 +99,27 @@ export function StartPackageDialog({
         .order('start_date', { ascending: false });
 
       const liveInstances = (instancesData || []).filter(
-        (i: any) => (i.membership_state ?? 'active') !== 'cancelled'
+        (i) => (i.membership_state ?? 'active') !== 'cancelled'
       );
 
       if (liveInstances.length > 0) {
-        const pkgIds = [...new Set(liveInstances.map((i: any) => i.package_id))] as number[];
+        const pkgIds = [...new Set(liveInstances.map((i) => i.package_id))];
         const { data: pkgRows } = await supabase
           .from('packages')
           .select('id, name, full_text, slug, package_type')
           .in('id', pkgIds);
         const pkgMap = new Map(
-          (pkgRows || []).map((p: any) => [p.id, p])
+          (pkgRows || []).map((p) => [p.id, p])
         );
 
-        setActiveInstances(liveInstances.map((inst: any) => {
+        setActiveInstances(liveInstances.map((inst) => {
           const p = pkgMap.get(inst.package_id);
           return {
             id: inst.id,
             package_id: inst.package_id,
-            package_name: (p as any)?.full_text || (p as any)?.name || `Package #${inst.package_id}`,
-            package_type: (p as any)?.package_type ?? null,
-            package_stream: getPackageStream((p as any)?.name, (p as any)?.slug),
+            package_name: p?.full_text || p?.name || `Package #${inst.package_id}`,
+            package_type: p?.package_type ?? null,
+            package_stream: getPackageStream(p?.name, p?.slug),
             manager_id: inst.manager_id || null,
           };
         }));
@@ -193,10 +193,10 @@ export function StartPackageDialog({
 
       if (parentId) {
         // Link the new instance to the parent, save comments and hours_used
-        const updatePayload: Record<string, any> = { parent_instance_id: parentId };
+        const updatePayload: { parent_instance_id: number; comments?: string; hours_used?: number } = { parent_instance_id: parentId };
         if (comments.trim()) updatePayload.comments = comments.trim();
         if (hoursUsed) updatePayload.hours_used = parseFloat(hoursUsed);
-        await (supabase as any)
+        await supabase
           .from('package_instances')
           .update(updatePayload)
           .eq('id', packageInstanceId);
@@ -207,14 +207,14 @@ export function StartPackageDialog({
 
         if (hoursToAdd > 0) {
           // Get current hours_added on parent
-          const { data: parentData } = await (supabase as any)
+          const { data: parentData } = await supabase
             .from('package_instances')
             .select('hours_added')
             .eq('id', parentId)
             .single();
 
           const currentAdded = parentData?.hours_added || 0;
-          await (supabase as any)
+          await supabase
             .from('package_instances')
             .update({ hours_added: currentAdded + hoursToAdd })
             .eq('id', parentId);
