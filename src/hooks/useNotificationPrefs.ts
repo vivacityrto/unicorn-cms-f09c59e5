@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface CategoryPrefs {
   tasks: boolean;
@@ -16,6 +17,14 @@ const DEFAULT_CATEGORIES: CategoryPrefs = {
   obligations: true,
   events: true,
 };
+
+interface NotificationPrefsRow {
+  email_enabled?: boolean | null;
+  inapp_enabled?: boolean | null;
+  digest_enabled?: boolean | null;
+  quiet_hours?: Json;
+  event_settings?: Json;
+}
 
 function parseCategories(eventSettings: unknown): CategoryPrefs {
   if (typeof eventSettings === "object" && eventSettings !== null) {
@@ -40,16 +49,17 @@ export function useNotificationPrefs() {
 
   const query = useQuery({
     queryKey: ["notification-prefs", profile?.user_uuid],
-    queryFn: async (): Promise<{ categories: CategoryPrefs; raw: Record<string, unknown> }> => {
-      const { data, error } = await supabase.rpc("get_user_notification_prefs" as any);
+    queryFn: async (): Promise<{ categories: CategoryPrefs; raw: NotificationPrefsRow }> => {
+      const { data, error } = await supabase.rpc("get_user_notification_prefs");
       if (error) throw error;
 
       // RPC returns a single row or array with one row
-      const row = Array.isArray(data) ? data[0] : data;
-      const eventSettings = row?.event_settings ?? {};
+      const rawData = Array.isArray(data) ? data[0] : data;
+      const row = (rawData ?? {}) as unknown as NotificationPrefsRow;
+      const eventSettings = row.event_settings ?? {};
       return {
         categories: parseCategories(eventSettings),
-        raw: row ?? {},
+        raw: row,
       };
     },
     enabled: !!profile?.user_uuid,
@@ -58,10 +68,10 @@ export function useNotificationPrefs() {
   const updateMutation = useMutation({
     mutationFn: async (updated: CategoryPrefs) => {
       // Merge categories into existing event_settings
-      const currentRaw = query.data?.raw ?? {};
+      const currentRaw: NotificationPrefsRow = query.data?.raw ?? {};
       const currentEventSettings =
-        typeof (currentRaw as any).event_settings === "object"
-          ? (currentRaw as any).event_settings
+        typeof currentRaw.event_settings === "object" && currentRaw.event_settings !== null
+          ? currentRaw.event_settings
           : {};
 
       const newEventSettings = {
@@ -69,12 +79,16 @@ export function useNotificationPrefs() {
         categories: updated,
       };
 
-      const { error } = await supabase.rpc("update_user_notification_prefs" as any, {
-        p_email_enabled: (currentRaw as any).email_enabled ?? true,
-        p_inapp_enabled: (currentRaw as any).inapp_enabled ?? true,
-        p_digest_enabled: (currentRaw as any).digest_enabled ?? false,
-        p_quiet_hours: (currentRaw as any).quiet_hours ?? {},
-        p_event_settings: newEventSettings,
+      // update_user_notification_prefs takes a single p_prefs jsonb argument (confirmed
+      // via pg_get_function_identity_arguments) — not five separate p_-prefixed params.
+      const { error } = await supabase.rpc("update_user_notification_prefs", {
+        p_prefs: {
+          email_enabled: currentRaw.email_enabled ?? true,
+          inapp_enabled: currentRaw.inapp_enabled ?? true,
+          digest_enabled: currentRaw.digest_enabled ?? false,
+          quiet_hours: currentRaw.quiet_hours ?? {},
+          event_settings: newEventSettings,
+        } as unknown as Json,
       });
 
       if (error) throw error;

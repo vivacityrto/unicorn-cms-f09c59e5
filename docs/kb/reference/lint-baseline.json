@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T22:17:07.942Z",
-  "baselineSha": "f451d918534dfe0bbe01e3c5590937554372ae65",
+  "generatedAt": "2026-09-04T22:39:39.886Z",
+  "baselineSha": "93ce61e5b9a69aebf0ce0e0292517ca95b856739",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 393,
-    "errors": 1443,
+    "filesWithFindings": 391,
+    "errors": 1427,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1436,
+    "@typescript-eslint/no-explicit-any": 1420,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 775,
+      "errors": 759,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 768,
+        "@typescript-eslint/no-explicit-any": 752,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -372,10 +372,10 @@
       }
     },
     "src/hooks": {
-      "errors": 310,
+      "errors": 294,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 310,
+        "@typescript-eslint/no-explicit-any": 294,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1760,9 +1760,6 @@
     "src/hooks/useMeetingTodos.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/hooks/useMembershipDashboard.tsx": {
-      "@typescript-eslint/no-explicit-any": 8
-    },
     "src/hooks/useMembershipStateOptions.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -1789,9 +1786,6 @@
     },
     "src/hooks/useNotes.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useNotificationPrefs.ts": {
-      "@typescript-eslint/no-explicit-any": 8
     },
     "src/hooks/useNotifications.tsx": {
       "@typescript-eslint/no-explicit-any": 5

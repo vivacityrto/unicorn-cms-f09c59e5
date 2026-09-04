@@ -384,6 +384,55 @@ edit) and is a pre-existing production bug on a page most tenants happen
 not to exercise, not something to silently patch as a side effect of a
 type-retirement batch.
 
+## Notification preferences (`useNotificationPrefs.ts`)
+
+### 18. Saving notification preferences has never worked for tenant-scoped users — PARTIALLY FIXED (deeper bug found, needs a schema decision)
+`updateMutation` called `update_user_notification_prefs` with five separate
+`p_`-prefixed arguments (`p_email_enabled`, `p_inapp_enabled`,
+`p_digest_enabled`, `p_quiet_hours`, `p_event_settings`) — but the real
+function only accepts a single `p_prefs jsonb` argument (confirmed via
+`select pg_get_function_identity_arguments(oid) from pg_proc where proname
+= 'update_user_notification_prefs'` → `p_prefs jsonb`; confirmed via
+`pg_get_functiondef` that the body reads
+`COALESCE((p_prefs->>'email_enabled')::boolean, true)` etc. from that one
+JSON argument). PostgREST has no overload matching the five-argument call
+shape, so every attempt to toggle a notification category (Tasks, Meetings,
+Obligations, Events) and save has always failed silently at the RPC layer —
+the row was never written.
+
+Found during batch 45 of the `no-explicit-any` retirement: typing the RPC's
+`Args` against the generated Supabase types surfaced the shape mismatch
+immediately. Fixed by wrapping the five fields into a single `p_prefs`
+object matching the function's real signature.
+
+**Live verification (2026-09-05) surfaced a second, pre-existing bug this
+fix does not resolve.** Both `get_user_notification_prefs` and
+`update_user_notification_prefs` resolve `tenant_id` via
+`SELECT tenant_id FROM users WHERE user_uuid = auth.uid()`, then read/upsert
+into `user_notification_prefs` keyed on `(user_id, tenant_id)` — but
+`user_notification_prefs.tenant_id` is `NOT NULL`, and **72 of 626 rows in
+`public.users` have `tenant_id IS NULL`** (confirmed via SQL) — these are
+staff/internal accounts with no single-tenant assignment (SuperAdmin
+included). For every one of those 72 accounts, both the read and the write
+path fail outright: read 400s with `23502: null value in column "tenant_id"
+of relation "user_notification_prefs" violates not-null constraint` (the
+RPC's own "create default preferences if none exist" branch trips the
+constraint), and write fails identically. This bug predates tonight's
+change — the old five-argument call also failed, just earlier and for a
+different reason (no matching function overload), which masked this one.
+Confirmed via live Playwright test against the SuperAdmin persona (no
+tenant selected): toggling a category produced a 400, no success toast, no
+persistence across a refresh.
+
+For real tenant-scoped users (the other 554), the argument-shape fix in
+this PR is a genuine improvement — their calls now reach the function body
+and should complete successfully. Not fixed here: the tenant_id NOT NULL
+constraint needs a product/schema decision (allow NULL + adjust the
+`(user_id, tenant_id)` conflict target, or give staff a dedicated
+tenant-less path, or exclude the notification-prefs UI for tenant-less
+accounts) before all 626 users can use this feature. Tracked as a backlog
+item, not silently patched as a side effect of a type-retirement batch.
+
 ## Also found this session, outside Package Builder (for completeness)
 
 These were found and either fixed or documented in earlier batches tonight,
