@@ -19,6 +19,20 @@ interface TgaPreviewData {
   organisation_type: string | null;
 }
 
+interface TgaLookupResponseData {
+  code?: string;
+  legal_name?: string;
+  trading_name?: string;
+  abn?: string;
+  status?: string;
+  organisation_type?: string;
+}
+interface TgaLookupResponsePayload {
+  success?: boolean;
+  error?: string;
+  data?: TgaLookupResponseData;
+}
+
 type TgaDirtyField = 'legalName' | 'tradingName' | 'abn';
 
 interface AddTenantDialogProps {
@@ -170,9 +184,9 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       const { data, error } = await supabase.functions.invoke('tga-rto-preview', {
         body: { rtoId: rtoCode.trim() },
       });
-      let payload: any = data;
+      let payload: TgaLookupResponsePayload | undefined = data;
       if (error && !payload) {
-        const ctx: any = (error as any).context;
+        const ctx = (error as { context?: Response }).context;
         if (ctx && typeof ctx.json === 'function') {
           try { payload = await ctx.json(); } catch { /* ignore */ }
         }
@@ -191,8 +205,8 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         status: d.status || null,
         organisation_type: d.organisation_type || null,
       });
-    } catch (err: any) {
-      setTgaLookupError(err?.message || 'Unexpected error during TGA lookup.');
+    } catch (err) {
+      setTgaLookupError(err instanceof Error ? err.message : 'Unexpected error during TGA lookup.');
     } finally {
       setTgaLooking(false);
     }
@@ -299,7 +313,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         rto_id: rtoCode || null,
         abn: abn || null,
         metadata: { source: 'manual' },
-      }] as any);
+      }]);
 
       if (error) throw error;
 
@@ -322,8 +336,8 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         }
         if (identifiers.length > 0) {
           const { error: idError } = await supabase
-            .from('tenant_identifiers' as any)
-            .insert(identifiers as any);
+            .from('tenant_identifiers')
+            .insert(identifiers);
           if (idError) {
             console.warn('[AddTenant] Identifier insert failed:', idError.message);
           }
@@ -377,9 +391,9 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
             p_tenant_id: newTenantId,
           });
           if (verifyErr) throw verifyErr;
-        } catch (linkError: any) {
+        } catch (linkError) {
           tgaLinkFailed = true;
-          console.warn('[AddTenant] TGA link failed:', linkError?.message);
+          console.warn('[AddTenant] TGA link failed:', linkError instanceof Error ? linkError.message : linkError);
         }
 
         if (!tgaLinkFailed) {
@@ -432,11 +446,11 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       resetForm();
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
-      let errorMessage = error.message || 'Failed to create client';
-      if (error.message?.includes('tenants_slug_key')) {
-        errorMessage = 'A client with a similar name already exists. Please use a different name.';
-      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create client';
+      const errorMessage = message.includes('tenants_slug_key')
+        ? 'A client with a similar name already exists. Please use a different name.'
+        : message;
       toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -903,8 +917,8 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
                 { key: 'linking', label: 'Linking to TGA', hint: null },
                 { key: 'importing', label: 'Importing TGA data', hint: 'Started — continues in background' },
               ] as { key: 'creating' | 'linking' | 'importing'; label: string; hint: string | null }[]).map((step) => {
-                const order = ['creating', 'linking', 'importing'] as const;
-                const currentIdx = order.indexOf(linkStep as any);
+                const order: LinkStep[] = ['creating', 'linking', 'importing'];
+                const currentIdx = order.indexOf(linkStep);
                 const stepIdx = order.indexOf(step.key);
                 const done = stepIdx < currentIdx;
                 const active = stepIdx === currentIdx;

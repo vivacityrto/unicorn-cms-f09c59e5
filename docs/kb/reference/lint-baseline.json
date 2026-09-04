@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T19:38:29.407Z",
-  "baselineSha": "b20f775df6976cc8aeb3e44a5345769b7397af44",
+  "generatedAt": "2026-09-04T19:51:02.921Z",
+  "baselineSha": "6581ec86fea93cd8ffa26271e6d1684099481946",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 419,
-    "errors": 1679,
+    "filesWithFindings": 417,
+    "errors": 1657,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1672,
+    "@typescript-eslint/no-explicit-any": 1650,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1011,
+      "errors": 989,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1004,
+        "@typescript-eslint/no-explicit-any": 982,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -32,10 +32,10 @@
   },
   "byDirectory": {
     "src/components": {
-      "errors": 44,
+      "errors": 34,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 44
+        "@typescript-eslint/no-explicit-any": 34
       }
     },
     "src/components/academy": {
@@ -402,10 +402,10 @@
       }
     },
     "src/pages": {
-      "errors": 146,
+      "errors": 134,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 146
+        "@typescript-eslint/no-explicit-any": 134
       }
     },
     "src/pages/academy": {
@@ -1237,9 +1237,6 @@
     "src/components/AddStageDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/components/AddTenantDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 10
-    },
     "src/components/AdminInviteUserDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -2037,9 +2034,6 @@
     },
     "src/pages/ManageEmailTemplates.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/ManageStages.tsx": {
-      "@typescript-eslint/no-explicit-any": 12
     },
     "src/pages/ManageTenants.tsx": {
       "@typescript-eslint/no-explicit-any": 8

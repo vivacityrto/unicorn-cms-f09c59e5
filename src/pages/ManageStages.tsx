@@ -85,7 +85,7 @@ export default function ManageStages() {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('stages' as any)
+        .from('stages')
         .select(`
           *,
           creator:created_by (
@@ -94,12 +94,12 @@ export default function ManageStages() {
             avatar_url
           )
         `)
-        .order('name', { ascending: true }) as any;
+        .order('name', { ascending: true });
 
       if (error) throw error;
-      
+
       // Map the data to include creator_name and avatar
-      const stagesWithCreator = (data || []).map((stageRaw: any) => ({
+      const stagesWithCreator = (data || []).map((stageRaw) => ({
         id: stageRaw.id,
         title: stageRaw.name,
         short_name: stageRaw.shortname,
@@ -113,12 +113,12 @@ export default function ManageStages() {
         creator_name: stageRaw.creator ? `${stageRaw.creator.first_name} ${stageRaw.creator.last_name}` : 'Unknown',
         creator_avatar: stageRaw.creator?.avatar_url || null,
       }));
-      
+
       setStages(stagesWithCreator);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
@@ -132,14 +132,27 @@ export default function ManageStages() {
 
   const handleCreate = async () => {
     try {
-      const { error } = await (supabase
+      // stages.id has no DB default/identity/sequence — every insert must supply the
+      // next available id explicitly (same approach as packages.createPackage in
+      // usePackageBuilder.tsx). Without this, "New Phase" has never actually worked —
+      // every attempt failed with a not-null violation.
+      const { data: maxIdRow } = await supabase
+        .from('stages')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1)
+        .single();
+      const nextId = (maxIdRow?.id ?? 0) + 1;
+
+      const { error } = await supabase
         .from('stages')
         .insert([{
+          id: nextId,
           name: formData.title,
           shortname: formData.short_name || null,
           description: formData.description || null,
           videourl: formData.video_url || null,
-        } as any]) as any);
+        }]);
 
       if (error) throw error;
 
@@ -151,10 +164,10 @@ export default function ManageStages() {
       setIsCreateDialogOpen(false);
       setFormData({ title: '', short_name: '', description: '', video_url: '' });
       fetchStages();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
@@ -164,15 +177,15 @@ export default function ManageStages() {
     if (!selectedStage) return;
 
     try {
-      const { error } = await (supabase
+      const { error } = await supabase
         .from('stages')
         .update({
           name: formData.title,
           shortname: formData.short_name || null,
           description: formData.description || null,
           videourl: formData.video_url || null,
-        } as any)
-        .eq('id', selectedStage.id) as any);
+        })
+        .eq('id', selectedStage.id);
 
       if (error) throw error;
 
@@ -185,10 +198,10 @@ export default function ManageStages() {
       setSelectedStage(null);
       setFormData({ title: '', short_name: '', description: '', video_url: '' });
       fetchStages();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
@@ -198,10 +211,10 @@ export default function ManageStages() {
     if (!selectedStage) return;
 
     try {
-      const { error } = await (supabase
+      const { error } = await supabase
         .from('stages')
         .delete()
-        .eq('id', selectedStage.id) as any);
+        .eq('id', selectedStage.id);
 
       if (error) throw error;
 
@@ -213,10 +226,10 @@ export default function ManageStages() {
       setIsDeleteDialogOpen(false);
       setSelectedStage(null);
       fetchStages();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
