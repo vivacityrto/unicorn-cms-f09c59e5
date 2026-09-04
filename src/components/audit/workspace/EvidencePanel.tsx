@@ -81,19 +81,19 @@ export function EvidencePanel(props: EvidencePanelProps) {
     enabled: !!responseId,
     queryFn: async () => {
       const { data: linkRows, error: linkErr } = await supabase
-        .from('client_audit_response_documents' as any)
+        .from('client_audit_response_documents')
         .select('id, document_id')
         .eq('response_id', responseId!);
       if (linkErr) throw linkErr;
       if (!linkRows || linkRows.length === 0) return [] as LinkedDoc[];
-      const ids = (linkRows as any[]).map((r) => r.document_id);
+      const ids = linkRows.map((r) => r.document_id);
       const { data: docs, error: docsErr } = await supabase
         .from('documents')
         .select('id, title')
         .in('id', ids);
       if (docsErr) throw docsErr;
-      const titleById = new Map<number, string>((docs ?? []).map((d: any) => [d.id, d.title]));
-      return (linkRows as any[]).map((l) => ({
+      const titleById = new Map<number, string>((docs ?? []).map((d) => [d.id, d.title]));
+      return linkRows.map((l) => ({
         id: l.id,
         document_id: l.document_id,
         document_title: titleById.get(l.document_id) ?? null,
@@ -107,7 +107,7 @@ export function EvidencePanel(props: EvidencePanelProps) {
   const unlinkMutation = useMutation({
     mutationFn: async (linkId: string) => {
       const { error } = await supabase
-        .from('client_audit_response_documents' as any)
+        .from('client_audit_response_documents')
         .delete()
         .eq('id', linkId);
       if (error) throw error;
@@ -115,7 +115,7 @@ export function EvidencePanel(props: EvidencePanelProps) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['response-evidence', responseId] });
     },
-    onError: (e: any) => toast.error(e?.message || 'Failed to unlink document'),
+    onError: (e) => toast.error(e?.message || 'Failed to unlink document'),
   });
 
   // ── Trigger AI analysis ─────────────────────────────────────────
@@ -135,8 +135,8 @@ export function EvidencePanel(props: EvidencePanelProps) {
       toast.success(`Analysis complete (${data?.documents_analysed ?? 0} document${data?.documents_analysed === 1 ? '' : 's'}).`);
       qc.invalidateQueries({ queryKey: ['audit-responses', auditId] });
       qc.invalidateQueries({ queryKey: ['audit-workspace', auditId] });
-    } catch (e: any) {
-      toast.error(e?.message || 'Analysis failed.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Analysis failed.');
     } finally {
       setAnalysing(false);
     }
@@ -441,15 +441,15 @@ function DocumentLinkerDialog(props: DocumentLinkerDialogProps) {
         linked_by: userId,
       }));
       const { error } = await supabase
-        .from('client_audit_response_documents' as any)
+        .from('client_audit_response_documents')
         .insert(rows);
       if (error) throw error;
       toast.success(`Linked ${rows.length} document${rows.length === 1 ? '' : 's'}.`);
       setSelected(new Set());
       onLinked();
       onOpenChange(false);
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to link documents.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to link documents.');
     } finally {
       setSaving(false);
     }
@@ -487,7 +487,7 @@ function DocumentLinkerDialog(props: DocumentLinkerDialogProps) {
             </div>
           ) : (
             <ul className="divide-y">
-              {(docsQuery.data ?? []).map((d: any) => {
+              {(docsQuery.data ?? []).map((d) => {
                 const already = alreadyLinkedIds.has(d.id);
                 const isSelected = selected.has(d.id);
                 return (

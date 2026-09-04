@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T09:37:55.925Z",
-  "baselineSha": "844cb0de93f350fcdb5d1afb2bd341dfdfc12b58",
+  "generatedAt": "2026-09-04T10:11:10.084Z",
+  "baselineSha": "e9b7d8d32548cede4b2a7bf209a39887dafa7231",
   "totals": {
-    "files": 1784,
-    "filesWithFindings": 489,
-    "errors": 2837,
+    "files": 1771,
+    "filesWithFindings": 480,
+    "errors": 2769,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2830,
+    "@typescript-eslint/no-explicit-any": 2762,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2169,
+      "errors": 2101,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2162,
+        "@typescript-eslint/no-explicit-any": 2094,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -98,18 +98,18 @@
       }
     },
     "src/components/audit": {
-      "errors": 20,
+      "errors": 8,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 20,
+        "@typescript-eslint/no-explicit-any": 8,
         "react-refresh/only-export-components": 1
       }
     },
     "src/components/audit/workspace": {
-      "errors": 82,
+      "errors": 44,
       "warnings": 2,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 82,
+        "@typescript-eslint/no-explicit-any": 44,
         "react-refresh/only-export-components": 2
       }
     },
@@ -155,13 +155,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "src/components/csc": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "src/components/dashboard": {
@@ -338,10 +331,10 @@
       }
     },
     "src/components/tenant": {
-      "errors": 17,
+      "errors": 14,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 17,
+        "@typescript-eslint/no-explicit-any": 14,
         "react-refresh/only-export-components": 1
       }
     },
@@ -390,10 +383,10 @@
       }
     },
     "src/hooks": {
-      "errors": 938,
+      "errors": 935,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 938,
+        "@typescript-eslint/no-explicit-any": 935,
         "react-refresh/only-export-components": 1
       }
     },
@@ -419,10 +412,10 @@
       }
     },
     "src/pages": {
-      "errors": 409,
+      "errors": 399,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 409
+        "@typescript-eslint/no-explicit-any": 399
       }
     },
     "src/pages/academy": {
@@ -1351,9 +1344,6 @@
     "src/components/audit/FindingCard.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/components/audit/NewAuditModal.tsx": {
-      "@typescript-eslint/no-explicit-any": 12
-    },
     "src/components/audit/workspace/ActionDrawer.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1375,9 +1365,6 @@
     "src/components/audit/workspace/DocumentReviewPhase.tsx": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "src/components/audit/workspace/EvidencePanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 10
-    },
     "src/components/audit/workspace/EvidenceRequestsSection.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
@@ -1393,14 +1380,8 @@
     "src/components/audit/workspace/QuestionGuidance.tsx": {
       "react-refresh/only-export-components": 1
     },
-    "src/components/audit/workspace/ReportTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 18
-    },
     "src/components/audit/workspace/SendEvidenceRequestDrawer.tsx": {
       "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/components/audit/workspace/SendPreliminarySummaryDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 10
     },
     "src/components/audit/workspace/UnsavedAuditWorkContext.tsx": {
       "react-refresh/only-export-components": 1
@@ -1443,9 +1424,6 @@
     },
     "src/components/compliance/ComplianceScoreBreakdown.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/csc/CSCProfileCard.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "src/components/dashboard/WeekTasksTable.tsx": {
       "@typescript-eslint/no-explicit-any": 3
@@ -1686,9 +1664,6 @@
     "src/components/tenant/CloseClientModal.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/components/tenant/EnrichTenantButton.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
     "src/components/tenant/RenameTenantDialog.tsx": {
       "react-refresh/only-export-components": 1,
       "@typescript-eslint/no-explicit-any": 1
@@ -1703,9 +1678,6 @@
       "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/tenant/TenantMergeWizard.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/tenant/TenantProgressTable.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/tenant/TenantRelationships.tsx": {
@@ -2085,9 +2057,6 @@
     "src/hooks/useRetentionForecast.ts": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/hooks/useReviewMode.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "src/hooks/useRisksOpportunities.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -2286,9 +2255,6 @@
     },
     "src/pages/TeamSettings.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/TenantDetail.tsx": {
-      "@typescript-eslint/no-explicit-any": 10
     },
     "src/pages/TenantDocumentDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 3

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ShieldCheck, ClipboardList, Building2, ArrowRight, ArrowLeft, Loader2, Award, Globe, Info, Link2, Target } from 'lucide-react';
+import { ShieldCheck, ClipboardList, Building2, ArrowRight, ArrowLeft, Loader2, Award, Globe, Info, Link2, Target, type LucideIcon } from 'lucide-react';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/modals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +41,7 @@ interface NewAuditModalProps {
 interface AuditTypeCard {
   value: AuditType;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   description: string;
   badge?: string;
   badgeColor?: string;
@@ -166,12 +166,12 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   useEffect(() => {
     if (!open || !preselectedStageInstanceId) { setResolvedStageId(null); return; }
     supabase
-      .from('stage_instances' as any)
+      .from('stage_instances')
       .select('stage_id')
       .eq('id', preselectedStageInstanceId)
       .maybeSingle()
       .then(({ data }) => {
-        if (data) setResolvedStageId((data as any).stage_id);
+        if (data) setResolvedStageId(data.stage_id);
       });
   }, [open, preselectedStageInstanceId]);
 
@@ -257,7 +257,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     setTenantsLoading(true);
     const fetchTenants = async () => {
       // Fetch active tenants — primary list for dropdown
-      const { data: tenantsData, error: tenantsError } = await (supabase as any)
+      const { data: tenantsData, error: tenantsError } = await supabase
         .from('tenants')
         .select('id, name, tenant_type, status, rto_id, rto_name, cricos_id')
         .eq('status', 'active')
@@ -270,22 +270,22 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
         return;
       }
 
-      const rows = (tenantsData as any[]) || [];
+      const rows = tenantsData || [];
       const ids = rows.map(r => r.id);
 
       // Enrich with tenant_profile (no FK to embed, so query separately)
       const profileMap: Record<number, { org_type: string | null; cricos_number: string | null }> = {};
       if (ids.length) {
-        const { data: profiles } = await (supabase as any)
+        const { data: profiles } = await supabase
           .from('tenant_profile')
           .select('tenant_id, org_type, cricos_number')
           .in('tenant_id', ids);
-        for (const p of (profiles as any[]) || []) {
+        for (const p of profiles || []) {
           profileMap[p.tenant_id] = { org_type: p.org_type ?? null, cricos_number: p.cricos_number ?? null };
         }
       }
 
-      const mapped: TenantRecord[] = rows.map((t: any) => ({
+      const mapped: TenantRecord[] = rows.map((t) => ({
         id: t.id,
         name: t.name,
         tenant_type: t.tenant_type ?? null,
@@ -301,7 +301,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     };
     fetchTenants();
     supabase.from('users').select('user_uuid, first_name, last_name').eq('is_vivacity_internal', true).eq('is_system_account', false).or('kpi_pod.is.null,kpi_pod.neq.qa').then(({ data }) => {
-      setAuditors(((data as any[]) || []).map(u => ({ user_uuid: u.user_uuid, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() })));
+      setAuditors((data || []).map(u => ({ user_uuid: u.user_uuid, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() })));
     });
   }, [open]);
 
@@ -347,21 +347,20 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     const isDD = selectedCard?.value === 'due_diligence' || selectedCard?.value === 'due_diligence_combined';
     if (isDD) return;
     supabase
-      .from('v_tga_audit_snapshot' as any)
+      .from('v_tga_audit_snapshot')
       .select('*')
       .eq('tenant_id', tenantId)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          const d = data as any;
-          setRtoName(d.legal_name || t?.rto_name || t?.name || '');
-          setRtoNumber(d.rto_code || t?.rto_id || '');
-          setCricosCode(d.cricos_codes || '');
-          setCeo(d.ceo_name || '');
-          setSiteAddress(d.head_office_address || '');
-          setPhone(d.contact_phone || '');
-          setEmail(d.contact_email || '');
-          setWebsite(d.website || '');
+          setRtoName(data.legal_name || t?.rto_name || t?.name || '');
+          setRtoNumber(data.rto_code || t?.rto_id || '');
+          setCricosCode(data.cricos_codes || '');
+          setCeo(data.ceo_name || '');
+          setSiteAddress(data.head_office_address || '');
+          setPhone(data.contact_phone || '');
+          setEmail(data.contact_email || '');
+          setWebsite(data.website || '');
         } else {
           setRtoName(t?.rto_name || t?.name || '');
           setRtoNumber(t?.rto_id || '');
@@ -816,7 +815,7 @@ function TargetRtoCombobox({ onSelect }: TargetRtoComboboxProps) {
     let cancelled = false;
     setLoading(true);
     const handle = setTimeout(async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('v_tga_audit_snapshot')
         .select('rto_code, legal_name, trading_name, cricos_codes, ceo_name, head_office_address, contact_phone, contact_email, website')
         .or(`rto_code.ilike.%${term}%,legal_name.ilike.%${term}%,trading_name.ilike.%${term}%`)
@@ -826,7 +825,7 @@ function TargetRtoCombobox({ onSelect }: TargetRtoComboboxProps) {
         console.error('[TargetRtoCombobox] search failed', error);
         setResults([]);
       } else {
-        setResults((data as TargetRtoSnapshot[]) || []);
+        setResults(data || []);
       }
       setLoading(false);
     }, 250);

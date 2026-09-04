@@ -184,9 +184,9 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
     text: string,
     successMessage: string,
   ) => {
-    updateAudit.mutate({ [field]: text } as any, {
+    updateAudit.mutate({ [field]: text }, {
       onSuccess: () => toast.success(successMessage),
-      onError: (err: any) => toast.error('Save failed: ' + (err?.message || 'unknown')),
+      onError: (err) => toast.error('Save failed: ' + (err?.message || 'unknown')),
     });
   };
 
@@ -211,17 +211,17 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   ) => {
     if (!draft) return;
     const decision: 'accepted' | 'edited' = original === edited ? 'accepted' : 'edited';
-    updateAudit.mutate({ [field]: edited } as any, {
+    updateAudit.mutate({ [field]: edited }, {
       onSuccess: () => {
         setDecisions((d) => ({ ...d, [field]: decision }));
         recordDecision.mutate({
           draft_log_id: draft.log_id,
           audit_id: audit.id,
           [field]: { decision, edit_distance_pct: editDistancePct(original, edited) },
-        } as any);
+        });
         toast.success(decision === 'accepted' ? 'Accepted.' : 'Saved your edits.');
       },
-      onError: (err: any) => toast.error('Save failed: ' + (err?.message || 'unknown')),
+      onError: (err) => toast.error('Save failed: ' + (err?.message || 'unknown')),
     });
   };
 
@@ -234,7 +234,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
       draft_log_id: draft.log_id,
       audit_id: audit.id,
       [field]: { decision: 'rejected', edit_distance_pct: null },
-    } as any);
+    });
   };
 
   const copyRollupToClipboard = () => {
@@ -267,7 +267,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   };
 
   const handleDownloadPdf = async () => {
-    const path = (audit as any).report_pdf_path as string | null | undefined;
+    const path = audit.report_pdf_path;
     if (!path) {
       toast.error('No PDF available yet.');
       return;
@@ -283,7 +283,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   };
 
   const handleDownloadDocx = async () => {
-    const path = (audit as any).report_docx_path as string | null | undefined;
+    const path = audit.report_docx_path;
     if (!path) {
       toast.error('No Word document available yet.');
       return;
@@ -312,9 +312,9 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   };
   const openActions = actions.filter(a => a.status !== 'complete' && a.status !== 'cancelled').length;
 
-  const isReleased = !!(audit as any).report_client_visible;
-  const releasedAt = (audit as any).report_released_at;
-  const acknowledgedAt = (audit as any).report_acknowledged_at;
+  const isReleased = audit.report_client_visible;
+  const releasedAt = audit.report_released_at;
+  const acknowledgedAt = audit.report_acknowledged_at;
 
   const openingComplete = openingMeeting?.status === 'completed';
   const closingComplete = closingMeeting?.status === 'completed';
@@ -388,12 +388,12 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
                 <FileText className="h-4 w-4" />
                 Last generated: {new Date(audit.report_generated_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
               </div>
-              {(audit as any).report_pdf_path && (
+              {audit.report_pdf_path && (
                 <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
                   <Download className="h-3 w-3 mr-1" /> Download PDF
                 </Button>
               )}
-              {(audit as any).report_docx_path && (
+              {audit.report_docx_path && (
                 <Button size="sm" variant="outline" onClick={handleDownloadDocx}>
                   <Download className="h-3 w-3 mr-1" /> Download Word
                 </Button>
@@ -414,7 +414,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
               ) : (
                 <>
                   <FileText className="h-4 w-4 mr-2" />
-                  {(audit as any).report_pdf_path ? 'Regenerate PDF' : 'Generate PDF'}
+                  {audit.report_pdf_path ? 'Regenerate PDF' : 'Generate PDF'}
                 </>
               )}
             </Button>
@@ -432,7 +432,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
               ) : (
                 <>
                   <FileText className="h-4 w-4 mr-2" />
-                  {(audit as any).report_docx_path ? 'Regenerate Word' : 'Generate Word'}
+                  {audit.report_docx_path ? 'Regenerate Word' : 'Generate Word'}
                 </>
               )}
             </Button>
@@ -614,7 +614,9 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground">Purchaser (commissioning client)</p>
-                <p className="font-medium">{(audit as any).snapshot_purchaser_name || '—'}</p>
+                {/* client_audits has no snapshot_purchaser_name column — AuditWorkspaceNew.tsx
+                    resolves and displays the real purchaser name in its header instead. */}
+                <p className="font-medium">—</p>
                 <p className="text-[11px] text-muted-foreground italic">See header for live purchaser name.</p>
               </div>
               <div>
@@ -679,11 +681,11 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
 
           <EditableReportField
             label="Risk Rating Rationale"
-            value={(audit as any).risk_rationale || ''}
+            value={audit.risk_rationale || ''}
             rows={5}
             placeholder="Explain the risk rating in language suitable for the client — avoid internal finding IDs and jargon."
             saving={updateAudit.isPending}
-            onSave={(text) => saveReportField('risk_rationale' as any, text, 'Risk rationale updated.')}
+            onSave={(text) => saveReportField('risk_rationale', text, 'Risk rationale updated.')}
           />
 
           <div>
