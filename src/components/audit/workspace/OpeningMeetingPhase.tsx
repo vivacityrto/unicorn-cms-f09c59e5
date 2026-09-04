@@ -3,6 +3,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { QuestionCard } from './QuestionCard';
 import { useDebouncedAutosave } from './useDebouncedAutosave';
 import type { AuditSection, AuditResponse, TemplateQuestion } from '@/types/auditWorkspace';
+import type { UpsertResponseInput, AddFindingInput } from './AuditFormTab';
 
 interface OpeningMeetingPhaseProps {
   sections: AuditSection[];
@@ -11,8 +12,8 @@ interface OpeningMeetingPhaseProps {
   userId: string | undefined;
   auditId: string;
   framework?: string | null;
-  onUpsertResponse: (data: any) => void;
-  onAddFinding: (f: any) => void;
+  onUpsertResponse: (data: UpsertResponseInput) => void;
+  onAddFinding: (f: AddFindingInput) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
 }
 

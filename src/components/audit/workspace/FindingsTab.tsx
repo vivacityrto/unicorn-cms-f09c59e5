@@ -92,7 +92,7 @@ export function FindingsTab({ auditId }: FindingsTabProps) {
         <AddFindingForm
           auditId={auditId}
           onSave={(f) => {
-            createFinding.mutate({ ...f, created_by: session?.user?.id });
+            createFinding.mutate({ ...f, audit_id: auditId, created_by: session?.user?.id });
             setShowForm(false);
           }}
           onCancel={() => setShowForm(false)}

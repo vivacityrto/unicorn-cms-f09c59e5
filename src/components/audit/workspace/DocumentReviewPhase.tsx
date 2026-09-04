@@ -9,6 +9,7 @@ import { useDebouncedAutosave } from './useDebouncedAutosave';
 import type { AuditSection, AuditResponse, TemplateQuestion } from '@/types/auditWorkspace';
 import { useAuditSectionCompletion } from '@/hooks/useAuditCompletion';
 import { AlertTriangle } from 'lucide-react';
+import type { UpsertResponseInput, AddFindingInput } from './AuditFormTab';
 
 interface DocumentReviewPhaseProps {
   sections: AuditSection[];
@@ -17,8 +18,8 @@ interface DocumentReviewPhaseProps {
   userId: string | undefined;
   auditId: string;
   framework?: string | null;
-  onUpsertResponse: (data: any) => void;
-  onAddFinding: (f: any) => void;
+  onUpsertResponse: (data: UpsertResponseInput) => void;
+  onAddFinding: (f: AddFindingInput) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
   onUpdateRiskLevel: (sectionId: string, riskLevel: string) => void;
   selectedSectionId?: string;
@@ -177,8 +178,8 @@ function DocumentReviewSection({
   userId: string | undefined;
   auditId: string;
   framework: string | null;
-  onUpsertResponse: (data: any) => void;
-  onAddFinding: (f: any) => void;
+  onUpsertResponse: (data: UpsertResponseInput) => void;
+  onAddFinding: (f: AddFindingInput) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
   onUpdateRiskLevel: (sectionId: string, riskLevel: string) => void;
   isSelected: boolean;

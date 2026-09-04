@@ -62,7 +62,7 @@ interface QuestionCardProps {
   findings?: AuditFinding[];
   onRate: (questionId: string, rating: string, score: number, isFlagged: boolean) => void;
   onNote: (questionId: string, notes: string) => void;
-  onAddFinding: (finding: any) => void;
+  onAddFinding: (finding: Partial<AuditFinding> & { audit_id: string }) => void;
 }
 
 const FLAGGED_RATINGS = new Set(['at_risk', 'non_compliant']);
@@ -103,12 +103,12 @@ export function QuestionCard({
     queryKey: ['audit-tenant-meta', auditId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_audits' as any)
+        .from('client_audits')
         .select('subject_tenant_id')
         .eq('id', auditId)
         .maybeSingle();
       if (error) throw error;
-      return (data as unknown) as { subject_tenant_id: number | null } | null;
+      return data;
     },
     enabled: ctx === 'auditor_assessment',
     staleTime: 5 * 60 * 1000,
@@ -131,7 +131,7 @@ export function QuestionCard({
   const handleDiscardAi = async () => {
     if (!response?.id) return;
     const { error } = await supabase
-      .from('client_audit_responses' as any)
+      .from('client_audit_responses')
       .update({
         ai_suggested_rating: null,
         ai_suggested_notes: null,
@@ -453,12 +453,12 @@ export function QuestionCard({
               subjectTenantId={auditMeta?.subject_tenant_id ?? null}
               currentRating={currentRating}
               aiSuggestion={{
-                rating: (response as any)?.ai_suggested_rating ?? null,
-                notes: (response as any)?.ai_suggested_notes ?? null,
-                confidence: (response as any)?.ai_confidence ?? null,
-                analyzedAt: (response as any)?.ai_analyzed_at ?? null,
-                excerpts: (response as any)?.ai_excerpts ?? null,
-                gaps: (response as any)?.ai_gaps ?? null,
+                rating: response?.ai_suggested_rating ?? null,
+                notes: response?.ai_suggested_notes ?? null,
+                confidence: response?.ai_confidence ?? null,
+                analyzedAt: response?.ai_analyzed_at ?? null,
+                excerpts: response?.ai_excerpts ?? null,
+                gaps: response?.ai_gaps ?? null,
               }}
               onAcceptRating={handleAcceptAi}
               onOverrideRating={handleAcceptAi}
@@ -658,7 +658,7 @@ export function QuestionCard({
               regulatory_reference: `${question.clause} ${question.nc_map || ''}`.trim(),
             }}
             onSave={(finding) => {
-              onAddFinding(finding);
+              onAddFinding({ ...finding, audit_id: auditId });
               setShowFindingForm(false);
             }}
             onCancel={() => setShowFindingForm(false)}
