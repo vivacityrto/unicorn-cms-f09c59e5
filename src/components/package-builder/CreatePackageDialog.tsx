@@ -80,10 +80,10 @@ export function CreatePackageDialog({ open, onOpenChange }: CreatePackageDialogP
 
       // Navigate to the package builder
       navigate(`/admin/package-builder/${newPackage.id}`);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create package',
+        description: error instanceof Error ? error.message : 'Failed to create package',
         variant: 'destructive'
       });
     } finally {

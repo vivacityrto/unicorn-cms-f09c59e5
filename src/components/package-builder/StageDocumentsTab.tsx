@@ -50,7 +50,7 @@ interface Document {
   format: string | null;
   category: string | null;
   source_template_url: string | null;
-  uploaded_files: any[] | null;
+  uploaded_files: string[] | null;
 }
 
 function SortableDocumentRow({ 
@@ -199,7 +199,7 @@ export function StageDocumentsTab({
 
       if (error) throw error;
 
-      setAvailableDocuments((data as any) || []);
+      setAvailableDocuments(data || []);
       
       // Extract unique categories
       const uniqueCategories = [...new Set(
@@ -208,10 +208,10 @@ export function StageDocumentsTab({
           .filter(Boolean)
       )] as string[];
       setCategories(uniqueCategories);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch documents',
+        description: error instanceof Error ? error.message : 'Failed to fetch documents',
         variant: 'destructive'
       });
     } finally {
@@ -274,10 +274,10 @@ export function StageDocumentsTab({
         description: `Successfully linked ${selectedDocuments.size} documents` 
       });
       handleCloseDialog();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to link documents',
+        description: error instanceof Error ? error.message : 'Failed to link documents',
         variant: 'destructive'
       });
     } finally {
@@ -289,10 +289,10 @@ export function StageDocumentsTab({
     try {
       await onUpdateDocument(id, data);
       toast({ title: 'Document updated' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update document',
+        description: error instanceof Error ? error.message : 'Failed to update document',
         variant: 'destructive'
       });
     }
@@ -302,10 +302,10 @@ export function StageDocumentsTab({
     try {
       await onRemoveDocument(id, documentId);
       toast({ title: 'Document unlinked' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to unlink document',
+        description: error instanceof Error ? error.message : 'Failed to unlink document',
         variant: 'destructive'
       });
     }
@@ -323,10 +323,10 @@ export function StageDocumentsTab({
       
       try {
         await onReorderDocuments(orderedIds);
-      } catch (error: any) {
+      } catch (error) {
         toast({
           title: 'Error',
-          description: error.message || 'Failed to reorder documents',
+          description: error instanceof Error ? error.message : 'Failed to reorder documents',
           variant: 'destructive'
         });
       }
