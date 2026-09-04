@@ -87,12 +87,23 @@ interface WebCitation {
   retrieved_at: string;
 }
 
+interface SourceUsed {
+  type: string;
+  title: string;
+  version: string | number;
+}
+
+interface RecordAccessed {
+  table: string;
+  label: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
-  sources_used?: any[];
-  records_accessed?: any[];
+  sources_used?: SourceUsed[];
+  records_accessed?: RecordAccessed[];
   confidence?: "high" | "medium" | "low";
   gaps?: string[];
   explain?: ExplainPayload;
@@ -505,8 +516,8 @@ export function AskVivPanel() {
       if (scrapeResponse.ok) {
         const scrapeResult = await scrapeResponse.json();
         sourceIds = (scrapeResult.results || [])
-          .filter((r: any) => r.success && r.source_id)
-          .map((r: any) => r.source_id);
+          .filter((r) => r.success && r.source_id)
+          .map((r) => r.source_id);
       }
     }
 
@@ -720,9 +731,9 @@ export function AskVivPanel() {
         .order("created_at", { ascending: true });
       if (error) throw error;
 
-      const loadedMessages: Message[] = (data || []).map((t: any) => ({
+      const loadedMessages: Message[] = (data || []).map((t) => ({
         id: t.id,
-        role: t.role,
+        role: t.role as Message["role"],
         content: t.content,
         created_at: t.created_at,
       }));
@@ -1243,7 +1254,7 @@ export function AskVivPanel() {
                           </CollapsibleTrigger>
                           <CollapsibleContent className="mt-1">
                             <div className="space-y-1">
-                              {message.records_accessed.slice(0, 10).map((record: any, idx: number) => (
+                              {message.records_accessed.slice(0, 10).map((record, idx) => (
                                 <div
                                   key={idx}
                                   className="text-xs bg-muted/50 rounded-lg p-2 flex items-center gap-2"
@@ -1304,7 +1315,7 @@ export function AskVivPanel() {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-1">
                         <div className="space-y-1">
-                          {message.sources_used.map((source: any, idx: number) => (
+                          {message.sources_used.map((source, idx) => (
                             <div key={idx} className="text-xs bg-muted/50 rounded-lg p-2">
                               <Badge variant="outline" className="text-[10px] mb-1">
                                 {source.type}
