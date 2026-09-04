@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T21:36:08.336Z",
-  "baselineSha": "867e8bdb4906bb005dc7ad3e34720c59ebeafa9b",
+  "generatedAt": "2026-09-04T22:39:39.886Z",
+  "baselineSha": "93ce61e5b9a69aebf0ce0e0292517ca95b856739",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 399,
-    "errors": 1496,
+    "filesWithFindings": 391,
+    "errors": 1427,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1489,
+    "@typescript-eslint/no-explicit-any": 1420,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 828,
+      "errors": 759,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 821,
+        "@typescript-eslint/no-explicit-any": 752,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -87,13 +87,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 6
-      }
-    },
-    "src/components/ask-viv": {
-      "errors": 7,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 7
       }
     },
     "src/components/audit": {
@@ -379,32 +372,25 @@
       }
     },
     "src/hooks": {
-      "errors": 333,
+      "errors": 294,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 333,
+        "@typescript-eslint/no-explicit-any": 294,
         "react-refresh/only-export-components": 1
       }
     },
     "src/lib": {
-      "errors": 10,
+      "errors": 3,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 10
-      }
-    },
-    "src/lib/kpi-v2": {
-      "errors": 8,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 8
+        "@typescript-eslint/no-explicit-any": 3
       }
     },
     "src/pages": {
-      "errors": 116,
+      "errors": 108,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 116
+        "@typescript-eslint/no-explicit-any": 108
       }
     },
     "src/pages/academy": {
@@ -1309,9 +1295,6 @@
     "src/components/admin/team-users/TeamLeaderEmailDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/components/ask-viv/AskVivPanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/components/audit/DeleteAuditDialog.tsx": {
       "react-refresh/only-export-components": 1
     },
@@ -1702,9 +1685,6 @@
     "src/hooks/useCompliancePacks.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/hooks/useCompliancePlaybooks.ts": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/hooks/useComplianceScore.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -1774,9 +1754,6 @@
     "src/hooks/useMeetingArtifacts.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/hooks/useMeetingRealtime.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/hooks/useMeetingSeries.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1835,9 +1812,6 @@
     "src/hooks/usePhaseProgress.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/hooks/usePortfolioCockpit.ts": {
-      "@typescript-eslint/no-explicit-any": 18
-    },
     "src/hooks/usePortfolioTimeline.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1892,9 +1866,6 @@
     "src/hooks/useSuggestDropdowns.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
-    "src/hooks/useSuggestItems.ts": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/hooks/useSupportTicketsBadge.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1944,12 +1915,6 @@
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/lib/friendlyDbError.ts": {},
-    "src/lib/kpi-v2/fetchers.ts": {
-      "@typescript-eslint/no-explicit-any": 8
-    },
-    "src/lib/messageAttachments.ts": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/lib/noteNotifications.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -1982,9 +1947,6 @@
     },
     "src/pages/ManageEmailTemplates.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/ManageTenants.tsx": {
-      "@typescript-eslint/no-explicit-any": 8
     },
     "src/pages/ManageUsers.tsx": {
       "@typescript-eslint/no-explicit-any": 6
