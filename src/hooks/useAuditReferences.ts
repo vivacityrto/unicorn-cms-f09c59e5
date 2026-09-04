@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { ClientAuditReference, AuditReferenceSource, AuditReferenceOutcome } from '@/types/auditReferences';
+import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 import { useEffect, useRef } from 'react';
 
 // Fetch references for a specific client
@@ -12,7 +13,7 @@ export function useClientAuditReferences(tenantId: number | undefined) {
     enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_audit_references' as any)
+        .from('client_audit_references')
         .select('*')
         .eq('subject_tenant_id', tenantId)
         .order('audit_date', { ascending: false, nullsFirst: false });
@@ -22,29 +23,34 @@ export function useClientAuditReferences(tenantId: number | undefined) {
   });
 }
 
+type AuditReferenceWithTenant = Tables<'client_audit_references'> & {
+  tenants: { name: string } | null;
+};
+
 // Fetch all references across all clients (for dashboard)
 export function useAllAuditReferences() {
   return useQuery({
     queryKey: ['audit-references-all'],
     queryFn: async () => {
+      const referencesSelect = '*, tenants!client_audit_references_subject_tenant_id_fkey(name)';
       const { data, error } = await supabase
-        .from('client_audit_references' as any)
-        .select('*, tenants!client_audit_references_subject_tenant_id_fkey(name)')
+        .from('client_audit_references')
+        .select<typeof referencesSelect, AuditReferenceWithTenant>(referencesSelect)
         .order('audit_date', { ascending: false, nullsFirst: false });
       if (error) {
         // Fallback without join if FK name is wrong
         const { data: fallback, error: err2 } = await supabase
-          .from('client_audit_references' as any)
+          .from('client_audit_references')
           .select('*')
           .order('audit_date', { ascending: false, nullsFirst: false });
         if (err2) throw err2;
         return (fallback || []) as unknown as ClientAuditReference[];
       }
-      return ((data || []) as any[]).map((d: any) => ({
+      return (data || []).map((d) => ({
         ...d,
         client_name: d.tenants?.name || null,
         tenants: undefined,
-      })) as ClientAuditReference[];
+      })) as unknown as ClientAuditReference[];
     },
   });
 }
@@ -79,26 +85,27 @@ export function useCreateAuditReference() {
       if (uploadError) throw new Error('File upload failed: ' + uploadError.message);
 
       // Insert record
+      const insertPayload: TablesInsert<'client_audit_references'> = {
+        id: refId,
+        subject_tenant_id: input.subject_tenant_id,
+        source: input.source,
+        source_label: input.source_label || null,
+        audit_type: input.audit_type || null,
+        audit_date: input.audit_date || null,
+        audit_outcome: input.audit_outcome || null,
+        auditor_name: input.auditor_name || null,
+        standards_framework: input.standards_framework || null,
+        file_name: input.file.name,
+        file_path: filePath,
+        file_size: input.file.size,
+        mime_type: input.file.type || null,
+        ai_status: 'none',
+        notes: input.notes || null,
+        uploaded_by: userId,
+      };
       const { data, error } = await supabase
-        .from('client_audit_references' as any)
-        .insert({
-          id: refId,
-          subject_tenant_id: input.subject_tenant_id,
-          source: input.source,
-          source_label: input.source_label || null,
-          audit_type: input.audit_type || null,
-          audit_date: input.audit_date || null,
-          audit_outcome: input.audit_outcome || null,
-          auditor_name: input.auditor_name || null,
-          standards_framework: input.standards_framework || null,
-          file_name: input.file.name,
-          file_path: filePath,
-          file_size: input.file.size,
-          mime_type: input.file.type || null,
-          ai_status: 'none',
-          notes: input.notes || null,
-          uploaded_by: userId,
-        } as any)
+        .from('client_audit_references')
+        .insert(insertPayload)
         .select('*')
         .single();
       if (error) throw error;
@@ -109,8 +116,8 @@ export function useCreateAuditReference() {
       queryClient.invalidateQueries({ queryKey: ['audit-references-all'] });
       toast.success('Reference uploaded successfully');
     },
-    onError: (err: any) => {
-      toast.error('Failed to upload reference: ' + (err.message || 'Unknown error'));
+    onError: (err: unknown) => {
+      toast.error('Failed to upload reference: ' + (err instanceof Error ? err.message : 'Unknown error'));
     },
   });
 }
@@ -134,8 +141,8 @@ export function useUpdateAuditReference() {
   return useMutation({
     mutationFn: async ({ id, subject_tenant_id, ...fields }: UpdateReferenceInput) => {
       const { error } = await supabase
-        .from('client_audit_references' as any)
-        .update(fields as any)
+        .from('client_audit_references')
+        .update(fields)
         .eq('id', id);
       if (error) throw error;
       return { id, subject_tenant_id };
@@ -145,8 +152,8 @@ export function useUpdateAuditReference() {
       queryClient.invalidateQueries({ queryKey: ['audit-references-all'] });
       toast.success('Reference updated');
     },
-    onError: (err: any) => {
-      toast.error('Failed to update reference: ' + (err.message || 'Unknown error'));
+    onError: (err: unknown) => {
+      toast.error('Failed to update reference: ' + (err instanceof Error ? err.message : 'Unknown error'));
     },
   });
 }
@@ -160,7 +167,7 @@ export function useDeleteAuditReference() {
       await supabase.storage.from('audit-references').remove([file_path]);
       // Delete record
       const { error } = await supabase
-        .from('client_audit_references' as any)
+        .from('client_audit_references')
         .delete()
         .eq('id', id);
       if (error) throw error;
@@ -171,8 +178,8 @@ export function useDeleteAuditReference() {
       queryClient.invalidateQueries({ queryKey: ['audit-references-all'] });
       toast.success('Reference deleted');
     },
-    onError: (err: any) => {
-      toast.error('Failed to delete reference: ' + (err.message || 'Unknown error'));
+    onError: (err: unknown) => {
+      toast.error('Failed to delete reference: ' + (err instanceof Error ? err.message : 'Unknown error'));
     },
   });
 }
@@ -192,8 +199,8 @@ export function useAnalyseAuditReference() {
     mutationFn: async ({ id, file_path, subject_tenant_id }: { id: string; file_path: string; subject_tenant_id: number }) => {
       // Set to pending
       await supabase
-        .from('client_audit_references' as any)
-        .update({ ai_status: 'pending' } as any)
+        .from('client_audit_references')
+        .update({ ai_status: 'pending' })
         .eq('id', id);
 
       // Call edge function
@@ -208,16 +215,16 @@ export function useAnalyseAuditReference() {
 
       if (error) {
         await supabase
-          .from('client_audit_references' as any)
-          .update({ ai_status: 'error' } as any)
+          .from('client_audit_references')
+          .update({ ai_status: 'error' })
           .eq('id', id);
         throw error;
       }
 
       // Update to processing
       await supabase
-        .from('client_audit_references' as any)
-        .update({ ai_status: 'processing' } as any)
+        .from('client_audit_references')
+        .update({ ai_status: 'processing' })
         .eq('id', id);
 
       // Poll for completion
@@ -231,11 +238,11 @@ export function useAnalyseAuditReference() {
             return;
           }
           const { data } = await supabase
-            .from('client_audit_references' as any)
+            .from('client_audit_references')
             .select('ai_status')
             .eq('id', id)
             .single();
-          const status = (data as any)?.ai_status;
+          const status = data?.ai_status;
           if (status === 'complete' || status === 'error') {
             if (pollingRef.current) clearInterval(pollingRef.current);
             queryClient.invalidateQueries({ queryKey: ['audit-references', subject_tenant_id] });
@@ -245,8 +252,8 @@ export function useAnalyseAuditReference() {
         }, 5000);
       });
     },
-    onError: (err: any) => {
-      toast.error('AI analysis failed: ' + (err.message || 'Unknown error'));
+    onError: (err: unknown) => {
+      toast.error('AI analysis failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
     },
   });
 }

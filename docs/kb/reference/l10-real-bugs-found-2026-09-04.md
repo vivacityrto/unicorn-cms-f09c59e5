@@ -174,6 +174,31 @@ network inspection. Zero console errors tied to this fix (two pre-existing,
 unrelated errors were observed — an "Ask Viv" feature-flag lookup returning
 406/PGRST116 — confirmed unrelated to this hook or page).
 
+## Audit workspace — scheduling (`/admin/audits/:id`, Schedule tab)
+
+### 10. Opening/closing meeting calendar invites have never actually been sent — DOCUMENTED, NOT FIXED
+`useAuditSchedule.ts`'s `useScheduleAuditPhase()` creates a local `calendar_events`
+row after scheduling an opening or closing meeting, then uses that row's id to
+call the `sync-outlook-calendar` edge function (which sends the actual Outlook
+invite). The `calendar_events` insert never supplies `calendar_id` or
+`provider_event_id` — both `NOT NULL` with no default at the database level —
+so the insert has **always** failed with a constraint violation. The whole
+thing is wrapped in `try { ... } catch { /* Calendar event creation is
+optional */ }`, so the failure has always been silently swallowed: the meeting
+itself gets scheduled correctly (via the `schedule_audit_phase` RPC, which is
+unaffected), but no calendar entry is created and no Outlook invite has ever
+gone out to attendees.
+
+**Verified live, not guessed**: confirmed both columns are `NOT NULL` with no
+`column_default` via `information_schema.columns`, and confirmed **0 of
+9,611** existing `calendar_events` rows have `provider = 'internal'` (the
+literal value this insert always sets) — meaning this insert has never once
+succeeded in production, for any audit, ever.
+
+Not fixed here because the correct source for `calendar_id`/`provider_event_id`
+on a purely-internal (non-Outlook-originated) calendar event is a product/
+schema decision, not a type-only change — it's out of scope for this batch.
+
 ## Also found this session, outside Package Builder (for completeness)
 
 These were found and either fixed or documented in earlier batches tonight,
@@ -202,6 +227,13 @@ on unrelated features:
   "Person" field when editing a time entry, because `tenant_users.user_id`
   has no FK to `public.users` — the same class of gap as item 5 above, just
   a different table pair. **Documented, not fixed** in either case.
+- **`useAuditPrep.ts`'s `useGenerateRequestFromQuestions`** — not a live bug
+  (confirmed zero consumers anywhere in the codebase — dead code, never
+  wired to any component), but worth noting it also had its own real bug
+  baked in (ordered by a `display_order` column that doesn't exist on
+  `compliance_template_questions`; the real column is `sort_order`), which
+  would have thrown immediately if anyone had ever called it. Removed rather
+  than fixed, since there's no live caller to verify against.
 
 ## What this means practically
 
@@ -211,9 +243,8 @@ forcing the compiler (or a live click-through) to check assumptions that
 had been hidden behind `any`. Seven real, previously-silently-broken
 features got fixed and verified live tonight (item 9 is a staff-facing
 admin page for viewing a client's package instance, not client-facing as
-first assumed — see the correction in that item). Five more (items 3,
-4, 5, 8 above, plus the two `tenant_users`→`users` FK gaps outside Package
-Builder) are confirmed real and written up with enough detail to scope a
-fix, deliberately left
-alone because the correct fix is a schema/migration decision, not a
-type-only code change.
+first assumed — see the correction in that item). Six more (items 3,
+4, 5, 8, 10 above, plus the two `tenant_users`→`users` FK gaps outside
+Package Builder) are confirmed real and written up with enough detail to
+scope a fix, deliberately left alone because the correct fix is a
+schema/migration decision, not a type-only code change.

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 // ─── Types ───
 export interface EvidenceRequest {
@@ -46,7 +47,7 @@ export function useAuditEvidenceRequests(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('evidence_requests' as any)
+        .from('evidence_requests')
         .select('*, evidence_request_items(*)')
         .eq('audit_id', auditId)
         .order('created_at', { ascending: false });
@@ -79,27 +80,29 @@ export function useCreateAuditEvidenceRequest() {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('Not authenticated');
 
+      const insertPayload: TablesInsert<'evidence_requests'> = {
+        tenant_id: tenantId,
+        audit_id: auditId,
+        title,
+        description,
+        due_date: dueDate,
+        category: 'audit_preparation',
+        requested_by_user_id: user.id,
+        status: 'open',
+        sent_at: new Date().toISOString(),
+      };
+
       const { data: req, error: reqErr } = await supabase
-        .from('evidence_requests' as any)
-        .insert({
-          tenant_id: tenantId,
-          audit_id: auditId,
-          title,
-          description,
-          due_date: dueDate,
-          category: 'audit_preparation',
-          requested_by_user_id: user.id,
-          status: 'open',
-          sent_at: new Date().toISOString(),
-        } as any)
+        .from('evidence_requests')
+        .insert(insertPayload)
         .select('id')
         .single();
       if (reqErr) throw reqErr;
 
-      const requestId = (req as any).id;
+      const requestId = req.id;
 
       if (items.length > 0) {
-        const itemInserts = items.map((item, i) => ({
+        const itemInserts: TablesInsert<'evidence_request_items'>[] = items.map((item, i) => ({
           request_id: requestId,
           item_name: item.item_name,
           guidance_text: item.guidance_text,
@@ -110,8 +113,8 @@ export function useCreateAuditEvidenceRequest() {
         }));
 
         const { error: itemErr } = await supabase
-          .from('evidence_request_items' as any)
-          .insert(itemInserts as any);
+          .from('evidence_request_items')
+          .insert(itemInserts);
         if (itemErr) throw itemErr;
       }
 
@@ -121,43 +124,8 @@ export function useCreateAuditEvidenceRequest() {
       queryClient.invalidateQueries({ queryKey: ['audit-evidence-requests', vars.auditId] });
       toast.success('Evidence request sent to client portal');
     },
-    onError: (err: any) => {
-      toast.error('Failed to create evidence request: ' + (err.message || 'Unknown error'));
-    },
-  });
-}
-
-// ─── Auditor: generate items from template questions ───
-export function useGenerateRequestFromQuestions(auditId: string | undefined, templateId: string | null | undefined) {
-  return useQuery({
-    queryKey: ['audit-evidence-template-items', auditId, templateId],
-    enabled: false, // manual trigger only
-    queryFn: async () => {
-      if (!templateId) return [];
-      const { data, error } = await supabase
-        .from('compliance_template_questions' as any)
-        .select('id, clause, audit_statement, evidence_to_sight, section_id')
-        .eq('is_active', true)
-        .not('evidence_to_sight', 'is', null)
-        .order('display_order', { ascending: true });
-      if (error) throw error;
-
-      // Filter to questions belonging to this template's sections
-      const { data: sections } = await supabase
-        .from('compliance_template_sections' as any)
-        .select('id')
-        .eq('template_id', templateId);
-      const sectionIds = new Set((sections as any[] || []).map((s: any) => s.id));
-
-      return ((data as any[]) || [])
-        .filter((q: any) => sectionIds.has(q.section_id) && q.evidence_to_sight)
-        .map((q: any) => ({
-          item_name: q.audit_statement || q.clause,
-          guidance_text: q.evidence_to_sight,
-          is_required: true,
-          section_id: q.section_id,
-          question_id: q.id,
-        }));
+    onError: (err: unknown) => {
+      toast.error('Failed to create evidence request: ' + (err instanceof Error ? err.message : 'Unknown error'));
     },
   });
 }
@@ -177,14 +145,15 @@ export function useReviewEvidenceItem() {
       reviewNotes?: string;
     }) => {
       const user = (await supabase.auth.getUser()).data.user;
+      const updatePayload: TablesUpdate<'evidence_request_items'> = {
+        status,
+        review_notes: reviewNotes || null,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user?.id,
+      };
       const { error } = await supabase
-        .from('evidence_request_items' as any)
-        .update({
-          status,
-          review_notes: reviewNotes || null,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: user?.id,
-        } as any)
+        .from('evidence_request_items')
+        .update(updatePayload)
         .eq('id', itemId);
       if (error) throw error;
     },
@@ -202,7 +171,7 @@ export function useClientEvidenceRequests(tenantId: number | null | undefined) {
     enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('evidence_requests' as any)
+        .from('evidence_requests')
         .select('*, evidence_request_items(*)')
         .eq('tenant_id', tenantId)
         .not('audit_id', 'is', null)
@@ -241,33 +210,35 @@ export function useUploadEvidenceItem() {
       if (uploadErr) throw uploadErr;
 
       // Create portal_documents record
+      const docInsertPayload: TablesInsert<'portal_documents'> = {
+        tenant_id: tenantId,
+        file_name: file.name,
+        storage_path: storagePath,
+        file_size: file.size,
+        file_type: file.type,
+        direction: 'client_to_vivacity',
+        evidence_request_item_id: itemId,
+        source: 'evidence_response',
+        is_client_visible: true,
+        status: 'received',
+        uploaded_by: user.id,
+      };
       const { data: doc, error: docErr } = await supabase
-        .from('portal_documents' as any)
-        .insert({
-          tenant_id: tenantId,
-          file_name: file.name,
-          storage_path: storagePath,
-          file_size: file.size,
-          file_type: file.type,
-          direction: 'client_to_vivacity',
-          evidence_request_item_id: itemId,
-          source: 'evidence_response',
-          is_client_visible: true,
-          status: 'received',
-          uploaded_by: user.id,
-        } as any)
+        .from('portal_documents')
+        .insert(docInsertPayload)
         .select('id')
         .single();
       if (docErr) throw docErr;
 
       // Update evidence_request_items
+      const itemUpdatePayload: TablesUpdate<'evidence_request_items'> = {
+        received_document_id: doc.id,
+        received_at: new Date().toISOString(),
+        status: 'received',
+      };
       const { error: updateErr } = await supabase
-        .from('evidence_request_items' as any)
-        .update({
-          received_document_id: (doc as any).id,
-          received_at: new Date().toISOString(),
-          status: 'received',
-        } as any)
+        .from('evidence_request_items')
+        .update(itemUpdatePayload)
         .eq('id', itemId);
       if (updateErr) throw updateErr;
     },
@@ -276,8 +247,8 @@ export function useUploadEvidenceItem() {
       queryClient.invalidateQueries({ queryKey: ['audit-evidence-requests'] });
       toast.success('Document uploaded successfully');
     },
-    onError: (err: any) => {
-      toast.error('Upload failed: ' + (err.message || 'Unknown error'));
+    onError: (err: unknown) => {
+      toast.error('Upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
     },
   });
 }
