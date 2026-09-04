@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T10:11:10.084Z",
-  "baselineSha": "e9b7d8d32548cede4b2a7bf209a39887dafa7231",
+  "generatedAt": "2026-09-04T10:52:24.810Z",
+  "baselineSha": "5c7c58dbed0e506f0b14f799136d8cbeddc17549",
   "totals": {
-    "files": 1771,
-    "filesWithFindings": 480,
-    "errors": 2769,
+    "files": 1769,
+    "filesWithFindings": 473,
+    "errors": 2740,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2762,
+    "@typescript-eslint/no-explicit-any": 2733,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2101,
+      "errors": 2072,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2094,
+        "@typescript-eslint/no-explicit-any": 2065,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -106,10 +106,10 @@
       }
     },
     "src/components/audit/workspace": {
-      "errors": 44,
+      "errors": 20,
       "warnings": 2,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 44,
+        "@typescript-eslint/no-explicit-any": 20,
         "react-refresh/only-export-components": 2
       }
     },
@@ -383,10 +383,10 @@
       }
     },
     "src/hooks": {
-      "errors": 935,
+      "errors": 930,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 935,
+        "@typescript-eslint/no-explicit-any": 930,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1350,32 +1350,14 @@
     "src/components/audit/workspace/ActionsTab.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "src/components/audit/workspace/AddFindingForm.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/audit/workspace/AuditFormTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
-    },
     "src/components/audit/workspace/AuditSidebar.tsx": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/components/audit/workspace/ClosingMeetingPhase.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/components/audit/workspace/DocumentReviewPhase.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/components/audit/workspace/EvidenceRequestsSection.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/components/audit/workspace/OpeningMeetingPhase.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
     "src/components/audit/workspace/OverviewTab.tsx": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/components/audit/workspace/QuestionCard.tsx": {
-      "@typescript-eslint/no-explicit-any": 9
     },
     "src/components/audit/workspace/QuestionGuidance.tsx": {
       "react-refresh/only-export-components": 1
@@ -1886,9 +1868,6 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "src/hooks/useDocumentRequests.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/hooks/useDocumentVersions.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
     "src/hooks/useEmailAttachments.ts": {

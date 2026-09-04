@@ -12,7 +12,20 @@ import { OpeningMeetingPhase } from './OpeningMeetingPhase';
 import { DocumentReviewPhase } from './DocumentReviewPhase';
 import { ClosingMeetingPhase } from './ClosingMeetingPhase';
 import type { ClientAudit } from '@/types/clientAudits';
-import type { TemplateQuestion, AuditResponse, AuditPhase, AuditSection } from '@/types/auditWorkspace';
+import type { TemplateQuestion, AuditResponse, AuditFinding, AuditPhase, AuditSection } from '@/types/auditWorkspace';
+
+export type UpsertResponseInput = {
+  audit_id: string;
+  section_id: string;
+  question_id: string;
+  rating?: string | null;
+  notes?: string | null;
+  score?: number | null;
+  is_flagged?: boolean;
+  responded_by: string;
+};
+
+export type AddFindingInput = Partial<AuditFinding> & { audit_id: string };
 
 interface AuditFormTabProps {
   audit: ClientAudit;
@@ -70,7 +83,7 @@ export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
             sectionId={section.id}
             title={section.title}
             auditId={audit.id}
-            onAddFinding={(f: any) => createFinding.mutate(f)}
+            onAddFinding={(f: AddFindingInput) => createFinding.mutate(f)}
           />
         ))}
       </div>
@@ -95,7 +108,7 @@ export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
       userId={userId}
       framework={framework ?? null}
       onUpsertResponse={upsertResponse.mutate}
-      onAddFinding={(f: any) => createFinding.mutate(f)}
+      onAddFinding={(f: AddFindingInput) => createFinding.mutate(f)}
       onUpdateSummary={(sectionId, summary) => updateSummary.mutate({ sectionId, summary })}
       onUpdateRiskLevel={(sectionId, riskLevel) => updateRiskLevel.mutate({ sectionId, riskLevel })}
       selectedSectionId={selectedSectionId}
@@ -130,8 +143,8 @@ function TemplatePhaseView({
   setActivePhase: (phase: AuditPhase) => void;
   userId: string | undefined;
   framework: string | null;
-  onUpsertResponse: (data: any) => void;
-  onAddFinding: (f: any) => void;
+  onUpsertResponse: (data: UpsertResponseInput) => void;
+  onAddFinding: (f: AddFindingInput) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
   onUpdateRiskLevel: (sectionId: string, riskLevel: string) => void;
   selectedSectionId?: string;
@@ -145,7 +158,7 @@ function TemplatePhaseView({
   // (which have no response row yet) fall to the end after a refresh.
   const responseOrderByQuestionId = new Map<string, number | null>();
   for (const r of responses) {
-    if (r.question_id) responseOrderByQuestionId.set(r.question_id, (r as any).display_order ?? null);
+    if (r.question_id) responseOrderByQuestionId.set(r.question_id, r.display_order ?? null);
   }
   const questionsBySection: Record<string, TemplateQuestion[]> = {};
   for (const tsId of allTemplateSectionIds) {
@@ -260,7 +273,7 @@ function FreeformSection({
   sectionId: string;
   title: string;
   auditId: string;
-  onAddFinding: (f: any) => void;
+  onAddFinding: (f: AddFindingInput) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -297,7 +310,7 @@ function FreeformSection({
             <AddFindingForm
               auditId={auditId}
               sectionId={sectionId}
-              onSave={(f) => { onAddFinding(f); setShowForm(false); }}
+              onSave={(f) => { onAddFinding({ ...f, audit_id: auditId }); setShowForm(false); }}
               onCancel={() => setShowForm(false)}
             />
           )}

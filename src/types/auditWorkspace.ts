@@ -71,6 +71,10 @@ export interface AuditResponse {
   ai_suggested_rating: string | null;
   ai_suggested_notes: string | null;
   ai_confidence: number | null;
+  ai_analyzed_at: string | null;
+  ai_excerpts: { quote: string; source: string; verified_against?: string }[] | null;
+  ai_gaps: string[] | null;
+  display_order: number | null;
   responded_by: string | null;
   responded_at: string | null;
   created_at: string;
