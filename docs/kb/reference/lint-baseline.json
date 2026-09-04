@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T19:27:40.362Z",
-  "baselineSha": "e4c03dffdfb0797f26c64537b0b2cd10c57a3c83",
+  "generatedAt": "2026-09-04T19:38:29.407Z",
+  "baselineSha": "b20f775df6976cc8aeb3e44a5345769b7397af44",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 421,
-    "errors": 1715,
+    "filesWithFindings": 419,
+    "errors": 1679,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1708,
+    "@typescript-eslint/no-explicit-any": 1672,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1047,
+      "errors": 1011,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1040,
+        "@typescript-eslint/no-explicit-any": 1004,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -32,10 +32,10 @@
   },
   "byDirectory": {
     "src/components": {
-      "errors": 57,
+      "errors": 44,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 57
+        "@typescript-eslint/no-explicit-any": 44
       }
     },
     "src/components/academy": {
@@ -423,10 +423,10 @@
       }
     },
     "src/pages/client": {
-      "errors": 36,
+      "errors": 13,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 36
+        "@typescript-eslint/no-explicit-any": 13
       }
     },
     "src/routes": {
@@ -1245,9 +1245,6 @@
     },
     "src/components/CreateDocumentDialog2.tsx": {
       "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/components/DashboardLayout.tsx": {
-      "@typescript-eslint/no-explicit-any": 13
     },
     "src/components/EditPackageDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 3
@@ -2109,9 +2106,6 @@
     },
     "src/pages/client/AcademyCourseDetailPage.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/pages/client/AcademyLessonViewerPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 23
     },
     "src/pages/client/ClientFilesPage.tsx": {
       "@typescript-eslint/no-explicit-any": 1

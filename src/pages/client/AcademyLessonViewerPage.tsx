@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import {
   GraduationCap, ChevronRight, ChevronLeft,
   Play, BookOpen, FileText, CheckCircle2, Clock, ArrowLeft, ArrowRight, Eye, Lock, AlertTriangle,
@@ -34,6 +35,19 @@ import WebinarSeriesSubtitle from "@/components/academy/WebinarSeriesSubtitle";
 
 const ACCENT = "#23c0dd";
 const PROGRESS_THROTTLE_MS = 10_000;
+
+type AcademyModuleRow = Pick<Tables<"academy_modules">, "id" | "course_id" | "title" | "sort_order" | "is_published">;
+interface AcademyLessonOutlineRow {
+  id: number;
+  module_id: number;
+  title: string;
+  lesson_type: string;
+  sort_order: number;
+  is_published: boolean;
+  is_preview: boolean;
+  estimated_minutes: number;
+}
+type AcademyModuleWithLessons = AcademyModuleRow & { lessons: AcademyLessonOutlineRow[] };
 
 export default function AcademyLessonViewerPage() {
   const { slug, lessonId } = useParams<{ slug: string; lessonId: string }>();
@@ -82,7 +96,7 @@ export default function AcademyLessonViewerPage() {
     [course?.facilitator_id],
   );
   const { data: facilitatorNameById = {} } = useFacilitatorNames(facilitatorLookupIds);
-  const facilitatorName = (course as any)?.facilitator_display_name?.trim() || (course?.facilitator_id ? facilitatorNameById[course.facilitator_id] : undefined);
+  const facilitatorName = course?.facilitator_display_name?.trim() || (course?.facilitator_id ? facilitatorNameById[course.facilitator_id] : undefined);
 
   // Fetch current lesson
   const { data: lesson, isLoading: lessonLoading } = useQuery({
@@ -126,15 +140,15 @@ export default function AcademyLessonViewerPage() {
       if (mErr) throw mErr;
       if (lErr) throw lErr;
 
-      const byModule = new Map<number, any[]>();
-      (lessons ?? []).forEach((l: any) => {
+      const byModule = new Map<number, AcademyLessonOutlineRow[]>();
+      (lessons ?? []).forEach((l) => {
         const arr = byModule.get(l.module_id) || [];
         arr.push(l);
         byModule.set(l.module_id, arr);
       });
-      return (mods ?? []).filter((m: any) => m.is_published !== false).map((m: any) => ({
+      return (mods ?? []).filter((m) => m.is_published !== false).map((m): AcademyModuleWithLessons => ({
         ...m,
-        lessons: (byModule.get(m.id) || []).filter((l: any) => l.is_published !== false),
+        lessons: (byModule.get(m.id) || []).filter((l) => l.is_published !== false),
       }));
     },
   });
@@ -191,7 +205,7 @@ export default function AcademyLessonViewerPage() {
         .select("lesson_id")
         .eq("enrollment_id", enrollment!.enrollment_id)
         .eq("is_completed", true);
-      return (data ?? []).map((r: any) => r.lesson_id as number);
+      return (data ?? []).map((r) => r.lesson_id);
     },
   });
 
@@ -239,7 +253,7 @@ export default function AcademyLessonViewerPage() {
 
   // Upsert progress helper
   const upsertProgress = useCallback(
-    async (fields: Record<string, any>) => {
+    async (fields: Partial<TablesInsert<"academy_lesson_progress">>) => {
       if (!canTrackProgress || !lesson || !course || !enrollment) return;
       if (!actingUserId) return;
       await supabase.from("academy_lesson_progress").upsert(
@@ -247,9 +261,9 @@ export default function AcademyLessonViewerPage() {
           user_id: actingUserId,
           course_id: course.id,
           lesson_id: lesson.id,
-          enrollment_id: enrollment.enrollment_id,
+          enrollment_id: enrollment.enrollment_id!,
           ...fields,
-        } as any,
+        },
         { onConflict: "enrollment_id,lesson_id" }
       );
     },
@@ -269,11 +283,11 @@ export default function AcademyLessonViewerPage() {
         user_id: actingUserId,
         course_id: course.id,
         lesson_id: lesson.id,
-        enrollment_id: enrollment.enrollment_id,
+        enrollment_id: enrollment.enrollment_id!,
         is_completed: true,
         completed_at: new Date().toISOString(),
         completion_percentage: 100,
-      } as any,
+      },
       { onConflict: "enrollment_id,lesson_id" }
     );
 
@@ -282,7 +296,7 @@ export default function AcademyLessonViewerPage() {
       .select("id")
       .eq("course_id", course.id)
       .eq("is_published", true);
-    const lessonIds = (allLessons ?? []).map((l: any) => l.id);
+    const lessonIds = (allLessons ?? []).map((l) => l.id);
     if (lessonIds.length > 0) {
       const { count: completedCount } = await supabase
         .from("academy_lesson_progress")
@@ -380,11 +394,11 @@ export default function AcademyLessonViewerPage() {
           user_id: actingUserId,
           course_id: course.id,
           lesson_id: lesson.id,
-          enrollment_id: enrollment.enrollment_id,
+          enrollment_id: enrollment.enrollment_id!,
           is_completed: true,
           completed_at: new Date().toISOString(),
           completion_percentage: 100,
-        } as any,
+        },
         { onConflict: "enrollment_id,lesson_id" }
       );
       if (error) throw error;
@@ -394,7 +408,7 @@ export default function AcademyLessonViewerPage() {
         .select("id")
         .eq("course_id", course.id)
         .eq("is_published", true);
-      const lessonIdList = (allLessonIds ?? []).map((l: any) => l.id);
+      const lessonIdList = (allLessonIds ?? []).map((l) => l.id);
       if (lessonIdList.length === 0) return { courseComplete: false };
 
       const { count: completedCount } = await supabase
@@ -422,15 +436,15 @@ export default function AcademyLessonViewerPage() {
         setShowCelebration(true);
       }
     },
-    onError: (e: any) => {
+    onError: (e: unknown) => {
       if (isPreviewBlockedError(e)) return;
       toast.error(friendlyDbError(e, "AcademyLessonViewer.markComplete"));
     },
   });
 
   // Compute prev/next lessons
-  const allLessons = modules.flatMap((m: any) => m.lessons);
-  const currentIdx = allLessons.findIndex((l: any) => l.id === numericLessonId);
+  const allLessons = modules.flatMap((m) => m.lessons);
+  const currentIdx = allLessons.findIndex((l) => l.id === numericLessonId);
   const prevLesson = currentIdx > 0 ? allLessons[currentIdx - 1] : null;
   const nextLesson = currentIdx >= 0 && currentIdx < allLessons.length - 1 ? allLessons[currentIdx + 1] : null;
 
@@ -443,7 +457,7 @@ export default function AcademyLessonViewerPage() {
   );
 
   const allLessonsComplete =
-    allLessons.length > 0 && allLessons.every((l: any) => completedLessonIds.includes(l.id));
+    allLessons.length > 0 && allLessons.every((l) => completedLessonIds.includes(l.id));
   const quizLocked = !isEnrolled || !allLessonsComplete;
   const hasCertificateQuiz = publishedAssessment?.is_required_for_certificate === true;
 
@@ -580,11 +594,11 @@ export default function AcademyLessonViewerPage() {
           )}
 
           <div className="space-y-2">
-            {modules.map((mod: any) => (
+            {modules.map((mod) => (
               <div key={mod.id}>
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">{mod.title}</p>
                 <ul className="space-y-0.5">
-                  {mod.lessons.map((l: any) => {
+                  {mod.lessons.map((l) => {
                     const active = l.id === numericLessonId;
                     const done = completedLessonIds.includes(l.id);
                     const locked = !isEnrolled && !l.is_preview;
@@ -734,8 +748,8 @@ export default function AcademyLessonViewerPage() {
             vimeoUrl={video?.vimeo_url ?? null}
             title={lesson.title}
             startPositionSeconds={currentProgress?.last_position_seconds ?? 0}
-            segmentStartSeconds={(lesson as any)?.segment_start_seconds ?? (course as any)?.segment_start_seconds ?? null}
-            segmentEndSeconds={(lesson as any)?.segment_end_seconds ?? (course as any)?.segment_end_seconds ?? null}
+            segmentStartSeconds={lesson?.segment_start_seconds ?? course?.segment_start_seconds ?? null}
+            segmentEndSeconds={lesson?.segment_end_seconds ?? course?.segment_end_seconds ?? null}
             completionThreshold={completionThreshold}
             onFirstPlay={() => {
               if (canTrackProgress) {

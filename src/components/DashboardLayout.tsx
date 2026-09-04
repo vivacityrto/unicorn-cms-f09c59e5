@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
 import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronUp, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download, Gauge, Activity, AlertTriangle, Radar, Compass, Network, UserPlus, UsersRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -100,12 +101,20 @@ const resourceManagementMenuItems = [
 // Super Admin: full access
 // Team Leader: read-only access to Team Users and Tenant Users
 // Team Member: hidden
-const administrationMenuItems = [
+interface AdministrationMenuItem {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  saOrIntegratorOnly?: boolean;
+  saOrTeamLeaderOnly?: boolean;
+  superAdminOnly?: boolean;
+}
+const administrationMenuItems: AdministrationMenuItem[] = [
   { icon: Shield, label: "Team Users", path: "/admin/team-users" },
   { icon: Building2, label: "Tenant Users", path: "/admin/tenant-users" },
   { icon: UsersRound, label: "Contact Directory", path: "/administration/contacts" },
   { icon: Users, label: "People", path: "/admin/staff-engagements", saOrIntegratorOnly: true },
-  
+
   { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
   { icon: Send, label: "Cohort Sender", path: "/admin/cohort-sender", superAdminOnly: true },
   { icon: UserPlus, label: "Bulk Invite", path: "/admin/bulk-invite", superAdminOnly: true },
@@ -276,10 +285,10 @@ export const DashboardLayout = ({
   const filteredWorkItems = useMemo(() => {
     const isEmailTriageStaff = EMAIL_TRIAGE_ROLES.has(userRole);
     return workMenuItems.filter(item => {
-      if ((item as any).leadershipOnly) {
+      if (item.leadershipOnly) {
         return isSuperAdmin || isTeamLeader;
       }
-      if ((item as any).emailTriageStaffOnly) {
+      if (item.emailTriageStaffOnly) {
         return isEmailTriageStaff;
       }
       return true;
@@ -289,10 +298,10 @@ export const DashboardLayout = ({
   // Filter Administration items based on role
   const filteredAdminItems = useMemo(() => {
     return administrationMenuItems.filter(item => {
-      if ((item as any).saOrIntegratorOnly) {
+      if (item.saOrIntegratorOnly) {
         return isSuperAdmin || isIntegrator;
       }
-      if ((item as any).saOrTeamLeaderOnly) {
+      if (item.saOrTeamLeaderOnly) {
         return isSuperAdmin || isTeamLeader;
       }
       if (item.superAdminOnly) {
@@ -309,7 +318,7 @@ export const DashboardLayout = ({
   }, [userRole]);
 
   // Render menu link
-  const renderMenuItem = (item: { icon: any; label: string; path: string; badge?: number }) => {
+  const renderMenuItem = (item: { icon: LucideIcon; label: string; path: string; badge?: number }) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
 
@@ -333,9 +342,9 @@ export const DashboardLayout = ({
               {item.label}
             </span>
           )}
-          {sidebarOpen && (item as any).badge > 0 && (
+          {sidebarOpen && item.badge > 0 && (
             <span className="ml-auto text-[10px] font-bold bg-[#ED1878] text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
-              {(item as any).badge > 99 ? "99+" : (item as any).badge}
+              {item.badge > 99 ? "99+" : item.badge}
             </span>
           )}
         </Link>
@@ -361,9 +370,9 @@ export const DashboardLayout = ({
             {item.label}
           </span>
         )}
-        {sidebarOpen && (item as any).badge > 0 && (
+        {sidebarOpen && item.badge > 0 && (
           <span className="ml-auto text-[10px] font-bold bg-[#ED1878] text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
-            {(item as any).badge > 99 ? "99+" : (item as any).badge}
+            {item.badge > 99 ? "99+" : item.badge}
           </span>
         )}
       </Link>
@@ -374,7 +383,7 @@ export const DashboardLayout = ({
   const renderSection = (
     key: string,
     title: string,
-    items: { icon: any; label: string; path: string }[],
+    items: { icon: LucideIcon; label: string; path: string }[],
     sectionKey: keyof typeof sectionsOpen,
     showAlertDot?: boolean
   ) => {
@@ -554,7 +563,7 @@ export const DashboardLayout = ({
                     return item;
                   })
                   .filter(item => {
-                    if ((item as any).cscOrSuperAdminOnly) {
+                    if (item.cscOrSuperAdminOnly) {
                       return isSuperAdmin || userRole === 'CSC';
                     }
                     return true;
