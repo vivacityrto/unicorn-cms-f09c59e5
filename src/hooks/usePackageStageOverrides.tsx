@@ -10,8 +10,8 @@ export interface OverrideItem {
   isOverride: boolean;
   isDeleted: boolean;
   type: 'team_task' | 'client_task' | 'email' | 'document';
-  packageData: any;
-  templateData: any | null;
+  packageData: { name?: string; [key: string]: unknown };
+  templateData: ({ name?: string; [key: string]: unknown }) | null;
   diffStatus: 'inherited' | 'overridden' | 'deleted' | 'added' | 'modified';
 }
 
@@ -50,8 +50,8 @@ export function usePackageOverrides(packageId: number | null, stageId: number | 
 
   // Calculate diff status for an item
   const calculateDiffStatus = (
-    packageItem: any,
-    templateItem: any | null,
+    packageItem: { source_stage_task_id?: number | null; source_stage_email_id?: number | null; source_stage_document_id?: number | null },
+    templateItem: unknown,
     isOverride: boolean,
     isDeleted: boolean
   ): 'inherited' | 'overridden' | 'deleted' | 'added' | 'modified' => {
@@ -209,7 +209,7 @@ export function usePackageOverrides(packageId: number | null, stageId: number | 
 
   // Mark item as overridden
   const markAsOverride = async (type: 'team_task' | 'client_task' | 'email' | 'document', itemId: string) => {
-    let error: any = null;
+    let error: unknown = null;
     
     if (type === 'team_task') {
       const result = await supabase.from('package_staff_tasks').update({ is_override: true }).eq('id', itemId);
@@ -218,10 +218,10 @@ export function usePackageOverrides(packageId: number | null, stageId: number | 
       const result = await supabase.from('package_client_tasks').update({ is_override: true }).eq('id', itemId);
       error = result.error;
     } else if (type === 'email') {
-      const result = await supabase.from('package_stage_emails').update({ is_override: true }).eq('id', itemId as any);
+      const result = await supabase.from('package_stage_emails').update({ is_override: true }).eq('id', Number(itemId));
       error = result.error;
     } else if (type === 'document') {
-      const result = await supabase.from('package_stage_documents').update({ is_override: true }).eq('id', itemId as any);
+      const result = await supabase.from('package_stage_documents').update({ is_override: true }).eq('id', itemId);
       error = result.error;
     }
     if (error) throw error;
@@ -296,7 +296,7 @@ export function usePackageOverrides(packageId: number | null, stageId: number | 
               is_override: false,
               is_deleted: false
             })
-            .eq('id', itemId as any);
+            .eq('id', Number(itemId));
         }
       } else if (type === 'document') {
         const { data: template } = await supabase
@@ -316,16 +316,16 @@ export function usePackageOverrides(packageId: number | null, stageId: number | 
               is_override: false,
               is_deleted: false
             })
-            .eq('id', itemId as any);
+            .eq('id', itemId);
         }
       }
 
       toast({ title: 'Reset to template' });
       await fetchOverrideData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to reset item',
+        description: error instanceof Error ? error.message : 'Failed to reset item',
         variant: 'destructive'
       });
     }
@@ -333,7 +333,7 @@ export function usePackageOverrides(packageId: number | null, stageId: number | 
 
   // Soft delete item (mark as deleted)
   const softDeleteItem = async (type: 'team_task' | 'client_task' | 'email' | 'document', itemId: string) => {
-    let error: any = null;
+    let error: unknown = null;
     
     if (type === 'team_task') {
       const result = await supabase.from('package_staff_tasks').update({ is_deleted: true, is_override: true }).eq('id', itemId);
@@ -342,10 +342,10 @@ export function usePackageOverrides(packageId: number | null, stageId: number | 
       const result = await supabase.from('package_client_tasks').update({ is_deleted: true, is_override: true }).eq('id', itemId);
       error = result.error;
     } else if (type === 'email') {
-      const result = await supabase.from('package_stage_emails').update({ is_deleted: true, is_override: true }).eq('id', itemId as any);
+      const result = await supabase.from('package_stage_emails').update({ is_deleted: true, is_override: true }).eq('id', Number(itemId));
       error = result.error;
     } else if (type === 'document') {
-      const result = await supabase.from('package_stage_documents').update({ is_deleted: true, is_override: true }).eq('id', itemId as any);
+      const result = await supabase.from('package_stage_documents').update({ is_deleted: true, is_override: true }).eq('id', itemId);
       error = result.error;
     }
 
@@ -356,7 +356,7 @@ export function usePackageOverrides(packageId: number | null, stageId: number | 
 
   // Restore deleted item
   const restoreItem = async (type: 'team_task' | 'client_task' | 'email' | 'document', itemId: string) => {
-    let error: any = null;
+    let error: unknown = null;
     
     if (type === 'team_task') {
       const result = await supabase.from('package_staff_tasks').update({ is_deleted: false }).eq('id', itemId);
@@ -365,10 +365,10 @@ export function usePackageOverrides(packageId: number | null, stageId: number | 
       const result = await supabase.from('package_client_tasks').update({ is_deleted: false }).eq('id', itemId);
       error = result.error;
     } else if (type === 'email') {
-      const result = await supabase.from('package_stage_emails').update({ is_deleted: false }).eq('id', itemId as any);
+      const result = await supabase.from('package_stage_emails').update({ is_deleted: false }).eq('id', Number(itemId));
       error = result.error;
     } else if (type === 'document') {
-      const result = await supabase.from('package_stage_documents').update({ is_deleted: false }).eq('id', itemId as any);
+      const result = await supabase.from('package_stage_documents').update({ is_deleted: false }).eq('id', itemId);
       error = result.error;
     }
 
@@ -490,10 +490,10 @@ export function useSyncStageToPackages() {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Sync Failed',
-        description: error.message || 'Failed to sync stage to packages',
+        description: error instanceof Error ? error.message : 'Failed to sync stage to packages',
         variant: 'destructive'
       });
       throw error;
@@ -523,10 +523,10 @@ export function useCopyTemplateToPackage() {
       if (error) throw error;
 
       toast({ title: 'Template copied to package with override tracking' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Copy Failed',
-        description: error.message || 'Failed to copy template',
+        description: error instanceof Error ? error.message : 'Failed to copy template',
         variant: 'destructive'
       });
       throw error;
