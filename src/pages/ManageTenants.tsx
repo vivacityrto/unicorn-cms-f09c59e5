@@ -143,7 +143,7 @@ export default function ManageTenants() {
   const basicQuery = useTenantsBasic();
   const accumulated = useMemo(() => basicQuery.data ?? [], [basicQuery.data]);
 
-  const tenantIds = useMemo(() => accumulated.map((t: any) => t.id), [accumulated]);
+  const tenantIds = useMemo(() => accumulated.map((t) => t.id), [accumulated]);
 
   const packagesQuery = useTenantPackages(tenantIds);
   const contactsQuery = useTenantContacts(tenantIds);
@@ -174,7 +174,7 @@ export default function ManageTenants() {
     const contactsMap = contactsQuery.data || {};
     const cscMap = cscQuery.data || {};
     const notesMap = notesQuery.data || {};
-    const merged: Tenant[] = accumulated.map((t: any) => {
+    const merged: Tenant[] = accumulated.map((t) => {
       const pkg = pkgMap[t.id];
       const contacts = contactsMap[t.id];
       const csc = cscMap[t.id];
@@ -322,7 +322,7 @@ export default function ManageTenants() {
       const { data, error } = await supabase.from("packages").select("id, name, created_at").order("name");
       if (error) throw error;
       setPackages(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching packages:", error);
     }
   };
@@ -350,7 +350,7 @@ export default function ManageTenants() {
         last_name: u.last_name,
         archived: u.archived || false
       })));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching CSC options:", error);
     }
   };
@@ -585,8 +585,8 @@ export default function ManageTenants() {
       setConnectedTenantIds(prev => [...prev, tenant.id]);
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       toast({ title: "Connected", description: `You are now connected to "${tenant.name}" workspace` });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" });
     }
   };
 
@@ -600,8 +600,8 @@ export default function ManageTenants() {
       setConnectedTenantIds(prev => prev.filter(id => id !== disconnectDialog.tenant!.id));
       toast({ title: "Disconnected", description: `Disconnected from "${disconnectDialog.tenant.name}" workspace` });
       setDisconnectDialog({ open: false, tenant: null });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" });
     }
   };
 
@@ -625,8 +625,8 @@ export default function ManageTenants() {
       setConnectedTenantIds(activeTenants.map(t => t.id));
       setConnectAllDialog(false);
       toast({ title: "Success", description: `Connected to ${activeTenants.length} active tenant${activeTenants.length !== 1 ? "s" : ""}` });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" });
     }
   };
 
@@ -1117,7 +1117,7 @@ export default function ManageTenants() {
               </TableHeader>
               <TableBody>
                 {filteredTenants.map((tenant, index) => {
-                  const hasKickStart = (tenant as any)._hasKickStart || tenant.all_packages.some(p => p.name.startsWith('KS'));
+                  const hasKickStart = tenant.all_packages.some(p => p.name.startsWith('KS'));
                   const nonKSPackages = tenant.all_packages.filter(p => !p.name.startsWith('KS'));
                   const primaryPkg = nonKSPackages[0];
                   const secondaryPkg = nonKSPackages.length > 1 ? nonKSPackages[1] : null;

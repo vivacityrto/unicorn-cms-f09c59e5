@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T21:50:23.607Z",
-  "baselineSha": "867e8bdb4906bb005dc7ad3e34720c59ebeafa9b",
+  "generatedAt": "2026-09-04T22:00:50.689Z",
+  "baselineSha": "b20adb03613799fbf30da1bdd6ba011ac2b32331",
   "totals": {
-    "files": 1758,
-    "filesWithFindings": 399,
-    "errors": 1486,
+    "files": 1757,
+    "filesWithFindings": 397,
+    "errors": 1471,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1479,
+    "@typescript-eslint/no-explicit-any": 1464,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 818,
+      "errors": 803,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 811,
+        "@typescript-eslint/no-explicit-any": 796,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -87,13 +87,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 6
-      }
-    },
-    "src/components/ask-viv": {
-      "errors": 7,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 7
       }
     },
     "src/components/audit": {
@@ -394,10 +387,10 @@
       }
     },
     "src/pages": {
-      "errors": 116,
+      "errors": 108,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 116
+        "@typescript-eslint/no-explicit-any": 108
       }
     },
     "src/pages/academy": {
@@ -1302,9 +1295,6 @@
     "src/components/admin/team-users/TeamLeaderEmailDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/components/ask-viv/AskVivPanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/components/audit/DeleteAuditDialog.tsx": {
       "react-refresh/only-export-components": 1
     },
@@ -1975,9 +1965,6 @@
     },
     "src/pages/ManageEmailTemplates.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/ManageTenants.tsx": {
-      "@typescript-eslint/no-explicit-any": 8
     },
     "src/pages/ManageUsers.tsx": {
       "@typescript-eslint/no-explicit-any": 6
