@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json, TablesUpdate } from '@/integrations/supabase/types';
 
 export interface CompliancePlaybook {
   id: string;
@@ -32,7 +33,7 @@ export interface PlaybookActivation {
   activation_reason: string;
   activation_status: 'suggested' | 'initiated' | 'completed' | 'dismissed';
   current_step_order: number;
-  adaptive_context_json: Record<string, any>;
+  adaptive_context_json: Json | null;
   activated_at: string;
   completed_at: string | null;
   compliance_playbooks?: CompliancePlaybook;
@@ -97,15 +98,15 @@ export function usePlaybookOverview() {
       if (error) throw error;
 
       const all = data || [];
-      const suggested = all.filter((a: any) => a.activation_status === 'suggested').length;
-      const initiated = all.filter((a: any) => a.activation_status === 'initiated').length;
-      const completed = all.filter((a: any) => a.activation_status === 'completed').length;
-      const dismissed = all.filter((a: any) => a.activation_status === 'dismissed').length;
+      const suggested = all.filter((a) => a.activation_status === 'suggested').length;
+      const initiated = all.filter((a) => a.activation_status === 'initiated').length;
+      const completed = all.filter((a) => a.activation_status === 'completed').length;
+      const dismissed = all.filter((a) => a.activation_status === 'dismissed').length;
       const actioned = initiated + completed;
 
       // Find top trigger type
       const typeCounts: Record<string, number> = {};
-      all.forEach((a: any) => {
+      all.forEach((a) => {
         const tt = a.compliance_playbooks?.trigger_type || 'unknown';
         typeCounts[tt] = (typeCounts[tt] || 0) + 1;
       });
@@ -128,7 +129,7 @@ export function useUpdateActivationStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status, stepOrder }: { id: string; status: string; stepOrder?: number }) => {
-      const updates: any = { activation_status: status };
+      const updates: TablesUpdate<'playbook_activations'> = { activation_status: status };
       if (status === 'completed') updates.completed_at = new Date().toISOString();
       if (stepOrder !== undefined) updates.current_step_order = stepOrder;
 
