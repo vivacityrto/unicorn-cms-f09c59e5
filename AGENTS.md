@@ -90,6 +90,20 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   its exact duration varies a lot with whatever else is resident on this
   machine (this dev box has only ~8 GB total RAM) — don't read a slow run as
   broken. A full performance diagnosis is out of scope here.
+- `npm run seed:tsc-cache` (`scripts/seed-tsc-cache.mjs`, 2026-09-04) copies
+  `node_modules/.cache/tsc/*.tsbuildinfo` from the main checkout or a
+  sibling worktree into the current one — run it once right after
+  `npm install` in a freshly created worktree, before the first
+  `npm run typecheck`, so that first run isn't a guaranteed full cold
+  compile. Safe by construction: `tsc --incremental` re-validates every
+  file's content against the cache before trusting it, so a stale or even
+  unrelated seed can only cost extra cache misses, never a wrong result.
+  Skips itself (no-op) if the current worktree already has a cache, unless
+  passed `--force`. Not yet a mandated step — see
+  `docs/kb/reference/execution-efficiency-log.md`'s "TS cache seeding —
+  baseline and milestones" for why (two trials so far disagree nearly 6x on
+  the speedup, though both beat a cold run) and what needs to be true
+  before it's promoted to standard practice.
 - Vitest single-file/teardown speed (P0.3): the plan's evidence for this
   candidate ("single files can take 27-90s and report fork termination
   timeouts") does **not** currently reproduce. Verified 2026-09-01 on
