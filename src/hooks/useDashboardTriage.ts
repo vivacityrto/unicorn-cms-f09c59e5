@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInDays, parseISO, isValid, addMonths } from 'date-fns';
 import { getReRegistrationDueDate, getReRegistrationUrgency, formatReRegistrationLabel } from '@/lib/reRegistrationDate';
+import type { Json } from '@/integrations/supabase/types';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -17,7 +18,7 @@ export interface AttentionTenant {
   rto_id: string | null;
   cricos_id: string | null;
   assigned_csc_user_id: string | null;
-  packages_json: any[];
+  packages_json: unknown[];
   risk_status: string;
   risk_index: number;
   risk_index_delta_14d: number;
@@ -48,7 +49,12 @@ export interface AttentionTenant {
   compliance_blocked_tasks: number;
   compliance_open_tasks: number;
   attention_score: number;
-  attention_drivers_json: any[];
+  attention_drivers_json: AttentionDriver[];
+}
+
+export interface AttentionDriver {
+  driver: string;
+  value: string | number;
 }
 
 export interface PriorityInboxItem {
@@ -86,8 +92,8 @@ export interface LabourMetric {
 
 export interface TenantComms {
   tenant_id: number;
-  recent_notes_json: any[];
-  recent_emails_json: any[];
+  recent_notes_json: unknown[];
+  recent_emails_json: unknown[];
 }
 
 export type SavedView = 'my_tenants' | 'all_tenants';
@@ -169,7 +175,7 @@ export function useDashboardTriage() {
         is_overdue: boolean; is_high_priority: boolean;
       }> = [];
 
-      (opsItems || []).forEach((i: any) => {
+      (opsItems || []).forEach((i) => {
         const isOverdue = i.due_at ? new Date(i.due_at) < now : false;
         const isHighPriority = ['high', 'urgent'].includes(i.priority || '');
         if (isOverdue || isHighPriority) {
@@ -181,7 +187,7 @@ export function useDashboardTriage() {
         }
       });
 
-      (clientItems || []).forEach((i: any) => {
+      (clientItems || []).forEach((i) => {
         const isOverdue = i.due_date ? new Date(i.due_date) < now : false;
         const isHighPriority = ['high', 'urgent'].includes(i.priority || '');
         if (isOverdue || isHighPriority) {
@@ -227,7 +233,7 @@ export function useDashboardTriage() {
   const { data: rawTenants = [], isLoading: tenantsLoading } = useQuery({
     queryKey: ['triage-attention-ranked', isSuperAdmin, savedView, profile?.user_uuid],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = supabase
         .from('v_dashboard_attention_ranked')
         .select('*')
         .order('attention_score', { ascending: false })
@@ -268,7 +274,7 @@ export function useDashboardTriage() {
 
   const cscNameMap = useMemo(() => {
     const map: Record<string, string> = {};
-    cscUsers.forEach((u: any) => { map[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown'; });
+    cscUsers.forEach((u) => { map[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown'; });
     return map;
   }, [cscUsers]);
 
@@ -523,7 +529,7 @@ export function useDashboardTriage() {
   const { data: rawInbox = [], isLoading: inboxLoading } = useQuery({
     queryKey: ['triage-priority-inbox'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('v_dashboard_priority_inbox' as any).select('*');
+      const { data, error } = await supabase.from('v_dashboard_priority_inbox').select('*');
       if (error) throw error;
       return (data || []) as unknown as PriorityInboxItem[];
     },
@@ -534,7 +540,8 @@ export function useDashboardTriage() {
   const { data: inboxActions = [] } = useQuery({
     queryKey: ['triage-inbox-actions'],
     queryFn: async () => {
-      const { data } = await (supabase.from as any)('priority_inbox_actions')
+      const { data } = await supabase
+        .from('priority_inbox_actions')
         .select('item_id, action_type, until_at')
         .eq('user_id', profile?.user_uuid || '');
       return data || [];
@@ -544,8 +551,8 @@ export function useDashboardTriage() {
 
   const priorityInbox = useMemo(() => {
     const now = new Date();
-    const snoozed = new Set(inboxActions.filter((a: any) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now)).map((a: any) => a.item_id));
-    const acked = new Set(inboxActions.filter((a: any) => a.action_type === 'acknowledge').map((a: any) => a.item_id));
+    const snoozed = new Set(inboxActions.filter((a) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now)).map((a) => a.item_id));
+    const acked = new Set(inboxActions.filter((a) => a.action_type === 'acknowledge').map((a) => a.item_id));
     let items = rawInbox.filter(i => !snoozed.has(i.item_id) && !acked.has(i.item_id));
 
     if (savedView === 'my_tenants' && profile?.user_uuid) {
@@ -564,7 +571,7 @@ export function useDashboardTriage() {
   const { data: backendPrompts = [] } = useQuery({
     queryKey: ['triage-behavioural-prompts', isSuperAdmin, savedView, profile?.user_uuid],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = supabase
         .from('v_dashboard_behavioural_prompts')
         .select('*');
       if (!isSuperAdmin && savedView === 'my_tenants' && profile?.user_uuid) {
@@ -590,8 +597,8 @@ export function useDashboardTriage() {
         .lte('registration_end_date', sixMonthsOut);
       if (error) throw error;
       return (data || [])
-        .filter((r: any) => r.registration_end_date && !(r.trading_name || '').toLowerCase().startsWith('test'))
-        .map((r: any): PriorityInboxItem => {
+        .filter((r) => r.registration_end_date && !(r.trading_name || '').toLowerCase().startsWith('test'))
+        .map((r): PriorityInboxItem => {
           const dueDate = getReRegistrationDueDate(r.registration_end_date);
           const daysToExpiry = dueDate ? differenceInDays(dueDate, new Date()) : 999;
           const urgency = dueDate ? getReRegistrationUrgency(dueDate) : 'green';
@@ -639,8 +646,8 @@ export function useDashboardTriage() {
 
     // Apply snooze/ack filtering for reg expiry items
     const now = new Date();
-    const snoozed = new Set(inboxActions.filter((a: any) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now)).map((a: any) => a.item_id));
-    const acked = new Set(inboxActions.filter((a: any) => a.action_type === 'acknowledge').map((a: any) => a.item_id));
+    const snoozed = new Set(inboxActions.filter((a) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now)).map((a) => a.item_id));
+    const acked = new Set(inboxActions.filter((a) => a.action_type === 'acknowledge').map((a) => a.item_id));
     let items = deduped.filter(i => !snoozed.has(i.item_id) && !acked.has(i.item_id));
 
     if (savedView === 'my_tenants' && profile?.user_uuid) {
@@ -659,10 +666,10 @@ export function useDashboardTriage() {
     // Fallback to backend prompts
     let prompts = backendPrompts;
     if (savedView === 'my_tenants' && profile?.user_uuid) {
-      prompts = prompts.filter((p: any) => p.owner_user_id === profile.user_uuid || !p.owner_user_id);
+      prompts = prompts.filter((p) => p.owner_user_id === profile.user_uuid || !p.owner_user_id);
     }
 
-    prompts = prompts.filter((p: any) => !snoozed.has(p.item_id) && !acked.has(p.item_id));
+    prompts = prompts.filter((p) => !snoozed.has(p.item_id) && !acked.has(p.item_id));
 
     if (prompts.length === 0) {
       return [{
@@ -686,7 +693,7 @@ export function useDashboardTriage() {
   const { data: riskClusters = [] } = useQuery({
     queryKey: ['triage-risk-clusters'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('v_dashboard_risk_clusters' as any).select('*');
+      const { data, error } = await supabase.from('v_dashboard_risk_clusters').select('*');
       if (error) throw error;
       return (data || []) as unknown as RiskCluster[];
     },
@@ -698,7 +705,7 @@ export function useDashboardTriage() {
   const { data: labourMetrics = [] } = useQuery({
     queryKey: ['triage-labour-efficiency'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('v_dashboard_labour_efficiency' as any).select('*');
+      const { data, error } = await supabase.from('v_dashboard_labour_efficiency').select('*');
       if (error) throw error;
       return (data || []) as unknown as LabourMetric[];
     },
@@ -722,7 +729,7 @@ export function useDashboardTriage() {
   // ── Mutations ──
   const acknowledgeItem = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await (supabase.from as any)('priority_inbox_actions').insert({
+      const { error } = await supabase.from('priority_inbox_actions').insert({
         item_id: itemId, item_type: 'inbox', user_id: profile!.user_uuid, action_type: 'acknowledge',
       });
       if (error) throw error;
@@ -738,7 +745,7 @@ export function useDashboardTriage() {
     mutationFn: async ({ itemId, days }: { itemId: string; days: number }) => {
       const until = new Date();
       until.setDate(until.getDate() + days);
-      const { error } = await (supabase.from as any)('priority_inbox_actions').insert({
+      const { error } = await supabase.from('priority_inbox_actions').insert({
         item_id: itemId, item_type: 'inbox', user_id: profile!.user_uuid, action_type: 'snooze', until_at: until.toISOString(),
       });
       if (error) throw error;
@@ -752,16 +759,16 @@ export function useDashboardTriage() {
 
   // ── Tenant comms ──
   const fetchTenantComms = useCallback(async (tenantId: number): Promise<TenantComms | null> => {
-    const { data, error } = await supabase.from('v_dashboard_tenant_recent_comms' as any).select('*').eq('tenant_id', tenantId).single();
+    const { data, error } = await supabase.from('v_dashboard_tenant_recent_comms').select('*').eq('tenant_id', tenantId).single();
     if (error) return null;
     return data as unknown as TenantComms;
   }, []);
 
   // ── Audit ──
-  const logDashboardEvent = useCallback(async (action: string, metadata: Record<string, any> = {}) => {
+  const logDashboardEvent = useCallback(async (action: string, metadata: Record<string, unknown> = {}) => {
     if (!profile?.user_uuid) return;
-    await (supabase.from as any)('audit_dashboard_events').insert({
-      actor_user_id: profile.user_uuid, action, metadata_json: { ...metadata, saved_view: savedView },
+    await supabase.from('audit_dashboard_events').insert({
+      actor_user_id: profile.user_uuid, action, metadata_json: { ...metadata, saved_view: savedView } as Json,
     });
   }, [profile?.user_uuid, savedView]);
 
