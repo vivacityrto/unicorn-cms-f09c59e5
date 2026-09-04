@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +53,17 @@ interface Task {
   milestones?: Array<{ id: string; text: string; completed: boolean }> | null;
   assignee_user?: { user_uuid: string; first_name: string; last_name: string; avatar_url: string | null } | null;
 }
+// get_valid_vivacity_users RPC's real return shape — no avatar_url (see the
+// Followers/Assign To pickers below, which render initials-only for this reason).
+interface VivacityUser {
+  email: string;
+  first_name: string;
+  last_name: string;
+  unicorn_role: string;
+  user_type: string;
+  user_uuid: string;
+}
+
 type TaskStatus = "pending" | "in_progress" | "completed" | "overdue" | "extended";
 // Reused from MyWork.tsx for visual consistency across task surfaces.
 const priorityColors: Record<string, string> = {
@@ -79,9 +92,8 @@ export default function TasksManagement() {
   }, [searchParams, setSearchParams]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [tenants, setTenants] = useState<any[]>([]);
-  const [packages, setPackages] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<{ id: number; name: string }[]>([]);
+  const [users, setUsers] = useState<VivacityUser[]>([]);
   const [formData, setFormData] = useState({
     task_name: "",
     description: "",
@@ -151,48 +163,48 @@ export default function TasksManagement() {
       ]);
 
       // Resolve ops package_instance_id -> package_id so the Package column can populate.
-      const opsInstanceIds = [...new Set((opsActions || []).map((a: any) => a.package_instance_id).filter(Boolean))] as number[];
+      const opsInstanceIds = [...new Set((opsActions || []).map((a) => a.package_instance_id).filter(Boolean))] as number[];
       let instanceToPackageId = new Map<number, number>();
       if (opsInstanceIds.length > 0) {
         const { data: instRows } = await supabase
           .from("package_instances")
           .select("id, package_id")
           .in("id", opsInstanceIds);
-        if (instRows) instanceToPackageId = new Map(instRows.map((r: any) => [r.id, r.package_id]));
+        if (instRows) instanceToPackageId = new Map(instRows.map((r) => [r.id, r.package_id]));
       }
 
       // Fetch tenant and package names separately (no FK joins available)
       const allTenantIds = new Set<number>();
-      tasksData?.forEach((t: any) => { if (t.tenant_id) allTenantIds.add(t.tenant_id); });
-      (clientActions || []).forEach((a: any) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
-      (opsActions || []).forEach((a: any) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
+      tasksData?.forEach((t) => { if (t.tenant_id) allTenantIds.add(t.tenant_id); });
+      (clientActions || []).forEach((a) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
+      (opsActions || []).forEach((a) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
       const tenantIds = [...allTenantIds];
       const packageIdSet = new Set<number>();
-      tasksData?.forEach((t: any) => { if (t.package_id) packageIdSet.add(t.package_id); });
-      (clientActions || []).forEach((a: any) => { if (a.package_id) packageIdSet.add(a.package_id); });
+      tasksData?.forEach((t) => { if (t.package_id) packageIdSet.add(t.package_id); });
+      (clientActions || []).forEach((a) => { if (a.package_id) packageIdSet.add(a.package_id); });
       instanceToPackageId.forEach((pid) => { if (pid) packageIdSet.add(pid); });
       const packageIds = [...packageIdSet];
 
       let tenantsMap = new Map<number, string>();
       if (tenantIds.length > 0) {
         const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
-        if (tenantRows) tenantsMap = new Map(tenantRows.map((t: any) => [t.id, t.name]));
+        if (tenantRows) tenantsMap = new Map(tenantRows.map((t) => [t.id, t.name]));
       }
 
       let packagesMap = new Map<number, { name: string; created_at: string | null; full_text: string | null }>();
       if (packageIds.length > 0) {
         const { data: pkgRows } = await supabase.from("packages").select("id, name, created_at, full_text").in("id", packageIds);
-        if (pkgRows) packagesMap = new Map(pkgRows.map((p: any) => [p.id, { name: p.name, created_at: p.created_at, full_text: p.full_text }]));
+        if (pkgRows) packagesMap = new Map(pkgRows.map((p) => [p.id, { name: p.name, created_at: p.created_at, full_text: p.full_text }]));
       }
 
       // Get unique creator and follower user IDs
-      const creatorIds = [...new Set(tasksData?.map((task: any) => task.created_by).filter(Boolean))] as string[];
-      const followerIds = [...new Set(tasksData?.flatMap((task: any) => task.followers || []).filter(Boolean))] as string[];
+      const creatorIds = [...new Set(tasksData?.map((task) => task.created_by).filter(Boolean))] as string[];
+      const followerIds = [...new Set(tasksData?.flatMap((task) => task.followers || []).filter(Boolean))] as string[];
       const actionUserIds = [
-        ...(clientActions || []).map((a: any) => a.assignee_user_id).filter(Boolean),
-        ...(clientActions || []).map((a: any) => a.created_by).filter(Boolean),
-        ...(opsActions || []).map((a: any) => a.owner_user_uuid).filter(Boolean),
-        ...(opsActions || []).map((a: any) => a.created_by).filter(Boolean),
+        ...(clientActions || []).map((a) => a.assignee_user_id).filter(Boolean),
+        ...(clientActions || []).map((a) => a.created_by).filter(Boolean),
+        ...(opsActions || []).map((a) => a.owner_user_uuid).filter(Boolean),
+        ...(opsActions || []).map((a) => a.created_by).filter(Boolean),
       ];
       const allUserIds = [...new Set([...creatorIds, ...followerIds, ...actionUserIds])];
 
@@ -214,7 +226,7 @@ export default function TasksManagement() {
       };
 
       // Map all fields from tasks_tenants table
-      const transformedTasks: Task[] = (tasksData || []).map((task: any) => {
+      const transformedTasks: Task[] = (tasksData || []).map((task) => {
         const pkg = task.package_id ? packagesMap.get(task.package_id) : null;
         return {
           id: task.id,
@@ -238,13 +250,13 @@ export default function TasksManagement() {
           follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean),
           source: 'task' as const,
           priority: task.priority,
-          milestones: task.milestones ?? null,
+          milestones: (task.milestones ?? null) as unknown as Task['milestones'],
           assignee_user: null,
         };
       });
 
       // Normalize client_action_items
-      const clientTasks: Task[] = (clientActions || []).map((a: any) => {
+      const clientTasks: Task[] = (clientActions || []).map((a) => {
         const pkg = a.package_id ? packagesMap.get(a.package_id) : null;
         return {
           id: `ca-${a.id}`,
@@ -263,7 +275,7 @@ export default function TasksManagement() {
           package_created_at: pkg?.created_at || null,
           package_full_text: pkg?.full_text || null,
           created_by_name: getUserName(a.created_by),
-          follower_users: a.assignee_user_id ? [usersMap.get(a.assignee_user_id)].filter(Boolean) as any : [],
+          follower_users: a.assignee_user_id ? [usersMap.get(a.assignee_user_id)].filter((u): u is NonNullable<typeof u> => Boolean(u)) : [],
           file_paths: [],
           source: 'action' as const,
           priority: a.priority ?? null,
@@ -272,7 +284,7 @@ export default function TasksManagement() {
       });
 
       // Normalize ops_work_items
-      const opsTasks: Task[] = (opsActions || []).map((a: any) => {
+      const opsTasks: Task[] = (opsActions || []).map((a) => {
         const resolvedPkgId = a.package_instance_id ? (instanceToPackageId.get(a.package_instance_id) ?? null) : null;
         const pkg = resolvedPkgId ? packagesMap.get(resolvedPkgId) : null;
         return {
@@ -292,7 +304,7 @@ export default function TasksManagement() {
           package_created_at: pkg?.created_at || null,
           package_full_text: pkg?.full_text || null,
           created_by_name: getUserName(a.created_by),
-          follower_users: a.owner_user_uuid ? [usersMap.get(a.owner_user_uuid)].filter(Boolean) as any : [],
+          follower_users: a.owner_user_uuid ? [usersMap.get(a.owner_user_uuid)].filter((u): u is NonNullable<typeof u> => Boolean(u)) : [],
           file_paths: [],
           source: 'ops' as const,
           priority: a.priority ?? null,
@@ -303,7 +315,7 @@ export default function TasksManagement() {
       const allTasks = [...transformedTasks, ...clientTasks, ...opsTasks];
       setTasks(allTasks);
       setFilteredTasks(allTasks);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching tasks:", error);
       toast({
         title: "Error",
@@ -322,17 +334,11 @@ export default function TasksManagement() {
         data: tenantsData
       } = await supabase.from("tenants").select("id, name").order("name");
 
-      // Fetch packages
-      const {
-        data: packagesData
-      } = await supabase.from("packages").select("id, name").order("name");
-
       // Fetch only valid Vivacity Team users (those that exist in auth.users)
       const {
         data: usersData
       } = await supabase.rpc("get_valid_vivacity_users");
       setTenants(tenantsData || []);
-      setPackages(packagesData || []);
       setUsers(usersData || []);
     } catch (error) {
       console.error("Error fetching dropdown data:", error);
@@ -479,7 +485,7 @@ export default function TasksManagement() {
           in_progress: 'in_progress',
           completed: 'done',
         };
-        const update: any = { status: statusMap[newStatus] ?? newStatus };
+        const update: TablesUpdate<'client_action_items'> = { status: statusMap[newStatus] ?? newStatus };
         if (newStatus === 'completed') {
           // client_action_items has no auto-stamping trigger — set completed_at from the FE.
           update.completed_at = new Date().toISOString();
@@ -502,7 +508,7 @@ export default function TasksManagement() {
         if (error) throw error;
       } else {
         // tasks_tenants has a DB trigger that stamps completed_at on terminal transition.
-        const updateData: any = { status: newStatus, completed: newStatus === 'completed' };
+        const updateData: TablesUpdate<'tasks_tenants'> = { status: newStatus, completed: newStatus === 'completed' };
         const { error } = await supabase.from("tasks_tenants").update(updateData).eq("id", taskId);
         if (error) throw error;
       }
@@ -519,7 +525,7 @@ export default function TasksManagement() {
       });
       // Refetch so DB-stamped completed_at values and derived stat-card counts stay in sync.
       fetchTasks();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating task:", error);
       toast({
         title: "Error",
@@ -530,7 +536,7 @@ export default function TasksManagement() {
   };
   const deleteTask = async (taskId: string) => {
     try {
-      let error: any = null;
+      let error: PostgrestError | null = null;
       if (taskId.startsWith('ca-')) {
         ({ error } = await supabase.from('client_action_items').delete().eq('id', taskId.slice(3)));
       } else if (taskId.startsWith('ops-')) {
@@ -546,7 +552,7 @@ export default function TasksManagement() {
         title: "Success",
         description: "Task deleted successfully"
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting task:", error);
       toast({
         title: "Error",
@@ -728,12 +734,11 @@ export default function TasksManagement() {
                   <Label className="text-primary font-semibold">Followers</Label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {followers.map(userId => {
-                      const user = users.find((u: any) => u.user_uuid === userId);
+                      const user = users.find((u) => u.user_uuid === userId);
                       if (!user) return null;
                       return (
                         <div key={userId} className="relative group">
                           <Avatar className="h-10 w-10 border-2 border-background shadow-sm cursor-pointer" onClick={() => setFollowers(prev => prev.filter(id => id !== userId))}>
-                            {user.avatar_url && <AvatarImage src={user.avatar_url} />}
                             <AvatarFallback className="text-xs bg-primary/10 text-primary">
                               {user.first_name?.[0]}{user.last_name?.[0]}
                             </AvatarFallback>
@@ -755,14 +760,13 @@ export default function TasksManagement() {
                       </PopoverTrigger>
                       <PopoverContent className="w-64 p-2 z-[80]" align="start">
                         <div className="space-y-1 max-h-48 overflow-y-auto">
-                          {users.filter((user: any) => !followers.includes(user.user_uuid)).map((user: any) => (
+                          {users.filter((user) => !followers.includes(user.user_uuid)).map((user) => (
                             <div
                               key={user.user_uuid}
                               onClick={() => setFollowers(prev => [...prev, user.user_uuid])}
                               className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors"
                             >
                               <Avatar className="h-7 w-7">
-                                {user.avatar_url && <AvatarImage src={user.avatar_url} />}
                                 <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                                   {user.first_name?.[0]}{user.last_name?.[0]}
                                 </AvatarFallback>
@@ -770,7 +774,7 @@ export default function TasksManagement() {
                               <span className="text-sm">{user.first_name} {user.last_name}</span>
                             </div>
                           ))}
-                          {users.filter((user: any) => !followers.includes(user.user_uuid)).length === 0 && (
+                          {users.filter((user) => !followers.includes(user.user_uuid)).length === 0 && (
                             <p className="text-sm text-muted-foreground text-center py-2">All team members added</p>
                           )}
                         </div>
@@ -782,7 +786,7 @@ export default function TasksManagement() {
                 <div className="grid gap-2">
                   <Label className="text-primary font-semibold">Assign To</Label>
                   <Combobox
-                    options={users.map((u: any) => ({
+                    options={users.map((u) => ({
                       value: u.user_uuid,
                       label: `${u.first_name || ''} ${u.last_name || ''}`.trim()
                     }))}
@@ -801,13 +805,12 @@ export default function TasksManagement() {
                   value: tenant.id.toString(),
                   label: tenant.name
                 }))} value={formData.tenant_id} onValueChange={value => {
-                  const selectedTenant = tenants.find(t => t.id.toString() === value);
-                  const selectedPackage = selectedTenant?.package_id ? packages.find(p => p.id === selectedTenant.package_id) : null;
+                  // tenants no longer carries package_id (dropped from the query — see
+                  // fetchDropdownData's comment), so selecting a client never
+                  // auto-populates a default package; the user picks one separately.
                   setFormData({
                     ...formData,
                     tenant_id: value,
-                    package_id: selectedTenant?.package_id?.toString() || "",
-                    package_name: selectedPackage?.name || ""
                   });
                 }} placeholder="Choose..." searchPlaceholder="Search client..." emptyText="No clients found." className="w-full" />
                 </div>
@@ -958,7 +961,7 @@ export default function TasksManagement() {
                           created_by: user.id,
                           source_id: newTask.id,
                         }));
-                        await supabase.from('user_notifications').insert(notifRows as any);
+                        await supabase.from('user_notifications').insert(notifRows);
 
                         // Teams / outbox notifications (respects notification_rules)
                         for (const uid of recipients) {
@@ -1007,12 +1010,12 @@ export default function TasksManagement() {
                     setMilestones([]);
                     setUploadedFiles([]);
                     fetchTasks();
-                  } catch (error: any) {
-                    let errorMessage = error.message;
+                  } catch (error) {
+                    const message = error instanceof Error ? error.message : 'Failed to create task';
                     // Handle foreign key constraint error for assigned_to
-                    if (error.message?.includes('tasks_tenants_assigned_to_fkey')) {
-                      errorMessage = 'The selected assignee is no longer a valid user. Please select a different assignee or leave it unassigned.';
-                    }
+                    const errorMessage = message.includes('tasks_tenants_assigned_to_fkey')
+                      ? 'The selected assignee is no longer a valid user. Please select a different assignee or leave it unassigned.'
+                      : message;
                     toast({
                       title: "Error",
                       description: errorMessage,
@@ -1167,12 +1170,11 @@ export default function TasksManagement() {
                   <Label className="text-primary font-semibold">Followers</Label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {followers.map(userId => {
-                      const user = users.find((u: any) => u.user_uuid === userId);
+                      const user = users.find((u) => u.user_uuid === userId);
                       if (!user) return null;
                       return (
                         <div key={userId} className="relative group">
                           <Avatar className="h-10 w-10 border-2 border-background shadow-sm cursor-pointer" onClick={() => setFollowers(prev => prev.filter(id => id !== userId))}>
-                            {user.avatar_url && <AvatarImage src={user.avatar_url} />}
                             <AvatarFallback className="text-xs bg-primary/10 text-primary">
                               {user.first_name?.[0]}{user.last_name?.[0]}
                             </AvatarFallback>
@@ -1194,14 +1196,13 @@ export default function TasksManagement() {
                       </PopoverTrigger>
                       <PopoverContent className="w-64 p-2 z-[80]" align="start">
                         <div className="space-y-1 max-h-48 overflow-y-auto">
-                          {users.filter((user: any) => !followers.includes(user.user_uuid)).map((user: any) => (
+                          {users.filter((user) => !followers.includes(user.user_uuid)).map((user) => (
                             <div
                               key={user.user_uuid}
                               onClick={() => setFollowers(prev => [...prev, user.user_uuid])}
                               className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors"
                             >
                               <Avatar className="h-7 w-7">
-                                {user.avatar_url && <AvatarImage src={user.avatar_url} />}
                                 <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                                   {user.first_name?.[0]}{user.last_name?.[0]}
                                 </AvatarFallback>
@@ -1209,7 +1210,7 @@ export default function TasksManagement() {
                               <span className="text-sm">{user.first_name} {user.last_name}</span>
                             </div>
                           ))}
-                          {users.filter((user: any) => !followers.includes(user.user_uuid)).length === 0 && (
+                          {users.filter((user) => !followers.includes(user.user_uuid)).length === 0 && (
                             <p className="text-sm text-muted-foreground text-center py-2">All team members added</p>
                           )}
                         </div>
@@ -1228,7 +1229,7 @@ export default function TasksManagement() {
                 if (!editingTask) return;
                 
                 try {
-                  const updateData: any = {
+                  const updateData: TablesUpdate<'tasks_tenants'> = {
                     task_name: formData.task_name,
                     description: formData.description,
                     due_date: formData.due_date,
@@ -1260,10 +1261,10 @@ export default function TasksManagement() {
 
                   setIsEditDialogOpen(false);
                   fetchTasks();
-                } catch (error: any) {
+                } catch (error) {
                   toast({
                     title: "Error",
-                    description: error.message,
+                    description: error instanceof Error ? error.message : "Failed to update task",
                     variant: "destructive"
                   });
                 }
