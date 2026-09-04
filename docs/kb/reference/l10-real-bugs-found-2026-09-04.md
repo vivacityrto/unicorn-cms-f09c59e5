@@ -199,6 +199,31 @@ Not fixed here because the correct source for `calendar_id`/`provider_event_id`
 on a purely-internal (non-Outlook-originated) calendar event is a product/
 schema decision, not a type-only change — it's out of scope for this batch.
 
+## KPI v2 dashboard (`src/hooks/useKpiAccess.tsx`)
+
+### 11. "Team KPI" toggle never renders for real SuperAdmin accounts — DOCUMENTED, NOT FIXED
+`useKpiAccess.tsx`'s `canViewAnyStaff` — which gates the "Team KPI" toggle and
+the whole `KpiTeamSection`/`KpiDrillDownSheet` team dashboard — checks only
+`profile?.global_role === 'SuperAdmin'`. The codebase's own canonical
+`useAuth().isSuperAdmin()` check (used everywhere else) explicitly checks
+**both** `global_role === 'SuperAdmin'` (legacy) **and** `unicorn_role ===
+'Super Admin'` (current standard), with an inline comment documenting why.
+`useKpiAccess.tsx` only checks the legacy field.
+
+**Verified live, not guessed**: the real SuperAdmin test account
+(`carl@vivacity.com.au`) has `unicorn_role: 'Super Admin'` set but
+`global_role: null` — the same "current standard, legacy field unset"
+combination `useAuth.tsx`'s own comment describes. As a direct result, the
+"Team KPI" toggle silently never appears for this account, blocking access to
+the team-wide KPI dashboard for a real, currently-privileged SuperAdmin.
+
+Found incidentally during batch 32's live verification (it blocked reaching
+`KpiDrillDownSheet.tsx` to test the actual PR under review) — not fixed here
+since `useKpiAccess.tsx` has zero `no-explicit-any` findings and is untouched
+by that PR; a one-line fix (`profile?.global_role === 'SuperAdmin' ||
+profile?.unicorn_role === 'Super Admin'`, matching `useAuth.tsx`'s existing
+pattern) is available whenever someone picks it up.
+
 ## Also found this session, outside Package Builder (for completeness)
 
 These were found and either fixed or documented in earlier batches tonight,
