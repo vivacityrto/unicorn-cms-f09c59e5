@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { Route } from "react-router-dom";
+import { Navigate, Route, useParams } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PermissionGate } from "@/components/PermissionGate";
 
@@ -130,10 +130,12 @@ const BulkDocumentJobsList = lazy(() => import("@/pages/BulkDocumentJobsList"));
 const BulkDocumentJobProgress = lazy(() => import("@/pages/BulkDocumentJobProgress"));
 const BulkGenerateNew = lazy(() => import("@/pages/BulkGenerateNew"));
 const AuditsAssessments = lazy(() => import("@/pages/AuditsAssessments"));
-const AuditActions = lazy(() => import("@/pages/AuditActions"));
-const AuditFindings = lazy(() => import("@/pages/AuditFindings"));
-const AuditReport = lazy(() => import("@/pages/AuditReport"));
 const AuditWorkspaceNew = lazy(() => import("@/pages/AuditWorkspaceNew"));
+
+function LegacyAuditTabRedirect({ tab }: { tab: 'findings' | 'actions' | 'report' }) {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate replace to={`/audits/${encodeURIComponent(id || '')}?tab=${tab}`} />;
+}
 const NewSupportTicketPage = lazy(() => import("@/pages/NewSupportTicketPage"));
 const SuggestionDetail = lazy(() => import("@/pages/SuggestionDetail"));
 const RtoTips = lazy(() => import("@/pages/RtoTips"));
@@ -700,9 +702,9 @@ export const dashboardLayoutRoutes = (
       <Route path="/manage-documents/bulk-jobs/:id" element={<BulkDocumentJobProgress />} />
       <Route path="/audits" element={<AuditsAssessments />} />
       <Route path="/audits/:id" element={<AuditWorkspaceNew />} />
-      <Route path="/audits/:id/findings" element={<AuditFindings />} />
-      <Route path="/audits/:id/actions" element={<AuditActions />} />
-      <Route path="/audits/:id/report" element={<AuditReport />} />
+      <Route path="/audits/:id/findings" element={<LegacyAuditTabRedirect tab="findings" />} />
+      <Route path="/audits/:id/actions" element={<LegacyAuditTabRedirect tab="actions" />} />
+      <Route path="/audits/:id/report" element={<LegacyAuditTabRedirect tab="report" />} />
       <Route path="/support-tickets/new" element={<NewSupportTicketPage />} />
       <Route path="/support-tickets/:id" element={<SuggestionDetail />} />
       <Route path="/suggestions/:id" element={<SuggestionDetail />} />
