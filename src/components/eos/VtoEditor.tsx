@@ -26,7 +26,7 @@ export function VtoEditor({ vto, onCancel }: VtoEditorProps) {
   
   // Core Values
   const [coreValues, setCoreValues] = useState<string[]>(
-    Array.isArray(vto?.core_values) ? vto.core_values : ['', '', '']
+    Array.isArray(vto?.core_values) ? (vto.core_values as string[]) : ['', '', '']
   );
   
   // Target Market
@@ -48,7 +48,7 @@ export function VtoEditor({ vto, onCancel }: VtoEditorProps) {
   
   // What Makes Us Different (3 Uniques)
   const [uniques, setUniques] = useState<string[]>(
-    Array.isArray(vto?.proven_process) ? vto.proven_process : ['', '', '']
+    Array.isArray(vto?.proven_process) ? (vto.proven_process as string[]) : ['', '', '']
   );
 
   const publishVto = useMutation({

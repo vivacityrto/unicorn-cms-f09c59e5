@@ -1,3 +1,5 @@
+import type { Json } from '@/integrations/supabase/types';
+
 export interface Audit {
   id: number;
   tenant_id: number;
@@ -38,7 +40,7 @@ export interface AuditQuestion {
   audit_section_id: number;
   bank_id: number;
   question_text: string;
-  rating_scale: any;
+  rating_scale: Json;
   evidence_prompt: string;
   order_index: number;
 }

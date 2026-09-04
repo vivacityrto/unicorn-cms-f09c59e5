@@ -1,4 +1,6 @@
 // EOS Type Definitions
+import type { Json } from '@/integrations/supabase/types';
+
 export type EosRole = 'admin' | 'facilitator' | 'scribe' | 'participant' | 'client_viewer';
 export type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'closed' | 'cancelled' | 'skipped';
 export type MeetingType = 'L10' | 'Quarterly' | 'Annual' | 'Same_Page' | 'Focus_Day' | 'Custom';
@@ -24,14 +26,16 @@ export interface EosVtoVersion {
   id: string;
   tenant_id: number;
   client_id?: string | null;
-  core_values?: any;
+  // Historically stored as either a string[] or a freeform string/JSON blob
+  // (both VtoEditor and VtoViewer narrow via Array.isArray/typeof before use).
+  core_values?: Json;
   target_market?: string | null;
-  proven_process?: any;
+  proven_process?: Json;
   ten_year_target?: string | null;
-  three_year_measurables?: any;
+  three_year_measurables?: Json;
   three_year_revenue_target?: number | null;
   three_year_profit_target?: number | null;
-  one_year_goals?: any;
+  one_year_goals?: Json;
   one_year_revenue_target?: number | null;
   one_year_profit_target?: number | null;
   created_at: string | null;
@@ -44,7 +48,7 @@ export interface EosVtoDraft {
   id: string;
   tenant_id: number;
   meeting_id: string;
-  draft_json: Record<string, any>;
+  draft_json: Json;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -54,7 +58,7 @@ export interface EosChartDraft {
   id: string;
   tenant_id: number;
   meeting_id: string;
-  draft_json: Record<string, any>;
+  draft_json: Json;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -65,7 +69,7 @@ export interface EosAccountabilityChart {
   tenant_id: number;
   version_number: number;
   is_active: boolean;
-  chart_data: Record<string, any>;
+  chart_data: Json;
   created_at: string;
   created_by: string;
   notes?: string;
@@ -286,7 +290,7 @@ export interface EosTemplateAuditLog {
   version_id?: string;
   tenant_id: number;
   change_summary?: string;
-  details?: Record<string, any>;
+  details?: Json;
   created_at: string;
 }
 
@@ -303,9 +307,9 @@ export interface EosMeeting {
   duration_minutes?: number;
   location?: string;
   notes?: string;
-  scorecard_data?: Record<string, any>;
-  rock_reviews?: Record<string, any>;
-  headlines?: Record<string, any>;
+  scorecard_data?: Json;
+  rock_reviews?: Json;
+  headlines?: Json;
   issues_discussed?: string[];
   status?: MeetingStatus;
   is_complete?: boolean;
@@ -383,7 +387,7 @@ export interface EosMinutesAuditLog {
   minutes_version_id?: string;
   tenant_id: number;
   change_summary?: string;
-  details?: Record<string, any>;
+  details?: Json;
   created_at: string;
 }
 
@@ -445,6 +449,67 @@ export interface EosMeetingSegment {
   created_at: string;
 }
 
+// Snapshot shapes below mirror exactly what generate_meeting_summary()
+// (supabase/migrations/20260727040000_eos_overhaul_m22_summary_fields.sql,
+// updated by 20260825090000_eos_one_phrase_close.sql) writes via
+// jsonb_build_object at meeting-close time — a point-in-time subset of the
+// live entity's fields, not the full entity.
+export interface EosMeetingSummaryTodoSnapshot {
+  id: string;
+  title: string;
+  owner_id: string | null;
+  due_date: string | null;
+  status: string;
+  completed_at: string | null;
+}
+
+export interface EosMeetingSummaryIssueSnapshot {
+  id: string;
+  title: string;
+  status: string;
+  priority: number | null;
+  solution: string | null;
+  solved_at: string | null;
+}
+
+export interface EosMeetingSummaryHeadlineSnapshot {
+  id: string;
+  headline: string;
+  is_good_news: boolean;
+  user_id: string | null;
+}
+
+export interface EosMeetingSummaryRockSnapshot {
+  id: string;
+  title: string;
+  status: string;
+  rock_level: RockLevel;
+  owner_id: string | null;
+}
+
+export interface EosMeetingSummaryAttendeeSnapshot {
+  user_id: string;
+  role: string | null;
+  attended: boolean;
+}
+
+export interface EosMeetingSummarySegueShareSnapshot {
+  id: string;
+  personal_win: string;
+  professional_win: string;
+  rating: number | null;
+  user_id: string | null;
+}
+
+export interface EosMeetingSummaryOnePhraseCloseSnapshot {
+  user_id: string;
+  phrase: string;
+}
+
+export interface EosMeetingSummaryCascadeSnapshot {
+  message: string;
+}
+
 export interface EosMeetingSummary {
   id: string;
   meeting_id: string;
@@ -452,16 +517,18 @@ export interface EosMeetingSummary {
   meeting_type?: string;
   period_range?: string;
   rating?: number;
-  attendance: any[];
-  todos: any[];
-  issues: any[];
-  rocks: any[];
-  headlines: any[];
-  cascades: any[];
-  one_phrase_closes?: any[];
-  segue_shares?: any[];
-  vto_changes?: any[];
-  chart_changes?: any[];
+  attendance: EosMeetingSummaryAttendeeSnapshot[];
+  todos: EosMeetingSummaryTodoSnapshot[];
+  issues: EosMeetingSummaryIssueSnapshot[];
+  rocks: EosMeetingSummaryRockSnapshot[];
+  headlines: EosMeetingSummaryHeadlineSnapshot[];
+  cascades: EosMeetingSummaryCascadeSnapshot[];
+  one_phrase_closes?: EosMeetingSummaryOnePhraseCloseSnapshot[];
+  segue_shares?: EosMeetingSummarySegueShareSnapshot[];
+  // Columns exist but are never populated by generate_meeting_summary() —
+  // no confirmed writer, so kept as raw Json rather than a guessed shape.
+  vto_changes?: Json[];
+  chart_changes?: Json[];
   emailed_at?: string;
   created_at: string;
 }

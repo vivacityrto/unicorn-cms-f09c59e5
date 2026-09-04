@@ -1,4 +1,5 @@
 // EOS Stuck Alerts Types
+import type { Json } from '@/integrations/supabase/types';
 
 export type AlertType = 
   | 'cadence_stuck'
@@ -68,7 +69,7 @@ export interface EosAlert {
     link?: string;
     entity_name?: string;
     days_stuck?: number;
-    [key: string]: any;
+    [key: string]: Json | undefined;
   };
   status: AlertStatus;
   dismiss_reason?: string;
