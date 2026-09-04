@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T20:40:05.118Z",
-  "baselineSha": "6a26566559b18866189f7d69cdbd4e0b82096101",
+  "generatedAt": "2026-09-04T20:52:03.084Z",
+  "baselineSha": "2e5afca5bc73e110fb00c70c89df64eefb27de9b",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 409,
-    "errors": 1579,
+    "filesWithFindings": 407,
+    "errors": 1561,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1572,
+    "@typescript-eslint/no-explicit-any": 1554,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 911,
+      "errors": 893,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 904,
+        "@typescript-eslint/no-explicit-any": 886,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -380,10 +380,10 @@
       }
     },
     "src/hooks": {
-      "errors": 383,
+      "errors": 374,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 383,
+        "@typescript-eslint/no-explicit-any": 374,
         "react-refresh/only-export-components": 1
       }
     },
@@ -402,10 +402,10 @@
       }
     },
     "src/pages": {
-      "errors": 125,
+      "errors": 116,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 125
+        "@typescript-eslint/no-explicit-any": 116
       }
     },
     "src/pages/academy": {
@@ -1860,9 +1860,6 @@
     "src/hooks/usePhaseProgress.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/hooks/usePortalDocuments.tsx": {
-      "@typescript-eslint/no-explicit-any": 9
-    },
     "src/hooks/usePortfolioCockpit.ts": {
       "@typescript-eslint/no-explicit-any": 18
     },
@@ -2040,9 +2037,6 @@
     },
     "src/pages/TenantDocumentDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/pages/TenantDocuments.tsx": {
-      "@typescript-eslint/no-explicit-any": 9
     },
     "src/pages/TenantLogins.tsx": {
       "@typescript-eslint/no-explicit-any": 1

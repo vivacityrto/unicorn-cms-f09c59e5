@@ -250,6 +250,31 @@ of bug stops resurfacing every time someone touches a nearby insert.
 both ways — deleted via the UI's own trash-icon delete, then confirmed via
 direct SQL that no row with that name remains.
 
+## Tenant Documents — Excel auto-generation legacy lookup (`TenantDocuments.tsx`)
+
+### 15. Excel document generation's legacy-client lookup has always been undefined — DOCUMENTED, NOT FIXED
+`TenantDocuments.tsx`'s `handleExcelGenerate` queries
+`supabase.from("tenants").select("client_legacy_id")` before calling
+`generateAndDownload({..., clientLegacyId: tenantData?.client_legacy_id})`.
+`tenants` has **no `client_legacy_id` column at all** — that column only
+exists on `excel_generated_files` and `generated_documents` (confirmed via
+`grep` against generated types). The select's error is never checked, so
+`tenantData` is always `null` and `clientLegacyId` has always been passed
+as `undefined` to `useExcelGeneration`'s edge-function invocation.
+
+Found during batch 41 of the `no-explicit-any` retirement (removing the
+`as any` cast on the result forced a look at what `client_legacy_id`
+actually was, which is when the missing column turned up).
+
+**Impact is likely low but unconfirmed**: `clientLegacyId` is an optional
+parameter (`clientLegacyId?: string`) passed through to the Excel
+generation edge function — a legacy Unicorn1-system lookup shortcut that
+has simply never fired. Whether the edge function has a working fallback
+without it wasn't verified here. Not fixed because the correct source
+column is unclear (`tenants.unicorn1_id` is a `number`, not the `string`
+type `client_legacy_id` expects elsewhere — this needs someone who knows
+the intended legacy-mapping path, not a type-only guess).
+
 ## Manage Stages — audit trail (`AdminManageStages.tsx`)
 
 ### 14. Stage archive/restore has never recorded an audit trail entry — DOCUMENTED, NOT FIXED (compliance-relevant)

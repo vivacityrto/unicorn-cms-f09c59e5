@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 
 export interface PortalDocument {
@@ -32,6 +33,19 @@ export interface PortalDocument {
   package_name?: string | null;
 }
 
+type PortalDocumentQueryRow = Tables<'portal_documents'> & {
+  uploader: Pick<Tables<'users'>, 'first_name' | 'last_name'> | null;
+  category: Pick<Tables<'portal_document_categories'>, 'name'> | null;
+  package: Pick<Tables<'packages'>, 'name'> | null;
+};
+
+const PORTAL_DOCUMENT_SELECT = `
+          *,
+          uploader:users!portal_documents_uploaded_by_fkey(first_name, last_name),
+          category:portal_document_categories(name),
+          package:packages(name)
+        `;
+
 export const portalDocumentsKeys = {
   all: ['portal-documents'] as const,
   list: (tenantId: number) => [...portalDocumentsKeys.all, 'list', tenantId] as const,
@@ -47,14 +61,9 @@ export function usePortalDocuments(tenantId: number | null, direction?: string) 
     queryFn: async () => {
       if (!tenantId) return [];
       
-      let query = (supabase
-        .from('portal_documents') as any)
-        .select(`
-          *,
-          uploader:users!portal_documents_uploaded_by_fkey(first_name, last_name),
-          category:portal_document_categories(name),
-          package:packages(name)
-        `)
+      let query = supabase
+        .from('portal_documents')
+        .select<typeof PORTAL_DOCUMENT_SELECT, PortalDocumentQueryRow>(PORTAL_DOCUMENT_SELECT)
         .eq('tenant_id', tenantId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
@@ -66,14 +75,14 @@ export function usePortalDocuments(tenantId: number | null, direction?: string) 
       const { data, error } = await query;
       if (error) throw error;
 
-      return (data || []).map((doc: any) => ({
+      return (data || []).map((doc): PortalDocument => ({
         ...doc,
-        uploader_name: doc.uploader 
-          ? `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}`.trim() 
+        uploader_name: doc.uploader
+          ? `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}`.trim()
           : null,
         category_name: doc.category?.name || null,
         package_name: doc.package?.name || null,
-      })) as PortalDocument[];
+      }));
     },
     enabled: !!tenantId,
   });
@@ -85,14 +94,9 @@ export function useClientVisibleDocuments(tenantId: number | null) {
     queryFn: async () => {
       if (!tenantId) return [];
       
-      const { data, error } = await (supabase
-        .from('portal_documents') as any)
-        .select(`
-          *,
-          uploader:users!portal_documents_uploaded_by_fkey(first_name, last_name),
-          category:portal_document_categories(name),
-          package:packages(name)
-        `)
+      const { data, error } = await supabase
+        .from('portal_documents')
+        .select<typeof PORTAL_DOCUMENT_SELECT, PortalDocumentQueryRow>(PORTAL_DOCUMENT_SELECT)
         .eq('tenant_id', tenantId)
         .eq('is_client_visible', true)
         .is('deleted_at', null)
@@ -100,14 +104,14 @@ export function useClientVisibleDocuments(tenantId: number | null) {
 
       if (error) throw error;
 
-      return (data || []).map((doc: any) => ({
+      return (data || []).map((doc): PortalDocument => ({
         ...doc,
-        uploader_name: doc.uploader 
-          ? `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}`.trim() 
+        uploader_name: doc.uploader
+          ? `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}`.trim()
           : null,
         category_name: doc.category?.name || null,
         package_name: doc.package?.name || null,
-      })) as PortalDocument[];
+      }));
     },
     enabled: !!tenantId,
   });
@@ -173,10 +177,10 @@ export function useUploadPortalDocument() {
         description: 'Your document has been uploaded successfully.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Upload failed',
-        description: error.message || 'Failed to upload document',
+        description: error instanceof Error ? error.message : 'Failed to upload document',
         variant: 'destructive',
       });
     },
@@ -218,10 +222,10 @@ export function useShareDocument() {
         description: 'The document is now visible to the client.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Share failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },
@@ -262,10 +266,10 @@ export function useUnshareDocument() {
         description: 'The document is no longer visible to the client.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Unshare failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },
@@ -310,10 +314,10 @@ export function useDownloadPortalDocument() {
         description: 'Your document is downloading.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Download failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },
@@ -351,10 +355,10 @@ export function useSoftDeleteDocument() {
         description: 'The document has been removed.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Delete failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },
