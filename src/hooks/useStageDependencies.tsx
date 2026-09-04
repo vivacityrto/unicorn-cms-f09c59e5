@@ -81,8 +81,8 @@ export function useStageDependencyCheck(stageId: number | null): {
         return;
       }
 
-      const requires = (stage as any).requires_stage_keys || [];
-      
+      const requires = stage.requires_stage_keys || [];
+
       if (!requires.length) {
         setResult({
           has_dependencies: false,
@@ -131,13 +131,13 @@ export async function checkDependenciesInPackage(
     return { satisfied: true, missing: [] };
   }
 
-  const requires = (stage as any).requires_stage_keys || [];
+  const requires = stage.requires_stage_keys || [];
   if (!requires.length) {
     return { satisfied: true, missing: [] };
   }
 
   // Get all stage_keys in the package
-  const { data: packageStages, error: psError } = await (supabase as any)
+  const { data: packageStages, error: psError } = await supabase
     .from('package_stages')
     .select('stage_id, stages!inner(stage_key)')
     .eq('package_id', packageId);
@@ -147,7 +147,7 @@ export async function checkDependenciesInPackage(
   }
 
   const packageStageKeys = new Set(
-    packageStages.map((ps: any) => ps.stages?.stage_key).filter(Boolean)
+    packageStages.map((ps) => ps.stages?.stage_key).filter(Boolean)
   );
 
   // Find missing
@@ -173,7 +173,7 @@ export async function checkPackageDependencies(packageId: number): Promise<{
   }>;
 }> {
   // Get all stages in package with their dependencies
-  const { data: packageStages, error } = await (supabase as any)
+  const { data: packageStages, error } = await supabase
     .from('package_stages')
     .select('stage_id, stages!inner(name, stage_key, requires_stage_keys)')
     .eq('package_id', packageId);
@@ -184,7 +184,7 @@ export async function checkPackageDependencies(packageId: number): Promise<{
 
   // Build set of stage_keys in package
   const packageStageKeys = new Set(
-    packageStages.map((ps: any) => ps.stages?.stage_key).filter(Boolean)
+    packageStages.map((ps) => ps.stages?.stage_key).filter(Boolean)
   );
 
   const unmetDependencies: Array<{
@@ -197,7 +197,7 @@ export async function checkPackageDependencies(packageId: number): Promise<{
   const allMissingKeys: string[] = [];
 
   for (const ps of packageStages) {
-    const stage = (ps as any).stages;
+    const stage = ps.stages;
     const requires = stage?.requires_stage_keys || [];
     const missingKeys = requires.filter((key: string) => !packageStageKeys.has(key));
     
@@ -243,7 +243,7 @@ export async function updateStageDependencies(
     .eq('id', stageId)
     .single();
 
-  const oldKeys = (oldStage as any)?.requires_stage_keys || [];
+  const oldKeys = oldStage?.requires_stage_keys || [];
 
   const { error } = await supabase
     .from('stages')
@@ -290,7 +290,7 @@ export async function checkDependencyCertification(stageKeys: string[]): Promise
     return { allCertified: true, uncertified: [] };
   }
 
-  const uncertified = data.filter(s => !s.is_certified).map(s => (s as any).name);
+  const uncertified = data.filter(s => !s.is_certified).map(s => s.name);
   
   return {
     allCertified: uncertified.length === 0,

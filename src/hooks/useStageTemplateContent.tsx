@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 /**
  * Safe, non-blocking audit log for stage template changes.
@@ -8,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
  * stage_id into it. We use a random UUID for entity_id and keep the real
  * numeric stage_id inside details.stage_id for downstream filtering.
  */
-function logStageTemplateAudit(stageId: number | null | undefined, action: string, details: Record<string, any>) {
+function logStageTemplateAudit(stageId: number | null | undefined, action: string, details: Record<string, Json | undefined>) {
   try {
     const payload = {
       entity: 'stage',
@@ -17,7 +18,7 @@ function logStageTemplateAudit(stageId: number | null | undefined, action: strin
       details: { ...details, stage_id: stageId ?? null },
     };
     // Fire-and-forget; never block UI on audit failures.
-    void supabase.from('audit_events').insert(payload as any).then(({ error }) => {
+    void supabase.from('audit_events').insert(payload).then(({ error }) => {
       if (error) console.warn('[audit] stage template audit failed:', error.message);
     });
   } catch (e) {
@@ -130,7 +131,7 @@ export function useStageTemplateContent(stageId: number | null) {
           .from('document_stage_links')
           .select('document_id')
           .eq('stage_id', stageId);
-        const additionalIds = (linkRows || []).map((r: any) => r.document_id);
+        const additionalIds = (linkRows || []).map((r) => r.document_id);
 
         let docsQuery = supabase
           .from('documents')
@@ -167,7 +168,7 @@ export function useStageTemplateContent(stageId: number | null) {
       if (docsResult.error) throw docsResult.error;
 
       // Map staff_tasks to StageTeamTask shape
-      setTeamTasks((teamResult.data || []).map((t: any) => ({
+      setTeamTasks((teamResult.data || []).map((t) => ({
         id: t.id,
         stage_id: t.stage_id,
         name: t.name,
@@ -186,7 +187,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
       // Map documents directly from the documents table (flat shape)
       const docRows = docsResult.data || [];
-      setDocuments(docRows.map((d: any, idx: number) => ({
+      setDocuments(docRows.map((d, idx) => ({
         id: d.id,
         stage_id: stageId,
         document_id: d.id,
@@ -211,7 +212,7 @@ export function useStageTemplateContent(stageId: number | null) {
         ai_reasoning: d.ai_reasoning || null,
         created_at: d.createdat || null,
       } as StageDocument)));
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch stage template content:', error);
       toast({
         title: 'Error',
@@ -243,7 +244,7 @@ export function useStageTemplateContent(stageId: number | null) {
         is_core: data.is_core ?? true,
         is_recurring: data.is_recurring ?? false,
         due_date_offset: data.due_date_offset || null
-      } as any);
+      });
 
     if (error) throw error;
 
@@ -253,16 +254,13 @@ export function useStageTemplateContent(stageId: number | null) {
   };
 
   const updateTeamTask = async (taskId: number, data: Partial<Omit<StageTeamTask, 'id'>>) => {
-    // Map sort_order back to order_number for staff_tasks
-    const updateData: any = { ...data };
-    if ('sort_order' in updateData) {
-      updateData.order_number = updateData.sort_order;
-      delete updateData.sort_order;
-    }
-    // Remove fields not in staff_tasks
-    delete updateData.owner_role;
-    delete updateData.estimated_hours;
-    delete updateData.is_mandatory;
+    // Map sort_order back to order_number for staff_tasks; owner_role/estimated_hours/
+    // is_mandatory don't exist on staff_tasks (they're synthesized in fetchContent's mapping).
+    const { sort_order, owner_role: _owner_role, estimated_hours: _estimated_hours, is_mandatory: _is_mandatory, ...rest } = data;
+    const updateData: TablesUpdate<'staff_tasks'> = {
+      ...rest,
+      ...(sort_order !== undefined ? { order_number: sort_order } : {}),
+    };
 
     const { error } = await supabase
       .from('staff_tasks')
@@ -307,7 +305,7 @@ export function useStageTemplateContent(stageId: number | null) {
         instructions: data.instructions || null,
         is_mandatory: data.is_mandatory ?? true,
         due_date_offset: data.due_date_offset || null
-      } as any);
+      });
 
     if (error) throw error;
 
@@ -317,9 +315,12 @@ export function useStageTemplateContent(stageId: number | null) {
   };
 
   const updateClientTask = async (taskId: number, data: Partial<Omit<StageClientTask, 'id'>>) => {
+    // required_documents isn't a real client_tasks column (it's part of the
+    // StageClientTask shape for callers, unused/unsupported at the DB level here).
+    const { required_documents: _required_documents, ...updateData } = data;
     const { error } = await supabase
       .from('client_tasks')
-      .update(data as any)
+      .update(updateData)
       .eq('id', taskId);
 
     if (error) throw error;
@@ -358,7 +359,7 @@ export function useStageTemplateContent(stageId: number | null) {
         subject: triggerTypeOrSubject,
         content: recipientTypeOrContent,
         order_number: maxOrder + 1,
-      } as any);
+      });
 
     if (error) throw error;
 
@@ -370,7 +371,7 @@ export function useStageTemplateContent(stageId: number | null) {
   const updateEmail = async (emailId: number, data: Partial<Omit<StageEmail, 'id'>>) => {
     const { error } = await supabase
       .from('emails')
-      .update(data as any)
+      .update(data)
       .eq('id', emailId);
 
     if (error) throw error;
@@ -403,7 +404,7 @@ export function useStageTemplateContent(stageId: number | null) {
       .eq('id', documentId)
       .maybeSingle();
 
-    const currentStage = (currentRow as any)?.stage ?? null;
+    const currentStage = currentRow?.stage ?? null;
 
     if (currentStage === null || currentStage === stageId) {
       const { error } = await supabase
@@ -472,7 +473,7 @@ export function useStageTemplateContent(stageId: number | null) {
   };
 
 
-  const updateDocument = async (docId: number, data: Record<string, any>) => {
+  const updateDocument = async (docId: number, data: Record<string, Json | undefined>) => {
     // No-op for junction-specific fields (visibility, is_core, etc.) since documents.stage model doesn't support them
     // This preserves the interface for StageDocumentsPanel toggles without errors
     console.warn('updateDocument: junction-specific fields not persisted in documents.stage model', data);
@@ -524,10 +525,10 @@ export function useStageTemplateContent(stageId: number | null) {
       // Batch update order_number in staff_tasks
       await Promise.all(
         orderedIds.map((id, idx) =>
-          supabase.from('staff_tasks').update({ order_number: idx } as any).eq('id', id)
+          supabase.from('staff_tasks').update({ order_number: idx }).eq('id', id)
         )
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to reorder team tasks:', error);
       toast({ title: 'Error', description: 'Failed to save task order', variant: 'destructive' });
       await fetchContent(); // rollback
@@ -654,7 +655,7 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
           .from('document_stage_links')
           .select('document_id')
           .eq('stage_id', stageId);
-        const additionalIds = (linkRows || []).map((r: any) => r.document_id);
+        const additionalIds = (linkRows || []).map((r) => r.document_id);
 
         let docsQuery = supabase.from('documents').select('id, title');
         docsQuery = additionalIds.length > 0
@@ -673,7 +674,7 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
 
       // Copy team tasks
       if (teamTasks.data && teamTasks.data.length > 0) {
-        const inserts = teamTasks.data.map((t: any) => ({
+        const inserts = teamTasks.data.map((t) => ({
           package_id: packageId,
           stage_id: stageId,
           name: t.name,
@@ -686,7 +687,7 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
 
       // Copy client tasks
       if (clientTasks.data && clientTasks.data.length > 0) {
-        const inserts = clientTasks.data.map((t: any) => ({
+        const inserts = clientTasks.data.map((t) => ({
           package_id: packageId,
           stage_id: stageId,
           name: t.name,
@@ -699,8 +700,19 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
       }
 
       // Copy emails
+      // KNOWN BUG (pre-existing, found while removing `any` here, not fixed - see
+      // execution-efficiency-log.md): package_stage_emails has no name/subject/content
+      // columns; it requires email_template_id + trigger_type + recipient_type instead,
+      // none of which the base `emails` table (subject/content stored directly) has an
+      // equivalent for. This insert has always been rejected by Postgres (NOT NULL on
+      // the real required columns) and its result was never checked, so "Copy template
+      // to overrides" has always silently failed to actually copy emails while still
+      // reporting success. Fixing this needs a real design decision (synthesize an
+      // email_template on the fly? pick default trigger/recipient types?) that's out of
+      // scope for a type-only batch - left functionally unchanged, typed honestly via
+      // an explicit cast rather than `any` so this doesn't silently look "fixed".
       if (emailsData.data && emailsData.data.length > 0) {
-        const inserts = emailsData.data.map((e: any) => ({
+        const inserts = emailsData.data.map((e) => ({
           package_id: packageId,
           stage_id: stageId,
           name: e.name,
@@ -709,12 +721,12 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
           sort_order: e.order_number,
           is_active: true
         }));
-        await supabase.from('package_stage_emails').insert(inserts as any);
+        await supabase.from('package_stage_emails').insert(inserts as unknown as TablesInsert<'package_stage_emails'>[]);
       }
 
       // Copy documents
       if (docs.data && docs.data.length > 0) {
-        const inserts = docs.data.map((d: any) => ({
+        const inserts = docs.data.map((d) => ({
           package_id: packageId,
           stage_id: stageId,
           document_id: d.id,
@@ -745,10 +757,10 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
 
       setUseOverrides(true);
       toast({ title: 'Template content copied to package overrides' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to copy template',
+        description: error instanceof Error ? error.message : 'Failed to copy template',
         variant: 'destructive'
       });
     }
@@ -782,10 +794,10 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
 
       setUseOverrides(false);
       toast({ title: 'Stage reset to use template content' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to reset overrides',
+        description: error instanceof Error ? error.message : 'Failed to reset overrides',
         variant: 'destructive'
       });
     }
@@ -808,10 +820,12 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
  */
 export function useResolvedStageContent(packageId: number | null, stageId: number | null) {
   const { toast } = useToast();
-  const [teamTasks, setTeamTasks] = useState<any[]>([]);
-  const [clientTasks, setClientTasks] = useState<any[]>([]);
-  const [emails, setEmails] = useState<any[]>([]);
-  const [documents, setDocuments] = useState<any[]>([]);
+  // Shape genuinely varies by source (override tables vs. base template tables have
+  // different columns/embeds) - resolved generically here and narrowed by consumers.
+  const [teamTasks, setTeamTasks] = useState<Record<string, unknown>[]>([]);
+  const [clientTasks, setClientTasks] = useState<Record<string, unknown>[]>([]);
+  const [emails, setEmails] = useState<Record<string, unknown>[]>([]);
+  const [documents, setDocuments] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<'template' | 'override'>('template');
 
@@ -886,8 +900,8 @@ export function useResolvedStageContent(packageId: number | null, stageId: numbe
           if (directError) throw directError;
           if (linksError) throw linksError;
 
-          const linkedDocumentIds = [...new Set((linkRows || []).map((row: any) => row.document_id))];
-          const linkedDocuments = [] as any[];
+          const linkedDocumentIds = [...new Set((linkRows || []).map((row) => row.document_id))];
+          const linkedDocuments: Tables<'documents'>[] = [];
 
           // Keep each request comfortably below PostgREST URL limits for
           // stages with large shared document libraries.
@@ -901,9 +915,9 @@ export function useResolvedStageContent(packageId: number | null, stageId: numbe
           }
 
           return [...new Map([...(directDocuments || []), ...linkedDocuments]
-            .map((document: any) => [document.id, document]))
+            .map((document): [number, Tables<'documents'>] => [document.id, document]))
             .values()]
-            .sort((left: any, right: any) => (left.title || '').localeCompare(right.title || ''));
+            .sort((left, right) => (left.title || '').localeCompare(right.title || ''));
         };
 
         // Fetch from base tables
@@ -935,7 +949,7 @@ export function useResolvedStageContent(packageId: number | null, stageId: numbe
         setEmails(emailsResult.data || []);
         setDocuments(docsResult);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch resolved content:', error);
       toast({
         title: 'Error',

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface StageAnalyticsKPIs {
   totalStages: number;
@@ -47,7 +48,7 @@ export interface StageAuditEvent {
   stage_title: string | null;
   user_id: string | null;
   user_email: string | null;
-  details: any;
+  details: Json;
 }
 
 interface UseStageAnalyticsOptions {
@@ -73,12 +74,12 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       // Get package_stages for unique stage usage
       const { data: packageStages, error: psError } = await supabase
-        .from('package_stages' as any)
-        .select('stage_id') as any;
-      
+        .from('package_stages')
+        .select('stage_id');
+
       if (psError) throw psError;
 
-      const stagesInPackagesSet = new Set((packageStages || []).map((ps: any) => ps.stage_id));
+      const stagesInPackagesSet = new Set((packageStages || []).map((ps) => ps.stage_id));
 
       // Try to get active client usage (may not be available)
       let stagesWithActiveClients = 0;
@@ -86,9 +87,9 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         const { data: activeClientStages } = await supabase
           .from('client_package_stages')
           .select('stage_id, client_package:client_packages!inner(status)')
-          .in('client_package.status', ['active', 'in_progress']) as any;
-        
-        const activeSet = new Set((activeClientStages || []).map((s: any) => s.stage_id));
+          .in('client_package.status', ['active', 'in_progress']);
+
+        const activeSet = new Set((activeClientStages || []).map((s) => s.stage_id));
         stagesWithActiveClients = activeSet.size;
       } catch (e) {
         // Active client usage not available
@@ -129,14 +130,14 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       // Get package counts
       const { data: packageStages, error: psError } = await supabase
-        .from('package_stages' as any)
-        .select('stage_id, package_id') as any;
-      
+        .from('package_stages')
+        .select('stage_id, package_id');
+
       if (psError) throw psError;
 
       // Count packages per stage
       const packageCountMap = new Map<number, Set<number>>();
-      (packageStages || []).forEach((ps: any) => {
+      (packageStages || []).forEach((ps) => {
         if (!packageCountMap.has(ps.stage_id)) {
           packageCountMap.set(ps.stage_id, new Set());
         }
@@ -149,10 +150,10 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         const { data: activeClientStages } = await supabase
           .from('client_package_stages')
           .select('stage_id, client_package:client_packages!inner(id, status)')
-          .in('client_package.status', ['active', 'in_progress']) as any;
-        
+          .in('client_package.status', ['active', 'in_progress']);
+
         const stageClientMap = new Map<number, Set<string>>();
-        (activeClientStages || []).forEach((s: any) => {
+        (activeClientStages || []).forEach((s) => {
           if (!stageClientMap.has(s.stage_id)) {
             stageClientMap.set(s.stage_id, new Set());
           }
@@ -170,7 +171,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         title: stage.name,
         stage_type: stage.stage_type,
         is_certified: stage.is_certified,
-        frameworks: (stage as any).frameworks || null,
+        frameworks: stage.frameworks || null,
         packageCount: packageCountMap.get(stage.id)?.size || 0,
         activeClientCount: activeClientCountMap.get(stage.id) || 0,
         updated_at: stage.updated_at
@@ -206,12 +207,12 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       // Get package_stages
       const { data: packageStages, error: psError } = await supabase
-        .from('package_stages' as any)
-        .select('stage_id') as any;
-      
+        .from('package_stages')
+        .select('stage_id');
+
       if (psError) throw psError;
 
-      const usedStageIds = new Set((packageStages || []).map((ps: any) => ps.stage_id));
+      const usedStageIds = new Set((packageStages || []).map((ps) => ps.stage_id));
 
       // Filter to unused
       const unusedStages = (certifiedStages || []).filter(s => !usedStageIds.has(s.id));
@@ -239,7 +240,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
       return unusedStages.map(s => ({
         id: s.id,
         title: s.name,
-        version_label: (s as any).version_label || null,
+        version_label: s.version_label || null,
         certified_at: certifiedAtMap.get(s.id.toString()) || null,
         updated_at: s.updated_at
       }));
@@ -262,16 +263,16 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         const { data: activeClientStages } = await supabase
           .from('client_package_stages')
           .select('stage_id, client_package:client_packages!inner(id, status)')
-          .in('client_package.status', ['active', 'in_progress']) as any;
-        
+          .in('client_package.status', ['active', 'in_progress']);
+
         const stageClientMap = new Map<number, Set<string>>();
-        (activeClientStages || []).forEach((s: any) => {
+        (activeClientStages || []).forEach((s) => {
           if (!stageClientMap.has(s.stage_id)) {
             stageClientMap.set(s.stage_id, new Set());
           }
           stageClientMap.get(s.stage_id)!.add(s.client_package?.id);
         });
-        
+
         activeStageIds = Array.from(stageClientMap.keys());
         stageClientMap.forEach((clients, stageId) => {
           stageActiveClientCount.set(stageId, clients.size);
@@ -293,12 +294,15 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
       
       if (auditError) throw auditError;
 
-      // Also check package_builder_audit_log for stage-related edits
+      // Also check package_builder_audit_log for stage-related edits. This table
+      // has no stage_id column - stage rows are identified by entity_type='stage'
+      // with the stage id (as a string) in entity_id, same convention as audit_events.
       const { data: builderAuditEvents } = await supabase
-        .from('package_builder_audit_log' as any)
-        .select('stage_id, created_at, user_id, action')
+        .from('package_builder_audit_log')
+        .select('entity_id, created_at, user_id, action')
+        .eq('entity_type', 'stage')
         .gte('created_at', cutoffDate.toISOString())
-        .in('stage_id', activeStageIds) as any;
+        .in('entity_id', activeStageIds.map(String));
 
       // Aggregate edits per stage
       const stageEditData = new Map<number, { count: number; lastEdit: string | null; editors: Map<string, number> }>();
@@ -318,8 +322,9 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         }
       });
 
-      (builderAuditEvents || []).forEach((e: any) => {
-        const stageId = e.stage_id;
+      (builderAuditEvents || []).forEach((e) => {
+        if (!e.entity_id) return;
+        const stageId = parseInt(e.entity_id, 10);
         if (!stageEditData.has(stageId)) {
           stageEditData.set(stageId, { count: 0, lastEdit: null, editors: new Map() });
         }
@@ -475,13 +480,13 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 }
 
 // CSV export helper
-export function exportToCSV(data: any[], filename: string) {
+export function exportToCSV(data: Record<string, unknown>[], filename: string) {
   if (data.length === 0) return;
 
   const headers = Object.keys(data[0]);
   const csvContent = [
     headers.join(','),
-    ...data.map(row => 
+    ...data.map(row =>
       headers.map(h => {
         const val = row[h];
         if (val === null || val === undefined) return '';

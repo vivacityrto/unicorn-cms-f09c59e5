@@ -219,8 +219,8 @@ export function useStageQualityCheck({
           .eq('package_id', packageId);
 
         emailCount = emails?.length || 0;
-        tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
-        draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
+        tenantEmailCount = emails?.filter((e) => e.recipient_type === 'tenant').length || 0;
+        draftEmailCount = emails?.filter((e) => e.email_templates?.status === 'draft').length || 0;
       } else {
         // Template context: count from base emails table
         const { count } = await supabase
@@ -285,8 +285,8 @@ export function useStageQualityCheck({
           .eq('package_id', packageId);
 
         documentCount = docs?.length || 0;
-        tenantVisibleDocs = docs?.filter((d: any) => d.visibility !== 'team_only').length || 0;
-        teamOnlyDocs = docs?.filter((d: any) => d.visibility === 'team_only').length || 0;
+        tenantVisibleDocs = docs?.filter((d) => d.visibility !== 'team_only').length || 0;
+        teamOnlyDocs = docs?.filter((d) => d.visibility === 'team_only').length || 0;
       } else {
         // Template context: count from base documents table (stage column)
         // union-aware with document_stage_links.
@@ -606,8 +606,8 @@ export async function computeStageQuality(
         .eq('stage_id', stageId)
         .eq('package_id', packageId);
 
-      tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
-      draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
+      tenantEmailCount = emails?.filter((e) => e.recipient_type === 'tenant').length || 0;
+      draftEmailCount = emails?.filter((e) => e.email_templates?.status === 'draft').length || 0;
     } else {
       const { count } = await supabase
         .from('emails')
@@ -662,8 +662,8 @@ export async function computeStageQuality(
         .eq('package_id', packageId);
 
       documentCount = docs?.length || 0;
-      tenantVisibleDocs = docs?.filter((d: any) => d.visibility !== 'team_only').length || 0;
-      teamOnlyDocs = docs?.filter((d: any) => d.visibility === 'team_only').length || 0;
+      tenantVisibleDocs = docs?.filter((d) => d.visibility !== 'team_only').length || 0;
+      teamOnlyDocs = docs?.filter((d) => d.visibility === 'team_only').length || 0;
     } else {
       const { data: linkRows } = await supabase
         .from('document_stage_links')
