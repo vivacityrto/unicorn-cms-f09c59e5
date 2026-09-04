@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,6 +33,11 @@ interface Document {
   format?: string | null;
 }
 
+type DocumentQueryRow = Tables<'documents'> & {
+  packages: Pick<Tables<'packages'>, 'name'> | null;
+};
+const DOCUMENT_SELECT = '*, packages:package_id(name)';
+
 export default function TenantDocuments() {
   const { tenantId } = useParams();
   const navigate = useNavigate();
@@ -42,7 +48,7 @@ export default function TenantDocuments() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [tenantName, setTenantName] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [packageId, setPackageId] = useState<number | null>(null);
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -80,8 +86,8 @@ export default function TenantDocuments() {
           .eq('document_id', doc.id);
         
         const docFieldCodes = (fieldRows || [])
-          .map((r: any) => r.field?.tag)
-          .filter(Boolean);
+          .map((r) => r.field?.tag)
+          .filter((tag): tag is string => Boolean(tag));
         
         if (docFieldCodes.length > 0) {
           const missing = await detectMissingFields(docFieldCodes);
@@ -111,33 +117,33 @@ export default function TenantDocuments() {
         setTenantName(tenantData.name);
         
         // Use all package_ids for querying released documents
-        const tenantPackageIds = (tenantData as any).package_ids || (tenantData.package_id ? [tenantData.package_id] : []);
+        const tenantPackageIds = tenantData.package_ids || (tenantData.package_id ? [tenantData.package_id] : []);
         setPackageId(tenantData.package_id);
-        
+
         // Fetch documents from documents table matching any of the tenant's package_ids (only released documents)
         if (tenantPackageIds.length > 0) {
-          const { data: documentsData, error } = await (supabase as any)
+          const { data: documentsData, error } = await supabase
             .from("documents")
-            .select("*, packages:package_id(name)")
+            .select<typeof DOCUMENT_SELECT, DocumentQueryRow>(DOCUMENT_SELECT)
             .in("package_id", tenantPackageIds)
             .eq("is_released", true)
             .order("createdat", { ascending: false });
 
           if (error) throw error;
-          
+
           // Map package name from joined data
-          const docsWithPackage = (documentsData || []).map((doc: any) => ({
+          const docsWithPackage = (documentsData || []).map((doc): Document => ({
             ...doc,
             package_name: doc.packages?.name || null
           }));
-          
+
           setDocuments(docsWithPackage);
-          
+
           // Check for missing merge fields in auto-generate documents
           checkAllMissingFields(docsWithPackage);
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching data:", error);
       toast({
         title: "Error",
@@ -181,7 +187,7 @@ export default function TenantDocuments() {
       });
 
       fetchData();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting document:", error);
       toast({
         title: "Error",
@@ -237,7 +243,7 @@ export default function TenantDocuments() {
         title: "Success",
         description: "Document downloaded successfully"
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to download document",
@@ -266,7 +272,11 @@ export default function TenantDocuments() {
       return;
     }
 
-    // Get client_legacy_id from tenants table
+    // NOTE: `tenants` has no `client_legacy_id` column (that column only exists on
+    // excel_generated_files/generated_documents) — this select has always failed
+    // silently (error not checked), so clientLegacyId has always been undefined.
+    // Pre-existing bug, out of scope for this type-only change; the cast preserves
+    // that exact (broken) behavior. See docs/kb/reference/l10-real-bugs-found-2026-09-04.md #15.
     const { data: tenantData } = await supabase
       .from("tenants")
       .select("client_legacy_id")
@@ -276,7 +286,7 @@ export default function TenantDocuments() {
     await generateAndDownload({
       documentId: doc.id,
       tenantId: parsedTenantId,
-      clientLegacyId: (tenantData as any)?.client_legacy_id,
+      clientLegacyId: (tenantData as unknown as { client_legacy_id?: string } | null)?.client_legacy_id,
       stageId: doc.stage || undefined,
       packageId: doc.package_id || undefined
     });
@@ -515,7 +525,9 @@ export default function TenantDocuments() {
           setSelectedDocument(null);
         }}
         packageId={packageId || undefined}
-        stageId={selectedDocument?.stage_id}
+        // `Document` has no `stage_id` field (only `stage`) — this has always
+        // evaluated to undefined; preserved as-is, not a behavior change here.
+        stageId={(selectedDocument as { stage_id?: number } | null)?.stage_id}
         editDocument={selectedDocument}
       />
 
