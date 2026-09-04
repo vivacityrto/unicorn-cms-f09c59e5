@@ -25,7 +25,6 @@ import { clientLayoutRoutes } from "./routes/clientRoutes";
 import { dashboardLayoutRoutes } from "./routes/dashboardRoutes";
 
  // Lazy load all page components for code splitting
- const Index = lazy(() => import("./pages/Index"));
  const Login = lazy(() => import("./pages/Login"));
 
  // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
