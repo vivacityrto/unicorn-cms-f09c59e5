@@ -16,9 +16,50 @@ export interface LookupResult {
   error?: string;
 }
 
-const isCurrent = (item: any) => !item?.endDate;
+// training.gov.au's own field naming varies across endpoints/versions, hence the alias fallbacks below.
+interface TgaAddress {
+  endDate?: string | null;
+  type?: string;
+  addressType?: string;
+  street1?: string; addressLine1?: string; address1?: string;
+  street2?: string; addressLine2?: string; address2?: string;
+  suburb?: string; locality?: string; city?: string;
+  state?: string;
+  postcode?: string; postCode?: string;
+}
 
-function pickPrincipalAddress(addresses: any[] | undefined): string {
+interface TgaContact {
+  endDate?: string | null;
+  type?: string; role?: string; title?: string;
+  phone?: string; phoneNumber?: string; telephone?: string;
+  email?: string; emailAddress?: string;
+  name?: string;
+  firstName?: string; givenName?: string;
+  lastName?: string; familyName?: string;
+}
+
+interface TgaRawSnapshot {
+  addresses?: TgaAddress[];
+  contacts?: TgaContact[];
+}
+
+interface TgaPreviewData {
+  legal_name?: string;
+  trading_name?: string;
+  code?: string;
+  web_address?: string;
+}
+
+interface TgaPreviewPayload {
+  success?: boolean;
+  error?: string;
+  data?: TgaPreviewData;
+  raw_snapshot?: TgaRawSnapshot;
+}
+
+const isCurrent = (item: TgaAddress | TgaContact) => !item?.endDate;
+
+function pickPrincipalAddress(addresses: TgaAddress[] | undefined): string {
   if (!Array.isArray(addresses) || addresses.length === 0) return '';
   const current = addresses.filter(isCurrent);
   const pool = current.length ? current : addresses;
@@ -42,7 +83,7 @@ function pickPrincipalAddress(addresses: any[] | undefined): string {
   return [street, tail].filter(Boolean).join(', ');
 }
 
-function pickPrincipalContact(contacts: any[] | undefined) {
+function pickPrincipalContact(contacts: TgaContact[] | undefined): TgaContact | null {
   if (!Array.isArray(contacts) || contacts.length === 0) return null;
   const current = contacts.filter(isCurrent);
   const pool = current.length ? current : contacts;
@@ -53,21 +94,21 @@ function pickPrincipalContact(contacts: any[] | undefined) {
   );
 }
 
-function pickPhone(contact: any, contacts: any[] | undefined): string {
+function pickPhone(contact: TgaContact | null, contacts: TgaContact[] | undefined): string {
   const direct = contact?.phone || contact?.phoneNumber || contact?.telephone;
   if (direct) return String(direct);
   const anyWithPhone = (contacts || []).find(c => c?.phone || c?.phoneNumber || c?.telephone);
   return anyWithPhone ? String(anyWithPhone.phone || anyWithPhone.phoneNumber || anyWithPhone.telephone) : '';
 }
 
-function pickEmail(contact: any, contacts: any[] | undefined): string {
+function pickEmail(contact: TgaContact | null, contacts: TgaContact[] | undefined): string {
   const direct = contact?.email || contact?.emailAddress;
   if (direct) return String(direct);
   const anyWithEmail = (contacts || []).find(c => c?.email || c?.emailAddress);
   return anyWithEmail ? String(anyWithEmail.email || anyWithEmail.emailAddress) : '';
 }
 
-function pickName(contact: any): string {
+function pickName(contact: TgaContact | null): string {
   if (!contact) return '';
   if (contact.name) return String(contact.name);
   const full = [contact.firstName || contact.givenName, contact.lastName || contact.familyName]
@@ -88,9 +129,9 @@ export async function lookupTargetRtoByCode(code: string): Promise<LookupResult>
     });
 
     // If the function returned a non-2xx, try to read the structured body from the Response context
-    let payload: any = data;
+    let payload: TgaPreviewPayload | undefined = data;
     if (error) {
-      const ctx: any = (error as any).context;
+      const ctx = (error as { context?: Response }).context;
       if (ctx && typeof ctx.json === 'function') {
         try {
           payload = await ctx.json();
@@ -122,7 +163,7 @@ export async function lookupTargetRtoByCode(code: string): Promise<LookupResult>
     };
 
     return { ok: true, data: snapshot };
-  } catch (err: any) {
-    return { ok: false, error: err?.message || 'Unexpected error during TGA lookup.' };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Unexpected error during TGA lookup.' };
   }
 }
