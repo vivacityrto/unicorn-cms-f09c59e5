@@ -109,6 +109,23 @@ const deriveFrameworkFromRootFolder = (
   return prefixed ? prefixed.value : null;
 };
 
+interface DeleteDocumentCascadeResult {
+  title: string;
+  instances_deleted: number;
+  stage_docs_deleted: number;
+  client_stage_docs_deleted: number;
+  tenant_docs_deleted: number;
+}
+
+interface PreviewDocumentDeleteResult {
+  found: boolean;
+  instances: number;
+  stage_docs: number;
+  data_sources: number;
+  source_mappings: number;
+  versions: number;
+}
+
 type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload' | 'no_package';
 interface Document {
   id: number;
@@ -135,6 +152,9 @@ interface Document {
     avatar_url: string | null;
   } | null;
   framework_type?: string | null;
+  standard_set?: string | null;
+  is_core?: boolean | null;
+  is_tenant_downloadable?: boolean | null;
   source_template_url?: string | null;
   updated_at?: string | null;
   current_published_version_id?: string | null;
@@ -246,7 +266,7 @@ export default function ManageDocuments() {
   const [currentUserTenantId, setCurrentUserTenantId] = useState<number | null>(null);
   const [categoriesCount, setCategoriesCount] = useState<number>(0);
   const [categories, setCategories] = useState<Array<{
-    id: number;
+    id: string;
     name: string;
     sharepoint_folder_name: string | null;
   }>>([]);
@@ -348,7 +368,7 @@ export default function ManageDocuments() {
         .from('stages')
         .select('id, name')
         .order('name');
-      return (data as any[]) || [];
+      return data || [];
     },
   });
 
@@ -418,11 +438,11 @@ export default function ManageDocuments() {
           versionlastupdated: doc.versionlastupdated ? new Date(doc.versionlastupdated) : undefined,
           isclientdoc: doc.isclientdoc || false,
           categories: doc.category ? doc.category.split(",").map(c => c.trim()) : [],
-          framework_type: (doc as any).framework_type || "",
-          stage: (doc as any).stage ? String((doc as any).stage) : "",
-          standard_set: (doc as any).standard_set || "",
-          is_core: (doc as any).is_core ?? false,
-          is_tenant_downloadable: (doc as any).is_tenant_downloadable ?? false,
+          framework_type: doc.framework_type || "",
+          stage: doc.stage ? String(doc.stage) : "",
+          standard_set: doc.standard_set || "",
+          is_core: doc.is_core ?? false,
+          is_tenant_downloadable: doc.is_tenant_downloadable ?? false,
         });
         // Set existing files
         if (doc.uploaded_files && doc.file_names) {
@@ -444,14 +464,14 @@ export default function ManageDocuments() {
         error
       } = await supabase.from("dd_document_categories").select("value, label, sharepoint_folder_name").eq("is_active", true).order("sort_order");
       if (error) throw error;
-      const mapped = (data || []).map((d: any) => ({
+      const mapped = (data || []).map((d) => ({
         id: d.value,
         name: d.label,
         sharepoint_folder_name: d.sharepoint_folder_name ?? null,
       }));
-      setCategories(mapped as any);
+      setCategories(mapped);
       setCategoriesCount(mapped.length);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching categories:", error);
     }
   };
@@ -463,7 +483,7 @@ export default function ManageDocuments() {
       } = await supabase.from("stages").select("*", { count: "exact", head: true });
       if (error) throw error;
       setStagesCount(count || 0);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching stages:", error);
     }
   };
@@ -475,7 +495,7 @@ export default function ManageDocuments() {
       } = await supabase.from("users").select("email, first_name, last_name, user_uuid");
       if (error) throw error;
       setBulkSendUsers(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching users:", error);
     }
   };
@@ -490,7 +510,7 @@ export default function ManageDocuments() {
       if (error) throw error;
       setBulkTenants(data || []);
       setBulkFilteredTenants(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching tenants:', error);
     }
   };
@@ -533,7 +553,7 @@ export default function ManageDocuments() {
       });
       if (error) throw error;
       setDocumentsCount(count || 0);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching documents count:", error);
     }
   };
@@ -560,7 +580,7 @@ export default function ManageDocuments() {
       if (error) throw error;
       setCurrentUserRole(userData.unicorn_role);
       setCurrentUserTenantId(userData.tenant_id);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching current user:", error);
     }
   };
@@ -723,11 +743,11 @@ export default function ManageDocuments() {
         }));
         setDocuments(markedDocs);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Fetch documents error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to fetch documents",
         variant: "destructive"
       });
     } finally {
@@ -852,7 +872,7 @@ export default function ManageDocuments() {
         const titleCompare = (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
         if (titleCompare !== 0) return titleCompare;
       }
-      let aVal: any, bVal: any;
+      let aVal: string | number, bVal: string | number;
       switch (sortField) {
         case "title":
           aVal = a.title || "";
@@ -874,7 +894,8 @@ export default function ManageDocuments() {
         const comparison = aVal.localeCompare(bVal);
         return sortDirection === "asc" ? comparison : -comparison;
       } else {
-        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+        const aNum = Number(aVal), bNum = Number(bVal);
+        return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
       }
     });
     setFilteredDocuments(filtered);
@@ -936,9 +957,9 @@ export default function ManageDocuments() {
       sonnerToast.success('File uploaded');
       // Optimistic update
       setDocuments(prev => prev.map(d => d.id === docId ? { ...d, file_status: 'file_ready' as FileStatus } : d));
-    } catch (err: any) {
+    } catch (err) {
       console.error('Inline upload failed:', err);
-      sonnerToast.error(err.message || 'Upload failed');
+      sonnerToast.error(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploadingDocId(null);
     }
@@ -1020,7 +1041,7 @@ export default function ManageDocuments() {
       folderMatchedCategory || categories.find((c) => String(c.id) === filenameMatchedCategoryId);
 
     const matchedFrameworkValue = deriveFrameworkFromRootFolder(rootFolderName, frameworks || []);
-    const matchedFramework = (frameworks || []).find((f: any) => f.value === matchedFrameworkValue);
+    const matchedFramework = (frameworks || []).find((f) => f.value === matchedFrameworkValue);
     const frameworkStageDefault = getDefaultStageIdForFramework(matchedFrameworkValue);
 
     setFormData((prev) => ({
@@ -1151,8 +1172,8 @@ export default function ManageDocuments() {
             title: "Success",
             description: "Document created and template linked",
           });
-        } catch (impErr: any) {
-          sonnerToast.error(impErr?.message || 'Template import failed — document created without a linked file. You can retry from the edit dialog.');
+        } catch (impErr) {
+          sonnerToast.error(impErr instanceof Error ? impErr.message : 'Template import failed — document created without a linked file. You can retry from the edit dialog.');
           // Keep dialog closed but preserve document row
         } finally {
           setImportingTemplate(false);
@@ -1191,10 +1212,10 @@ export default function ManageDocuments() {
       setCreateStep('browse');
       setIsCreateDialogOpen(false);
       fetchDocuments();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to save document",
         variant: "destructive"
       });
     }
@@ -1254,10 +1275,10 @@ export default function ManageDocuments() {
         description: "Document duplicated successfully"
       });
       fetchDocuments();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to duplicate document",
         variant: "destructive"
       });
     }
@@ -1267,16 +1288,16 @@ export default function ManageDocuments() {
     try {
       const { data, error } = await supabase.rpc('delete_document_cascade', { p_doc_id: docId });
       if (error) throw error;
-      const result = data as any;
+      const result = data as unknown as DeleteDocumentCascadeResult;
       toast({
         title: "Document deleted",
         description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s), ${result.client_stage_docs_deleted} client stage assignment(s), and ${result.tenant_docs_deleted} tenant link(s).`
       });
       fetchDocuments();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to delete document",
         variant: "destructive"
       });
     }
@@ -1300,8 +1321,8 @@ export default function ManageDocuments() {
         if (error) throw error;
         results.push(data);
       }
-      const totalInstances = results.reduce((sum: number, r: any) => sum + (r?.instances_deleted || 0), 0);
-      const totalStage = results.reduce((sum: number, r: any) => sum + (r?.stage_docs_deleted || 0), 0);
+      const totalInstances = results.reduce((sum, r) => sum + ((r as DeleteDocumentCascadeResult | null)?.instances_deleted || 0), 0);
+      const totalStage = results.reduce((sum, r) => sum + ((r as DeleteDocumentCascadeResult | null)?.stage_docs_deleted || 0), 0);
       toast({
         title: "Success",
         description: `${selectedDocuments.length} document(s) deleted with ${totalInstances} instance(s) and ${totalStage} stage link(s) removed.`
@@ -1309,10 +1330,10 @@ export default function ManageDocuments() {
       setSelectedDocuments([]);
       setIsBulkDeleteDialogOpen(false);
       fetchDocuments();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to delete documents",
         variant: "destructive"
       });
     } finally {
@@ -1364,7 +1385,7 @@ export default function ManageDocuments() {
       setBulkSendSearchQuery("");
       setBulkSendType(null);
       setSelectedDocuments([]);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error sending documents:", error);
       toast({
         title: "Error",
@@ -1436,10 +1457,10 @@ export default function ManageDocuments() {
       setBulkCricosFilter('all');
       setBulkFrameworkFilter('');
       setSelectedDocuments([]);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to send documents",
         variant: "destructive"
       });
     } finally {
@@ -1486,10 +1507,10 @@ export default function ManageDocuments() {
         title: "Success",
         description: "Document downloaded successfully"
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to download document",
         variant: "destructive"
       });
     }
@@ -1500,10 +1521,10 @@ export default function ManageDocuments() {
       const { data, error } = await supabase.storage.from("document-files").createSignedUrl(filePath, 3600);
       if (error || !data?.signedUrl) throw error || new Error('Failed to generate file URL');
       window.open(data.signedUrl, "_blank");
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to open document",
         variant: "destructive"
       });
     }
@@ -1785,7 +1806,7 @@ export default function ManageDocuments() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">None</SelectItem>
-                        {frameworks?.map((f: any) => (
+                        {frameworks?.map((f) => (
                           <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
                         ))}
                       </SelectContent>
@@ -1796,7 +1817,7 @@ export default function ManageDocuments() {
                   <div className="grid gap-2">
                     <Label className="flex items-center gap-1.5">
                       Stage (Template Association)
-                      <DefaultStageSettingButton stagesList={stagesList as any} frameworks={frameworks} />
+                      <DefaultStageSettingButton stagesList={stagesList} frameworks={frameworks} />
                     </Label>
                     <Select
                       value={formData.stage || '__none__'}
@@ -1807,7 +1828,7 @@ export default function ManageDocuments() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">None</SelectItem>
-                        {stagesList?.map((s: any) => (
+                        {stagesList?.map((s) => (
                           <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -1817,7 +1838,7 @@ export default function ManageDocuments() {
                   {/* Additional Stages */}
                   <DocumentAdditionalStagesField
                     documentId={editingDocumentId}
-                    stages={stagesList as any}
+                    stages={stagesList}
                     primaryStageId={formData.stage ? parseInt(formData.stage) : null}
                   />
 
@@ -2216,7 +2237,7 @@ export default function ManageDocuments() {
                 </TableRow> : paginatedDocuments.map((doc, index) => {
             const isNew = doc.sent_at && new Date().getTime() - new Date(doc.sent_at).getTime() < 24 * 60 * 60 * 1000;
             const categoryIds = doc.category ? doc.category.split(',') : [];
-            const categoryBadges = categoryIds.map(id => categories.find(c => c.id === parseInt(id.trim()))?.name).filter(Boolean);
+            const categoryBadges = categoryIds.map(id => categories.find(c => c.id === id.trim())?.name).filter(Boolean);
             const isSelected = selectedDocuments.includes(doc.id);
             const currentVersion = getCurrentVersion(doc);
             return <TableRow key={doc.id} className={cn("group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in", isSelected && "bg-primary/5")} style={{
@@ -2446,7 +2467,7 @@ export default function ManageDocuments() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="__none__">None</SelectItem>
-                                    {stagesList?.map((s: any) => (
+                                    {stagesList?.map((s) => (
                                       <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                                     ))}
                                   </SelectContent>
@@ -2454,7 +2475,7 @@ export default function ManageDocuments() {
                               </div>
                               <DocumentAdditionalStagesField
                                 documentId={doc.id}
-                                stages={stagesList as any}
+                                stages={stagesList}
                                 primaryStageId={doc.stage ?? null}
                               />
                             </PopoverContent>
@@ -2471,8 +2492,8 @@ export default function ManageDocuments() {
                     setIsDeleteDialogOpen(true);
                     try {
                       const { data } = await supabase.rpc('preview_document_delete', { p_doc_id: doc.id });
-                      if (data && (data as any).found) {
-                        const d = data as any;
+                      const d = data as unknown as PreviewDocumentDeleteResult | null;
+                      if (d?.found) {
                         setDeleteImpact({ instances: d.instances, stageDocs: d.stage_docs, dataSources: d.data_sources, sourceMappings: d.source_mappings, versions: d.versions });
                       }
                     } catch { /* best-effort preview; dialog still opens without an impact summary */ }
@@ -2586,7 +2607,7 @@ export default function ManageDocuments() {
               setIsDeleting(true);
               const { data, error } = await supabase.rpc('delete_document_cascade', { p_doc_id: documentToDelete });
               if (error) throw error;
-              const result = data as any;
+              const result = data as unknown as DeleteDocumentCascadeResult;
               toast({
                 title: "Document deleted",
                 description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s).`
@@ -2595,10 +2616,10 @@ export default function ManageDocuments() {
               setDeleteImpact(null);
               setIsDeleteDialogOpen(false);
               fetchDocuments();
-            } catch (error: any) {
+            } catch (error) {
               toast({
                 title: "Error",
-                description: error.message,
+                description: error instanceof Error ? error.message : "Failed to delete document",
                 variant: "destructive"
               });
             } finally {

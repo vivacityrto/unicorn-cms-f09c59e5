@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T14:37:24.895Z",
-  "baselineSha": "3d2fc0b8eb94ad7057f13ab2f99248a798ca67b4",
+  "generatedAt": "2026-09-04T14:53:25.769Z",
+  "baselineSha": "51b53f072e9fc17b526a48dc2f0b3011fb992cd7",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 449,
-    "errors": 2341,
+    "filesWithFindings": 448,
+    "errors": 2299,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2334,
+    "@typescript-eslint/no-explicit-any": 2292,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1673,
+      "errors": 1631,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1666,
+        "@typescript-eslint/no-explicit-any": 1624,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -409,10 +409,10 @@
       }
     },
     "src/pages": {
-      "errors": 275,
+      "errors": 233,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 275
+        "@typescript-eslint/no-explicit-any": 233
       }
     },
     "src/pages/academy": {
@@ -2122,9 +2122,6 @@
     },
     "src/pages/ManageCategories.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/ManageDocuments.tsx": {
-      "@typescript-eslint/no-explicit-any": 42
     },
     "src/pages/ManageEmailTemplates.tsx": {
       "@typescript-eslint/no-explicit-any": 4
