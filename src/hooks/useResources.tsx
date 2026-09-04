@@ -3,9 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Resource } from "@/types/resource";
 import { toast } from "sonner";
 import { useAuth } from "./useAuth";
+import type { Tables } from "@/integrations/supabase/types";
+
+type ResourceLibraryRowWithUsage = Tables<'resource_library'> & { usage_count: number };
 
 // Helper function to transform database rows to Resource type
-const transformResource = (row: any, favouriteIds: string[] = []): Resource => ({
+const transformResource = (row: ResourceLibraryRowWithUsage, favouriteIds: string[] = []): Resource => ({
   id: row.id,
   title: row.title,
   description: row.description,
@@ -15,8 +18,8 @@ const transformResource = (row: any, favouriteIds: string[] = []): Resource => (
   version: row.version || 'v1.0',
   tags: row.tags || [],
   access_level: row.access_level || 'member',
-  created_at: row.created_at,
-  updated_at: row.updated_at,
+  created_at: row.created_at ?? '',
+  updated_at: row.updated_at ?? '',
   usage_count: row.usage_count || 0,
   is_favourite: favouriteIds.includes(row.id),
 });
@@ -36,7 +39,7 @@ export const useResources = () => {
           .select("resource_id")
           .eq("user_id", user.id);
         if (error) throw error;
-        return data?.map((f: any) => f.resource_id) || [];
+        return data?.map((f) => f.resource_id) || [];
       },
       enabled: !!user?.id,
     });
@@ -64,11 +67,11 @@ export const useResources = () => {
           .select("resource_id");
 
         const countMap: Record<string, number> = {};
-        usageCounts?.forEach((u: any) => {
+        usageCounts?.forEach((u) => {
           countMap[u.resource_id] = (countMap[u.resource_id] || 0) + 1;
         });
 
-        return (resources || []).map((r: any) => 
+        return (resources || []).map((r) => 
           transformResource({ ...r, usage_count: countMap[r.id] || 0 }, favouriteIds)
         );
       },
@@ -97,11 +100,11 @@ export const useResources = () => {
           .select("resource_id");
 
         const countMap: Record<string, number> = {};
-        usageCounts?.forEach((u: any) => {
+        usageCounts?.forEach((u) => {
           countMap[u.resource_id] = (countMap[u.resource_id] || 0) + 1;
         });
 
-        return (resources || []).map((r: any) => 
+        return (resources || []).map((r) => 
           transformResource({ ...r, usage_count: countMap[r.id] || 0 }, favouriteIds)
         );
       },
@@ -131,11 +134,11 @@ export const useResources = () => {
           .select("resource_id");
 
         const countMap: Record<string, number> = {};
-        usageCounts?.forEach((u: any) => {
+        usageCounts?.forEach((u) => {
           countMap[u.resource_id] = (countMap[u.resource_id] || 0) + 1;
         });
 
-        return (resources || []).map((r: any) => 
+        return (resources || []).map((r) => 
           transformResource({ ...r, usage_count: countMap[r.id] || 0 }, favouriteIds)
         );
       },
@@ -155,7 +158,7 @@ export const useResources = () => {
           .select("resource_id");
 
         const countMap: Record<string, number> = {};
-        usageCounts?.forEach((u: any) => {
+        usageCounts?.forEach((u) => {
           countMap[u.resource_id] = (countMap[u.resource_id] || 0) + 1;
         });
 
@@ -169,11 +172,11 @@ export const useResources = () => {
 
         // Sort by usage count and limit
         const sortedResources = (resources || [])
-          .map((r: any) => ({ ...r, usage_count: countMap[r.id] || 0 }))
-          .sort((a: any, b: any) => b.usage_count - a.usage_count)
+          .map((r) => ({ ...r, usage_count: countMap[r.id] || 0 }))
+          .sort((a, b) => b.usage_count - a.usage_count)
           .slice(0, limit);
 
-        return sortedResources.map((r: any) => transformResource(r, favouriteIds));
+        return sortedResources.map((r) => transformResource(r, favouriteIds));
       },
     });
   };
@@ -201,11 +204,11 @@ export const useResources = () => {
           .select("resource_id");
 
         const countMap: Record<string, number> = {};
-        usageCounts?.forEach((u: any) => {
+        usageCounts?.forEach((u) => {
           countMap[u.resource_id] = (countMap[u.resource_id] || 0) + 1;
         });
 
-        return (resources || []).map((r: any) => 
+        return (resources || []).map((r) => 
           transformResource({ ...r, usage_count: countMap[r.id] || 0 }, favouriteIds)
         );
       },
@@ -247,11 +250,11 @@ export const useResources = () => {
           .select("resource_id");
 
         const countMap: Record<string, number> = {};
-        usageCounts?.forEach((u: any) => {
+        usageCounts?.forEach((u) => {
           countMap[u.resource_id] = (countMap[u.resource_id] || 0) + 1;
         });
 
-        return (resources || []).map((r: any) => 
+        return (resources || []).map((r) => 
           transformResource({ ...r, usage_count: countMap[r.id] || 0 }, favouriteIds)
         );
       },
