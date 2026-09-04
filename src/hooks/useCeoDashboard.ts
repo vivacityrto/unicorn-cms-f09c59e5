@@ -196,7 +196,7 @@ export function useFinancialControls() {
     queryKey: ['ceo-financial-controls'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('financial_controls' as any)
+        .from('financial_controls')
         .select('*')
         .order('due_date', { ascending: true });
 
@@ -238,9 +238,9 @@ export function useDiamondCommitments() {
     queryKey: ['ceo-diamond-commitments'],
     queryFn: async () => {
       // Get diamond tenant IDs
-      const { data: diamondTenants, error: tErr } = await (supabase
+      const { data: diamondTenants, error: tErr } = await supabase
         .from('tenants')
-        .select('id') as any)
+        .select('id')
         .eq('tier', 'diamond')
         .eq('status', 'active');
 
@@ -253,19 +253,19 @@ export function useDiamondCommitments() {
       fourteenDaysFromNow.setDate(fourteenDaysFromNow.getDate() + 14);
 
       const { data, error } = await supabase
-        .from('client_commitments' as any)
+        .from('client_commitments')
         .select('*')
         .in('tenant_id', tenantIds)
         .lte('due_date', fourteenDaysFromNow.toISOString().split('T')[0])
         .order('due_date', { ascending: true });
 
       if (error) throw error;
-      const rows = (data ?? []) as any[];
+      const rows = data ?? [];
 
       return {
-        upcoming: rows.filter((r: any) => r.status === 'pending'),
-        atRisk: rows.filter((r: any) => r.status === 'at_risk').length,
-        missed: rows.filter((r: any) => r.status === 'missed').length,
+        upcoming: rows.filter(r => r.status === 'pending'),
+        atRisk: rows.filter(r => r.status === 'at_risk').length,
+        missed: rows.filter(r => r.status === 'missed').length,
       };
     },
     staleTime: 60_000,
@@ -288,7 +288,7 @@ export function useCeoDecisionQueue() {
     queryKey: ['ceo-decision-queue'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('ceo_decision_queue' as any)
+        .from('ceo_decision_queue')
         .select('*')
         .eq('status', 'pending')
         .order('submitted_at', { ascending: true });
@@ -296,7 +296,7 @@ export function useCeoDecisionQueue() {
       if (error) throw error;
 
       const now = new Date();
-      return ((data ?? []) as any[]).map((row: any) => ({
+      return (data ?? []).map((row) => ({
         id: row.id,
         title: row.title,
         impact_level: row.impact_level,
@@ -324,13 +324,22 @@ export function useKpiScoreRpc(tenantId: number = SYSTEM_TENANT_ID, days: number
   return useQuery({
     queryKey: ['ceo-kpi-score-rpc', tenantId, days],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('kpi_score_rolling' as any, {
+      const { data, error } = await supabase.rpc('kpi_score_rolling', {
         p_tenant_id: tenantId,
         p_days: days,
       });
 
       if (error) throw error;
-      const result = data as any;
+      const result = data as unknown as {
+        overall_score?: number;
+        scores?: {
+          eos_execution?: number;
+          unicorn_integrity?: number;
+          ceo_relief?: number;
+          financial_accuracy?: number;
+        };
+        status?: string | null;
+      } | null;
 
       return {
         overall: Math.round(result?.overall_score ?? 0),
