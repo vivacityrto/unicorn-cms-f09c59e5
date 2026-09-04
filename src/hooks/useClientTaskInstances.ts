@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useTaskStatusOptions, getStatusLabel } from '@/hooks/useTaskStatusOptions';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 
 export interface ClientTaskInstance {
   id: number;
@@ -33,12 +34,12 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
     if (!stageInstanceId) return;
     setLoading(true);
     try {
-      const taskResult = await (supabase
-        .from('client_task_instances' as any)
+      const taskResult = await supabase
+        .from('client_task_instances')
         .select('id, clienttask_id, status, due_date, completion_date')
         .eq('stageinstance_id', stageInstanceId)
         .eq('is_archived', false)
-        .order('id')) as { data: any[] | null; error: any };
+        .order('id');
 
       if (taskResult.error) throw taskResult.error;
       if (!taskResult.data || taskResult.data.length === 0) {
@@ -58,12 +59,12 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
         : { data: [], error: null };
 
       const taskMap = new Map<number, { name: string; description: string | null; order_number: number | null }>();
-      
-      (metaResult.data || []).forEach((t: any) => {
+
+      (metaResult.data || []).forEach((t) => {
         taskMap.set(t.id, { name: t.name, description: t.description, order_number: t.sort_order ?? null });
       });
 
-      const transformed: ClientTaskInstance[] = taskResult.data.map((row: any) => {
+      const transformed: ClientTaskInstance[] = taskResult.data.map((row) => {
         const meta = row.clienttask_id ? taskMap.get(row.clienttask_id) : undefined;
         return {
           id: row.id,
@@ -85,7 +86,7 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
       });
 
       setTasks(transformed);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching client task instances:', error);
       toast({ title: 'Error', description: 'Failed to load client tasks', variant: 'destructive' });
     } finally {
@@ -101,7 +102,7 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
     setUpdating(taskId);
     try {
       const oldTask = tasks.find(t => t.id === taskId);
-      const updateData: Record<string, any> = { status: newStatusId };
+      const updateData: TablesUpdate<'client_task_instances'> = { status: newStatusId };
 
       if (newStatusId === 2 && oldTask?.status_id !== 2) {
         updateData.completion_date = new Date().toISOString().split('T')[0];
@@ -111,13 +112,18 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
 
       const { error } = await supabase
         .from('client_task_instances')
-        .update(updateData as never)
+        .update(updateData)
         .eq('id', taskId);
 
       if (error) throw error;
 
       // Compute structured AI signals
-      const aiSignals: Record<string, any> = {
+      const aiSignals: {
+        package_id: number;
+        stage_instance_id: number;
+        completion_latency_days?: number;
+        completed_on_time?: boolean;
+      } = {
         package_id: packageId,
         stage_instance_id: stageInstanceId,
       };
@@ -149,7 +155,7 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
           .eq('id', stageInstanceId)
           .single();
 
-        const currentStatus = (stageData as any)?.status;
+        const currentStatus = stageData?.status;
         const isNotStarted =
           currentStatus === 'not_started' ||
           currentStatus === '0' ||
@@ -175,9 +181,9 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
       }
 
       fetchTasks();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating client task:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     } finally {
       setUpdating(null);
     }

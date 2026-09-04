@@ -61,12 +61,12 @@ export function useTenantContacts(tenantIds: number[]) {
       if (adminUsersErr) throw adminUsersErr;
 
       const memberCount: Record<number, number> = {};
-      (members || []).forEach((m: any) => {
+      (members || []).forEach((m) => {
         memberCount[m.tenant_id] = (memberCount[m.tenant_id] || 0) + 1;
       });
 
-      const primaryUserIds = [...new Set((primary || []).map((p: any) => p.user_id).filter(Boolean))];
-      const stateCodes = [...new Set((adminUsers || []).map((u: any) => u.state).filter(Boolean))];
+      const primaryUserIds = [...new Set((primary || []).map((p) => p.user_id).filter(Boolean))];
+      const stateCodes = [...new Set((adminUsers || []).map((u) => u.state).filter(Boolean))];
 
       // Second wave: each depends on a first-wave result, but not on each
       // other, so they can also run concurrently.
@@ -79,30 +79,30 @@ export function useTenantContacts(tenantIds: number[]) {
               .from("users")
               .select("user_uuid, first_name, last_name")
               .in("user_uuid", primaryUserIds)
-          : Promise.resolve({ data: [] as any[], error: null }),
+          : Promise.resolve({ data: [] as { user_uuid: string; first_name: string; last_name: string }[], error: null }),
         stateCodes.length > 0
-          ? supabase.from("dd_states" as any).select("legacy_code, label").in("legacy_code", stateCodes)
-          : Promise.resolve({ data: [] as any[], error: null }),
+          ? supabase.from("dd_states").select("legacy_code, label").in("legacy_code", stateCodes)
+          : Promise.resolve({ data: [] as { legacy_code: number | null; label: string }[], error: null }),
       ]);
       if (primaryUsersErr) throw primaryUsersErr;
       if (statesErr) throw statesErr;
 
       const primaryUserMap: Record<string, string | null> = {};
-      (primaryUsers || []).forEach((u: any) => {
+      (primaryUsers || []).forEach((u) => {
         primaryUserMap[u.user_uuid] = `${u.first_name || ""} ${u.last_name || ""}`.trim() || null;
       });
       const primaryContactMap: Record<number, string | null> = {};
-      (primary || []).forEach((pc: any) => {
+      (primary || []).forEach((pc) => {
         if (!primaryContactMap[pc.tenant_id]) {
           primaryContactMap[pc.tenant_id] = primaryUserMap[pc.user_id] || null;
         }
       });
 
       const stateLabel: Record<number, string> = {};
-      (statesData || []).forEach((s: any) => { stateLabel[s.legacy_code] = s.label; });
+      (statesData || []).forEach((s) => { if (s.legacy_code !== null) stateLabel[s.legacy_code] = s.label; });
       const stateMap: Record<number, string | null> = {};
-      (adminUsers || []).forEach((u: any) => {
-        if (!stateMap[u.tenant_id] && u.state) {
+      (adminUsers || []).forEach((u) => {
+        if (u.tenant_id !== null && !stateMap[u.tenant_id] && u.state) {
           stateMap[u.tenant_id] = stateLabel[u.state] || null;
         }
       });
