@@ -4,10 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Upload, FileText, Check, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { useClientEvidenceRequests, useUploadEvidenceItem } from '@/hooks/useAuditPrep';
+import { useClientEvidenceRequests, useUploadEvidenceItem, type EvidenceRequest, type EvidenceRequestItem } from '@/hooks/useAuditPrep';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+
+// useClientEvidenceRequests' query embeds the related items under the real
+// FK-embed alias `evidence_request_items`, not the `items` field the
+// EvidenceRequest interface declares - typed honestly here to match the
+// actual query shape rather than the (unused) `items` field.
+type EvidenceRequestRow = EvidenceRequest & { evidence_request_items: EvidenceRequestItem[] };
 
 const ITEM_STATUS: Record<string, { label: string; color: string }> = {
   pending: { label: 'Awaiting', color: 'bg-gray-100 text-gray-600' },
@@ -35,7 +41,7 @@ export function AuditPreparationSection() {
     const file = e.target.files?.[0];
     if (!file || !uploadingItemId || !activeTenantId) return;
 
-    const request = requests.find(r => (r as any).evidence_request_items?.some((i: any) => i.id === uploadingItemId));
+    const request = (requests as EvidenceRequestRow[]).find(r => r.evidence_request_items?.some((i) => i.id === uploadingItemId));
     if (!request) return;
 
     uploadItem.mutate({
@@ -66,9 +72,9 @@ export function AuditPreparationSection() {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {requests.map(req => {
-          const items = (req as any).evidence_request_items || [];
-          const received = items.filter((i: any) => ['received', 'accepted'].includes(i.status)).length;
+        {(requests as EvidenceRequestRow[]).map(req => {
+          const items = req.evidence_request_items || [];
+          const received = items.filter((i) => ['received', 'accepted'].includes(i.status)).length;
           const isOverdue = req.due_date && new Date(req.due_date) < new Date();
 
           return (
@@ -92,7 +98,7 @@ export function AuditPreparationSection() {
                 )}
 
                 <div className="space-y-2">
-                  {items.map((item: any) => {
+                  {items.map((item) => {
                     const statusCfg = ITEM_STATUS[item.status] || ITEM_STATUS.pending;
                     return (
                       <div key={item.id} className="border rounded-md p-3 space-y-2">

@@ -48,7 +48,7 @@ export function ClientUpcomingAuditSection() {
     queryFn: async () => {
       // Get current active audit for tenant
       const { data: audits, error: auditErr } = await supabase
-        .from('client_audits' as any)
+        .from('client_audits')
         .select('id, title, audit_type, status, lead_auditor_id, subject_tenant_id')
         .eq('subject_tenant_id', activeTenantId)
         .in('status', ['draft', 'in_progress', 'review'])
@@ -56,11 +56,11 @@ export function ClientUpcomingAuditSection() {
         .limit(1);
       if (auditErr || !audits || audits.length === 0) return null;
 
-      const audit = audits[0] as any;
+      const audit = audits[0];
 
       // Get appointments for this audit
       const { data: appointments, error: apptErr } = await supabase
-        .from('audit_appointments' as any)
+        .from('audit_appointments')
         .select('*')
         .eq('audit_id', audit.id)
         .neq('status', 'cancelled')
@@ -73,11 +73,11 @@ export function ClientUpcomingAuditSection() {
       let auditorName: string | null = null;
       if (audit.lead_auditor_id) {
         const { data: user } = await supabase
-          .from('users' as any)
+          .from('users')
           .select('first_name, last_name')
           .eq('user_uuid', audit.lead_auditor_id)
           .single();
-        if (user) auditorName = `${(user as any).first_name} ${(user as any).last_name}`;
+        if (user) auditorName = `${user.first_name} ${user.last_name}`;
       }
 
       return {

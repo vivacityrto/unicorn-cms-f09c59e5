@@ -96,7 +96,7 @@ export function ClientGovernanceDocumentsPage() {
     enabled: !!activeTenantId && canAccess,
     queryFn: async (): Promise<GovernanceQueryResult> => {
       const [vRes, catRes, fwRes] = await Promise.all([
-        (supabase as any)
+        supabase
           .from("v_client_governance_documents")
           .select(
             "id, document_id, generationdate, generated_file_url, document_title, doc_title, description, category, framework_type, active_package_names"
@@ -110,17 +110,17 @@ export function ClientGovernanceDocumentsPage() {
       if (vRes.error) throw vRes.error;
 
       const catMap = new Map<string, { label: string; sort_order: number | null }>();
-      (catRes.data || []).forEach((c: any) =>
+      (catRes.data || []).forEach((c) =>
         catMap.set(c.value, { label: c.label, sort_order: c.sort_order ?? null })
       );
       const fwMap = new Map<string, string>();
-      (fwRes.data || []).forEach((f: any) => fwMap.set(f.value, f.label));
+      (fwRes.data || []).forEach((f) => fwMap.set(f.value, f.label));
 
       const frameworks: FrameworkOption[] = (fwRes.data || [])
-        .map((f: any) => ({ value: f.value as string, label: f.label as string }))
+        .map((f) => ({ value: f.value, label: f.label }))
         .sort((a, b) => a.label.localeCompare(b.label));
 
-      const rows: GovernanceDocRow[] = (vRes.data || []).map((r: any) => {
+      const rows: GovernanceDocRow[] = (vRes.data || []).map((r) => {
         const cat = r.category ? catMap.get(r.category) : undefined;
         const fwLabel = r.framework_type
           ? fwMap.get(r.framework_type) ?? r.framework_type

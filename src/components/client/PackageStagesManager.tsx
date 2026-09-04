@@ -92,7 +92,7 @@ interface StageRowProps {
   packageId: number;
   packageInstanceId?: number;
   onUpdate: () => void;
-  profile: any;
+  profile: ReturnType<typeof useAuth>['profile'];
   counts: { staffTasks: number; clientTasks: number; documents: number; emails: number; publishedCount?: number };
   countsLoading: boolean;
 }
@@ -132,10 +132,10 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
       queryClient.invalidateQueries({ queryKey: ['client_package_stages'] });
       queryClient.invalidateQueries({ queryKey: ['client-all-tasks'] });
       onUpdate();
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: 'Failed to publish tasks',
-        description: err?.message ?? 'Unknown error',
+        description: err instanceof Error ? err.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {
@@ -383,8 +383,8 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
 
       toast({ title: 'Updated', description: `${stage.stage_name} set to ${newValue ? 'Recurring' : 'Once'}` });
       fetchStages();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setRecurringConfirm(null);
     }
@@ -431,15 +431,11 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       setPackageInstanceId(resolvedInstanceId);
 
       // Fetch stage_instances for this package_instance
-      const stageResult = await (supabase
-        .from('stage_instances' as any)
+      const { data: stageData, error: stageError } = await supabase
+        .from('stage_instances')
         .select('id, stage_id, status, status_date, completion_date, comment, paid, is_recurring, event_conducted_date, linked_audit_id')
         .eq('packageinstance_id', resolvedInstanceId)
-        .order('stage_sortorder')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; linked_audit_id: string | null }> | null; error: any };
-
-      
-      const stageData = stageResult.data;
-      const stageError = stageResult.error;
+        .order('stage_sortorder');
 
       if (stageError) throw stageError;
 
@@ -464,9 +460,9 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       // Status is left unresolved here (may be a numeric code, canonical
       // text value, or null) — see the `stages` useMemo below for
       // resolution against the current `statuses` list.
-      const transformed: StageInstance[] = stageData.map((row: any) => {
+      const transformed: StageInstance[] = stageData.map((row) => {
         const meta = stageMap.get(row.stage_id);
-        const stageType = (meta as any)?.stage_type || null;
+        const stageType = meta?.stage_type || null;
         return {
           id: row.id,
           stage_id: row.stage_id,
@@ -486,7 +482,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       });
 
       setRawStages(transformed);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching stage instances:', error);
       toast({ title: 'Error', description: 'Failed to load stages', variant: 'destructive' });
     } finally {
@@ -560,7 +556,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       }
       const newStatusValue = statusOption.value;
 
-      const updateData: Record<string, any> = {
+      const updateData: { status: string; status_date: string; completion_date?: string } = {
         status: newStatusValue,
         status_date: new Date().toISOString(),
       };
@@ -623,9 +619,9 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
 
       toast({ title: 'Stage Updated', description: `Status changed to ${getStatusLabel(newStatus, [])}` });
       fetchStages();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating stage instance:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setUpdating(null);
     }

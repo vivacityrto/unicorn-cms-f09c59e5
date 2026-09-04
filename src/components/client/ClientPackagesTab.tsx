@@ -171,7 +171,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
     try {
       // Update end_date on the package instance
       if (finaliseEndDate) {
-        const { error: endDateError } = await (supabase as any)
+        const { error: endDateError } = await supabase
           .from('package_instances')
           .update({ end_date: format(finaliseEndDate, 'yyyy-MM-dd') })
           .eq('id', parseInt(finaliseTarget.id, 10));
@@ -203,7 +203,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
 
         // RPC sets start_date = CURRENT_DATE; override to the chosen renewal start
         if (newInstanceId && newStartDate !== format(new Date(), 'yyyy-MM-dd')) {
-          const { error: startDateError } = await (supabase as any)
+          const { error: startDateError } = await supabase
             .from('package_instances')
             .update({ start_date: newStartDate })
             .eq('id', newInstanceId);
@@ -214,9 +214,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
       toast.success(`${finaliseTarget.package_name} finalised successfully${renewPackage ? ' — renewal created' : ''}`);
       setFinaliseTarget(null);
       onRefresh?.();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Finalise error:', err);
-      toast.error(err.message || 'Failed to finalise package');
+      toast.error(err instanceof Error ? err.message : 'Failed to finalise package');
     } finally {
       setFinalising(false);
     }
@@ -236,8 +236,8 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
       setCancelTarget(null);
       setCancelReason('');
       onRefresh?.();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to cancel package');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to cancel package');
     } finally {
       setCancelling(false);
     }
@@ -272,7 +272,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
             p_payload: {
               title: `Package on hold: ${holdTarget.package_name}`,
               body: `${tenantName || 'Client'} — ${holdTarget.package_name} has been put on hold. Reason: ${holdReason.trim()}`,
-            } as any,
+            },
           });
         }
       } catch (notifErr) {
@@ -283,8 +283,8 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
       setHoldTarget(null);
       setHoldReason('');
       onRefresh?.();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to put package on hold');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to put package on hold');
     } finally {
       setHolding(false);
     }
@@ -317,7 +317,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
             p_payload: {
               title: `Package resumed: ${pkg.package_name}`,
               body: `${tenantName || 'Client'} — ${pkg.package_name} has been resumed from hold.`,
-            } as any,
+            },
           });
         }
       } catch (notifErr) {
@@ -326,8 +326,8 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
 
       toast.success(`${pkg.package_name} has been resumed`);
       onRefresh?.();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to resume package');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to resume package');
     }
   };
 
@@ -544,7 +544,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                                   try {
                                     const { error } = await supabase.rpc('transition_membership_state', {
                                       p_instance_id: parseInt(pkg.id, 10),
-                                      p_new_state: stateOpt.value as any,
+                                      p_new_state: stateOpt.value,
                                       p_reason: `Package state changed to ${stateOpt.value} by SuperAdmin`,
                                     });
                                     if (error) throw error;
@@ -555,8 +555,8 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                                     } else {
                                       onRefresh?.();
                                     }
-                                  } catch (err: any) {
-                                    toast.error(err.message || 'Failed to change state');
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : 'Failed to change state');
                                   }
                                 }}
                               >
@@ -736,7 +736,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                               disabled={!renewalDue}
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                const { data: incomplete } = await (supabase as any)
+                                const { data: incomplete } = await supabase
                                   .from('stage_instances')
                                   .select('id')
                                   .eq('packageinstance_id', parseInt(pkg.id, 10))
