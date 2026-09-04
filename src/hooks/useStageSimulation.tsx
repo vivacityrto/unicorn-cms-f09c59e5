@@ -331,23 +331,33 @@ export function useStageSimulation() {
   const { standards: allStandards } = useStandardsReference();
 
   const fetchPackagesUsingStage = useCallback(async (stageId: number) => {
-    const { data } = await (supabase as any)
+    // The result row type is passed explicitly as a generic argument to .select()
+    // because this nested-embed shape otherwise makes the Supabase client's
+    // automatic embed-inference recurse too deep ("Type instantiation is
+    // excessively deep and possibly infinite").
+    type PackageStageWithPackage = {
+      package_id: number;
+      packages: { id: number; name: string | null; status: string; package_type: string | null } | null;
+    };
+    const { data } = await supabase
       .from('package_stages')
-      .select('package_id, packages:package_id (id, name, status, package_type)')
-      .eq('stage_id', stageId) as any;
+      .select<'package_id, packages:package_id (id, name, status, package_type)', PackageStageWithPackage>(
+        'package_id, packages:package_id (id, name, status, package_type)'
+      )
+      .eq('stage_id', stageId);
 
     const packages = (data || [])
-      .filter((d: any) => d.packages)
-      .map((d: any) => ({
-        id: d.packages.id,
-        name: d.packages.name,
-        status: d.packages.status,
-        package_type: d.packages.package_type,
+      .filter((d) => d.packages)
+      .map((d) => ({
+        id: d.packages!.id,
+        name: d.packages!.name,
+        status: d.packages!.status,
+        package_type: d.packages!.package_type,
       }));
 
     // Remove duplicates
     const uniquePackages = packages.filter(
-      (pkg: any, index: number, self: any[]) => 
+      (pkg, index, self) =>
         index === self.findIndex(p => p.id === pkg.id)
     );
 
@@ -393,7 +403,7 @@ export function useStageSimulation() {
       const resolved = await fetchResolvedContent(context.packageId, stageId);
 
       // Map team tasks
-      const teamTasks: SimulationTeamTask[] = resolved.teamTasks.map((t: any) => ({
+      const teamTasks: SimulationTeamTask[] = resolved.teamTasks.map((t) => ({
         id: t.id?.toString() || '',
         name: t.name,
         description: t.description,
@@ -404,7 +414,7 @@ export function useStageSimulation() {
       }));
 
       // Map client tasks
-      const clientTasks: SimulationClientTask[] = resolved.clientTasks.map((t: any) => ({
+      const clientTasks: SimulationClientTask[] = resolved.clientTasks.map((t) => ({
         id: t.id?.toString() || '',
         name: t.name,
         description: t.description,
@@ -415,7 +425,7 @@ export function useStageSimulation() {
       }));
 
       // Map emails with template rendering
-      const emails: SimulationEmail[] = resolved.emails.map((e: any) => {
+      const emails: SimulationEmail[] = resolved.emails.map((e) => {
         // Handle both override (email_templates) and template (email_template) structure
         const template = e.email_templates || e.email_template;
         const subject = template?.subject || '';
@@ -442,7 +452,7 @@ export function useStageSimulation() {
       });
 
       // Map documents
-      const documents: SimulationDocument[] = resolved.documents.map((d: any) => {
+      const documents: SimulationDocument[] = resolved.documents.map((d) => {
         // Handle both override (documents) and template (document) structure
         const doc = d.documents || d.document;
         return {
@@ -460,7 +470,7 @@ export function useStageSimulation() {
       // Check dependencies
       const depResult = await checkDependenciesInPackage(stageId, context.packageId);
       const dependencyCheck: DependencyCheckResult = {
-        has_dependencies: (stageData as any).requires_stage_keys?.length > 0,
+        has_dependencies: (stageData.requires_stage_keys?.length ?? 0) > 0,
         all_met: depResult.satisfied,
         missing_stages: depResult.missing.map((m) => ({ stage_key: m.stage_key, title: m.name })),
       };
@@ -480,14 +490,14 @@ export function useStageSimulation() {
 
       // Resolve standards
       const resolvedStandards = resolveStandardCodes(
-        (stageData as any).covers_standards || null,
+        stageData.covers_standards || null,
         allStandards
       ).map(s => ({ code: s.code, title: s.title }));
 
       const summary: SimulationSummary = {
         stage,
-        version_label: (stageData as any).version_label || null,
-        frameworks: (stageData as any).frameworks || [],
+        version_label: stageData.version_label || null,
+        frameworks: stageData.frameworks || [],
         standards: resolvedStandards,
         dependency_check: dependencyCheck,
         quality_check: qualityCheck,

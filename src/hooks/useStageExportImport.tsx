@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Stage } from '@/hooks/usePackageBuilder';
+import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 export interface StageExportData {
   version: '1.0';
@@ -87,10 +88,10 @@ export function useStageExportImport() {
         throw new Error('Stage not found');
       }
 
-      let teamTasks: any[] = [];
-      let clientTasks: any[] = [];
-      let emails: any[] = [];
-      let documents: any[] = [];
+      let teamTasks: Tables<'package_staff_tasks'>[] = [];
+      let clientTasks: Tables<'package_client_tasks'>[] = [];
+      let emails: Tables<'package_stage_emails'>[] = [];
+      let documents: Tables<'package_stage_documents'>[] = [];
       let packageContext: { package_id: number; package_name: string } | undefined;
 
       if (packageId) {
@@ -118,17 +119,17 @@ export function useStageExportImport() {
             .eq('stage_id', stageId)
             .order('order_number'),
           supabase
-            .from('package_stage_emails' as any)
+            .from('package_stage_emails')
             .select('*')
             .eq('package_id', packageId)
             .eq('stage_id', stageId)
-            .order('sort_order') as any,
+            .order('sort_order'),
           supabase
-            .from('package_stage_documents' as any)
+            .from('package_stage_documents')
             .select('*')
             .eq('package_id', packageId)
             .eq('stage_id', stageId)
-            .order('sort_order') as any,
+            .order('sort_order'),
         ]);
 
         teamTasks = staffResult.data || [];
@@ -142,11 +143,11 @@ export function useStageExportImport() {
         exported_at: new Date().toISOString(),
         package_context: packageContext,
         stage: {
-          title: (stage as any).name,
-          short_name: (stage as any).shortname,
+          title: stage.name,
+          short_name: stage.shortname,
           description: stage.description,
           stage_type: stage.stage_type,
-          video_url: (stage as any).videourl,
+          video_url: stage.videourl,
           ai_hint: stage.ai_hint,
           is_reusable: stage.is_reusable ?? true,
           dashboard_visible: stage.dashboard_visible ?? true,
@@ -197,11 +198,11 @@ export function useStageExportImport() {
       });
 
       return exportData;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Export failed:', error);
       toast({
         title: 'Export Failed',
-        description: error.message || 'Failed to export stage',
+        description: error instanceof Error ? error.message : 'Failed to export stage',
         variant: 'destructive',
       });
       return null;
@@ -235,14 +236,15 @@ export function useStageExportImport() {
     });
   };
 
-  const validateImportData = (data: any): data is StageExportData => {
+  const validateImportData = (data: unknown): data is StageExportData => {
     if (!data || typeof data !== 'object') return false;
-    if (data.version !== '1.0') return false;
-    if (!data.stage || typeof data.stage.title !== 'string') return false;
-    if (!Array.isArray(data.team_tasks)) return false;
-    if (!Array.isArray(data.client_tasks)) return false;
-    if (!Array.isArray(data.emails)) return false;
-    if (!Array.isArray(data.documents)) return false;
+    const d = data as Record<string, unknown>;
+    if (d.version !== '1.0') return false;
+    if (!d.stage || typeof (d.stage as Record<string, unknown>).title !== 'string') return false;
+    if (!Array.isArray(d.team_tasks)) return false;
+    if (!Array.isArray(d.client_tasks)) return false;
+    if (!Array.isArray(d.emails)) return false;
+    if (!Array.isArray(d.documents)) return false;
     return true;
   };
 
@@ -265,10 +267,10 @@ export function useStageExportImport() {
         .ilike('name', `${data.stage.title}%`);
 
       let newTitle = data.stage.title;
-      if (existingStages?.some(s => (s as any).name === newTitle)) {
+      if (existingStages?.some(s => s.name === newTitle)) {
         newTitle = `${data.stage.title} (Imported)`;
         // Check again and add timestamp if still collision
-        if (existingStages?.some(s => (s as any).name === newTitle)) {
+        if (existingStages?.some(s => s.name === newTitle)) {
           newTitle = `${data.stage.title} (Imported ${Date.now()})`;
         }
       }
@@ -277,8 +279,16 @@ export function useStageExportImport() {
       const baseKey = newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const newStageKey = `${baseKey}-${Date.now()}`;
 
+      // KNOWN BUG (pre-existing, found while removing `any` here, not fixed - see
+      // execution-efficiency-log.md): stages.id has no default/sequence at the DB
+      // level (column_default is null, not-null constrained), so every insert into
+      // `stages` requires an explicit id. This insert has always failed with a NOT
+      // NULL violation - "Import Stage" has never actually created a stage. Fixing
+      // it needs a schema decision (add a sequence/default to stages.id, a migration
+      // requiring its own audit entry) out of scope for a type-only batch - left
+      // functionally unchanged, typed honestly via an explicit cast rather than `any`.
       // Create new stage (always non-certified for safety)
-      const { data: newStage, error: createError } = await (supabase as any)
+      const { data: newStage, error: createError } = await supabase
         .from('stages')
         .insert({
           name: newTitle,
@@ -293,7 +303,7 @@ export function useStageExportImport() {
           certified_notes: null,
           is_archived: false,
           stage_key: newStageKey,
-        })
+        } as unknown as TablesInsert<'stages'>)
         .select()
         .single();
 
@@ -341,7 +351,7 @@ export function useStageExportImport() {
       }
 
       if (targetPackageId && data.emails.length > 0) {
-        const { error } = await (supabase.from('package_stage_emails' as any).insert(
+        const { error } = await supabase.from('package_stage_emails').insert(
           data.emails.map(e => ({
             package_id: targetPackageId,
             stage_id: newStage.id,
@@ -351,12 +361,12 @@ export function useStageExportImport() {
             sort_order: e.sort_order,
             is_active: e.is_active ?? true,
           }))
-        ) as any);
+        );
         if (!error) counts.emails = data.emails.length;
       }
 
       if (targetPackageId && data.documents.length > 0) {
-        const { error } = await (supabase.from('package_stage_documents' as any).insert(
+        const { error } = await supabase.from('package_stage_documents').insert(
           data.documents.map(d => ({
             package_id: targetPackageId,
             stage_id: newStage.id,
@@ -365,7 +375,7 @@ export function useStageExportImport() {
             delivery_type: d.delivery_type,
             sort_order: d.sort_order,
           }))
-        ) as any);
+        );
         if (!error) counts.documents = data.documents.length;
       }
 
@@ -390,11 +400,11 @@ export function useStageExportImport() {
         newStageId: newStage.id,
         counts,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Import failed:', error);
       return {
         success: false,
-        error: error.message || 'Failed to import stage',
+        error: error instanceof Error ? error.message : 'Failed to import stage',
       };
     } finally {
       setIsImporting(false);

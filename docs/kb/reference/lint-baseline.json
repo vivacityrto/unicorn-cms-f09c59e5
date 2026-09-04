@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T04:45:49.914Z",
-  "baselineSha": "105a4c1566d5bf4dfb7044010a464245fea26ab3",
+  "generatedAt": "2026-09-04T05:28:40.039Z",
+  "baselineSha": "944ad762750ca5135689072b009bf8f3b5ba7091",
   "totals": {
     "files": 1787,
-    "filesWithFindings": 543,
-    "errors": 3380,
+    "filesWithFindings": 535,
+    "errors": 3240,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3373,
+    "@typescript-eslint/no-explicit-any": 3233,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2712,
+      "errors": 2572,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2705,
+        "@typescript-eslint/no-explicit-any": 2565,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -391,10 +391,10 @@
       }
     },
     "src/hooks": {
-      "errors": 1078,
+      "errors": 938,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1078,
+        "@typescript-eslint/no-explicit-any": 938,
         "react-refresh/only-export-components": 1
       }
     },
@@ -2248,30 +2248,6 @@
     },
     "src/hooks/useStaffTaskInstances.ts": {
       "@typescript-eslint/no-explicit-any": 15
-    },
-    "src/hooks/useStageAnalytics.tsx": {
-      "@typescript-eslint/no-explicit-any": 22
-    },
-    "src/hooks/useStageDependencies.tsx": {
-      "@typescript-eslint/no-explicit-any": 9
-    },
-    "src/hooks/useStageDuplication.tsx": {
-      "@typescript-eslint/no-explicit-any": 18
-    },
-    "src/hooks/useStageExportImport.tsx": {
-      "@typescript-eslint/no-explicit-any": 21
-    },
-    "src/hooks/useStageQualityCheck.tsx": {
-      "@typescript-eslint/no-explicit-any": 8
-    },
-    "src/hooks/useStageReplacement.tsx": {
-      "@typescript-eslint/no-explicit-any": 14
-    },
-    "src/hooks/useStageSimulation.tsx": {
-      "@typescript-eslint/no-explicit-any": 14
-    },
-    "src/hooks/useStageTemplateContent.tsx": {
-      "@typescript-eslint/no-explicit-any": 34
     },
     "src/hooks/useStrategicCommand.ts": {
       "@typescript-eslint/no-explicit-any": 4

@@ -104,7 +104,7 @@ export function useStageReplacement() {
 
               if (staffTasks?.length) {
                 await supabase.from('package_staff_tasks').insert(
-                  staffTasks.map((t: any) => ({
+                  staffTasks.map((t) => ({
                     package_id: packageId,
                     stage_id: newStageId,
                     name: t.name,
@@ -126,7 +126,7 @@ export function useStageReplacement() {
 
               if (clientTasks?.length) {
                 await supabase.from('package_client_tasks').insert(
-                  clientTasks.map((t: any) => ({
+                  clientTasks.map((t) => ({
                     package_id: packageId,
                     stage_id: newStageId,
                     name: t.name,
@@ -139,15 +139,15 @@ export function useStageReplacement() {
               }
 
               // Copy stage emails
-              const { data: emails } = await (supabase
-                .from('package_stage_emails' as any)
+              const { data: emails } = await supabase
+                .from('package_stage_emails')
                 .select('*')
                 .eq('package_id', packageId)
-                .eq('stage_id', oldStageId) as any);
+                .eq('stage_id', oldStageId);
 
               if (emails?.length) {
-                await (supabase.from('package_stage_emails' as any).insert(
-                  emails.map((e: any) => ({
+                await supabase.from('package_stage_emails').insert(
+                  emails.map((e) => ({
                     package_id: packageId,
                     stage_id: newStageId,
                     email_template_id: e.email_template_id,
@@ -156,19 +156,19 @@ export function useStageReplacement() {
                     sort_order: e.sort_order,
                     is_active: e.is_active,
                   }))
-                ) as any);
+                );
               }
 
               // Copy stage documents
-              const { data: docs } = await (supabase
-                .from('package_stage_documents' as any)
+              const { data: docs } = await supabase
+                .from('package_stage_documents')
                 .select('*')
                 .eq('package_id', packageId)
-                .eq('stage_id', oldStageId) as any);
+                .eq('stage_id', oldStageId);
 
               if (docs?.length) {
-                await (supabase.from('package_stage_documents' as any).insert(
-                  docs.map((d: any) => ({
+                await supabase.from('package_stage_documents').insert(
+                  docs.map((d) => ({
                     package_id: packageId,
                     stage_id: newStageId,
                     document_id: d.document_id,
@@ -176,7 +176,7 @@ export function useStageReplacement() {
                     delivery_type: d.delivery_type,
                     sort_order: d.sort_order,
                   }))
-                ) as any);
+                );
               }
             }
           }
@@ -202,9 +202,9 @@ export function useStageReplacement() {
           } else {
             result.updated++;
           }
-        } catch (err: any) {
+        } catch (err) {
           result.skipped++;
-          result.errors.push({ packageId, reason: err.message || 'Unknown error' });
+          result.errors.push({ packageId, reason: err instanceof Error ? err.message : 'Unknown error' });
         }
       }
 
@@ -225,11 +225,11 @@ export function useStageReplacement() {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Stage replacement failed:', error);
       toast({
         title: 'Replacement Failed',
-        description: error.message || 'Failed to replace stage in packages',
+        description: error instanceof Error ? error.message : 'Failed to replace stage in packages',
         variant: 'destructive',
       });
       return null;
