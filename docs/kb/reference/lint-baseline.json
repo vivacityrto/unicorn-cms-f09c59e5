@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T02:39:54.876Z",
-  "baselineSha": "e810c51b1d97bc6f45093685eb20ec177a8e0f73",
+  "generatedAt": "2026-09-04T04:03:11.678Z",
+  "baselineSha": "0b31f3497e202a448528f76b034609044bcf0634",
   "totals": {
-    "files": 1785,
-    "filesWithFindings": 586,
-    "errors": 3641,
+    "files": 1787,
+    "filesWithFindings": 557,
+    "errors": 3537,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 3634,
+    "@typescript-eslint/no-explicit-any": 3530,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2973,
+      "errors": 2869,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2966,
+        "@typescript-eslint/no-explicit-any": 2862,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -214,27 +214,6 @@
         "@typescript-eslint/no-explicit-any": 2
       }
     },
-    "src/components/eos": {
-      "errors": 23,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 23
-      }
-    },
-    "src/components/eos/configurations": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "src/components/eos/qc": {
-      "errors": 6,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 6
-      }
-    },
     "src/components/executive": {
       "errors": 33,
       "warnings": 0,
@@ -405,10 +384,10 @@
     },
     "src/features/pdp": {},
     "src/hooks/academy": {
-      "errors": 153,
+      "errors": 114,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 153
+        "@typescript-eslint/no-explicit-any": 114
       }
     },
     "src/hooks/admin": {
@@ -419,10 +398,10 @@
       }
     },
     "src/hooks": {
-      "errors": 1154,
+      "errors": 1120,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1154,
+        "@typescript-eslint/no-explicit-any": 1120,
         "react-refresh/only-export-components": 1
       }
     },
@@ -448,10 +427,10 @@
       }
     },
     "src/pages": {
-      "errors": 451,
+      "errors": 450,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 451
+        "@typescript-eslint/no-explicit-any": 450
       }
     },
     "src/pages/academy": {
@@ -1639,39 +1618,6 @@
     "src/components/email/ConvertEmailToNoteDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
-    "src/components/eos/AgendaTemplateEditor.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/eos/ApplyTemplateDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/components/eos/AttendancePanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/eos/IDSDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/eos/LiveMeetingView.tsx": {
-      "@typescript-eslint/no-explicit-any": 10
-    },
-    "src/components/eos/MeetingScheduler.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/components/eos/ScorecardEntryGrid.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/eos/TodoInlineForm.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/eos/configurations/EosConfigurationEditor.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/eos/qc/QCScheduler.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/components/eos/qc/QCSectionCard.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "src/components/executive/ClientRiskForecastWidget.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -1970,32 +1916,11 @@
     "src/hooks/academy/useAcademyCertificates.ts": {
       "@typescript-eslint/no-explicit-any": 15
     },
-    "src/hooks/academy/useAcademyCourseResources.ts": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/hooks/academy/useAcademyEnrollments.ts": {
       "@typescript-eslint/no-explicit-any": 48
     },
     "src/hooks/academy/useAcademyModulesLessons.ts": {
       "@typescript-eslint/no-explicit-any": 19
-    },
-    "src/hooks/academy/useAcademyPackageRules.ts": {
-      "@typescript-eslint/no-explicit-any": 9
-    },
-    "src/hooks/academy/useAcademyTagManagement.ts": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/academy/useAcademyWorkbooks.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/academy/useAdminAcademyCourses.ts": {
-      "@typescript-eslint/no-explicit-any": 13
-    },
-    "src/hooks/academy/useEnrolCourse.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/academy/useMyEnrolledCourses.ts": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/hooks/academy/useTenantAcademyAccess.ts": {
       "@typescript-eslint/no-explicit-any": 14
@@ -2167,36 +2092,6 @@
     },
     "src/hooks/useEngagementAudit.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useEosAgendaTemplates.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/hooks/useEosConfigMeetingActions.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/hooks/useEosConfigV2Flag.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useEosDrafts.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useEosHeadlines.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useEosHealth.tsx": {
-      "@typescript-eslint/no-explicit-any": 8
-    },
-    "src/hooks/useEosMeetingSegments.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useEosReadiness.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/hooks/useEosRocksHierarchy.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useEosSegueShares.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
     },
     "src/hooks/useEvidenceCategories.ts": {
       "@typescript-eslint/no-explicit-any": 1
@@ -2553,9 +2448,6 @@
     },
     "src/pages/ClientPackageDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/pages/EosIssues.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "src/pages/Login.tsx": {
       "@typescript-eslint/no-explicit-any": 4

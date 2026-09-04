@@ -61,7 +61,7 @@ export function useAdminAcademyCourses(filters?: CourseFilters) {
       if (error) throw error;
       if (!courses?.length) return [];
 
-      const courseIds = courses.map((c: any) => c.id);
+      const courseIds = courses.map((c) => c.id);
 
       // Parallel counts
       const [{ data: modules }, { data: lessons }, { data: enrollments }] = await Promise.all([
@@ -74,11 +74,11 @@ export function useAdminAcademyCourses(filters?: CourseFilters) {
       const lessonCount = new Map<number, number>();
       const enrollCount = new Map<number, number>();
 
-      (modules ?? []).forEach((m: any) => moduleCount.set(m.course_id, (moduleCount.get(m.course_id) || 0) + 1));
-      (lessons ?? []).forEach((l: any) => lessonCount.set(l.course_id, (lessonCount.get(l.course_id) || 0) + 1));
-      (enrollments ?? []).forEach((e: any) => enrollCount.set(e.course_id, (enrollCount.get(e.course_id) || 0) + 1));
+      (modules ?? []).forEach((m) => moduleCount.set(m.course_id, (moduleCount.get(m.course_id) || 0) + 1));
+      (lessons ?? []).forEach((l) => lessonCount.set(l.course_id, (lessonCount.get(l.course_id) || 0) + 1));
+      (enrollments ?? []).forEach((e) => enrollCount.set(e.course_id, (enrollCount.get(e.course_id) || 0) + 1));
 
-      return courses.map((c: any) => ({
+      return courses.map((c) => ({
         ...c,
         module_count: moduleCount.get(c.id) || 0,
         lesson_count: lessonCount.get(c.id) || 0,
@@ -97,7 +97,7 @@ export function useUpdateCourse() {
       data,
     }: {
       id: number;
-      data: Partial<AdminCourse> & {
+      data: Partial<Omit<AdminCourse, "id" | "module_count" | "lesson_count" | "enrollment_count">> & {
         ai_generated?: boolean;
         ai_reviewed_by?: string | null;
         ai_reviewed_at?: string | null;
@@ -105,7 +105,7 @@ export function useUpdateCourse() {
     }) => {
       const { error } = await supabase
         .from("academy_courses")
-        .update(data as any)
+        .update(data)
         .eq("id", id);
       if (error) throw error;
     },
@@ -113,7 +113,7 @@ export function useUpdateCourse() {
       toast.success("Course updated");
       qc.invalidateQueries({ queryKey: [QUERY_KEY] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update course"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to update course"),
   });
 }
 
@@ -123,7 +123,7 @@ export function useDeleteCourse() {
     mutationFn: async (id: number) => {
       const { error } = await supabase
         .from("academy_courses")
-        .update({ status: "archived", archived_at: new Date().toISOString() } as any)
+        .update({ status: "archived", archived_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
     },
@@ -131,7 +131,7 @@ export function useDeleteCourse() {
       toast.success("Course archived");
       qc.invalidateQueries({ queryKey: [QUERY_KEY] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to archive course"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to archive course"),
   });
 }
 
@@ -164,7 +164,7 @@ export function usePermanentDeleteCourse() {
       toast.success("Course deleted");
       qc.invalidateQueries({ queryKey: [QUERY_KEY] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to delete course"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to delete course"),
   });
 }
 
@@ -185,10 +185,10 @@ export function usePublishCourse() {
           published_at: new Date().toISOString(),
           published_by: user?.id ?? null,
           // AI-drafted courses are human-reviewed at the moment a staff member publishes
-          ...((course as any)?.ai_generated
+          ...(course?.ai_generated
             ? { ai_reviewed_by: user?.id ?? null, ai_reviewed_at: new Date().toISOString() }
             : {}),
-        } as any)
+        })
         .eq("id", id);
       if (error) throw error;
     },
@@ -196,6 +196,6 @@ export function usePublishCourse() {
       toast.success("Course published");
       qc.invalidateQueries({ queryKey: [QUERY_KEY] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to publish course"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to publish course"),
   });
 }

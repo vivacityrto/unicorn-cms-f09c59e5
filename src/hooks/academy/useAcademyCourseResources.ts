@@ -52,7 +52,7 @@ async function currentUserId(): Promise<string | null> {
 }
 
 function courseResourcesTable() {
-  return (supabase as any).from("academy_course_resources");
+  return supabase.from("academy_course_resources");
 }
 
 function mapRows(links: LinkRow[], library: LibraryRow[]): CourseResource[] {
@@ -149,7 +149,7 @@ export function useAddCourseFileResource(courseId: number) {
         mime_type: mimeForUpload(file),
         file_size: file.size,
         ...(userId ? { created_by: userId } : {}),
-      } as any);
+      });
       if (libraryError) {
         await supabase.storage.from(bucket).remove([storagePath]).catch(() => {});
         throw libraryError;
@@ -171,7 +171,7 @@ export function useAddCourseFileResource(courseId: number) {
       toast.success("Resource added");
       qc.invalidateQueries({ queryKey: [COURSE_RESOURCES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to add resource"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to add resource"),
   });
 }
 
@@ -207,7 +207,7 @@ export function useAddCourseLinkResource(courseId: number) {
           resource_type: "link",
           file_url: trimmedUrl,
           ...(userId ? { created_by: userId } : {}),
-        } as any)
+        })
         .select("id")
         .single();
       if (libraryError) throw libraryError;
@@ -227,7 +227,7 @@ export function useAddCourseLinkResource(courseId: number) {
       toast.success("Link added");
       qc.invalidateQueries({ queryKey: [COURSE_RESOURCES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to add link"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to add link"),
   });
 }
 
@@ -242,7 +242,7 @@ export function useRemoveCourseResource(courseId: number) {
       toast.success("Resource removed");
       qc.invalidateQueries({ queryKey: [COURSE_RESOURCES_KEY, courseId] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to remove resource"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to remove resource"),
   });
 }
 
@@ -262,7 +262,7 @@ export function useReorderCourseResources(courseId: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [COURSE_RESOURCES_KEY, courseId] });
     },
-    onError: (e: any) => {
+    onError: (e: Error) => {
       toast.error(e?.message || "Failed to reorder resources");
       qc.invalidateQueries({ queryKey: [COURSE_RESOURCES_KEY, courseId] });
     },

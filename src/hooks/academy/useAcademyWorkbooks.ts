@@ -29,7 +29,7 @@ export function useAcademyWorkbooks() {
         .order("created_at", { ascending: false });
       if (error) throw error;
 
-      return (data ?? []).map((r: any) => ({
+      return (data ?? []).map((r) => ({
         id: r.id,
         title: r.title,
         description: r.description,
