@@ -83,6 +83,8 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [cscProfile, setCscProfile] = useState<{ avatar_url: string | null; first_name: string | null; last_name: string | null } | null>(null);
   const [staffNameMap, setStaffNameMap] = useState<Map<string, string>>(new Map());
   const [staffAvatarMap, setStaffAvatarMap] = useState<Map<string, string | null>>(new Map());
+  const staffAvatarMapRef = useRef(staffAvatarMap);
+  staffAvatarMapRef.current = staffAvatarMap;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
@@ -312,7 +314,7 @@ export function MessageTab({ channel }: MessageTabProps) {
     return () => {
       cancelled = true;
     };
-  }, [profile?.user_uuid, profile?.tenant_id, channel]);
+  }, [profile, channel]);
 
   // ---------- Realtime (CSC only) ----------
   useEffect(() => {
@@ -345,7 +347,7 @@ export function MessageTab({ channel }: MessageTabProps) {
             ];
           });
           // Backfill staff identity if unseen.
-          if (r.sender_user_uuid && r.sender_user_uuid !== myUuid && !staffAvatarMap.has(r.sender_user_uuid)) {
+          if (r.sender_user_uuid && r.sender_user_uuid !== myUuid && !staffAvatarMapRef.current.has(r.sender_user_uuid)) {
             void (async () => {
               const { data: u } = await (supabase
                 .from("users")

@@ -64,7 +64,7 @@ export function EmailViewDialog({
 
     // 3. Linked email, no stored body, viewer is not the linker — silent fallback to preview
     setFetched(true);
-  }, [open]);
+  }, [open, bodyHtmlProp, fetched, outlookMessageId]);
 
   const fetchBodyFromGraph = async (messageId: string) => {
     setLoading(true);

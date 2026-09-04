@@ -67,7 +67,8 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
       // Skipping the sync here is safe - the editor already has the right
       // initial content from the `content: value` passed to useEditor.
     }
-  }, [value]); // intentionally omit editor to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally omit editor to avoid loops
+  }, [value]);
 
   if (!editor) return null;
 

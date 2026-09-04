@@ -81,7 +81,7 @@ export function TenantDrawer({ tenant, open, onOpenChange, fetchComms, onLogEven
       });
       onLogEvent('drawer_opened', { tenant_id: tenant.tenant_id });
     }
-  }, [tenant?.tenant_id, open]);
+  }, [tenant, open, fetchComms, onLogEvent]);
 
   if (!tenant) return null;
 

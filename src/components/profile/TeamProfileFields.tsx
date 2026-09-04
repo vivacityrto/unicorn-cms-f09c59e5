@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -104,13 +104,7 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
     cover_user_id: user.cover_user_id || '',
   });
 
-  useEffect(() => {
-    if (isTeamUser) {
-      fetchTeamUsers();
-    }
-  }, [isTeamUser]);
-
-  const fetchTeamUsers = async () => {
+  const fetchTeamUsers = useCallback(async () => {
     try {
       const { data, error } = await supabase.rpc('get_team_users');
       if (error) throw error;
@@ -129,7 +123,13 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
     } catch (error) {
       console.error('Error fetching team users:', error);
     }
-  };
+  }, [user.user_uuid]);
+
+  useEffect(() => {
+    if (isTeamUser) {
+      fetchTeamUsers();
+    }
+  }, [isTeamUser, fetchTeamUsers]);
 
   // Only show for Team users
   if (!isTeamUser) {

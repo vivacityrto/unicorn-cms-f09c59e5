@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 import {
   Dialog,
@@ -155,6 +155,14 @@ export function AddTimeDialog({
   const consultRoom = selectedInstance
     ? Math.max(0, selectedInstance.included_minutes - KICKSTART_FLOOR_MINUTES - instanceTotalUsedMinutes)
     : 0;
+  const noteFormActivePackages = useMemo(() => (
+    selectedInstance ? [{
+      instance_id: selectedInstance.id,
+      package_id: selectedInstance.package_id,
+      name: selectedInstance.package_name,
+    }] : []
+  ), [selectedInstance]);
+
   const maxKickstartTas = selectedInstance && kickstartCap > 0
     ? Math.floor(Math.min(kickstartCapRemaining, consultRoom) / KICKSTART_TAS_MINUTES)
     : 0;
@@ -896,11 +904,7 @@ export function AddTimeDialog({
           showPackageSelector={false}
           hideLogTime={true}
           prelinkedTimeEntryId={pendingTimeEntryId}
-          activePackages={selectedInstance ? [{
-            instance_id: selectedInstance.id,
-            package_id: selectedInstance.package_id,
-            name: selectedInstance.package_name,
-          }] : []}
+          activePackages={noteFormActivePackages}
           onSave={async (data) => {
             // Insert the note here, then link the prelinked time entry
             const { data: inserted, error } = await supabase

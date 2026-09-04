@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,7 +67,7 @@ export function KpiDeveloperTicketQueue() {
   const [confirm, setConfirm] = useState<{ ticketId: number; commKey: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     const { data: t } = await (supabase as any)
@@ -99,9 +99,9 @@ export function KpiDeveloperTicketQueue() {
       }
     }
     setLoading(false);
-  };
+  }, [user?.id]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { load(); }, [load]);
 
   const updateStatus = async (t: Ticket, next: string) => {
     setBusy(true);

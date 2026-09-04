@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
@@ -38,7 +38,7 @@ export const TenantTypeProvider = ({
   const [academyMaxUsers, setAcademyMaxUsers] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchTenantType = async () => {
+  const fetchTenantType = useCallback(async () => {
     // For Vivacity Team members, they don't have a tenant type restriction
     const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
@@ -83,7 +83,7 @@ export const TenantTypeProvider = ({
     }
 
     setLoading(false);
-  };
+  }, [profile, memberships]);
 
   useEffect(() => {
     if (profile) {
@@ -92,7 +92,7 @@ export const TenantTypeProvider = ({
       setTenantType(null);
       setLoading(false);
     }
-  }, [profile, memberships]);
+  }, [profile, fetchTenantType]);
 
   const isComplianceMember = useMemo(() => {
     return tenantType === "compliance_system";
