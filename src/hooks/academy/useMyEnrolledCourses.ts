@@ -40,7 +40,7 @@ export function useMyEnrolledCourses() {
       if (progErr) throw progErr;
       if (!progress || progress.length === 0) return [];
 
-      const courseIds = progress.map((p: any) => p.course_id).filter(Boolean) as number[];
+      const courseIds = progress.map((p) => p.course_id).filter(Boolean) as number[];
 
       const [coursesRes, modulesRes, lessonsRes, completedRes] = await Promise.all([
         supabase
@@ -76,7 +76,7 @@ export function useMyEnrolledCourses() {
         banner_thumbnail_zoom: number | null;
         webinar_series: string | null;
       }>();
-      (coursesRes.data ?? []).forEach((c: any) =>
+      (coursesRes.data ?? []).forEach((c) =>
         courseMap.set(c.id, {
           slug: c.slug,
           description: c.description,
@@ -91,18 +91,18 @@ export function useMyEnrolledCourses() {
 
       const moduleCountByCourse = new Map<number, number>();
       const moduleSortByCourse = new Map<number, Map<number, number>>();
-      (modulesRes.data ?? []).forEach((m: any) => {
+      (modulesRes.data ?? []).forEach((m) => {
         moduleCountByCourse.set(m.course_id, (moduleCountByCourse.get(m.course_id) ?? 0) + 1);
         if (!moduleSortByCourse.has(m.course_id)) moduleSortByCourse.set(m.course_id, new Map());
         moduleSortByCourse.get(m.course_id)!.set(m.id, m.sort_order ?? 0);
       });
 
       const completedSet = new Set<number>(
-        (completedRes.data ?? []).map((r: any) => r.lesson_id as number)
+        (completedRes.data ?? []).map((r) => r.lesson_id as number)
       );
 
       const lessonsByCourse = new Map<number, { id: number; module_id: number; sort_order: number }[]>();
-      (lessonsRes.data ?? []).forEach((l: any) => {
+      (lessonsRes.data ?? []).forEach((l) => {
         const arr = lessonsByCourse.get(l.course_id) ?? [];
         arr.push({ id: l.id, module_id: l.module_id, sort_order: l.sort_order ?? 0 });
         lessonsByCourse.set(l.course_id, arr);
@@ -117,7 +117,7 @@ export function useMyEnrolledCourses() {
         });
       });
 
-      return progress.map((p: any) => {
+      return progress.map((p) => {
         const meta = courseMap.get(p.course_id);
         const lessons = lessonsByCourse.get(p.course_id) ?? [];
         const nextLesson = lessons.find((l) => !completedSet.has(l.id));

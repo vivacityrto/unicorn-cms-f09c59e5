@@ -92,7 +92,7 @@ export function useRuleStats() {
   return useQuery<RuleStats>({
     queryKey: RULE_STATS_KEY,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("fn_academy_rule_dashboard_stats" as any);
+      const { data, error } = await supabase.rpc("fn_academy_rule_dashboard_stats");
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       return (row ?? {
@@ -129,8 +129,8 @@ export function useRulesRealtime() {
 
 // ============= Mutations =============
 
-function rlsErrorMessage(err: any): string {
-  const msg = String(err?.message ?? err ?? "");
+function rlsErrorMessage(err: unknown): string {
+  const msg = String((err instanceof Error ? err.message : err) ?? "");
   if (/row-level security|permission denied|access denied|vivacity/i.test(msg)) {
     return "You need SuperAdmin access to modify rules.";
   }
@@ -227,7 +227,7 @@ export function useBackfillRule() {
   return useMutation({
     mutationFn: async (ruleId: number) => {
       const { data, error } = await supabase.rpc(
-        "fn_academy_backfill_enrollments_for_rule" as any,
+        "fn_academy_backfill_enrollments_for_rule",
         { p_rule_id: ruleId }
       );
       if (error) throw error;
@@ -256,7 +256,7 @@ export function useBackfillPreview() {
         .eq("is_active", true)
         .eq("membership_state", "active");
       if (e1) throw e1;
-      const tenantIds = Array.from(new Set((instances ?? []).map((r: any) => r.tenant_id)));
+      const tenantIds = Array.from(new Set((instances ?? []).map((r) => r.tenant_id)));
       if (tenantIds.length === 0) {
         return { tenants: 0, users: 0, new_enrollments: 0 };
       }
@@ -265,7 +265,7 @@ export function useBackfillPreview() {
         .select("user_id")
         .in("tenant_id", tenantIds);
       if (e2) throw e2;
-      const userIds = Array.from(new Set((tu ?? []).map((r: any) => r.user_id)));
+      const userIds = Array.from(new Set((tu ?? []).map((r) => r.user_id)));
       if (userIds.length === 0) {
         return { tenants: tenantIds.length, users: 0, new_enrollments: 0 };
       }
@@ -275,7 +275,7 @@ export function useBackfillPreview() {
         .eq("course_id", vars.courseId)
         .in("user_id", userIds);
       if (e3) throw e3;
-      const enrolled = new Set((existing ?? []).map((r: any) => r.user_id));
+      const enrolled = new Set((existing ?? []).map((r) => r.user_id));
       const newEnrollments = userIds.filter((u) => !enrolled.has(u)).length;
       return {
         tenants: tenantIds.length,
@@ -303,13 +303,13 @@ export function useCreateRules() {
         .upsert(rows, { onConflict: "package_id,course_id" })
         .select("id");
       if (error) throw error;
-      const ruleIds = (data ?? []).map((r: any) => r.id as number);
+      const ruleIds = (data ?? []).map((r) => r.id);
 
       let backfilled = 0;
       if (backfill && ruleIds.length > 0) {
         for (const rid of ruleIds) {
           const { data: cnt, error: bfErr } = await supabase.rpc(
-            "fn_academy_backfill_enrollments_for_rule" as any,
+            "fn_academy_backfill_enrollments_for_rule",
             { p_rule_id: rid }
           );
           if (bfErr) throw bfErr;
@@ -341,7 +341,7 @@ export function useCopyRuleMappings() {
         .eq("package_id", vars.sourcePackageId)
         .eq("is_active", true);
       if (error) throw error;
-      const courseIds = (srcRules ?? []).map((r: any) => r.course_id as number);
+      const courseIds = (srcRules ?? []).map((r) => r.course_id);
       if (courseIds.length === 0) return { copied: 0 };
       const { data: { user } } = await supabase.auth.getUser();
       const rows = courseIds.map((cid) => ({

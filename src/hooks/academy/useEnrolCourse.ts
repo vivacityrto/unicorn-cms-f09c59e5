@@ -73,7 +73,7 @@ export function useEnrolCourse() {
         toast.error("This user is already enrolled under a different tenant context");
         return;
       }
-      const code = (e as any)?.code;
+      const code = (e as Error & { code?: string })?.code;
       if (
         msg.includes("invalid_target_user") ||
         msg.includes("violates foreign key constraint") ||

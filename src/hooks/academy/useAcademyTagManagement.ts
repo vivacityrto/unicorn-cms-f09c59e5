@@ -102,7 +102,7 @@ export function useRenameAcademyTag() {
         );
         const { error: updErr } = await supabase
           .from("academy_courses")
-          .update({ tags: next.length ? next : null } as any)
+          .update({ tags: next.length ? next : null })
           .eq("id", course.id);
         if (updErr) throw updErr;
       }
@@ -117,6 +117,6 @@ export function useRenameAcademyTag() {
       qc.invalidateQueries({ queryKey: [ADMIN_COURSES_KEY] });
       qc.invalidateQueries({ queryKey: [DISTINCT_TAGS_KEY] });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update tag"),
+    onError: (e: Error) => toast.error(e?.message || "Failed to update tag"),
   });
 }
