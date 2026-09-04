@@ -6,6 +6,8 @@ import { Send, Loader2, User, Headphones, MessageCircle, Paperclip, X, CheckCirc
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables, Json } from "@/integrations/supabase/types";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -160,8 +162,8 @@ export function MessageTab({ channel }: MessageTabProps) {
 
       // 1) Resolve existing open CSC conversation, or create one.
       let conversationId: string | null = null;
-      const { data: existing } = await (supabase
-        .from("tenant_conversations" as any)
+      const { data: existing } = await supabase
+        .from("tenant_conversations")
         .select("id")
         .eq("tenant_id", tenantId)
         .eq("topic", "csc")
@@ -169,13 +171,13 @@ export function MessageTab({ channel }: MessageTabProps) {
         .eq("status", "open")
         .order("created_at", { ascending: false })
         .limit(1)
-        .maybeSingle()) as any;
+        .maybeSingle();
 
       if (existing?.id) {
         conversationId = existing.id;
       } else {
-        const { data: created, error: createErr } = await (supabase
-          .from("tenant_conversations" as any)
+        const { data: created, error: createErr } = await supabase
+          .from("tenant_conversations")
           .insert({
             tenant_id: tenantId,
             topic: "csc",
@@ -183,9 +185,9 @@ export function MessageTab({ channel }: MessageTabProps) {
             subject: "Message your CSC",
             created_by_user_uuid: myUuid,
             status: "open",
-          } as any)
+          })
           .select("id")
-          .single()) as any;
+          .single();
         if (createErr || !created?.id) {
           console.error("CSC conversation create failed:", createErr);
           toast.error("Could not initialize your message thread. Please refresh and try again.");
@@ -198,17 +200,17 @@ export function MessageTab({ channel }: MessageTabProps) {
       if (!conversationId || cancelled) return;
 
       // 2) Self participant — REQUIRED before any send (RLS). Surface failure to user.
-      const { error: selfPartErr } = await (supabase
-        .from("conversation_participants" as any)
+      const { error: selfPartErr } = await supabase
+        .from("conversation_participants")
         .upsert(
           {
             conversation_id: conversationId,
             user_id: myUuid,
             role: "member",
             last_read_at: new Date().toISOString(),
-          } as any,
+          },
           { onConflict: "conversation_id,user_id" }
-        )) as any;
+        );
       if (selfPartErr) {
         console.error("CSC self participant upsert failed:", selfPartErr);
         toast.error("Could not initialize your message thread. Please refresh and try again.");
@@ -217,32 +219,32 @@ export function MessageTab({ channel }: MessageTabProps) {
       }
 
       // 3) Add primary CSC as participant (best-effort).
-      const { data: cscRow } = await (supabase
-        .from("tenant_csc_assignments" as any)
+      const { data: cscRow } = await supabase
+        .from("tenant_csc_assignments")
         .select("csc_user_id")
         .eq("tenant_id", tenantId)
         .eq("is_primary", true)
         .limit(1)
-        .maybeSingle()) as any;
+        .maybeSingle();
 
       if (cscRow?.csc_user_id) {
-        const { data: cscUser } = await (supabase
+        const { data: cscUser } = await supabase
           .from("users")
           .select("avatar_url, first_name, last_name")
           .eq("user_uuid", cscRow.csc_user_id)
-          .maybeSingle()) as any;
+          .maybeSingle();
         if (!cancelled && cscUser) setCscProfile(cscUser);
 
-        const { error: cscPartErr } = await (supabase
-          .from("conversation_participants" as any)
+        const { error: cscPartErr } = await supabase
+          .from("conversation_participants")
           .upsert(
             {
               conversation_id: conversationId,
               user_id: cscRow.csc_user_id,
               role: "csc",
-            } as any,
+            },
             { onConflict: "conversation_id,user_id", ignoreDuplicates: true }
-          )) as any;
+          );
         if (cscPartErr) {
           console.warn("CSC participant upsert non-fatal failure:", cscPartErr);
         }
@@ -252,15 +254,15 @@ export function MessageTab({ channel }: MessageTabProps) {
       setThreadId(conversationId);
 
       // 4) Fetch messages.
-      const { data: rows } = await (supabase
-        .from("tenant_messages" as any)
+      const { data: rows } = await supabase
+        .from("tenant_messages")
         .select("id, sender_user_uuid, body, created_at")
         .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true })) as any;
+        .order("created_at", { ascending: true });
 
       if (cancelled) return;
 
-      const mapped: Message[] = (rows || []).map((r: any) => ({
+      const mapped: Message[] = (rows || []).map((r) => ({
         id: r.id,
         role: r.sender_user_uuid === myUuid ? "user" : "staff",
         content: r.body,
@@ -270,20 +272,20 @@ export function MessageTab({ channel }: MessageTabProps) {
       setMessages(mapped);
 
       // Resolve staff sender identities (per-message).
-      const staffIds = Array.from(new Set<string>(
+      const staffIds = Array.from(new Set(
         (rows || [])
-          .map((r: any) => r.sender_user_uuid)
-          .filter((u: string) => u && u !== myUuid)
+          .map((r) => r.sender_user_uuid)
+          .filter((u) => u && u !== myUuid)
       ));
       if (staffIds.length > 0) {
-        const { data: staffUsers } = await (supabase
+        const { data: staffUsers } = await supabase
           .from("users")
           .select("user_uuid, first_name, last_name, avatar_url")
-          .in("user_uuid", staffIds)) as any;
+          .in("user_uuid", staffIds);
         if (!cancelled && staffUsers) {
           const nm = new Map<string, string>();
           const am = new Map<string, string | null>();
-          staffUsers.forEach((u: any) => {
+          staffUsers.forEach((u) => {
             const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Vivacity Team";
             nm.set(u.user_uuid, name);
             am.set(u.user_uuid, u.avatar_url ?? null);
@@ -295,7 +297,7 @@ export function MessageTab({ channel }: MessageTabProps) {
 
       // 5) Fire-and-forget read audit.
       if (mapped.length > 0) {
-        void (supabase
+        void supabase
           .from("audit_events")
           .insert({
             entity: "tenant_message_read",
@@ -307,7 +309,8 @@ export function MessageTab({ channel }: MessageTabProps) {
               tenant_id: tenantId,
               message_count: mapped.length,
             },
-          } as any) as any).then(() => {}, () => {});
+          })
+          .then(() => {}, () => {});
       }
     }
 
@@ -323,25 +326,25 @@ export function MessageTab({ channel }: MessageTabProps) {
     const ch = supabase
       .channel(`csc-tm:${threadId}`)
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "tenant_messages",
           filter: `conversation_id=eq.${threadId}`,
         },
-        (payload: any) => {
-          const r = payload.new;
-          if (!r) return;
+        (payload: RealtimePostgresChangesPayload<Tables<"tenant_messages">>) => {
+          const r = payload.new as Partial<Tables<"tenant_messages">>;
+          if (!r.id) return;
           setMessages(prev => {
             if (prev.some(m => m.id === r.id)) return prev;
             return [
               ...prev,
               {
-                id: r.id,
+                id: r.id!,
                 role: r.sender_user_uuid === myUuid ? "user" : "staff",
-                content: r.body,
-                created_at: r.created_at,
+                content: r.body!,
+                created_at: r.created_at!,
                 sender_user_uuid: r.sender_user_uuid,
               },
             ];
@@ -349,11 +352,11 @@ export function MessageTab({ channel }: MessageTabProps) {
           // Backfill staff identity if unseen.
           if (r.sender_user_uuid && r.sender_user_uuid !== myUuid && !staffAvatarMapRef.current.has(r.sender_user_uuid)) {
             void (async () => {
-              const { data: u } = await (supabase
+              const { data: u } = await supabase
                 .from("users")
                 .select("user_uuid, first_name, last_name, avatar_url")
-                .eq("user_uuid", r.sender_user_uuid)
-                .maybeSingle()) as any;
+                .eq("user_uuid", r.sender_user_uuid!)
+                .maybeSingle();
               if (!u) return;
               const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Vivacity Team";
               setStaffNameMap(prev => new Map(prev).set(u.user_uuid, name));
@@ -392,7 +395,7 @@ export function MessageTab({ channel }: MessageTabProps) {
       } else {
         await sendSupport(userMsg);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Message send error:", err);
       toast.error("Failed to send message. Please try again.");
     } finally {
@@ -418,14 +421,14 @@ export function MessageTab({ channel }: MessageTabProps) {
         status: "open",
         subject: subject.trim() || null,
         metadata: diagnosticMeta,
-      } as any)
+      })
       .select("id")
       .single();
 
     if (threadError) throw threadError;
     const currentThreadId = newThread.id;
 
-    let messageMetadata: Record<string, any> | null = null;
+    let messageMetadata: Json | null = null;
     const fileToUpload = attachment;
     if (fileToUpload) {
       const path = `${profile!.tenant_id}/${currentThreadId}/${crypto.randomUUID()}-${fileToUpload.name}`;
@@ -447,7 +450,7 @@ export function MessageTab({ channel }: MessageTabProps) {
         role: "user",
         content: userMsg || "(image attached)",
         ...(messageMetadata ? { metadata: messageMetadata } : {}),
-      } as any);
+      });
 
     if (msgError) throw msgError;
 
@@ -472,17 +475,17 @@ export function MessageTab({ channel }: MessageTabProps) {
     const myUuid = profile!.user_uuid;
     const tenantId = profile!.tenant_id;
 
-    const { data: inserted, error } = await (supabase
-      .from("tenant_messages" as any)
+    const { data: inserted, error } = await supabase
+      .from("tenant_messages")
       .insert({
         conversation_id: conversationId,
         tenant_id: tenantId,
         sender_user_uuid: myUuid,
         sender_type: "client",
         body: userMsg,
-      } as any)
+      })
       .select("id, sender_user_uuid, body, created_at")
-      .single()) as any;
+      .single();
     if (error) throw error;
 
     if (inserted) {
@@ -502,11 +505,11 @@ export function MessageTab({ channel }: MessageTabProps) {
     }
 
     // Touch own last_read_at
-    await (supabase
-      .from("conversation_participants" as any)
-      .update({ last_read_at: new Date().toISOString() } as any)
+    await supabase
+      .from("conversation_participants")
+      .update({ last_read_at: new Date().toISOString() })
       .eq("conversation_id", conversationId)
-      .eq("user_id", myUuid)) as any;
+      .eq("user_id", myUuid);
   }
 
   const EmptyIcon = config.emptyIcon;
