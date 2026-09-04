@@ -29,7 +29,7 @@ export function useNotesForRange(
     enabled: !!userId && enabled,
     queryFn: async (): Promise<DailyNote[]> => {
       const { data, error } = await supabase
-        .from(TABLE as any)
+        .from(TABLE)
         .select('*')
         .eq('user_id', userId!)
         .gte('note_date', from)
@@ -37,20 +37,20 @@ export function useNotesForRange(
         .order('note_date', { ascending: true })
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return ((data ?? []) as any[]).map(hydrateLegacyNote);
+      return (data ?? []).map(hydrateLegacyNote);
     },
   });
 }
 
 async function fetchByDate(userId: string, dateStr: string): Promise<DailyNote[]> {
   const { data, error } = await supabase
-    .from(TABLE as any)
+    .from(TABLE)
     .select('*')
     .eq('user_id', userId)
     .eq('note_date', dateStr)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return ((data ?? []) as any[]).map(hydrateLegacyNote);
+  return (data ?? []).map(hydrateLegacyNote);
 }
 
 export function useNotesForDate(userId: string | undefined, date: Date, enabled = true) {
@@ -71,14 +71,14 @@ export function useNotesForMonth(userId: string | undefined, month: Date, enable
     enabled: !!userId && enabled,
     queryFn: async (): Promise<string[]> => {
       const { data, error } = await supabase
-        .from(TABLE as any)
+        .from(TABLE)
         .select('note_date')
         .eq('user_id', userId!)
         .gte('note_date', from)
         .lte('note_date', to);
       if (error) throw error;
       const set = new Set<string>();
-      ((data ?? []) as any[]).forEach((r) => r?.note_date && set.add(String(r.note_date)));
+      (data ?? []).forEach((r) => r?.note_date && set.add(String(r.note_date)));
       return Array.from(set);
     },
   });
@@ -94,13 +94,13 @@ export function useSearchNotes(userId: string | undefined, query: string, enable
       // user_daily_notes is small per-user, this is a fine tradeoff and
       // avoids indexing a jsonb text column.
       const { data, error } = await supabase
-        .from(TABLE as any)
+        .from(TABLE)
         .select('*')
         .eq('user_id', userId!)
         .order('note_date', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
-      const notes = ((data ?? []) as any[]).map(hydrateLegacyNote);
+      const notes = (data ?? []).map(hydrateLegacyNote);
       const needle = q.toLowerCase();
       return notes.filter((n) => {
         if (n.title.toLowerCase().includes(needle)) return true;

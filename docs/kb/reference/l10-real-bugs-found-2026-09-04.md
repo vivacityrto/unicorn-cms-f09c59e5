@@ -336,6 +336,54 @@ which surfaced the mismatch immediately (the column plainly wasn't there).
 Fixed by correcting the select/field references to `comm_type`, matching
 the schema and the sibling file that writes this data.
 
+## Academy admin — Enrolment Progress drawer (`EnrolmentProgressDrawer.tsx`)
+
+### 16. Enrolment Progress drawer's Lessons section has never shown real lesson data — DOCUMENTED, NOT FIXED (backend function bug)
+The drawer's Lessons section always renders "No lessons published in this
+course" regardless of the course's actual content or the enrolment's real
+progress (confirmed on a real enrolment showing "3/5 lessons complete" in
+its own progress bar, while the Lessons section directly below it claimed
+zero lessons). Network capture shows why: the RPC it calls,
+`fn_academy_enrollment_lesson_detail`, returns a Postgres error on every
+invocation — `42804: returned type uuid does not match expected type text
+in column 9` — meaning the function body's actual `RETURN QUERY` doesn't
+match its own declared `RETURNS TABLE` column types. This is a genuine
+backend SQL function definition bug, not a frontend issue and not
+introduced by tonight's `no-explicit-any` retirement (the frontend hook
+consuming it, `useLessonDetail`, already silently returned `[]` on error
+before and after batch 42's type-only changes).
+
+Found during batch 42's live verification. Not fixed here — this needs
+someone with write access to fix the function definition (correct column
+9's type to match what's actually selected) via a proper migration, not a
+frontend change.
+
+## Tenant Documents — package-name lookup has no real FK (`TenantDocuments.tsx`)
+
+### 17. Tenant Documents page has never loaded documents for any tenant with an assigned package — DOCUMENTED, NOT FIXED (missing FK, same root cause as #5/#8)
+`TenantDocuments.tsx`'s document list embeds `packages:package_id(name)`
+on the `documents` table — but **`documents.package_id` has no foreign key
+to `packages` at all** (confirmed via `pg_constraint`: `documents` has
+exactly two FKs, `created_by → auth.users` and
+`current_published_version_id → document_versions`; nothing on
+`package_id`). Every real request for a tenant that actually has an
+assigned package 400s with "could not find a relationship" — reproduced
+live for HPA Training Pty Ltd (tenant #6278), which has a real package and
+a "Failed to load documents" toast on this exact page. Tenants checked
+during batch 41's own verification (Demo RTO and others) all happened to
+have zero packages/documents, so the query's `if (tenantPackageIds.length
+> 0)` guard never fired and this failure mode went unnoticed there.
+
+Same root cause and fix pattern as items #5 and #8 above (an embed
+assuming a FK relationship that was never created) — a two-step fetch
+(load documents, then separately fetch package names by id and merge
+client-side) would work without a migration, or an actual FK could be
+added. Not fixed here: this predates tonight's `no-explicit-any` work
+entirely (the query string is unchanged from before batch 41's type-only
+edit) and is a pre-existing production bug on a page most tenants happen
+not to exercise, not something to silently patch as a side effect of a
+type-retirement batch.
+
 ## Also found this session, outside Package Builder (for completeness)
 
 These were found and either fixed or documented in earlier batches tonight,

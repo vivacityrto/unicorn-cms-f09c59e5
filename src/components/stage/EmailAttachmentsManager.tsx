@@ -119,7 +119,7 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
         .order('order_number', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true });
       if (error) throw error;
-      const docIds = [...new Set((links || []).map((l: any) => l.document_id))];
+      const docIds = [...new Set((links || []).map((l) => l.document_id))];
       if (docIds.length === 0) return [];
       const [{ data: docs }, { data: files }] = await Promise.all([
         supabase.from('documents').select('id, title, format').in('id', docIds),
@@ -129,13 +129,13 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
           .in('document_id', docIds)
           .order('created_at', { ascending: false }),
       ]);
-      const docMap = new Map((docs || []).map((d: any) => [d.id, d]));
-      const fileMap = new Map<number, any>();
-      (files || []).forEach((f: any) => {
-        if (!fileMap.has(f.document_id)) fileMap.set(f.document_id, f);
+      const docMap = new Map((docs || []).map((d) => [d.id, d]));
+      const fileMap = new Map<number, { file_path: string }>();
+      (files || []).forEach((f) => {
+        if (f.document_id != null && !fileMap.has(f.document_id)) fileMap.set(f.document_id, f);
       });
       return (links || [])
-        .map((l: any) => {
+        .map((l): AttachmentRow | null => {
           const d = docMap.get(l.document_id);
           if (!d) return null;
           const f = fileMap.get(l.document_id);
@@ -146,9 +146,9 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
             title: d.title,
             format: d.format ?? null,
             file_path: f?.file_path ?? null,
-          } as AttachmentRow;
+          };
         })
-        .filter(Boolean) as AttachmentRow[];
+        .filter((r): r is AttachmentRow => r !== null);
     },
   });
 
@@ -202,7 +202,7 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
       qc.invalidateQueries({ queryKey: ['stage-email-attachments', emailId] });
       toast.success('Order updated');
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to reorder'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to reorder'),
   });
 
   const addMutation = useMutation({
@@ -220,7 +220,7 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
       setPickedDocId(null);
       toast.success('Attachment added');
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to add attachment'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to add attachment'),
   });
 
   const removeMutation = useMutation({
@@ -233,7 +233,7 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
       setRemoveTarget(null);
       toast.success('Attachment removed');
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to remove attachment'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to remove attachment'),
   });
 
   const handleDragEnd = (event: DragEndEvent) => {
