@@ -8,16 +8,22 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
+
+interface NewTodoInput {
+  meeting_id?: string;
+  title: string;
+  owner_id: string;
+  due_date: string;
+  status?: 'Open' | 'Complete' | 'Cancelled';
+}
 
 interface TodoInlineFormProps {
   meetingId: string;
-  onTodoCreated: (todo: any) => Promise<void>;
+  onTodoCreated: (todo: NewTodoInput) => Promise<void>;
 }
 
 export function TodoInlineForm({ meetingId, onTodoCreated }: TodoInlineFormProps) {
-  const { profile } = useAuth();
   const [title, setTitle] = useState('');
   const [ownerId, setOwnerId] = useState('');
   const [dueDate, setDueDate] = useState<Date>();
@@ -41,7 +47,6 @@ export function TodoInlineForm({ meetingId, onTodoCreated }: TodoInlineFormProps
         owner_id: ownerId,
         due_date: format(dueDate, 'yyyy-MM-dd'),
         meeting_id: meetingId,
-        tenant_id: profile?.tenant_id,
       });
 
       setTitle('');

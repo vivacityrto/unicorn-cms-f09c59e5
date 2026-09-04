@@ -260,9 +260,9 @@ export interface EosConfiguration {
   tenant_id: number;
   meeting_type: ConfigMeetingType;
   frequency: ConfigFrequency;
-  facilitator_seat_id?: string;
-  visionary_seat_id?: string;
-  integrator_seat_id?: string;
+  facilitator_seat_id?: string | null;
+  visionary_seat_id?: string | null;
+  integrator_seat_id?: string | null;
   participant_model: ParticipantModel;
   required_seat_ids: string[];
   scorecard_metric_cap: number;

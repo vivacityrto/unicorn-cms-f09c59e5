@@ -54,7 +54,7 @@ import {
   QuorumWarningPrompt,
 } from '@/components/eos/facilitator/FacilitatorPrompts';
 import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
-import type { EosMeetingSegment, MeetingType, ConfigMeetingType } from '@/types/eos';
+import type { EosMeetingSegment, MeetingType, ConfigMeetingType, EosIssue, EosRock, EosTodo } from '@/types/eos';
 
 export const LiveMeetingView = () => {
   const { meetingId } = useParams<{ meetingId: string }>();
@@ -66,13 +66,13 @@ export const LiveMeetingView = () => {
   const [personalWin, setPersonalWin] = useState('');
   const [professionalWin, setProfessionalWin] = useState('');
   const [segueRating, setSegueRating] = useState('');
-  const [selectedIssue, setSelectedIssue] = useState<any>(null);
+  const [selectedIssue, setSelectedIssue] = useState<EosIssue | null>(null);
   const [idsDialogOpen, setIdsDialogOpen] = useState(false);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [facilitatorDialogOpen, setFacilitatorDialogOpen] = useState(false);
   const [changeFacilitatorOpen, setChangeFacilitatorOpen] = useState(false);
-  const [editingRock, setEditingRock] = useState<any>(null);
+  const [editingRock, setEditingRock] = useState<EosRock | null>(null);
   const [rockFormOpen, setRockFormOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
   const [myPhraseDraft, setMyPhraseDraft] = useState('');
@@ -193,23 +193,23 @@ export const LiveMeetingView = () => {
   const { data: participants } = useQuery({
     queryKey: ['eos-meeting-participants', meetingId],
     queryFn: async () => {
-      const { data: rows, error } = await (supabase as any)
+      const { data: rows, error } = await supabase
         .from('eos_meeting_participants')
         .select('*')
         .eq('meeting_id', meetingId!);
       if (error) throw error;
 
-      const userIds = (rows ?? []).map((p: any) => p.user_id);
+      const userIds = (rows ?? []).map((p) => p.user_id);
       const { data: userRows, error: userError } = userIds.length
-        ? await (supabase as any)
+        ? await supabase
             .from('users')
             .select('user_uuid, first_name, last_name')
             .in('user_uuid', userIds)
         : { data: [], error: null };
       if (userError) throw userError;
 
-      const userMap = new Map((userRows ?? []).map((u: any) => [u.user_uuid, u]));
-      return (rows ?? []).map((p: any) => ({ ...p, users: userMap.get(p.user_id) ?? null }));
+      const userMap = new Map((userRows ?? []).map((u) => [u.user_uuid, u]));
+      return (rows ?? []).map((p) => ({ ...p, users: userMap.get(p.user_id) ?? null }));
     },
     enabled: !!meetingId,
   });
@@ -389,7 +389,7 @@ export const LiveMeetingView = () => {
   const isFacilitator = participants?.some(p => p.user_id === profile?.user_uuid && p.role === 'Leader') ?? false;
 
   // Derive facilitator display name from the participant row with role='Leader'.
-  const facilitatorParticipant = participants?.find((p: any) => p.role === 'Leader');
+  const facilitatorParticipant = participants?.find((p) => p.role === 'Leader');
   const facilitatorName = facilitatorParticipant
     ? `${facilitatorParticipant.users?.first_name || ''} ${facilitatorParticipant.users?.last_name || ''}`.trim() || null
     : null;
@@ -517,7 +517,7 @@ export const LiveMeetingView = () => {
     },
   });
 
-  const handleSelectIssue = (issue: any) => {
+  const handleSelectIssue = (issue: EosIssue) => {
     setSelectedIssue(issue);
     setIdsDialogOpen(true);
   };
@@ -561,7 +561,7 @@ export const LiveMeetingView = () => {
   };
 
 
-  const handleToggleTodo = async (todo: any) => {
+  const handleToggleTodo = async (todo: EosTodo) => {
     const newStatus = todo.status === 'Complete' ? 'Open' : 'Complete';
     await updateTodo.mutateAsync({
       id: todo.id,

@@ -142,8 +142,8 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
       setFrequency('one-time');
       setEndRule('never');
       setEndDate('');
-    } catch (error: any) {
-      toast({ title: 'Error scheduling meeting', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error scheduling meeting', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -252,7 +252,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
               <Repeat className="h-4 w-4" />
               Frequency *
             </Label>
-            <RadioGroup value={frequency} onValueChange={(v: any) => setFrequency(v)}>
+            <RadioGroup value={frequency} onValueChange={(v: string) => setFrequency(v as typeof frequency)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="one-time" id="one-time" />
                 <Label htmlFor="one-time" className="font-normal">One-time meeting</Label>
@@ -280,7 +280,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
           {frequency !== 'one-time' && (
             <div className="space-y-2">
               <Label>End Rule</Label>
-              <RadioGroup value={endRule} onValueChange={(v: any) => setEndRule(v)}>
+              <RadioGroup value={endRule} onValueChange={(v: string) => setEndRule(v as typeof endRule)}>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="never" id="never" />
                   <Label htmlFor="never" className="font-normal">No end date</Label>

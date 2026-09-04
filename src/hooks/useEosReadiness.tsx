@@ -10,6 +10,24 @@ import type {
 import { READINESS_STATE_LABELS, READINESS_STATE_DESCRIPTIONS } from '@/types/eosReadiness';
 import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
+// Shape of the aliased nested accountability_charts embed below - the Supabase
+// client can't infer types for aliased nested relationships, so it's typed by hand.
+interface ReadinessSeatAssignment {
+  id: string;
+  assignment_type: string;
+  end_date: string | null;
+}
+
+interface ReadinessSeat {
+  id: string;
+  assignments: ReadinessSeatAssignment[] | null;
+}
+
+interface ReadinessFunction {
+  id: string;
+  seats: ReadinessSeat[] | null;
+}
+
 interface ReadinessRawData {
   // Foundation
   hasAccountabilityChart: boolean;
@@ -113,10 +131,11 @@ export function useEosReadiness() {
 
       // Calculate raw data
       // Check for active chart with seats that have primary assignments
-      const hasAccountabilityChart = !!activeChart && (activeChart.functions?.length ?? 0) > 0;
-      const allSeats = (activeChart?.functions ?? []).flatMap((f: any) => f.seats ?? []);
-      const hasSeatsWithOwners = allSeats.some((seat: any) => 
-        (seat.assignments ?? []).some((a: any) => a.assignment_type === 'Primary' && !a.end_date)
+      const chartFunctions = (activeChart?.functions ?? []) as unknown as ReadinessFunction[];
+      const hasAccountabilityChart = !!activeChart && chartFunctions.length > 0;
+      const allSeats = chartFunctions.flatMap((f) => f.seats ?? []);
+      const hasSeatsWithOwners = allSeats.some((seat) =>
+        (seat.assignments ?? []).some((a) => a.assignment_type === 'Primary' && !a.end_date)
       );
 
       const hasVto = !!vto;

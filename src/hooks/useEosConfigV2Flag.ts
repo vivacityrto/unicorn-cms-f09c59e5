@@ -11,7 +11,7 @@ export function useEosConfigV2Flag() {
   const { data, isLoading } = useQuery({
     queryKey: ["eos-config-v2-enabled"],
     queryFn: async (): Promise<boolean> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("app_settings")
         .select("eos_config_v2")
         .limit(1)
@@ -22,7 +22,7 @@ export function useEosConfigV2Flag() {
         return false;
       }
 
-      return (data?.eos_config_v2 as boolean) ?? false;
+      return data?.eos_config_v2 ?? false;
     },
     staleTime: QUERY_STALE_TIMES.REFERENCE,
   });

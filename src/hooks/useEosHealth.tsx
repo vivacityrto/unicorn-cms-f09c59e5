@@ -13,6 +13,22 @@ import {
 } from '@/types/eosHealth';
 import { subWeeks, startOfWeek, isAfter, differenceInDays } from 'date-fns';
 import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
+import type { Tables } from '@/integrations/supabase/types';
+
+type HealthMeetingRow = Pick<Tables<'eos_meetings'>, 'id' | 'meeting_type' | 'status' | 'is_complete' | 'scheduled_date' | 'recurrence_rule'>;
+type HealthRockRow = Pick<Tables<'eos_rocks'>, 'id' | 'owner_id' | 'seat_id' | 'status' | 'quarter_year' | 'quarter_number' | 'due_date'>;
+type HealthIssueRow = Pick<Tables<'eos_issues'>, 'id' | 'status' | 'priority' | 'created_at' | 'resolved_at' | 'escalated_at'>;
+// eos_qc has no quarter_number/quarter_year (quarters are arbitrary date ranges via
+// quarter_start/quarter_end) and no manager_signed_at/reviewee_signed_at columns -
+// sign-off is tracked per-role in the separate eos_qc_signoffs table.
+type HealthQcRow = Pick<Tables<'eos_qc'>, 'id' | 'status' | 'quarter_start' | 'quarter_end'> & {
+  eos_qc_signoffs: Pick<Tables<'eos_qc_signoffs'>, 'role'>[] | null;
+};
+type HealthFlightPlanRow = Pick<Tables<'eos_flight_plans'>, 'id' | 'quarter_number' | 'quarter_year'>;
+interface PeopleAnalyzerTrend {
+  is_at_risk: boolean;
+  trend: string;
+}
 
 /**
  * Hook to calculate EOS Health Score for the current tenant.
@@ -49,7 +65,7 @@ export function useEosHealth() {
         // Rocks - current quarter
         supabase
           .from('eos_rocks')
-          .select('id, owner_id, status, quarter_year, quarter_number, due_date')
+          .select('id, owner_id, seat_id, status, quarter_year, quarter_number, due_date')
           .eq('tenant_id', tenantId),
         // Issues/Risks & Opportunities
         supabase
@@ -59,12 +75,12 @@ export function useEosHealth() {
         // Quarterly Conversations
         supabase
           .from('eos_qc')
-          .select('id, status, quarter_number, quarter_year, manager_signed_at, reviewee_signed_at')
+          .select('id, status, quarter_start, quarter_end, eos_qc_signoffs(role)')
           .eq('tenant_id', tenantId),
         // Flight Plans
         supabase
           .from('eos_flight_plans')
-          .select('id, quarter_number, quarter_year, status')
+          .select('id, quarter_number, quarter_year')
           .eq('tenant_id', tenantId),
       ]);
 
@@ -78,7 +94,7 @@ export function useEosHealth() {
       const cadenceScore = calculateCadenceHealth(meetings, fourWeeksAgo);
       const rocksScore = calculateRockDiscipline(rocks, currentQuarter, currentYear);
       const idsScore = calculateIDSEffectiveness(issues);
-      const peopleScore = calculatePeopleSystem(qcs, currentQuarter, currentYear);
+      const peopleScore = calculatePeopleSystem(qcs, now);
       const quarterlyScore = calculateQuarterlyRhythm(flightPlans, meetings, rocks, currentQuarter, currentYear);
 
       const dimensions: DimensionScore[] = [
@@ -118,7 +134,7 @@ export function useEosHealth() {
 }
 
 function calculateCadenceHealth(
-  meetings: any[],
+  meetings: HealthMeetingRow[],
   fourWeeksAgo: Date
 ): DimensionScore {
   const l10Meetings = meetings.filter(m => m.meeting_type === 'L10');
@@ -195,7 +211,7 @@ function calculateCadenceHealth(
 }
 
 function calculateRockDiscipline(
-  rocks: any[],
+  rocks: HealthRockRow[],
   currentQuarter: number,
   currentYear: number
 ): DimensionScore {
@@ -295,7 +311,7 @@ function calculateRockDiscipline(
   };
 }
 
-function calculateIDSEffectiveness(issues: any[]): DimensionScore {
+function calculateIDSEffectiveness(issues: HealthIssueRow[]): DimensionScore {
   const open = issues.filter(i => i.status === 'Open' || i.status === 'open');
   const solved = issues.filter(i => i.status === 'Solved' || i.status === 'solved');
   const escalated = issues.filter(i => i.escalated_at);
@@ -307,7 +323,7 @@ function calculateIDSEffectiveness(issues: any[]): DimensionScore {
   });
   
   const criticalOld = oldOpenItems.filter(i => 
-    i.priority === 'Critical' || i.priority === 'High' || i.priority === 3 || i.priority === 4
+    i.priority === 3 || i.priority === 4
   );
 
   const healthIssues: HealthIssue[] = [];
@@ -377,21 +393,21 @@ function calculateIDSEffectiveness(issues: any[]): DimensionScore {
 }
 
 function calculatePeopleSystem(
-  qcs: any[],
-  currentQuarter: number,
-  currentYear: number,
-  paTrends?: any[]
+  qcs: HealthQcRow[],
+  now: Date,
+  paTrends?: PeopleAnalyzerTrend[]
 ): DimensionScore {
+  // Quarters here are arbitrary date ranges (quarter_start/quarter_end), not
+  // quarter_number/quarter_year - "current quarter" means now falls in that range.
   const currentQCs = qcs.filter(
-    q => q.quarter_year === currentYear && q.quarter_number === currentQuarter
-  );
-  const previousQCs = qcs.filter(
-    q => (q.quarter_year === currentYear && q.quarter_number === currentQuarter - 1) ||
-         (q.quarter_year === currentYear - 1 && q.quarter_number === 4 && currentQuarter === 1)
+    q => new Date(q.quarter_start) <= now && new Date(q.quarter_end) >= now
   );
 
   const completed = currentQCs.filter(q => q.status === 'completed');
-  const fullySignedOff = currentQCs.filter(q => q.manager_signed_at && q.reviewee_signed_at);
+  const fullySignedOff = currentQCs.filter(q => {
+    const roles = new Set((q.eos_qc_signoffs ?? []).map(s => s.role));
+    return roles.has('manager') && roles.has('reviewee');
+  });
   const inProgress = currentQCs.filter(q => q.status === 'in_progress' || q.status === 'draft');
 
   const healthIssues: HealthIssue[] = [];
@@ -406,8 +422,10 @@ function calculatePeopleSystem(
       link: '/eos/qc',
     });
   } else {
-    // Current quarter progress
-    if (currentQCs.length === 0 && currentQuarter > 1) {
+    // Current quarter progress - skip the penalty in the calendar year's first
+    // quarter to give a brand-new tenant a grace period before its first QC is due.
+    const currentCalendarQuarter = Math.ceil((now.getMonth() + 1) / 3);
+    if (currentQCs.length === 0 && currentCalendarQuarter > 1) {
       score -= 30;
       healthIssues.push({
         id: 'no-current-qcs',
@@ -492,9 +510,9 @@ function calculatePeopleSystem(
 }
 
 function calculateQuarterlyRhythm(
-  flightPlans: any[],
-  meetings: any[],
-  rocks: any[],
+  flightPlans: HealthFlightPlanRow[],
+  meetings: HealthMeetingRow[],
+  rocks: HealthRockRow[],
   currentQuarter: number,
   currentYear: number
 ): DimensionScore {

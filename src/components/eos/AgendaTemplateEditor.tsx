@@ -104,7 +104,7 @@ export const AgendaTemplateEditor = ({ open, onOpenChange, template }: AgendaTem
     setSegments(segments.filter((_, i) => i !== index));
   };
 
-  const updateSegment = (index: number, field: keyof EosAgendaSegment, value: any) => {
+  const updateSegment = (index: number, field: keyof EosAgendaSegment, value: string | number) => {
     const updated = [...segments];
     updated[index] = { ...updated[index], [field]: value };
     setSegments(updated);
