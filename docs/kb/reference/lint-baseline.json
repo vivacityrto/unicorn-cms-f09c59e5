@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T21:21:47.727Z",
-  "baselineSha": "60454cb06eeab60bd1e642b5c49c1f3cd435bacf",
+  "generatedAt": "2026-09-04T21:50:23.607Z",
+  "baselineSha": "867e8bdb4906bb005dc7ad3e34720c59ebeafa9b",
   "totals": {
-    "files": 1757,
-    "filesWithFindings": 401,
-    "errors": 1512,
+    "files": 1758,
+    "filesWithFindings": 399,
+    "errors": 1486,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1505,
+    "@typescript-eslint/no-explicit-any": 1479,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 844,
+      "errors": 818,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 837,
+        "@typescript-eslint/no-explicit-any": 811,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -379,10 +379,10 @@
       }
     },
     "src/hooks": {
-      "errors": 349,
+      "errors": 331,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 349,
+        "@typescript-eslint/no-explicit-any": 331,
         "react-refresh/only-export-components": 1
       }
     },
@@ -391,13 +391,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 10
-      }
-    },
-    "src/lib/kpi-v2": {
-      "errors": 8,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 8
       }
     },
     "src/pages": {
@@ -1841,9 +1834,6 @@
     "src/hooks/usePhaseProgress.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/hooks/usePortfolioCockpit.ts": {
-      "@typescript-eslint/no-explicit-any": 18
-    },
     "src/hooks/usePortfolioTimeline.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1950,9 +1940,6 @@
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/lib/friendlyDbError.ts": {},
-    "src/lib/kpi-v2/fetchers.ts": {
-      "@typescript-eslint/no-explicit-any": 8
-    },
     "src/lib/messageAttachments.ts": {
       "@typescript-eslint/no-explicit-any": 7
     },
