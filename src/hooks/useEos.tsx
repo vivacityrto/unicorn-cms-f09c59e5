@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { toast } from '@/hooks/use-toast';
-import type { 
+import type { Json, TablesUpdate } from '@/integrations/supabase/types';
+import type {
   EosRock, 
   EosIssue, 
   EosTodo, 
@@ -49,11 +50,17 @@ export const useEosRocks = () => {
   });
 
   const createRock = useMutation({
-    mutationFn: async (rock: Partial<EosRock>) => {
-      const { tenant_id, ...rockData } = rock;
+    mutationFn: async (rock: Partial<EosRock> & { title: string; due_date: string; quarter_number: number; quarter_year: number }) => {
+      // EOS is Vivacity-internal only; fall back to Vivacity's tenant so this
+      // never lands NULL (see docs/audit-log/entries/2026-08-10-eos-todos-null-tenant-id.md).
+      // Not currently exercised by any real caller (useEosRocksHierarchy's own
+      // createRock is what the create-rock dialogs actually use), but fixed
+      // to match the same pattern as createIssue/createTodo below rather than
+      // leaving tenant_id silently dropped.
+      const insertData = { ...rock, tenant_id: rock.tenant_id ?? 6372 };
       const { data, error } = await supabase
         .from('eos_rocks')
-        .insert(rockData as any)
+        .insert(insertData)
         .select()
         .single();
       
@@ -74,11 +81,11 @@ export const useEosRocks = () => {
     mutationFn: async ({ id, ...updates }: Partial<EosRock> & { id: string }) => {
       const { data, error } = await supabase
         .from('eos_rocks')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -150,13 +157,13 @@ export const useEosIssues = () => {
   });
 
   const createIssue = useMutation({
-    mutationFn: async (issue: Partial<EosIssue>) => {
+    mutationFn: async (issue: Partial<EosIssue> & { title: string }) => {
       // EOS is Vivacity-internal only; fall back to Vivacity's tenant so this
       // never lands NULL (see docs/audit-log/entries/2026-08-10-eos-todos-null-tenant-id.md)
       const insertData = { ...issue, tenant_id: issue.tenant_id ?? 6372 };
       const { data, error } = await supabase
         .from('eos_issues')
-        .insert(insertData as any)
+        .insert(insertData)
         .select()
         .single();
       
@@ -176,7 +183,7 @@ export const useEosIssues = () => {
     mutationFn: async ({ id, ...updates }: Partial<EosIssue> & { id: string }) => {
       const { data, error } = await supabase
         .from('eos_issues')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
@@ -250,11 +257,11 @@ export const useEosTodos = () => {
   });
 
   const createTodo = useMutation({
-    mutationFn: async (todo: Partial<EosTodo>) => {
+    mutationFn: async (todo: Partial<EosTodo> & { title: string }) => {
       const insertData = { ...todo, tenant_id: todo.tenant_id ?? 6372 };
       const { data, error } = await supabase
         .from('eos_todos')
-        .insert(insertData as any)
+        .insert(insertData)
         .select()
         .single();
       
@@ -272,7 +279,7 @@ export const useEosTodos = () => {
 
   const updateTodo = useMutation({
     mutationFn: async ({ id, status, completed_at, ...updates }: Partial<EosTodo> & { id: string; status?: string; completed_at?: string }) => {
-      const updateData: any = { ...updates };
+      const updateData: TablesUpdate<'eos_todos'> = { ...updates };
       if (status) updateData.status = status;
       if (completed_at !== undefined) updateData.completed_date = completed_at;
       
@@ -383,11 +390,16 @@ export const useEosMeetings = () => {
   });
 
   const createMeeting = useMutation({
-    mutationFn: async (meeting: Partial<EosMeeting>) => {
-      const { tenant_id, ...meetingData } = meeting;
+    mutationFn: async (meeting: Partial<EosMeeting> & { title: string; meeting_type: EosMeeting['meeting_type']; scheduled_date: string }) => {
+      // EOS is Vivacity-internal only; fall back to Vivacity's tenant so this
+      // never lands NULL (see docs/audit-log/entries/2026-08-10-eos-todos-null-tenant-id.md).
+      // Not currently exercised by any real caller, but fixed to match the
+      // same pattern as createIssue/createTodo above rather than leaving
+      // tenant_id silently dropped.
+      const insertData = { ...meeting, tenant_id: meeting.tenant_id ?? 6372 };
       const { data, error } = await supabase
         .from('eos_meetings')
-        .insert(meetingData as any)
+        .insert(insertData)
         .select()
         .single();
       
@@ -407,7 +419,7 @@ export const useEosMeetings = () => {
     mutationFn: async ({ id, ...updates }: Partial<EosMeeting> & { id: string }) => {
       const { data, error } = await supabase
         .from('eos_meetings')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
@@ -494,7 +506,7 @@ export const useEosScorecardMetrics = (showArchived = false) => {
     enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
-  const auditLog = async (action: string, entityId: string, details?: Record<string, any>) => {
+  const auditLog = async (action: string, entityId: string, details?: Json) => {
     if (!profile?.tenant_id || !profile?.user_uuid) return;
     await supabase.from('client_audit_log').insert({
       tenant_id: profile.tenant_id,
@@ -507,14 +519,21 @@ export const useEosScorecardMetrics = (showArchived = false) => {
   };
 
   const createMetric = useMutation({
-    mutationFn: async (metric: Partial<EosScorecardMetric>) => {
+    // Not currently exercised by any real caller — EosScorecard.tsx's own
+    // "createMetric" is a same-named export from the separate, newer
+    // useScorecardMetrics.tsx hook, which is what the live Scorecard page
+    // actually uses. Kept in sync with the real DB Insert contract anyway
+    // (metric_name/scorecard_id/goal_value have no equivalent field on
+    // EosScorecardMetric, which predates that schema) rather than guessed.
+    mutationFn: async (metric: Partial<EosScorecardMetric> & { name: string; unit: string; metric_name: string; scorecard_id: string; goal_value: number }) => {
       const { tenant_id, ...metricData } = metric;
+      const insertData = { ...metricData, tenant_id: tenant_id ?? 6372 };
       const { data, error } = await supabase
         .from('eos_scorecard_metrics')
-        .insert(metricData as any)
+        .insert(insertData)
         .select()
         .single();
-      
+
       if (error) throw error;
       await auditLog('scorecard_metric.created', data.id, { name: metricData.name });
       return data;
@@ -532,7 +551,7 @@ export const useEosScorecardMetrics = (showArchived = false) => {
     mutationFn: async ({ id, ...updates }: Partial<EosScorecardMetric> & { id: string }) => {
       const { data, error } = await supabase
         .from('eos_scorecard_metrics')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
@@ -553,7 +572,7 @@ export const useEosScorecardMetrics = (showArchived = false) => {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('eos_scorecard_metrics')
-        .update({ is_archived: true, is_active: false } as any)
+        .update({ is_archived: true, is_active: false })
         .eq('id', id);
       if (error) throw error;
       await auditLog('scorecard_metric.archived', id);
