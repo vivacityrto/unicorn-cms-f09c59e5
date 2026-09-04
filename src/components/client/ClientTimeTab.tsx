@@ -63,28 +63,28 @@ interface ClientTimeTabProps {
 async function resolvePackageNames(instanceIds: number[]) {
   if (instanceIds.length === 0) return { nameMap: {} as Record<number, string>, fullTextMap: {} as Record<number, string>, lifecycleMap: {} as Record<number, { start_date: string | null; end_date: string | null }> };
 
-  const { data: instances } = await (supabase as any)
+  const { data: instances } = await supabase
     .from('package_instances')
     .select('id, package_id, start_date, end_date')
     .in('id', instanceIds);
 
-  const resolvedInstanceIds = new Set((instances || []).map((i: any) => i.id));
+  const resolvedInstanceIds = new Set((instances || []).map((i) => i.id));
   const fallbackPackageIds = instanceIds.filter(id => !resolvedInstanceIds.has(id));
 
   const allPackageIds = [
     ...new Set([
-      ...(instances || []).map((i: any) => i.package_id).filter(Boolean),
+      ...(instances || []).map((i) => i.package_id).filter(Boolean),
       ...fallbackPackageIds,
     ]),
   ];
 
   const { data: pkgs } = allPackageIds.length > 0
-    ? await (supabase as any).from('packages').select('id, name, full_text').in('id', allPackageIds)
+    ? await supabase.from('packages').select('id, name, full_text').in('id', allPackageIds)
     : { data: [] };
 
   const pkgNameMap: Record<number, string> = {};
   const pkgFullTextMap: Record<number, string> = {};
-  (pkgs || []).forEach((p: any) => {
+  (pkgs || []).forEach((p) => {
     pkgNameMap[p.id] = p.name;
     pkgFullTextMap[p.id] = p.full_text || p.name;
   });
@@ -92,7 +92,7 @@ async function resolvePackageNames(instanceIds: number[]) {
   const nameMap: Record<number, string> = {};
   const fullTextMap: Record<number, string> = {};
   const lifecycleMap: Record<number, { start_date: string | null; end_date: string | null }> = {};
-  (instances || []).forEach((inst: any) => {
+  (instances || []).forEach((inst) => {
     nameMap[inst.id] = pkgNameMap[inst.package_id] || `Package #${inst.package_id}`;
     fullTextMap[inst.id] = pkgFullTextMap[inst.package_id] || nameMap[inst.id];
     lifecycleMap[inst.id] = { start_date: inst.start_date, end_date: inst.end_date };
@@ -117,7 +117,7 @@ function TenantTimeSummaryStrip({ tenantId }: { tenantId: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ['tenant-time-summary-strip', tenantId],
     queryFn: async () => {
-      const { data: rows, error } = await (supabase as any)
+      const { data: rows, error } = await supabase
         .from('time_entries')
         .select('duration_minutes, is_billable')
         .eq('tenant_id', tenantId)
@@ -125,7 +125,7 @@ function TenantTimeSummaryStrip({ tenantId }: { tenantId: number }) {
       if (error) throw error;
       let billable = 0;
       let nonBillable = 0;
-      (rows || []).forEach((r: any) => {
+      (rows || []).forEach((r) => {
         const mins = r.duration_minutes || 0;
         if (r.is_billable) billable += mins; else nonBillable += mins;
       });
@@ -310,7 +310,7 @@ function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPerio
     queryKey: ['package-burndown-combined', tenantId],
     queryFn: async () => {
       // 1. Get active (non-complete, non-child) instance IDs with renewal info
-      const { data: activeInstances, error: aiErr } = await (supabase as any)
+      const { data: activeInstances, error: aiErr } = await supabase
         .from('package_instances')
         .select('id, start_date, next_renewal_date')
         .eq('tenant_id', tenantId)
@@ -319,7 +319,7 @@ function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPerio
       if (aiErr) throw aiErr;
 
       // Also fetch child instances to show as add-ons
-      const { data: childInstances } = await (supabase as any)
+      const { data: childInstances } = await supabase
         .from('package_instances')
         .select('id, package_id, parent_instance_id, hours_included, included_minutes')
         .eq('tenant_id', tenantId)
@@ -327,15 +327,15 @@ function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPerio
         .not('parent_instance_id', 'is', null);
 
       // Get child package names
-      const childPkgIds = [...new Set((childInstances || []).map((c: any) => c.package_id))] as number[];
+      const childPkgIds = [...new Set((childInstances || []).map((c) => c.package_id))];
       const { data: childPkgNames } = childPkgIds.length > 0
         ? await supabase.from('packages').select('id, name, total_hours').in('id', childPkgIds)
         : { data: [] };
-      const childPkgMap = new Map((childPkgNames || []).map((p: any) => [p.id, p]));
+      const childPkgMap = new Map((childPkgNames || []).map((p) => [p.id, p]));
 
       // Group children by parent_instance_id
       const childrenByParent: Record<number, { name: string; hours: number }[]> = {};
-      (childInstances || []).forEach((child: any) => {
+      (childInstances || []).forEach((child) => {
         const pid = child.parent_instance_id;
         if (!childrenByParent[pid]) childrenByParent[pid] = [];
         const pkg = childPkgMap.get(child.package_id);
@@ -345,12 +345,12 @@ function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPerio
         });
       });
 
-      const activeIds = (activeInstances || []).map((r: any) => r.id);
+      const activeIds = (activeInstances || []).map((r) => r.id);
       if (activeIds.length === 0) return [];
 
       // Build renewal year window per instance
       const renewalWindowMap: Record<number, { start: string; end: string }> = {};
-      (activeInstances || []).forEach((inst: any) => {
+      (activeInstances || []).forEach((inst) => {
         const renewalEnd = inst.next_renewal_date
           ? new Date(inst.next_renewal_date)
           : inst.start_date
@@ -379,41 +379,41 @@ function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPerio
       if (instanceIds.length === 0) return [];
 
       // Index burndown data by instance id for fast lookup
-      const burndownMap: Record<number, any> = {};
-      (burndownData || []).forEach((r: any) => { if (r.package_instance_id) burndownMap[r.package_instance_id] = r; });
+      const burndownMap: Record<number, NonNullable<typeof burndownData>[number]> = {};
+      (burndownData || []).forEach((r) => { if (r.package_instance_id) burndownMap[r.package_instance_id] = r; });
 
       const { fullTextMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
       // Current (open) period's carry-in, for the segmented usage bar.
-      const { data: openPeriods } = await (supabase as any)
+      const { data: openPeriods } = await supabase
         .from('package_renewal_periods')
         .select('package_instance_id, carried_in_minutes')
         .in('package_instance_id', instanceIds)
         .is('closed_at', null);
       const carriedInMap: Record<number, number> = {};
-      (openPeriods || []).forEach((p: any) => { carriedInMap[p.package_instance_id] = p.carried_in_minutes || 0; });
+      (openPeriods || []).forEach((p) => { carriedInMap[p.package_instance_id] = p.carried_in_minutes || 0; });
 
       // 3. Fetch per-month breakdown from time_entries + allocations.
       // Burndown gauge (v_package_burndown) is allocation-aware; attribute
       // monthly minutes the same way so the table matches after reallocation.
-      const { data: monthlyRows } = await (supabase as any)
+      const { data: monthlyRows } = await supabase
         .from('time_entries')
         .select('id, package_id, package_instance_id, start_at, duration_minutes, is_billable')
         .eq('tenant_id', tenantId)
         .neq('work_type', 'carry_over');
 
-      const entryIds = (monthlyRows || []).map((r: any) => r.id).filter(Boolean);
+      const entryIds = (monthlyRows || []).map((r) => r.id).filter(Boolean);
       const allocByEntry = new Map<string, { package_instance_id: number; allocated_minutes: number }[]>();
       if (entryIds.length > 0) {
         // PostgREST .in() chunking for large tenants
         const chunkSize = 200;
         for (let i = 0; i < entryIds.length; i += chunkSize) {
           const chunk = entryIds.slice(i, i + chunkSize);
-          const { data: allocRows } = await (supabase as any)
+          const { data: allocRows } = await supabase
             .from('time_entry_allocations')
             .select('time_entry_id, package_instance_id, allocated_minutes')
             .in('time_entry_id', chunk);
-          (allocRows || []).forEach((a: any) => {
+          (allocRows || []).forEach((a) => {
             const list = allocByEntry.get(a.time_entry_id) || [];
             list.push({
               package_instance_id: a.package_instance_id,
@@ -452,7 +452,7 @@ function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPerio
         }
       };
 
-      (monthlyRows || []).forEach((row: any) => {
+      (monthlyRows || []).forEach((row) => {
         if (!row.start_at) return;
         const allocs = allocByEntry.get(row.id);
         if (allocs && allocs.length > 0) {
@@ -465,16 +465,16 @@ function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPerio
       Object.values(monthlyMap).forEach(arr => arr.sort((a, b) => a.month.localeCompare(b.month)));
 
       return instanceIds.map(instId => {
-        const row = burndownMap[instId] || {};
+        const row = burndownMap[instId];
         return {
           package_instance_id: instId,
           package_name: fullTextMap[instId] || 'Unknown',
           lifecycle: lifecycleMap[instId] || { start_date: null, end_date: null },
           renewalWindow: renewalWindowMap[instId] || null,
-          used_minutes: row.used_minutes ?? 0,
-          included_minutes: row.included_minutes ?? 0,
-          remaining_minutes: row.remaining_minutes ?? 0,
-          percent_used: row.percent_used ?? 0,
+          used_minutes: row?.used_minutes ?? 0,
+          included_minutes: row?.included_minutes ?? 0,
+          remaining_minutes: row?.remaining_minutes ?? 0,
+          percent_used: row?.percent_used ?? 0,
           monthly: monthlyMap[instId] || [],
           totals: instanceTotals[instId] || { billable: 0, nonBillable: 0, total: 0, lastEntry: null },
           addons: childrenByParent[instId] || [],
@@ -522,7 +522,7 @@ function ClosedPackageSummaries({ tenantId }: { tenantId: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ['closed-package-summaries', tenantId],
     queryFn: async () => {
-      const { data: closedInstances, error: ciErr } = await (supabase as any)
+      const { data: closedInstances, error: ciErr } = await supabase
         .from('package_instances')
         .select('id, package_id, start_date, end_date')
         .eq('tenant_id', tenantId)
@@ -532,27 +532,27 @@ function ClosedPackageSummaries({ tenantId }: { tenantId: number }) {
       if (ciErr) throw ciErr;
       if (!closedInstances || closedInstances.length === 0) return [];
 
-      const instanceIds = closedInstances.map((r: any) => r.id);
+      const instanceIds = closedInstances.map((r) => r.id);
       const { fullTextMap } = await resolvePackageNames(instanceIds);
 
       // Allocation-aware: same rule as active burndown monthly table.
-      const { data: timeRows } = await (supabase as any)
+      const { data: timeRows } = await supabase
         .from('time_entries')
         .select('id, package_instance_id, duration_minutes, is_billable')
         .eq('tenant_id', tenantId)
         .neq('work_type', 'carry_over');
 
-      const entryIds = (timeRows || []).map((r: any) => r.id).filter(Boolean);
+      const entryIds = (timeRows || []).map((r) => r.id).filter(Boolean);
       const allocByEntry = new Map<string, { package_instance_id: number; allocated_minutes: number }[]>();
       const chunkSize = 200;
       for (let i = 0; i < entryIds.length; i += chunkSize) {
         const chunk = entryIds.slice(i, i + chunkSize);
         if (chunk.length === 0) break;
-        const { data: allocRows } = await (supabase as any)
+        const { data: allocRows } = await supabase
           .from('time_entry_allocations')
           .select('time_entry_id, package_instance_id, allocated_minutes')
           .in('time_entry_id', chunk);
-        (allocRows || []).forEach((a: any) => {
+        (allocRows || []).forEach((a) => {
           const list = allocByEntry.get(a.time_entry_id) || [];
           list.push({
             package_instance_id: a.package_instance_id,
@@ -570,7 +570,7 @@ function ClosedPackageSummaries({ tenantId }: { tenantId: number }) {
         if (isBillable) totalsMap[id].billable += mins;
         else totalsMap[id].nonBillable += mins;
       };
-      (timeRows || []).forEach((r: any) => {
+      (timeRows || []).forEach((r) => {
         const allocs = allocByEntry.get(r.id);
         if (allocs && allocs.length > 0) {
           allocs.forEach(a => credit(a.package_instance_id, a.allocated_minutes, !!r.is_billable));
@@ -579,7 +579,7 @@ function ClosedPackageSummaries({ tenantId }: { tenantId: number }) {
         }
       });
 
-      return closedInstances.map((inst: any) => ({
+      return closedInstances.map((inst) => ({
         id: inst.id,
         name: fullTextMap[inst.id] || `Package #${inst.package_id}`,
         start_date: inst.start_date,
@@ -638,7 +638,7 @@ function RenewalHistorySection({ instanceId }: { instanceId: number | null }) {
   const { data, isLoading } = useQuery({
     queryKey: ['renewal-history', instanceId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('package_renewal_periods')
         .select('period_number, period_start, period_end, included_minutes, carried_in_minutes, hours_used_at_close, closed_at')
         .eq('package_instance_id', instanceId)
@@ -663,7 +663,7 @@ function RenewalHistorySection({ instanceId }: { instanceId: number | null }) {
       </button>
       {expanded && (
         <div className="mt-1.5 space-y-1">
-          {data.map((period: any) => {
+          {data.map((period) => {
             const usedMinutes = (period.hours_used_at_close ?? 0) * 60;
             const totalIncluded = (period.included_minutes || 0) + (period.carried_in_minutes || 0);
             return (
@@ -904,18 +904,18 @@ function MoveEntryDialog({
   const { data: packages } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
-      const { data: instances } = await (supabase as any)
+      const { data: instances } = await supabase
         .from('package_instances')
         .select('id, package_id')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false);
-      const packageIds = [...new Set((instances || []).map((i: any) => i.package_id).filter(Boolean))];
+      const packageIds = [...new Set((instances || []).map((i) => i.package_id).filter(Boolean))];
       const { data: pkgs } = packageIds.length > 0
-        ? await (supabase as any).from('packages').select('id, name').in('id', packageIds)
+        ? await supabase.from('packages').select('id, name').in('id', packageIds)
         : { data: [] };
       const pkgNames: Record<number, string> = {};
-      (pkgs || []).forEach((p: any) => { pkgNames[p.id] = p.name; });
-      return (instances || []).map((p: any) => ({
+      (pkgs || []).forEach((p) => { pkgNames[p.id] = p.name; });
+      return (instances || []).map((p) => ({
         id: p.package_id,
         name: pkgNames[p.package_id] || `Package #${p.package_id}`,
       }));
@@ -938,8 +938,8 @@ function MoveEntryDialog({
       onOpenChange(false);
       setTargetPackageId('');
       setReason('');
-    } catch (err: any) {
-      toast({ title: 'Move failed', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Move failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -1022,18 +1022,18 @@ function SplitEntryDialog({
   const { data: packages } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
-      const { data: instances } = await (supabase as any)
+      const { data: instances } = await supabase
         .from('package_instances')
         .select('id, package_id')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false);
-      const packageIds = [...new Set((instances || []).map((i: any) => i.package_id).filter(Boolean))];
+      const packageIds = [...new Set((instances || []).map((i) => i.package_id).filter(Boolean))];
       const { data: pkgs } = packageIds.length > 0
-        ? await (supabase as any).from('packages').select('id, name').in('id', packageIds)
+        ? await supabase.from('packages').select('id, name').in('id', packageIds)
         : { data: [] };
       const pkgNames: Record<number, string> = {};
-      (pkgs || []).forEach((p: any) => { pkgNames[p.id] = p.name; });
-      return (instances || []).map((p: any) => ({
+      (pkgs || []).forEach((p) => { pkgNames[p.id] = p.name; });
+      return (instances || []).map((p) => ({
         id: p.package_id,
         name: pkgNames[p.package_id] || `Package #${p.package_id}`,
       }));
@@ -1064,8 +1064,8 @@ function SplitEntryDialog({
       toast({ title: 'Entry split successfully' });
       onSuccess();
       onOpenChange(false);
-    } catch (err: any) {
-      toast({ title: 'Split failed', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Split failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -1196,8 +1196,8 @@ function ReallocateDialog({
       onSuccess();
       onOpenChange(false);
       setReason('');
-    } catch (err: any) {
-      toast({ title: 'Reallocation failed', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Reallocation failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -1323,14 +1323,14 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     queryKey: ['selected-renewal-period-row', singleSelectedPackageId, selectedPeriodId],
     queryFn: async () => {
       if (!singleSelectedPackageId || selectedPeriodId === ALL_TIME_VALUE) return null;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('package_renewal_periods')
         .select('id, period_start, period_end, included_minutes, carried_in_minutes')
         .eq('package_instance_id', singleSelectedPackageId)
         .eq('period_number', parseInt(selectedPeriodId, 10))
         .maybeSingle();
       if (error) throw error;
-      return data as { id: string; period_start: string; period_end: string; included_minutes: number; carried_in_minutes: number } | null;
+      return data;
     },
     enabled: !!singleSelectedPackageId && selectedPeriodId !== ALL_TIME_VALUE,
   });
@@ -1360,12 +1360,12 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     queryFn: async () => {
       if (userIds.length === 0) return {};
       // Fetch all users including archived/disabled so time entries still show names
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name, archived, disabled')
         .in('user_uuid', userIds);
       const map: Record<string, string> = {};
-      (data || []).forEach((u: any) => {
+      (data || []).forEach((u) => {
         const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown';
         const suffix = (u.archived || u.disabled) ? ' (Inactive)' : '';
         map[u.user_uuid] = name + suffix;
@@ -1390,20 +1390,20 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const { data: allPackageOptions = [] } = useQuery({
     queryKey: ['all-package-filter-options', tenantId],
     queryFn: async (): Promise<PackageFilterOption[]> => {
-      const { data: instances } = await (supabase as any)
+      const { data: instances } = await supabase
         .from('package_instances')
         .select('id, package_id, start_date, end_date, is_complete')
         .eq('tenant_id', tenantId)
         .is('parent_instance_id', null)
         .order('start_date', { ascending: false });
 
-      const packageIds = [...new Set((instances || []).map((p: any) => Number(p.package_id)))] as number[];
+      const packageIds = [...new Set((instances || []).map((p) => Number(p.package_id)))];
       const { data: pkgs } = packageIds.length > 0
         ? await supabase.from('packages').select('id, name').in('id', packageIds)
         : { data: [] };
-      const nameMap = new Map((pkgs || []).map((p: any) => [p.id, p.name]));
+      const nameMap = new Map((pkgs || []).map((p) => [p.id, p.name]));
 
-      return (instances || []).map((p: any) => {
+      return (instances || []).map((p) => {
         const name = nameMap.get(p.package_id) || `Package #${p.package_id}`;
         return {
           instanceId: Number(p.id),
@@ -1420,19 +1420,19 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const { data: activePackages = [] } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
-      const { data: instances } = await (supabase as any)
+      const { data: instances } = await supabase
         .from('package_instances')
         .select('id, package_id')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false);
 
-      const packageIds = [...new Set((instances || []).map((p: any) => Number(p.package_id)))] as number[];
+      const packageIds = [...new Set((instances || []).map((p) => Number(p.package_id)))];
       const { data: pkgs } = packageIds.length > 0
         ? await supabase.from('packages').select('id, name').in('id', packageIds)
         : { data: [] };
-      const nameMap = new Map((pkgs || []).map((p: any) => [p.id, p.name]));
+      const nameMap = new Map((pkgs || []).map((p) => [p.id, p.name]));
 
-      return (instances || []).map((p: any) => ({
+      return (instances || []).map((p) => ({
         id: p.package_id,
         name: nameMap.get(p.package_id) || `Package #${p.package_id}`,
       }));
@@ -1444,21 +1444,21 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const { data: packageInstanceMap = {} } = useQuery({
     queryKey: ['all-package-instances', tenantId, pageEntries.length],
     queryFn: async () => {
-      const { data: instances } = await (supabase as any)
+      const { data: instances } = await supabase
         .from('package_instances')
         .select('id, package_id, start_date, end_date')
         .eq('tenant_id', tenantId);
 
       // Resolve package names via separate fetch
-      const pkgIds = [...new Set((instances || []).map((i: any) => i.package_id).filter(Boolean))];
+      const pkgIds = [...new Set((instances || []).map((i) => i.package_id).filter(Boolean))];
       const { data: pkgs } = pkgIds.length > 0
-        ? await (supabase as any).from('packages').select('id, name').in('id', pkgIds)
+        ? await supabase.from('packages').select('id, name').in('id', pkgIds)
         : { data: [] };
       const pkgNameMap: Record<number, string> = {};
-      (pkgs || []).forEach((p: any) => { pkgNameMap[Number(p.id)] = p.name; });
+      (pkgs || []).forEach((p) => { pkgNameMap[Number(p.id)] = p.name; });
 
       const map: Record<number, { name: string; start_date: string; end_date: string | null }> = {};
-      (instances || []).forEach((p: any) => {
+      (instances || []).forEach((p) => {
         map[Number(p.id)] = {
           name: pkgNameMap[Number(p.package_id)] || `Package #${p.package_id}`,
           start_date: p.start_date,
@@ -1473,11 +1473,11 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
           .filter((pid): pid is number => pid != null && !map[Number(pid)])
       )];
       if (unmatchedPkgIds.length > 0) {
-        const { data: basePkgs } = await (supabase as any)
+        const { data: basePkgs } = await supabase
           .from('packages')
           .select('id, name')
           .in('id', unmatchedPkgIds);
-        (basePkgs || []).forEach((p: any) => {
+        (basePkgs || []).forEach((p) => {
           const key = Number(p.id);
           if (!map[key]) {
             map[key] = { name: p.name || `Package #${p.id}`, start_date: '', end_date: null };
@@ -1500,8 +1500,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
         .from('notes')
         .select('id, timeentry_id, title')
         .in('timeentry_id', timeEntryIds);
-      const map: Record<string, { id: number; title: string | null }> = {};
-      (data || []).forEach((n: any) => {
+      const map: Record<string, { id: string; title: string | null }> = {};
+      (data || []).forEach((n) => {
         if (n.timeentry_id) map[n.timeentry_id] = { id: n.id, title: n.title };
       });
       return map;
@@ -1559,11 +1559,11 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       const exportUserIds = [...new Set(rows.map(e => e.user_id).filter(Boolean))];
       const exportUserMap: Record<string, string> = {};
       if (exportUserIds.length > 0) {
-        const { data } = await (supabase as any)
+        const { data } = await supabase
           .from('users')
           .select('user_uuid, first_name, last_name, archived, disabled')
           .in('user_uuid', exportUserIds);
-        (data || []).forEach((u: any) => {
+        (data || []).forEach((u) => {
           const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown';
           const suffix = (u.archived || u.disabled) ? ' (Inactive)' : '';
           exportUserMap[u.user_uuid] = name + suffix;
@@ -1592,7 +1592,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     const newVal = !entry.is_billable;
     const { error } = await supabase
       .from('time_entries')
-      .update({ is_billable: newVal, updated_at: new Date().toISOString() } as any)
+      .update({ is_billable: newVal, updated_at: new Date().toISOString() })
       .eq('id', entry.id);
 
     if (error) {
@@ -1847,9 +1847,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                           <Badge variant="secondary" className="capitalize">
                             {entry.work_type.replace('_', ' ')}
                           </Badge>
-                          {(entry as any).work_sub_type && (
+                          {entry.work_sub_type && (
                             <Badge variant="outline" className="text-xs">
-                              {getSubTypeLabel((entry as any).work_sub_type)}
+                              {getSubTypeLabel(entry.work_sub_type)}
                             </Badge>
                           )}
                         </div>
