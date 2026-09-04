@@ -37,7 +37,7 @@ export async function fetchRetention(
   period: KpiV2Period,
 ): Promise<RetentionResult> {
   const { startTs, endTs } = tsRange(period);
-  const { data, error } = await (supabase as any).rpc("kpi_csc_retention_rows", {
+  const { data, error } = await supabase.rpc("kpi_csc_retention_rows", {
     p_csc_user_id: subjectUuid,
     p_start: startTs,
     p_end: endTs,
@@ -59,7 +59,7 @@ export async function fetchCommunication(
   period: KpiV2Period,
 ): Promise<CommunicationResult> {
   const { startTs, endTs } = tsRange(period);
-  const { data, error } = await (supabase as any).rpc("kpi_csc_communication_rows", {
+  const { data, error } = await supabase.rpc("kpi_csc_communication_rows", {
     p_csc_user_id: subjectUuid,
     p_start: startTs,
     p_end: endTs,
@@ -82,7 +82,7 @@ export async function fetchCscTasks(
   period: KpiV2Period,
 ): Promise<TaskResult> {
   const { startTs, endTs } = tsRange(period);
-  const { data, error } = await (supabase as any).rpc("kpi_csc_tasks_rows", {
+  const { data, error } = await supabase.rpc("kpi_csc_tasks_rows", {
     p_csc_user_id: subjectUuid,
     p_start: startTs,
     p_end: endTs,
@@ -103,22 +103,21 @@ export async function fetchAssistantTasks(
   period: KpiV2Period,
 ): Promise<TaskResult> {
   const { startTs, endTs } = tsRange(period);
-  const sb = supabase as any;
 
   const [ttCreated, ttFollowers, cai, ops] = await Promise.all([
-    sb.from("tasks_tenants")
+    supabase.from("tasks_tenants")
       .select("id, due_date, completed_at")
       .gte("created_at", startTs).lt("created_at", endTs)
       .eq("created_by", subjectUuid),
-    sb.from("tasks_tenants")
+    supabase.from("tasks_tenants")
       .select("id, due_date, completed_at")
       .gte("created_at", startTs).lt("created_at", endTs)
       .contains("followers", [subjectUuid]),
-    sb.from("client_action_items")
+    supabase.from("client_action_items")
       .select("id, due_date, completed_at")
       .gte("created_at", startTs).lt("created_at", endTs)
       .eq("assignee_user_id", subjectUuid),
-    sb.from("ops_work_items")
+    supabase.from("ops_work_items")
       .select("id, due_at, completed_at")
       .gte("created_at", startTs).lt("created_at", endTs)
       .eq("owner_user_uuid", subjectUuid),
@@ -131,13 +130,13 @@ export async function fetchAssistantTasks(
     seen.add(`tt:${id}`);
     dueRows.push({ due, completed_at, isTs: false });
   };
-  (ttCreated.data ?? []).forEach((r: any) => pushDate(r.id, r.due_date, r.completed_at));
-  (ttFollowers.data ?? []).forEach((r: any) => pushDate(r.id, r.due_date, r.completed_at));
-  (cai.data ?? []).forEach((r: any) => {
+  (ttCreated.data ?? []).forEach((r) => pushDate(r.id, r.due_date, r.completed_at));
+  (ttFollowers.data ?? []).forEach((r) => pushDate(r.id, r.due_date, r.completed_at));
+  (cai.data ?? []).forEach((r) => {
     if (!r.due_date) return;
     dueRows.push({ due: r.due_date, completed_at: r.completed_at, isTs: false });
   });
-  (ops.data ?? []).forEach((r: any) => {
+  (ops.data ?? []).forEach((r) => {
     if (!r.due_at) return;
     dueRows.push({ due: r.due_at, completed_at: r.completed_at, isTs: true });
   });

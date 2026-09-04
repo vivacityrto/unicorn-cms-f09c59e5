@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
+import type { Json } from '@/integrations/supabase/types';
 
 // ── Types ──────────────────────────────────────────────────────
 export interface PortfolioTenant {
@@ -14,7 +15,7 @@ export interface PortfolioTenant {
   rto_id: string | null;
   cricos_id: string | null;
   assigned_csc_user_id: string | null;
-  packages_json: any[];
+  packages_json: unknown[];
   risk_status: string;
   risk_index: number;
   risk_index_delta_14d: number;
@@ -46,8 +47,8 @@ export interface PriorityInboxItem {
 
 export interface TenantComms {
   tenant_id: number;
-  recent_notes_json: any[];
-  recent_emails_json: any[];
+  recent_notes_json: unknown[];
+  recent_emails_json: unknown[];
 }
 
 export type SavedView = 'my_tenants' | 'all_tenants';
@@ -89,7 +90,7 @@ export function usePortfolioCockpit() {
     queryKey: ['portfolio-cockpit-tenants'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('v_dashboard_tenant_portfolio' as any)
+        .from('v_dashboard_tenant_portfolio')
         .select('*');
       if (error) throw error;
       return (data || []) as unknown as PortfolioTenant[];
@@ -120,7 +121,7 @@ export function usePortfolioCockpit() {
 
   const cscNameMap = useMemo(() => {
     const map: Record<string, string> = {};
-    cscUsers.forEach((u: any) => {
+    cscUsers.forEach((u) => {
       map[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown';
     });
     return map;
@@ -169,7 +170,7 @@ export function usePortfolioCockpit() {
     queryKey: ['portfolio-cockpit-inbox'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('v_dashboard_priority_inbox' as any)
+        .from('v_dashboard_priority_inbox')
         .select('*');
       if (error) throw error;
       return (data || []) as unknown as PriorityInboxItem[];
@@ -182,7 +183,7 @@ export function usePortfolioCockpit() {
   const { data: inboxActions = [] } = useQuery({
     queryKey: ['portfolio-inbox-actions'],
     queryFn: async () => {
-      const { data } = await (supabase.from as any)('priority_inbox_actions')
+      const { data } = await supabase.from('priority_inbox_actions')
         .select('item_id, action_type, until_at')
         .eq('user_id', profile?.user_uuid || '');
       return data || [];
@@ -194,11 +195,11 @@ export function usePortfolioCockpit() {
     const now = new Date();
     const snoozedIds = new Set(
       inboxActions
-        .filter((a: any) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now))
-        .map((a: any) => a.item_id)
+        .filter((a) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now))
+        .map((a) => a.item_id)
     );
     const ackedIds = new Set(
-      inboxActions.filter((a: any) => a.action_type === 'acknowledge').map((a: any) => a.item_id)
+      inboxActions.filter((a) => a.action_type === 'acknowledge').map((a) => a.item_id)
     );
 
     // Exclude test tenants
@@ -226,14 +227,14 @@ export function usePortfolioCockpit() {
   // ── Inbox actions ──
   const acknowledgeItem = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await (supabase.from as any)('priority_inbox_actions').insert({
+      const { error } = await supabase.from('priority_inbox_actions').insert({
         item_id: itemId,
         item_type: 'inbox',
         user_id: profile!.user_uuid,
         action_type: 'acknowledge',
       });
       if (error) throw error;
-      await (supabase.from as any)('audit_dashboard_events').insert({
+      await supabase.from('audit_dashboard_events').insert({
         actor_user_id: profile!.user_uuid,
         action: 'inbox_acknowledge',
         metadata_json: { item_id: itemId },
@@ -249,7 +250,7 @@ export function usePortfolioCockpit() {
     mutationFn: async ({ itemId, days }: { itemId: string; days: number }) => {
       const until = new Date();
       until.setDate(until.getDate() + days);
-      const { error } = await (supabase.from as any)('priority_inbox_actions').insert({
+      const { error } = await supabase.from('priority_inbox_actions').insert({
         item_id: itemId,
         item_type: 'inbox',
         user_id: profile!.user_uuid,
@@ -257,7 +258,7 @@ export function usePortfolioCockpit() {
         until_at: until.toISOString(),
       });
       if (error) throw error;
-      await (supabase.from as any)('audit_dashboard_events').insert({
+      await supabase.from('audit_dashboard_events').insert({
         actor_user_id: profile!.user_uuid,
         action: 'inbox_snooze',
         metadata_json: { item_id: itemId, days },
@@ -272,7 +273,7 @@ export function usePortfolioCockpit() {
   // ── Tenant comms (for drawer) ──
   const fetchTenantComms = useCallback(async (tenantId: number): Promise<TenantComms | null> => {
     const { data, error } = await supabase
-      .from('v_dashboard_tenant_recent_comms' as any)
+      .from('v_dashboard_tenant_recent_comms')
       .select('*')
       .eq('tenant_id', tenantId)
       .single();
@@ -281,12 +282,12 @@ export function usePortfolioCockpit() {
   }, []);
 
   // ── Audit helper ──
-  const logDashboardEvent = useCallback(async (action: string, metadata: Record<string, any> = {}) => {
+  const logDashboardEvent = useCallback(async (action: string, metadata: Record<string, unknown> = {}) => {
     if (!profile?.user_uuid) return;
-    await (supabase.from as any)('audit_dashboard_events').insert({
+    await supabase.from('audit_dashboard_events').insert({
       actor_user_id: profile.user_uuid,
       action,
-      metadata_json: { ...metadata, saved_view: savedView },
+      metadata_json: { ...metadata, saved_view: savedView } as Json,
     });
   }, [profile?.user_uuid, savedView]);
 
