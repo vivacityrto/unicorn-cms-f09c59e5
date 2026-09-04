@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T20:18:56.963Z",
-  "baselineSha": "80e87c74b621d9ae4cdb3907b7472c45ef1cf271",
+  "generatedAt": "2026-09-04T20:27:11.169Z",
+  "baselineSha": "8e016b6ca75efff6c36a228997b968eba4089e41",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 413,
-    "errors": 1618,
+    "filesWithFindings": 411,
+    "errors": 1598,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1611,
+    "@typescript-eslint/no-explicit-any": 1591,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 950,
+      "errors": 930,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 943,
+        "@typescript-eslint/no-explicit-any": 923,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -380,10 +380,10 @@
       }
     },
     "src/hooks": {
-      "errors": 403,
+      "errors": 392,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 403,
+        "@typescript-eslint/no-explicit-any": 392,
         "react-refresh/only-export-components": 1
       }
     },
@@ -402,10 +402,10 @@
       }
     },
     "src/pages": {
-      "errors": 134,
+      "errors": 125,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 134
+        "@typescript-eslint/no-explicit-any": 125
       }
     },
     "src/pages/academy": {
@@ -1766,9 +1766,6 @@
     "src/hooks/useExcelBindings.tsx": {
       "@typescript-eslint/no-explicit-any": 8
     },
-    "src/hooks/useExcelDataSources.tsx": {
-      "@typescript-eslint/no-explicit-any": 11
-    },
     "src/hooks/useExecutiveAnomalies.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1995,9 +1992,6 @@
     },
     "src/pages/AdminCompliancePacks.tsx": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/pages/AdminManageStages.tsx": {
-      "@typescript-eslint/no-explicit-any": 9
     },
     "src/pages/AdminPackageTenantDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 1

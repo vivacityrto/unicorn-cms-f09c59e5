@@ -67,9 +67,9 @@ export function useExcelDataSources(documentId: number | null) {
         .order('name');
       
       if (error) throw error;
-      setDataSources((data || []) as DataSource[]);
-    } catch (error: any) {
-      toast({ title: 'Error loading data sources', description: error.message, variant: 'destructive' });
+      setDataSources((data || []) as unknown as DataSource[]);
+    } catch (error) {
+      toast({ title: 'Error loading data sources', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -85,9 +85,9 @@ export function useExcelDataSources(documentId: number | null) {
         .eq('document_id', documentId);
       
       if (error) throw error;
-      setMappings((data || []) as SourceMapping[]);
-    } catch (error: any) {
-      toast({ title: 'Error loading mappings', description: error.message, variant: 'destructive' });
+      setMappings((data || []) as unknown as SourceMapping[]);
+    } catch (error) {
+      toast({ title: 'Error loading mappings', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     }
   }, [documentId, toast]);
 
@@ -139,9 +139,9 @@ export function useExcelDataSources(documentId: number | null) {
       
       await fetchDataSources();
       toast({ title: 'Data source uploaded successfully' });
-      return data as DataSource;
-    } catch (error: any) {
-      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+      return data as unknown as DataSource;
+    } catch (error) {
+      toast({ title: 'Upload failed', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
       return null;
     }
   };
@@ -165,8 +165,8 @@ export function useExcelDataSources(documentId: number | null) {
       await fetchDataSources();
       await fetchMappings();
       toast({ title: 'Data source deleted' });
-    } catch (error: any) {
-      toast({ title: 'Delete failed', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Delete failed', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     }
   };
 
@@ -193,8 +193,8 @@ export function useExcelDataSources(documentId: number | null) {
       
       await fetchMappings();
       toast({ title: 'Mapping added' });
-    } catch (error: any) {
-      toast({ title: 'Failed to add mapping', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Failed to add mapping', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     }
   };
 
@@ -209,8 +209,8 @@ export function useExcelDataSources(documentId: number | null) {
       
       await fetchMappings();
       toast({ title: 'Mapping removed' });
-    } catch (error: any) {
-      toast({ title: 'Delete failed', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Delete failed', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     }
   };
 
@@ -230,8 +230,8 @@ export function useExcelDataSources(documentId: number | null) {
       a.download = `${source.name}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (error: any) {
-      toast({ title: 'Download failed', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Download failed', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     }
   };
 
@@ -263,8 +263,8 @@ export function useDocumentReadiness() {
 
       if (error) throw error;
       return data as unknown as DocumentReadiness;
-    } catch (error: any) {
-      toast({ title: 'Validation failed', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Validation failed', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
       return null;
     }
   }, [toast]);
@@ -281,8 +281,8 @@ export function useDocumentReadiness() {
 
       if (error) throw error;
       return data as unknown as ReleaseReadiness;
-    } catch (error: any) {
-      toast({ title: 'Validation failed', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Validation failed', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
       return null;
     }
   }, [toast]);
@@ -309,8 +309,8 @@ export function useDocumentMergeFields(documentId: number | null) {
         .eq('document_id', documentId);
       
       if (error) throw error;
-      setMergeFields((data || []).map((r: any) => r.field?.tag).filter(Boolean));
-    } catch (error: any) {
+      setMergeFields((data || []).map((r) => r.field?.tag).filter((tag): tag is string => Boolean(tag)));
+    } catch (error) {
       console.error('Error fetching merge fields:', error);
     } finally {
       setLoading(false);
