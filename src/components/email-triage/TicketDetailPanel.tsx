@@ -67,6 +67,10 @@ export function TicketDetailPanel({ ticket, open, onOpenChange }: Props) {
       setStatus(ticket.status ?? "");
       setNotes(ticket.resolution_notes ?? "");
     }
+    // Deliberately narrow: depend on the specific fields that should reset
+    // the local draft, not the whole `ticket` object, which gets a new
+    // reference on every parent refetch even when these fields haven't changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket?.id, ticket?.status, ticket?.resolution_notes]);
 
   if (!ticket) return null;

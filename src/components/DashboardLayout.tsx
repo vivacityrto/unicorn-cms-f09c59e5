@@ -3,7 +3,6 @@ import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Buildin
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useKpiAccess } from "@/hooks/useKpiAccess";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { TopBar } from "@/components/layout/TopBar";
@@ -260,9 +259,6 @@ export const DashboardLayout = ({
   // Determine if we should show Vivacity Team menu or Client menu
   const showVivacityMenu = isVivacityTeam && !isViewingAsClient;
 
-  const { canViewAnyStaff } = useKpiAccess();
-  const kpiRole = profile?.kpi_role ?? null;
-
   // Filter EOS items based on role
   const filteredEosItems = useMemo(() => {
     const base = eosMenuItems.filter(item => {
@@ -274,7 +270,7 @@ export const DashboardLayout = ({
     });
     // KPI module lives in the Work section (/kpi) with an in-page reviewer toggle.
     return base;
-  }, [isSuperAdmin, isTeamLeader, kpiRole, canViewAnyStaff]);
+  }, [isSuperAdmin, isTeamLeader]);
 
   // Filter Work items based on role
   const filteredWorkItems = useMemo(() => {

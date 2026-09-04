@@ -45,6 +45,9 @@ export function FloatingSuggestionsDialog({ open, onClose }: FloatingSuggestions
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
 
+  const width = expanded ? 680 : 460;
+  const height = expanded ? 600 : 440;
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     dragging.current = true;
     dragOffset.current = {
@@ -68,7 +71,7 @@ export function FloatingSuggestionsDialog({ open, onClose }: FloatingSuggestions
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, [position]);
+  }, [position, width, height]);
 
   const filtered = useMemo(() => {
     if (!items) return [];
@@ -82,9 +85,6 @@ export function FloatingSuggestionsDialog({ open, onClose }: FloatingSuggestions
   }, [items, search]);
 
   if (!open) return null;
-
-  const width = expanded ? 680 : 460;
-  const height = expanded ? 600 : 440;
 
   return createPortal(
     <>

@@ -82,6 +82,11 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
     return () => clearInterval(interval);
   }, []);
 
+  // Holds the latest showCelebration so dismiss (defined first, and whose own
+  // deps must stay empty to avoid re-arming its dedup/cooldown timers) never
+  // calls a stale closure from an earlier render.
+  const showCelebrationRef = useRef<(config: CelebrationConfig) => void>(() => {});
+
   const dismiss = useCallback(() => {
     cleanupRef.current?.();
     cleanupRef.current = null;
@@ -93,7 +98,7 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
     setTimeout(() => {
       if (queueRef.current.length > 0) {
         const next = queueRef.current.shift()!;
-        showCelebration(next);
+        showCelebrationRef.current(next);
       }
     }, COOLDOWN_MS);
   }, []);
@@ -123,6 +128,10 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
     },
     [canAnimate, dismiss],
   );
+
+  useEffect(() => {
+    showCelebrationRef.current = showCelebration;
+  }, [showCelebration]);
 
   const trigger = useCallback(
     (config: CelebrationConfig) => {

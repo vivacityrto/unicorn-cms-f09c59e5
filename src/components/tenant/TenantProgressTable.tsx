@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { addYears, parse, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -76,7 +76,7 @@ export default function TenantProgressTable({
     }
     return { calculatedExpiryDate: null, isExpired: false };
   }, [packageDate]);
-  const fetchStages = async () => {
+  const fetchStages = useCallback(async () => {
     if (!tenantId || !packageId) {
       setLoading(false);
       return;
@@ -133,10 +133,10 @@ export default function TenantProgressTable({
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, packageId]);
   useEffect(() => {
     fetchStages();
-  }, [tenantId, packageId]);
+  }, [fetchStages]);
   const handleRowClick = (stage: Stage) => {
     setSelectedStage(stage.rawData);
     setEditDialogOpen(true);

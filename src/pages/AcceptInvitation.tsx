@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,11 +34,7 @@ const [invitationData, setInvitationData] = useState<{
     phone: '',
   });
 
-  useEffect(() => {
-    validateToken();
-  }, [token]);
-
-  const validateToken = async () => {
+  const validateToken = useCallback(async () => {
     if (!token) {
       toast({
         title: 'Invalid invitation',
@@ -118,7 +114,11 @@ setInvitationData({
     } finally {
       setValidating(false);
     }
-  };
+  }, [token, toast]);
+
+  useEffect(() => {
+    validateToken();
+  }, [validateToken]);
 
   const hashToken = async (token: string): Promise<string> => {
     const encoder = new TextEncoder();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -68,11 +68,7 @@ export function CSCProfileCard({ tenantId, compact = false }: CSCProfileCardProp
   const [loading, setLoading] = useState(true);
   const [cscProfiles, setCscProfiles] = useState<CSCProfile[]>([]);
 
-  useEffect(() => {
-    fetchCSCProfiles();
-  }, [tenantId]);
-
-  const fetchCSCProfiles = async () => {
+  const fetchCSCProfiles = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_tenant_csc_profiles', {
@@ -80,12 +76,12 @@ export function CSCProfileCard({ tenantId, compact = false }: CSCProfileCardProp
       });
 
       if (error) throw error;
-      
+
       // Transform the response to match our interface
       const profiles = (data || []).map((item: any) => ({
         ...item,
         working_days: Array.isArray(item.working_days) ? item.working_days : null,
-        working_hours: item.working_hours && typeof item.working_hours === 'object' 
+        working_hours: item.working_hours && typeof item.working_hours === 'object'
           ? item.working_hours as { start: string; end: string }
           : null,
       })) as CSCProfile[];
@@ -95,7 +91,11 @@ export function CSCProfileCard({ tenantId, compact = false }: CSCProfileCardProp
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
+
+  useEffect(() => {
+    fetchCSCProfiles();
+  }, [fetchCSCProfiles]);
 
   if (loading) {
     return (

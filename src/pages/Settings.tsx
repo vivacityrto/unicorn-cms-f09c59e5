@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -99,13 +99,7 @@ export default function Settings() {
     return () => clearInterval(interval);
   }, [formData.timezone]);
 
-  useEffect(() => {
-    if (user && profile) {
-      fetchUserData();
-    }
-  }, [user, profile]);
-
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       const { data: userData, error } = await supabase
         .from('users')
@@ -152,7 +146,13 @@ export default function Settings() {
         variant: 'destructive',
       });
     }
-  };
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user && profile) {
+      fetchUserData();
+    }
+  }, [user, profile, fetchUserData]);
 
   const handleSaveProfile = async () => {
     if (!user) return;

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,7 @@ export function SharePointTemplateBrowser({
   const [importedItemIds, setImportedItemIds] = useState<Set<string>>(new Set());
   const autoNavigatedRef = useRef(false);
 
-  const fetchImportedItemIds = async () => {
+  const fetchImportedItemIds = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('document_versions')
@@ -63,9 +63,9 @@ export function SharePointTemplateBrowser({
     } catch (err: any) {
       console.error('Failed to load imported item IDs:', err.message);
     }
-  };
+  }, []);
 
-  const browse = async (folderId?: string) => {
+  const browse = useCallback(async (folderId?: string) => {
     setLoading(true);
     setSelectedFile(null);
     onSelectionChange(null);
@@ -86,7 +86,7 @@ export function SharePointTemplateBrowser({
     } finally {
       setLoading(false);
     }
-  };
+  }, [onSelectionChange, fetchImportedItemIds]);
 
   // Initial load on mount
   useEffect(() => {
@@ -108,7 +108,7 @@ export function SharePointTemplateBrowser({
     } else {
       autoNavigatedRef.current = true;
     }
-  }, [initialLoaded, items, autoNavigateToFolder, breadcrumbs.length]);
+  }, [initialLoaded, items, autoNavigateToFolder, breadcrumbs.length, browse]);
 
   const currentFolderName = breadcrumbs[breadcrumbs.length - 1]?.name || 'Root';
 

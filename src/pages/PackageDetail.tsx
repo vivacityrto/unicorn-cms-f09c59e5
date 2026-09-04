@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -333,16 +333,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
     }
   };
   
-  useEffect(() => {
-    if (id) {
-      fetchPackageData();
-      fetchAvailableTenants();
-    }
-  }, [id]);
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [allTenants, searchQuery, sortField, sortDirection, statusFilter]);
-  const applyFiltersAndSort = () => {
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = [...allTenants];
 
     // Apply search filter
@@ -373,7 +364,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       }
     });
     setFilteredTenants(filtered);
-  };
+  }, [allTenants, searchQuery, sortField, sortDirection, statusFilter]);
   const toggleSort = (field: "name" | "status" | "created_at") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -382,7 +373,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       setSortDirection("asc");
     }
   };
-  const fetchAvailableTenants = async () => {
+  const fetchAvailableTenants = useCallback(async () => {
     try {
       // Fetch all tenants
       const { data: allTenants, error: tenantsError } = await supabase
@@ -409,7 +400,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
     } catch (error: any) {
       console.error("Error fetching available tenants:", error);
     }
-  };
+  }, [id]);
   const handleAddTenant = async () => {
     if (!selectedTenantId) {
       toast({
@@ -585,7 +576,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
     setEditingDocument(null);
     setIsDocumentDialogOpen(false);
   };
-  const fetchPackageData = async () => {
+  const fetchPackageData = useCallback(async () => {
     try {
       setIsLoading(true);
 
@@ -790,7 +781,18 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id, tenantId, instanceId, toast]);
+
+  useEffect(() => {
+    if (id) {
+      fetchPackageData();
+      fetchAvailableTenants();
+    }
+  }, [id, fetchPackageData, fetchAvailableTenants]);
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [applyFiltersAndSort]);
+
   if (isLoading) {
     return <div className="p-6 space-y-6 animate-fade-in">
         <Skeleton className="h-10 w-64" />

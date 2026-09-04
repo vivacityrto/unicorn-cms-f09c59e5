@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,12 +33,7 @@ export default function AdminPackageTenantDetail() {
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [tenantContact, setTenantContact] = useState<TenantContact | null>(null);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    if (tenantId) {
-      fetchTenantInfo();
-    }
-  }, [tenantId]);
-  const fetchTenantInfo = async () => {
+  const fetchTenantInfo = useCallback(async () => {
     if (!tenantId) return;
     try {
       setLoading(true);
@@ -76,7 +71,12 @@ export default function AdminPackageTenantDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, toast]);
+  useEffect(() => {
+    if (tenantId) {
+      fetchTenantInfo();
+    }
+  }, [tenantId, fetchTenantInfo]);
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };

@@ -455,7 +455,7 @@ export function NoteFormDialog({
         setLoadingNote(false);
       });
     }
-  }, [open, mode, noteId, initialNote, resetForm, toast, onOpenChange]);
+  }, [open, mode, noteId, initialNote, resetForm, toast, onOpenChange, activePackages, draftKey]);
 
   // Fetch package info for edit header
   useEffect(() => {

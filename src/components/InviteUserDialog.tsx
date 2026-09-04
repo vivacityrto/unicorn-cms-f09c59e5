@@ -153,7 +153,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [importSearch, step]);
+  }, [importSearch, step, toast]);
 
   // Import selected user from unicorn1
   const handleImportUser = async () => {
