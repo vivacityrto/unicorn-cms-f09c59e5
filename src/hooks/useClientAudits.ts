@@ -4,13 +4,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { AuditDashboardRow, ClientAudit, AuditType } from '@/types/clientAudits';
+import type { TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 export function useAuditsDashboard() {
   return useQuery({
     queryKey: ['client-audits-dashboard'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('v_client_audits_dashboard' as any)
+        .from('v_client_audits_dashboard')
         .select('*')
         .order('updated_at', { ascending: false });
       if (error) throw error;
@@ -25,7 +26,7 @@ export function useClientAudits(tenantId: number | undefined) {
     enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('v_client_audits_dashboard' as any)
+        .from('v_client_audits_dashboard')
         .select('*')
         .eq('subject_tenant_id', tenantId)
         .order('created_at', { ascending: false });
@@ -41,7 +42,7 @@ export function useAudit(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_audits' as any)
+        .from('client_audits')
         .select('*')
         .eq('id', auditId)
         .single();
@@ -112,50 +113,52 @@ export function useCreateAudit() {
       const userId = session?.user?.id;
       const templateId = input.template_id || AUDIT_TYPE_TEMPLATE[input.audit_type];
 
+      const insertPayload: TablesInsert<'client_audits'> = {
+        audit_type: input.audit_type,
+        subject_tenant_id: input.subject_tenant_id,
+        title,
+        status: 'draft',
+        is_rto: input.is_rto ?? null,
+        is_cricos: input.is_cricos ?? null,
+        conducted_at: input.conducted_at || null,
+        lead_auditor_id: input.lead_auditor_id || null,
+        assisted_by_id: input.assisted_by_id || null,
+        training_products: input.training_products || [],
+        doc_number: input.doc_number || null,
+        snapshot_rto_name: input.snapshot_rto_name || null,
+        snapshot_rto_number: input.snapshot_rto_number || null,
+        snapshot_cricos_code: input.snapshot_cricos_code || null,
+        snapshot_site_address: input.snapshot_site_address || null,
+        snapshot_ceo: input.snapshot_ceo || null,
+        snapshot_phone: input.snapshot_phone || null,
+        snapshot_email: input.snapshot_email || null,
+        snapshot_website: input.snapshot_website || null,
+        snapshot_other_contacts: input.snapshot_other_contacts || null,
+        snapshot_overseas_student_count: input.snapshot_overseas_student_count ?? null,
+        snapshot_education_agents: input.snapshot_education_agents || null,
+        snapshot_prisms_users: input.snapshot_prisms_users || null,
+        snapshot_dha_contact: input.snapshot_dha_contact || null,
+        template_id: templateId,
+        linked_stage_instance_id: input.linked_stage_instance_id || null,
+        ai_analysis_status: 'none',
+        created_by: userId,
+      };
       const { data, error } = await supabase
-        .from('client_audits' as any)
-        .insert({
-          audit_type: input.audit_type,
-          subject_tenant_id: input.subject_tenant_id,
-          title,
-          status: 'draft',
-          is_rto: input.is_rto ?? null,
-          is_cricos: input.is_cricos ?? null,
-          conducted_at: input.conducted_at || null,
-          lead_auditor_id: input.lead_auditor_id || null,
-          assisted_by_id: input.assisted_by_id || null,
-          training_products: input.training_products || [],
-          doc_number: input.doc_number || null,
-          snapshot_rto_name: input.snapshot_rto_name || null,
-          snapshot_rto_number: input.snapshot_rto_number || null,
-          snapshot_cricos_code: input.snapshot_cricos_code || null,
-          snapshot_site_address: input.snapshot_site_address || null,
-          snapshot_ceo: input.snapshot_ceo || null,
-          snapshot_phone: input.snapshot_phone || null,
-          snapshot_email: input.snapshot_email || null,
-          snapshot_website: input.snapshot_website || null,
-          snapshot_other_contacts: input.snapshot_other_contacts || null,
-          snapshot_overseas_student_count: input.snapshot_overseas_student_count ?? null,
-          snapshot_education_agents: input.snapshot_education_agents || null,
-          snapshot_prisms_users: input.snapshot_prisms_users || null,
-          snapshot_dha_contact: input.snapshot_dha_contact || null,
-          template_id: templateId,
-          linked_stage_instance_id: input.linked_stage_instance_id || null,
-          ai_analysis_status: 'none',
-          created_by: userId,
-        } as any)
+        .from('client_audits')
+        .insert(insertPayload)
         .select('id')
         .single();
       if (error) throw error;
 
-      const newAuditId = (data as any).id;
+      const newAuditId = data.id;
 
       // Back-link stage_instances if linked
       if (input.linked_stage_instance_id) {
         try {
+          const stageUpdate: TablesUpdate<'stage_instances'> = { linked_audit_id: newAuditId };
           await supabase
-            .from('stage_instances' as any)
-            .update({ linked_audit_id: newAuditId } as any)
+            .from('stage_instances')
+            .update(stageUpdate)
             .eq('id', input.linked_stage_instance_id);
         } catch {
           // Non-critical
@@ -164,7 +167,7 @@ export function useCreateAudit() {
 
       // Insert timeline event
       try {
-        await supabase.from('client_timeline_events' as any).insert({
+        const timelineInsert: TablesInsert<'client_timeline_events'> = {
           tenant_id: input.subject_tenant_id,
           client_id: String(input.subject_tenant_id),
           event_type: 'audit_created',
@@ -172,7 +175,8 @@ export function useCreateAudit() {
           entity_type: 'client_audit',
           entity_id: newAuditId,
           source: 'unicorn',
-        } as any);
+        };
+        await supabase.from('client_timeline_events').insert(timelineInsert);
       } catch (err) {
         // Non-critical (a missing Timeline entry, not audit data) — logged so
         // this doesn't fail as invisibly as it did before (see
@@ -188,8 +192,8 @@ export function useCreateAudit() {
       toast.success('Audit created successfully');
       navigate(`/audits/${data.id}`);
     },
-    onError: (err: any) => {
-      toast.error('Failed to create audit: ' + (err.message || 'Unknown error'));
+    onError: (err: unknown) => {
+      toast.error('Failed to create audit: ' + (err instanceof Error ? err.message : 'Unknown error'));
     },
   });
 }
@@ -200,7 +204,7 @@ export function useOverdueActionCount() {
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
       const { count, error } = await supabase
-        .from('client_audit_actions' as any)
+        .from('client_audit_actions')
         .select('*', { count: 'exact', head: true })
         .neq('status', 'complete')
         .lt('due_date', today);

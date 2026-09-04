@@ -2,6 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import type { Tables } from '@/integrations/supabase/types';
+
+type EvidenceRequestJoinedRow = Tables<'evidence_requests'> & {
+  requester: { first_name: string | null; last_name: string | null } | null;
+  assignee: { first_name: string | null; last_name: string | null } | null;
+  items: (Tables<'evidence_request_items'> & {
+    received_document: { file_name: string; storage_path: string } | null;
+  })[];
+};
 
 export interface EvidenceRequestItem {
   id: string;
@@ -61,9 +70,7 @@ export function useEvidenceRequests(tenantId: number | null) {
     queryFn: async () => {
       if (!tenantId) return [];
       
-      const { data, error } = await supabase
-        .from('evidence_requests')
-        .select(`
+      const evidenceRequestSelect = `
           *,
           requester:users!evidence_requests_requested_by_user_id_fkey(first_name, last_name),
           assignee:users!evidence_requests_assigned_to_client_user_id_fkey(first_name, last_name),
@@ -71,24 +78,27 @@ export function useEvidenceRequests(tenantId: number | null) {
             *,
             received_document:portal_documents(file_name, storage_path)
           )
-        `)
+        `;
+      const { data, error } = await supabase
+        .from('evidence_requests')
+        .select<typeof evidenceRequestSelect, EvidenceRequestJoinedRow>(evidenceRequestSelect)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      return (data || []).map((req: any) => ({
+      return (data || []).map((req) => ({
         ...req,
-        requester_name: req.requester 
-          ? `${req.requester.first_name || ''} ${req.requester.last_name || ''}`.trim() 
+        requester_name: req.requester
+          ? `${req.requester.first_name || ''} ${req.requester.last_name || ''}`.trim()
           : null,
-        assignee_name: req.assignee 
-          ? `${req.assignee.first_name || ''} ${req.assignee.last_name || ''}`.trim() 
+        assignee_name: req.assignee
+          ? `${req.assignee.first_name || ''} ${req.assignee.last_name || ''}`.trim()
           : null,
-        items: (req.items || []).sort((a: EvidenceRequestItem, b: EvidenceRequestItem) => 
+        items: (req.items || []).sort((a, b) =>
           a.display_order - b.display_order
         ),
-      })) as EvidenceRequest[];
+      })) as unknown as EvidenceRequest[];
     },
     enabled: !!tenantId,
   });
@@ -100,9 +110,7 @@ export function useEvidenceRequest(requestId: string | null) {
     queryFn: async () => {
       if (!requestId) return null;
       
-      const { data, error } = await supabase
-        .from('evidence_requests')
-        .select(`
+      const evidenceRequestSelect = `
           *,
           requester:users!evidence_requests_requested_by_user_id_fkey(first_name, last_name),
           assignee:users!evidence_requests_assigned_to_client_user_id_fkey(first_name, last_name),
@@ -110,7 +118,10 @@ export function useEvidenceRequest(requestId: string | null) {
             *,
             received_document:portal_documents(file_name, storage_path)
           )
-        `)
+        `;
+      const { data, error } = await supabase
+        .from('evidence_requests')
+        .select<typeof evidenceRequestSelect, EvidenceRequestJoinedRow>(evidenceRequestSelect)
         .eq('id', requestId)
         .single();
 
@@ -118,16 +129,16 @@ export function useEvidenceRequest(requestId: string | null) {
 
       return {
         ...data,
-        requester_name: (data as any).requester 
-          ? `${(data as any).requester.first_name || ''} ${(data as any).requester.last_name || ''}`.trim() 
+        requester_name: data.requester
+          ? `${data.requester.first_name || ''} ${data.requester.last_name || ''}`.trim()
           : null,
-        assignee_name: (data as any).assignee 
-          ? `${(data as any).assignee.first_name || ''} ${(data as any).assignee.last_name || ''}`.trim() 
+        assignee_name: data.assignee
+          ? `${data.assignee.first_name || ''} ${data.assignee.last_name || ''}`.trim()
           : null,
-        items: ((data as any).items || []).sort((a: EvidenceRequestItem, b: EvidenceRequestItem) => 
+        items: (data.items || []).sort((a, b) =>
           a.display_order - b.display_order
         ),
-      } as EvidenceRequest;
+      } as unknown as EvidenceRequest;
     },
     enabled: !!requestId,
   });
@@ -238,10 +249,10 @@ export function useCreateEvidenceRequest() {
         description: 'Evidence request has been sent to the client.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Failed to create request',
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: 'destructive',
       });
     },
@@ -324,10 +335,10 @@ export function useUploadEvidence() {
         description: 'Your file has been submitted.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Upload failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: 'destructive',
       });
     },
@@ -375,10 +386,10 @@ export function useReviewEvidenceItem() {
         description: `Evidence item has been ${variables.status}.`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Review failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: 'destructive',
       });
     },
@@ -410,10 +421,10 @@ export function useCloseRequest() {
         description: 'The evidence request has been closed.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Failed to close',
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: 'destructive',
       });
     },

@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T17:48:20.665Z",
-  "baselineSha": "87ea52256cb7ca9cafd1049805b168fada5bb95a",
+  "generatedAt": "2026-09-04T17:59:47.512Z",
+  "baselineSha": "a3cc0aef94a53585d39090234574d68f5dc3b948",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 433,
-    "errors": 1903,
+    "filesWithFindings": 431,
+    "errors": 1879,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1896,
+    "@typescript-eslint/no-explicit-any": 1872,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 1235,
+      "errors": 1211,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 1228,
+        "@typescript-eslint/no-explicit-any": 1204,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -380,10 +380,10 @@
       }
     },
     "src/hooks": {
-      "errors": 506,
+      "errors": 482,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 506,
+        "@typescript-eslint/no-explicit-any": 482,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1722,9 +1722,6 @@
     "src/hooks/useClientAuditPortal.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "src/hooks/useClientAudits.ts": {
-      "@typescript-eslint/no-explicit-any": 12
-    },
     "src/hooks/useClientImpact.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -1799,9 +1796,6 @@
     },
     "src/hooks/useEvidenceCategories.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/hooks/useEvidenceRequests.tsx": {
-      "@typescript-eslint/no-explicit-any": 12
     },
     "src/hooks/useExcelBindings.tsx": {
       "@typescript-eslint/no-explicit-any": 8
