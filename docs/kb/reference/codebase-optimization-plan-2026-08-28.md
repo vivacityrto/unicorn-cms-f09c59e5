@@ -1274,6 +1274,19 @@ Baseline dropped 3090→2954 (136 targeted, no compensating increase, confirmed 
 | Phase 2.5 any-batch 29 | `@typescript-eslint/no-explicit-any` (24), audit lifecycle + evidence-request lifecycle — `useClientAudits.ts` (12), `useEvidenceRequests.tsx` (12) | ✅ Done | [#618](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/618) | `useEvidenceRequests.tsx`'s deep `evidence_requests`→`users`(requester/assignee)→`evidence_request_items`→`portal_documents` embed fixed with the established `.select<Query, Result>()` pattern. Verified live via Playwright (SuperAdmin): Audits dashboard (19 real audits), two different audit-type detail pages, a per-tenant Audits tab, and a real Evidence Request with items all rendered correctly, zero 4xx/5xx anywhere in the session. |
 | Phase 2.5 any-batch 30 | `@typescript-eslint/no-explicit-any` (30), `useStaffTaskInstances.ts` (15) + `useTeamsMeetingMinutes.ts` (15) | ✅ Done | [#619](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/619) | `useTeamsMeetingMinutes.ts`'s raw-fetch REST helpers (predating `meeting_minutes` existing in generated types) were left as-is to avoid a behavior change outside this batch's type-only scope; the one genuinely-untyped case (`(supabase as any).supabaseUrl`/`.supabaseKey`, real runtime properties not in the public `SupabaseClient` type) is now one narrow documented cast instead of scattered blanket `any`. Verified live via Playwright (SuperAdmin): a real stage's 34-task staff checklist rendered correctly (read-only); `useTeamsMeetingMinutes.ts`'s two raw REST calls confirmed 200 directly (no meeting exists in production within the panel's -14/+90-day window, confirmed via SQL — a pre-existing data gap, not a defect). |
 
+**Phase 2.5 synchronization checkpoint (2026-09-05):** Claude's rolling
+`no-explicit-any` lane has advanced through batch 49, with [#640](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/640)
+as the latest merged code PR and a reported baseline of 1,443 errors across
+393 files. Phase 2.5 is still open: PR [#636](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/636)
+(batch 45) is intentionally held after live verification exposed a separate
+tenant-less staff notification-preferences schema defect (72 of 626 users
+have `tenant_id IS NULL` while `user_notification_prefs.tenant_id` is
+`NOT NULL`). That requires a product/schema decision and is not being hidden
+inside a type-only batch. PR [#612](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/612)
+remains the documentation record for dashboard 500 findings. The Phase 2.6
+task-dialog implementation remains queued until Claude records the formal
+Phase 2.5 exit checkpoint.
+
 ### Phase 2.6 — verified retirement and bounded consolidation (council-planned 2026-09-04)
 
 **Parallel preparation checkpoint (2026-09-04):** while Phase 2.5 remains

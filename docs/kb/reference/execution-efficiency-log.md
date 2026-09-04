@@ -59,6 +59,28 @@ possible (real timestamps, real line counts) rather than estimated.
 | 10b | [#582](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/582) | 2026-09-04 10:54:05 | 28m07s | 24 across 6 files, `src/components/audit` sub-batch 2/3 — `QuestionCard.tsx` 9, `AuditFormTab.tsx` 6, `OpeningMeetingPhase.tsx` 2, `DocumentReviewPhase.tsx` 4, `ClosingMeetingPhase.tsx` 2, `AddFindingForm.tsx` 1 | Extended `AuditResponse` (`src/types/auditWorkspace.ts`) with 4 missing real columns. Defined two shared cross-file callback types (`UpsertResponseInput`, `AddFindingInput`) once in `AuditFormTab.tsx`, reused via `import type` across a 5-file call chain — a type-only import, so no circular-import runtime issue despite the reverse value-level import already existing. **One real fallout bug fixed**: `FindingsTab.tsx` (0 findings of its own) never explicitly set `audit_id` when creating a finding — invisible while the upstream callback was `any`-typed; fixed with an explicit `audit_id: auditId`, confirmed a true no-op via live Playwright end-to-end finding creation. **Process snag**: reused the same branch as 10a across two merged PRs, leaving a stale merge-base that GitHub refused to auto-merge (`lint-baseline.json` conflict) — resolved by merging `origin/main` in and regenerating; branching fresh per sub-batch PR adopted as standing practice from 10c onward. Baseline dropped 2762→2738. Verified live via Playwright (SuperAdmin, subagent) across 3 real audits (template-backed and freeform), specifically exercising the finding-creation path end-to-end including the new `audit_id` call sites — zero console errors, test data cleaned up. |
 | 10c | [#584](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/584) | 2026-09-04 11:26:11 | 32m06s | 24 across 9 files (+1 type-only addition outside the cluster), `src/components/audit` sub-batch 3/3 (final) — `ActionsTab.tsx` 3, `OverviewTab.tsx` 3, `AuditSidebar.tsx` 2, `ActionDrawer.tsx` 1, `FindingCard.tsx` 1, `ActionCreateForm.tsx` 2, `DeleteAuditDialog.tsx` 1, `EvidenceRequestsSection.tsx` 5, `SendEvidenceRequestDrawer.tsx` 6 | **First sub-batch branched fresh off `origin/main` instead of reusing the prior sub-batch's branch** (the 10b process-snag fix) — merged cleanly with a clean file list on the first try. `FindingCard.tsx`/`ActionCreateForm.tsx` are exclusive to the still-routed (though legacy-contract) `/audits/:id/findings`/`/actions` pages — kept in scope per the Phase 2.6 register's explicit "don't skip merely for looking stale" guidance, distinct from the 2 files excluded in 10a that are exclusive to the fully-dead legacy island. `useAuditPrep.ts`'s `EvidenceRequest` interface was missing the real PostgREST embed key (`evidence_request_items`) its own query returns — the component was already defensively checking both `items` and `evidence_request_items` at runtime; added the missing field honestly rather than picking one arbitrarily. Baseline dropped 2733→2709. **`src/components/audit` cluster now fully closed** (94/98 findings — the 4 legacy-only-file findings deliberately excluded pending Phase 2.6's audit-route-convergence decision). Verified live via Playwright (SuperAdmin, subagent) on 2 real audits: Overview/Sidebar/Actions tabs, evidence requests, legacy pages (graceful empty states) — all PASS. **Coordination favor mid-batch**: ran an independent read-only Playwright characterization pass for Codex's Phase 2.6 "Audit route convergence" investigation (their PR [#583](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/583)) — confirmed the three legacy subroutes `parseInt()` real UUID audit IDs and always render broken/empty pages, while the same audits' in-page tabs work correctly; no security issue found (no unauthorized content flash on invalid IDs); zero writes. |
 
+### Phase 2.5 continuation checkpoint — 2026-09-05
+
+Claude advanced the rolling `no-explicit-any` lane from batch 12 through
+batch 49 on GitHub `main` (latest merged code PR: [#640](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/640)).
+The latest reported baseline is **1,443 errors across 393 files**. This is
+progress, not the Phase 2.5 exit: the exit still requires the final scan,
+full verification contract, Playwright evidence, and an explicit disposition
+for every remaining finding.
+
+PR [#636](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/636)
+(batch 45) remains intentionally held. Its safe RPC-argument fix exposed a
+separate live defect affecting tenant-less staff accounts: `tenant_id` is
+`NOT NULL` in `user_notification_prefs`, while 72 of 626 users have no
+tenant. The schema/product choice is unresolved and must not be silently
+patched in a type-only batch. PR [#612](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/612)
+also remains open as documentation for dashboard 500 findings.
+
+The local shared checkout's remote-tracking ref was stale during monitoring;
+GitHub's direct API reported `main@e9356cf9` and was used as the branch-cut
+authority. Do not branch from a stale local `origin/main` until a fresh fetch
+has materialized that object.
+
 ## Phase 2.6 — verified retirement (Codex, dead-code cohorts)
 
 Tracked here after-the-fact since these merges predate this log recording them; Codex's own workflow doesn't currently track batch-start time the way the Phase 2.5 table above does, so only merge timestamps and LOC are available — cycle time is not computable for these rows.
