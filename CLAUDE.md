@@ -65,6 +65,7 @@ branch URL.
 | `docs/kb/pinned/lovable-prompt-guardrails.md` | Mandatory guardrail blocks for every Lovable prompt |
 | `docs/audit-log/README.md` | Audit trail — when to write an entry, template, retrieval |
 | `docs/audit-log/INDEX.md` | Chronological list of audit entries |
+| `docs/kb/reference/execution-efficiency-log.md` | Real cycle-time/verification metrics per batch across all active plan initiatives — data, not principles (companion to the Builder Manifest's efficiency-checkpoints practice) |
 
 ## Lovable production DB change sessions
 
