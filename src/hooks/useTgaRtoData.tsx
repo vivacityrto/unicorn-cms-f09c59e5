@@ -154,6 +154,10 @@ export interface TGAQualification {
   start_date: string | null;
   end_date: string | null;
   extent_label: string | null;
+  /** Set by the sync mapper below; not declared until now even though every item carries it. */
+  scope_state?: string | null;
+  usageRecommendation_raw?: string | null;
+  endDate_raw?: string | null;
 }
 
 export interface TGASkillset {
@@ -167,6 +171,7 @@ export interface TGASkillset {
   start_date: string | null;
   end_date: string | null;
   extent_label: string | null;
+  scope_state?: string | null;
 }
 
 export interface TGAUnit {
@@ -180,6 +185,7 @@ export interface TGAUnit {
   start_date: string | null;
   end_date: string | null;
   extent_label: string | null;
+  scope_state?: string | null;
 }
 
 export interface TGACourse {
@@ -192,6 +198,7 @@ export interface TGACourse {
   start_date: string | null;
   end_date: string | null;
   extent_label: string | null;
+  scope_state?: string | null;
 }
 
 export interface TGATrainingPackage {
@@ -203,6 +210,7 @@ export interface TGATrainingPackage {
   is_current: boolean;
   start_date: string | null;
   end_date: string | null;
+  scope_state?: string | null;
 }
 
 export interface TGAImportJob {

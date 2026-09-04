@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
 import { useTgaRtoData } from '@/hooks/useTgaRtoData';
+import type { TablesInsert } from '@/integrations/supabase/types';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDate, formatDateTime, formatDateLong } from '@/lib/utils';
@@ -164,6 +165,50 @@ function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLi
   );
 }
 
+interface TgaSyncDiagnostic {
+  raw_total: number;
+  current: number;
+  teach_out: number;
+  dropped: number;
+  drop_reasons?: Record<string, number>;
+  sample_item?: { code: string; usageRaw?: string | null; endRaw?: string | null };
+}
+
+interface TgaSyncJobPayload {
+  raw_total?: number;
+  kept_total?: number;
+  diagnostics?: Record<string, TgaSyncDiagnostic>;
+  swap_result?: { deleted_old: number; inserted_new: number };
+}
+
+// Loosely-shaped debug JSON written by different versions of the TGA sync
+// edge function over time - every field is optional and several have both
+// a camelCase and a snake_case variant because the writer changed formats
+// at some point. Not a stable contract; used only by the SuperAdmin debug
+// panel below and by SummaryTab's field-presence display.
+interface TgaDebugPayload {
+  field_presence?: Record<string, boolean>;
+  fieldPresence?: Record<string, boolean>;
+  parse_failed_fields?: string[];
+  parseFailedFields?: string[];
+  tradingNamesArray?: TradingNameHistory[];
+  tradingNamesCount?: number;
+  rawXmlHash?: string;
+  raw_xml_hash?: string;
+  rawXmlLength?: number;
+  raw_xml_length?: number;
+  sectionPresence?: Record<string, boolean>;
+  extractedFrom?: Record<string, string>;
+  missingFields?: string[];
+  missing_fields?: string[];
+  emptyFields?: string[];
+  empty_fields?: string[];
+  extractedSummary?: unknown;
+  parsed_summary?: unknown;
+  rawXml?: string;
+  raw_xml_excerpt?: string;
+}
+
 interface TradingNameHistory {
   name: string;
   startDate: string | null;
@@ -184,15 +229,7 @@ interface SummaryTabProps {
     registration_end_date?: string | null;
     fetched_at?: string | null;
   } | null;
-  debugPayload?: {
-    // Support both old (snake_case) and new (camelCase) payload formats
-    field_presence?: Record<string, boolean>;
-    fieldPresence?: Record<string, boolean>;
-    parse_failed_fields?: string[];
-    parseFailedFields?: string[];
-    tradingNamesArray?: TradingNameHistory[];
-    tradingNamesCount?: number;
-  };
+  debugPayload?: TgaDebugPayload;
 }
 
 function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
@@ -347,8 +384,8 @@ export function ClientIntegrationsTab({
   const [tenantStatus, setTenantStatus] = useState<{ status: string; mergedInto?: number } | null>(null);
   const [tgaLinkRow, setTgaLinkRow] = useState<{ last_sync_at: string | null; last_sync_status: string | null; last_sync_error: string | null } | null>(null);
   const [debugInfo, setDebugInfo] = useState<{
-    lastSyncRun?: { id: string; status: string; created_at: string; stage?: string; last_error?: string | null; payload_meta?: unknown; payload?: any } | null;
-    debugPayload?: { record_count: number; fetched_at: string; endpoint?: string; http_status?: number | null; payload?: any } | null;
+    lastSyncRun?: { id: string; status: string; created_at: string; stage?: string; last_error?: string | null; payload_meta?: unknown; payload?: TgaSyncJobPayload | null } | null;
+    debugPayload?: { record_count: number; fetched_at: string; endpoint?: string; http_status?: number | null; payload?: TgaDebugPayload } | null;
     stageJobs?: Array<{ stage: string; status: string; count?: number; reason?: string }>;
   } | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -395,7 +432,7 @@ export function ClientIntegrationsTab({
         .select('lifecycle_status')
         .eq('id', profile.tenant_id)
         .maybeSingle();
-      if (matches((tenantRow as any)?.lifecycle_status)) {
+      if (matches(tenantRow?.lifecycle_status)) {
         if (!cancelled) setIsInitialRegistration(true);
         return;
       }
@@ -404,7 +441,7 @@ export function ClientIntegrationsTab({
         .from('package_instances')
         .select('package_id')
         .eq('tenant_id', profile.tenant_id);
-      const pkgIds = Array.from(new Set((ents || []).map((e: any) => e.package_id).filter(Boolean)));
+      const pkgIds = Array.from(new Set((ents || []).map((e) => e.package_id).filter(Boolean)));
       if (pkgIds.length === 0) {
         if (!cancelled) setIsInitialRegistration(false);
         return;
@@ -413,7 +450,7 @@ export function ClientIntegrationsTab({
         .from('packages')
         .select('name, slug')
         .in('id', pkgIds);
-      const hit = (pkgs || []).some((p: any) => matches(p?.name) || matches(p?.slug));
+      const hit = (pkgs || []).some((p) => matches(p?.name) || matches(p?.slug));
       if (!cancelled) setIsInitialRegistration(hit);
     };
     check();
@@ -439,8 +476,8 @@ export function ClientIntegrationsTab({
       setLocalRtoNumber(trimmed);
       setRtoInput('');
       toast.success('RTO number saved');
-    } catch (e: any) {
-      toast.error(e.message ?? 'Failed to save RTO number');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save RTO number');
     } finally {
       setSavingRto(false);
     }
@@ -509,8 +546,12 @@ export function ClientIntegrationsTab({
       ]);
       
       setDebugInfo({
-        lastSyncRun: runRes.data,
+        lastSyncRun: runRes.data
+          ? { ...runRes.data, payload: runRes.data.payload as unknown as TgaSyncJobPayload | undefined }
+          : null,
         debugPayload: payloadRes.data
+          ? { ...payloadRes.data, payload: payloadRes.data.payload as unknown as TgaDebugPayload | undefined }
+          : null,
       });
     };
     
@@ -535,7 +576,7 @@ export function ClientIntegrationsTab({
         .eq('tenant_id', profile.tenant_id)
         .eq('address_type', 'HO')
         .maybeSingle();
-      setLastTransferDate((data as any)?.transfer_date ?? null);
+      setLastTransferDate(data?.transfer_date ?? null);
     };
     fetchLastTransferDate();
   }, [profile?.tenant_id]);
@@ -559,7 +600,7 @@ export function ClientIntegrationsTab({
       // 2. Build address rows from TGA data
       let hoAssigned = false;
       let poAssigned = false;
-      const rows: any[] = [];
+      const rows: TablesInsert<'tenant_addresses'>[] = [];
 
       // Registered addresses
       for (const addr of tgaData.addresses) {
@@ -617,15 +658,15 @@ export function ClientIntegrationsTab({
       if (rows.length > 0) {
         const { error: insertError } = await supabase
           .from('tenant_addresses')
-          .insert(rows as any);
+          .insert(rows);
         if (insertError) throw insertError;
       }
 
       setLastTransferDate(now);
       toast.success(`${rows.length} address(es) transferred to tenant successfully.`);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Transfer addresses error:', err);
-      toast.error('Failed to transfer addresses: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to transfer addresses: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setIsTransferring(false);
       setShowTransferConfirm(false);
@@ -638,7 +679,7 @@ export function ClientIntegrationsTab({
     setIsTransferringDetails(true);
     try {
       const s = tgaData.summary;
-      const updates: Record<string, any> = {
+      const updates: TablesInsert<'tenant_profile'> = {
         tenant_id: profile.tenant_id,
         updated_by: user.id,
         updated_at: new Date().toISOString(),
@@ -652,7 +693,7 @@ export function ClientIntegrationsTab({
 
       const { error } = await supabase
         .from('tenant_profile')
-        .upsert(updates as any, { onConflict: 'tenant_id' });
+        .upsert(updates, { onConflict: 'tenant_id' });
       if (error) throw error;
 
       // Also update tenant name to match legal name
@@ -664,9 +705,9 @@ export function ClientIntegrationsTab({
       }
 
       toast.success('TGA details transferred to tenant profile');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Transfer details error:', err);
-      toast.error('Failed to transfer details: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to transfer details: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setIsTransferringDetails(false);
       setShowTransferDetailsConfirm(false);
@@ -679,11 +720,11 @@ export function ClientIntegrationsTab({
     setIsTransferringContact(true);
     try {
       // Prefer Chief executive contact, fallback to first contact
-      const contact = tgaData.contacts.find((c: any) => 
-        c.contact_type?.toLowerCase().includes('chief executive') || 
+      const contact = tgaData.contacts.find((c) =>
+        c.contact_type?.toLowerCase().includes('chief executive') ||
         c.contact_type === 'ChiefExecutive'
       ) || tgaData.contacts[0];
-      const updates: Record<string, any> = {
+      const updates: TablesInsert<'tenant_profile'> = {
         tenant_id: profile.tenant_id,
         updated_by: user.id,
         updated_at: new Date().toISOString(),
@@ -694,13 +735,13 @@ export function ClientIntegrationsTab({
 
       const { error } = await supabase
         .from('tenant_profile')
-        .upsert(updates as any, { onConflict: 'tenant_id' });
+        .upsert(updates, { onConflict: 'tenant_id' });
       if (error) throw error;
 
       toast.success(`Contact "${contact.name}" transferred as primary contact`);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Transfer contact error:', err);
-      toast.error('Failed to transfer contact: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to transfer contact: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setIsTransferringContact(false);
       setShowTransferContactConfirm(false);
@@ -713,7 +754,7 @@ export function ClientIntegrationsTab({
     setIsTransferringUsers(true);
     try {
       // Deduplicate contacts by email
-      const uniqueByEmail = new Map<string, any>();
+      const uniqueByEmail = new Map<string, (typeof tgaData.contacts)[number]>();
       for (const contact of tgaData.contacts) {
         if (contact.email && !uniqueByEmail.has(contact.email.toLowerCase())) {
           uniqueByEmail.set(contact.email.toLowerCase(), contact);
@@ -757,8 +798,8 @@ export function ClientIntegrationsTab({
           } else {
             created++;
           }
-        } catch (err: any) {
-          const msg = err?.message || JSON.stringify(err);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : JSON.stringify(err);
           if (msg.includes('ALREADY_MEMBER') || msg.includes('already')) {
             skipped++;
           } else {
@@ -774,9 +815,9 @@ export function ClientIntegrationsTab({
       } else {
         toast.success(`${created} user(s) created, ${skipped} already existed`);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Transfer users error:', err);
-      toast.error('Failed to transfer users: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to transfer users: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setIsTransferringUsers(false);
       setShowTransferUsersConfirm(false);
@@ -1094,7 +1135,7 @@ export function ClientIntegrationsTab({
                     <div>
                       <p className="font-medium">TGA data mismatch</p>
                       <p className="text-xs mt-1">
-                        {tgaData.scopeMismatch.details.map((d: any) =>
+                        {tgaData.scopeMismatch.details.map((d) =>
                           `Loaded ${d.loaded} of ${d.stored} ${d.type}s`
                         ).join('. ')}. Refresh. If persists, report.
                       </p>
@@ -1307,7 +1348,7 @@ export function ClientIntegrationsTab({
                                 }`}>
                                   {qual.status_label || qual.status || '-'}
                                 </span>
-                                {(qual as any).scope_state === 'teach_out' && (
+                                {qual.scope_state === 'teach_out' && (
                                   <span
                                     className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
@@ -1363,7 +1404,7 @@ export function ClientIntegrationsTab({
                                 }`}>
                                   {skill.status_label || skill.status || '-'}
                                 </span>
-                                {(skill as any).scope_state === 'teach_out' && (
+                                {skill.scope_state === 'teach_out' && (
                                   <span
                                     className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
@@ -1418,7 +1459,7 @@ export function ClientIntegrationsTab({
                                 }`}>
                                   {unit.status_label || unit.status || '-'}
                                 </span>
-                                {(unit as any).scope_state === 'teach_out' && (
+                                {unit.scope_state === 'teach_out' && (
                                   <span
                                     className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
@@ -1472,7 +1513,7 @@ export function ClientIntegrationsTab({
                                 }`}>
                                   {course.status_label || course.status || '-'}
                                 </span>
-                                {(course as any).scope_state === 'teach_out' && (
+                                {course.scope_state === 'teach_out' && (
                                   <span
                                     className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
@@ -1525,7 +1566,7 @@ export function ClientIntegrationsTab({
                                 }`}>
                                   {tp.status_label || tp.status || '-'}
                                 </span>
-                                {(tp as any).scope_state === 'teach_out' && (
+                                {tp.scope_state === 'teach_out' && (
                                   <span
                                     className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
@@ -1589,8 +1630,8 @@ export function ClientIntegrationsTab({
                       { label: 'Courses', items: tgaData.courses },
                       { label: 'Packages', items: tgaData.trainingPackages },
                     ].map(({ label, items }) => {
-                      const current = items.filter((i: any) => i.scope_state === 'current').length;
-                      const teachOut = items.filter((i: any) => i.scope_state === 'teach_out').length;
+                      const current = items.filter((i) => i.scope_state === 'current').length;
+                      const teachOut = items.filter((i) => i.scope_state === 'teach_out').length;
                       return (
                         <div key={label} className="rounded border p-2">
                           <p className="font-semibold">{label}</p>
@@ -1620,7 +1661,7 @@ export function ClientIntegrationsTab({
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {tgaData.qualifications.slice(0, 5).map((q: any) => (
+                          {tgaData.qualifications.slice(0, 5).map((q) => (
                             <TableRow key={q.id}>
                               <TableCell className="font-mono text-xs">{q.qualification_code}</TableCell>
                               <TableCell className="text-xs">{q.usageRecommendation_raw ?? '—'}</TableCell>
@@ -1647,7 +1688,7 @@ export function ClientIntegrationsTab({
                     <p className="text-xs">TGA raw total: <span className="font-mono font-semibold">{debugInfo.lastSyncRun.payload.raw_total}</span> → Kept: <span className="font-mono font-semibold">{debugInfo.lastSyncRun.payload.kept_total ?? '?'}</span></p>
                   )}
                   <div className="grid grid-cols-5 gap-2 text-xs">
-                    {Object.entries(debugInfo.lastSyncRun.payload.diagnostics as Record<string, any>).map(([type, diag]: [string, any]) => (
+                    {Object.entries(debugInfo.lastSyncRun.payload.diagnostics).map(([type, diag]) => (
                       <div key={type} className="rounded border p-2">
                         <p className="font-semibold">{type}</p>
                         <p className="font-mono">{diag.raw_total} raw</p>

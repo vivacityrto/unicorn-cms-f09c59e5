@@ -46,8 +46,8 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
   const [nullStatusCount, setNullStatusCount] = useState(0);
 
   // Renewal dates
-  const currentRenewal = (pkg as any).next_renewal_date
-    ? parseISO((pkg as any).next_renewal_date)
+  const currentRenewal = pkg.next_renewal_date
+    ? parseISO(pkg.next_renewal_date)
     : addYears(parseISO(pkg.membership_started_at), 1);
   const periodStart = subYears(currentRenewal, 1);
   const newRenewalDate = addYears(currentRenewal, 1);
@@ -63,17 +63,17 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
 
         // Fetch burndown, included_minutes, and null-status stages in parallel
         const [burndownResult, instanceResult, nullStagesResult] = await Promise.all([
-          (supabase as any)
+          supabase
             .from('v_package_burndown')
             .select('remaining_minutes, included_minutes')
             .eq('package_instance_id', instanceId)
             .maybeSingle(),
-          (supabase as any)
+          supabase
             .from('package_instances')
             .select('included_minutes, start_renewal_date')
             .eq('id', instanceId)
             .single(),
-          (supabase as any)
+          supabase
             .from('stage_instances')
             .select('id')
             .eq('packageinstance_id', instanceId)
@@ -119,7 +119,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
       // previous value - avoids the compounding date drift that previously
       // corrupted a renewal window after a double-renewal-click (see
       // docs/audit-log/entries/2026-07-06-farsta-package-burndown-renewal-date.md).
-      const { error: renewError } = await (supabase as any)
+      const { error: renewError } = await supabase
         .from('package_instances')
         .update({
           next_renewal_date: format(newRenewalDate, 'yyyy-MM-dd'),
@@ -134,7 +134,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
       // and open the next. carried_in_minutes is what actually makes "Carry
       // Over" credit the new period's allowance (previously it only inserted
       // a time entry that every usage calculation deliberately excludes).
-      const { data: openPeriod } = await (supabase as any)
+      const { data: openPeriod } = await supabase
         .from('package_renewal_periods')
         .select('id, period_number')
         .eq('package_instance_id', instanceId)
@@ -142,14 +142,14 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         .maybeSingle();
 
       if (openPeriod) {
-        const { error: closeError } = await (supabase as any)
+        const { error: closeError } = await supabase
           .from('package_renewal_periods')
           .update({ closed_at: new Date().toISOString(), hours_used_at_close: pkg.hours_used ?? null })
           .eq('id', openPeriod.id);
         if (closeError) throw closeError;
       }
 
-      const { error: periodError } = await (supabase as any)
+      const { error: periodError } = await supabase
         .from('package_renewal_periods')
         .insert({
           tenant_id: tenantId,
@@ -178,19 +178,19 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
             source: 'system',
             start_at: format(currentRenewal, "yyyy-MM-dd'T'00:00:00"),
             notes: `Carry-over of ${formatMinutes(cappedCarryOver)} from ${format(periodStart, 'dd MMM yyyy')} – ${format(currentRenewal, 'dd MMM yyyy')}.${isCapped ? ` Capped at package inclusion of ${formatMinutes(includedMinutes)}.` : ''}`,
-          } as any);
+          });
         if (timeError) throw timeError;
       }
 
       // 3. Reset recurring stages and recurring staff tasks
       // Fetch stage_instances for this package instance
-      const { data: stageInstances } = await (supabase as any)
+      const { data: stageInstances } = await supabase
         .from('stage_instances')
         .select('id, is_recurring, status')
         .eq('packageinstance_id', instanceId);
 
       if (stageInstances && stageInstances.length > 0) {
-        const stageInstanceIds = stageInstances.map((si: any) => si.id);
+        const stageInstanceIds = stageInstances.map((si) => si.id);
 
         // 3a. Reset recurring stages (e.g. annual Compliance Health Check,
         // Assessment Validation) back to a fresh cycle - stage_instances.is_recurring
@@ -201,11 +201,11 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         // renewal must never resurrect a stage that was deliberately marked
         // irrelevant. Also excludes stages already 'not_started' (nothing to reset).
         const recurringStageInstanceIds = stageInstances
-          .filter((si: any) => si.is_recurring && si.status !== 'na' && si.status !== 'not_started')
-          .map((si: any) => si.id);
+          .filter((si) => si.is_recurring && si.status !== 'na' && si.status !== 'not_started')
+          .map((si) => si.id);
 
         if (recurringStageInstanceIds.length > 0) {
-          const { error: stageResetError } = await (supabase as any)
+          const { error: stageResetError } = await supabase
             .from('stage_instances')
             .update({ status: 'not_started', completion_date: null, status_date: null, event_conducted_date: null })
             .in('id', recurringStageInstanceIds);
@@ -213,13 +213,13 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         }
 
         // Fetch task instances with their staff_task is_recurring flag
-        const { data: taskInstances } = await (supabase as any)
+        const { data: taskInstances } = await supabase
           .from('staff_task_instances')
           .select('id, stafftask_id')
           .in('stageinstance_id', stageInstanceIds);
 
         if (taskInstances && taskInstances.length > 0) {
-          const staffTaskIds = [...new Set(taskInstances.map((t: any) => t.stafftask_id).filter(Boolean))] as number[];
+          const staffTaskIds = [...new Set(taskInstances.map((t) => t.stafftask_id).filter(Boolean))] as number[];
 
           if (staffTaskIds.length > 0) {
             const { data: staffTasks } = await supabase
@@ -228,15 +228,15 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
               .in('id', staffTaskIds);
 
             const recurringIds = new Set(
-              (staffTasks || []).filter((st: any) => st.is_recurring).map((st: any) => st.id)
+              (staffTasks || []).filter((st) => st.is_recurring).map((st) => st.id)
             );
 
             const tasksToReset = taskInstances
-              .filter((ti: any) => ti.stafftask_id && recurringIds.has(ti.stafftask_id))
-              .map((ti: any) => ti.id);
+              .filter((ti) => ti.stafftask_id && recurringIds.has(ti.stafftask_id))
+              .map((ti) => ti.id);
 
             if (tasksToReset.length > 0) {
-              await (supabase as any)
+              await supabase
                 .from('staff_task_instances')
                 .update({ status: 'not_started', status_id: 0, completion_date: null })
                 .in('id', tasksToReset);
@@ -273,7 +273,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         : 'No time carried over (forfeited).';
 
       // Look up legacy client_id
-      const { data: clientRow } = await (supabase as any)
+      const { data: clientRow } = await supabase
         .from('v_client_to_tenant')
         .select('client_id')
         .eq('tenant_id', tenantId)
@@ -302,9 +302,9 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
       );
       onOpenChange(false);
       onSuccess();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Renewal error:', err);
-      toast.error(err.message || 'Failed to renew package');
+      toast.error(err instanceof Error ? err.message : 'Failed to renew package');
     } finally {
       setProcessing(false);
     }

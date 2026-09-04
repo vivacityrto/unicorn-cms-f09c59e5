@@ -132,21 +132,21 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
   // Load active Vivacity staff for the assignment dropdown + avatars
   useEffect(() => {
     (async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name, email, is_vivacity_internal, unicorn_role, disabled, archived, kpi_pod, is_system_account')
         .or('is_vivacity_internal.eq.true,unicorn_role.in.(Admin,CSC,Super Admin)');
       const rows = (data ?? []).filter(
-        (u: any) => !u.disabled && !u.archived && u.kpi_pod !== 'qa' && !u.is_system_account && u.user_uuid,
+        (u) => !u.disabled && !u.archived && u.kpi_pod !== 'qa' && !u.is_system_account && u.user_uuid,
       );
-      rows.sort((a: any, b: any) => staffName(a).localeCompare(staffName(b)));
-      setStaffList(rows as StaffMember[]);
+      rows.sort((a, b) => staffName(a).localeCompare(staffName(b)));
+      setStaffList(rows);
     })();
   }, []);
 
   const loadConversations = async () => {
     setLoading(true);
-    const { data: convos, error } = await (supabase as any)
+    const { data: convos, error } = await supabase
       .from('tenant_conversations')
       .select('*')
       .eq('tenant_id', tenantId)
@@ -161,14 +161,14 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     // Determine last sender per conversation to compute "unread" (last msg from client)
     if (list.length > 0) {
       const ids = list.map((c) => c.id);
-      const { data: lastMsgs } = await (supabase as any)
+      const { data: lastMsgs } = await supabase
         .from('tenant_messages')
         .select('conversation_id, sender_type, created_at')
         .in('conversation_id', ids)
         .order('created_at', { ascending: false });
       const seen = new Map<string, 'client' | 'staff'>();
-      (lastMsgs ?? []).forEach((m: any) => {
-        if (!seen.has(m.conversation_id)) seen.set(m.conversation_id, m.sender_type);
+      (lastMsgs ?? []).forEach((m) => {
+        if (!seen.has(m.conversation_id)) seen.set(m.conversation_id, m.sender_type as 'client' | 'staff');
       });
       list.forEach((c) => {
         c.last_sender_type = seen.get(c.id) ?? null;
@@ -189,7 +189,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     const channel = supabase
       .channel(`tenant-messages:${tenantId}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'tenant_messages', filter: `tenant_id=eq.${tenantId}` },
         () => {
           loadConversations();
@@ -205,7 +205,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
 
   const loadMessages = async (conversationId: string) => {
     setMessagesLoading(true);
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('tenant_messages')
       .select('id, conversation_id, sender_type, sender_user_uuid, body, created_at')
       .eq('conversation_id', conversationId)
@@ -219,12 +219,12 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     const rows = (data ?? []) as Message[];
     const senderIds = Array.from(new Set(rows.map((m) => m.sender_user_uuid).filter(Boolean))) as string[];
     if (senderIds.length > 0) {
-      const { data: users } = await (supabase as any)
+      const { data: users } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name')
         .in('user_uuid', senderIds);
       const nameMap = new Map<string, string>();
-      (users ?? []).forEach((u: any) =>
+      (users ?? []).forEach((u) =>
         nameMap.set(u.user_uuid, [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown'),
       );
       rows.forEach((m) => {
@@ -238,12 +238,12 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     // attachments
     const msgIds = rows.map((m) => m.id);
     if (msgIds.length > 0) {
-      const { data: atts } = await (supabase as any)
+      const { data: atts } = await supabase
         .from('tenant_message_attachments')
-        .select('id, message_id, filename, storage_path, mime_type')
+        .select('id, message_id, filename, storage_path, mime_type, file_size, created_at')
         .in('message_id', msgIds);
       const grouped = new Map<string, Message['attachments']>();
-      (atts ?? []).forEach((a: any) => {
+      (atts ?? []).forEach((a) => {
         const arr = grouped.get(a.message_id) ?? [];
         arr!.push(a);
         grouped.set(a.message_id, arr);
@@ -261,7 +261,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     await loadMessages(c.id);
     // Mark conversation as read for this staff user
     if (currentUserId) {
-      await (supabase as any)
+      await supabase
         .from('conversation_participants')
         .upsert(
           {
@@ -294,7 +294,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
 
   const assignConversation = async (assigneeUuid: string | null) => {
     if (!selected || !canChangeStatus) return;
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('tenant_conversations')
       .update({ assigned_to_user_uuid: assigneeUuid, updated_at: new Date().toISOString() })
       .eq('id', selected.id);
@@ -311,7 +311,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     if (assigneeUuid && assigneeUuid !== currentUserId) {
       const assignee = staffById.get(assigneeUuid);
       const subject = selected.subject || '(No subject)';
-      await (supabase as any)
+      await supabase
         .from('user_notifications')
         .upsert(
           {
@@ -340,7 +340,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     if (!selected || (!reply.trim() && replyFiles.length === 0) || !currentUserId) return;
     setSending(true);
     const body = reply.trim();
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('tenant_messages')
       .insert({
         conversation_id: selected.id,
@@ -359,15 +359,15 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     for (const file of replyFiles) {
       try {
         await uploadMessageAttachment(supabase, file, tenantId, selected.id, data.id);
-      } catch (uploadError: any) {
+      } catch (uploadError) {
         toast({
           title: `Attachment failed: ${file.name}`,
-          description: uploadError?.message || 'The message was sent without this attachment.',
+          description: uploadError instanceof Error ? uploadError.message : 'The message was sent without this attachment.',
           variant: 'destructive',
         });
       }
     }
-    await (supabase as any)
+    await supabase
       .from('tenant_conversations')
       .update({
         last_message_at: new Date().toISOString(),
@@ -393,8 +393,8 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
       try {
         validateAttachment(file);
         accepted.push(file);
-      } catch (error: any) {
-        toast({ title: error?.message || `Could not attach ${file.name}`, variant: 'destructive' });
+      } catch (error) {
+        toast({ title: error instanceof Error ? error.message : `Could not attach ${file.name}`, variant: 'destructive' });
       }
     }
     if (accepted.length) setReplyFiles((prev) => [...prev, ...accepted]);
@@ -403,7 +403,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
 
   const changeStatus = async (newStatus: 'open' | 'resolved' | 'closed') => {
     if (!selected || !canChangeStatus) return;
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('tenant_conversations')
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq('id', selected.id);
@@ -486,12 +486,12 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
                 const created = (conversations.find((c) => c.id === newId) ?? null) as Conversation | null;
                 if (created) await openConversation(created);
                 else {
-                  const { data } = await (supabase as any)
+                  const { data } = await supabase
                     .from('tenant_conversations')
                     .select('*')
                     .eq('id', newId)
                     .single();
-                  if (data) await openConversation(data as Conversation);
+                  if (data) await openConversation(data);
                 }
               }}
             />
@@ -926,8 +926,8 @@ function ComposePanel({
       try {
         validateAttachment(file);
         accepted.push(file);
-      } catch (error: any) {
-        toast({ title: error?.message || `Could not attach ${file.name}`, variant: 'destructive' });
+      } catch (error) {
+        toast({ title: error instanceof Error ? error.message : `Could not attach ${file.name}`, variant: 'destructive' });
       }
     }
     if (accepted.length) setQueuedFiles((prev) => [...prev, ...accepted]);
@@ -945,7 +945,7 @@ function ComposePanel({
     }
     setSubmitting(true);
     const now = new Date().toISOString();
-    const { data: conv, error: convErr } = await (supabase as any)
+    const { data: conv, error: convErr } = await supabase
       .from('tenant_conversations')
       .insert({
         tenant_id: tenantId,
@@ -964,10 +964,10 @@ function ComposePanel({
       setSubmitting(false);
       return;
     }
-    const conversationId = conv.id as string;
+    const conversationId = conv.id;
 
     // Add sender as participant (RLS requirement for inserting messages)
-    await (supabase as any)
+    await supabase
       .from('conversation_participants')
       .upsert(
         {
@@ -979,7 +979,7 @@ function ComposePanel({
         { onConflict: 'conversation_id,user_id' },
       );
 
-    const { data: newMessage, error: msgErr } = await (supabase as any).from('tenant_messages').insert({
+    const { data: newMessage, error: msgErr } = await supabase.from('tenant_messages').insert({
       conversation_id: conversationId,
       tenant_id: tenantId,
       sender_type: 'staff',
@@ -994,10 +994,10 @@ function ComposePanel({
     for (const file of queuedFiles) {
       try {
         await uploadMessageAttachment(supabase, file, tenantId, conversationId, newMessage.id);
-      } catch (uploadError: any) {
+      } catch (uploadError) {
         toast({
           title: `Attachment failed: ${file.name}`,
-          description: uploadError?.message || 'The message was sent without this attachment.',
+          description: uploadError instanceof Error ? uploadError.message : 'The message was sent without this attachment.',
           variant: 'destructive',
         });
       }
@@ -1021,7 +1021,7 @@ function ComposePanel({
         </div>
         <div>
           <label className="text-sm font-medium">Type</label>
-          <Select value={type} onValueChange={(v) => setType(v as any)}>
+          <Select value={type} onValueChange={(v) => setType(v as 'csc' | 'general' | 'task' | 'package')}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

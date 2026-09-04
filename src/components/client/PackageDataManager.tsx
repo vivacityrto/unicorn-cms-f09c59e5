@@ -87,9 +87,9 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
       toast({ title: 'Error loading packages', description: instancesRes.error.message, variant: 'destructive' });
     } else if (instancesRes.data) {
       const packageNames = new Map<number, string>();
-      (packagesRes.data ?? []).forEach((p: any) => packageNames.set(p.id, p.name));
+      (packagesRes.data ?? []).forEach((p) => packageNames.set(p.id, p.name));
 
-      const mapped: PackageInstanceRow[] = instancesRes.data.map((d: any) => ({
+      const mapped: PackageInstanceRow[] = instancesRes.data.map((d) => ({
         id: d.id,
         package_id: d.package_id,
         package_name: packageNames.get(d.package_id) ?? `Package #${d.package_id}`,
@@ -107,25 +107,25 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
       const instIds = mapped.map(r => r.id);
       if (instIds.length > 0) {
         const [tplRes, instStagesRes] = await Promise.all([
-          (supabase as any)
+          supabase
             .from('package_stages')
             .select('package_id, stage_id, sort_order, stages:stage_id(id, name)')
             .in('package_id', pkgIds),
-          (supabase as any)
+          supabase
             .from('stage_instances')
             .select('packageinstance_id, stage_id')
             .in('packageinstance_id', instIds),
         ]);
 
         const tplByPkg = new Map<number, { stage_id: number; name: string; sort_order: number }[]>();
-        (tplRes.data ?? []).forEach((t: any) => {
+        (tplRes.data ?? []).forEach((t) => {
           const arr = tplByPkg.get(t.package_id) ?? [];
           arr.push({ stage_id: Number(t.stage_id), name: t.stages?.name ?? `Stage #${t.stage_id}`, sort_order: t.sort_order });
           tplByPkg.set(t.package_id, arr);
         });
 
         const presentByInst = new Map<number, Set<number>>();
-        (instStagesRes.data ?? []).forEach((si: any) => {
+        (instStagesRes.data ?? []).forEach((si) => {
           const set = presentByInst.get(si.packageinstance_id) ?? new Set<number>();
           set.add(Number(si.stage_id));
           presentByInst.set(si.packageinstance_id, set);
@@ -164,7 +164,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
     };
   };
 
-  const setEdit = (id: number, field: keyof RowEdits, value: any) => {
+  const setEdit = <K extends keyof RowEdits>(id: number, field: K, value: RowEdits[K]) => {
     setEdits(prev => ({
       ...prev,
       [id]: { ...prev[id], [field]: value },
@@ -183,7 +183,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
     setSavingId(row.id);
     const eff = getEffective(row);
 
-    const updateData: Record<string, any> = {};
+    const updateData: { start_date?: string | null; end_date?: string | null; is_active?: boolean; included_minutes?: number; is_complete?: boolean } = {};
     if (e.start_date !== undefined) updateData.start_date = e.start_date;
     if (e.end_date !== undefined) updateData.end_date = e.end_date;
     if (e.is_active !== undefined) updateData.is_active = e.is_active;
@@ -251,10 +251,10 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
 
       if (stages && stages.length > 0) {
         const stageIds = stages.map(s => s.id);
-        await (supabase.from('client_task_instances') as any).delete().in('stageinstance_id', stageIds);
-        await (supabase.from('email_instances') as any).delete().in('stageinstance_id', stageIds);
-        await (supabase.from('document_instances') as any).delete().in('stageinstance_id', stageIds);
-        await (supabase.from('stage_instances') as any).delete().in('id', stageIds);
+        await supabase.from('client_task_instances').delete().in('stageinstance_id', stageIds);
+        await supabase.from('email_instances').delete().in('stageinstance_id', stageIds);
+        await supabase.from('document_instances').delete().in('stageinstance_id', stageIds);
+        await supabase.from('stage_instances').delete().in('id', stageIds);
       }
 
       // 2. Delete time entries
@@ -264,10 +264,10 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
       await supabase.from('phase_instances').delete().eq('package_instance_id', row.id);
 
       // 4. Delete package_instance_state_log
-      await (supabase.from('package_instance_state_log') as any).delete().eq('package_instance_id', row.id);
+      await supabase.from('package_instance_state_log').delete().eq('package_instance_id', row.id);
 
       // 5. Delete compliance_score_snapshots
-      await (supabase.from('compliance_score_snapshots') as any).delete().eq('package_instance_id', row.id);
+      await supabase.from('compliance_score_snapshots').delete().eq('package_instance_id', row.id);
 
       // 6. Delete the package instance itself
       const { error } = await supabase.from('package_instances').delete().eq('id', row.id);
@@ -278,8 +278,8 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
       setDeletingRow(null);
       await fetchData();
       onSuccess?.();
-    } catch (err: any) {
-      toast({ title: 'Delete failed', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Delete failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setIsDeleting(false);
     }
@@ -288,18 +288,18 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
   const handleAuditStages = async (row: PackageInstanceRow) => {
     setAuditing(true);
     try {
-      const { data, error } = await (supabase as any).rpc('repair_package_instance_stages', {
+      const { data, error } = await supabase.rpc('repair_package_instance_stages', {
         p_package_instance_id: row.id,
         p_dry_run: false,
       });
       if (error) throw error;
-      const inserted = (data as any)?.inserted_count ?? 0;
+      const inserted = (data as { inserted_count?: number } | null)?.inserted_count ?? 0;
       toast({ title: 'Stages repaired', description: `${inserted} missing stage${inserted === 1 ? '' : 's'} added to ${row.package_name}.` });
       setAuditTarget(null);
       await fetchData();
       onSuccess?.();
-    } catch (err: any) {
-      toast({ title: 'Audit failed', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Audit failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setAuditing(false);
     }

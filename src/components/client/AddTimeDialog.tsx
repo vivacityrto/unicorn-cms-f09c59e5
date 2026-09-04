@@ -31,6 +31,7 @@ import { NotifyClientCheckbox } from './NotifyClientCheckbox';
 import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import type { ScopeTag } from '@/hooks/useTenantMemberships';
+import type { TablesInsert } from '@/integrations/supabase/types';
 
 interface WorkTypeOption {
   code: string;
@@ -172,24 +173,24 @@ export function AddTimeDialog({
   // Fetch work types from dd_work_types lookup
   useEffect(() => {
     (async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('dd_work_types')
         .select('code, label')
         .eq('is_active', true)
         .order('sort_order');
-      if (data) setWorkTypes(data as WorkTypeOption[]);
+      if (data) setWorkTypes(data);
     })();
   }, []);
 
   // Fetch work sub types from dd_work_sub_type lookup
   useEffect(() => {
     (async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('dd_work_sub_type')
         .select('code, label, category')
         .eq('is_active', true)
         .order('sort_order');
-      if (data) setWorkSubTypes(data as WorkSubTypeOption[]);
+      if (data) setWorkSubTypes(data);
     })();
   }, []);
 
@@ -198,7 +199,7 @@ export function AddTimeDialog({
     if (!open) return;
     (async () => {
       // Fetch Vivacity staff
-      const { data: staffData } = await (supabase as any)
+      const { data: staffData } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name, avatar_url')
         .eq('disabled', false)
@@ -209,16 +210,27 @@ export function AddTimeDialog({
       // Fetch tenant users via tenant_users junction
       let tenantUsers: TeamMember[] = [];
       if (tenantId) {
-        const { data: tuData } = await (supabase as any)
+        // The result type is passed explicitly as a generic argument to
+        // .select() because this nested-embed shape otherwise makes the
+        // Supabase client's automatic embed-inference recurse too deep
+        // ("Type instantiation is excessively deep and possibly infinite").
+        type TenantUserWithProfile = {
+          user_uuid: string;
+          users: { user_uuid: string; first_name: string | null; last_name: string | null; avatar_url: string | null; disabled: boolean | null } | null;
+        };
+        const { data: tuData } = await supabase
           .from('tenant_users')
-          .select('user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)')
+          .select<
+            'user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)',
+            TenantUserWithProfile
+          >('user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)')
           .eq('tenant_id', tenantId)
           .limit(200);
         if (tuData) {
           tenantUsers = tuData
-            .map((tu: any) => tu.users)
-            .filter((u: any) => u && !u.disabled)
-            .map((u: any) => ({
+            .map((tu) => tu.users)
+            .filter((u): u is NonNullable<typeof u> => !!u && !u.disabled)
+            .map((u) => ({
               user_uuid: u.user_uuid,
               first_name: u.first_name,
               last_name: u.last_name,
@@ -228,7 +240,7 @@ export function AddTimeDialog({
       }
 
       // Merge and deduplicate
-      const allMembers = [...(staffData || []), ...tenantUsers] as TeamMember[];
+      const allMembers = [...(staffData || []), ...tenantUsers];
       const seen = new Set<string>();
       const deduped = allMembers.filter(m => {
         if (seen.has(m.user_uuid) || m.user_uuid === user?.id) return false;
@@ -265,9 +277,9 @@ export function AddTimeDialog({
           : { data: [], error: null };
 
         console.log('[AddTimeDialog] packages lookup', { pkgIds, pkgData, pkgErr });
-        const pkgMap = new Map((pkgData || []).map((p: any) => [Number(p.id), p]));
+        const pkgMap = new Map((pkgData || []).map((p) => [Number(p.id), p]));
 
-        const instances: PackageInstance[] = piData.map((pi: any) => {
+        const instances: PackageInstance[] = piData.map((pi) => {
           const pkg = pkgMap.get(Number(pi.package_id));
           const hoursMinutes = ((Number(pi.hours_included) || 0) + (Number(pi.hours_added) || 0)) * 60;
           const includedMinutes = Number(pi.included_minutes) || 0;
@@ -301,7 +313,7 @@ export function AddTimeDialog({
   useEffect(() => {
     if (!open) return;
     (async () => {
-      const { data: rel } = await (supabase as any)
+      const { data: rel } = await supabase
         .from('tenant_relationships')
         .select('parent_tenant_id')
         .eq('child_tenant_id', tenantId)
@@ -309,7 +321,7 @@ export function AddTimeDialog({
         .maybeSingle();
       const parentId = rel?.parent_tenant_id ? Number(rel.parent_tenant_id) : null;
       if (!parentId) { setParentTenant(null); return; }
-      const { data: parent } = await (supabase as any)
+      const { data: parent } = await supabase
         .from('tenants')
         .select('id, rto_id, rto_name, name')
         .eq('id', parentId)
@@ -352,7 +364,7 @@ export function AddTimeDialog({
         .is('timeentry_id', null)
         .order('created_at', { ascending: false })
         .limit(20);
-      setRecentNotes((data || []) as any);
+      setRecentNotes(data || []);
     })();
   }, [linkNote, tenantId]);
 
@@ -453,7 +465,7 @@ export function AddTimeDialog({
         source: 'manual',
         package_id: selectedInstanceId,
         package_instance_id: selectedInstanceId,
-      } as any).select('id').single();
+      }).select('id').single();
 
       if (error) throw error;
 
@@ -486,7 +498,7 @@ export function AddTimeDialog({
         description: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m logged${notifyUserId ? ' — notification sent' : ''}`,
       });
 
-      const entryId = (insertedEntry as any)?.id ?? null;
+      const entryId = insertedEntry?.id ?? null;
       if (linkNote && entryId) {
         const opened = await handleLinkOrCreateNote(entryId);
         if (opened) {
@@ -497,8 +509,8 @@ export function AddTimeDialog({
       resetForm();
       onOpenChange(false);
       onSuccess?.();
-    } catch (err: any) {
-      toast({ title: 'Failed to add time', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Failed to add time', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -529,7 +541,7 @@ export function AddTimeDialog({
   // not reset/close — the dialog's onOpenChange handles that).
   const handleLinkOrCreateNote = async (entryId: string): Promise<boolean> => {
     if (linkNoteMode === 'existing' && selectedNoteId) {
-      await supabase.from('notes').update({ timeentry_id: entryId } as any).eq('id', selectedNoteId);
+      await supabase.from('notes').update({ timeentry_id: entryId }).eq('id', selectedNoteId);
       return false;
     }
     if (linkNoteMode === 'new') {
@@ -906,13 +918,28 @@ export function AddTimeDialog({
           prelinkedTimeEntryId={pendingTimeEntryId}
           activePackages={noteFormActivePackages}
           onSave={async (data) => {
-            // Insert the note here, then link the prelinked time entry
+            // Insert the note here, then link the prelinked time entry.
+            // KNOWN BUGS (pre-existing, found while removing `any` here - see
+            // execution-efficiency-log.md), one fixed and two left:
+            // - FIXED: this set `user_id` (notes' legacy numeric column, wrong
+            //   type for the auth UUID) and never set `created_by`, which is
+            //   required with no DB default - useNotes.tsx's createNote (the
+            //   canonical insert path) sets created_by and never touches
+            //   user_id/user_uuid at all. Matched to that canonical shape.
+            // - NOT FIXED: `client_id` and `package_instance_id` are not real
+            //   columns on `notes` at all (confirmed against generated types -
+            //   the real columns are `package_id`/`parent_id`/`parent_type`).
+            //   Every insert through this exact code path has always been
+            //   rejected by PostgREST with an unknown-column error. Left as an
+            //   honest cast rather than guessing the intended parent_type/
+            //   parent_id mapping, which needs a product decision (out of
+            //   scope for a type-only batch).
             const { data: inserted, error } = await supabase
               .from('notes')
               .insert({
                 tenant_id: tenantId,
                 client_id: clientId,
-                user_id: user?.id,
+                created_by: user?.id ?? '',
                 title: data.title || null,
                 note_details: data.content,
                 note_type: data.noteType,
@@ -921,13 +948,13 @@ export function AddTimeDialog({
                 is_pinned: data.isPinned,
                 package_instance_id: data.packageInstanceId !== 'none' ? Number(data.packageInstanceId) : (selectedInstance?.id ?? null),
                 timeentry_id: pendingTimeEntryId,
-              } as any)
+              } as unknown as TablesInsert<'notes'>)
               .select('id')
               .single();
             if (error) throw error;
-            const noteId = (inserted as any)?.id;
+            const noteId = inserted?.id;
             if (noteId && pendingTimeEntryId) {
-              await supabase.from('notes').update({ timeentry_id: pendingTimeEntryId } as any).eq('id', noteId);
+              await supabase.from('notes').update({ timeentry_id: pendingTimeEntryId }).eq('id', noteId);
             }
             setShowNoteDialog(false);
             setPendingTimeEntryId(null);
