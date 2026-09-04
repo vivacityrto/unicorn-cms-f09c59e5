@@ -101,6 +101,11 @@ export default function ClientDetail() {
     if (tabParam && tabParam !== activeTab) {
       setActiveTab(tabParam);
     }
+    // activeTab is intentionally excluded: this effect only syncs FROM the
+    // URL, and must not re-run every time a local tab click changes
+    // activeTab (that direction is handled by handleTabChange writing back
+    // to the URL instead).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Tab switches from clicking within the page (as opposed to the URL-sync
@@ -266,13 +271,6 @@ export default function ClientDetail() {
   };
 
   useEffect(() => {
-    if (tenantIdNum) {
-      fetchTenantBasic();
-      fetchPrimaryContact();
-    }
-  }, [tenantIdNum]);
-
-  useEffect(() => {
     if (!tenantIdNum || !profile?.rto_number) {
       setTgaLinked(false);
       return;
@@ -292,9 +290,9 @@ export default function ClientDetail() {
     return () => { cancelled = true; };
   }, [tenantIdNum, profile?.rto_number]);
 
-  const fetchTenantBasic = async () => {
+  const fetchTenantBasic = useCallback(async () => {
     if (!tenantIdNum) return;
-    
+
     try {
       setLoading(true);
       const [{ data, error }, { data: tp }] = await Promise.all([
@@ -320,9 +318,9 @@ export default function ClientDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantIdNum, navigate]);
 
-  const fetchPrimaryContact = async () => {
+  const fetchPrimaryContact = useCallback(async () => {
     if (!tenantIdNum) return;
     try {
       const [{ data: pcRow }, { data: scRow }] = await Promise.all([
@@ -373,7 +371,14 @@ export default function ClientDetail() {
     } catch (err) {
       console.error('Error fetching primary contact:', err);
     }
-  };
+  }, [tenantIdNum]);
+
+  useEffect(() => {
+    if (tenantIdNum) {
+      fetchTenantBasic();
+      fetchPrimaryContact();
+    }
+  }, [tenantIdNum, fetchTenantBasic, fetchPrimaryContact]);
 
   if (loading) {
     return (

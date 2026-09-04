@@ -374,19 +374,19 @@ function SortableQuestionCard({
     return responseValue;
   };
   
-  const getResponseNotes = () => {
+  const getResponseNotes = useCallback(() => {
     if (responseValue && typeof responseValue === 'object' && 'notes' in responseValue) {
       return responseValue.notes as string;
     }
     return '';
-  };
-  
-  const getResponseMediaFiles = () => {
+  }, [responseValue]);
+
+  const getResponseMediaFiles = useCallback(() => {
     if (responseValue && typeof responseValue === 'object' && 'media_files' in responseValue) {
       return responseValue.media_files as { name: string; url: string }[];
     }
     return [];
-  };
+  }, [responseValue]);
 
   // Local state for notes and media in preview mode
   const [previewNotes, setPreviewNotes] = useState(getResponseNotes());
@@ -396,7 +396,7 @@ function SortableQuestionCard({
   useEffect(() => {
     setPreviewNotes(getResponseNotes());
     setPreviewMediaFiles(getResponseMediaFiles());
-  }, [responseValue]);
+  }, [responseValue, getResponseNotes, getResponseMediaFiles]);
 
   // Update response with notes/files in preview mode
   const updatePreviewResponse = (newValue?: any, newNotes?: string, newMediaFiles?: { name: string; url: string }[]) => {

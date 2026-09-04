@@ -156,7 +156,7 @@ export default function ClickUpImport() {
       fetchTasks();
     }, taskSearch.trim() ? 400 : 0);
     return () => clearTimeout(timer);
-  }, [fetchTasks]);
+  }, [fetchTasks, taskSearch]);
 
   const handleApiSync = async () => {
     setApiSyncing(true);

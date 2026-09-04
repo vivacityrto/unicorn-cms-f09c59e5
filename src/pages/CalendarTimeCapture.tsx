@@ -222,7 +222,7 @@ export default function CalendarTimeCapture() {
       fetchEvents({ startDate: dateRange.start, endDate: dateRange.end });
       fetchDrafts();
     }
-  }, [connected, dateRange]);
+  }, [connected, dateRange, fetchEvents, fetchDrafts]);
 
   const fetchClients = async () => {
     const { data } = await supabase
