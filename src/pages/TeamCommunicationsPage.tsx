@@ -41,17 +41,10 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BulkMessageDialog } from "@/components/communications/BulkMessageDialog";
 import { BulkMessageHistory } from "@/components/communications/BulkMessageHistory";
+import type { Tables } from "@/integrations/supabase/types";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
-interface Conversation {
-  id: string;
-  tenant_id: number;
-  topic: string;
-  type: string;
-  subject: string | null;
-  status: string;
-  last_message_at: string | null;
-  last_message_preview: string | null;
-  created_at: string;
+interface Conversation extends Tables<"tenant_conversations"> {
   tenant_name?: string;
   isUnread?: boolean;
   isMine?: boolean;
@@ -107,39 +100,39 @@ export default function TeamCommunicationsPage() {
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ["team-conversations"],
     queryFn: async (): Promise<Conversation[]> => {
-      const { data, error } = await (supabase
-        .from("tenant_conversations" as any)
+      const { data, error } = await supabase
+        .from("tenant_conversations")
         .select("*")
-        .order("last_message_at", { ascending: false, nullsFirst: false })) as any;
+        .order("last_message_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       if (!data?.length) return [];
 
       // Fetch tenant names
-      const tenantIds = [...new Set((data as any[]).map((c: any) => c.tenant_id))];
+      const tenantIds = [...new Set(data.map((c) => c.tenant_id))];
       const { data: tenants } = await supabase
         .from("tenants")
         .select("id, name")
-        .in("id", tenantIds as number[]);
+        .in("id", tenantIds);
 
       const tenantMap = new Map<number, string>();
-      (tenants || []).forEach((t: any) => tenantMap.set(t.id, t.name));
+      (tenants || []).forEach((t) => tenantMap.set(t.id, t.name));
 
-      const convoIds = (data as any[]).map((c: any) => c.id);
+      const convoIds = data.map((c) => c.id);
       const readMap = new Map<string, string | null>();
       const mineSet = new Set<string>();
       if (currentUserId && convoIds.length > 0) {
-        const { data: participants } = await (supabase
-          .from("conversation_participants" as any)
+        const { data: participants } = await supabase
+          .from("conversation_participants")
           .select("conversation_id, last_read_at")
           .eq("user_id", currentUserId)
-          .in("conversation_id", convoIds)) as any;
-        (participants || []).forEach((p: any) => {
+          .in("conversation_id", convoIds);
+        (participants || []).forEach((p) => {
           readMap.set(p.conversation_id, p.last_read_at);
           mineSet.add(p.conversation_id);
         });
       }
 
-      return (data as any[]).map((c: any) => ({
+      return data.map((c) => ({
         ...c,
         tenant_name: tenantMap.get(c.tenant_id) || `Tenant ${c.tenant_id}`,
         isUnread: c.last_message_at
@@ -165,12 +158,12 @@ export default function TeamCommunicationsPage() {
   const { data: staffConvIds } = useQuery({
     queryKey: ["team-comms-staff-conv-ids", filterStaff],
     queryFn: async (): Promise<Set<string>> => {
-      const { data, error } = await (supabase
-        .from("conversation_participants" as any)
+      const { data, error } = await supabase
+        .from("conversation_participants")
         .select("conversation_id")
-        .eq("user_id", filterStaff)) as any;
+        .eq("user_id", filterStaff);
       if (error) throw error;
-      return new Set<string>((data || []).map((p: any) => p.conversation_id));
+      return new Set<string>((data || []).map((p) => p.conversation_id));
     },
     enabled: filterStaff !== "all",
   });
@@ -227,15 +220,15 @@ export default function TeamCommunicationsPage() {
     queryKey: ["team-conversations-last-sender", convoIdList.length, convoIdList[0] ?? null],
     queryFn: async (): Promise<Record<string, string | null>> => {
       if (convoIdList.length === 0) return {};
-      const { data, error } = await (supabase
-        .from("tenant_messages" as any)
+      const { data, error } = await supabase
+        .from("tenant_messages")
         .select("conversation_id, sender_type, created_at")
         .in("conversation_id", convoIdList)
         .order("created_at", { ascending: false })
-        .limit(2000)) as any;
+        .limit(2000);
       if (error) return {};
       const seen: Record<string, string | null> = {};
-      for (const row of (data ?? []) as any[]) {
+      for (const row of data ?? []) {
         if (!(row.conversation_id in seen)) seen[row.conversation_id] = row.sender_type ?? null;
       }
       return seen;
@@ -252,43 +245,43 @@ export default function TeamCommunicationsPage() {
     queryKey: ["team-conversation-messages", selectedId],
     queryFn: async (): Promise<Message[]> => {
       if (!selectedId) return [];
-      const { data, error } = await (supabase
-        .from("tenant_messages" as any)
+      const { data, error } = await supabase
+        .from("tenant_messages")
         .select("id, conversation_id, sender_user_uuid, sender_type, body, created_at")
         .eq("conversation_id", selectedId)
-        .order("created_at", { ascending: true })) as any;
+        .order("created_at", { ascending: true });
       if (error) throw error;
       if (!data?.length) return [];
 
-      const senderIds = Array.from(new Set<string>((data as any[]).map((m: any) => m.sender_user_uuid)));
+      const senderIds = Array.from(new Set(data.map((m) => m.sender_user_uuid)));
 
-      const { data: users } = await (supabase
+      const { data: users } = await supabase
         .from("users")
         .select("user_uuid, first_name, last_name, avatar_url")
-        .in("user_uuid", senderIds)) as any;
+        .in("user_uuid", senderIds);
 
       const nameMap = new Map<string, string>();
       const avatarMap = new Map<string, string | null>();
-      (users || []).forEach((u: any) => {
+      (users || []).forEach((u) => {
         nameMap.set(u.user_uuid, [u.first_name, u.last_name].filter(Boolean).join(" "));
         avatarMap.set(u.user_uuid, u.avatar_url ?? null);
       });
 
-      const messageIds = (data as any[]).map((m: any) => m.id);
+      const messageIds = data.map((m) => m.id);
       const attMap = new Map<string, MessageAttachmentRow[]>();
       if (messageIds.length > 0) {
-        const { data: attRows } = await (supabase
-          .from("tenant_message_attachments" as any)
+        const { data: attRows } = await supabase
+          .from("tenant_message_attachments")
           .select("*")
-          .in("message_id", messageIds)) as any;
-        (attRows || []).forEach((a: any) => {
+          .in("message_id", messageIds);
+        (attRows || []).forEach((a) => {
           const arr = attMap.get(a.message_id) || [];
           arr.push(a as MessageAttachmentRow);
           attMap.set(a.message_id, arr);
         });
       }
 
-      const mapped = (data as any[]).map((m: any) => {
+      const mapped: Message[] = data.map((m) => {
         const resolved = nameMap.get(m.sender_user_uuid) || "";
         const fallback = m.sender_type === "staff" ? "Vivacity Team" : "Unknown";
         return {
@@ -302,12 +295,12 @@ export default function TeamCommunicationsPage() {
           sender_avatar_url: avatarMap.get(m.sender_user_uuid) ?? null,
           attachments: attMap.get(m.id) || [],
         };
-      }) as Message[];
+      });
 
       // Fire-and-forget read audit.
       if (mapped.length > 0 && currentUserId) {
         const conv = conversations.find(c => c.id === selectedId);
-        void (supabase
+        void supabase
           .from("audit_events")
           .insert({
             entity: "tenant_message_read",
@@ -319,7 +312,8 @@ export default function TeamCommunicationsPage() {
               tenant_id: conv?.tenant_id ?? null,
               message_count: mapped.length,
             },
-          } as any) as any).then(() => {}, () => {});
+          })
+          .then(() => {}, () => {});
       }
 
       return mapped;
@@ -333,7 +327,7 @@ export default function TeamCommunicationsPage() {
     const channel = supabase
       .channel(`team-tm:${selectedId}`)
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
@@ -356,15 +350,16 @@ export default function TeamCommunicationsPage() {
     const channel = supabase
       .channel("team-conversations-live")
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "tenant_conversations",
         },
-        (payload: any) => {
+        (payload: RealtimePostgresChangesPayload<Tables<"tenant_conversations">>) => {
           qc.invalidateQueries({ queryKey: ["team-conversations"] });
-          if (selectedId && payload.new?.id === selectedId) {
+          const updatedId = (payload.new as Partial<Tables<"tenant_conversations">>)?.id;
+          if (selectedId && updatedId === selectedId) {
             qc.invalidateQueries({ queryKey: ["team-conversation-messages", selectedId] });
           }
         }
@@ -380,30 +375,31 @@ export default function TeamCommunicationsPage() {
     setSearchParams({ thread: convId }, { replace: true });
     if (!currentUserId) return;
     // Stamp last_read_at without touching the existing role
-    await (supabase
-      .from("conversation_participants" as any)
-      .update({ last_read_at: new Date().toISOString() } as any)
+    await supabase
+      .from("conversation_participants")
+      .update({ last_read_at: new Date().toISOString() })
       .eq("conversation_id", convId)
-      .eq("user_id", currentUserId)) as any;
+      .eq("user_id", currentUserId);
 
     // Mark any message notifications for this conversation as read (fire-and-forget)
-    void (supabase
-      .from("user_notifications" as any)
-      .update({ is_read: true } as any)
+    void supabase
+      .from("user_notifications")
+      .update({ is_read: true })
       .eq("user_id", currentUserId)
       .eq("source_id", convId)
-      .eq("is_read", false) as any).then(() => {}, () => {});
+      .eq("is_read", false)
+      .then(() => {}, () => {});
 
     qc.invalidateQueries({ queryKey: ["team-unread-count"] });
   }, [currentUserId, qc, setSearchParams]);
 
   const handleMarkUnread = useCallback(async () => {
     if (!currentUserId || !selectedId) return;
-    const { error } = await (supabase
-      .from("conversation_participants" as any)
-      .update({ last_read_at: null } as any)
+    const { error } = await supabase
+      .from("conversation_participants")
+      .update({ last_read_at: null })
       .eq("conversation_id", selectedId)
-      .eq("user_id", currentUserId)) as any;
+      .eq("user_id", currentUserId);
     if (error) {
       toast.error("Could not mark as unread");
       return;
@@ -430,41 +426,42 @@ export default function TeamCommunicationsPage() {
     mutationFn: async ({ conversationId, body }: { conversationId: string; body: string }) => {
       if (!currentUserId) throw new Error("Not authenticated");
       const conv = conversations.find(c => c.id === conversationId);
+      if (!conv) throw new Error("Conversation not found");
 
       // Step 1: Insert participant row only if not already present (never overwrite role)
-      const { error: partError } = await (supabase
-        .from("conversation_participants" as any)
+      const { error: partError } = await supabase
+        .from("conversation_participants")
         .upsert(
           {
             conversation_id: conversationId,
             user_id: currentUserId,
             role: "staff",
             last_read_at: new Date().toISOString(),
-          } as any,
+          },
           { onConflict: "conversation_id,user_id", ignoreDuplicates: true }
-        )) as any;
+        );
       if (partError) throw partError;
 
       // Step 2: Stamp last_read_at on the existing row regardless of its role
-      await (supabase
-        .from("conversation_participants" as any)
-        .update({ last_read_at: new Date().toISOString() } as any)
+      await supabase
+        .from("conversation_participants")
+        .update({ last_read_at: new Date().toISOString() })
         .eq("conversation_id", conversationId)
-        .eq("user_id", currentUserId)) as any;
+        .eq("user_id", currentUserId);
 
-      const { data: newMsg, error } = await (supabase
-        .from("tenant_messages" as any)
+      const { data: newMsg, error } = await supabase
+        .from("tenant_messages")
         .insert({
           conversation_id: conversationId,
           sender_user_uuid: currentUserId,
           sender_type: "staff",
           body,
-          tenant_id: conv?.tenant_id,
-        } as any)
+          tenant_id: conv.tenant_id,
+        })
         .select("id")
-        .single()) as any;
+        .single();
       if (error) throw error;
-      return { messageId: newMsg.id as string, tenantId: conv?.tenant_id };
+      return { messageId: newMsg.id, tenantId: conv.tenant_id };
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["team-conversation-messages", vars.conversationId] });
@@ -481,8 +478,8 @@ export default function TeamCommunicationsPage() {
       try {
         validateAttachment(f);
         accepted.push(f);
-      } catch (err: any) {
-        toast.error(err?.message ?? "Invalid file");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Invalid file");
       }
     }
     setQueuedFiles(prev => {
@@ -513,8 +510,8 @@ export default function TeamCommunicationsPage() {
       for (const f of filesToUpload) {
         try {
           await uploadMessageAttachment(supabase, f, result.tenantId, selectedId, result.messageId);
-        } catch (err: any) {
-          toast.warning(`Attachment "${f.name}" failed to upload: ${err?.message ?? "unknown error"}`);
+        } catch (err) {
+          toast.warning(`Attachment "${f.name}" failed to upload: ${err instanceof Error ? err.message : "unknown error"}`);
         }
       }
       qc.invalidateQueries({ queryKey: ["team-conversation-messages", selectedId] });
@@ -548,8 +545,8 @@ export default function TeamCommunicationsPage() {
         try {
           validateAttachment(file);
           images.push(file);
-        } catch (err: any) {
-          toast.error(err?.message ?? "Invalid file");
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Invalid file");
         }
       }
     }
@@ -823,8 +820,8 @@ function NewTeamMessageDialog({
       try {
         validateAttachment(f);
         accepted.push(f);
-      } catch (err: any) {
-        toast.error(err?.message || `"${f.name}" was rejected.`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : `"${f.name}" was rejected.`);
       }
     }
     if (accepted.length) setQueuedFiles(prev => [...prev, ...accepted]);
@@ -841,8 +838,8 @@ function NewTeamMessageDialog({
     try {
       const tid = parseInt(tenantId);
       // Create conversation
-      const { data: conv, error } = await (supabase
-        .from("tenant_conversations" as any)
+      const { data: conv, error } = await supabase
+        .from("tenant_conversations")
         .insert({
           tenant_id: tid,
           topic: "general",
@@ -850,20 +847,20 @@ function NewTeamMessageDialog({
           subject: subject.trim() || null,
           created_by_user_uuid: currentUserId,
           status: "open",
-        } as any)
+        })
         .select("id")
-        .single()) as any;
+        .single();
       if (error) throw error;
 
       // Add staff as participant (must exist before message INSERT for RLS).
-      const { error: staffPartError } = await (supabase
-        .from("conversation_participants" as any)
+      const { error: staffPartError } = await supabase
+        .from("conversation_participants")
         .upsert({
           conversation_id: conv.id,
           user_id: currentUserId,
           role: "staff",
           last_read_at: new Date().toISOString(),
-        } as any, { onConflict: "conversation_id,user_id" })) as any;
+        }, { onConflict: "conversation_id,user_id" });
       if (staffPartError) throw staffPartError;
 
       // Add all tenant users as participants so every client user can read/write.
@@ -874,14 +871,14 @@ function NewTeamMessageDialog({
       if (tenantUsersError) throw tenantUsersError;
 
       if (tenantUsers?.length) {
-        const clientRows = tenantUsers.map((u: any) => ({
+        const clientRows = tenantUsers.map((u) => ({
           conversation_id: conv.id,
           user_id: u.user_id,
           role: "client",
         }));
-        const { error: clientPartError } = await (supabase
-          .from("conversation_participants" as any)
-          .upsert(clientRows, { onConflict: "conversation_id,user_id", ignoreDuplicates: true })) as any;
+        const { error: clientPartError } = await supabase
+          .from("conversation_participants")
+          .upsert(clientRows, { onConflict: "conversation_id,user_id", ignoreDuplicates: true });
         if (clientPartError) {
           // conversation_participants.user_id FKs to auth.users, not public.users — a
           // stale public.users row with no matching auth account (seeded/fixture
@@ -890,26 +887,26 @@ function NewTeamMessageDialog({
           // bad participant only costs that one participant, not the whole tenant.
           console.error(`Batch client-participant upsert failed (${clientPartError.message}), retrying row-by-row`);
           for (const row of clientRows) {
-            const { error: rowErr } = await (supabase
-              .from("conversation_participants" as any)
-              .upsert(row, { onConflict: "conversation_id,user_id", ignoreDuplicates: true })) as any;
+            const { error: rowErr } = await supabase
+              .from("conversation_participants")
+              .upsert(row, { onConflict: "conversation_id,user_id", ignoreDuplicates: true });
             if (rowErr) console.error(`Skipping participant ${row.user_id} — ${rowErr.message}`);
           }
         }
       }
 
       // Send first message
-      const { data: newMsg, error: msgErr } = await (supabase
-        .from("tenant_messages" as any)
+      const { data: newMsg, error: msgErr } = await supabase
+        .from("tenant_messages")
         .insert({
           conversation_id: conv.id,
           sender_user_uuid: currentUserId,
           sender_type: "staff",
           body: message.trim(),
           tenant_id: tid,
-        } as any)
+        })
         .select("id")
-        .single()) as any;
+        .single();
       if (msgErr) throw msgErr;
 
       // Upload queued attachments (best-effort, per-file)
@@ -946,7 +943,7 @@ function NewTeamMessageDialog({
             <Select value={tenantId} onValueChange={setTenantId}>
               <SelectTrigger><SelectValue placeholder="Select a client…" /></SelectTrigger>
               <SelectContent>
-                {tenants.map((t: any) => (
+                {tenants.map((t) => (
                   <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
                 ))}
               </SelectContent>
