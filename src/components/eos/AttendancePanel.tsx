@@ -98,7 +98,7 @@ export const AttendancePanel = ({
     queryKey: ['dd-meeting-attendance-status'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('dd_meeting_attendance_status' as any)
+        .from('dd_meeting_attendance_status')
         .select('label, value')
         .eq('is_active', true)
         .order('sort_order');

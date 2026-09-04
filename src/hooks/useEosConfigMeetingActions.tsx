@@ -18,7 +18,7 @@ export const useEosConfigMeetingActions = () => {
 
   const createMeetingFromConfiguration = useMutation({
     mutationFn: async ({ meetingType, scheduledDate }: { meetingType: ConfigMeetingType; scheduledDate: Date }) => {
-      const { data, error } = await (supabase.rpc as any)('create_meeting_from_configuration', {
+      const { data, error } = await supabase.rpc('create_meeting_from_configuration', {
         p_meeting_type: meetingType,
         p_scheduled_date: scheduledDate.toISOString(),
       });
@@ -36,7 +36,7 @@ export const useEosConfigMeetingActions = () => {
 
   const syncMeetingToConfiguration = useMutation({
     mutationFn: async (meetingId: string) => {
-      const { error } = await (supabase.rpc as any)('sync_meeting_to_configuration', {
+      const { error } = await supabase.rpc('sync_meeting_to_configuration', {
         p_meeting_id: meetingId,
       });
       if (error) throw error;
@@ -53,7 +53,7 @@ export const useEosConfigMeetingActions = () => {
 
   const skipMeetingOccurrence = useMutation({
     mutationFn: async ({ meetingId, reason }: { meetingId: string; reason?: string }) => {
-      const { error } = await (supabase.rpc as any)('skip_meeting_occurrence', {
+      const { error } = await supabase.rpc('skip_meeting_occurrence', {
         p_meeting_id: meetingId,
         p_reason: reason ?? null,
       });

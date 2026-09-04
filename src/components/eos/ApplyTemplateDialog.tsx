@@ -24,6 +24,15 @@ import { toast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import type { MeetingType, EosAgendaTemplate } from '@/types/eos';
 
+// Segments predating the current EosAgendaSegment shape used `segment_name`/`duration`
+// instead of `name`/`duration_minutes` - tolerate both rather than assuming the new shape.
+interface LegacySegment {
+  name?: string;
+  segment_name?: string;
+  duration_minutes?: number;
+  duration?: number;
+}
+
 interface ApplyTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -64,11 +73,14 @@ export const ApplyTemplateDialog = ({
 
   const calculateTotalDuration = (template: EosAgendaTemplate) => {
     if (!template.segments || !Array.isArray(template.segments)) return 0;
-    return template.segments.reduce((sum: number, seg: any) => sum + (seg.duration_minutes || seg.duration || 0), 0);
+    return (template.segments as unknown as LegacySegment[]).reduce(
+      (sum, seg) => sum + (seg.duration_minutes || seg.duration || 0),
+      0
+    );
   };
-  
-  const getSegmentName = (seg: any) => seg.segment_name || seg.name || 'Unnamed';
-  const getSegmentDuration = (seg: any) => seg.duration_minutes || seg.duration || 0;
+
+  const getSegmentName = (seg: LegacySegment) => seg.segment_name || seg.name || 'Unnamed';
+  const getSegmentDuration = (seg: LegacySegment) => seg.duration_minutes || seg.duration || 0;
 
   const handleApply = async () => {
     if (!selectedTemplateId) {
@@ -90,11 +102,11 @@ export const ApplyTemplateDialog = ({
       queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
       queryClient.invalidateQueries({ queryKey: ['eos-meetings'] });
       onOpenChange(false);
-    } catch (error: any) {
-      toast({ 
-        title: 'Error applying template', 
-        description: error.message, 
-        variant: 'destructive' 
+    } catch (error) {
+      toast({
+        title: 'Error applying template',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive'
       });
     } finally {
       setIsApplying(false);
@@ -167,7 +179,7 @@ export const ApplyTemplateDialog = ({
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Agenda Segments</Label>
                 <div className="flex flex-wrap gap-1">
-                  {Array.isArray(selectedTemplate.segments) && selectedTemplate.segments.map((seg: any, idx: number) => (
+                  {Array.isArray(selectedTemplate.segments) && (selectedTemplate.segments as unknown as LegacySegment[]).map((seg, idx) => (
                     <Badge key={idx} variant="outline" className="text-xs">
                       <FileText className="w-3 h-3 mr-1" />
                       {getSegmentName(seg)} ({getSegmentDuration(seg)}m)

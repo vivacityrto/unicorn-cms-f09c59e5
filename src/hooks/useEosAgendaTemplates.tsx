@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
 import { VIVACITY_TENANT_ID } from './useVivacityTeamUsers';
 import type { EosAgendaTemplate, MeetingType } from '@/types/eos';
+import type { Json, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 export const useEosAgendaTemplates = () => {
   const { profile } = useAuth();
@@ -38,16 +39,18 @@ export const useEosAgendaTemplates = () => {
   };
 
   const createTemplate = useMutation({
-    mutationFn: async (template: Partial<EosAgendaTemplate>) => {
+    mutationFn: async (template: Partial<EosAgendaTemplate> & { meeting_type: MeetingType; template_name: string }) => {
       const { tenant_id, ...templateData } = template;
+      const insertData: TablesInsert<'eos_agenda_templates'> = {
+        ...templateData,
+        segments: templateData.segments as unknown as Json,
+        tenant_id: VIVACITY_TENANT_ID,
+        is_system: false,
+        is_archived: false,
+      };
       const { data, error } = await supabase
         .from('eos_agenda_templates')
-        .insert({ 
-          ...templateData, 
-          tenant_id: VIVACITY_TENANT_ID,
-          is_system: false,
-          is_archived: false,
-        } as any)
+        .insert(insertData)
         .select()
         .single();
       
@@ -65,9 +68,13 @@ export const useEosAgendaTemplates = () => {
 
   const updateTemplate = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<EosAgendaTemplate> & { id: string }) => {
+      const updateData: TablesUpdate<'eos_agenda_templates'> = {
+        ...updates,
+        segments: updates.segments ? (updates.segments as unknown as Json) : undefined,
+      };
       const { data, error } = await supabase
         .from('eos_agenda_templates')
-        .update(updates as any)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -96,12 +103,12 @@ export const useEosAgendaTemplates = () => {
           meeting_type: original.meeting_type,
           template_name: `${original.template_name} (Copy)`,
           description: original.description,
-          segments: original.segments,
+          segments: original.segments as unknown as Json,
           is_default: false,
           is_system: false,
           is_archived: false,
           created_by: profile?.user_uuid,
-        } as any)
+        })
         .select()
         .single();
       
@@ -122,14 +129,14 @@ export const useEosAgendaTemplates = () => {
       // First, unset any existing default for this meeting type
       await supabase
         .from('eos_agenda_templates')
-        .update({ is_default: false } as any)
+        .update({ is_default: false })
         .eq('tenant_id', VIVACITY_TENANT_ID)
         .eq('meeting_type', meetingType);
 
       // Set the new default
       const { data, error } = await supabase
         .from('eos_agenda_templates')
-        .update({ is_default: true } as any)
+        .update({ is_default: true })
         .eq('id', id)
         .select()
         .single();
@@ -150,7 +157,7 @@ export const useEosAgendaTemplates = () => {
     mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from('eos_agenda_templates')
-        .update({ is_archived: true } as any)
+        .update({ is_archived: true })
         .eq('id', id)
         .select()
         .single();

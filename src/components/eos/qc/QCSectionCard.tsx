@@ -10,6 +10,10 @@ import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { Heart, CheckCircle2, MinusCircle, XCircle } from 'lucide-react';
 import type { QCSection, QCAnswer, QCPrompt } from '@/types/qc';
 
+interface LocalAnswerValue {
+  value: string | boolean;
+}
+
 interface QCSectionCardProps {
   qcId: string;
   section: QCSection;
@@ -29,7 +33,7 @@ const ALIGNMENT_OPTIONS = [
 
 export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, respondentRole, isMeetingMode, disabled, coreValues }: QCSectionCardProps) => {
   const { upsertAnswer } = useQuarterlyConversations();
-  const [localAnswers, setLocalAnswers] = useState<Record<string, any>>({});
+  const [localAnswers, setLocalAnswers] = useState<Record<string, LocalAnswerValue>>({});
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
   const [isDirty, setIsDirty] = useState(false);
   const [saveCount, setSaveCount] = useState(0);
@@ -43,14 +47,14 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
   }, [upsertAnswer.isPending, upsertAnswer.isError, isDirty]);
 
   useEffect(() => {
-    const answerMap: Record<string, any> = {};
+    const answerMap: Record<string, LocalAnswerValue> = {};
     myAnswers.forEach(answer => {
-      answerMap[answer.prompt_key] = answer.value_json;
+      answerMap[answer.prompt_key] = answer.value_json as unknown as LocalAnswerValue;
     });
     setLocalAnswers(answerMap);
   }, [myAnswers]);
 
-  const handleAnswerChange = (promptKey: string, value: any) => {
+  const handleAnswerChange = (promptKey: string, value: string | boolean) => {
     const newAnswers = { ...localAnswers, [promptKey]: { value } };
     setLocalAnswers(newAnswers);
     setIsDirty(true);
@@ -75,12 +79,12 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
     return valueJson?.value || '';
   };
 
-  const renderPromptInput = (prompt: QCPrompt, value: any, isDisabled: boolean, idPrefix: string = '') => {
+  const renderPromptInput = (prompt: QCPrompt, value: string | boolean, isDisabled: boolean, idPrefix: string = '') => {
     switch (prompt.type) {
       case 'text':
         return (
           <Input
-            value={value}
+            value={value as string}
             onChange={(e) => !isDisabled && handleAnswerChange(prompt.key, e.target.value)}
             disabled={isDisabled}
             placeholder={prompt.label}
@@ -89,7 +93,7 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
       case 'textarea':
         return (
           <Textarea
-            value={value}
+            value={value as string}
             onChange={(e) => !isDisabled && handleAnswerChange(prompt.key, e.target.value)}
             disabled={isDisabled}
             placeholder={prompt.label}
@@ -117,7 +121,7 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
       case 'rating':
         return (
           <RadioGroup
-            value={value}
+            value={value as string}
             onValueChange={(val) => !isDisabled && handleAnswerChange(prompt.key, val)}
             disabled={isDisabled}
             className="flex gap-4"
@@ -134,7 +138,7 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
       case 'checklist':
         return (
           <Textarea
-            value={value}
+            value={value as string}
             onChange={(e) => !isDisabled && handleAnswerChange(prompt.key, e.target.value)}
             disabled={isDisabled}
             placeholder="Enter items, one per line"
@@ -186,11 +190,13 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
 
         {coreValues!.map((valueName, idx) => {
           const promptKey = `cv_alignment_${idx}`;
-          const myValue = localAnswers[promptKey]?.value || '';
+          // Alignment ratings are always strings ('rarely'/'sometimes'/'consistently'),
+          // never the boolean branch of LocalAnswerValue (that's only for boolean-type prompts).
+          const myValue = (localAnswers[promptKey]?.value as string | undefined) || '';
           const otherValue = getOtherValue(promptKey);
 
           if (isMeetingMode) {
-            const myNotes = localAnswers[`cv_notes_${idx}`]?.value || '';
+            const myNotes = (localAnswers[`cv_notes_${idx}`]?.value as string | undefined) || '';
             const otherNotes = getOtherValue(`cv_notes_${idx}`);
             return (
               <div key={idx} className="rounded-lg border border-border p-4 space-y-3">
@@ -295,7 +301,7 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
           }
 
           // Pre-meeting: single rating per value + notes
-          const myNotes = localAnswers[`cv_notes_${idx}`]?.value || '';
+          const myNotes = (localAnswers[`cv_notes_${idx}`]?.value as string | undefined) || '';
           return (
             <div key={idx} className="rounded-lg border border-border p-4 space-y-3">
               <div className="flex items-center justify-between">

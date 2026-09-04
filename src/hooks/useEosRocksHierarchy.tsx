@@ -5,6 +5,7 @@ import { useAuth } from './useAuth';
 import { VIVACITY_TENANT_ID } from './useVivacityTeamUsers';
 import { toast } from '@/hooks/use-toast';
 import type { EosRock, RockWithHierarchy, RockLevel } from '@/types/eos';
+import type { Json, TablesInsert } from '@/integrations/supabase/types';
 import { 
   buildRockHierarchy, 
   groupRocksByLevel, 
@@ -136,8 +137,9 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
   // Create rock mutation
   const createRock = useMutation({
     mutationFn: async (input: CreateRockInput) => {
-      const rockData = {
+      const rockData: TablesInsert<'eos_rocks'> = {
         ...input,
+        milestones: input.milestones as unknown as Json,
         tenant_id: VIVACITY_TENANT_ID,
         status: input.status || DB_ROCK_STATUS.ON_TRACK,
         quarter_year: input.quarter_year || quarterYear,
@@ -148,7 +150,7 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
 
       const { data, error } = await supabase
         .from('eos_rocks')
-        .insert(rockData as any)
+        .insert(rockData)
         .select()
         .single();
       
@@ -176,7 +178,7 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
     mutationFn: async ({ id, ...updates }: Partial<EosRock> & { id: string }) => {
       const { data, error } = await supabase
         .from('eos_rocks')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single();

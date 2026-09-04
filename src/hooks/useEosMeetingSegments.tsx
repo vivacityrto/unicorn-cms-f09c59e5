@@ -42,8 +42,7 @@ export const useEosMeetingSegments = (meetingId: string | undefined) => {
 
   const goToPreviousSegment = useMutation({
     mutationFn: async () => {
-      // Type assertion needed - RPC exists but types.ts not regenerated
-      const { data, error } = await (supabase.rpc as any)('go_to_previous_segment', {
+      const { data, error } = await supabase.rpc('go_to_previous_segment', {
         p_meeting_id: meetingId,
       });
       

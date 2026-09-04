@@ -529,7 +529,7 @@ function ConfigurationSettingsPanel({
                 required_seat_ids: requiredSeatIds,
                 scorecard_metric_cap: scorecardCap,
                 rocks_scope: rocksScope,
-              } as any)
+              })
             }
           >
             Save Settings

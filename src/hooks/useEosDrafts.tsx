@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { EosVtoDraft, EosChartDraft } from '@/types/eos';
+import type { Json } from '@/integrations/supabase/types';
 
 export const useEosVtoDrafts = (meetingId?: string) => {
   const queryClient = useQueryClient();
@@ -22,7 +23,7 @@ export const useEosVtoDrafts = (meetingId?: string) => {
   });
 
   const proposeDraft = useMutation({
-    mutationFn: async (draftJson: Record<string, any>) => {
+    mutationFn: async (draftJson: Record<string, Json | undefined>) => {
       const { data, error } = await supabase.rpc('propose_vto_change', {
         p_meeting_id: meetingId,
         p_draft_json: draftJson,
@@ -70,7 +71,7 @@ export const useEosChartDrafts = (meetingId?: string) => {
   });
 
   const proposeDraft = useMutation({
-    mutationFn: async (draftJson: Record<string, any>) => {
+    mutationFn: async (draftJson: Record<string, Json | undefined>) => {
       const { data, error } = await supabase.rpc('propose_chart_change', {
         p_meeting_id: meetingId,
         p_draft_json: draftJson,

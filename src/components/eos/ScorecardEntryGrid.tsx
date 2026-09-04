@@ -83,7 +83,7 @@ export function ScorecardEntryGrid({ metric, onEdit, onArchive, onDelete, isArch
       title: `Off-track metric: ${metric.name}`,
       description: `${metric.name} is off target of ${metric.target_value} ${metric.unit}`,
       status: 'Open',
-      priority: 2 as any,
+      priority: 2,
     });
   };
 

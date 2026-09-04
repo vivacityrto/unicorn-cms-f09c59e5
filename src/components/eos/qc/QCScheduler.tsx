@@ -114,7 +114,7 @@ export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProp
           message: `${schedulerName} has scheduled a Quarterly Conversation with you for ${formattedDate}. Please complete your self-assessment before the meeting.`,
           link: qcLink,
           created_by: profile?.user_uuid || null,
-        } as any);
+        });
       } catch (e) {
         console.error('Failed to create in-app notification:', e);
       }
@@ -161,8 +161,8 @@ export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProp
       setManagerIds([]);
       setQuarterStart('');
       setScheduledDate('');
-    } catch (error: any) {
-      toast({ title: 'Error scheduling QC', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error scheduling QC', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }

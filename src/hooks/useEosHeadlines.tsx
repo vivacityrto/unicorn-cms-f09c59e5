@@ -24,13 +24,13 @@ export const useEosHeadlines = (meetingId: string | undefined) => {
   });
 
   const createHeadline = useMutation({
-    mutationFn: async (headline: Partial<EosHeadline>) => {
+    mutationFn: async (headline: Partial<EosHeadline> & { meeting_id: string; headline: string }) => {
       const { data, error } = await supabase
         .from('eos_headlines')
         .insert({
           ...headline,
           user_id: profile?.user_uuid,
-        } as any)
+        })
         .select()
         .single();
       

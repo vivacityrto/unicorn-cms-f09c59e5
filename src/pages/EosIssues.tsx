@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, AlertCircle, Circle, CheckCircle2, Archive } from 'lucide-react';
+import { Plus, AlertCircle, Circle, CheckCircle2, Archive, type LucideIcon } from 'lucide-react';
 import { useEosIssues } from '@/hooks/useEos';
 import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -21,7 +21,7 @@ function IssuesContent() {
 
   // Use exact enum values as keys - no transformation
   const getStatusConfig = (status: string) => {
-    const configs: Record<string, { icon: any; color: string; bg: string; label: string }> = {
+    const configs: Record<string, { icon: LucideIcon; color: string; bg: string; label: string }> = {
       'Open': { icon: Circle, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Open' },
       'Discussing': { icon: AlertCircle, color: 'text-yellow-600', bg: 'bg-yellow-50', label: 'Discussing' },
       'In Review': { icon: AlertCircle, color: 'text-purple-600', bg: 'bg-purple-50', label: 'In Review' },

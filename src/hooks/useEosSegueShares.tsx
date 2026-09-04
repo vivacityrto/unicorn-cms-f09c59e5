@@ -14,7 +14,7 @@ export const useEosSegueShares = (meetingId: string | undefined) => {
   const { data: segueShares, isLoading } = useQuery({
     queryKey: ['eos-segue-shares', meetingId],
     queryFn: async () => {
-      const { data: rows, error } = await (supabase as any)
+      const { data: rows, error } = await supabase
         .from('eos_segue_shares')
         .select('*')
         .eq('meeting_id', meetingId!)
@@ -22,24 +22,24 @@ export const useEosSegueShares = (meetingId: string | undefined) => {
 
       if (error) throw error;
 
-      const userIds = (rows ?? []).map((s: any) => s.user_id).filter(Boolean);
+      const userIds = (rows ?? []).map((s) => s.user_id).filter(Boolean);
       const { data: userRows, error: userError } = userIds.length
-        ? await (supabase as any)
+        ? await supabase
             .from('users')
             .select('user_uuid, first_name, last_name')
             .in('user_uuid', userIds)
         : { data: [], error: null };
       if (userError) throw userError;
 
-      const userMap = new Map((userRows ?? []).map((u: any) => [u.user_uuid, u]));
-      return (rows ?? []).map((s: any) => ({ ...s, users: userMap.get(s.user_id) ?? null })) as EosSegueShare[];
+      const userMap = new Map((userRows ?? []).map((u) => [u.user_uuid, u]));
+      return (rows ?? []).map((s) => ({ ...s, users: userMap.get(s.user_id) ?? null })) as EosSegueShare[];
     },
     enabled: !!meetingId,
   });
 
   const createSegueShare = useMutation({
-    mutationFn: async (share: Partial<EosSegueShare>) => {
-      const { data, error } = await (supabase as any)
+    mutationFn: async (share: Omit<Partial<EosSegueShare>, 'users'> & { meeting_id: string; personal_win: string; professional_win: string }) => {
+      const { data, error } = await supabase
         .from('eos_segue_shares')
         .insert({
           ...share,
@@ -62,7 +62,7 @@ export const useEosSegueShares = (meetingId: string | undefined) => {
 
   const deleteSegueShare = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('eos_segue_shares')
         .delete()
         .eq('id', id);
