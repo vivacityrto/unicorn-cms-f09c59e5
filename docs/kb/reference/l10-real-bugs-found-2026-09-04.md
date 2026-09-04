@@ -117,21 +117,31 @@ fix only added a compile-time generic, never touched the runtime request.
 Same root cause and same fix options as item 5 above (two-step fetch, or an
 actual FK via migration).
 
-## Client Portal — Package Detail (`/client/package/:id`)
+## Admin — Client Package Detail (`/admin/client-packages/:id`)
 
 ### 9. Client Package Detail has never shown a package's stages, tasks, documents, or emails — FIXED
+**Correction (found during live verification, see below): despite its name,
+`ClientPackageDetail.tsx` is a staff-only admin page** (route
+`/admin/client-packages/:clientPackageId`, gated by the deny-by-default RBAC
+rule — a client-role user hitting this URL is redirected to `/dashboard`
+before the page ever mounts). It's where staff drill into one specific
+client's package instance from the admin side, not something clients see
+themselves. The bug and fix below are unaffected by this correction — a
+PostgREST column error fails identically regardless of who's logged in —
+only the "who's been affected" framing changes: it's staff viewing a
+client's package, not clients viewing their own.
+
 `useClientPackageInstances.tsx`'s `fetchPackageStages()` — the data source
-for the client-facing Package Detail page — selected a `status_id` column
-from `stage_instances`. That column was removed from the table in an
-earlier "stage status consolidation Phase A" (the file's own pre-existing
-comment on `STAGE_STATUS_MAP` already documented the removal, just not that
-this specific query still requested it). PostgREST returns a 400 for a
-select referencing a nonexistent column, so this query has **always
-thrown** and the function's catch block has always silently returned an
-empty array. Net effect: every client, viewing any package, has never seen
-that package's stage list, team tasks, client tasks, linked documents, or
-queued emails on this page — regardless of how much real data exists for
-that package instance.
+for this page — selected a `status_id` column from `stage_instances`. That
+column was removed from the table in an earlier "stage status consolidation
+Phase A" (the file's own pre-existing comment on `STAGE_STATUS_MAP` already
+documented the removal, just not that this specific query still requested
+it). PostgREST returns a 400 for a select referencing a nonexistent column,
+so this query has **always thrown** and the function's catch block has
+always silently returned an empty array. Net effect: **staff have never
+seen a package instance's stage list, team tasks, client tasks, linked
+documents, or queued emails on this admin page** — regardless of how much
+real data exists for that package instance.
 
 **Verified before fixing, not guessed**: ran `select column_name from
 information_schema.columns where table_name = 'stage_instances'` directly
@@ -184,9 +194,12 @@ on unrelated features:
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
-had been hidden behind `any`. Seven real, previously-silently-broken features
-got fixed and verified live tonight (including item 9, the most user-facing
-of the night — the client-facing Package Detail page). Five more (items 3,
+had been hidden behind `any`. Seven real, previously-silently-broken features got fixed tonight, six
+verified live so far (item 9 — a staff-facing admin page for viewing a
+client's package instance, see the correction in that item about who's
+actually affected — was verified for its type-safety/lint/test contract;
+its live browser check needed a staff persona and is being re-run). Five
+more (items 3,
 4, 5, 8 above, plus the two `tenant_users`→`users` FK gaps outside Package
 Builder) are confirmed real and written up with enough detail to scope a
 fix, deliberately left
