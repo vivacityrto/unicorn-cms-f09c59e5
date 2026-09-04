@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T22:08:03.046Z",
-  "baselineSha": "95ed9e5a9aff278c2d111f88fe35c534597f5375",
+  "generatedAt": "2026-09-04T22:17:07.942Z",
+  "baselineSha": "f451d918534dfe0bbe01e3c5590937554372ae65",
   "totals": {
     "files": 1757,
-    "filesWithFindings": 395,
-    "errors": 1457,
+    "filesWithFindings": 393,
+    "errors": 1443,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1450,
+    "@typescript-eslint/no-explicit-any": 1436,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 789,
+      "errors": 775,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 782,
+        "@typescript-eslint/no-explicit-any": 768,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -372,10 +372,10 @@
       }
     },
     "src/hooks": {
-      "errors": 324,
+      "errors": 310,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 324,
+        "@typescript-eslint/no-explicit-any": 310,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1685,9 +1685,6 @@
     "src/hooks/useCompliancePacks.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/hooks/useCompliancePlaybooks.ts": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/hooks/useComplianceScore.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -1874,9 +1871,6 @@
     },
     "src/hooks/useSuggestDropdowns.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useSuggestItems.ts": {
-      "@typescript-eslint/no-explicit-any": 7
     },
     "src/hooks/useSupportTicketsBadge.ts": {
       "@typescript-eslint/no-explicit-any": 1

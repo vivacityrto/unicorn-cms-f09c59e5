@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import type { TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 export interface SuggestItem {
   id: string;
@@ -68,7 +69,7 @@ export function useSuggestItems(filters?: {
     queryKey: ['suggest-items', filters],
     queryFn: async (): Promise<SuggestItem[]> => {
       let query = supabase
-        .from('suggest_items' as any)
+        .from('suggest_items')
         .select(SUGGEST_ITEMS_SELECT)
         .eq('is_deleted', false)
         .order('updated_at', { ascending: false });
@@ -89,7 +90,7 @@ export function useSuggestItem(id: string | undefined) {
     queryKey: ['suggest-item', id],
     queryFn: async (): Promise<SuggestItem | null> => {
       const { data, error } = await supabase
-        .from('suggest_items' as any)
+        .from('suggest_items')
         .select(SUGGEST_ITEMS_SELECT)
         .eq('id', id!)
         .maybeSingle();
@@ -103,9 +104,9 @@ export function useSuggestItem(id: string | undefined) {
 export function useCreateSuggestItem() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (item: Record<string, any>) => {
+    mutationFn: async (item: TablesInsert<'suggest_items'>) => {
       const { data, error } = await supabase
-        .from('suggest_items' as any)
+        .from('suggest_items')
         .insert(item)
         .select('id')
         .single();
@@ -127,7 +128,7 @@ export function useReleasedSuggestItems() {
     queryKey: ['suggest-items-released'],
     queryFn: async (): Promise<SuggestItem[]> => {
       const { data, error } = await supabase
-        .from('suggest_items' as any)
+        .from('suggest_items')
         .select(SUGGEST_ITEMS_SELECT)
         .eq('is_deleted', false)
         .not('released_at', 'is', null)
@@ -141,9 +142,9 @@ export function useReleasedSuggestItems() {
 export function useUpdateSuggestItem() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: Record<string, any> & { id: string }) => {
+    mutationFn: async ({ id, ...updates }: TablesUpdate<'suggest_items'> & { id: string }) => {
       const { error } = await supabase
-        .from('suggest_items' as any)
+        .from('suggest_items')
         .update(updates)
         .eq('id', id);
       if (error) throw error;
