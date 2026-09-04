@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -70,6 +71,24 @@ interface UnifiedTask {
   status: string | null;
   createdAt: string | null;
 }
+
+type AttentionHealthRow = Pick<Tables<"v_dashboard_attention_ranked">, "worst_stage_health_status">;
+type TaskTenantRow = Pick<Tables<"tasks_tenants">, "id" | "task_name" | "description" | "due_date" | "priority" | "status" | "created_at">;
+type ClientActionItemRow = Pick<Tables<"client_action_items">, "id" | "title" | "due_date" | "priority" | "status" | "created_at">;
+type OpsWorkItemRow = Pick<Tables<"ops_work_items">, "id" | "title" | "due_at" | "priority" | "status" | "created_at">;
+type BroadcastCampaignRow = Pick<Tables<"broadcast_campaigns">, "id" | "title" | "body" | "target_mode" | "total_recipients" | "sent_at">;
+type TenantConversationRow = Pick<Tables<"tenant_conversations">, "id" | "tenant_id" | "subject" | "topic" | "last_message_at" | "last_message_preview">;
+type ClientMessage = {
+  id: string;
+  tenant_id: number;
+  tenant_name: string;
+  body: string;
+  subject: string;
+  created_at: string | null;
+};
+type EosRockRow = Pick<Tables<"eos_rocks">, "id" | "title" | "status" | "due_date" | "completion_percentage">;
+type CalendarEventRow = Pick<Tables<"calendar_events">, "id" | "title" | "start_at" | "end_at" | "organizer_email" | "organiser_email" | "attendees" | "user_id">;
+type PortfolioClientHealth = { healthy?: number; monitoring?: number; at_risk?: number; critical?: number };
 
 function normalizePriority(p: unknown): "high" | "medium" | "low" | null {
   if (p === null || p === undefined) return null;
@@ -157,7 +176,7 @@ interface SummaryCardProps {
 
 function SummaryCard({ title, value, sub, onClick, accentColor, topAccent, icon: Icon }: SummaryCardProps) {
   const clickable = !!onClick;
-  const Comp: any = clickable ? "button" : "div";
+  const Comp = clickable ? "button" : "div";
   const glow = topAccent ?? "#7130A0";
   return (
     <Comp
@@ -378,7 +397,7 @@ export default function MainDashboard() {
   const [labour, setLabour] = useState<{ overdue_ratio_pct: number | null; client_count: number | null } | null>(null);
   const [kpiPct, setKpiPct] = useState<number | null>(null);
   const [kpiLoading, setKpiLoading] = useState(true);
-  const [rocks, setRocks] = useState<{ total: number; onTrack: number; list: any[] } | null>(null);
+  const [rocks, setRocks] = useState<{ total: number; onTrack: number; list: EosRockRow[] } | null>(null);
 
   // Tasks (unified list)
   const [tasks, setTasks] = useState<UnifiedTask[]>([]);
@@ -386,9 +405,9 @@ export default function MainDashboard() {
   const [dueTodayCount, setDueTodayCount] = useState<number | null>(null);
 
   // Broadcasts
-  const [broadcasts, setBroadcasts] = useState<any[]>([]);
+  const [broadcasts, setBroadcasts] = useState<BroadcastCampaignRow[]>([]);
   // Client messages
-  const [clientMsgs, setClientMsgs] = useState<any[]>([]);
+  const [clientMsgs, setClientMsgs] = useState<ClientMessage[]>([]);
   // Client health
   type HealthCounts = { healthy: number; monitoring: number; at_risk: number; critical: number };
   const [healthMine, setHealthMine] = useState<HealthCounts | null>(null);
@@ -396,7 +415,7 @@ export default function MainDashboard() {
   const [hasMineAssignments, setHasMineAssignments] = useState(false);
   const [healthScope, setHealthScope] = useState<"mine" | "portfolio">("mine");
   // Upcoming calendar
-  const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [upcoming, setUpcoming] = useState<CalendarEventRow[]>([]);
 
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -408,23 +427,22 @@ export default function MainDashboard() {
   useEffect(() => {
     if (!isStaff || !userUuid) return;
     const today = todayIsoLocal();
-    const sb = supabase as any;
 
     // Clients + health donut. Fetches both "my assigned clients" and
     // portfolio-wide counts up front so the Mine/Portfolio toggle switches
     // instantly with no refetch. Defaults to "mine" when the signed-in user
     // has assignments (CSCs), otherwise "portfolio" (devs, admins, etc. who
     // would otherwise see an empty "No client data" state).
-    const tallyHealth = (rows: any[]): HealthCounts => {
+    const tallyHealth = (rows: AttentionHealthRow[]): HealthCounts => {
       const counts: HealthCounts = { healthy: 0, monitoring: 0, at_risk: 0, critical: 0 };
-      rows.forEach((r: any) => {
+      rows.forEach((r) => {
         const k = (r.worst_stage_health_status ?? "").toLowerCase();
-        if (k in counts) (counts as any)[k]++;
+        if (k in counts) counts[k as keyof HealthCounts]++;
       });
       return counts;
     };
     (async () => {
-      const { data } = await sb
+      const { data } = await supabase
         .from("v_dashboard_attention_ranked")
         .select("worst_stage_health_status")
         .eq("assigned_csc_user_id", userUuid)
@@ -439,7 +457,8 @@ export default function MainDashboard() {
       // tenants access policy (plus several expensive joins) once per row,
       // which times out for non-trivial portfolios. The RPC computes the
       // aggregate server-side, bypassing that per-row cost entirely.
-      const { data: portfolioResult, error: portfolioError } = await sb.rpc("rpc_portfolio_client_health");
+      const { data: portfolioData, error: portfolioError } = await supabase.rpc("rpc_portfolio_client_health");
+      const portfolioResult = portfolioData as unknown as PortfolioClientHealth | null;
       if (portfolioError) {
         console.error("rpc_portfolio_client_health failed:", portfolioError);
       } else if (portfolioResult) {
@@ -455,24 +474,24 @@ export default function MainDashboard() {
     // Tasks union
     (async () => {
       const [ttCreated, ttFollowers, caiOwner, caiAssignee, opsOwner, opsCreator] = await Promise.all([
-        sb.from("tasks_tenants").select("id, task_name, description, due_date, priority, status, created_at").eq("created_by", userUuid),
-        sb.from("tasks_tenants").select("id, task_name, description, due_date, priority, status, created_at").contains("followers", [userUuid]),
-        sb
+        supabase.from("tasks_tenants").select("id, task_name, description, due_date, priority, status, created_at").eq("created_by", userUuid),
+        supabase.from("tasks_tenants").select("id, task_name, description, due_date, priority, status, created_at").contains("followers", [userUuid]),
+        supabase
           .from("client_action_items")
           .select("id, title, due_date, priority, status, created_at")
           .eq("owner_user_id", userUuid)
           .not("status", "in", "(done,cancelled)"),
-        sb
+        supabase
           .from("client_action_items")
           .select("id, title, due_date, priority, status, created_at")
           .eq("assignee_user_id", userUuid)
           .not("status", "in", "(done,cancelled)"),
-        sb
+        supabase
           .from("ops_work_items")
           .select("id, title, due_at, priority, status, created_at")
           .eq("owner_user_uuid", userUuid)
           .not("status", "in", "(done,cancelled)"),
-        sb
+        supabase
           .from("ops_work_items")
           .select("id, title, due_at, priority, status, created_at")
           .eq("created_by", userUuid)
@@ -481,7 +500,7 @@ export default function MainDashboard() {
 
       const merged: UnifiedTask[] = [];
       const seen = new Set<string>();
-      const pushTT = (r: any) => {
+      const pushTT = (r: TaskTenantRow) => {
         const key = `tt-${r.id}`;
         if (seen.has(key)) return;
         seen.add(key);
@@ -496,7 +515,7 @@ export default function MainDashboard() {
           createdAt: r.created_at ?? null,
         });
       };
-      const pushCAI = (r: any) => {
+      const pushCAI = (r: ClientActionItemRow) => {
         const key = `ca-${r.id}`;
         if (seen.has(key)) return;
         seen.add(key);
@@ -511,7 +530,7 @@ export default function MainDashboard() {
           createdAt: r.created_at ?? null,
         });
       };
-      const pushOps = (r: any) => {
+      const pushOps = (r: OpsWorkItemRow) => {
         const key = `ops-${r.id}`;
         if (seen.has(key)) return;
         seen.add(key);
@@ -563,7 +582,7 @@ export default function MainDashboard() {
 
     // Labour
     (async () => {
-      const { data } = await sb
+      const { data } = await supabase
         .from("v_dashboard_labour_efficiency")
         .select("overdue_ratio_pct, client_count")
         .eq("csc_user_id", userUuid)
@@ -592,7 +611,7 @@ export default function MainDashboard() {
     // Rocks (current quarter only)
     (async () => {
       const q = getCurrentQuarter();
-      const { data } = await sb
+      const { data } = await supabase
         .from("eos_rocks")
         .select("id, title, status, due_date, completion_percentage")
         .is("archived_at", null)
@@ -602,7 +621,7 @@ export default function MainDashboard() {
         .order("due_date", { ascending: true, nullsFirst: false })
         .limit(20);
       const rows = data ?? [];
-      const onTrack = rows.filter((r: any) => {
+      const onTrack = rows.filter((r) => {
         const s = (r.status ?? "").toLowerCase();
         return s === "on_track" || s === "on track";
       }).length;
@@ -611,7 +630,7 @@ export default function MainDashboard() {
 
     // Broadcasts
     (async () => {
-      const { data } = await sb
+      const { data } = await supabase
         .from("broadcast_campaigns")
         .select("id, title, body, target_mode, total_recipients, sent_at")
         .eq("status", "sent")
@@ -622,25 +641,25 @@ export default function MainDashboard() {
 
     // Client messages — 3 most recent threads from Team Communications
     (async () => {
-      const { data: convos } = await sb
-        .from("tenant_conversations" as any)
+      const { data: convos } = await supabase
+        .from("tenant_conversations")
         .select("id, tenant_id, subject, topic, last_message_at, last_message_preview")
         .not("last_message_at", "is", null)
         .neq("type", "broadcast")
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(3);
-      const rows = (convos ?? []) as any[];
+      const rows: TenantConversationRow[] = convos ?? [];
       if (rows.length === 0) {
         setClientMsgs([]);
         return;
       }
       const uniqueTenants = Array.from(new Set(rows.map((c) => c.tenant_id)));
-      const { data: tenants } = await sb
+      const { data: tenantRows } = await supabase
         .from("tenants")
         .select("id, name")
-        .in("id", uniqueTenants as number[]);
+        .in("id", uniqueTenants);
       const nameMap = new Map<number, string>();
-      (tenants ?? []).forEach((t: any) => nameMap.set(t.id, t.name));
+      (tenantRows ?? []).forEach((t) => nameMap.set(t.id, t.name));
       setClientMsgs(
         rows.map((c) => ({
           id: c.id,
@@ -665,7 +684,7 @@ export default function MainDashboard() {
       // Fetch a wider window in parallel: (a) events organized by viewer, (b) events owned by viewer's user_id
       // (attendees is jsonb — filter client-side to honour "attendees contains my email").
       const [byOrganizer, byUser] = await Promise.all([
-        sb
+        supabase
           .from("calendar_events")
           .select("id, title, start_at, end_at, organizer_email, organiser_email, attendees")
           .gt("start_at", nowIso)
@@ -673,18 +692,18 @@ export default function MainDashboard() {
           .order("start_at", { ascending: true })
           .limit(20),
         userUuid
-          ? sb
+          ? supabase
               .from("calendar_events")
               .select("id, title, start_at, end_at, organizer_email, organiser_email, attendees")
               .gt("start_at", nowIso)
               .eq("user_id", userUuid)
               .order("start_at", { ascending: true })
               .limit(40)
-          : Promise.resolve({ data: [] as any[] }),
+          : Promise.resolve({ data: [] as CalendarEventRow[] }),
       ]);
       const emailLower = email.toLowerCase();
-      const merged = new Map<string, any>();
-      const consider = (row: any) => {
+      const merged = new Map<string, CalendarEventRow>();
+      const consider = (row: CalendarEventRow) => {
         const org = (row.organizer_email ?? row.organiser_email ?? "").toLowerCase();
         const attendeesText = JSON.stringify(row.attendees ?? "").toLowerCase();
         if (org === emailLower || attendeesText.includes(emailLower)) {
@@ -721,7 +740,7 @@ export default function MainDashboard() {
     setTasks((prev) => prev.filter((x) => x.id !== t.id));
     try {
       if (t.source === "client_action_items") {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from("client_action_items")
           .update({
             status: "done",
@@ -731,13 +750,13 @@ export default function MainDashboard() {
           .eq("id", t.realId);
         if (error) throw error;
       } else if (t.source === "ops_work_items") {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from("ops_work_items")
           .update({ status: "done" })
           .eq("id", t.realId);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from("tasks_tenants")
           .update({ status: "completed", completed: true })
           .eq("id", t.realId);
@@ -1007,7 +1026,7 @@ export default function MainDashboard() {
                 </div>
               ) : (
                 <ul className="space-y-1.5 pr-1">
-                  {rocks.list.slice(0, 5).map((r: any) => {
+                  {rocks.list.slice(0, 5).map((r) => {
                     const s = (r.status ?? "").toLowerCase().replace(/\s+/g, "_");
                     // Brand compliance-state tokens (index.css --state-*) instead of
                     // generic Material Design colors — on_track=compliant(purple),
@@ -1148,7 +1167,7 @@ export default function MainDashboard() {
 
             <Panel title="KPI Dashboard" icon={Gauge} footerHref="/kpi" bodyClassName="!py-2">
               {userUuid && (kpiRole === "csc_consultant" || kpiRole === "cst_assistant" || kpiRole === "developer") ? (
-                <MiniKpiSummary subjectUuid={userUuid} period={period} role={kpiRole as any} />
+                <MiniKpiSummary subjectUuid={userUuid} period={period} role={kpiRole} />
               ) : (
                 <div className="text-sm text-muted-foreground py-4 text-center">
                   No KPI configured.
