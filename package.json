@@ -17,6 +17,7 @@
     "routes:check-drift": "node scripts/check-route-drift.mjs",
     "check:kb-links": "node scripts/check-kb-links.mjs",
     "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit && node --max-old-space-size=4096 node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit",
+    "seed:tsc-cache": "node scripts/seed-tsc-cache.mjs",
     "test:frontend": "vitest run",
     "test:frontend:changed": "vitest run --changed",
     "test:watch": "vitest",

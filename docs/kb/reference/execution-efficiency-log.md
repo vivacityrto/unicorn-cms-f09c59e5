@@ -72,6 +72,51 @@ checked against real before/after data rather than assumed to have worked.
 |---|---|---|---|
 | 2026-09-01 | `tsconfig.app.json`/`tsconfig.node.json` gained `incremental: true` + explicit `tsBuildInfoFile` | Cold run ~2m45s → warm run ~15s (~11x) on repeat `npm run typecheck` invocations, identical result | PR #548 |
 | 2026-09-04 | Consolidated ~40 scattered single-file lint findings into 1 PR (4 commits) instead of ~40 micro-PRs | Avoided ~39 redundant worktree-setup + PR-review + merge cycles; exact time saved not measured (no baseline of the un-consolidated approach to compare against) | PR #550 (batch 18) |
+| 2026-09-04 | `scripts/seed-tsc-cache.mjs`: copy `.tsbuildinfo` from the main checkout/a sibling worktree into a fresh worktree before its first typecheck, instead of leaving every new worktree to pay a full cold compile | See "TS cache seeding — baseline and milestones" below. Not yet adopted as a standing step in the batch/PR cycle — tracking real data across the next several worktrees before promoting it from "tried" to "practice." | `scripts/seed-tsc-cache.mjs`, Builder Manifest §6 |
+
+### TS cache seeding — baseline and milestones
+
+Added 2026-09-04 in response to a direct ask: "have a baseline and then
+we'll see" before trusting this as a real improvement, not just a plausible
+idea. The safety claim (seeding cannot produce a wrong typecheck result,
+only a cache miss) is argued from how `tsc --incremental` works and was
+spot-checked once (see Builder Manifest §6) — the timing claim is separate
+and explicitly **not yet trusted**, because the two trials so far disagree
+by nearly 6x on this machine (limited RAM, shared with whatever else is
+resident — see AGENTS.md's own note on typecheck duration variance).
+
+**Baseline (no seeding, this repo, 2026-09-04):** a genuinely cold
+`npm run typecheck` — empty `node_modules/.cache/tsc/` — took **99.6s** in
+the `any-retirement-batch6` worktree (25 changed files vs. `origin/main`).
+
+**Seeded trials, same worktree, same diff, cache copied from the main
+checkout each time:**
+| Trial | Duration | Notes |
+|---|---|---|
+| 1 | 8.7s | Ran immediately after several unrelated typechecks in the same worktree this session — OS/disk cache likely still warm from that, not just the seeded `.tsbuildinfo`. |
+| 2 | 54.2s | Cache cleared and reseeded fresh immediately before this run, no intervening activity. Still ~46% faster than the 99.6s cold baseline, but far short of trial 1. |
+
+**Reading this honestly:** both seeded trials beat the cold baseline, so
+the mechanism has *some* real effect, but the size of that effect on this
+machine is currently unmeasurable with confidence — the variance between
+trial 1 and 2 is larger than the effect being measured. Do not quote "12x"
+or "2x" as a settled number from this data.
+
+**Milestones before promoting this from "tried" to a standing §2 step:**
+1. Collect 3 more real before/after pairs across genuinely separate
+   worktree creations (not repeated trials in one still-warm worktree) —
+   ideally spanning different times of day / different concurrent system
+   load, to see whether the variance is load-driven or something else.
+2. In every one of those pairs, confirm the seeded run's typecheck
+   **result** (error count, specific errors) is byte-identical to a cold
+   run's result on the same file state — this is the actual thing that
+   must never regress, independent of timing.
+3. If the seeded median across those runs is consistently faster than cold
+   (even if the exact multiple varies), add `node scripts/seed-tsc-cache.mjs`
+   as a standing step in Builder Manifest §2 (worktree setup, right after
+   `npm install`). If it's a wash or the variance swallows the effect,
+   record that finding here too — a tried-and-inconclusive result is still
+   worth keeping so it isn't re-tried blind later.
 
 ## Adding a new entry
 
