@@ -224,6 +224,30 @@ by that PR; a one-line fix (`profile?.global_role === 'SuperAdmin' ||
 profile?.unicorn_role === 'Super Admin'`, matching `useAuth.tsx`'s existing
 pattern) is available whenever someone picks it up.
 
+## Manage Phases (`/manage-documents` → Manage Phases, `ManageStages.tsx`)
+
+### 12. "New Phase" has never worked — a *third* independent occurrence of the same `stages.id` bug — FIXED
+Same exact root cause as #2 and #3 above: `stages.id` has no DB
+default/identity/sequence, so every insert must supply the next available
+id explicitly. This is a *third*, separate, previously-undiscovered call
+site — `ManageStages.tsx`'s own "New Phase" dialog (distinct from the
+Stage Library dialog and Stage Detail duplicate-stage flow fixed under #2,
+and from `useStageExportImport.tsx`'s Import Stage flow documented under
+#3). Fixed the same way (compute `MAX(id)+1` before inserting, mirroring
+`packages.createPackage`'s established pattern).
+
+Found during batch 36 of the `no-explicit-any` retirement, the same way as
+#1/#2: removing an `as any` cast on the insert forced TypeScript to check
+the real `stages` Insert type, which surfaced `id` as required.
+
+This is now the **third** independent place this exact bug has been
+rediscovered by hand tonight. Reinforces #3's recommendation: add a real
+default/sequence to `stages.id` (and audit `packages.id` too) so this class
+of bug stops resurfacing every time someone touches a nearby insert.
+
+**Not yet verified live** — pending this batch's live Playwright check
+(will update this entry with the result once that lands).
+
 ## Also found this session, outside Package Builder (for completeness)
 
 These were found and either fixed or documented in earlier batches tonight,
