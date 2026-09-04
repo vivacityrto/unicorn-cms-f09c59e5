@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 
 export interface UIPrefs {
   reduce_motion: boolean;
@@ -41,7 +42,7 @@ export function useUIPrefs() {
 
       // Try fetch
       const { data, error } = await supabase
-        .from('user_ui_prefs' as any)
+        .from('user_ui_prefs')
         .select('reduce_motion, celebrations_enabled, sound_enabled')
         .eq('user_uuid', user.id)
         .maybeSingle();
@@ -53,11 +54,10 @@ export function useUIPrefs() {
       }
 
       if (data) {
-        const d = data as any;
         setPrefs({
-          reduce_motion: d.reduce_motion ?? osReducedMotion,
-          celebrations_enabled: d.celebrations_enabled ?? true,
-          sound_enabled: d.sound_enabled ?? false,
+          reduce_motion: data.reduce_motion ?? osReducedMotion,
+          celebrations_enabled: data.celebrations_enabled ?? true,
+          sound_enabled: data.sound_enabled ?? false,
         });
       } else {
         // Seed row with OS preference
@@ -65,10 +65,10 @@ export function useUIPrefs() {
           ...DEFAULTS,
           reduce_motion: osReducedMotion,
         };
-        await supabase.from('user_ui_prefs' as any).insert({
+        await supabase.from('user_ui_prefs').insert({
           user_uuid: user.id,
           ...seedPrefs,
-        } as any);
+        });
         setPrefs(seedPrefs);
       }
 
@@ -83,9 +83,10 @@ export function useUIPrefs() {
     async <K extends keyof UIPrefs>(key: K, value: UIPrefs[K]) => {
       setPrefs(prev => ({ ...prev, [key]: value }));
       if (userId) {
+        const updates = { [key]: value, updated_at: new Date().toISOString() } as TablesUpdate<'user_ui_prefs'>;
         await supabase
-          .from('user_ui_prefs' as any)
-          .update({ [key]: value, updated_at: new Date().toISOString() } as any)
+          .from('user_ui_prefs')
+          .update(updates)
           .eq('user_uuid', userId);
       }
     },
