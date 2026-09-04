@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Target, TrendingUp, TrendingDown, CheckCircle, Mountain } from 'lucide-react';
+import { Badge, badgeVariants } from '@/components/ui/badge';
+import type { VariantProps } from 'class-variance-authority';
+import { Target, TrendingUp, TrendingDown, CheckCircle, Mountain, type LucideIcon } from 'lucide-react';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
+import type { Json } from '@/integrations/supabase/types';
 
 // Use the database type directly
 interface Rock {
@@ -12,7 +14,7 @@ interface Rock {
   completion_percentage?: number | null;
   issue?: string | null;
   outcome?: string | null;
-  milestones?: any;
+  milestones?: Json;
   client_tenant_id?: number | null;
   owner_id?: string | null;
   due_date: string;
@@ -30,7 +32,7 @@ interface QuarterlyRocksSectionProps {
 export function QuarterlyRocksSection({ rocks, isLoading, quarter, year }: QuarterlyRocksSectionProps) {
   const getStatusBadge = (status: string) => {
     const statusLower = status?.toLowerCase() || '';
-    const variants: Record<string, { variant: any; icon: any; label: string }> = {
+    const variants: Record<string, { variant: VariantProps<typeof badgeVariants>['variant']; icon: LucideIcon; label: string }> = {
       on_track: { variant: 'default', icon: TrendingUp, label: 'On Track' },
       'on-track': { variant: 'default', icon: TrendingUp, label: 'On Track' },
       off_track: { variant: 'destructive', icon: TrendingDown, label: 'Off Track' },
@@ -118,30 +120,36 @@ export function QuarterlyRocksSection({ rocks, isLoading, quarter, year }: Quart
                   {/* Status and Progress */}
                   <div className="flex items-center justify-between pt-2 border-t">
                     {getStatusBadge(rock.status || 'on_track')}
-                    <RockProgressControl rock={rock as any} compact />
+                    <RockProgressControl rock={rock} compact />
                   </div>
 
                   {/* Milestones Preview */}
-                  {rock.milestones && Array.isArray(rock.milestones) && rock.milestones.length > 0 && (
+                  {rock.milestones && Array.isArray(rock.milestones) && rock.milestones.length > 0 && (() => {
+                    // Historical shape varies: {text, completed}, {title, completed}, or a raw string.
+                    const milestoneList = rock.milestones as unknown as (
+                      { text?: string; title?: string; completed?: boolean } | string
+                    )[];
+                    return (
                     <div className="pt-2 border-t">
                       <p className="text-xs font-medium uppercase text-muted-foreground mb-2">Milestones</p>
                       <div className="space-y-1">
-                        {(rock.milestones as any[]).slice(0, 3).map((milestone: any, i: number) => (
+                        {milestoneList.slice(0, 3).map((milestone, i) => (
                           <div key={i} className="flex items-center gap-2 text-xs">
                             <span className="text-muted-foreground">{i + 1}.</span>
-                            <span className={milestone.completed ? 'line-through text-muted-foreground' : ''}>
-                             {milestone.text || milestone.title || (typeof milestone === 'string' ? milestone : '')}
+                            <span className={typeof milestone !== 'string' && milestone.completed ? 'line-through text-muted-foreground' : ''}>
+                             {typeof milestone === 'string' ? milestone : (milestone.text || milestone.title || '')}
                             </span>
                           </div>
                         ))}
-                        {(rock.milestones as any[]).length > 3 && (
+                        {milestoneList.length > 3 && (
                           <p className="text-xs text-muted-foreground">
-                            +{(rock.milestones as any[]).length - 3} more...
+                            +{milestoneList.length - 3} more...
                           </p>
                         )}
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </CardContent>
               </Card>
             ))}

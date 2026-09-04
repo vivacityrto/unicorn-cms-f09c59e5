@@ -58,7 +58,7 @@ export function RockCard({
   const status = dbToUiStatus(rock.rollupStatus || rock.status);
   const hasChildren = rock.childStats && rock.childStats.total > 0;
   const milestones = Array.isArray(rock.milestones) ? rock.milestones : [];
-  const completedMilestones = milestones.filter((m: any) => m.completed).length;
+  const completedMilestones = (milestones as unknown as { completed?: boolean }[]).filter((m) => m.completed).length;
   const milestoneProgress = milestones.length > 0
     ? Math.round((completedMilestones / milestones.length) * 100)
     : 0;

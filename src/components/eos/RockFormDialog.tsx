@@ -20,6 +20,7 @@ import { User, Plus, X, ListChecks, GitBranch, Building2, Users, UserCircle, Inf
 import { DB_ROCK_STATUS, getStatusOptions } from '@/utils/rockStatusUtils';
 import { toast } from '@/hooks/use-toast';
 import type { EosRock, RockLevel } from '@/types/eos';
+import type { Json } from '@/integrations/supabase/types';
 
 interface RockFormDialogProps {
   open: boolean;
@@ -40,7 +41,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
   // RPC-based mutation for save with auto-parenting
   const upsertRock = useMutation({
-    mutationFn: async (payload: Record<string, any>) => {
+    mutationFn: async (payload: Json) => {
       const { data, error } = await supabase.rpc('upsert_rock_with_parenting', {
         p_payload: payload,
       });
@@ -61,23 +62,27 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const [rockLevel, setRockLevel] = useState<RockLevel>(rock?.rock_level || 'company');
   const [title, setTitle] = useState(rock?.title || '');
   const [description, setDescription] = useState(rock?.description || '');
-  const [issue, setIssue] = useState((rock as any)?.issue || '');
-  const [problemSolved, setProblemSolved] = useState((rock as any)?.outcome || '');
+  const [issue, setIssue] = useState(rock?.issue || '');
+  const [problemSolved, setProblemSolved] = useState(rock?.outcome || '');
 
   const descriptionRef = useAutoResizeTextarea<HTMLTextAreaElement>(description, 400);
   const issueRef = useAutoResizeTextarea<HTMLTextAreaElement>(issue, 400);
   const problemSolvedRef = useAutoResizeTextarea<HTMLTextAreaElement>(problemSolved, 400);
   const [milestones, setMilestones] = useState<Milestone[]>(() => {
-    const savedMilestones = (rock as any)?.milestones;
+    const savedMilestones = rock?.milestones;
     if (Array.isArray(savedMilestones)) {
-      return savedMilestones.map(m => ({ ...m, id: m.id || crypto.randomUUID() }));
+      return (savedMilestones as unknown as Partial<Milestone>[]).map(m => ({
+        id: m.id || crypto.randomUUID(),
+        text: m.text || '',
+        completed: !!m.completed,
+      }));
     }
     return [];
   });
   const [clientId, setClientId] = useState<string>(rock?.client_tenant_id ? String(rock.client_tenant_id) : '');
-  const [functionId, setFunctionId] = useState((rock as any)?.function_id || '');
-  const [ownerId, setOwnerId] = useState((rock as any)?.owner_id || '');
-  const [parentRockId, setParentRockId] = useState((rock as any)?.parent_rock_id || '');
+  const [functionId, setFunctionId] = useState(rock?.function_id || '');
+  const [ownerId, setOwnerId] = useState(rock?.owner_id || '');
+  const [parentRockId, setParentRockId] = useState(rock?.parent_rock_id || '');
   const [status, setStatus] = useState(rock?.status || DB_ROCK_STATUS.ON_TRACK);
   const [priority, setPriority] = useState(rock?.priority || 1);
   const [quarterNumber, setQuarterNumber] = useState(
@@ -120,11 +125,11 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         setRockLevel(rock.rock_level || 'company');
         setTitle(rock.title || '');
         setDescription(rock.description || '');
-        setIssue((rock as any)?.issue || '');
-        setProblemSolved((rock as any)?.outcome || '');
-        const savedMilestones = (rock as any)?.milestones;
+        setIssue(rock?.issue || '');
+        setProblemSolved(rock?.outcome || '');
+        const savedMilestones = rock?.milestones;
         if (Array.isArray(savedMilestones)) {
-          setMilestones(savedMilestones.map(m => ({
+          setMilestones((savedMilestones as unknown as Partial<Milestone>[]).map(m => ({
             id: m.id || crypto.randomUUID(),
             text: m.text || '',
             completed: !!m.completed,
@@ -133,9 +138,9 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
           setMilestones([]);
         }
         setClientId(rock.client_tenant_id ? String(rock.client_tenant_id) : '');
-        setFunctionId((rock as any)?.function_id || '');
-        setOwnerId((rock as any)?.owner_id || '');
-        setParentRockId((rock as any)?.parent_rock_id || '');
+        setFunctionId(rock?.function_id || '');
+        setOwnerId(rock?.owner_id || '');
+        setParentRockId(rock?.parent_rock_id || '');
         setStatus(rock.status || DB_ROCK_STATUS.ON_TRACK);
         setPriority(rock.priority || 1);
         setQuarterNumber(rock.quarter_number || Math.ceil((new Date().getMonth() + 1) / 3));
@@ -295,13 +300,13 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
-    const rockData: Record<string, any> = {
+    const rockData: Record<string, Json | undefined> = {
       title,
       description: description || null,
       issue: issue || null,
       outcome: problemSolved || null,
       milestones: milestones.filter(m => m.text.trim()).length > 0
-        ? milestones.filter(m => m.text.trim())
+        ? (milestones.filter(m => m.text.trim()) as unknown as Json)
         : null,
       client_tenant_id: clientId ? Number(clientId) : null,
       rock_level: rockLevel,

@@ -8,7 +8,10 @@ import { useRockStatusOptions } from '@/hooks/useRockStatusOptions';
 import type { EosRock } from '@/types/eos';
 
 interface RockProgressControlProps {
-  rock: EosRock;
+  // Narrowed to exactly the fields this component reads, so callers with a
+  // partial rock projection (e.g. QuarterlyRocksSection's summary query)
+  // can pass one directly - a full EosRock satisfies this structurally too.
+  rock: Pick<EosRock, 'id' | 'status' | 'title' | 'description' | 'priority'>;
   compact?: boolean;
 }
 
@@ -32,7 +35,7 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
       title: `Rock issue: ${rock.title}`,
       description: rock.description || `Issue from rock: ${rock.title}`,
       status: 'Open',
-      priority: (rock.priority || 2) as any,
+      priority: rock.priority || 2,
     });
   };
 
