@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-04T07:58:14.929Z",
-  "baselineSha": "12169da8f4924014744e82f8b4868375981bb6c3",
+  "generatedAt": "2026-09-04T09:37:55.925Z",
+  "baselineSha": "844cb0de93f350fcdb5d1afb2bd341dfdfc12b58",
   "totals": {
-    "files": 1787,
-    "filesWithFindings": 493,
-    "errors": 2961,
+    "files": 1784,
+    "filesWithFindings": 489,
+    "errors": 2837,
     "warnings": 38
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 2954,
+    "@typescript-eslint/no-explicit-any": 2830,
     "react-refresh/only-export-components": 38,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 2293,
+      "errors": 2169,
       "warnings": 38,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2286,
+        "@typescript-eslint/no-explicit-any": 2162,
         "react-refresh/only-export-components": 38,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -32,10 +32,10 @@
   },
   "byDirectory": {
     "src/components": {
-      "errors": 61,
+      "errors": 57,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 61
+        "@typescript-eslint/no-explicit-any": 57
       }
     },
     "src/components/academy": {
@@ -70,10 +70,10 @@
       }
     },
     "src/components/admin": {
-      "errors": 20,
+      "errors": 12,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 20
+        "@typescript-eslint/no-explicit-any": 12
       }
     },
     "src/components/admin/reporting-obligations": {
@@ -135,11 +135,10 @@
       }
     },
     "src/components/client": {
-      "errors": 73,
+      "errors": 2,
       "warnings": 5,
       "byRule": {
         "@typescript-eslint/no-unused-expressions": 2,
-        "@typescript-eslint/no-explicit-any": 71,
         "react-refresh/only-export-components": 5
       }
     },
@@ -420,10 +419,10 @@
       }
     },
     "src/pages": {
-      "errors": 450,
+      "errors": 409,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 450
+        "@typescript-eslint/no-explicit-any": 409
       }
     },
     "src/pages/academy": {
@@ -1242,9 +1241,6 @@
     "src/components/AddExistingStageDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "src/components/AddPackageDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "src/components/AddStaffTaskDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1305,9 +1301,6 @@
     },
     "src/components/academy/builder/PackageRulesTab.tsx": {
       "@typescript-eslint/no-explicit-any": 10
-    },
-    "src/components/admin/AllStagesTable.tsx": {
-      "@typescript-eslint/no-explicit-any": 8
     },
     "src/components/admin/AppSettingsForm.tsx": {
       "@typescript-eslint/no-explicit-any": 4
@@ -1430,9 +1423,6 @@
     },
     "src/components/client/AuditPreparationSection.tsx": {
       "@typescript-eslint/no-unused-expressions": 1
-    },
-    "src/components/client/ClientTimeTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 71
     },
     "src/components/client/ClientTimelineTab.tsx": {
       "react-refresh/only-export-components": 1,
@@ -2215,9 +2205,6 @@
     },
     "src/pages/AdminCompliancePacks.tsx": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/pages/AdminManagePackages.tsx": {
-      "@typescript-eslint/no-explicit-any": 41
     },
     "src/pages/AdminManageStages.tsx": {
       "@typescript-eslint/no-explicit-any": 9
