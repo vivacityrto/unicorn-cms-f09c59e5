@@ -1,6 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+
+interface MembershipEntitlementRow {
+  id: string;
+  tenant_id: number;
+  package_id: number;
+  membership_state: string;
+  hours_included_monthly: number;
+  hours_used_current_month: number;
+  packages: { id: number; name: string; slug: string | null } | null;
+}
 
 /** Stage types excluded from the progress bar (ongoing or exit stages) — static fallback */
 const NON_TRACKABLE_STAGE_TYPES = ['offboarding', 'monitor', 'monitoring'];
@@ -123,9 +134,7 @@ export function useClientManagement() {
       const tenantIds = tenantsData.map(t => t.id);
 
       // Fetch all membership entitlements with package details
-      const { data: entitlements } = await (supabase as any)
-        .from('membership_entitlements')
-        .select(`
+      const entitlementsSelect = `
           id,
           tenant_id,
           package_id,
@@ -133,7 +142,10 @@ export function useClientManagement() {
           hours_included_monthly,
           hours_used_current_month,
           packages(id, name, slug)
-        `)
+        `;
+      const { data: entitlements } = await supabase
+        .from('membership_entitlements')
+        .select<typeof entitlementsSelect, MembershipEntitlementRow>(entitlementsSelect)
         .in('tenant_id', tenantIds);
 
       // Fetch stage progress for each entitlement
@@ -207,8 +219,8 @@ export function useClientManagement() {
 
         acc[ent.tenant_id].push({
           id: ent.package_id,
-          name: (ent.packages as any)?.name || 'Unknown',
-          slug: (ent.packages as any)?.slug || null,
+          name: ent.packages?.name || 'Unknown',
+          slug: ent.packages?.slug || null,
           membership_state: ent.membership_state,
           current_stage: activeStage ? 'In Progress' : totalStages > 0 && completedStages === totalStages ? 'Completed' : 'Not Started',
           progress_percent: totalStages > 0 ? Math.round((completedStages / totalStages) * 100) : 0,
@@ -235,11 +247,11 @@ export function useClientManagement() {
       }));
 
       setClients(clientsWithData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching clients:', error);
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to fetch clients',
         variant: 'destructive'
       });
     } finally {
@@ -388,11 +400,11 @@ export function useClientProfile(tenantId: number | null) {
       setProfile(profileData);
       setTgaConnected(tgaConnected);
       setRegistryLink(linkResult.data);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching client profile:', error);
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to fetch client profile',
         variant: 'destructive'
       });
     } finally {
@@ -411,7 +423,7 @@ export function useClientProfile(tenantId: number | null) {
       const oldProfile = profile;
 
       // Map interface fields back to tenants column names
-      const tenantUpdates: Record<string, any> = {};
+      const tenantUpdates: TablesUpdate<'tenants'> = {};
       if ('legal_name' in updates) tenantUpdates.legal_name = updates.legal_name;
       if ('trading_name' in updates) tenantUpdates.rto_name = updates.trading_name;
       if ('abn' in updates) tenantUpdates.abn = updates.abn;
@@ -427,7 +439,7 @@ export function useClientProfile(tenantId: number | null) {
       tenantUpdates.updated_at = new Date().toISOString();
 
       // Handle phone1 and org_type separately (stored in tenant_profile)
-      const profileUpdates: Record<string, any> = {};
+      const profileUpdates: TablesUpdate<'tenant_profile'> = {};
       if ('phone1' in updates) profileUpdates.phone1 = updates.phone1;
       if ('org_type' in updates) profileUpdates.org_type = updates.org_type;
       if ('rto_email' in updates) profileUpdates.rto_email = updates.rto_email;
@@ -445,7 +457,7 @@ export function useClientProfile(tenantId: number | null) {
 
       const { error } = await supabase
         .from('tenants')
-        .update(tenantUpdates as never)
+        .update(tenantUpdates)
         .eq('id', tenantId);
 
       if (error) throw error;
@@ -471,10 +483,10 @@ export function useClientProfile(tenantId: number | null) {
 
       await fetchProfile();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to save profile',
         variant: 'destructive'
       });
       return false;
@@ -493,21 +505,21 @@ export function useClientProfile(tenantId: number | null) {
 
       if (error) throw error;
 
-      const result = data as { success: boolean; status: string; auto_verified: boolean };
+      const result = data as unknown as { success: boolean; status: string; auto_verified: boolean };
 
       toast({
         title: 'Success',
-        description: result.auto_verified 
-          ? 'TGA link verified automatically' 
+        description: result.auto_verified
+          ? 'TGA link verified automatically'
           : 'TGA link initiated - awaiting admin verification'
       });
 
       await fetchProfile();
       return { success: true, status: result.status, autoVerified: result.auto_verified };
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to set TGA link',
         variant: 'destructive'
       });
       return { success: false };
@@ -532,10 +544,10 @@ export function useClientProfile(tenantId: number | null) {
 
       await fetchProfile();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to verify TGA link',
         variant: 'destructive'
       });
       return false;
@@ -588,10 +600,10 @@ export function useClientProfile(tenantId: number | null) {
 
       await fetchProfile();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to update registry link',
         variant: 'destructive'
       });
       return false;
@@ -631,7 +643,7 @@ export function useClientPackages(tenantId: number | null) {
         .from('package_instances')
         .select('id, tenant_id, package_id, start_date, is_complete, included_minutes, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date, last_renewed_date, start_renewal_date, parent_instance_id, comments')
         .eq('tenant_id', tenantId)
-        .order('start_date', { ascending: false }) as { data: any[] | null; error: any };
+        .order('start_date', { ascending: false });
 
       if (error) throw error;
 
@@ -643,38 +655,32 @@ export function useClientPackages(tenantId: number | null) {
       const [packagesResult, stageInstancesResult, openPeriodsResult] = await Promise.all([
         packageIds.length > 0
           ? supabase.from('packages').select('id, name, slug, full_text').in('id', packageIds)
-          : Promise.resolve({ data: [] }),
+          : Promise.resolve({ data: [] as { id: number; name: string; slug: string | null; full_text: string | null }[] }),
         instanceIds.length > 0
           ? supabase.from('stage_instances').select('id, packageinstance_id, stage_id, status, stage_sortorder, completion_date').in('packageinstance_id', instanceIds).order('stage_sortorder')
-          : Promise.resolve({ data: [] }),
+          : Promise.resolve({ data: [] as { id: number; packageinstance_id: number; stage_id: number; status: string | null; stage_sortorder: number | null; completion_date: string | null }[] }),
         instanceIds.length > 0
-          ? (supabase as any).from('package_renewal_periods').select('package_instance_id, carried_in_minutes').in('package_instance_id', instanceIds).is('closed_at', null)
-          : Promise.resolve({ data: [] })
+          ? supabase.from('package_renewal_periods').select('package_instance_id, carried_in_minutes').in('package_instance_id', instanceIds).is('closed_at', null)
+          : Promise.resolve({ data: [] as { package_instance_id: number; carried_in_minutes: number }[] })
       ]);
 
-      const packagesMap = ((packagesResult as any).data || []).reduce((acc: Record<number, any>, pkg: any) => {
-        acc[pkg.id] = pkg;
-        return acc;
-      }, {} as Record<number, any>);
+      const packagesMap = new Map((packagesResult.data || []).map(pkg => [pkg.id, pkg]));
 
-      const stageInstances = (stageInstancesResult as any).data || [];
+      const stageInstances = stageInstancesResult.data || [];
 
       const carriedInMinutesMap: Record<number, number> = {};
-      ((openPeriodsResult as any).data || []).forEach((p: any) => {
+      (openPeriodsResult.data || []).forEach(p => {
         carriedInMinutesMap[p.package_instance_id] = p.carried_in_minutes || 0;
       });
 
       // Fetch stage names from stages for current stage display
       const stageIdSet = new Set<number>();
-      stageInstances.forEach((s: any) => stageIdSet.add(Number(s.stage_id)));
+      stageInstances.forEach(s => stageIdSet.add(s.stage_id));
       const stageIds = Array.from(stageIdSet);
       const stageNamesResult = stageIds.length > 0
-        ? await (supabase.from('stages').select('id, name, stage_type') as any).in('id', stageIds)
-        : { data: [] };
-      const stageMetaMap = ((stageNamesResult as any).data || []).reduce((acc: Record<number, { name: string; stage_type: string | null }>, s: any) => {
-        acc[s.id] = { name: s.name, stage_type: s.stage_type };
-        return acc;
-      }, {} as Record<number, { name: string; stage_type: string | null }>);
+        ? await supabase.from('stages').select('id, name, stage_type').in('id', stageIds)
+        : { data: [] as { id: number; name: string; stage_type: string | null }[] };
+      const stageMetaMap = new Map((stageNamesResult.data || []).map(s => [s.id, { name: s.name, stage_type: s.stage_type }]));
 
       // Build package data with stage info
       // A stage counts as done once it's 'completed' or 'core_complete' — the
@@ -682,25 +688,25 @@ export function useClientPackages(tenantId: number | null) {
       // Applicable), not completed; it was never a valid "done" marker.
       const isDoneStatus = (status: unknown) => status === 'completed' || status === 'core_complete';
       const packageData: ClientPackage[] = (instances || []).map(inst => {
-        const pkg = packagesMap[inst.package_id];
-        const pkgStages = stageInstances.filter((s: any) => s.packageinstance_id === inst.id);
+        const pkg = packagesMap.get(inst.package_id);
+        const pkgStages = stageInstances.filter(s => s.packageinstance_id === inst.id);
         const totalStages = pkgStages.length;
-        const completedStages = pkgStages.filter((s: any) => isDoneStatus(s.status)).length;
-        const hasBlocked = pkgStages.some((s: any) => s.status === 'blocked');
+        const completedStages = pkgStages.filter(s => isDoneStatus(s.status)).length;
+        const hasBlocked = pkgStages.some(s => s.status === 'blocked');
 
         // Trackable stages exclude offboarding/monitor/finalise
-        const trackableStages = pkgStages.filter((s: any) => {
-          const sType = stageMetaMap[s.stage_id]?.stage_type?.toLowerCase();
+        const trackableStages = pkgStages.filter(s => {
+          const sType = stageMetaMap.get(s.stage_id)?.stage_type?.toLowerCase();
           return !NON_TRACKABLE_STAGE_TYPES.includes(sType || '');
         });
-        const trackableCompleted = trackableStages.filter((s: any) => isDoneStatus(s.status)).length;
-        const monitorStages = pkgStages.filter((s: any) => {
-          const sType = stageMetaMap[s.stage_id]?.stage_type?.toLowerCase();
+        const trackableCompleted = trackableStages.filter(s => isDoneStatus(s.status)).length;
+        const monitorStages = pkgStages.filter(s => {
+          const sType = stageMetaMap.get(s.stage_id)?.stage_type?.toLowerCase();
           return sType === 'monitor';
         }).length;
-        const activeStage = pkgStages.find((s: any) =>
+        const activeStage = pkgStages.find(s =>
           !isDoneStatus(s.status) && s.status !== 'na' && s.status !== 'not_started'
-        ) || pkgStages.find((s: any) => s.status === 'not_started');
+        ) || pkgStages.find(s => s.status === 'not_started');
 
         // Total hours = included_minutes (canonical) fallback to hours_included (deprecated) + added + carried in from the last renewal
         const baseMinutes = inst.included_minutes ?? (inst.hours_included ? inst.hours_included * 60 : 0);
@@ -708,7 +714,7 @@ export function useClientPackages(tenantId: number | null) {
         const totalHours = (baseMinutes / 60) + (inst.hours_added || 0) + (carriedInMinutes / 60);
 
         return {
-          id: inst.id,
+          id: inst.id.toString(),
           package_id: inst.package_id,
           package_name: pkg?.name || 'Unknown',
           package_slug: pkg?.slug || null,
@@ -717,7 +723,7 @@ export function useClientPackages(tenantId: number | null) {
           hours_included: totalHours,
           carried_in_hours: carriedInMinutes / 60,
           hours_used: inst.hours_used || 0,
-          current_stage_name: activeStage ? stageMetaMap[activeStage.stage_id]?.name || null : null,
+          current_stage_name: activeStage ? stageMetaMap.get(activeStage.stage_id)?.name || null : null,
           completed_stages: completedStages,
           total_stages: totalStages,
           trackable_completed: trackableCompleted,
@@ -753,11 +759,11 @@ export function useClientPackages(tenantId: number | null) {
       const completedPackages = packageData.filter(p => p.is_complete);
 
       setPackages([...activePackages, ...completedPackages]);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching client packages:', error);
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to fetch client packages',
         variant: 'destructive'
       });
     } finally {
