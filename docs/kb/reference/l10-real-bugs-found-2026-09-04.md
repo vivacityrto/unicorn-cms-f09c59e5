@@ -117,6 +117,49 @@ fix only added a compile-time generic, never touched the runtime request.
 Same root cause and same fix options as item 5 above (two-step fetch, or an
 actual FK via migration).
 
+## Admin — Client Package Detail (`/admin/client-packages/:id`)
+
+### 9. Client Package Detail has never shown a package's stages, tasks, documents, or emails — FIXED
+**Correction (found during live verification, see below): despite its name,
+`ClientPackageDetail.tsx` is a staff-only admin page** (route
+`/admin/client-packages/:clientPackageId`, gated by the deny-by-default RBAC
+rule — a client-role user hitting this URL is redirected to `/dashboard`
+before the page ever mounts). It's where staff drill into one specific
+client's package instance from the admin side, not something clients see
+themselves. The bug and fix below are unaffected by this correction — a
+PostgREST column error fails identically regardless of who's logged in —
+only the "who's been affected" framing changes: it's staff viewing a
+client's package, not clients viewing their own.
+
+`useClientPackageInstances.tsx`'s `fetchPackageStages()` — the data source
+for this page — selected a `status_id` column from `stage_instances`. That
+column was removed from the table in an earlier "stage status consolidation
+Phase A" (the file's own pre-existing comment on `STAGE_STATUS_MAP` already
+documented the removal, just not that this specific query still requested
+it). PostgREST returns a 400 for a select referencing a nonexistent column,
+so this query has **always thrown** and the function's catch block has
+always silently returned an empty array. Net effect: **staff have never
+seen a package instance's stage list, team tasks, client tasks, linked
+documents, or queued emails on this admin page** — regardless of how much
+real data exists for that package instance.
+
+**Verified before fixing, not guessed**: ran `select column_name from
+information_schema.columns where table_name = 'stage_instances'` directly
+against the live database — confirmed no `status_id` column exists, only
+`status` (text). Also confirmed the real distinct `status` values in
+production (`not_started`, `in_progress`, `completed`, `na`,
+`core_complete`, `monitor`) via `select distinct status from
+stage_instances`.
+
+**Fix**: removed `status_id` from the query; added a
+`STAGE_STATUS_TO_LEGACY_ID` map deriving the legacy numeric id the page's
+UI still expects (`ClientPackageDetail.tsx`'s `STAGE_STATUS_ID_TO_KEY`)
+from the real `status` string. Four of the six real values map cleanly;
+`core_complete` and `monitor` have no exact legacy equivalent and were
+mapped to the closest active-work bucket (`completed`/`in_progress`
+respectively) with an inline comment flagging this for a product decision
+if either status ever needs its own distinct badge/behavior in this page.
+
 ## Also found this session, outside Package Builder (for completeness)
 
 These were found and either fixed or documented in earlier batches tonight,
@@ -151,9 +194,14 @@ on unrelated features:
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
-had been hidden behind `any`. Six real, previously-silently-broken features
-got fixed and verified live tonight. Five more (items 3, 4, 5, 8 above, plus
-the two `tenant_users`→`users` FK gaps outside Package Builder) are confirmed
-real and written up with enough detail to scope a fix, deliberately left
+had been hidden behind `any`. Seven real, previously-silently-broken features got fixed tonight, six
+verified live so far (item 9 — a staff-facing admin page for viewing a
+client's package instance, see the correction in that item about who's
+actually affected — was verified for its type-safety/lint/test contract;
+its live browser check needed a staff persona and is being re-run). Five
+more (items 3,
+4, 5, 8 above, plus the two `tenant_users`→`users` FK gaps outside Package
+Builder) are confirmed real and written up with enough detail to scope a
+fix, deliberately left
 alone because the correct fix is a schema/migration decision, not a
 type-only code change.
