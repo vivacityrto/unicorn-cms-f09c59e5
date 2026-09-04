@@ -116,7 +116,7 @@ export default function MyOnboardingPage() {
   });
 
   const run = runQuery.data;
-  const instances = instancesQuery.data ?? [];
+  const instances = useMemo(() => instancesQuery.data ?? [], [instancesQuery.data]);
   const completed = instances.filter((i) => i.completed).length;
   const total = instances.length;
 

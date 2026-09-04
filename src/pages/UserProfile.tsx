@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -76,13 +76,6 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
-    if (userId) {
-      fetchUserData();
-      fetchCurrentUser();
-    }
-  }, [userId]);
-
   const fetchCurrentUser = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -102,7 +95,7 @@ export default function UserProfile() {
     }
   };
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       // Use raw query to include all team profile columns
       const { data: userData, error: userError } = await supabase
@@ -194,7 +187,14 @@ export default function UserProfile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, toast]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchUserData();
+      fetchCurrentUser();
+    }
+  }, [userId, fetchUserData]);
 
   const canEditProfile = user && currentUser && (
     user.user_uuid === currentUser.user_uuid || // User editing themselves

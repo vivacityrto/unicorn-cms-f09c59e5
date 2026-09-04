@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -106,47 +106,9 @@ export default function TasksManagement() {
   } = useAuth();
   const navigate = useNavigate();
   useEffect(() => {
-    fetchTasks();
-    fetchDropdownData();
-
-    // Set up real-time subscription for task updates
-    const channel = supabase
-      .channel('task-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'tasks_tenants'
-        },
-        (payload) => {
-          console.log('Task updated:', payload);
-          // Update the task in local state
-          setTasks(prev => prev.map(task => 
-            task.id === payload.new.id 
-              ? {
-                  ...task,
-                  status: payload.new.status,
-                  completed: payload.new.completed,
-                  updated_at: payload.new.updated_at
-                }
-              : task
-          ));
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id]);
-  useEffect(() => {
-    filterTasks();
-  }, [searchQuery, statusFilter, tasks]);
-  useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -351,8 +313,9 @@ export default function TasksManagement() {
     } finally {
       setLoading(false);
     }
-  };
-  const fetchDropdownData = async () => {
+  }, [user, toast]);
+
+  const fetchDropdownData = useCallback(async () => {
     try {
       // Fetch tenants (removed deprecated package_id field)
       const {
@@ -374,16 +337,62 @@ export default function TasksManagement() {
     } catch (error) {
       console.error("Error fetching dropdown data:", error);
     }
-  };
-  const filterTasks = () => {
+  }, []);
+
+  useEffect(() => {
+    fetchTasks();
+    fetchDropdownData();
+
+    // Set up real-time subscription for task updates
+    const channel = supabase
+      .channel('task-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tasks_tenants'
+        },
+        (payload) => {
+          console.log('Task updated:', payload);
+          // Update the task in local state
+          setTasks(prev => prev.map(task =>
+            task.id === payload.new.id
+              ? {
+                  ...task,
+                  status: payload.new.status,
+                  completed: payload.new.completed,
+                  updated_at: payload.new.updated_at
+                }
+              : task
+          ));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchTasks, fetchDropdownData]);
+
+  const getTaskStatus = useCallback((task: Task): TaskStatus => {
+    if (task.completed) return "completed";
+    if (task.status === "extended") return "extended";
+    if (isPast(new Date(task.due_date)) && !task.completed) return "overdue";
+    if (task.status === "in_progress") return "in_progress";
+    if (task.status === "not_started") return "pending";
+    return "pending";
+  }, []);
+
+  const filterTasks = useCallback(() => {
     let filtered = [...tasks];
-    
+
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(task => task.task_name.toLowerCase().includes(query) || task.tenant_name?.toLowerCase().includes(query) || task.package_name?.toLowerCase().includes(query) || task.created_by_name?.toLowerCase().includes(query));
     }
-    
+
     // Apply status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter(task => {
@@ -395,17 +404,14 @@ export default function TasksManagement() {
         return true;
       });
     }
-    
+
     setFilteredTasks(filtered);
-  };
-  const getTaskStatus = (task: Task): TaskStatus => {
-    if (task.completed) return "completed";
-    if (task.status === "extended") return "extended";
-    if (isPast(new Date(task.due_date)) && !task.completed) return "overdue";
-    if (task.status === "in_progress") return "in_progress";
-    if (task.status === "not_started") return "pending";
-    return "pending";
-  };
+  }, [tasks, searchQuery, statusFilter, getTaskStatus]);
+
+  useEffect(() => {
+    filterTasks();
+  }, [filterTasks]);
+
   const getStatusIcon = (status: TaskStatus) => {
     switch (status) {
       case "completed":

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -89,13 +89,7 @@ export default function AskVivFlags() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewingFlag, setViewingFlag] = useState<ReviewFlag | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && hasAccess) {
-      loadFlags();
-    }
-  }, [authLoading, hasAccess, statusFilter]);
-
-  async function loadFlags() {
+  const loadFlags = useCallback(async () => {
     setLoading(true);
     try {
       // Simple query first, then enrich with related data if needed
@@ -128,7 +122,13 @@ export default function AskVivFlags() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [statusFilter]);
+
+  useEffect(() => {
+    if (!authLoading && hasAccess) {
+      loadFlags();
+    }
+  }, [authLoading, hasAccess, statusFilter, loadFlags]);
 
   async function handleResolve() {
     if (!selectedFlag || !user?.id) return;

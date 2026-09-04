@@ -78,6 +78,10 @@ export default function MyExitInterview() {
     if (interview?.responses && typeof interview.responses === "object") {
       setResponses(interview.responses as Record<string, unknown>);
     }
+    // interview.responses is intentionally excluded: this should only seed
+    // local state when a different interview loads (interview.id changes),
+    // not every time the query refetches while the user is mid-edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interview?.id]);
 
   const upsertMutation = useMutation({

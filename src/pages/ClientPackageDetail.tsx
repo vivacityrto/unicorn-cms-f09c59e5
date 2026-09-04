@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useClientPackageInstances, ClientPackageInstance, ClientPackageStage } from '@/hooks/useClientPackageInstances';
@@ -88,16 +88,10 @@ export default function ClientPackageDetail() {
   const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState('stages');
 
-  useEffect(() => {
-    if (clientPackageId) {
-      loadData();
-    }
-  }, [clientPackageId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!clientPackageId) return;
     setLoading(true);
-    
+
     const [pkgData, stagesData] = await Promise.all([
       fetchPackageDetail(clientPackageId),
       fetchPackageStages(clientPackageId)
@@ -106,7 +100,13 @@ export default function ClientPackageDetail() {
     setPackageData(pkgData);
     setStages(stagesData);
     setLoading(false);
-  };
+  }, [clientPackageId, fetchPackageDetail, fetchPackageStages]);
+
+  useEffect(() => {
+    if (clientPackageId) {
+      loadData();
+    }
+  }, [clientPackageId, loadData]);
 
   const toggleStage = (stageId: number) => {
     const newExpanded = new Set(expandedStages);

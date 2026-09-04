@@ -50,7 +50,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (isVivacityStaff) logDashboardEvent('dashboard_viewed');
-  }, [isVivacityStaff]);
+  }, [isVivacityStaff, logDashboardEvent]);
 
   if (authLoading) {
     return (
