@@ -39,10 +39,10 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
   // historical summaries, so render it as a fallback rather than dropping it.
   const cascades = Array.isArray(summary.cascades) ? summary.cascades : [];
 
-  const solvedIssues = issues.filter((i: any) => i.status === 'Solved');
-  const unsolvedIssues = issues.filter((i: any) => i.status !== 'Solved');
+  const solvedIssues = issues.filter((i) => i.status === 'Solved');
+  const unsolvedIssues = issues.filter((i) => i.status !== 'Solved');
 
-  const attendedCount = attendance.filter((a: any) => a.attended).length;
+  const attendedCount = attendance.filter((a) => a.attended).length;
   const attendancePct = attendance.length > 0 ? Math.round((attendedCount / attendance.length) * 100) : 0;
   const quorumMet = attendance.length === 0 || attendedCount >= Math.ceil(attendance.length * 0.5);
 
@@ -50,8 +50,8 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
   // to public.users - same reason the live view resolves names in a
   // separate query rather than an embed hint).
   const summaryUserIds = Array.from(new Set([
-    ...segueShares.map((s: any) => s.user_id),
-    ...onePhraseCloses.map((c: any) => c.user_id),
+    ...segueShares.map((s) => s.user_id),
+    ...onePhraseCloses.map((c) => c.user_id),
   ].filter(Boolean)));
   const { data: summaryUsers } = useQuery({
     queryKey: ['summary-users', summary.id, summaryUserIds],
@@ -63,7 +63,7 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
         .in('user_uuid', summaryUserIds);
       if (error) throw error;
       return Object.fromEntries(
-        (data ?? []).map((u: any) => [
+        (data ?? []).map((u) => [
           u.user_uuid,
           { name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown', avatarUrl: u.avatar_url as string | null },
         ])
@@ -127,7 +127,7 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {rocks.map((rock: any, index: number) => (
+              {rocks.map((rock, index) => (
                 <div key={index} className="p-3 bg-muted/50 rounded flex items-center justify-between gap-2">
                   <div className="flex-1">
                     <p className="font-medium text-sm">{rock.title}</p>
@@ -156,7 +156,7 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
         <CardContent>
           {todos.length > 0 ? (
             <div className="space-y-2">
-              {todos.map((todo: any, index: number) => (
+              {todos.map((todo, index) => (
                 <div key={index} className="p-3 bg-muted/50 rounded flex items-center justify-between">
                   <div className="flex-1">
                     <p className="font-medium text-sm">{todo.title}</p>
@@ -188,7 +188,7 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
           {solvedIssues.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-green-600">Solved ({solvedIssues.length})</h4>
-              {solvedIssues.map((issue: any, index: number) => (
+              {solvedIssues.map((issue, index) => (
                 <div key={index} className="p-3 bg-green-50 border border-green-200 rounded">
                   <p className="font-medium text-sm">{issue.title}</p>
                   {issue.solution && (
@@ -202,7 +202,7 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
           {unsolvedIssues.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-yellow-600">Carry Forward ({unsolvedIssues.length})</h4>
-              {unsolvedIssues.map((issue: any, index: number) => (
+              {unsolvedIssues.map((issue, index) => (
                 <div key={index} className="p-3 bg-yellow-50 border border-yellow-200 rounded">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-sm flex-1">{issue.title}</p>
@@ -230,7 +230,7 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {headlines.map((headline: any, index: number) => (
+              {headlines.map((headline, index) => (
                 <div
                   key={index}
                   className={`p-3 rounded ${
@@ -259,7 +259,7 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {segueShares.map((share: any, index: number) => (
+              {segueShares.map((share, index) => (
                 <div key={index} className="p-3 bg-muted/50 rounded space-y-1">
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-sm">{summaryUsers?.[share.user_id]?.name ?? 'Unknown'}</p>
@@ -287,7 +287,7 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {onePhraseCloses.map((close: any, index: number) => {
+              {onePhraseCloses.map((close, index) => {
                 const user = summaryUsers?.[close.user_id];
                 const name = user?.name ?? 'Unknown';
                 const color = clientAvatarColor(close.user_id);
@@ -319,9 +319,9 @@ export function MeetingSummaryCard({ summary }: MeetingSummaryCardProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {cascades.map((cascade: any, index: number) => (
+              {cascades.map((cascade, index) => (
                 <div key={index} className="p-3 bg-muted/50 rounded">
-                  <p className="text-sm">{cascade.message || cascade}</p>
+                  <p className="text-sm">{cascade.message}</p>
                 </div>
               ))}
             </div>
