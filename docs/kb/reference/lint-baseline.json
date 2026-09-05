@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T16:30:42.668Z",
-  "baselineSha": "471b24279c301c312f923b952f9a1976e0578031",
+  "generatedAt": "2026-09-05T17:04:45.771Z",
+  "baselineSha": "d3476e08ed87c308a3c356a35505abb91ef5c389",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 261,
-    "errors": 1139,
+    "filesWithFindings": 257,
+    "errors": 1131,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1132,
+    "@typescript-eslint/no-explicit-any": 1124,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 471,
+      "errors": 463,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 464,
+        "@typescript-eslint/no-explicit-any": 456,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -275,10 +275,10 @@
       }
     },
     "src/hooks": {
-      "errors": 156,
+      "errors": 148,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 156,
+        "@typescript-eslint/no-explicit-any": 148,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1350,9 +1350,6 @@
     "src/hooks/useConsultantAssignment.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "src/hooks/useCopilot.ts": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
     "src/hooks/useCscAssignments.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -1383,9 +1380,6 @@
     "src/hooks/useFlightPlan.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "src/hooks/useGWCTrends.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
     "src/hooks/useKpiReview.tsx": {
       "@typescript-eslint/no-explicit-any": 6
     },
@@ -1397,12 +1391,6 @@
     },
     "src/hooks/useMergeFields.tsx": {
       "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/hooks/useMomentumPanel.ts": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useMomentumState.ts": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "src/hooks/useMyAssignedConversationsCount.ts": {
       "@typescript-eslint/no-explicit-any": 2

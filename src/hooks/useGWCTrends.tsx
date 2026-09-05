@@ -258,7 +258,9 @@ export function useSeatGWCTrends(seatId: string | null) {
       return {
         seatId,
         seatName,
-        functionName: (seatData.accountability_functions as any)?.name || '',
+        functionName: Array.isArray(seatData.accountability_functions)
+          ? seatData.accountability_functions[0]?.name || ''
+          : seatData.accountability_functions?.name || '',
         ownerName,
         dimensions,
         overallStatus,
@@ -478,7 +480,9 @@ export function useAllSeatGWCTrends() {
         return {
           seatId: seat.id,
           seatName: seat.seat_name,
-          functionName: (seat.accountability_functions as any)?.name || '',
+          functionName: Array.isArray(seat.accountability_functions)
+            ? seat.accountability_functions[0]?.name || ''
+            : seat.accountability_functions?.name || '',
           ownerName,
           dimensions,
           overallStatus,

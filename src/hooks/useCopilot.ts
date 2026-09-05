@@ -23,6 +23,17 @@ export interface CopilotContext {
   context_mode?: 'tenant' | 'stage' | 'template' | 'general' | 'executive';
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
+function errorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null || !('context' in error)) return undefined;
+  const context = error.context;
+  if (typeof context !== 'object' || context === null || !('status' in context)) return undefined;
+  return typeof context.status === 'number' ? context.status : undefined;
+}
+
 export function useCopilot() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CopilotMessage[]>([]);
@@ -45,10 +56,10 @@ export function useCopilot() {
       setSessionId(data.session.id);
       setMessages([]);
       return data.session.id;
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: 'Failed to start copilot',
-        description: err.message || 'Unknown error',
+        description: errorMessage(err),
         variant: 'destructive',
       });
       return null;
@@ -87,14 +98,14 @@ export function useCopilot() {
         created_at: new Date().toISOString(),
       };
       setMessages(prev => [...prev, copilotMsg]);
-    } catch (err: any) {
-      const status = err?.context?.status;
+    } catch (err) {
+      const status = errorStatus(err);
       if (status === 429) {
         toast({ title: 'Rate limited', description: 'Too many requests. Please wait.', variant: 'destructive' });
       } else if (status === 402) {
         toast({ title: 'Credits exhausted', description: 'Please add AI credits.', variant: 'destructive' });
       } else {
-        toast({ title: 'Copilot error', description: err.message, variant: 'destructive' });
+        toast({ title: 'Copilot error', description: errorMessage(err), variant: 'destructive' });
       }
     } finally {
       setIsLoading(false);

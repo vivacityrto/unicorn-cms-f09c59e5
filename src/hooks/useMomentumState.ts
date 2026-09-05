@@ -33,7 +33,7 @@ export function useMomentumState(tenantId: number | null, packageInstanceId?: nu
       if (!tenantId) return [];
 
       let query = supabase
-        .from('v_momentum_state' as any)
+        .from('v_momentum_state')
         .select('*')
         .eq('tenant_id', tenantId);
 
@@ -58,7 +58,7 @@ export function useConsultantMomentumStates(userUuid: string | null) {
       if (!userUuid) return [];
 
       const { data, error } = await supabase
-        .from('v_momentum_state' as any)
+        .from('v_momentum_state')
         .select('*')
         .eq('manager_id', userUuid);
 

@@ -19,7 +19,7 @@ export interface MomentumClient {
   consult_health: number;
   days_stale: number;
   is_stale: boolean;
-  caps_applied: any[];
+  caps_applied: unknown[];
   hours_remaining: number;
   risk_state: 'critical' | 'at_risk' | 'on_track';
   score_calculated_at: string | null;
@@ -32,7 +32,7 @@ export function useMomentumPanel(userUuid: string | null) {
       if (!userUuid) return [];
 
       const { data, error } = await supabase
-        .from('v_dashboard_consultant_momentum' as any)
+        .from('v_dashboard_consultant_momentum')
         .select('*')
         .eq('user_uuid', userUuid);
 
