@@ -241,6 +241,20 @@ live Playwright check. The things worth reviewing each time:
   build-cache change, verified to produce an identical result, that cut
   repeat runs to ~15s (~11x). Re-check this kind of thing doesn't already
   exist before optimizing some other part of the pipeline instead.
+- **Don't echo full verbose test output into your own context every
+  batch.** `npm run test:edge` alone prints 150-250 lines (every
+  individual `✔` across ~260 tests), and it's nearly byte-identical from
+  one batch to the next once a phase is steady-state. Pasting that in
+  full every single batch (confirmed as a real, avoidable cost across a
+  ~26-batch Phase 2.5 stretch on 2026-09-05 — see the execution
+  efficiency log) burns a lot of your own context for close to zero
+  information, since the tests reliably pass. Capture only the summary
+  line (pass/fail/skip counts) from `test:edge` and `test:frontend`
+  unless something actually fails — only paste the full output when a
+  test fails, since that's the one case the detail is actually needed.
+  This does not weaken verification: the full suite still runs and still
+  gates the batch, only what you *echo back into your own context*
+  changes.
 
 The bar for any of these: does it reduce repeated overhead without
 skipping, weakening, or reordering-around a verification step? If yes,
