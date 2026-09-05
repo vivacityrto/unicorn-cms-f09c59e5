@@ -171,6 +171,40 @@ may continue Phase 2.5 independently. A formal Phase 2.5 exit checkpoint is
 still required before declaring that phase complete, but it is not a reason to
 stall safe Phase 2.6 work indefinitely.
 
+## 7bis. Fresh reachability reconfirmation — Phase 2.5 batches 71-80 (2026-09-05)
+
+The ongoing `no-explicit-any` retirement lane's mandatory reachability
+triage (grep for real importers before touching a candidate file, per the
+liveness-triage rule from §7 above and §3.3 item 5) independently
+reconfirmed two items already on this register, at current `origin/main`
+after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
+
+- **`ComplianceScoreBreakdown.tsx`** (batch 80) — zero inbound imports
+  confirmed via `Grep` across all of `src/`; only self-references (its own
+  interface/export declarations) matched. Its paired hook,
+  **`useComplianceScore.ts`**, is likewise only imported by
+  `ComplianceScoreBreakdown.tsx` itself — the whole island is still fully
+  disconnected. This matches the existing §3.2 "Compliance-score island"
+  row exactly; no new evidence changes its disposition (still: confirm
+  product/history intent before deleting, and do not infer its backing
+  view/RPC is dead from frontend disconnection alone).
+- **`useCompletionEligibility.ts`** (batch 78, [PR #677](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/677)) — zero inbound
+  imports confirmed the same way; matches the §3.3 zero-inbound queue's
+  `useCompletionEligibility` entry (that list didn't record a file
+  extension — this is `.ts`, not `.tsx`). One caveat for whoever actions
+  this: PR #677 removed an `as any` cast inside this file (a `v_completion_eligibility`
+  view-name cast) *before* this reachability confirmation surfaced — a
+  type-only change with no behavioral effect, so it doesn't block
+  retirement, but a diff against `origin/main` will show that unrelated
+  edit sitting in the file's history.
+
+No other file touched across batches 71-80 turned up as unreachable;
+every other candidate in those batches had a real, grep-confirmed importer
+before being edited (see `docs/kb/reference/execution-efficiency-log.md`
+for the batch-by-batch record). These two remain **candidates only** —
+nothing here authorizes deletion; follow the "Required gates per
+implementation PR" checklist in §7 before actioning either one.
+
 ## 6. Cross-program sequence
 
 ### Phase 2.5 checkpoint and ongoing lane
