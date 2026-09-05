@@ -208,6 +208,7 @@ checked against real before/after data rather than assumed to have worked.
 
 | 2026-09-05 | Full Phase 2.5 reset/verification run after Claude stopped: terminated 36 machine-wide `node.exe` processes by explicit user authorization, retained credentials/auth state, reused one isolated worktree, and ran all gates under the named mutex. Dependency installation took 3m; lint baseline 29s; lint ratchet 25s; frontend 18.7s; Edge 1.8s; build 12.7s; authenticated Playwright 44s; unauthenticated desktop/mobile 44s. | Avoided duplicate worktree installs and server collisions; browser evidence is reproducible on canonical port 8080. | `codex/phase-2-5-exit`; Phase 2.5 reconciliation checkpoint |
 | 2026-09-05 | PR #693 auto-merged after all GitHub checks completed (Vercel Agent Review included) at 15:16:12Z. | No bypass or forced merge; final origin tip is `c897ef863`. | Phase 2.5 exit reconciliation |
+| 2026-09-05 | Profile cluster batch (`TeamProfileFields.tsx`, `AdminActions.tsx`) reused one persistent worktree and one dependency install; all heavy gates were mutex-wrapped. | 10 findings retired; baseline 1,176→1,166 errors. Frontend 19s, Edge+build ~10s, Playwright 41s; no new production bug found. | Phase 2.5 profile batch |
 
 ### TS cache seeding — baseline and milestones
 
