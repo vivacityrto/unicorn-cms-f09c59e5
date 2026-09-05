@@ -246,6 +246,7 @@ or "2x" as a settled number from this data.
 
 | 2026-09-04 | Prepared Phase 3–5 characterization packets while Claude's Phase 2.5 lane remained active | Read-only source/history work completed without taking the heavy-job mutex, starting a competing Vite server, or changing runtime/schema state. One packet now captures Lifecycle Checklists, auth/RBAC seams, package/messaging/document reliability gates, and authenticated Edge title-extraction contracts. | `phase-3-5-parallel-preparation-packets-2026-09-04.md` |
 | 2026-09-05 | Started tenant operating-model P0.1 in an isolated worktree with a source-only inventory script and generated contract artifact | The source generator itself makes no Supabase connection; a separate read-only catalog query supplied the dated live snapshot. No heavy command, server, production write, or shared-checkout checkout was used. | `scripts/tenant-p0-inventory.mjs`; `scripts/tenant-p0-catalog.sql`; `docs/kb/codebase-state/tenant-p0-source-inventory.md` |
+| 2026-09-05 | Phase 2.6 single-cohort retirement attempt for `AuditInspectionsTable.tsx` | Fresh reachability/server sweep passed; lint-ratchet, frontend tests (298 passed/15 skipped), Edge tests, and build passed. Typecheck remains a pre-existing baseline failure in `useKpiSummary.tsx`; Playwright preflight was correctly blocked because Claude owns port 8080. PR is intentionally open pending human sign-off. | `chore/phase-2-6-retire-document-versions`; implementation PR |
 
 ## Adding a new entry
 
