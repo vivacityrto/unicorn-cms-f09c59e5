@@ -215,12 +215,12 @@ for the batch-by-batch record). These three remain **candidates only** —
 nothing here authorizes deletion; follow the "Required gates per
 implementation PR" checklist in §7 before actioning any of them.
 
-**AuditTemplatesTable action (pending human sign-off):** Fresh reachability at
+**AuditTemplatesTable action (completed in PR [#691](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/691), merged 2026-09-05):** Fresh reachability at
 current `origin/main` found `src/components/audit/AuditTemplatesTable.tsx`
 has no inbound imports, dynamic imports, route/menu/registry references, or
 generated-link/history references. Its former `Audits.tsx` parent was retired
 in #588; `/audits` uses `AuditsAssessments`. The component is frontend-only and
-this PR removes the orphaned file without changing active routes or backend
+the merged PR removed the orphaned file without changing active routes or backend
 objects.
 
 **Actioned candidate (PR [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686), merged 2026-09-05):** the Phase 2.6 cohort for
@@ -235,7 +235,7 @@ and transition RPC remain live elsewhere and are untouched. The implementation
 PR will record the exact verification results and remains unmergeable without
 Carl's explicit sign-off.
 
-**AuditNavCards action (pending human sign-off):** Fresh reachability at
+**AuditNavCards action (completed in PR [#690](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/690), merged 2026-09-05):** Fresh reachability at
 current `origin/main` found `src/components/audit/AuditNavCards.tsx` has no
 inbound imports, dynamic imports, route/menu/registry references, or generated
 link/history references. Its former parent `Audits.tsx` was retired in #588;
@@ -313,7 +313,7 @@ No plan or council approval authorizes a production migration/deployment, extern
 | Item | Status | Evidence |
 |---|---|---|
 | Three-seat council investigation | Complete 2026-09-04 | dead-code/import graph, feature/database consolidation, and RBAC/tenant alignment seats |
-| Phase 2.6 plan insertion | Implementation underway | All highest-confidence dead-code cohorts are retired: [#570](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/570), [#571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571), [#574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574), [#577](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/577), [#579](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/579), Audit work [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586)/[#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588), and export cleanup [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686). Remaining work is bounded consolidation candidates plus the lower-confidence candidates listed above. |
+| Phase 2.6 plan insertion | Implementation underway | All listed high-confidence retirements are now merged: [#570](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/570), [#571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571), [#574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574), [#577](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/577), [#579](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/579), Audit work [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586)/[#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588), Audit orphan retirements [#690](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/690)/[#691](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/691), and export cleanup [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686). Remaining work is bounded feature consolidation plus lower-confidence candidates requiring fresh evidence. |
 | AuditInspectionsTable retirement | Merged in [#681](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/681) | Fresh current-origin sweep: zero inbound imports/dynamic imports/routes/menu references; no Edge callers; backend `audit_inspection` remains active through `AuditTemplateBuilder` and `merge_tenants`. Component deletion was frontend-only; authenticated Playwright passed with real audit data and zero writes. |
 | StageCellEditor export retirement | Merged in [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686) | Removed only the unreachable editor export and exclusive imports; retained the file and live `StageStatusDot`. Fresh reachability sweep found no inbound references; related stage-state backend objects remain live. Authenticated Membership Grid Playwright passed with zero writes; current data did not exercise a colored stage state. |
 | High-confidence cohorts | 6 of 6 retired | Audit convergence is a separate source-proven slice intentionally gated on UUID/deep-link characterization; broader consolidation remains investigative |
