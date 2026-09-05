@@ -37,7 +37,7 @@ export function StageMessagesPanel({ stageId, tenantId, onSendMessage }: StageMe
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('stage_message_templates')
         .select('*')
         .eq('stage_id', stageId)
