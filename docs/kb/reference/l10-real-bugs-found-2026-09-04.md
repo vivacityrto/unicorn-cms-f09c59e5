@@ -275,6 +275,16 @@ column is unclear (`tenants.unicorn1_id` is a `number`, not the `string`
 type `client_legacy_id` expects elsewhere — this needs someone who knows
 the intended legacy-mapping path, not a type-only guess).
 
+**Update (batch 57, 2026-09-05): a second independent occurrence found.**
+`GeneratedDocumentsTab.tsx`'s `handleExcelGenerate` — a different component,
+same feature area — has the exact same `supabase.from('tenants').select
+('client_legacy_id')` call and the same unchecked-error/always-undefined
+result. Same root cause, same fix status (documented, not fixed, pending a
+product decision on the correct legacy-mapping source). The `any`-cast
+removal preserved the existing (broken) behavior via an explicit narrow
+cast, matching item 15's established pattern, rather than silently
+patching it.
+
 ## Manage Stages — audit trail (`AdminManageStages.tsx`)
 
 ### 14. Stage archive/restore has never recorded an audit trail entry — DOCUMENTED, NOT FIXED (compliance-relevant)

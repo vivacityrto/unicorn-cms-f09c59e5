@@ -68,12 +68,12 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
 
       if (!tenantData) return [];
 
-      const packageIds = (tenantData as any).package_ids || (tenantData.package_id ? [tenantData.package_id] : []);
+      const packageIds = tenantData.package_ids || (tenantData.package_id ? [tenantData.package_id] : []);
       if (packageIds.length === 0) return [];
 
       // Two-step fetch — there's no FK between documents.package_id and
       // packages, so the embedded `packages:package_id(name)` select 400s.
-      let query = (supabase as any)
+      let query = supabase
         .from('documents')
         .select('*')
         .in('package_id', packageIds)
@@ -88,12 +88,12 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
       if (error) throw error;
 
       const { data: pkgs } = await supabase.from('packages').select('id, name').in('id', packageIds);
-      const nameMap = new Map((pkgs || []).map((p: any) => [p.id, p.name]));
+      const nameMap = new Map((pkgs || []).map((p) => [p.id, p.name]));
 
-      return (data || []).map((doc: any) => ({
+      return (data || []).map((doc) => ({
         ...doc,
         package_name: nameMap.get(doc.package_id) || null,
-      }));
+      })) as GeneratedDocument[];
     },
     enabled: !!tenantId,
   });
@@ -114,7 +114,7 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
           .eq('document_id', doc.id);
         
         const docFieldCodes = (fieldRows || [])
-          .map((r: any) => r.field?.tag)
+          .map((r) => r.field?.tag)
           .filter(Boolean);
         
         if (docFieldCodes.length > 0) {
@@ -159,7 +159,11 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
       return;
     }
 
-    // Get client_legacy_id from tenants table
+    // NOTE: `tenants` has no `client_legacy_id` column (that column only exists on
+    // excel_generated_files/generated_documents) — this select has always failed
+    // silently (error not checked), so clientLegacyId has always been undefined.
+    // Pre-existing bug, out of scope for this type-only change; the cast preserves
+    // that exact (broken) behavior. See docs/kb/reference/l10-real-bugs-found-2026-09-04.md #15.
     const { data: tenantData } = await supabase
       .from('tenants')
       .select('client_legacy_id')
@@ -169,7 +173,7 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
     await generateAndDownload({
       documentId: doc.id,
       tenantId,
-      clientLegacyId: (tenantData as any)?.client_legacy_id,
+      clientLegacyId: (tenantData as unknown as { client_legacy_id?: string } | null)?.client_legacy_id,
       stageId: doc.stage || undefined,
       packageId: doc.package_id || undefined,
     });
@@ -204,10 +208,10 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
       });
       
       toast({ title: 'Download started' });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Download failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }

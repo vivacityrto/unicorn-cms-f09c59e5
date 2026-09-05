@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import {
   useBuilderAssessment, useBuilderQuestions, useCreateAssessment,
   useUpdateAssessment, useDeleteQuestion, useSaveAllQuestions,
-  type BuilderQuestion, type QuestionOption,
+  type BuilderAssessment, type BuilderQuestion, type QuestionOption,
 } from "@/hooks/academy/useAcademyAssessmentBuilder";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +33,12 @@ function suggestQuestionCount(lessonCount: number): number {
 function clampQuestionCount(value: number): number {
   if (!Number.isFinite(value)) return QUESTION_COUNT_SUGGEST_MIN;
   return Math.min(QUESTION_COUNT_MAX, Math.max(QUESTION_COUNT_MIN, Math.round(value)));
+}
+
+interface GeneratedQuestion {
+  question_text: string;
+  options: QuestionOption[];
+  explanation?: string | null;
 }
 
 interface AssessmentEditorTabProps {
@@ -99,9 +106,16 @@ export default function AssessmentEditorTab({
     });
   };
 
-  const autoSaveField = (field: string, value: any) => {
+  const autoSaveField = <K extends keyof Omit<BuilderAssessment, "id" | "course_id">>(
+    field: K,
+    value: BuilderAssessment[K],
+  ) => {
     if (!assessment) return;
-    updateAssessment.mutate({ id: assessment.id, courseId, data: { [field]: value } });
+    updateAssessment.mutate({
+      id: assessment.id,
+      courseId,
+      data: { [field]: value } as Partial<Omit<BuilderAssessment, "id" | "course_id">>,
+    });
   };
 
   const addQuestion = () => {
@@ -122,11 +136,11 @@ export default function AssessmentEditorTab({
     setNextTempId(prev => prev - 1);
   };
 
-  const updateLocalQuestion = (idx: number, field: keyof BuilderQuestion, value: any) => {
+  const updateLocalQuestion = <K extends keyof BuilderQuestion>(idx: number, field: K, value: BuilderQuestion[K]) => {
     setLocalQuestions(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q));
   };
 
-  const updateOption = (qIdx: number, optIdx: number, field: keyof QuestionOption, value: any) => {
+  const updateOption = <K extends keyof QuestionOption>(qIdx: number, optIdx: number, field: K, value: QuestionOption[K]) => {
     setLocalQuestions(prev => prev.map((q, i) => {
       if (i !== qIdx) return q;
       const opts = [...q.options];
@@ -199,7 +213,7 @@ export default function AssessmentEditorTab({
     setAiModalOpen(true);
   };
 
-  const insertGeneratedQuestions = async (questions: any[]) => {
+  const insertGeneratedQuestions = async (questions: GeneratedQuestion[]) => {
     if (!assessment) return;
     const maxSort = localQuestions.length > 0
       ? Math.max(...localQuestions.map(q => q.sort_order ?? 0))
@@ -211,11 +225,11 @@ export default function AssessmentEditorTab({
         assessment_id: assessment.id,
         question_text: q.question_text,
         question_type: "multiple_choice",
-        options: q.options,
+        options: q.options as unknown as Json,
         points: 1,
         sort_order: maxSort + i + 1,
         explanation: q.explanation || null,
-      } as any);
+      });
       if (error) throw error;
     }
 
@@ -263,7 +277,7 @@ export default function AssessmentEditorTab({
 
       await insertGeneratedQuestions(questions);
       setAiModalOpen(false);
-    } catch (e: any) {
+    } catch (e) {
       console.error("AI question generation error:", e);
       toast.error("Generation failed, please try again");
     } finally {
@@ -298,7 +312,7 @@ export default function AssessmentEditorTab({
       }
 
       await insertGeneratedQuestions(questions);
-    } catch (e: any) {
+    } catch (e) {
       console.error("AI quiz generation error:", e);
       toast.error("Generation failed, please try again");
     } finally {

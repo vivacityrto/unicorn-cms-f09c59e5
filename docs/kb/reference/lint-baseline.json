@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T01:44:47.332Z",
-  "baselineSha": "3f52dcce4555e07c6619556adcaa772e889dcba1",
+  "generatedAt": "2026-09-05T02:08:38.053Z",
+  "baselineSha": "c302fd32333637e0a86ae8451c9b1adc21966074",
   "totals": {
     "files": 1758,
-    "filesWithFindings": 377,
-    "errors": 1341,
+    "filesWithFindings": 375,
+    "errors": 1327,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1334,
+    "@typescript-eslint/no-explicit-any": 1320,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 673,
+      "errors": 659,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 666,
+        "@typescript-eslint/no-explicit-any": 652,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -61,11 +61,11 @@
       }
     },
     "src/components/academy/builder": {
-      "errors": 10,
+      "errors": 3,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 9,
-        "@typescript-eslint/no-unused-expressions": 1
+        "@typescript-eslint/no-unused-expressions": 1,
+        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "src/components/admin": {
@@ -173,13 +173,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "src/components/documents/tabs": {
-      "errors": 7,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 7
       }
     },
     "src/components/email-triage": {
@@ -1249,9 +1242,6 @@
     "src/components/academy/admin/rules/RulesListTab.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/components/academy/builder/AssessmentEditorTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/components/academy/builder/ImportVideosPanel.tsx": {
       "@typescript-eslint/no-unused-expressions": 1,
       "@typescript-eslint/no-explicit-any": 2
@@ -1345,9 +1335,6 @@
     },
     "src/components/documents/bulk-generate/targeted/TargetedMode.tsx": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/documents/tabs/GeneratedDocumentsTab.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
     },
     "src/components/email-triage/TicketDetailPanel.tsx": {
       "@typescript-eslint/no-explicit-any": 4
