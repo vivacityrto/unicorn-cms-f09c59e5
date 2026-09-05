@@ -33,12 +33,12 @@ export function useEvidenceCategories(stageType?: string) {
 
       if (error) throw error;
 
-      return (data || []).map((cat: any) => ({
+      return (data || []).map((cat) => ({
         ...cat,
         required_metadata_json: Array.isArray(cat.required_metadata_json)
           ? cat.required_metadata_json
           : [],
-      })) as EvidenceCategory[];
+      })) as unknown as EvidenceCategory[];
     },
   });
 }
