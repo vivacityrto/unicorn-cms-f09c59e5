@@ -188,7 +188,7 @@ or "2x" as a settled number from this data.
    worth keeping so it isn't re-tried blind later.
 
 | 2026-09-04 | Prepared Phase 3–5 characterization packets while Claude's Phase 2.5 lane remained active | Read-only source/history work completed without taking the heavy-job mutex, starting a competing Vite server, or changing runtime/schema state. One packet now captures Lifecycle Checklists, auth/RBAC seams, package/messaging/document reliability gates, and authenticated Edge title-extraction contracts. | `phase-3-5-parallel-preparation-packets-2026-09-04.md` |
-| 2026-09-05 | Started tenant operating-model P0.1 in an isolated worktree with a source-only inventory script and generated contract artifact | No heavy command, server, Supabase connection, production write, or shared-checkout checkout was used. The repeatable scan records the Manage Tenants request graph and visible fields while explicitly leaving live catalog/identity evidence open. | `scripts/tenant-p0-inventory.mjs`; `docs/kb/codebase-state/tenant-p0-source-inventory.md` |
+| 2026-09-05 | Started tenant operating-model P0.1 in an isolated worktree with a source-only inventory script and generated contract artifact | The source generator itself makes no Supabase connection; a separate read-only catalog query supplied the dated live snapshot. No heavy command, server, production write, or shared-checkout checkout was used. | `scripts/tenant-p0-inventory.mjs`; `scripts/tenant-p0-catalog.sql`; `docs/kb/codebase-state/tenant-p0-source-inventory.md` |
 
 ## Adding a new entry
 
