@@ -10,6 +10,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { isCronAuthorized, cronUnauthorizedResponse } from "../_shared/cron-auth.ts";
 
+interface StageRow { id: string; packageinstance_id: number | null; status: string; created_at: string; updated_at: string | null; }
+interface PackageRow { id: number; tenant_id: number; }
+interface TaskRow { id: string; stageinstance_id: string; status_id: number; due_date: string | null; }
+interface RiskRow { tenant_id: number; }
+interface GapRow { stage_instance_id: string; missing_categories_json: unknown; generated_at?: string; }
+interface GapCategory { mandatory?: boolean; }
+interface TimeEntryRow { tenant_id: number; duration_minutes: number | null; }
+interface HealthRule { metric_key: string; comparison_operator: string; threshold_value: number; severity_impact: string; }
+interface SnapshotRow { tenant_id: number; stage_instance_id: string; snapshot_date: string; progress_percentage: number; tasks_open_count: number; tasks_overdue_count: number; high_risk_count: number; evidence_gap_mandatory_count: number; days_since_last_activity: number; consult_hours_logged: number; health_status: string; }
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
@@ -34,7 +44,7 @@ Deno.serve(async (req) => {
     if (rulesErr) throw rulesErr;
 
     // 2. Fetch all active stage instances
-    const stages: any[] = [];
+    const stages: StageRow[] = [];
     let page = 0;
     while (true) {
       const { data, error } = await sb
@@ -58,9 +68,9 @@ Deno.serve(async (req) => {
 
     // 3. Get all unique IDs needed
     const packageInstanceIds = [
-      ...new Set(stages.map((s: any) => s.packageinstance_id).filter(Boolean)),
+      ...new Set(stages.map((s) => s.packageinstance_id).filter((id): id is number => id != null)),
     ];
-    const stageIds = stages.map((s: any) => s.id);
+    const stageIds = stages.map((s) => s.id);
 
     // 4. Bulk fetch package_instances → tenant mapping
     const { data: pkgInstances } = await sb
@@ -69,7 +79,7 @@ Deno.serve(async (req) => {
       .in("id", packageInstanceIds);
 
     const tenantByPkg = new Map<number, number>();
-    (pkgInstances || []).forEach((p: any) => tenantByPkg.set(p.id, p.tenant_id));
+    (pkgInstances as PackageRow[] | null || []).forEach((p) => tenantByPkg.set(p.id, p.tenant_id));
 
     const tenantIds = [...new Set(Array.from(tenantByPkg.values()))];
 
@@ -79,8 +89,8 @@ Deno.serve(async (req) => {
       .select("id, stageinstance_id, status_id, due_date")
       .in("stageinstance_id", stageIds);
 
-    const tasksByStage = new Map<string, any[]>();
-    (allTasks || []).forEach((t: any) => {
+    const tasksByStage = new Map<string, TaskRow[]>();
+    (allTasks as TaskRow[] | null || []).forEach((t) => {
       const key = t.stageinstance_id;
       if (!tasksByStage.has(key)) tasksByStage.set(key, []);
       tasksByStage.get(key)!.push(t);
@@ -95,7 +105,7 @@ Deno.serve(async (req) => {
       .in("status", ["open", "monitoring"]);
 
     const riskCountByTenant = new Map<number, number>();
-    (riskEvents || []).forEach((r: any) => {
+    (riskEvents as RiskRow[] | null || []).forEach((r) => {
       riskCountByTenant.set(r.tenant_id, (riskCountByTenant.get(r.tenant_id) || 0) + 1);
     });
 
@@ -106,8 +116,8 @@ Deno.serve(async (req) => {
       .in("stage_instance_id", stageIds)
       .order("generated_at", { ascending: false });
 
-    const latestGapByStage = new Map<string, any>();
-    (allGapChecks || []).forEach((g: any) => {
+    const latestGapByStage = new Map<string, GapRow>();
+    (allGapChecks as GapRow[] | null || []).forEach((g) => {
       if (!latestGapByStage.has(g.stage_instance_id)) {
         latestGapByStage.set(g.stage_instance_id, g);
       }
@@ -122,13 +132,13 @@ Deno.serve(async (req) => {
       .gte("start_at", ninetyDaysAgo);
 
     const consultHoursByTenant = new Map<number, number>();
-    (timeEntries || []).forEach((te: any) => {
+    (timeEntries as TimeEntryRow[] | null || []).forEach((te) => {
       const hours = (te.duration_minutes || 0) / 60;
       consultHoursByTenant.set(te.tenant_id, (consultHoursByTenant.get(te.tenant_id) || 0) + hours);
     });
 
     // 9. Process all stages in memory — zero DB calls in this loop
-    const snapshots: any[] = [];
+    const snapshots: SnapshotRow[] = [];
     const today = new Date().toISOString().split("T")[0];
 
     for (const stage of stages) {
@@ -138,9 +148,9 @@ Deno.serve(async (req) => {
       const stageId = stage.id;
       const tasks = tasksByStage.get(stageId) || [];
       const totalTasks = tasks.length;
-      const completedTasks = tasks.filter((t: any) => t.status_id === 2).length;
+      const completedTasks = tasks.filter((t) => t.status_id === 2).length;
       const openTasks = totalTasks - completedTasks;
-      const overdueTasks = tasks.filter((t: any) =>
+      const overdueTasks = tasks.filter((t) =>
         t.due_date && t.status_id !== 2 && t.status_id !== 3 && t.due_date < today
       ).length;
       const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -150,8 +160,10 @@ Deno.serve(async (req) => {
       const gapCheck = latestGapByStage.get(stageId);
       let mandatoryGapCount = 0;
       if (gapCheck?.missing_categories_json) {
-        mandatoryGapCount = (gapCheck.missing_categories_json as any[])
-          .filter((m: any) => m.mandatory === true).length;
+        mandatoryGapCount = (Array.isArray(gapCheck.missing_categories_json)
+          ? gapCheck.missing_categories_json.filter((m): m is GapCategory => typeof m === "object" && m !== null)
+          : [])
+          .filter((m) => m.mandatory === true).length;
       }
 
       const lastUpdated = stage.updated_at || stage.created_at;
@@ -220,7 +232,8 @@ Deno.serve(async (req) => {
 
     // 6. Refresh materialized view
     try {
-      await sb.rpc("refresh_stage_health_trends" as any);
+      const rpc = sb.rpc.bind(sb) as (fn: string) => Promise<unknown>;
+      await rpc("refresh_stage_health_trends");
     } catch {
       console.log("Materialized view refresh via RPC not available, skipping");
     }
