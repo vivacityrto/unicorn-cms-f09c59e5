@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
+import type { VariantProps } from "class-variance-authority";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -61,7 +62,7 @@ function StatusBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-muted-foreground text-xs">—</span>;
   const variant =
     status === "green" ? "default" : status === "amber" ? "secondary" : status === "red" ? "destructive" : "outline";
-  return <Badge variant={variant as any} className="capitalize">{status}</Badge>;
+  return <Badge variant={variant as VariantProps<typeof badgeVariants>['variant']} className="capitalize">{status}</Badge>;
 }
 
 function PctCell({ value }: { value: number | null | undefined }) {
