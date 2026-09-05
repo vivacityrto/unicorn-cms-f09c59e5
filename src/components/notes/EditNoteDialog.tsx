@@ -69,8 +69,8 @@ export function EditNoteDialog({ noteId, tenantId, open, onOpenChange, onSaved }
       toast({ title: 'Note updated' });
       onSaved?.();
       onOpenChange(false);
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     }
   }, [noteId, toast, onSaved, onOpenChange]);
 

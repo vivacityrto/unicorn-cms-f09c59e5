@@ -71,9 +71,9 @@ export function CreatableSelect({
         onOptionCreated?.();
         toast.success(`"${formattedLabel}" added successfully.`);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to add custom option:', err);
-      toast.error('Failed to add option: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to add option: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setSaving(false);
       setShowCustomInput(false);

@@ -9,7 +9,7 @@ import { CalendarGrid } from '@/components/calendar/CalendarGrid';
 import { CalendarOwnerSelector } from '@/components/calendar/CalendarOwnerSelector';
 import { CalendarEventDetailDialog } from '@/components/calendar/CalendarEventDetailDialog';
 import { LinkEventToClientDialog } from '@/components/calendar/LinkEventToClientDialog';
-import { useWorkCalendar, CalendarEvent } from '@/hooks/useWorkCalendar';
+import { useWorkCalendar, CalendarEvent, CalendarView } from '@/hooks/useWorkCalendar';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -148,7 +148,7 @@ export default function WorkCalendar() {
               {/* View toggle */}
               <Tabs
                 value={view}
-                onValueChange={(v) => setView(v as any)}
+                onValueChange={(v) => setView(v as CalendarView)}
               >
                 <TabsList>
                   <TabsTrigger value="day">Day</TabsTrigger>

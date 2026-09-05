@@ -93,7 +93,7 @@ export function ChatTab() {
           setMessages(prev => [...prev, latestMsg as Message]);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Chat error:", err);
       toast.error("Failed to send message. Please try again.");
       // Remove optimistic message on error
