@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T15:10:58.428Z",
-  "baselineSha": "1641f4186b8576ad5d5f8b30c68a1a7a6caf270d",
+  "generatedAt": "2026-09-05T15:48:57.879Z",
+  "baselineSha": "40e1de38679efbec7ddf45222d1eeabd1e04adf1",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 267,
-    "errors": 1176,
+    "filesWithFindings": 265,
+    "errors": 1166,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1169,
+    "@typescript-eslint/no-explicit-any": 1159,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 508,
+      "errors": 498,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 501,
+        "@typescript-eslint/no-explicit-any": 491,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -210,10 +210,10 @@
       }
     },
     "src/components/profile": {
-      "errors": 14,
+      "errors": 4,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 14
+        "@typescript-eslint/no-explicit-any": 4
       }
     },
     "src/components/stage": {
@@ -1247,14 +1247,8 @@
     "src/components/portfolio/TenantDrawer.tsx": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "src/components/profile/AdminActions.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
     "src/components/profile/ProfileHeader.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/components/profile/TeamProfileFields.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "src/components/stage/StageFrameworkSelector.tsx": {
       "react-refresh/only-export-components": 6

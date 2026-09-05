@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface TeamUser {
@@ -109,9 +110,9 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
       const { data, error } = await supabase.rpc('get_team_users');
       if (error) throw error;
       // Filter out current user (prevent self-selection) but include inactive users if they're the current selection
-      const users = (data || [])
-        .filter((u: any) => u.user_uuid !== user.user_uuid)
-        .map((u: any) => ({
+      const users = ((data || []) as TeamUserRpcRow[])
+        .filter((u) => u.user_uuid !== user.user_uuid)
+        .map((u) => ({
           user_uuid: u.user_uuid,
           first_name: u.first_name,
           last_name: u.last_name,
@@ -229,10 +230,10 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
       });
 
       onSave();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to update team profile',
         variant: 'destructive',
       });
     } finally {
@@ -284,13 +285,13 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
                 try {
                   const { error } = await supabase
                     .from('users')
-                    .update({ is_csc: !!checked } as any)
+                    .update({ is_csc: !!checked } satisfies TablesUpdate<'users'>)
                     .eq('user_uuid', user.user_uuid);
                   if (error) throw error;
                   toast({ title: checked ? 'CSC Enabled' : 'CSC Disabled', description: `User ${checked ? 'is now' : 'is no longer'} a Client Success Champion.` });
                   onSave();
-                } catch (err: any) {
-                  toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                } catch (err) {
+                  toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update CSC status', variant: 'destructive' });
                 }
               }}
             />
@@ -564,3 +565,8 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
     </Card>
   );
 }
+
+type TeamUserRpcRow = Pick<TeamUser, 'user_uuid' | 'first_name' | 'last_name' | 'email'> & {
+  job_title?: string | null;
+  disabled?: boolean | null;
+};

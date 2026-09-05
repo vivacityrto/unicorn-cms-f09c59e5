@@ -242,10 +242,10 @@ export function AdminActions({
       });
 
       onUpdate();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to update status',
         variant: 'destructive',
       });
     } finally {
@@ -259,7 +259,7 @@ export function AdminActions({
 
       const primaryTeam = selectedStaffTeams.length > 0 ? selectedStaffTeams[0] : null;
 
-      const body: Record<string, any> = isInternalUser
+      const body: Record<string, unknown> = isInternalUser
         ? {
             user_uuid: user.user_uuid,
             unicorn_role: unicornRole,
@@ -293,10 +293,10 @@ export function AdminActions({
       });
 
       onUpdate();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to update role',
         variant: 'destructive',
       });
     } finally {
@@ -325,10 +325,10 @@ export function AdminActions({
         title: 'Password Reset Sent',
         description: `Reset email sent to ${data.email}`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to send password reset',
         variant: 'destructive',
       });
     } finally {
@@ -354,10 +354,10 @@ export function AdminActions({
         title: 'Recovery Link Copied',
         description: `Link for ${data.email} copied to clipboard. Send it directly via Teams or SMS — it opens a landing page before consuming the token. Expires in 24 hours.`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to generate recovery link',
         variant: 'destructive',
       });
     } finally {
