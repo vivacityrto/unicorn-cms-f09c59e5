@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type Ref } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft } from 'lucide-react';
@@ -6,14 +6,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 import { TICKET_TYPE_BY_KEY, TicketTypeKey } from '@/components/support-tickets/ticketTypeConfig';
 import { ClientTicketTypePickerStep } from './ClientTicketTypePickerStep';
-import { useClientSubmitTicket } from './useClientSubmitTicket';
+import { useClientSubmitTicket, type AnyFormValues } from './useClientSubmitTicket';
 import { ClientBrokenForm } from './forms/ClientBrokenForm';
 import { ClientFeatureForm } from './forms/ClientFeatureForm';
 import { ClientImprovementForm } from './forms/ClientImprovementForm';
 import { ClientQuestionForm } from './forms/ClientQuestionForm';
 import { ClientOtherForm } from './forms/ClientOtherForm';
 
-interface FormHandle { submit: () => Promise<any | null>; }
+interface FormHandle { submit: () => Promise<AnyFormValues | null>; }
 
 interface Props {
   open: boolean;
@@ -93,7 +93,7 @@ export function ClientNewTicketModal({ open, onOpenChange }: Props) {
           ) : step === 'pick' ? (
             <ClientTicketTypePickerStep selected={selectedType} onSelect={handlePick} />
           ) : FormComponent ? (
-            <FormComponent ref={formRef as any} />
+            <FormComponent ref={formRef as Ref<FormHandle>} />
           ) : null}
         </div>
 

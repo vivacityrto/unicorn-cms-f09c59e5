@@ -11,9 +11,10 @@ import { useRBAC } from '@/hooks/useRBAC';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { format } from 'date-fns';
+import type { Tables } from '@/integrations/supabase/types';
 
 interface Props {
-  data: { upcoming: any[]; atRisk: number; missed: number } | undefined;
+  data: { upcoming: Tables<'client_commitments'>[]; atRisk: number; missed: number } | undefined;
   isLoading: boolean;
 }
 
@@ -78,7 +79,7 @@ export function DiamondClientPanel({ data, isLoading }: Props) {
                 {data.upcoming.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Upcoming</p>
-                    {data.upcoming.slice(0, 5).map((c: any) => (
+                    {data.upcoming.slice(0, 5).map((c) => (
                       <div key={c.id} className="flex items-center justify-between text-xs">
                         <span className="text-foreground truncate max-w-[60%]">{c.title}</span>
                         <span className="text-muted-foreground tabular-nums">

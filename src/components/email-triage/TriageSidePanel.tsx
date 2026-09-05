@@ -69,13 +69,13 @@ export function TriageSidePanel({ ticket, open, onOpenChange }: Props) {
           urgent,
           assigned_to_user_id: assignee,
           assigned_at: nowIso,
-        } as any,
+        },
       });
       toast.success("Ticket triaged");
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err) {
       toast.error("Failed to triage ticket", {
-        description: err?.message ?? "Please try again.",
+        description: err instanceof Error ? err.message : "Please try again.",
       });
     }
   };

@@ -42,7 +42,7 @@ export function BroadcastPreviewDialog({ open, onOpenChange, obligation }: Props
     preview
       .mutateAsync(obligation.id)
       .then(setPreviewData)
-      .catch((err: any) => setPreviewError(err?.message ?? String(err)));
+      .catch((err: unknown) => setPreviewError(err instanceof Error ? err.message : String(err)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, obligation?.id]);
 
@@ -55,8 +55,8 @@ export function BroadcastPreviewDialog({ open, onOpenChange, obligation }: Props
         description: `${result.inserted} notification${result.inserted === 1 ? "" : "s"} inserted.`,
       });
       onOpenChange(false);
-    } catch (err: any) {
-      toast({ title: "Broadcast failed", description: err?.message ?? String(err), variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Broadcast failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     }
   };
 
