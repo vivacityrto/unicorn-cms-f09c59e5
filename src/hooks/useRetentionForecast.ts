@@ -4,6 +4,16 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
+
+type RetentionForecastSummary = Pick<
+  Tables<'tenant_retention_forecasts'>,
+  'tenant_id' | 'retention_status' | 'composite_retention_risk_index' | 'forecast_date'
+>;
+type CommercialProfileSummary = Pick<
+  Tables<'tenant_commercial_profiles'>,
+  'tenant_id' | 'contract_end_date' | 'average_monthly_revenue'
+>;
 
 export interface RetentionForecast {
   id: string;
@@ -77,8 +87,8 @@ export function useRetentionOverview() {
       if (error) throw error;
 
       // Deduplicate: keep latest per tenant
-      const latest = new Map<number, any>();
-      (forecasts ?? []).forEach((f: any) => {
+      const latest = new Map<number, RetentionForecastSummary>();
+      (forecasts ?? []).forEach((f) => {
         if (!latest.has(f.tenant_id)) latest.set(f.tenant_id, f);
       });
 
@@ -89,8 +99,8 @@ export function useRetentionOverview() {
         .from('tenant_commercial_profiles')
         .select('tenant_id, contract_end_date, average_monthly_revenue');
 
-      const profileMap = new Map<number, any>();
-      (profiles ?? []).forEach((p: any) => profileMap.set(p.tenant_id, p));
+      const profileMap = new Map<number, CommercialProfileSummary>();
+      (profiles ?? []).forEach((p) => profileMap.set(p.tenant_id, p));
 
       const now = new Date();
       const in90 = new Date(Date.now() + 90 * 86400000);
@@ -99,7 +109,7 @@ export function useRetentionOverview() {
       let within_renewal_90 = 0, high_risk_in_renewal = 0;
       let revenue_at_risk = 0;
 
-      all.forEach((f: any) => {
+      all.forEach((f) => {
         if (f.retention_status === 'stable') stable++;
         else if (f.retention_status === 'watch') watch++;
         else if (f.retention_status === 'vulnerable') vulnerable++;
