@@ -18,9 +18,18 @@ interface Alert {
   alert_type: string;
   severity: string;
   alert_summary: string;
-  recommended_actions_json: any[];
+  recommended_actions_json: Array<{ action: string; priority: string }>;
   dedupe_hash: string;
 }
+
+interface DedupeRow { dedupe_hash: string; }
+interface ForecastRow { tenant_id: number; risk_velocity_score: number | null; forecast_date: string; }
+interface StageInstanceRow { id: string; package_instance_id: number | null; }
+interface PackageInstanceRow { id: number; tenant_id: number; }
+interface GapCategory { mandatory?: boolean; category?: string; name?: string; }
+interface GapCheckRow { id: string; stage_instance_id: string | null; missing_categories_json: unknown; generated_at: string; }
+interface CapacityRow { user_uuid: string; full_name: string | null; utilisation_pct: number | null; }
+interface TriggerRow { id: string; playbook_id: string; trigger_source: string; threshold_config_json: unknown; }
 
 function makeDedupe(tenantId: number, alertType: string, sourceId: string | null): string {
   const raw = `${tenantId}:${alertType}:${sourceId ?? "global"}`;
@@ -70,7 +79,7 @@ Deno.serve(async (req) => {
       .eq("resolved_flag", false)
       .eq("archived_flag", false);
 
-    const existingHashes = new Set((existingAlerts || []).map((a: any) => a.dedupe_hash));
+    const existingHashes = new Set((existingAlerts as DedupeRow[] | null || []).map((a) => a.dedupe_hash));
 
     // Archive old alerts (> 90 days)
     await sb
@@ -195,7 +204,7 @@ Deno.serve(async (req) => {
       .order("forecast_date", { ascending: true });
 
     if (forecasts14d) {
-      const byTenant = new Map<number, any[]>();
+      const byTenant = new Map<number, ForecastRow[]>();
       for (const f of forecasts14d) {
         if (!byTenant.has(f.tenant_id)) byTenant.set(f.tenant_id, []);
         byTenant.get(f.tenant_id)!.push(f);
@@ -235,7 +244,7 @@ Deno.serve(async (req) => {
 
     if (gapChecks && gapChecks.length > 0) {
       // Group by stage_instance_id and find repeated mandatory gaps
-      const gapByStage = new Map<string, any[]>();
+      const gapByStage = new Map<string, GapCheckRow[]>();
       for (const gc of gapChecks) {
         if (!gc.stage_instance_id) continue;
         if (!gapByStage.has(gc.stage_instance_id)) gapByStage.set(gc.stage_instance_id, []);
@@ -250,16 +259,16 @@ Deno.serve(async (req) => {
           .select("id, package_instance_id")
           .in("id", stageIds);
 
-        const pkgIds = [...new Set((stageInstances || []).map((s: any) => s.package_instance_id).filter(Boolean))];
+        const pkgIds = [...new Set((stageInstances as StageInstanceRow[] | null || []).map((s) => s.package_instance_id).filter((id): id is number => id != null))];
         const { data: pkgInsts } = await sb
           .from("package_instances")
           .select("id, tenant_id")
           .in("id", pkgIds);
 
         const pkgTenantMap = new Map<number, number>();
-        (pkgInsts || []).forEach((p: any) => pkgTenantMap.set(p.id, p.tenant_id));
+        (pkgInsts as PackageInstanceRow[] | null || []).forEach((p) => pkgTenantMap.set(p.id, p.tenant_id));
         const stageTenantMap = new Map<string, number>();
-        (stageInstances || []).forEach((s: any) => {
+        (stageInstances as StageInstanceRow[] | null || []).forEach((s) => {
           const tid = pkgTenantMap.get(s.package_instance_id);
           if (tid) stageTenantMap.set(s.id, tid);
         });
@@ -272,8 +281,10 @@ Deno.serve(async (req) => {
           // Find categories that appear in multiple checks
           const catCount = new Map<string, number>();
           for (const check of checks) {
-            const missing = (check.missing_categories_json || []) as any[];
-            const mandatoryCats = missing.filter((m: any) => m.mandatory).map((m: any) => m.category || m.name || "unknown");
+            const missing = Array.isArray(check.missing_categories_json)
+              ? check.missing_categories_json.filter((value): value is GapCategory => typeof value === "object" && value !== null)
+              : [];
+            const mandatoryCats = missing.filter((m) => m.mandatory).map((m) => m.category || m.name || "unknown");
             for (const cat of mandatoryCats) {
               catCount.set(cat, (catCount.get(cat) || 0) + 1);
             }
@@ -383,7 +394,7 @@ Deno.serve(async (req) => {
 
         for (const alert of alerts) {
           const mappedSource = triggerSourceMap[alert.alert_type] || "";
-          const matchingTriggers = triggers.filter((t: any) => t.trigger_source === mappedSource);
+          const matchingTriggers = (triggers as TriggerRow[]).filter((t) => t.trigger_source === mappedSource);
 
           for (const trigger of matchingTriggers) {
             // Check for existing suggested/initiated activation to avoid duplicates
