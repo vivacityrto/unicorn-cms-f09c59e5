@@ -19,7 +19,7 @@ export function useSupportTicketsBadge() {
         .eq("role", "staff")
         .in("thread_id", ids);
 
-      const answered = new Set((staffMsgs || []).map((m: any) => m.thread_id));
+      const answered = new Set((staffMsgs || []).map((m) => m.thread_id));
       return threads.filter((t) => !answered.has(t.id)).length;
     },
     refetchInterval: 60_000,

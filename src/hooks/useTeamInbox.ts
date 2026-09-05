@@ -2,6 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { InboxItem, InboxFilterType } from "@/types/inbox";
+import type { Database } from "@/integrations/supabase/types";
+
+type GetInboxItemsArgs = Database['public']['Functions']['rpc_get_inbox_items']['Args'];
 
 interface UseTeamInboxOptions {
   filter?: InboxFilterType;
@@ -17,7 +20,7 @@ export function useTeamInbox({ filter = "all", tenantId, actionRequiredOnly }: U
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const params: Record<string, unknown> = {
+      const params: GetInboxItemsArgs = {
         p_user_id: user.id,
         p_limit: 100,
         p_offset: 0,
@@ -26,7 +29,7 @@ export function useTeamInbox({ filter = "all", tenantId, actionRequiredOnly }: U
       if (tenantId) params.p_tenant_id = tenantId;
       if (actionRequiredOnly) params.p_action_required = true;
 
-      const { data, error } = await (supabase.rpc as any)("rpc_get_inbox_items", params);
+      const { data, error } = await supabase.rpc("rpc_get_inbox_items", params);
       if (error) throw error;
       return (data || []) as unknown as InboxItem[];
     },
