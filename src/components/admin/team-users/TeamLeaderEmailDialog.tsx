@@ -26,6 +26,12 @@ interface Props {
   rule: StaffProvisioningRule | null;
 }
 
+type ErrorPayload = { code?: string; error?: string; ok?: boolean };
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function TeamLeaderEmailDialog({ open, onOpenChange, runId, newStarter, teamLeader, rule }: Props) {
   const { toast } = useToast();
   const [sending, setSending] = useState<"none" | "mailgun" | "graph">("none");
@@ -81,20 +87,20 @@ Let me know if you need anything else.`;
 
       // Extract structured payload even when the function returned a non-2xx status.
       // supabase-js puts the parsed JSON body on error.context for FunctionsHttpError.
-      let payload: any = data;
+      let payload: ErrorPayload | null = data as ErrorPayload | null;
       if (error && !payload) {
         try {
-          const ctx: any = (error as any).context;
-          if (ctx && typeof ctx.json === "function") payload = await ctx.json();
+          const ctx = (error as { context?: { json?: () => Promise<unknown>; text?: () => Promise<string> } }).context;
+          if (ctx && typeof ctx.json === "function") payload = await ctx.json() as ErrorPayload;
           else if (ctx && typeof ctx.text === "function") {
             const t = await ctx.text();
-            try { payload = JSON.parse(t); } catch { payload = { error: t }; }
+            try { payload = JSON.parse(t) as ErrorPayload; } catch { payload = { error: t }; }
           }
         } catch { /* ignore */ }
       }
 
       const code = payload?.code;
-      const errMsg = payload?.error || (error as any)?.message;
+      const errMsg = payload?.error || errorMessage(error);
 
       if (code === "no_microsoft_connection") {
         toast({
@@ -114,8 +120,8 @@ Let me know if you need anything else.`;
         title: channel === "mailgun" ? "Email sent via Mailgun" : "Email sent from your Outlook",
       });
       onOpenChange(false);
-    } catch (e: any) {
-      toast({ title: "Send failed", description: e?.message ?? String(e), variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Send failed", description: errorMessage(e), variant: "destructive" });
     } finally {
       setSending("none");
     }
