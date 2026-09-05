@@ -27,7 +27,7 @@ export function useSyncAuditActions() {
   return useMutation({
     mutationFn: async (auditId: string) => {
       const { data, error } = await supabase
-        .rpc('sync_audit_actions_to_client_items', { p_audit_id: auditId } as any);
+        .rpc('sync_audit_actions_to_client_items', { p_audit_id: auditId });
       if (error) throw error;
       return (data as number) || 0;
     },
@@ -48,9 +48,9 @@ export function useClientActionPlan(tenantId: number | null | undefined) {
     queryKey: ['client-action-plan', tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from('client_action_items' as any)
-        .select('*') as any)
+      const { data, error } = await supabase
+        .from('client_action_items')
+        .select('*')
         .eq('tenant_id', tenantId)
         .eq('source', 'audit')
         .neq('status', 'completed')
@@ -70,12 +70,12 @@ export function useCompleteClientAction() {
     mutationFn: async (itemId: string) => {
       const user = (await supabase.auth.getUser()).data.user;
       const { error } = await supabase
-        .from('client_action_items' as any)
+        .from('client_action_items')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
           completed_by: user?.id,
-        } as any)
+        })
         .eq('id', itemId);
       if (error) throw error;
     },
@@ -94,14 +94,14 @@ export function useClientSubmitActionResponse() {
     mutationFn: async ({ actionId, response }: { actionId: string; response: string }) => {
       const user = (await supabase.auth.getUser()).data.user;
       const { error } = await supabase
-        .from('client_audit_actions' as any)
+        .from('client_audit_actions')
         .update({
           client_response: response,
           client_response_at: new Date().toISOString(),
           client_responded_by: user?.id,
           verification_status: 'response_received',
           status: 'in_progress',
-        } as any)
+        })
         .eq('id', actionId);
       if (error) throw error;
     },
