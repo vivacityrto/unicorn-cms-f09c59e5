@@ -179,25 +179,22 @@ liveness-triage rule from §7 above and §3.3 item 5) independently
 reconfirmed two items already on this register, at current `origin/main`
 after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
 
-- **`ComplianceScoreBreakdown.tsx`** (batch 80) — zero inbound imports
-  confirmed via `Grep` across all of `src/`; only self-references (its own
-  interface/export declarations) matched. Its paired hook,
-  **`useComplianceScore.ts`**, is likewise only imported by
-  `ComplianceScoreBreakdown.tsx` itself — the whole island is still fully
-  disconnected. This matches the existing §3.2 "Compliance-score island"
-  row exactly; no new evidence changes its disposition (still: confirm
-  product/history intent before deleting, and do not infer its backing
-  view/RPC is dead from frontend disconnection alone).
-- **`useCompletionEligibility.ts`** (batch 78, [PR #677](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/677)) — zero inbound
-  imports confirmed the same way; matches the §3.3 zero-inbound queue's
-  `useCompletionEligibility` entry (that list didn't record a file
-  extension — this is `.ts`, not `.tsx`). One caveat for whoever actions
-  this: PR #677 removed an `as any` cast inside this file (a `v_completion_eligibility`
-  view-name cast) *before* this reachability confirmation surfaced — a
-  type-only change with no behavioral effect, so it doesn't block
-  retirement, but a diff against `origin/main` will show that unrelated
-  edit sitting in the file's history.
-
+- **Correction from the current-origin sweep (2026-09-05):** the cached
+  zero-inbound evidence for **`ComplianceScoreBreakdown.tsx`** and
+  **`useComplianceScore.ts`** is stale. At `origin/main` (`a0cf450b5`),
+  `ComplianceScoreBreakdown` is imported and rendered by
+  `ComplianceScoreCard`, while `useComplianceScore` is used by both
+  `ComplianceScoreBreakdown` and `CompletionSummaryModal`. This island is
+  live and is **not** a retirement candidate. Its backing
+  `v_compliance_score_latest` view and `calculate_compliance_score` RPC also
+  remain live; no deletion or schema action is authorized.
+- **Correction from the current-origin sweep (2026-09-05):** the cached
+  zero-inbound evidence for **`useCompletionEligibility.ts`** is stale. At
+  `origin/main` (`a0cf450b5`), it is imported and executed by
+  `useCompletionCascade.ts`, so it is live and is **not** a retirement
+  candidate. Its `v_completion_eligibility` view remains a live backend
+  contract. PR #677's earlier type-only cast cleanup does not change this
+  disposition.
 Batch 81's live-verification pass (PR #683) turned up a third, more
 specific finding: **`StageCellEditor` itself (the named export in
 `src/components/membership/StageCellEditor.tsx`) has no importer anywhere**
@@ -226,7 +223,7 @@ in #588; `/audits` uses `AuditsAssessments`. The component is frontend-only and
 this PR removes the orphaned file without changing active routes or backend
 objects.
 
-**Actioned candidate (PR [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686), pending human sign-off):** the Phase 2.6 cohort for
+**Actioned candidate (PR [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686), merged 2026-09-05):** the Phase 2.6 cohort for
 `StageCellEditor` removes only the unimported `StageCellEditor` export and its
 exclusive editor/UI/data-access imports from
 `src/components/membership/StageCellEditor.tsx`. The file and its live
@@ -237,6 +234,14 @@ the deleted frontend export; the related `client_package_stage_state` table
 and transition RPC remain live elsewhere and are untouched. The implementation
 PR will record the exact verification results and remains unmergeable without
 Carl's explicit sign-off.
+
+**AuditNavCards action (pending human sign-off):** Fresh reachability at
+current `origin/main` found `src/components/audit/AuditNavCards.tsx` has no
+inbound imports, dynamic imports, route/menu/registry references, or generated
+link/history references. Its former parent `Audits.tsx` was retired in #588;
+the active `/audits` route renders `AuditsAssessments` instead. The component
+is frontend-only and has no backend object dependency. This PR removes the
+orphaned file only; no active audit route or data contract changes.
 
 ## 6. Cross-program sequence
 
@@ -308,8 +313,9 @@ No plan or council approval authorizes a production migration/deployment, extern
 | Item | Status | Evidence |
 |---|---|---|
 | Three-seat council investigation | Complete 2026-09-04 | dead-code/import graph, feature/database consolidation, and RBAC/tenant alignment seats |
-| Phase 2.6 plan insertion | Implementation underway | All highest-confidence dead-code cohorts are retired: [#570](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/570), [#571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571), [#574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574), [#577](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/577), [#579](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/579), and Audit work [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586)/[#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588). Remaining work is bounded consolidation candidates. |
-| AuditInspectionsTable retirement | Pending human sign-off in implementation PR | Fresh current-origin sweep: zero inbound imports/dynamic imports/routes/menu references; no Edge callers; backend `audit_inspection` remains active through `AuditTemplateBuilder` and `merge_tenants`. Component deletion is frontend-only; Playwright preflight was blocked because Claude owns port 8080. |
+| Phase 2.6 plan insertion | Implementation underway | All highest-confidence dead-code cohorts are retired: [#570](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/570), [#571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571), [#574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574), [#577](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/577), [#579](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/579), Audit work [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586)/[#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588), and export cleanup [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686). Remaining work is bounded consolidation candidates plus the lower-confidence candidates listed above. |
+| AuditInspectionsTable retirement | Merged in [#681](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/681) | Fresh current-origin sweep: zero inbound imports/dynamic imports/routes/menu references; no Edge callers; backend `audit_inspection` remains active through `AuditTemplateBuilder` and `merge_tenants`. Component deletion was frontend-only; authenticated Playwright passed with real audit data and zero writes. |
+| StageCellEditor export retirement | Merged in [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686) | Removed only the unreachable editor export and exclusive imports; retained the file and live `StageStatusDot`. Fresh reachability sweep found no inbound references; related stage-state backend objects remain live. Authenticated Membership Grid Playwright passed with zero writes; current data did not exercise a colored stage state. |
 | High-confidence cohorts | 6 of 6 retired | Audit convergence is a separate source-proven slice intentionally gated on UUID/deep-link characterization; broader consolidation remains investigative |
 | Audit route convergence and island retirement | Implemented in [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586) and [#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588) | Legacy deep links redirect via history replacement to the canonical UUID workspace with matching `?tab=` selection. Authenticated verification passed with real data, refresh/back/forward, zero console errors, and zero writes. The unreachable legacy island and exclusive dependencies were removed in #588; active canonical flow is unchanged. |
 | Clone consolidation | Candidate register complete | parity fixtures not started |
