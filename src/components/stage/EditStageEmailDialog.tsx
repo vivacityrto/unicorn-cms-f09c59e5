@@ -45,10 +45,10 @@ export function EditStageEmailDialog({ open, onOpenChange, email, onSave }: Edit
         to: email.to || '',
         order_number: email.order_number ?? 0,
         automation_enabled: email.automation_enabled ?? false,
-        auth_mode: (email as any).auth_mode ?? false,
-        auto_send_on_document_added: (email as any).auto_send_on_document_added ?? false,
-        auto_send_on_document_updated: (email as any).auto_send_on_document_updated ?? false,
-        auto_send_on_task_assignment: (email as any).auto_send_on_task_assignment ?? false,
+        auth_mode: email.auth_mode ?? false,
+        auto_send_on_document_added: email.auto_send_on_document_added ?? false,
+        auto_send_on_document_updated: email.auto_send_on_document_updated ?? false,
+        auto_send_on_task_assignment: email.auto_send_on_task_assignment ?? false,
       });
     }
   }, [email]);
@@ -59,7 +59,11 @@ export function EditStageEmailDialog({ open, onOpenChange, email, onSave }: Edit
     try {
       await onSave(email.id, {
         name: form.name,
-        subject: form.subject || null as any,
+        // StageEmail declares `subject: string`, but the real `emails.subject`
+        // column is nullable (confirmed via generated types) -- the interface
+        // is stale, not this call. Cast preserves the existing intent to send
+        // null when the field is left empty.
+        subject: (form.subject || null) as unknown as string,
         description: form.description || null,
         content: form.content || null,
         to: form.to || null,
@@ -69,7 +73,7 @@ export function EditStageEmailDialog({ open, onOpenChange, email, onSave }: Edit
         auto_send_on_document_added: form.auto_send_on_document_added,
         auto_send_on_document_updated: form.auto_send_on_document_updated,
         auto_send_on_task_assignment: form.auto_send_on_task_assignment,
-      } as any);
+      });
       onOpenChange(false);
     } catch (error) {
       // Error handled by parent
@@ -188,7 +192,7 @@ export function EditStageEmailDialog({ open, onOpenChange, email, onSave }: Edit
             </TabsContent>
 
             <TabsContent value="attachments" className="overflow-y-auto scrollbar-hide flex-1 min-h-0 mt-4">
-              <EmailAttachmentsManager emailId={email.id} stageId={(email as any).stage_id ?? null} />
+              <EmailAttachmentsManager emailId={email.id} stageId={email.stage_id ?? null} />
             </TabsContent>
           </Tabs>
 
