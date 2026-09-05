@@ -13,13 +13,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { FileText, Loader2, X, Upload, Calendar, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface EditDocumentData {
+  id: number;
+  title?: string | null;
+  description?: string | null;
+  watermark?: boolean | null;
+  isclientdoc?: boolean | null;
+  is_released?: boolean | null;
+  category?: string | null;
+  is_active?: boolean | null;
+  uploaded_files?: string[] | null;
+  file_names?: string[] | null;
+  stage?: number | null;
+  created_at?: string | null;
+}
+
 interface CreateDocumentDialog2Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   packageId?: number;
   stageId?: number;
-  editDocument?: any;
+  editDocument?: EditDocumentData | null;
   tenantId?: number;
 }
 
@@ -83,7 +98,7 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
       
       if (error) throw error;
       setCategories((data || []) as { value: string; label: string }[]);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching categories:', error);
     }
   };
@@ -173,14 +188,14 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
       if (editDocument) {
         // Protect existing primary stage: if it differs from the target, keep it and add
         // the target as an additional-stage link instead.
-        const currentStage = (editDocument as any).stage ?? null;
+        const currentStage = editDocument.stage ?? null;
         const targetStage = stageId ?? null;
         const shouldPreservePrimary =
           currentStage !== null && targetStage !== null && currentStage !== targetStage;
 
         const updatePayload = shouldPreservePrimary
           ? (() => {
-              const { stage: _omit, ...rest } = documentData as any;
+              const { stage: _omit, ...rest } = documentData;
               return rest;
             })()
           : documentData;
@@ -228,10 +243,10 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
       
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create document",
+        description: error instanceof Error ? error.message : "Failed to create document",
         variant: "destructive"
       });
     } finally {
