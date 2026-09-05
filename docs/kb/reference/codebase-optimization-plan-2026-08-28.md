@@ -1339,6 +1339,27 @@ The three-seat council investigation is complete and recorded in [`dead-code-fea
 
 Later batches diff against `lint-baseline.json`'s `byFile`/`byRule` data, not against re-derived counts, so "no compensating increase elsewhere" is checkable per the plan's Phase 2.5 exit gate (§8).
 
+> **Phase 2.5 production Edge verification methodology (2026-09-06):** A green
+> local Edge test run is not live production evidence. For each merged Edge
+> cohort, first confirm the deployed function is `ACTIVE` and its version
+> timestamp is later than the merge. Then map the function to its real caller
+> (route, hook, cron, or protected action) and classify the caller as
+> read-only, write-capable, or cron-only. Use the authenticated SuperAdmin
+> storage state against the local Vite client (hosted production Supabase),
+> with the shared heavy-job mutex and port-8080 preflight. Exercise only
+> read-only callers; for write/cron functions, record a deliberate non-run
+> and use deployment/source/log evidence instead. If UI navigation is too
+> conditional to reach a safe caller reliably, a temporary Playwright
+> `page.evaluate(fetch)` may call only an explicitly read-only function with
+> the existing authenticated session and publishable key; never log tokens or
+> response PII. Query production Edge logs for the exact function paths after
+> the run. A 2xx response is a pass; 4xx/5xx is recorded with the response
+> body and escalated unless it is a documented authorization/contract gate.
+> Delete temporary specs/configs and all browser artifacts after the run. No
+> Demo RTO seed or cleanup is required for read-only calls; any write-path
+> verification needs an explicit disposable Demo RTO fixture and post-run
+> zero-delta cleanup before it can count as evidence.
+
 > **Phase 2.5 lifecycle-hooks checkpoint (2026-09-06, pre-merge):** `useLifecycleChecklists.ts` was confirmed live from `LifecycleChecklistsAdmin.tsx` and its three generated dropdown tables plus `lifecycle_checklist_templates`. Eight redundant `no-explicit-any` findings were removed using generated Supabase table types; lint ratchet passed (8→0), and the regenerated baseline is 1,139 errors across 261 files with 39 warnings. Frontend tests (298 passed/15 skipped), Edge tests, and production build passed. Typecheck retains only the established baseline errors in `ClientLayout.tsx` and `useKpiSummary.tsx`. No new L10 bug was found.
 > **Phase 2.5 hooks-cluster checkpoint (2026-09-06, merged in PR #696):** `useProgressAnchors.ts`, `useWinBanner.ts`, and `usePackagePhases.ts` were reduced by 19 `@typescript-eslint/no-explicit-any` findings using generated Supabase row/insert/update types. Fresh lint ratchet passes (7/6/6 errors to 0); regenerated baseline was 1,147 errors across 262 files (39 warnings). Frontend tests passed (298/15 skipped), Edge tests passed, and production build passed. Typecheck reported only the established pre-existing errors in `ClientLayout.tsx` and `useKpiSummary.tsx`. Unauthenticated Playwright smoke passed 12/12 desktop/mobile cases; authenticated state was unavailable in that isolated worktree.
 
@@ -1373,3 +1394,4 @@ Later batches diff against `lint-baseline.json`'s `byFile`/`byRule` data, not ag
 > **Phase 2.5 TGA scope checkpoint (2026-09-06):** `tga-fetch-scope/index.ts` is configured, authenticated, and has no current local UI caller; its TGA scope pagination, page-size clamp, and response contract are unchanged. The one explicit-any collection was narrowed to `unknown[]` (1→0). Lint ratchet passed (1→0), Edge 260, frontend 298/15 skipped, build, and KB links 672/672 passed; typecheck retains only documented baseline errors. Authenticated SuperAdmin Playwright passed 4/4 with zero application console errors. No new L10 bug found.
 > **Phase 2.5 Unicorn-1 user search checkpoint (2026-09-06):** `search-unicorn1-users/index.ts` is live from `InviteUserDialog.tsx` behind the existing `adminUnicorn1` caller gate and RPC boundary. The catch path now narrows `unknown` errors explicitly (1→0); search inputs, RPC arguments, and response behavior are unchanged. Lint ratchet passed (1→0), Edge 260, frontend 298/15 skipped, build, and KB links 672/672 passed; typecheck retains only documented baseline errors. Authenticated SuperAdmin Playwright passed 4/4 with zero application console errors. No new L10 bug found.
 > **Phase 2.5 transcript-minutes checkpoint (2026-09-06):** `generate-minutes-from-transcript/index.ts` is live behind the existing `staffMeetings` caller gate and writes the existing AI-minutes contract. The token-usage result was narrowed from explicit `any` to a nullable bounded usage shape (1→0); transcript parsing, AI extraction, and persistence behavior are unchanged. Lint ratchet passed (1→0), Edge 260, frontend 298/15 skipped, build, and KB links 672/672 passed; typecheck retains only documented baseline errors. Authenticated SuperAdmin Playwright passed 4/4 with zero application console errors. No new L10 bug found.
+> **Phase 2.5 assigned-conversations hook checkpoint (2026-09-06, pending PR):** `useMyAssignedConversationsCount.ts` is live through `DashboardLayout.tsx`; fresh reachability confirmed the generated `tenant_conversations` table/columns and the existing realtime subscription/query contract. Removed two redundant explicit-any escape hatches (2→0) without changing filters, count semantics, or channel behavior. Lint ratchet passed (2→0), frontend 298/15 skipped, Edge 260; typecheck retains only the documented `ClientLayout.tsx` and `useKpiSummary.tsx` baseline errors. Build, KB links, and authenticated Playwright remain required before PR/merge. No new L10 bug found.
