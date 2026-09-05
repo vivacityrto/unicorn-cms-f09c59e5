@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,13 @@ import { format } from 'date-fns';
 interface GovernanceDeliveryHistoryProps {
   documentId: number;
 }
+
+type EnrichedDelivery = Tables<'governance_document_deliveries'> & {
+  tenant_name: string;
+  version_label: string;
+  delivered_by_name: string;
+  snapshot_date: string | null;
+};
 
 export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHistoryProps) {
   const { data: deliveries, isLoading } = useQuery({
@@ -94,7 +102,7 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
     }
   };
 
-  const issuesPopover = (d: any) => {
+  const issuesPopover = (d: EnrichedDelivery) => {
     const missing = (d.missing_merge_fields as string[] | null) || [];
     const invalid = (d.invalid_merge_fields as string[] | null) || [];
     const total = missing.length + invalid.length;

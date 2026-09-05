@@ -40,7 +40,7 @@ export function GovernanceTailoringHealth({ documentId }: GovernanceTailoringHea
         .select('field:dd_fields(tag, name)')
         .eq('document_id', documentId);
       if (error) throw error;
-      return (data || []).map((r: any) => r.field).filter(Boolean) as { tag: string; name: string }[];
+      return (data || []).map((r) => r.field).filter(Boolean) as { tag: string; name: string }[];
     },
   });
 

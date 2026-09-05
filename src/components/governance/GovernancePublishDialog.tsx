@@ -38,13 +38,14 @@ export function GovernancePublishDialog({ versionId, open, onOpenChange, onSucce
 
       toast.success(`Version v${data.version_number} published successfully`);
       onSuccess();
-    } catch (err: any) {
-      let message = err.message || 'Publish failed';
+    } catch (err) {
+      let message = err instanceof Error ? err.message : 'Publish failed';
       let isDrift = false;
 
       try {
-        if (err?.context?.json) {
-          const body = await err.context.json();
+        const context = (err as { context?: Response })?.context;
+        if (context?.json) {
+          const body = await context.json();
           if (body?.error) {
             message = body.error;
             isDrift = !!body.drift_detected;
