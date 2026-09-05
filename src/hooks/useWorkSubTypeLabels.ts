@@ -8,7 +8,7 @@ interface WorkSubType {
 
 const fetchWorkSubTypes = async (): Promise<WorkSubType[]> => {
   const { data, error } = await supabase
-    .from('dd_work_sub_type' as any)
+    .from('dd_work_sub_type')
     .select('code, label')
     .eq('is_active', true);
   if (error) throw error;

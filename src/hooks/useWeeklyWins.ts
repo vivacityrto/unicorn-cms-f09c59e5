@@ -24,7 +24,7 @@ export function useWeeklyWins(userUuid: string | null) {
       if (!userUuid) return null;
 
       const { data, error } = await supabase
-        .from('v_dashboard_weekly_wins' as any)
+        .from('v_dashboard_weekly_wins')
         .select('*')
         .eq('user_uuid', userUuid)
         .maybeSingle();
