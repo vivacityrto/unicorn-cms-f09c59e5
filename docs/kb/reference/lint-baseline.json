@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T21:52:05.576Z",
-  "baselineSha": "b1ea87c91aa7fd6f4e52c57ffed865f0c358a63c",
+  "generatedAt": "2026-09-05T21:55:32.769Z",
+  "baselineSha": "b8359c0f363bb5c8db282a419622bcf7778b3dc9",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 231,
-    "errors": 961,
+    "filesWithFindings": 230,
+    "errors": 960,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 954,
+    "@typescript-eslint/no-explicit-any": 953,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 566,
+      "errors": 565,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 566
+        "@typescript-eslint/no-explicit-any": 565
       }
     }
   },
@@ -813,13 +813,6 @@
         "@typescript-eslint/no-explicit-any": 3
       }
     },
-    "supabase/functions/search-unicorn1-users": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
     "supabase/functions/send-action-item-due-reminders": {
       "errors": 2,
       "warnings": 0,
@@ -1597,9 +1590,6 @@
     },
     "supabase/functions/search-organisations/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "supabase/functions/search-unicorn1-users/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/send-action-item-due-reminders/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
