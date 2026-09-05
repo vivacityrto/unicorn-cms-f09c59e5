@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T20:15:01.426Z",
-  "baselineSha": "8b6a74ef91477bd7ad99025c3794ce33a33863f3",
+  "generatedAt": "2026-09-05T20:24:00.409Z",
+  "baselineSha": "32f132ce7d8454f405d87342b3dbcffd7ee2e01c",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 243,
-    "errors": 1041,
+    "filesWithFindings": 242,
+    "errors": 1029,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1034,
+    "@typescript-eslint/no-explicit-any": 1022,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 646,
+      "errors": 634,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 646
+        "@typescript-eslint/no-explicit-any": 634
       }
     }
   },
@@ -1016,13 +1016,6 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/vector-index-rebuild": {
-      "errors": 12,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 12
-      }
-    },
     "supabase/functions/vector-index-update": {
       "errors": 2,
       "warnings": 0,
@@ -1768,9 +1761,6 @@
     },
     "supabase/functions/upload-sharepoint-file/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/vector-index-rebuild/index.ts": {
-      "@typescript-eslint/no-explicit-any": 12
     },
     "supabase/functions/vector-index-update/index.ts": {
       "@typescript-eslint/no-explicit-any": 2

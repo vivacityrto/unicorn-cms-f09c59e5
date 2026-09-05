@@ -40,6 +40,13 @@ interface RequestPayload {
   source_types?: string[];
 }
 
+interface IndexRecord { id: string | number; label: string; text: string; mode?: string; metadata?: Record<string, unknown>; }
+interface TenantRow { id: number; name: string | null; status: string | null; rto_id: number | null; risk_level: string | null; abn: string | null; }
+interface StageRow { id: number; name: string; status: string | null; stage_type: string | null; }
+interface TaskRow { id: number; task_name: string; status: string | null; description: string | null; due_date_text: string | null; priority: string | null; }
+interface DocumentRow { id: number; title: string; category: string | null; is_released: boolean | null; uploaded_at: string | null; }
+interface TimeEntryRow { id: number; start_time: string; notes: string | null; duration_minutes: number | null; work_type: string | null; }
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders(req) });
@@ -164,11 +171,11 @@ Deno.serve(async (req) => {
  * Index a specific source type for a tenant
  */
 async function indexSourceType(
-  supabase: any,
+  supabase: ReturnType<typeof createServiceClient>,
   tenantId: number,
   sourceType: string,
 ): Promise<number> {
-  let records: any[] = [];
+  let records: IndexRecord[] = [];
 
   switch (sourceType) {
     case "client_summary":
@@ -262,7 +269,7 @@ async function generateEmbedding(text: string): Promise<number[] | null> {
 
 // ============= Data Fetchers =============
 
-async function fetchClientSummaries(supabase: any, tenantId: number) {
+async function fetchClientSummaries(supabase: ReturnType<typeof createServiceClient>, tenantId: number): Promise<IndexRecord[]> {
   const { data } = await supabase
     .from("tenants")
     .select("id, name, status, rto_id, risk_level, abn")
@@ -271,7 +278,7 @@ async function fetchClientSummaries(supabase: any, tenantId: number) {
 
   if (!data || data.length === 0) return [];
 
-  return data.map((t: any) => ({
+  return (data as TenantRow[]).map((t) => ({
     id: t.id,
     label: t.name || `Tenant ${t.id}`,
     text: buildClientSummary(t),
@@ -280,7 +287,7 @@ async function fetchClientSummaries(supabase: any, tenantId: number) {
   }));
 }
 
-async function fetchPhaseSummaries(supabase: any, tenantId: number) {
+async function fetchPhaseSummaries(supabase: ReturnType<typeof createServiceClient>, tenantId: number): Promise<IndexRecord[]> {
   const { data } = await supabase
     .from("stages")
     .select("id, name, status, stage_type")
@@ -288,7 +295,7 @@ async function fetchPhaseSummaries(supabase: any, tenantId: number) {
 
   if (!data) return [];
 
-  return data.map((p: any) => ({
+  return (data as StageRow[]).map((p) => ({
     id: p.id,
     label: p.name,
     text: buildPhaseSummary(p),
@@ -297,7 +304,7 @@ async function fetchPhaseSummaries(supabase: any, tenantId: number) {
   }));
 }
 
-async function fetchTasks(supabase: any, tenantId: number) {
+async function fetchTasks(supabase: ReturnType<typeof createServiceClient>, tenantId: number): Promise<IndexRecord[]> {
   const { data } = await supabase
     .from("tasks")
     .select("id, task_name, status, description, due_date_text, priority")
@@ -306,7 +313,7 @@ async function fetchTasks(supabase: any, tenantId: number) {
 
   if (!data) return [];
 
-  return data.map((t: any) => ({
+  return (data as TaskRow[]).map((t) => ({
     id: t.id,
     label: t.task_name,
     text: buildTaskSummary(t),
@@ -315,7 +322,7 @@ async function fetchTasks(supabase: any, tenantId: number) {
   }));
 }
 
-async function fetchDocuments(supabase: any, tenantId: number) {
+async function fetchDocuments(supabase: ReturnType<typeof createServiceClient>, tenantId: number): Promise<IndexRecord[]> {
   const { data } = await supabase
     .from("documents")
     .select("id, title, category, is_released, uploaded_at")
@@ -324,7 +331,7 @@ async function fetchDocuments(supabase: any, tenantId: number) {
 
   if (!data) return [];
 
-  return data.map((d: any) => ({
+  return (data as DocumentRow[]).map((d) => ({
     id: d.id,
     label: d.title,
     text: buildDocumentSummary(d),
@@ -333,7 +340,7 @@ async function fetchDocuments(supabase: any, tenantId: number) {
   }));
 }
 
-async function fetchConsultLogs(supabase: any, tenantId: number) {
+async function fetchConsultLogs(supabase: ReturnType<typeof createServiceClient>, tenantId: number): Promise<IndexRecord[]> {
   // Using time_entries as consult logs
   const { data } = await supabase
     .from("time_entries")
@@ -344,7 +351,7 @@ async function fetchConsultLogs(supabase: any, tenantId: number) {
 
   if (!data) return [];
 
-  return data.map((c: any) => ({
+  return (data as TimeEntryRow[]).map((c) => ({
     id: c.id,
     label: `Consult ${new Date(c.start_time).toLocaleDateString()}`,
     text: buildConsultSummary({
