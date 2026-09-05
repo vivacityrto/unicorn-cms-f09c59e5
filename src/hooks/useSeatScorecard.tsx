@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
+import type { Tables } from '@/integrations/supabase/types';
 import type {
   SeatScorecard,
   SeatScorecardVersion,
@@ -389,21 +390,42 @@ export function useAllSeatScorecards() {
     queryFn: async () => {
       if (!tenantId) return [];
 
-      const { data, error } = await (supabase as any)
-        .from('seat_scorecards')
-        .select(`
-          *,
-          seat:accountability_seats(
-            id, seat_name,
-            assignments:accountability_seat_assignments(
-              user_id, assignment_type, end_date,
-              user:users(user_uuid, first_name, last_name)
-            )
-          ),
-          measurables:seat_measurables(
-            id, name, target_value, comparison_type, unit, is_active
+      const ALL_SEAT_SCORECARDS_SELECT = `
+        *,
+        seat:accountability_seats(
+          id, seat_name,
+          assignments:accountability_seat_assignments(
+            user_id, assignment_type, end_date,
+            user:users(user_uuid, first_name, last_name)
           )
-        `)
+        ),
+        measurables:seat_measurables(
+          id, name, target_value, comparison_type, unit, is_active
+        )
+      `;
+      type AllSeatScorecardRow = Tables<'seat_scorecards'> & {
+        seat: {
+          id: string;
+          seat_name: string;
+          assignments: {
+            user_id: string;
+            assignment_type: string;
+            end_date: string | null;
+            user: { user_uuid: string; first_name: string | null; last_name: string | null } | null;
+          }[];
+        } | null;
+        measurables: {
+          id: string;
+          name: string;
+          target_value: number | null;
+          comparison_type: string;
+          unit: string | null;
+          is_active: boolean;
+        }[];
+      };
+      const { data, error } = await supabase
+        .from('seat_scorecards')
+        .select<typeof ALL_SEAT_SCORECARDS_SELECT, AllSeatScorecardRow>(ALL_SEAT_SCORECARDS_SELECT)
         .eq('tenant_id', tenantId)
         .eq('status', 'Active');
 
