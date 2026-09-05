@@ -36,7 +36,7 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
       const ids = (data || []).map((r) => r.field_id);
       setLinkedFieldIds(ids);
       setLocalFieldIds(ids);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching document fields:', err);
     } finally {
       setLoading(false);
@@ -75,8 +75,8 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
       setLinkedFieldIds(localFieldIds);
       setHasChanges(false);
       toast.success('Required merge fields updated');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to save');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setSaving(false);
     }
