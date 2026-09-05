@@ -1305,6 +1305,20 @@ non-blocking with respect to the entire lint backlog: its task-dialog slice
 may proceed after parity fixtures and file exclusion are established while
 Claude continues Phase 2.5 independently.
 
+**Phase 2.5 strategic-orchestration checkpoint (2026-09-06):** the
+`supabase/functions/strategic-orchestration/index.ts` cohort removed 13
+explicit-`any` findings (13→0) after a fresh reachability sweep confirmed the
+configured Edge Function, the `/admin/strategic-orchestration` route, the
+`useStrategicOrchestration` importer, and its existing SuperAdmin gate. The
+change only narrows advisory priority/RPC row shapes; advisory priority writes
+and refresh RPCs are unchanged, and no schema, RLS, or auth contract changed.
+Lint ratchet passed 13→0; Edge 260 passed; frontend 298 passed/15 skipped;
+build passed; KB links 672/672; typecheck retained only the documented
+baseline errors in `ClientLayout.tsx` and `useKpiSummary.tsx`; authenticated
+SuperAdmin Playwright passed 4/4 with zero application console errors. This
+cohort is ready for its implementation PR and merge; no new L10 item was
+found.
+
 ### Phase 2.6 — verified retirement and bounded consolidation (council-planned 2026-09-04)
 
 **Parallel preparation checkpoint (2026-09-04):** while Phase 2.5 remains
