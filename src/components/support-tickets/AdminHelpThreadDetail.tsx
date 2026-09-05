@@ -63,7 +63,7 @@ export function AdminHelpThreadDetail({ thread, onClose }: Props) {
       invalidate();
       toast({ title: 'Reply sent' });
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast({
         title: 'Failed to send reply',
         description: err?.message ?? 'Unknown error',
@@ -85,7 +85,7 @@ export function AdminHelpThreadDetail({ thread, onClose }: Props) {
       invalidate();
       toast({ title: status === 'resolved' ? 'Marked as resolved' : 'Reopened' });
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast({
         title: 'Failed to update status',
         description: err?.message ?? 'Unknown error',

@@ -2,12 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { ClientImpactReport, ClientImpactItem, ItemSection, ItemStatus, ReportStatus } from '@/types/clientImpact';
+import type { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
 const VIVACITY_TENANT_ID = 6372;
 
 // Mapping functions to sanitize EOS data for client consumption
-function mapRockToImpactItem(rock: any): { 
+function mapRockToImpactItem(rock: Tables<'eos_rocks'>): {
   section: ItemSection; 
   category: string; 
   title: string; 
@@ -18,20 +19,15 @@ function mapRockToImpactItem(rock: any): {
   source_type: string;
   source_id: string;
 } {
-  // Remove all EOS terminology
-  const categoryMap: Record<string, string> = {
-    'compliance': 'Compliance',
-    'delivery': 'Delivery Quality',
-    'communication': 'Communication',
-    'process': 'Process Improvement',
-  };
-  
+  // eos_rocks has no category/client_benefit column (confirmed against the
+  // generated schema) - these always fell back to their default here even
+  // before removing the `any` cast that had been masking it.
   return {
     section: 'improvements' as ItemSection,
-    category: categoryMap[rock.category?.toLowerCase()] || 'Service Enhancement',
+    category: 'Service Enhancement',
     title: sanitizeTitle(rock.title) || 'Improvement delivered',
     description: sanitizeDescription(rock.description),
-    client_benefit: rock.client_benefit || 'Improved service delivery and outcomes',
+    client_benefit: 'Improved service delivery and outcomes',
     status: (rock.status === 'Complete' ? 'completed' : 'in_progress') as ItemStatus,
     completed_date: rock.completed_date || null,
     source_type: 'rock',
@@ -39,7 +35,7 @@ function mapRockToImpactItem(rock: any): {
   };
 }
 
-function mapIssueToImpactItem(issue: any): {
+function mapIssueToImpactItem(issue: Tables<'eos_issues'>): {
   section: ItemSection;
   category: string;
   title: string;

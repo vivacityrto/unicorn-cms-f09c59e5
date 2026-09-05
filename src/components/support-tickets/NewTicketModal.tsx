@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type Ref } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +6,7 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { TicketTypePicker } from './TicketTypePicker';
 import { TICKET_TYPE_BY_KEY, TicketTypeKey } from './ticketTypeConfig';
-import { useSubmitSupportTicket } from './useSubmitSupportTicket';
+import { useSubmitSupportTicket, type AnyFormValues } from './useSubmitSupportTicket';
 import { BrokenTicketForm } from './forms/BrokenTicketForm';
 import { FeatureRequestForm } from './forms/FeatureRequestForm';
 import { UxImprovementForm } from './forms/UxImprovementForm';
@@ -14,7 +14,7 @@ import { QuestionTicketForm } from './forms/QuestionTicketForm';
 import { OtherTicketForm } from './forms/OtherTicketForm';
 
 interface FormHandle {
-  submit: () => Promise<any | null>;
+  submit: () => Promise<AnyFormValues | null>;
 }
 
 interface Props {
@@ -106,7 +106,7 @@ export function NewTicketModal({ open, onOpenChange }: Props) {
           ) : step === 'pick' ? (
             <TicketTypePicker selected={selectedType} onSelect={handlePick} />
           ) : FormComponent ? (
-            <FormComponent ref={formRef as any} />
+            <FormComponent ref={formRef as Ref<FormHandle>} />
           ) : null}
         </div>
 

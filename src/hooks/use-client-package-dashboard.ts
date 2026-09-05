@@ -63,7 +63,7 @@ export function useClientPackageDashboard(packageInstanceId: number | null) {
     queryFn: async (): Promise<ClientPackageDashboardRow | null> => {
       if (!activeTenantId || !packageInstanceId) return null;
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .rpc('get_client_package_dashboard', {
           p_tenant_id: activeTenantId,
           p_package_instance_id: packageInstanceId,
@@ -90,7 +90,7 @@ export function useClientPackageDashboards() {
     queryFn: async (): Promise<ClientPackageDashboardRow[]> => {
       if (!activeTenantId) return [];
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .rpc('get_client_package_dashboard', {
           p_tenant_id: activeTenantId,
           p_package_instance_id: null,

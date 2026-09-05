@@ -7,7 +7,7 @@ import { useSuggestDropdowns, SuggestDropdownItem } from '@/hooks/useSuggestDrop
 import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { TICKET_TYPE_BY_KEY, TicketTypeKey } from './ticketTypeConfig';
 
-interface AnyFormValues {
+export interface AnyFormValues {
   title: string;
   urgency?: 'low' | 'medium' | 'high' | 'critical';
   description?: string;

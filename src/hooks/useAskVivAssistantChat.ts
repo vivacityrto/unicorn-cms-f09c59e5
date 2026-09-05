@@ -59,7 +59,7 @@ export function useAskVivAssistantChat() {
         .eq("mode", "assistant");
       if (turnErr) throw turnErr;
 
-      const uniqueIds = [...new Set((turnRows || []).map((r: any) => r.conversation_id))];
+      const uniqueIds = [...new Set((turnRows || []).map((r) => r.conversation_id))];
       if (uniqueIds.length === 0) {
         setConversationList([]);
         return;
@@ -91,9 +91,9 @@ export function useAskVivAssistantChat() {
     if (error) throw error;
 
     setMessages(
-      (data || []).map((t: any) => ({
+      (data || []).map((t) => ({
         id: t.id,
-        role: t.role,
+        role: t.role === "assistant" ? "assistant" : "user",
         content: t.content,
         created_at: t.created_at,
       }))

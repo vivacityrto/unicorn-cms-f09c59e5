@@ -19,6 +19,7 @@ import {
   ChevronRight,
   GraduationCap,
   NotebookPen,
+  type LucideIcon,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
@@ -111,7 +112,7 @@ const AcademyLayoutInner = ({
   }, [location.pathname]);
 
   // Render menu link
-  const renderMenuItem = (item: { icon: any; label: string; path: string }) => {
+  const renderMenuItem = (item: { icon: LucideIcon; label: string; path: string }) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
     return (
@@ -135,7 +136,7 @@ const AcademyLayoutInner = ({
   // Render section with collapsible header
   const renderSection = (
     title: string,
-    items: { icon: any; label: string; path: string }[],
+    items: { icon: LucideIcon; label: string; path: string }[],
     sectionKey: keyof typeof sectionsOpen
   ) => {
     if (items.length === 0) return null;
