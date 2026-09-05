@@ -65,7 +65,7 @@ export function SupportTicketsList({ onSelect }: Props) {
           <div className="divide-y">
             {filtered.map((item) => {
               const statusCode = item.status?.code ?? '';
-              const urgency = (item as any).urgency ?? item.priority?.code ?? '';
+              const urgency = item.urgency ?? item.priority?.code ?? '';
               return (
                 <button
                   key={item.id}

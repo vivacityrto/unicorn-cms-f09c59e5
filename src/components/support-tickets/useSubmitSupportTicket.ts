@@ -110,7 +110,7 @@ export function useSubmitSupportTicket() {
         title_generated_by_ai: false,
       };
 
-      const { error } = await supabase.from('suggest_items' as any).insert(payload);
+      const { error } = await supabase.from('suggest_items').insert(payload);
       if (error) {
         toast({ title: 'Failed to submit ticket', description: error.message, variant: 'destructive' });
         return false;
