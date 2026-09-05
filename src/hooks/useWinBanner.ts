@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWeeklyWins } from './useWeeklyWins';
 import { useMemo } from 'react';
+import type { TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 function getWeekStart(): string {
   const now = new Date();
@@ -38,7 +39,7 @@ export function useWinBanner(userUuid: string | null) {
       if (!userUuid) return null;
 
       const { data, error } = await supabase
-        .from('user_win_banner_state' as any)
+        .from('user_win_banner_state')
         .select('*')
         .eq('user_uuid', userUuid)
         .eq('week_start_date', weekStart)
@@ -76,13 +77,13 @@ export function useWinBanner(userUuid: string | null) {
 
       if (bannerState) {
         const { error } = await supabase
-          .from('user_win_banner_state' as any)
+          .from('user_win_banner_state')
           .update({ dismissed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
           .eq('id', bannerState.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('user_win_banner_state' as any)
+          .from('user_win_banner_state')
           .insert({
             user_uuid: userUuid,
             week_start_date: weekStart,
@@ -103,23 +104,25 @@ export function useWinBanner(userUuid: string | null) {
     mutationFn: async (type: 'milestone_3' | 'hours_100' | 'rocks_5') => {
       if (!userUuid) throw new Error('No user');
 
-      const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
-      updateData[`${type}_triggered`] = true;
+      const updateData: TablesUpdate<'user_win_banner_state'> = { updated_at: new Date().toISOString() };
+      const triggerKey = `${type}_triggered` as 'milestone_3_triggered' | 'hours_100_triggered' | 'rocks_5_triggered';
+      updateData[triggerKey] = true;
 
       if (bannerState) {
         const { error } = await supabase
-          .from('user_win_banner_state' as any)
+          .from('user_win_banner_state')
           .update(updateData)
           .eq('id', bannerState.id);
         if (error) throw error;
       } else {
+        const insertData: TablesInsert<'user_win_banner_state'> = {
+          user_uuid: userUuid,
+          week_start_date: weekStart,
+          [`${type}_triggered`]: true,
+        };
         const { error } = await supabase
-          .from('user_win_banner_state' as any)
-          .insert({
-            user_uuid: userUuid,
-            week_start_date: weekStart,
-            [`${type}_triggered`]: true,
-          });
+          .from('user_win_banner_state')
+          .insert(insertData);
         if (error) throw error;
       }
     },

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 import type { Phase, PhaseStage } from '@/types/checkpoint-phase';
+import type { TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 /**
  * Hook to manage phases assigned to a package in the Package Builder.
@@ -15,13 +16,13 @@ export function usePackagePhases(packageId: number | null) {
   const { data: allPhases = [], isLoading: loadingPhases } = useQuery({
     queryKey: ['phases'],
     queryFn: async (): Promise<Phase[]> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('phases')
         .select('*')
         .eq('is_archived', false)
         .order('sort_order_default');
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Phase[];
     },
     staleTime: QUERY_STALE_TIMES.LIST,
   });
@@ -31,13 +32,13 @@ export function usePackagePhases(packageId: number | null) {
     queryKey: ['phase-stages', packageId],
     queryFn: async (): Promise<PhaseStage[]> => {
       if (!packageId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('phase_stages')
         .select('*')
         .eq('package_id', packageId)
         .order('sort_order');
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as PhaseStage[];
     },
     enabled: !!packageId,
     staleTime: QUERY_STALE_TIMES.LIST,
@@ -46,9 +47,9 @@ export function usePackagePhases(packageId: number | null) {
   // Create a new phase definition
   const createPhase = useMutation({
     mutationFn: async (phase: { phase_key: string; title: string; description?: string; gate_type: string; allow_parallel?: boolean }) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('phases')
-        .insert(phase)
+        .insert(phase satisfies TablesInsert<'phases'>)
         .select()
         .single();
       if (error) throw error;
@@ -62,9 +63,9 @@ export function usePackagePhases(packageId: number | null) {
   // Update a phase definition
   const updatePhase = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Phase> & { id: string }) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('phases')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...updates, updated_at: new Date().toISOString() } satisfies TablesUpdate<'phases'>)
         .eq('id', id);
       if (error) throw error;
     },
@@ -77,7 +78,7 @@ export function usePackagePhases(packageId: number | null) {
   const assignStageToPhase = useMutation({
     mutationFn: async ({ phaseId, stageId, sortOrder = 0, isRequired = true }: { phaseId: string; stageId: number; sortOrder?: number; isRequired?: boolean }) => {
       if (!packageId) throw new Error('No package selected');
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('phase_stages')
         .insert({
           phase_id: phaseId,
@@ -96,7 +97,7 @@ export function usePackagePhases(packageId: number | null) {
   // Remove a stage from a phase
   const removeStageFromPhase = useMutation({
     mutationFn: async (phaseStageId: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('phase_stages')
         .delete()
         .eq('id', phaseStageId);

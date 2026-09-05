@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T15:48:57.879Z",
-  "baselineSha": "40e1de38679efbec7ddf45222d1eeabd1e04adf1",
+  "generatedAt": "2026-09-05T16:12:10.156Z",
+  "baselineSha": "6413ff94c45f1f0eefb2906fa14d854c3062b5dd",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 265,
-    "errors": 1166,
+    "filesWithFindings": 262,
+    "errors": 1147,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1159,
+    "@typescript-eslint/no-explicit-any": 1140,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 498,
+      "errors": 479,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 491,
+        "@typescript-eslint/no-explicit-any": 472,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -275,10 +275,10 @@
       }
     },
     "src/hooks": {
-      "errors": 183,
+      "errors": 164,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 183,
+        "@typescript-eslint/no-explicit-any": 164,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1413,9 +1413,6 @@
     "src/hooks/useNotifications.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
-    "src/hooks/usePackagePhases.ts": {
-      "@typescript-eslint/no-explicit-any": 6
-    },
     "src/hooks/usePackageUsage.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -1423,9 +1420,6 @@
       "@typescript-eslint/no-explicit-any": 4
     },
     "src/hooks/usePageViewTracking.ts": {},
-    "src/hooks/useProgressAnchors.ts": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/hooks/useRetentionForecast.ts": {
       "@typescript-eslint/no-explicit-any": 5
     },
@@ -1461,9 +1455,6 @@
     },
     "src/hooks/useTriageStaffOptions.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useWinBanner.ts": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/hooks/useWorkflowOptimisation.ts": {
       "@typescript-eslint/no-explicit-any": 5
