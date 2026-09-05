@@ -27,7 +27,7 @@ export function useMyAssignedConversationsCount() {
     const channel = supabase
       .channel(`my-assigned-conversations:${currentUserId}`)
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         { event: "*", schema: "public", table: "tenant_conversations" },
         invalidate
       )
@@ -42,7 +42,7 @@ export function useMyAssignedConversationsCount() {
     queryKey: ["my-assigned-conversations-count", currentUserId],
     queryFn: async () => {
       if (!currentUserId) return 0;
-      const { count, error } = await (supabase as any)
+      const { count, error } = await supabase
         .from("tenant_conversations")
         .select("id", { count: "exact", head: true })
         .eq("assigned_to_user_uuid", currentUserId)
