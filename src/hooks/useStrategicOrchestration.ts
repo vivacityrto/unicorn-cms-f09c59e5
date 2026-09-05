@@ -14,8 +14,8 @@ export interface StrategicPriority {
   priority_type: string;
   severity_level: string;
   impact_scope: string;
-  affected_entities_json: any[];
-  recommended_actions_json: any[];
+  affected_entities_json: unknown[];
+  recommended_actions_json: unknown[];
   priority_summary: string;
   resolved_flag: boolean;
   resolved_at: string | null;
