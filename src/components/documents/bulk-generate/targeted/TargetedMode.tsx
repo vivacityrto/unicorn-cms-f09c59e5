@@ -121,7 +121,7 @@ export function TargetedMode({ tenants }: Props) {
         .order("archived", { ascending: true })
         .order("first_name", { ascending: true });
       if (error) throw error;
-      return ((data ?? []) as any[])
+      return (data ?? [])
         .filter((u) => {
           const inTeams = Array.isArray(u.staff_teams) && u.staff_teams.includes("client_success");
           const inTeam = u.staff_team === "client_success";

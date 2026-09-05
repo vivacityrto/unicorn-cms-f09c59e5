@@ -61,7 +61,7 @@ export default function AdminPackageTenantDetail() {
           avatar_url: adminUser.avatar_url || undefined
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching tenant info:", error);
       toast({
         title: "Error",

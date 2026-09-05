@@ -310,7 +310,7 @@ export default function ClientDetail() {
 
       if (error) throw error;
       setTenant(data);
-      setLogoPath((data as any).logo_path || null);
+      setLogoPath(data.logo_path || null);
       setTenantPhone(tp?.phone1 || null);
     } catch (error) {
       console.error('Error fetching tenant:', error);

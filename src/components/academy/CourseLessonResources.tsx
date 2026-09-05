@@ -31,8 +31,8 @@ export default function CourseLessonResources({ courseId }: { courseId: number }
           console.error("Failed to record resource usage", error);
         }
       }
-    } catch (e: any) {
-      toast.error(e?.message || "Could not open resource");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open resource");
     } finally {
       setBusyId(null);
     }

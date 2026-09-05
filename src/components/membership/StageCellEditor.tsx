@@ -142,10 +142,10 @@ export function StageCellEditor({
       setOpen(false);
       setReason('');
       onUpdate?.();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error updating stage',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {

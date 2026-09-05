@@ -30,8 +30,8 @@ export default function AcademyWorkbooksPage() {
         });
         if (error) console.error("Failed to record resource usage", error);
       }
-    } catch (e: any) {
-      toast.error(e?.message || "Could not open workbook");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open workbook");
     } finally {
       setBusyId(null);
     }

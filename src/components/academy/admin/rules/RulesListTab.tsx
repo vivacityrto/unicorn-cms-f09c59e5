@@ -80,7 +80,7 @@ export default function RulesListTab() {
             className="pl-8 w-72"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "active" | "inactive")}>
           <SelectTrigger className="w-[160px]">
             <SelectValue />
           </SelectTrigger>

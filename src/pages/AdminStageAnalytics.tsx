@@ -267,7 +267,7 @@ export default function AdminStageAnalytics() {
 
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Status:</span>
-                <Select value={certifiedFilter} onValueChange={v => setCertifiedFilter(v as any)}>
+                <Select value={certifiedFilter} onValueChange={v => setCertifiedFilter(v as 'all' | 'certified' | 'uncertified')}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue />
                   </SelectTrigger>
