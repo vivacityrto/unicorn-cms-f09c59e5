@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import type { TablesInsert } from '@/integrations/supabase/types';
 
 export interface SuggestAttachment {
   id: string;
@@ -20,7 +21,7 @@ export function useSuggestAttachments(itemId: string | undefined) {
     queryKey: ['suggest-attachments', itemId],
     queryFn: async (): Promise<SuggestAttachment[]> => {
       const { data, error } = await supabase
-        .from('suggest_attachments' as any)
+        .from('suggest_attachments')
         .select('*')
         .eq('suggest_item_id', itemId!)
         .order('created_at', { ascending: true });
@@ -53,7 +54,7 @@ export function useUploadSuggestAttachment() {
       if (uploadError) throw uploadError;
 
       const { error: dbError } = await supabase
-        .from('suggest_attachments' as any)
+        .from('suggest_attachments')
         .insert({
           tenant_id: tenantId,
           suggest_item_id: itemId,
@@ -63,7 +64,7 @@ export function useUploadSuggestAttachment() {
           mime_type: file.type || null,
           attachment_kind: file.type?.startsWith('image/') ? 'image' : 'file',
           created_by: userId,
-        });
+        } satisfies TablesInsert<'suggest_attachments'>);
       if (dbError) throw dbError;
     },
     onSuccess: (_data, variables) => {
