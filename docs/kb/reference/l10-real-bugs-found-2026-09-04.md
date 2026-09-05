@@ -535,6 +535,29 @@ itself to target `public.users(user_uuid)` to match every other
 actor/owner FK in this table family. Left for a schema-change session
 per the standing guardrail, not patched inline during a type-only batch.
 
+## Client Time tab (`ClientTimeTab.tsx` -> `EditTimeDialog.tsx`)
+
+### 21. "Person" dropdown in Edit Time Entry silently shows staff only, never tenant contacts — DOCUMENTED, NOT FIXED (wrong column name)
+Opening "Edit Time Entry" on an existing time entry populates the "Person"
+selector's tenant-side half from a query that 400s every time:
+`supabase.from('tenant_users').select('user_uuid, users:user_uuid(user_uuid,
+first_name, last_name, avatar_url, disabled)')`. `tenant_users` has no
+`user_uuid` column — the real column (confirmed via
+`src/integrations/supabase/types.ts`'s generated `tenant_users` Row) is
+`user_id`. Because the request fails, `tuData` stays undefined and
+`tenantUsers` stays an empty array — the dropdown silently falls back to
+Vivacity staff only, with no visible error to the user. The likely fix is
+renaming both the selected column and the embed hint to `user_id` (i.e.
+`user_id, users:user_id(user_uuid, first_name, last_name, avatar_url,
+disabled)`), matching the same `user_id`-FK-to-`users` pattern already used
+elsewhere in this codebase — but verify the actual FK name PostgREST expects
+for the embed (`information_schema` / `pg_constraint`) before shipping, per
+this repo's standing guardrail on FK-embed hints.
+
+Found incidentally during batch 80 of the `no-explicit-any` retirement's
+live verification — `EditTimeDialog.tsx` is not one of that batch's changed
+files, so this is confirmed pre-existing and unrelated to that diff.
+
 ## What this means practically
 
 Nothing above was caused by tonight's work — every one of these bugs
