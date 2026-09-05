@@ -55,7 +55,7 @@ export function useDocumentDeliveryGuards(pairs: DeliveryGuardPair[], enabled = 
         .in('document_id', documentIds);
       const map = new Map<number, string[]>();
       for (const row of data || []) {
-        const tag = (row as any).field?.tag;
+        const tag = row.field?.tag;
         if (!tag) continue;
         const list = map.get(row.document_id) || [];
         list.push(tag);
