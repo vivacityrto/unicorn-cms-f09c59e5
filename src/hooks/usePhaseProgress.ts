@@ -12,13 +12,17 @@ export function usePhaseProgress(packageInstanceId: number | null) {
     queryKey: ['phase-progress', packageInstanceId],
     queryFn: async (): Promise<PhaseProgressSummary[]> => {
       if (!packageInstanceId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('v_phase_progress_summary')
         .select('*')
         .eq('package_instance_id', packageInstanceId)
         .order('sort_order');
       if (error) throw error;
-      return data ?? [];
+      // gate_type is a plain text column in v_phase_progress_summary, but
+      // PhaseProgressSummary narrows it to a literal union -- real values
+      // are already constrained to that set at the source (stages.gate_type),
+      // so this narrowing cast reflects a real invariant, not an escape hatch.
+      return (data ?? []) as unknown as PhaseProgressSummary[];
     },
     enabled: !!packageInstanceId,
     staleTime: QUERY_STALE_TIMES.REALTIME,

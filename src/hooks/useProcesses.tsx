@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 
@@ -486,12 +487,16 @@ export function useProcessAuditLog(processId: string | undefined) {
     queryFn: async (): Promise<ProcessAuditEntry[]> => {
       if (!processId) return [];
 
-      const { data, error } = await (supabase as any)
+      const PROCESS_AUDIT_LOG_SELECT = `
+        *,
+        actor:users!process_audit_log_actor_user_id_fkey(first_name, last_name, email)
+      `;
+      type ProcessAuditLogRow = Tables<'process_audit_log'> & {
+        actor: { first_name: string | null; last_name: string | null; email: string } | null;
+      };
+      const { data, error } = await supabase
         .from('process_audit_log')
-        .select(`
-          *,
-          actor:users!process_audit_log_actor_user_id_fkey(first_name, last_name, email)
-        `)
+        .select<typeof PROCESS_AUDIT_LOG_SELECT, ProcessAuditLogRow>(PROCESS_AUDIT_LOG_SELECT)
         .eq('process_id', processId)
         .order('created_at', { ascending: false });
 

@@ -39,7 +39,7 @@
          .limit(5);
  
        if (!error && data) {
-         const mapped = data.map((p: any) => ({
+         const mapped = data.map((p) => ({
            id: p.id,
            title: p.title,
            category: p.category,
