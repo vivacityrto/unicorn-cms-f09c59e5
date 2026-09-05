@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { Tables } from "@/integrations/supabase/types";
 
 export interface RtoTip {
   id: string;
@@ -36,7 +37,7 @@ export const useRtoTips = () => {
 
       // Fetch creator details for all unique creator IDs
       const creatorIds = Array.from(
-        new Set((data || []).map((tip: any) => tip.created_by).filter(Boolean))
+        new Set((data || []).map((tip: Tables<"rto_tips">) => tip.created_by).filter(Boolean))
       ) as string[];
 
       let creatorsById: Record<string, RtoTip["creator"]> = {};
@@ -50,7 +51,7 @@ export const useRtoTips = () => {
         if (creatorsError) throw creatorsError;
 
         creatorsById = (creators || []).reduce(
-          (acc: Record<string, RtoTip["creator"]>, user: any) => {
+          (acc: Record<string, RtoTip["creator"]>, user) => {
             acc[user.user_uuid] = {
               user_uuid: user.user_uuid,
               email: user.email,
@@ -64,7 +65,7 @@ export const useRtoTips = () => {
         );
       }
 
-      const tipsWithCreators = (data || []).map((tip: any) => ({
+      const tipsWithCreators = (data || []).map((tip: Tables<"rto_tips">) => ({
         ...tip,
         creator: tip.created_by ? creatorsById[tip.created_by] : undefined,
       })) as RtoTip[];
