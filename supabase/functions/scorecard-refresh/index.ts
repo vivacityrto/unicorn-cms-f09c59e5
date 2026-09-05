@@ -189,8 +189,7 @@ function calculateStatus(actual: number, target: number, direction: string): str
 
 // Metric resolution by key — each key maps to a SQL query against system data
 async function resolveMetricValue(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
   metricKey: string | null,
   tenantId: number,
   weekEnding: string,
