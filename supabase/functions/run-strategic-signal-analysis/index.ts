@@ -45,16 +45,16 @@ Deno.serve(async (req) => {
 
     if (snapshots) {
       const latestDate = snapshots[0]?.snapshot_date;
-      const latest = snapshots.filter((s: any) => s.snapshot_date === latestDate);
-      const critical = latest.filter((s: any) => s.capacity_utilisation_percentage > 110);
-      const high = latest.filter((s: any) => s.capacity_utilisation_percentage > 100);
+      const latest = snapshots.filter((s) => s.snapshot_date === latestDate);
+      const critical = latest.filter((s) => s.capacity_utilisation_percentage > 110);
+      const high = latest.filter((s) => s.capacity_utilisation_percentage > 100);
 
       if (critical.length >= 1) {
         signals.push({
           signal_type: "capacity_critical",
           signal_severity: "high",
           signal_summary: `${critical.length} consultant(s) exceed 110% capacity utilisation.`,
-          affected_entities_json: critical.map((c: any) => c.user_id),
+          affected_entities_json: critical.map((c) => c.user_id),
         });
       }
 
@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
           signal_type: "capacity_cluster_overload",
           signal_severity: "elevated",
           signal_summary: `${high.length} consultants over 100% capacity – team-wide pressure detected.`,
-          affected_entities_json: high.map((h: any) => h.user_id),
+          affected_entities_json: high.map((h) => h.user_id),
         });
       }
     }
@@ -77,8 +77,8 @@ Deno.serve(async (req) => {
 
     if (forecasts) {
       const latestDate = forecasts[0]?.forecast_date;
-      const latest = forecasts.filter((f: any) => f.forecast_date === latestDate);
-      const highRisk = latest.filter((f: any) => f.forecast_risk_status === "high" || f.forecast_risk_status === "elevated");
+      const latest = forecasts.filter((f) => f.forecast_date === latestDate);
+      const highRisk = latest.filter((f) => f.forecast_risk_status === "high" || f.forecast_risk_status === "elevated");
       const totalTenants = latest.length || 1;
       const elevatedPct = Math.round((highRisk.length / totalTenants) * 100);
 
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
           signal_type: "portfolio_risk_concentration",
           signal_severity: "high",
           signal_summary: `${elevatedPct}% of tenants at elevated or high risk status.`,
-          affected_entities_json: highRisk.map((h: any) => h.tenant_id),
+          affected_entities_json: highRisk.map((h) => h.tenant_id),
         });
       }
     }
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
         signal_type: "burn_risk_cluster",
         signal_severity: "elevated",
         signal_summary: `${burns.length} packages in critical burn status across portfolio.`,
-        affected_entities_json: burns.map((b: any) => ({ tenant_id: b.tenant_id, package_id: b.package_id })),
+        affected_entities_json: burns.map((b) => ({ tenant_id: b.tenant_id, package_id: b.package_id })),
       });
     }
 

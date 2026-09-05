@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T20:47:59.332Z",
-  "baselineSha": "cc829bb508334a850759bb5bd937c088cc1a71e1",
+  "generatedAt": "2026-09-05T20:55:47.372Z",
+  "baselineSha": "b7c99caf1e8bf13694739904bbfe072abec59c18",
   "totals": {
-    "files": 1755,
-    "filesWithFindings": 240,
-    "errors": 1000,
+    "files": 1754,
+    "filesWithFindings": 239,
+    "errors": 991,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 993,
+    "@typescript-eslint/no-explicit-any": 984,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 605,
+      "errors": 596,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 605
+        "@typescript-eslint/no-explicit-any": 596
       }
     }
   },
@@ -797,13 +797,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/run-strategic-signal-analysis": {
-      "errors": 9,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 9
       }
     },
     "supabase/functions/run-tenant-risk-forecast": {
@@ -1654,9 +1647,6 @@
     },
     "supabase/functions/run-retention-forecast/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/run-strategic-signal-analysis/index.ts": {
-      "@typescript-eslint/no-explicit-any": 9
     },
     "supabase/functions/run-tenant-risk-forecast/index.ts": {
       "@typescript-eslint/no-explicit-any": 6
