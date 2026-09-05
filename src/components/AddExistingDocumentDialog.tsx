@@ -62,7 +62,7 @@ export function AddExistingDocumentDialog({
       if (error) throw error;
       setDocuments(data || []);
       setFilteredDocuments(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching documents:', error);
       toast({
         title: "Error",
@@ -197,7 +197,7 @@ export function AddExistingDocumentDialog({
       // For each doc: if its primary stage is null or already equals the target, set it as primary.
       // Otherwise leave primary stage untouched and add an additional-stage link instead.
       const updatePromises = newDocuments.map(selectedDoc => {
-        const curr = (selectedDoc as any).stage ?? null;
+        const curr = selectedDoc.stage ?? null;
         if (curr === null || curr === stageId) {
           return supabase.from('documents')
             .update({
@@ -223,7 +223,7 @@ export function AddExistingDocumentDialog({
       // For docs whose primary stage differs from target, add an additional-stage link.
       const linkRows = newDocuments
         .filter(d => {
-          const curr = (d as any).stage ?? null;
+          const curr = d.stage ?? null;
           return curr !== null && curr !== stageId;
         })
         .map(d => ({ document_id: d.id, stage_id: stageId }));
@@ -247,10 +247,10 @@ export function AddExistingDocumentDialog({
       setIsConfirmDialogOpen(false);
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to add document",
+        description: error instanceof Error ? error.message : "Failed to add document",
         variant: "destructive"
       });
     } finally {
