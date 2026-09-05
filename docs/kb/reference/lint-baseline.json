@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T17:39:30.755Z",
-  "baselineSha": "f1224bd580c5da8ac045cdc6013c7743d3a34c3d",
+  "generatedAt": "2026-09-05T17:53:27.308Z",
+  "baselineSha": "c7d96f926ac70aec4c0d7b4e656da91396506801",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 255,
-    "errors": 1118,
+    "filesWithFindings": 254,
+    "errors": 1113,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1111,
+    "@typescript-eslint/no-explicit-any": 1106,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 450,
+      "errors": 445,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 443,
+        "@typescript-eslint/no-explicit-any": 438,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -64,13 +64,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 10
-      }
-    },
-    "src/components/admin/team-users": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
       }
     },
     "src/components/audit": {
@@ -1144,9 +1137,6 @@
     },
     "src/components/admin/CodeRowDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/components/admin/team-users/TeamLeaderEmailDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "src/components/audit/DeleteAuditDialog.tsx": {
       "react-refresh/only-export-components": 1
