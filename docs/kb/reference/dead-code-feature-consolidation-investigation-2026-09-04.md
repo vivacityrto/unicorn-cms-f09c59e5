@@ -230,6 +230,14 @@ and transition RPC remain live elsewhere and are untouched. The implementation
 PR will record the exact verification results and remains unmergeable without
 Carl's explicit sign-off.
 
+**AuditNavCards action (pending human sign-off):** Fresh reachability at
+current `origin/main` found `src/components/audit/AuditNavCards.tsx` has no
+inbound imports, dynamic imports, route/menu/registry references, or generated
+link/history references. Its former parent `Audits.tsx` was retired in #588;
+the active `/audits` route renders `AuditsAssessments` instead. The component
+is frontend-only and has no backend object dependency. This PR removes the
+orphaned file only; no active audit route or data contract changes.
+
 ## 6. Cross-program sequence
 
 ### Phase 2.5 checkpoint and ongoing lane
