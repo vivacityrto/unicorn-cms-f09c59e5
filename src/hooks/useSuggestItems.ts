@@ -30,6 +30,7 @@ export interface SuggestItem {
   released_by: string | null;
   is_deleted: boolean;
   is_client_visible: boolean;
+  urgency: string | null;
   created_at: string;
   updated_at: string;
   created_by: string;
