@@ -213,9 +213,13 @@ When starting a new phase of a multi-batch plan (e.g. a new sub-phase of
 `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`), or after
 ~5-10 batches of the same repetitive pattern within a phase, pause and
 actively look for ways to cut *overhead* before continuing — never by
-cutting a verification step. Every shipped change still gets the full
-sequence: `lint:ratchet`, `typecheck`, `test:frontend`, `test:edge`, and a
-live Playwright check. The things worth reviewing each time:
+cutting a verification step that actually catches bugs. Every shipped
+change still gets the full automated sequence unconditionally:
+`lint:ratchet`, `typecheck`, `test:frontend`, `test:edge`. A live
+Playwright check is scoped by behavioral risk — see the "Scope live
+verification to behavioral risk" bullet below; it is not skipped for
+convenience, only where the compiler already proves the change can't
+alter runtime behavior. The things worth reviewing each time:
 
 - **Worktree reuse.** A fresh `EnterWorktree` + `npm install` per tiny
   batch pays a full dependency install every time. When doing a run of
@@ -255,6 +259,31 @@ live Playwright check. The things worth reviewing each time:
   This does not weaken verification: the full suite still runs and still
   gates the batch, only what you *echo back into your own context*
   changes.
+- **Scope live verification to behavioral risk (added 2026-09-05).** Live
+  Playwright verification agents are the single largest cost in this
+  workflow by far — this session's own agent-completion reports show
+  individual verification runs costing 140,000-283,000 tokens each
+  (dominated by screenshot/navigation tool calls, not anything going
+  wrong), and launching two of them in the same turn is enough on its own
+  to move the usage meter several percentage points. Skip the live
+  Playwright pass entirely — rely on the automated chain alone — when
+  *every* fix in a batch is a pattern where TypeScript's own compiler is
+  complete proof of correctness, because the change cannot alter emitted
+  JS at all: a `catch (err: any)` -> `instanceof Error` narrowing, or
+  removing a redundant cast where the query already had an explicit
+  column select and the generated types confirm the cast was a no-op.
+  Live verification stays mandatory whenever a batch contains anything
+  with real behavioral risk: a cast removal that surfaces a genuine
+  structural mismatch requiring an actual code fix (not just deleting
+  `as any`), a `.select<QueryString, RowType>()` generic covering an
+  embedded/joined query shape, polymorphic ref/component-switching logic,
+  or anything touching auth/RBAC. When live verification does run, scope
+  the agent's prompt to only the files carrying that risk — don't ask it
+  to also click through every trivial catch-block file in the same batch.
+  This doesn't reduce coverage of real bugs: the compiler already fully
+  proves the skipped cases, so a browser click-through adds zero
+  additional confidence there — it only stops paying for verification
+  that provably can't find anything.
 
 The bar for any of these: does it reduce repeated overhead without
 skipping, weakening, or reordering-around a verification step? If yes,
