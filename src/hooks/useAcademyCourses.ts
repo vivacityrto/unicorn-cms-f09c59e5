@@ -71,13 +71,22 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
       }>();
       const lessonCountMap = new Map<number, number>();
 
+      type ProgressRow = {
+        course_id: number | null;
+        enrollment_status: string | null;
+        progress_percentage: number | null;
+        completed_lessons: number | null;
+        total_lessons: number | null;
+        has_certificate: boolean | null;
+        certificate_number: string | null;
+      };
       const [progressRes, lessonsRes] = await Promise.all([
         userId
           ? supabase
               .from("v_academy_course_progress")
               .select("course_id, enrollment_status, progress_percentage, completed_lessons, total_lessons, has_certificate, certificate_number")
               .eq("user_id", userId)
-          : Promise.resolve({ data: null as any }),
+          : Promise.resolve({ data: null as ProgressRow[] | null }),
         supabase
           .rpc("get_academy_course_lesson_outline_safe", { p_course_ids: courseIds })
           .select("course_id"),
@@ -130,7 +139,7 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
     () =>
       (coursesQuery.data ?? []).map((c) => ({
         ...c,
-        facilitator_name: (c as any).facilitator_display_name?.trim() || (c.facilitator_id ? facilitatorNameById[c.facilitator_id] ?? null : null),
+        facilitator_name: c.facilitator_display_name?.trim() || (c.facilitator_id ? facilitatorNameById[c.facilitator_id] ?? null : null),
       })),
     [coursesQuery.data, facilitatorNameById],
   );

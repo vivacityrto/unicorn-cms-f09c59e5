@@ -345,7 +345,7 @@ describe('Edge Cases', () => {
   });
 
   it('handles unknown role as General User', () => {
-    const unknownRoleProfile = { ...mockUsers.clientUser, unicorn_role: 'Unknown Role' as any };
+    const unknownRoleProfile = { ...mockUsers.clientUser, unicorn_role: 'Unknown Role' };
     expect(hasPermission(unknownRoleProfile, 'eos:access')).toBe(false);
     expect(hasPermission(unknownRoleProfile, 'administration:access')).toBe(false);
   });

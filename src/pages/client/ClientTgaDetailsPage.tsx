@@ -88,8 +88,8 @@ export default function ClientTgaDetailsPage() {
       if (error) throw error;
       toast.success("TGA details marked as reviewed");
       await loadData();
-    } catch (err: any) {
-      toast.error("Failed to log review: " + (err.message || "Unknown error"));
+    } catch (err) {
+      toast.error("Failed to log review: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setSubmitting(false);
     }
