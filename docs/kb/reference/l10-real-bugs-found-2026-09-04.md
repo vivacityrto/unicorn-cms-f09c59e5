@@ -504,6 +504,37 @@ hand — further reinforcing #3's original recommendation to add a real
 default/sequence to `stages.id` (and audit `packages.id` too) so this class
 of bug stops resurfacing every time someone touches a nearby insert.
 
+## Processes — Audit Log tab (`useProcesses.tsx`, `ProcessDetail.tsx`)
+
+### 20. Process Audit Log has never shown any entries — DOCUMENTED, NOT FIXED (wrong FK schema target)
+The Audit Log tab on a process's detail page has always silently shown
+"No audit entries available," even for processes with real history
+(created/updated/approved/archived/submitted-for-review entries do get
+written to `process_audit_log` by `useProcesses.tsx`'s own mutations —
+the table isn't empty). The read query embeds the actor via
+`actor:users!process_audit_log_actor_user_id_fkey(first_name, last_name,
+email)`, asking PostgREST to resolve that FK hint against `public.users`.
+Confirmed live via `pg_get_constraintdef`: the real constraint is
+`FOREIGN KEY (actor_user_id) REFERENCES auth.users(id)`, not
+`public.users` — so PostgREST can never satisfy the embed and returns a
+`PGRST200` 400 every time. The UI catches the error and falls back to the
+empty-state message instead of surfacing a failure, which is why this has
+gone unnoticed.
+
+Found during batch 72 of the `no-explicit-any` retirement's live
+verification — the batch's own diff only changed the query's TypeScript
+generics (fixing a masked TS2589 "excessively deep" error), not the query
+shape, so this is confirmed pre-existing and unrelated to that change.
+
+Not fixed here: the correct fix is either repointing the embed to
+`auth.users` (schema/FK decision — `auth.users` isn't normally embeddable
+the same way, may need a view or a manual second lookup by
+`actor_user_id` against `public.users` instead, since the two tables'
+UUIDs correlate 1:1 in this codebase's convention) or altering the FK
+itself to target `public.users(user_uuid)` to match every other
+actor/owner FK in this table family. Left for a schema-change session
+per the standing guardrail, not patched inline during a type-only batch.
+
 ## What this means practically
 
 Nothing above was caused by tonight's work — every one of these bugs
