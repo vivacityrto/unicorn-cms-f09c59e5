@@ -95,7 +95,7 @@ serve(async (req) => {
     
     if (fetch_all) {
       // Paginate through all results
-      const allItems: any[] = [];
+      const allItems: unknown[] = [];
       let currentOffset = 0;
       let hasMore = true;
       let totalCount = 0;
