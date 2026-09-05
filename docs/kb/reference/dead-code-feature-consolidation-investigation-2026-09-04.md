@@ -188,16 +188,13 @@ after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
   live and is **not** a retirement candidate. Its backing
   `v_compliance_score_latest` view and `calculate_compliance_score` RPC also
   remain live; no deletion or schema action is authorized.
-- **`useCompletionEligibility.ts`** (batch 78, [PR #677](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/677)) — zero inbound
-  imports confirmed the same way; matches the §3.3 zero-inbound queue's
-  `useCompletionEligibility` entry (that list didn't record a file
-  extension — this is `.ts`, not `.tsx`). One caveat for whoever actions
-  this: PR #677 removed an `as any` cast inside this file (a `v_completion_eligibility`
-  view-name cast) *before* this reachability confirmation surfaced — a
-  type-only change with no behavioral effect, so it doesn't block
-  retirement, but a diff against `origin/main` will show that unrelated
-  edit sitting in the file's history.
-
+- **Correction from the current-origin sweep (2026-09-05):** the cached
+  zero-inbound evidence for **`useCompletionEligibility.ts`** is stale. At
+  `origin/main` (`a0cf450b5`), it is imported and executed by
+  `useCompletionCascade.ts`, so it is live and is **not** a retirement
+  candidate. Its `v_completion_eligibility` view remains a live backend
+  contract. PR #677's earlier type-only cast cleanup does not change this
+  disposition.
 Batch 81's live-verification pass (PR #683) turned up a third, more
 specific finding: **`StageCellEditor` itself (the named export in
 `src/components/membership/StageCellEditor.tsx`) has no importer anywhere**
