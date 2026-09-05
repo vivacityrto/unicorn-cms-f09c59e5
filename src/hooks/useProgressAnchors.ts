@@ -7,6 +7,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
+
+type PhaseActionsRemainingRow = Tables<'v_phase_actions_remaining'>;
+type ProgressAnchorInputRow = Tables<'v_progress_anchor_inputs'>;
 
 export interface ProgressAnchorData {
   tenant_id: number;
@@ -39,7 +43,7 @@ export function useProgressAnchors(tenantId: number | null, packageInstanceId?: 
 
       // Fetch deterministic action counts
       let actionsQuery = supabase
-        .from('v_phase_actions_remaining' as any)
+        .from('v_phase_actions_remaining')
         .select('*')
         .eq('tenant_id', tenantId);
 
@@ -49,7 +53,7 @@ export function useProgressAnchors(tenantId: number | null, packageInstanceId?: 
 
       // Fetch anchor inputs for overall_score and stale data
       let anchorQuery = supabase
-        .from('v_progress_anchor_inputs' as any)
+        .from('v_progress_anchor_inputs')
         .select('*')
         .eq('tenant_id', tenantId);
 
@@ -64,14 +68,14 @@ export function useProgressAnchors(tenantId: number | null, packageInstanceId?: 
 
       if (actionsRes.error) throw actionsRes.error;
 
-      const actions = (actionsRes.data ?? []) as any[];
-      const anchors = (anchorsRes.data ?? []) as any[];
+      const actions = (actionsRes.data ?? []) as PhaseActionsRemainingRow[];
+      const anchors = (anchorsRes.data ?? []) as ProgressAnchorInputRow[];
 
       // Build anchor lookup by package_instance_id
-      const anchorMap = new Map<number, any>();
-      anchors.forEach((a: any) => anchorMap.set(a.package_instance_id, a));
+      const anchorMap = new Map<number | null, ProgressAnchorInputRow>();
+      anchors.forEach((a) => anchorMap.set(a.package_instance_id, a));
 
-      return actions.map((a: any): ProgressAnchorData => {
+      return actions.map((a): ProgressAnchorData => {
         const anchor = anchorMap.get(a.package_instance_id);
         return {
           tenant_id: a.tenant_id,
