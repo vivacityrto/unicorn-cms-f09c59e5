@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 export interface EmailTemplate {
   id: string;
@@ -55,10 +56,11 @@ export function useEmailTemplates() {
 
       if (error) throw error;
       setTemplates((data || []) as unknown as EmailTemplate[]);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to load email templates";
       toast({
         title: "Error",
-        description: e.message || "Failed to load email templates",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -111,11 +113,11 @@ export function useEmailTemplates() {
       updates.subject !== currentTemplate?.subject || 
       updates.html_body !== currentTemplate?.html_body;
 
-    const updateData: any = {
+    const updateData = {
       ...updates,
       updated_at: new Date().toISOString(),
       updated_by: userData?.user?.id || null,
-    };
+    } as unknown as TablesUpdate<"email_templates">;
 
     if (shouldIncrementVersion && currentTemplate) {
       updateData.version = (currentTemplate.version || 1) + 1;
@@ -213,10 +215,11 @@ export function useEmailSending() {
       }
 
       return result;
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to send email";
       toast({
         title: "Error",
-        description: e.message || "Failed to send email",
+        description: message,
         variant: "destructive",
       });
       throw e;
