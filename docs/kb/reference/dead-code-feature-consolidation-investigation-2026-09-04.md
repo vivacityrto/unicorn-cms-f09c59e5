@@ -39,10 +39,10 @@ These have replacement and isolation evidence strong enough to enter the first i
 | ~~Legacy tenant-detail island~~ **✅ Retired [PR #571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571), merged 2026-09-04** | `src/pages/TenantDetail.tsx`, `src/components/csc/CSCProfileCard.tsx`, `src/components/tenant/EnrichTenantButton.tsx`, `ReviewModePanel.tsx`, `TenantClickUpActivity.tsx`, `TenantProgressTable.tsx`, `src/hooks/useReviewMode.ts` | The island is disconnected and its dependencies are exclusive. Current tenant-detail routes render `ClientDetail`; PR #538 reconfirmed the old page as dead. This is not authority to change the active tenant-detail feature. | 2,474 |
 | ~~Stale EOS page~~ **✅ Retired [PR #574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574), merged 2026-09-04** | `src/pages/EosIssues.tsx`, plus its unused declaration in `src/App.tsx` | `/eos/issues` redirects to `/eos/risks-opportunities`; the `App.tsx` declaration exists but is never rendered. PR #574 also updated `EosOverview.tsx`'s three hardcoded `/eos/issues` links to point directly at the live `/eos/risks-opportunities` route — a necessary follow-up (those links would otherwise still round-trip through the now-deleted redirect), not scope creep. | 223 |
 | ~~Legacy suggestion pages~~ **✅ Retired [PR #577](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/577), merged 2026-09-04** | `src/pages/NewSuggestionForm.tsx`, `SuggestionRegister.tsx`, `src/pages/client/ClientNewSuggestionPage.tsx`, `ClientSuggestionDetailPage.tsx`, `ClientSuggestionsPage.tsx` | Zero inbound imports. Staff and client legacy routes now redirect to or use Support Tickets; compatibility redirects and the live `SuggestionDetail` alias were preserved. | 1,224 |
-| Orphaned document-version hook | `src/hooks/useDocumentVersions.tsx` | Zero inbound imports; the August document-version audit records it as orphaned after `/document/:id` retirement. | 167 |
-| Unused landing-page alias | `src/pages/Index.tsx`, plus its unused declaration in `src/App.tsx` | The binding has no JSX/use reference; `/` and `/login` render `Login` directly. | 18 |
+| ~~Orphaned document-version hook~~ **✅ Retired [PR #579](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/579)** | `src/hooks/useDocumentVersions.tsx` | Retired before this branch cut; current `origin/main` no longer contains the file. | 167 |
+| ~~Unused landing-page alias~~ **✅ Retired [PR #579](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/579)** | `src/pages/Index.tsx`, plus its unused declaration in `src/App.tsx` | Retired before this branch cut; `/` and `/login` render `Login` directly. | 18 |
 
-The immediately actionable first-wave potential was about **6,627 lines**, already above the parent plan's original 3,000–6,000 conservative target. That was a reason to split it into domain PRs, not to raise deletion scope automatically. **Update 2026-09-04:** four retired cohorts account for about 6,442 lines; the remaining first-wave candidates (orphaned document-version hook and unused landing-page alias) total about 185 lines.
+The immediately actionable first-wave potential was about **6,627 lines**, already above the parent plan's original 3,000–6,000 conservative target. That was a reason to split it into domain PRs, not to raise deletion scope automatically. **Update 2026-09-05:** PR #579 retired the document-version hook and landing-page alias; the remaining work is the separately gated Audit components and bounded consolidation candidates.
 
 The formerly unused Audit shells and their exclusive legacy dependencies were characterized with the UUID route-convergence slice in [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586), then retired in [#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588) after authenticated parity evidence. The active replacements remain `AuditsAssessments` and `AuditWorkspaceNew`.
 
@@ -136,13 +136,13 @@ PR #588 removed the legacy `Audits.tsx` island but did not remove three of its
 exclusive components. Fresh entry-point traversal and exact-export searches
 show no inbound use for:
 
-- `src/components/audit/AuditInspectionsTable.tsx` — 324 lines;
+- `src/components/audit/AuditInspectionsTable.tsx` — 336 lines at current branch cut;
 - `src/components/audit/AuditNavCards.tsx` — 81 lines;
 - `src/components/audit/AuditTemplatesTable.tsx` — 300 lines.
 
-These are Phase 2.6 retirement candidates (approximately 705 lines), not
-approved deletions. Run a fresh route, dynamic-import, history, and deployed-
-caller sweep immediately before removal. Preserve the live
+These are Phase 2.6 retirement candidates (approximately 717 lines at this
+branch cut), not approved deletions. Run a fresh route, dynamic-import,
+history, and deployed-caller sweep immediately before removal. Preserve the live
 `AuditsAssessments`/`AuditWorkspaceNew` surfaces and UUID redirects.
 
 ### 7.2 Package/stage authoring reliability family
@@ -276,6 +276,7 @@ No plan or council approval authorizes a production migration/deployment, extern
 |---|---|---|
 | Three-seat council investigation | Complete 2026-09-04 | dead-code/import graph, feature/database consolidation, and RBAC/tenant alignment seats |
 | Phase 2.6 plan insertion | Implementation underway | All highest-confidence dead-code cohorts are retired: [#570](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/570), [#571](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/571), [#574](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/574), [#577](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/577), [#579](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/579), and Audit work [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586)/[#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588). Remaining work is bounded consolidation candidates. |
+| AuditInspectionsTable retirement | Pending human sign-off in implementation PR | Fresh current-origin sweep: zero inbound imports/dynamic imports/routes/menu references; no Edge callers; backend `audit_inspection` remains active through `AuditTemplateBuilder` and `merge_tenants`. Component deletion is frontend-only; Playwright preflight was blocked because Claude owns port 8080. |
 | High-confidence cohorts | 6 of 6 retired | Audit convergence is a separate source-proven slice intentionally gated on UUID/deep-link characterization; broader consolidation remains investigative |
 | Audit route convergence and island retirement | Implemented in [#586](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/586) and [#588](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/588) | Legacy deep links redirect via history replacement to the canonical UUID workspace with matching `?tab=` selection. Authenticated verification passed with real data, refresh/back/forward, zero console errors, and zero writes. The unreachable legacy island and exclusive dependencies were removed in #588; active canonical flow is unchanged. |
 | Clone consolidation | Candidate register complete | parity fixtures not started |
