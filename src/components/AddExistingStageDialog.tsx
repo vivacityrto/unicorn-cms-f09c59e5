@@ -51,7 +51,7 @@ export function AddExistingStageDialog({
 
       if (error) throw error;
       setCurrentStageIds(data?.stage_ids || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching current tenant stages:', error);
     }
   }, [tenantId]);
@@ -75,10 +75,10 @@ export function AddExistingStageDialog({
         short_name: s.shortname,
         description: s.description,
       })));
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch stages',
+        description: error instanceof Error ? error.message : 'Failed to fetch stages',
         variant: 'destructive',
       });
     } finally {
@@ -130,10 +130,10 @@ export function AddExistingStageDialog({
       setConfirmStage(null);
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add stage',
+        description: error instanceof Error ? error.message : 'Failed to add stage',
         variant: 'destructive',
       });
     }
