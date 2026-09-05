@@ -54,10 +54,10 @@ export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, 
         description: `"${tenantName}" has been ${labels[action] || action}.`,
       });
       onSuccess();
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: 'Action Failed',
-        description: err.message,
+        description: err instanceof Error ? err.message : String(err),
         variant: 'destructive',
       });
     } finally {

@@ -145,8 +145,8 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
         const statusDesc = options.find(o => o.value === newStatus)?.description || newStatus;
         onNonActiveChange(statusDesc);
       }
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally {
       setSaving(false);
       setShowConfirm(false);

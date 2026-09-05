@@ -92,8 +92,8 @@ export function TenantClickUpAISearch({ tenantId }: TenantClickUpAISearchProps) 
           }
         }
       }
-    } catch (e: any) {
-      if (e.name !== "AbortError") {
+    } catch (e) {
+      if (!(e instanceof Error) || e.name !== "AbortError") {
         console.error("AI search error:", e);
         toast.error("AI search failed");
       }
