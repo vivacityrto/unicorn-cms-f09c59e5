@@ -33,7 +33,7 @@ export function usePredictiveRisk(tenantId: number | null, packageInstanceId?: n
       if (!tenantId) return [];
 
       let query = supabase
-        .from('predictive_operational_risk_snapshots' as any)
+        .from('predictive_operational_risk_snapshots')
         .select('*')
         .eq('tenant_id', tenantId)
         .order('calculated_at', { ascending: false });
