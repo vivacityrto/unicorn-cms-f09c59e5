@@ -89,7 +89,7 @@ export function StageQualityIndicator({
           `)
           .eq('stage_id', stageId);
 
-        const draftEmails = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
+        const draftEmails = emails?.filter((e) => e.email_templates?.status === 'draft').length || 0;
 
         if (draftEmails > 0) {
           setStatus('warn');
