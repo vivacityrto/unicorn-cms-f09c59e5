@@ -61,7 +61,7 @@ export function useMeetingArtifacts(meetingId: string | null) {
       });
 
       if (error) throw new Error(error.message);
-      if (data && 'error' in data) throw new Error((data as any).error);
+      if (data && 'error' in data) throw new Error((data as { error: string }).error);
       return data as SyncResult;
     },
     onSuccess: (result) => {
