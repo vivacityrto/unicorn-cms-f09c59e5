@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T21:33:41.589Z",
-  "baselineSha": "b75cacaca4227af878427740c5d199d5eaf4598f",
+  "generatedAt": "2026-09-05T21:39:44.630Z",
+  "baselineSha": "ed4e5c39901900141acdd85439b4aa503183e2e0",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 235,
-    "errors": 969,
+    "filesWithFindings": 234,
+    "errors": 964,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 962,
+    "@typescript-eslint/no-explicit-any": 957,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 574,
+      "errors": 569,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 574
+        "@typescript-eslint/no-explicit-any": 569
       }
     }
   },
@@ -981,13 +981,6 @@
         "@typescript-eslint/no-explicit-any": 3
       }
     },
-    "supabase/functions/xero-invoice-list": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
-      }
-    },
     "supabase/functions/xero-invoice-status": {
       "errors": 1,
       "warnings": 0,
@@ -1697,9 +1690,6 @@
     },
     "supabase/functions/vector-search/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "supabase/functions/xero-invoice-list/index.ts": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "supabase/functions/xero-invoice-status/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
