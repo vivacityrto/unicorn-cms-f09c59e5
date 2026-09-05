@@ -10,6 +10,39 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
 
+interface XeroLineItem {
+  ItemCode?: string;
+  Item?: { Name?: string };
+  Quantity?: number;
+  AccountCode?: string;
+}
+
+interface XeroPayment {
+  Date?: string;
+  Reference?: string;
+}
+
+interface XeroInvoice {
+  InvoiceID?: string;
+  InvoiceNumber?: string;
+  Type?: string;
+  Status?: string;
+  Reference?: string;
+  Contact?: { Name?: string };
+  DateString?: string;
+  DueDateString?: string;
+  UpdatedDateUTCString?: string;
+  FullyPaidOnDate?: string;
+  SentToContact?: boolean;
+  HasAttachments?: boolean;
+  RepeatingInvoiceID?: string;
+  CurrencyCode?: string;
+  LineItems?: XeroLineItem[];
+  Payments?: XeroPayment[];
+  CreditNotes?: unknown[];
+  Prepayments?: unknown[];
+}
+
 function json(req: Request, status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -30,7 +63,7 @@ function parseXeroDate(xeroDateStr: string | undefined | null): string | null {
 // text (e.g. "TOTAL AMOUNT PAYABLE: $40,425"), which would leak the
 // exact thing this is meant to exclude. ItemCode/Item name convey what
 // the line is for without that.
-function redactInvoice(inv: any) {
+function redactInvoice(inv: XeroInvoice) {
   return {
     invoiceId: inv.InvoiceID,
     invoiceNumber: inv.InvoiceNumber ?? null,
@@ -46,13 +79,13 @@ function redactInvoice(inv: any) {
     hasAttachments: inv.HasAttachments ?? null,
     repeatingInvoiceId: inv.RepeatingInvoiceID ?? null,
     currencyCode: inv.CurrencyCode ?? null,
-    lineItems: (inv.LineItems ?? []).map((li: any) => ({
+    lineItems: (inv.LineItems ?? []).map((li) => ({
       itemCode: li.ItemCode ?? null,
       itemName: li.Item?.Name ?? null,
       quantity: li.Quantity ?? null,
       accountCode: li.AccountCode ?? null,
     })),
-    payments: (inv.Payments ?? []).map((p: any) => ({
+    payments: (inv.Payments ?? []).map((p) => ({
       date: parseXeroDate(p.Date),
       reference: p.Reference || null,
     })),
@@ -160,7 +193,7 @@ Deno.serve(async (req) => {
 
     // Follow pagination - Xero caps each page at 100 items (see
     // xero-invoice-sync-all for where this bit us at batch scale).
-    let allInvoices: any[] = [];
+    let allInvoices: XeroInvoice[] = [];
     let page = 1;
     while (true) {
       const resp = await fetch(
@@ -190,7 +223,7 @@ Deno.serve(async (req) => {
     // seeing a voided invoice in the list is exactly what surfaced the
     // earlier paid/unpaid bug, so this view should show the full history).
     const invoices = allInvoices
-      .filter((inv: any) => inv.Status !== "DELETED")
+      .filter((inv) => inv.Status !== "DELETED")
       .map(redactInvoice);
 
     return json(req, 200, { connected: true, linked: true, invoices });
