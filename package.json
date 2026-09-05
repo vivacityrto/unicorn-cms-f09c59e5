@@ -13,6 +13,7 @@
     "lint:email-redirects": "node scripts/check-email-redirect-urls.mjs",
     "preview": "vite preview",
     "metrics": "node scripts/architecture-metrics.mjs",
+    "tenant:p0:inventory": "node scripts/tenant-p0-inventory.mjs",
     "routes": "node scripts/generate-route-manifest.mjs",
     "routes:check-drift": "node scripts/check-route-drift.mjs",
     "check:kb-links": "node scripts/check-kb-links.mjs",
