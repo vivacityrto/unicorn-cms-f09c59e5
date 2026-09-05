@@ -72,11 +72,11 @@ export function useWorkflowOverview() {
       const d14 = new Date(Date.now() - 14 * 86400000).toISOString();
 
       return {
-        active_bottlenecks: all.filter((s: any) => s.signal_type === 'bottleneck_detected').length,
-        rework_signals: all.filter((s: any) => s.signal_type === 'repeated_rework').length,
-        imbalance_signals: all.filter((s: any) => s.signal_type === 'workload_imbalance').length,
-        stalled_signals: all.filter((s: any) => s.signal_type === 'stalled_stage').length,
-        unresolved_14d: all.filter((s: any) => s.created_at < d14).length,
+        active_bottlenecks: all.filter((s: WorkflowSignal) => s.signal_type === 'bottleneck_detected').length,
+        rework_signals: all.filter((s: WorkflowSignal) => s.signal_type === 'repeated_rework').length,
+        imbalance_signals: all.filter((s: WorkflowSignal) => s.signal_type === 'workload_imbalance').length,
+        stalled_signals: all.filter((s: WorkflowSignal) => s.signal_type === 'stalled_stage').length,
+        unresolved_14d: all.filter((s: WorkflowSignal) => s.created_at < d14).length,
         total_unresolved: all.length,
       } as WorkflowOverview;
     },

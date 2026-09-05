@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T19:18:16.876Z",
-  "baselineSha": "d5b9d911a93e9b4d52a588c93d1cfc16b41dc972",
+  "generatedAt": "2026-09-05T19:23:33.332Z",
+  "baselineSha": "97df771bcb9a9511cfe7c410acec92a7ba674f35",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 248,
-    "errors": 1078,
+    "filesWithFindings": 247,
+    "errors": 1073,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1071,
+    "@typescript-eslint/no-explicit-any": 1066,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 410,
+      "errors": 405,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 403,
+        "@typescript-eslint/no-explicit-any": 398,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -260,10 +260,10 @@
       }
     },
     "src/hooks": {
-      "errors": 124,
+      "errors": 119,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 124,
+        "@typescript-eslint/no-explicit-any": 119,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1394,9 +1394,6 @@
     },
     "src/hooks/useTriageStaffOptions.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useWorkflowOptimisation.ts": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "src/hooks/useYouveGotMailToast.tsx": {
       "@typescript-eslint/no-explicit-any": 3
