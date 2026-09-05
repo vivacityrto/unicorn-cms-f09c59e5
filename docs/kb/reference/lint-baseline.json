@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T18:35:58.895Z",
-  "baselineSha": "1fd7b79df9c4df3c95c0d40da9f04369a95ef1fc",
+  "generatedAt": "2026-09-05T19:00:33.349Z",
+  "baselineSha": "5a47a1688c6a152c97f0deb9d789bfccbfc1df4c",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 251,
-    "errors": 1095,
+    "filesWithFindings": 250,
+    "errors": 1089,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1088,
+    "@typescript-eslint/no-explicit-any": 1082,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 427,
+      "errors": 421,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 420,
+        "@typescript-eslint/no-explicit-any": 414,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -217,11 +217,10 @@
       }
     },
     "src/components/tenant": {
-      "errors": 6,
+      "errors": 0,
       "warnings": 1,
       "byRule": {
-        "react-refresh/only-export-components": 1,
-        "@typescript-eslint/no-explicit-any": 6
+        "react-refresh/only-export-components": 1
       }
     },
     "src/components/ui": {
@@ -1238,9 +1237,6 @@
     },
     "src/components/tenant/RenameTenantDialog.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/components/tenant/TenantLogoUpload.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/ui/badge.tsx": {
       "react-refresh/only-export-components": 1

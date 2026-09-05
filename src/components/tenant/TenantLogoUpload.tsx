@@ -7,11 +7,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Trash2, Building2, Upload } from 'lucide-react';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 
 interface TenantLogoUploadProps {
   tenantId: number;
   currentLogoPath: string | null;
   onLogoChange: (newPath: string | null) => void;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: TenantLogoUploadProps) {
@@ -56,7 +61,7 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
 
       const { error: updateError } = await supabase
         .from('tenants')
-        .update({ logo_path: filePath } as any)
+        .update({ logo_path: filePath } satisfies Pick<TablesUpdate<'tenants'>, 'logo_path'>)
         .eq('id', tenantId);
 
       if (updateError) throw updateError;
@@ -70,15 +75,15 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
           entity_type: 'tenant',
           entity_id: String(tenantId),
           details: { file_path: filePath, file_name: file.name }
-        } as any).then(({ error: auditErr }) => {
+        } as never).then(({ error: auditErr }) => {
           if (auditErr) console.warn('Audit log (logo upload) failed:', auditErr.message);
         });
       }
 
       onLogoChange(filePath);
       toast({ title: 'Logo uploaded successfully' });
-    } catch (error: any) {
-      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Upload failed', description: errorMessage(error), variant: 'destructive' });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -94,7 +99,7 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
 
       const { error } = await supabase
         .from('tenants')
-        .update({ logo_path: null } as any)
+        .update({ logo_path: null } satisfies Pick<TablesUpdate<'tenants'>, 'logo_path'>)
         .eq('id', tenantId);
 
       if (error) throw error;
@@ -108,15 +113,15 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
           entity_type: 'tenant',
           entity_id: String(tenantId),
           details: { removed_path: currentLogoPath }
-        } as any).then(({ error: auditErr }) => {
+        } as never).then(({ error: auditErr }) => {
           if (auditErr) console.warn('Audit log (logo delete) failed:', auditErr.message);
         });
       }
 
       onLogoChange(null);
       toast({ title: 'Logo removed' });
-    } catch (error: any) {
-      toast({ title: 'Delete failed', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Delete failed', description: errorMessage(error), variant: 'destructive' });
     } finally {
       setUploading(false);
     }
