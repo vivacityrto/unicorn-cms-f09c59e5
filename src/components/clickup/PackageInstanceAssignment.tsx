@@ -8,6 +8,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Package, Wand2, Save } from "lucide-react";
 import { format } from "date-fns";
 
+type RawTask = {
+  id: number; task_id: string; custom_id: string | null; name: string | null;
+  tenant_id: number; packageinstance_id: number | null; date_created: string | null;
+  tenants?: { name?: string | null } | null;
+};
+type AutoMatchResult = { matched: number; unmatched: number; no_entries: number };
+
 interface UnmatchedTask {
   id: number;
   task_id: string;
@@ -64,8 +71,8 @@ export function PackageInstanceAssignment() {
     setLoading(true);
     try {
       // Get unmatched tasks (has tenant_id, no packageinstance_id)
-      const { data: rawTasks, error } = await (supabase as any)
-        .from("clickup_tasks_api")
+      const { data: rawTasks, error } = await supabase
+        .from("clickup_tasks_api" as never)
         .select("id, task_id, custom_id, name, tenant_id, packageinstance_id, date_created, tenants!clickup_tasks_api_tenant_id_fkey(name)")
         .not("tenant_id", "is", null)
         .is("packageinstance_id", null)
@@ -75,7 +82,7 @@ export function PackageInstanceAssignment() {
       if (error) throw error;
 
       // Get time entry date ranges for these tasks
-      const taskIds = (rawTasks || []).map((t: any) => t.task_id);
+      const taskIds = ((rawTasks || []) as unknown as RawTask[]).map((t) => t.task_id);
       const entryRanges: Record<string, { earliest: string; latest: string }> = {};
 
       if (taskIds.length > 0) {
@@ -98,7 +105,7 @@ export function PackageInstanceAssignment() {
         }
       }
 
-      const mapped: UnmatchedTask[] = (rawTasks || []).map((t: any) => ({
+      const mapped: UnmatchedTask[] = ((rawTasks || []) as unknown as RawTask[]).map((t) => ({
         id: t.id,
         task_id: t.task_id,
         custom_id: t.custom_id,
@@ -136,9 +143,9 @@ export function PackageInstanceAssignment() {
             .select("id, name")
             .in("id", packageIds);
           const pkgMap: Record<number, string> = {};
-          (pkgData || []).forEach((p: any) => { pkgMap[p.id] = p.name; });
+          (pkgData || []).forEach((p) => { pkgMap[p.id] = p.name; });
 
-          newCache[tid] = piData.map((pi: any) => ({
+          newCache[tid] = piData.map((pi) => ({
             id: pi.id,
             package_name: pkgMap[pi.package_id] ?? "Unknown",
             start_date: pi.start_date,
@@ -178,7 +185,7 @@ export function PackageInstanceAssignment() {
     try {
       const { data, error } = await supabase.rpc("rpc_match_clickup_to_rto_membership");
       if (error) throw error;
-      const result = data as any;
+      const result = data as unknown as AutoMatchResult;
       toast({
         title: "Auto-Match Complete",
         description: `${result.matched} matched, ${result.unmatched} unmatched, ${result.no_entries} without entries.`,

@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T18:20:29.632Z",
-  "baselineSha": "9034ecb828315682fa3d39457ffdd633dfbf1a5f",
+  "generatedAt": "2026-09-05T18:35:58.895Z",
+  "baselineSha": "1fd7b79df9c4df3c95c0d40da9f04369a95ef1fc",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 252,
-    "errors": 1101,
+    "filesWithFindings": 251,
+    "errors": 1095,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1094,
+    "@typescript-eslint/no-explicit-any": 1088,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 433,
+      "errors": 427,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 426,
+        "@typescript-eslint/no-explicit-any": 420,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -78,13 +78,6 @@
       "warnings": 2,
       "byRule": {
         "react-refresh/only-export-components": 2
-      }
-    },
-    "src/components/clickup": {
-      "errors": 6,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 6
       }
     },
     "src/components/client": {
@@ -1145,9 +1138,6 @@
       "react-refresh/only-export-components": 1
     },
     "src/components/audit/workspace/useDebouncedAutosave.ts": {},
-    "src/components/clickup/PackageInstanceAssignment.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
-    },
     "src/components/client/AuditPreparationSection.tsx": {
       "@typescript-eslint/no-unused-expressions": 1
     },
