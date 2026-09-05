@@ -81,6 +81,20 @@ GitHub's direct API reported `main@e9356cf9` and was used as the branch-cut
 authority. Do not branch from a stale local `origin/main` until a fresh fetch
 has materialized that object.
 
+**Council recheck (2026-09-05, refreshed at `main@eba9833`):** recent PR
+review identified three Audit components newly orphaned by #588
+(`AuditInspectionsTable.tsx` 324 LOC, `AuditNavCards.tsx` 81 LOC,
+`AuditTemplatesTable.tsx` 300 LOC) and promoted package/stage authoring to a
+Phase 4 reliability slice with a later Phase 7 schema gate. Phase 2.6 is
+non-blocking with respect to the entire lint backlog: its task-dialog cohort
+may proceed after parity fixtures and lint-lane exclusion while Phase 2.5
+continues independently. Fresh architecture metrics are 1,735 product files,
+492,817 physical lines, 419,353 excluding generated types, 408,643 product
+excluding generated types/tests, 118 files over 600 LOC, 33 over 1,000, and
+1,668 raw `any` keyword hits. The committed lint baseline is 1,417 findings
+across 379 files. Historical batch rows remain immutable; these values are
+the current planning checkpoint.
+
 ## Phase 2.6 — verified retirement (Codex, dead-code cohorts)
 
 Tracked here after-the-fact since these merges predate this log recording them; Codex's own workflow doesn't currently track batch-start time the way the Phase 2.5 table above does, so only merge timestamps and LOC are available — cycle time is not computable for these rows.

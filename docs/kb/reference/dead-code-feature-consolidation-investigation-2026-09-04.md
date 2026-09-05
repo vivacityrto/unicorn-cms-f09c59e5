@@ -124,6 +124,53 @@ Do not delete the three currently routed subpages merely because their contract 
 
 The tenant plan remains authoritative for read-before-write sequencing, expand/migrate/compare/canary/contract mechanics, identity ledgers, unmatched-row classification, and schema normalization. The optimization plan must not split the 64-column `tenants` table, replace its primary key, delete indexes from “unused” evidence, coerce legacy IDs, or expose new directory/Ask Viv/BI surfaces ahead of those gates.
 
+## 7. Council recheck after Phase 2.5 batches 12–49 (2026-09-05)
+
+The follow-up council reviewed the recent merged PRs and the exact current
+source at `main@eba9833`. It found one missed Phase 2.6 retirement cohort and
+one under-scoped reliability family:
+
+### 7.1 Newly orphaned Audit components
+
+PR #588 removed the legacy `Audits.tsx` island but did not remove three of its
+exclusive components. Fresh entry-point traversal and exact-export searches
+show no inbound use for:
+
+- `src/components/audit/AuditInspectionsTable.tsx` — 324 lines;
+- `src/components/audit/AuditNavCards.tsx` — 81 lines;
+- `src/components/audit/AuditTemplatesTable.tsx` — 300 lines.
+
+These are Phase 2.6 retirement candidates (approximately 705 lines), not
+approved deletions. Run a fresh route, dynamic-import, history, and deployed-
+caller sweep immediately before removal. Preserve the live
+`AuditsAssessments`/`AuditWorkspaceNew` surfaces and UUID redirects.
+
+### 7.2 Package/stage authoring reliability family
+
+Recent typing work fixed several browser paths by computing `MAX(id)+1`, while
+other paths still omit required IDs and Archive writes an unsupported status.
+This is a shared contract problem, not more UI cleanup. Promote it to an
+explicit Phase 4 package/stage reliability slice and a later Phase 7 schema
+candidate:
+
+- inventory every package/stage insert and lifecycle transition;
+- design database-owned ID allocation and a valid status contract;
+- add an idempotent, backward-compatible server contract before removing the
+  browser-side allocation;
+- separately decide Import Stage, Archive Package, Stage Preview, and Bulk
+  Generate behavior against the live schema and foreign-key graph.
+
+Do not add speculative FKs or bundle migrations into a consolidation PR.
+
+### 7.3 Scheduling clarification
+
+Phase 2.6 is non-blocking with respect to the *entire* lint backlog. The
+already-characterized task-dialog consolidation may proceed once its two files
+are excluded from the active lint batch and parity fixtures are ready; Claude
+may continue Phase 2.5 independently. A formal Phase 2.5 exit checkpoint is
+still required before declaring that phase complete, but it is not a reason to
+stall safe Phase 2.6 work indefinitely.
+
 ## 6. Cross-program sequence
 
 ### Phase 2.5 checkpoint and ongoing lane
