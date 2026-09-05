@@ -5,11 +5,13 @@ import { extractToken, verifyAuth, checkVivacityTeam } from "../_shared/auth-hel
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 
 interface ClickUpComment {
-  id: string;
-  comment_text: string;
-  user: { id: number; username: string; email: string };
-  date: string; // unix ms as string
-  resolved: boolean;
+  id?: string | number;
+  comment_id?: string | number;
+  comment_text?: unknown;
+  text_content?: unknown;
+  user?: { id?: number | string; username?: string; email?: string };
+  date?: string | number; // unix ms as string
+  resolved?: boolean;
   comment?: ClickUpComment[]; // threaded replies
 }
 
@@ -20,9 +22,11 @@ function extractCommentText(raw: unknown): string {
   if (typeof raw === "string") return raw;
   if (Array.isArray(raw)) {
     return raw
-      .map((block: any) => {
+      .map((block: unknown) => {
         if (typeof block === "string") return block;
-        if (block?.text) return block.text;
+        if (typeof block === "object" && block !== null && "text" in block && typeof block.text === "string") {
+          return block.text;
+        }
         return "";
       })
       .join("")
@@ -35,7 +39,7 @@ function extractCommentText(raw: unknown): string {
  * Flatten a ClickUp comment (and its threaded replies) into DB rows.
  */
 function flattenComment(
-  c: any,
+  c: ClickUpComment,
   taskId: string,
   tenantId: number | null,
   parentId: string | null = null
@@ -124,12 +128,12 @@ Deno.serve(async (req) => {
           }
 
           const data = await resp.json();
-          const comments: any[] = data.comments ?? [];
+          const comments: ClickUpComment[] = Array.isArray(data.comments) ? data.comments : [];
           totalFetched += comments.length;
 
           if (comments.length === 0) continue;
 
-          const rows = comments.flatMap((c: any) =>
+          const rows = comments.flatMap((c) =>
             flattenComment(c, tid, tenant_id ?? null)
           );
 
@@ -180,7 +184,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const taskEntries = tasks.filter((t: any) => t.task_id).map((t: any) => ({
+      const taskEntries = tasks.filter((t) => t.task_id).map((t) => ({
         task_id: t.task_id,
         tenant_id: t.tenant_id ?? null,
       }));
@@ -201,12 +205,12 @@ Deno.serve(async (req) => {
           }
 
           const data = await resp.json();
-          const comments: any[] = data.comments ?? [];
+          const comments: ClickUpComment[] = Array.isArray(data.comments) ? data.comments : [];
           totalFetched += comments.length;
 
           if (comments.length === 0) continue;
 
-          const rows = comments.flatMap((c: any) =>
+          const rows = comments.flatMap((c) =>
             flattenComment(c, entry.task_id, fetchAll ? entry.tenant_id : tenant_id)
           );
 

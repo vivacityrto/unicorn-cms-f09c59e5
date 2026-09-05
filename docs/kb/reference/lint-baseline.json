@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T21:27:11.277Z",
-  "baselineSha": "9403dfc1f8e787b91d352f63f5bb4e1c29eda35f",
+  "generatedAt": "2026-09-05T21:33:41.589Z",
+  "baselineSha": "b75cacaca4227af878427740c5d199d5eaf4598f",
   "totals": {
-    "files": 1754,
-    "filesWithFindings": 236,
-    "errors": 977,
+    "files": 1755,
+    "filesWithFindings": 235,
+    "errors": 969,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 970,
+    "@typescript-eslint/no-explicit-any": 962,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 582,
+      "errors": 574,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 582
+        "@typescript-eslint/no-explicit-any": 574
       }
     }
   },
@@ -531,13 +531,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/fetch-clickup-comments": {
-      "errors": 8,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 8
       }
     },
     "supabase/functions/generate-ask-viv-faqs": {
@@ -1512,9 +1505,6 @@
     },
     "supabase/functions/extract-document-fields/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/fetch-clickup-comments/index.ts": {
-      "@typescript-eslint/no-explicit-any": 8
     },
     "supabase/functions/generate-ask-viv-faqs/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
