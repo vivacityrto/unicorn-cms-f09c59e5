@@ -1274,18 +1274,29 @@ Baseline dropped 3090→2954 (136 targeted, no compensating increase, confirmed 
 | Phase 2.5 any-batch 29 | `@typescript-eslint/no-explicit-any` (24), audit lifecycle + evidence-request lifecycle — `useClientAudits.ts` (12), `useEvidenceRequests.tsx` (12) | ✅ Done | [#618](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/618) | `useEvidenceRequests.tsx`'s deep `evidence_requests`→`users`(requester/assignee)→`evidence_request_items`→`portal_documents` embed fixed with the established `.select<Query, Result>()` pattern. Verified live via Playwright (SuperAdmin): Audits dashboard (19 real audits), two different audit-type detail pages, a per-tenant Audits tab, and a real Evidence Request with items all rendered correctly, zero 4xx/5xx anywhere in the session. |
 | Phase 2.5 any-batch 30 | `@typescript-eslint/no-explicit-any` (30), `useStaffTaskInstances.ts` (15) + `useTeamsMeetingMinutes.ts` (15) | ✅ Done | [#619](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/619) | `useTeamsMeetingMinutes.ts`'s raw-fetch REST helpers (predating `meeting_minutes` existing in generated types) were left as-is to avoid a behavior change outside this batch's type-only scope; the one genuinely-untyped case (`(supabase as any).supabaseUrl`/`.supabaseKey`, real runtime properties not in the public `SupabaseClient` type) is now one narrow documented cast instead of scattered blanket `any`. Verified live via Playwright (SuperAdmin): a real stage's 34-task staff checklist rendered correctly (read-only); `useTeamsMeetingMinutes.ts`'s two raw REST calls confirmed 200 directly (no meeting exists in production within the panel's -14/+90-day window, confirmed via SQL — a pre-existing data gap, not a defect). |
 
-**Phase 2.5 synchronization checkpoint (2026-09-05):** Claude's rolling
-`no-explicit-any` lane has advanced through batch 49, with [#640](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/640)
-as the latest merged code PR and a reported baseline of 1,443 errors across
-393 files. Phase 2.5 is still open: PR [#636](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/636)
-(batch 45) is intentionally held after live verification exposed a separate
-tenant-less staff notification-preferences schema defect (72 of 626 users
-have `tenant_id IS NULL` while `user_notification_prefs.tenant_id` is
-`NOT NULL`). That requires a product/schema decision and is not being hidden
-inside a type-only batch. PR [#612](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/612)
-remains the documentation record for dashboard 500 findings. The Phase 2.6
-task-dialog implementation remains queued until Claude records the formal
-Phase 2.5 exit checkpoint.
+**Phase 2.5 synchronization checkpoint (2026-09-05, refreshed):** Claude's
+rolling `no-explicit-any` lane has advanced through batch 49 and PR [#645](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/645).
+Fresh measurement at `main@eba9833` reports **1,417 baseline findings across
+379 files**; PR-local totals are not interchangeable with this merged-main
+measurement. Phase 2.5 is still open because the final scan, full verification
+contract, Playwright evidence, and explicit disposition of remaining findings
+have not been recorded as one exit checkpoint. PR [#636](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/636)
+has merged its safe RPC-argument fix, but its live tenant-less staff
+notification-preferences defect remains unresolved: 72 of 626 users have
+`tenant_id IS NULL` while `user_notification_prefs.tenant_id` is `NOT NULL`.
+That requires a product/schema decision. PR [#612](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/612)
+remains the documentation record for dashboard 500 findings.
+
+**Council recheck (2026-09-05):** three components newly orphaned by the
+legacy Audit retirement (`AuditInspectionsTable.tsx` 324 LOC,
+`AuditNavCards.tsx` 81 LOC, and `AuditTemplatesTable.tsx` 300 LOC) are now a
+separate Phase 2.6 candidate cohort. Package/stage authoring is promoted to a
+Phase 4 reliability slice with a later Phase 7 schema candidate because
+browser-side `MAX(id)+1`, missing IDs, invalid archive status, and missing-FK
+embeds are contract problems, not cosmetic refactors. Phase 2.6 is
+non-blocking with respect to the entire lint backlog: its task-dialog slice
+may proceed after parity fixtures and file exclusion are established while
+Claude continues Phase 2.5 independently.
 
 ### Phase 2.6 — verified retirement and bounded consolidation (council-planned 2026-09-04)
 
@@ -1299,10 +1310,10 @@ authorize runtime, schema, RLS, RPC, trigger, grant, or public-contract
 changes; they exist to keep the CPU-heavy implementation lane focused while
 Claude completes Phase 2.5.
 
-The three-seat council investigation is complete and recorded in [`dead-code-feature-consolidation-investigation-2026-09-04.md`](dead-code-feature-consolidation-investigation-2026-09-04.md). **Checkpoint 2026-09-04:** all six original highest-confidence cohorts are now implemented and merged through #570, #571, #574, #577, #579, and #588; #586 supplied the required Audit UUID route convergence before #588 removed the legacy island. The remaining Phase 2.6 queue is therefore bounded consolidation and redesign candidates, not proven dead-code deletion. Phase 2.5 remains the active lane while Claude completes its declared batches (latest merged checkpoint: #590); declare its exit only after the final baseline, full verification contract, and Playwright evidence are recorded. Each future implementation PR must still regenerate import-graph, route, and metrics evidence from its own fresh branch-cut SHA; the register is evidence, not standing deletion authority, and `origin/main` continues to advance past any snapshot.
+The three-seat council investigation is complete and recorded in [`dead-code-feature-consolidation-investigation-2026-09-04.md`](dead-code-feature-consolidation-investigation-2026-09-04.md). **Checkpoint refreshed 2026-09-05:** all six original highest-confidence cohorts are implemented and merged through #570, #571, #574, #577, #579, and #588; #586 supplied the required Audit UUID route convergence before #588 removed the legacy island. The remaining Phase 2.6 queue is bounded consolidation plus the three newly orphaned Audit components, not an unrestricted deletion sweep. Phase 2.5 remains active through #645; declare its exit only after the final baseline, full verification contract, and Playwright evidence are recorded. Each future implementation PR must still regenerate import-graph, route, and metrics evidence from its own fresh branch-cut SHA; the register is evidence, not standing deletion authority, and GitHub `main` continues to advance past any snapshot.
 
 **Concrete post-Phase-2.5 execution order:** (1) Codex characterizes `AddClientTaskDialog`/`AddStaffTaskDialog` without editing; (2) after the Phase 2.5 exit checkpoint, add focused parity fixtures for create/edit, validation, date offsets, reset/close, failures, owner behavior, and permissions; (3) extract a shared form/controller with thin client/staff adapters while preserving separate `package_client_tasks` and `package_staff_tasks` contracts; (4) run the full lint/type/test/build/Playwright contract and open one PR; (5) only after that cohort merges, evaluate the title-extraction pair, then `useStageQualityCheck`, then the SeatCard presentation core. Any RBAC, tenant-scope, schema, RLS, RPC, trigger, grant, or Edge-contract change exits Phase 2.6 and requires its own aligned vertical slice.
 
-**Measured Phase 2.6 checkpoint (2026-09-04, merged tip `ee8fceb0`, `scripts/architecture-metrics.mjs`):** 1,735 tracked product files; 492,264 physical lines; 418,800 lines excluding generated Supabase types; 408,090 product lines excluding generated types and tests; 117 files over 600 LOC (115,316 lines held); 33 files over 1,000 LOC; 7 wrapper files (116 LOC). Boundary indicators are unchanged from the prior checkpoint: 107 page / 223 component / 271 hook Supabase imports; 95 / 177 / 240 direct Supabase calls; 12 Zod-adoption files; 160 `unicorn_role` files; 2,995 raw `any` keyword hits. The Audit retirement accounts for 12 deleted files and 1,607 exact LOC; the metric delta is a removal, not a behavioral or database consolidation. Largest remaining files are `ManageDocuments.tsx` (2,768), `AdminStageDetail.tsx` (2,700), `tga-sync/index.ts` (2,674), `AcademyAddCoursePage.tsx` (2,531), and `AuditTemplateBuilder.tsx` (2,353). These figures are the new baseline for the next consolidation decision; do not compare them to older ad-hoc tables without noting the script's exclusions and detection method.
+**Measured current checkpoint (2026-09-05, `main@eba9833`, `scripts/architecture-metrics.mjs`):** 1,735 tracked product files; 492,817 physical lines; 419,353 lines excluding generated Supabase types; 408,643 product lines excluding generated types and tests; 118 files over 600 LOC (116,250 lines held); 33 files over 1,000 LOC; 7 wrapper files (116 LOC). Boundary indicators: 107/223/271 Supabase imports and 96/181/240 direct calls (pages/components/hooks); 12 Zod-adoption files; 161 `unicorn_role` files; 1,668 raw `any` keyword hits. These figures are the baseline for the next consolidation decision; do not compare them to older ad-hoc tables without noting the script's exclusions and detection method.
 
 Later batches diff against `lint-baseline.json`'s `byFile`/`byRule` data, not against re-derived counts, so "no compensating increase elsewhere" is checkable per the plan's Phase 2.5 exit gate (§8).
