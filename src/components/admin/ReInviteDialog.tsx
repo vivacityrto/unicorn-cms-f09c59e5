@@ -80,9 +80,9 @@ export default function ReInviteDialog({
       } else {
         toast.error("Failed to re-send invitation(s)");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error re-inviting user:", error);
-      toast.error(error.message || "Failed to re-send invitation");
+      toast.error(error instanceof Error ? error.message : "Failed to re-send invitation");
     } finally {
       setIsSubmitting(false);
     }

@@ -31,7 +31,7 @@ function isBoolean(dataType: string) {
   return dataType === "boolean";
 }
 
-function formatCellValue(value: any, dataType: string) {
+function formatCellValue(value: unknown, dataType: string) {
   if (value === null || value === undefined) return <span className="text-muted-foreground">—</span>;
   if (isBoolean(dataType)) {
     return (
@@ -42,7 +42,7 @@ function formatCellValue(value: any, dataType: string) {
   }
   if (isTimestamp(dataType) && value) {
     try {
-      return format(new Date(value), "dd MMM yyyy");
+      return format(new Date(value as string | number), "dd MMM yyyy");
     } catch {
       return String(value);
     }

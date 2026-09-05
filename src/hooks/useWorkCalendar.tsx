@@ -1,11 +1,17 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/hooks/useAuth';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 
 export type CalendarView = 'day' | 'week' | 'month';
+
+export interface EventAttendee {
+  name?: string;
+  email?: string;
+}
 
 export interface CalendarEvent {
   id: string;
@@ -15,7 +21,7 @@ export interface CalendarEvent {
   title: string;
   description: string | null;
   location: string | null;
-  attendees: { list: any[]; emails: string[] } | null;
+  attendees: { list: EventAttendee[]; emails: string[] } | null;
   client_id: number | null;
   package_id: number | null;
   status: string | null;
@@ -84,7 +90,13 @@ export function useWorkCalendar() {
       
       if (error) throw error;
       
-      return (data || []).map((share: any) => ({
+      type SharedCalendarShareRow = {
+        owner_user_uuid: string;
+        scope: string;
+        users: { first_name: string | null; last_name: string | null } | null;
+      };
+
+      return (data || []).map((share: SharedCalendarShareRow) => ({
         user_uuid: share.owner_user_uuid,
         full_name: `${share.users?.first_name || ''} ${share.users?.last_name || ''}`.trim() || 'Unknown User',
         scope: share.scope as 'busy_only' | 'details',
@@ -119,7 +131,7 @@ export function useWorkCalendar() {
 
       if (error) throw error;
       
-      return (data || []).map((event: any) => ({
+      return (data || []).map((event: Tables<'calendar_events_shared'>) => ({
         id: event.id,
         owner_user_uuid: event.owner_user_uuid,
         start_at: event.start_at,
@@ -127,7 +139,7 @@ export function useWorkCalendar() {
         title: event.title || 'Untitled',
         description: event.description,
         location: event.location,
-        attendees: event.attendees,
+        attendees: event.attendees as unknown as CalendarEvent['attendees'],
         client_id: event.client_id,
         package_id: event.package_id,
         status: event.status,
@@ -135,7 +147,7 @@ export function useWorkCalendar() {
         meeting_url: event.meeting_url,
         sensitivity: event.sensitivity,
         provider: event.provider,
-      })) as CalendarEvent[];
+      })) as unknown as CalendarEvent[];
     },
     enabled: !!viewingUserId,
   });
@@ -180,7 +192,7 @@ export function useWorkCalendar() {
       const { data, error } = await supabase.functions.invoke('sync-outlook-calendar', {});
       if (error) throw error;
       await refetch();
-      const synced = (data as any)?.synced ?? 0;
+      const synced = (data as { synced?: number } | null)?.synced ?? 0;
       toast.success(`Calendar synced (${synced} event${synced === 1 ? '' : 's'})`);
     } catch (err) {
       console.error('Failed to sync calendar:', err);

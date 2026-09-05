@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CalendarEvent } from '@/hooks/useWorkCalendar';
+import { CalendarEvent, EventAttendee } from '@/hooks/useWorkCalendar';
 
 interface CalendarEventDetailDialogProps {
   event: CalendarEvent;
@@ -107,7 +107,7 @@ export function CalendarEventDetailDialog({
                   {event.attendees.list.length} attendee{event.attendees.list.length !== 1 ? 's' : ''}
                 </div>
                 <div className="text-sm text-muted-foreground space-y-0.5">
-                  {event.attendees.list.slice(0, 5).map((attendee: any, i: number) => (
+                  {event.attendees.list.slice(0, 5).map((attendee: EventAttendee, i: number) => (
                     <div key={i}>
                       {attendee.name || attendee.email}
                     </div>

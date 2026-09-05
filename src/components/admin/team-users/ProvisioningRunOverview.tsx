@@ -27,7 +27,7 @@ export function ProvisioningRunOverview({ runId }: Props) {
         .eq("id", runId)
         .maybeSingle();
       if (error) throw error;
-      return data as any;
+      return data;
     },
   });
 

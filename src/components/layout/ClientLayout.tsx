@@ -2,7 +2,9 @@ import { useState, createContext, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { ClientTenantProvider, useClientTenant } from "@/contexts/ClientTenantContext";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
@@ -82,7 +84,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           table: "tenant_messages",
           filter: `tenant_id=eq.${activeTenantId}`,
         },
-        (payload: any) => {
+        (payload: RealtimePostgresChangesPayload<Tables<"tenant_messages">>) => {
           const row = payload?.new;
           if (!row) return;
           if (currentUserUuid && row.sender_user_uuid === currentUserUuid) return;

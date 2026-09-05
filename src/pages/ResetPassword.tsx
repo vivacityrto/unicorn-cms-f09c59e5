@@ -100,10 +100,10 @@ const ResetPassword = () => {
       // Sign out and redirect to login
       await supabase.auth.signOut();
       setTimeout(() => navigate("/login"), 2000);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to reset password",
+        description: error instanceof Error ? error.message : "Failed to reset password",
         variant: "destructive",
       });
     } finally {
