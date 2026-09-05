@@ -114,15 +114,14 @@ export function MiniKpiSummary({ subjectUuid, period, role }: Props) {
         const { startIso, endIso } = getPeriodRange(period);
         const startTs = `${startIso}T00:00:00.000Z`;
         const endTs = `${endIso}T23:59:59.999Z`;
-        const sb = supabase as any;
         const [ttCreated, ttFollowers, cai, ops] = await Promise.all([
-          sb.from("tasks_tenants").select("id, due_date, completed_at")
+          supabase.from("tasks_tenants").select("id, due_date, completed_at")
             .gte("created_at", startTs).lte("created_at", endTs).eq("created_by", subjectUuid),
-          sb.from("tasks_tenants").select("id, due_date, completed_at")
+          supabase.from("tasks_tenants").select("id, due_date, completed_at")
             .gte("created_at", startTs).lte("created_at", endTs).contains("followers", [subjectUuid]),
-          sb.from("client_action_items").select("id, due_date, completed_at")
+          supabase.from("client_action_items").select("id, due_date, completed_at")
             .gte("created_at", startTs).lte("created_at", endTs).eq("assignee_user_id", subjectUuid),
-          sb.from("ops_work_items").select("id, due_at, completed_at")
+          supabase.from("ops_work_items").select("id, due_at, completed_at")
             .gte("created_at", startTs).lte("created_at", endTs).eq("owner_user_uuid", subjectUuid),
         ]);
         const seen = new Set<string>();
@@ -132,10 +131,10 @@ export function MiniKpiSummary({ subjectUuid, period, role }: Props) {
           seen.add(id);
           rowsRaw.push({ due, completed_at: ca, isTs: false });
         };
-        (ttCreated.data ?? []).forEach((r: any) => push(`tt:${r.id}`, r.due_date, r.completed_at));
-        (ttFollowers.data ?? []).forEach((r: any) => push(`tt:${r.id}`, r.due_date, r.completed_at));
-        (cai.data ?? []).forEach((r: any) => r.due_date && rowsRaw.push({ due: r.due_date, completed_at: r.completed_at, isTs: false }));
-        (ops.data ?? []).forEach((r: any) => r.due_at && rowsRaw.push({ due: r.due_at, completed_at: r.completed_at, isTs: true }));
+        (ttCreated.data ?? []).forEach((r) => push(`tt:${r.id}`, r.due_date, r.completed_at));
+        (ttFollowers.data ?? []).forEach((r) => push(`tt:${r.id}`, r.due_date, r.completed_at));
+        (cai.data ?? []).forEach((r) => r.due_date && rowsRaw.push({ due: r.due_date, completed_at: r.completed_at, isTs: false }));
+        (ops.data ?? []).forEach((r) => r.due_at && rowsRaw.push({ due: r.due_at, completed_at: r.completed_at, isTs: true }));
         const total = rowsRaw.length;
         const onTime = rowsRaw.filter((r) => {
           if (!r.completed_at) return false;
