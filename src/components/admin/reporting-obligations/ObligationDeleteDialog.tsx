@@ -20,8 +20,8 @@ export function ObligationDeleteDialog({ open, onOpenChange, obligation }: Props
       await del.mutateAsync(obligation.id);
       toast({ title: "Obligation deleted", description: obligation.title });
       onOpenChange(false);
-    } catch (err: any) {
-      toast({ title: "Delete failed", description: err?.message ?? String(err), variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Delete failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     }
   };
 

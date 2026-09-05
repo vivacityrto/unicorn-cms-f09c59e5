@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T02:23:02.838Z",
-  "baselineSha": "035669584a7c004b771f341d73b6d2c23fae164a",
+  "generatedAt": "2026-09-05T02:57:01.007Z",
+  "baselineSha": "82d732773368bb0d15e05e25b04114bbe132dd4e",
   "totals": {
     "files": 1758,
-    "filesWithFindings": 373,
-    "errors": 1313,
+    "filesWithFindings": 370,
+    "errors": 1310,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1306,
+    "@typescript-eslint/no-explicit-any": 1303,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 645,
+      "errors": 642,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 638,
+        "@typescript-eslint/no-explicit-any": 635,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -76,10 +76,10 @@
       }
     },
     "src/components/admin/reporting-obligations": {
-      "errors": 5,
+      "errors": 2,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
+        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "src/components/admin/team-users": {
@@ -1260,15 +1260,6 @@
     },
     "src/components/admin/reporting-obligations/BroadcastPreviewDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/components/admin/reporting-obligations/ObligationDeleteDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/admin/reporting-obligations/ObligationFormDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/admin/reporting-obligations/ObligationsTable.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/admin/team-users/ProvisioningRunOverview.tsx": {
       "@typescript-eslint/no-explicit-any": 1
