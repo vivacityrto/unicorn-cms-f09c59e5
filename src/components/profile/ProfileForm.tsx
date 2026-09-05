@@ -71,10 +71,10 @@ export function ProfileForm({ user, canEdit, canEditWorkEmail = false, onSave }:
       });
 
       onSave();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
