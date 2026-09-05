@@ -56,7 +56,7 @@ type RowFor<R extends KpiRole> = R extends "csc"
   ? CstSummaryRow
   : DevSummaryRow;
 
-const VIEW: Record<KpiRole, string> = {
+const VIEW: Record<KpiRole, "v_kpi_csc_summary" | "v_kpi_cst_summary" | "v_kpi_dev_summary"> = {
   csc: "v_kpi_csc_summary",
   cst: "v_kpi_cst_summary",
   dev: "v_kpi_dev_summary",
@@ -78,7 +78,7 @@ export function useKpiSummary<R extends KpiRole>(role: R, subjectUuid: string | 
     (async () => {
       const since = new Date();
       since.setDate(since.getDate() - weeks * 7);
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from(VIEW[role])
         .select("*")
         .eq("subject_uuid", subjectUuid)

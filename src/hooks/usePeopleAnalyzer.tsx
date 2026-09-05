@@ -206,7 +206,7 @@ export function usePeopleAnalyzer() {
         // Upsert trend
         const { data: upserted, error } = await supabase
           .from('people_analyzer_trends')
-          .upsert([trendRecord as any], {
+          .upsert([trendRecord], {
             onConflict: 'user_id,core_value_id,quarter_year,quarter_number',
           })
           .select()
