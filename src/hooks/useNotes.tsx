@@ -306,7 +306,7 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
           created_by: userData.user.id,
           ...(input.timeentry_id ? { timeentry_id: input.timeentry_id } : {}),
           ...(input.source_email_id ? { source_email_id: input.source_email_id } : {})
-        } as any)
+        })
         .select('id')
         .single();
 

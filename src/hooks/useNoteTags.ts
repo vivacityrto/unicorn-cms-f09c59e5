@@ -15,7 +15,7 @@ export function useNoteTags() {
     queryKey: ['dd_note_tags'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('dd_note_tags' as any)
+        .from('dd_note_tags')
         .select('*')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
