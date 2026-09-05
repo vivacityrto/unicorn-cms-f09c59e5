@@ -67,15 +67,23 @@ export function useNextMeeting() {
       ).length;
 
       // Fetch seats marked as required for quorum OR with Integrator/Visionary roles
-      const { data: seats, error: seatsError } = await supabase
-        .from('accountability_seats')
-        .select(`
+      const SEATS_SELECT = `
           id,
           seat_name,
           eos_role_type,
           is_required_for_quorum,
           accountability_seat_assignments!inner(user_id, assignment_type, end_date)
-        `)
+        `;
+      type SeatWithAssignments = {
+        id: string;
+        seat_name: string;
+        eos_role_type: string | null;
+        is_required_for_quorum: boolean | null;
+        accountability_seat_assignments: { user_id: string; assignment_type: string; end_date: string | null }[];
+      };
+      const { data: seats, error: seatsError } = await supabase
+        .from('accountability_seats')
+        .select<typeof SEATS_SELECT, SeatWithAssignments>(SEATS_SELECT)
         .eq('tenant_id', VIVACITY_TENANT_ID)
         .or('eos_role_type.in.(visionary,integrator),is_required_for_quorum.eq.true');
 
@@ -90,9 +98,9 @@ export function useNextMeeting() {
       let visionaryUserId: string | null = null;
       const quorumRequiredSeats: { seatId: string; seatName: string; userId: string | null }[] = [];
 
-      seatList.forEach((seat: any) => {
+      seatList.forEach((seat) => {
         const primaryAssignment = seat.accountability_seat_assignments?.find(
-          (a: any) => a.assignment_type === 'Primary' && !a.end_date
+          (a) => a.assignment_type === 'Primary' && !a.end_date
         );
         const userId = primaryAssignment?.user_id || null;
         

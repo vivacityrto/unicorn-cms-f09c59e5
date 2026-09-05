@@ -45,7 +45,7 @@ export default function SupportTicketsPortalPage() {
     for (const t of all) {
       const code = t.status?.code ?? 'new';
       if (code !== 'resolved' && code !== 'closed') c.active += 1;
-      if (code in c) (c as any)[code] += 1;
+      if (code in c) c[code as TabKey] += 1;
     }
     return c;
   }, [all]);

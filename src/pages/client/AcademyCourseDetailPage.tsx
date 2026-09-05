@@ -66,7 +66,7 @@ export default function AcademyCourseDetailPage() {
         .select("lesson_id")
         .eq("enrollment_id", enrollment!.enrollment_id)
         .eq("is_completed", true);
-      return (data ?? []).map((r: any) => r.lesson_id as number);
+      return (data ?? []).map((r) => r.lesson_id);
     },
   });
 

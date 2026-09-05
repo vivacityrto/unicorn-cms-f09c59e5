@@ -40,7 +40,7 @@ export function useMyWork() {
       if (error) throw error;
 
       setItems((data || []) as MyWorkItem[]);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching my work items:', error);
       toast({
         title: 'Error',
@@ -80,10 +80,10 @@ export function useMyWork() {
         }
         return true;
       }));
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive'
       });
     }

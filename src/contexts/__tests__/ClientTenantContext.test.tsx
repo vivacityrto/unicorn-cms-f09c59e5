@@ -48,9 +48,16 @@ vi.mock("@/integrations/supabase/client", () => {
     }),
   });
 
+  interface TenantUsersQueryBuilder {
+    select: () => TenantUsersQueryBuilder;
+    eq: (col: string, val: unknown) => TenantUsersQueryBuilder;
+    maybeSingle: () => Promise<{ data: TURow | null; error: null }>;
+    then: (resolve: (v: { data: TURow[]; error: null }) => void) => void;
+  }
+
   const tenantUsersBuilder = () => {
     let filterTenant: number | null = null;
-    const builder: any = {
+    const builder: TenantUsersQueryBuilder = {
       select: () => builder,
       eq: (col: string, val: unknown) => {
         if (col === "tenant_id") filterTenant = Number(val);

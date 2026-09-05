@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { useEosStatusTransitions, isValidStatusTransition, getAllowedStatusTransitions } from '@/hooks/useEosOptions';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { RiskOpportunity, RiskOpportunityStatus, RiskOpportunityCategory, RiskOpportunityImpact } from '@/types/risksOpportunities';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 
 // Valid status enum values - must match eos_issue_status exactly
 const VALID_STATUSES = ['Open', 'Discussing', 'Solved', 'Archived', 'In Review', 'Actioning', 'Escalated', 'Closed'] as const;
@@ -88,7 +89,7 @@ export const useRisksOpportunities = () => {
           meeting_segment_id: item.meeting_segment_id,
           source: item.source || 'ad_hoc',
           created_by: profile?.user_uuid,
-        } as any)
+        })
         .select()
         .single();
       
@@ -124,7 +125,7 @@ export const useRisksOpportunities = () => {
         }
       }
 
-      const dbUpdates: Record<string, unknown> = {
+      const dbUpdates: TablesUpdate<'eos_issues'> = {
         updated_at: new Date().toISOString(),
       };
       
@@ -143,7 +144,7 @@ export const useRisksOpportunities = () => {
       
       const { data, error } = await supabase
         .from('eos_issues')
-        .update(dbUpdates as any)
+        .update(dbUpdates)
         .eq('id', id)
         .select()
         .single();

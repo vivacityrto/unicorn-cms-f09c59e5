@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 
 export interface TimelineEntry {
@@ -7,7 +8,7 @@ export interface TimelineEntry {
   action: string;
   entity_type: string;
   entity_id: string | null;
-  details: Record<string, any> | null;
+  details: Record<string, Json> | null;
   created_at: string;
   actor_user_id: string | null;
 }
@@ -24,7 +25,7 @@ export function useClientActivityTimeline() {
       if (!activeTenantId) return [];
 
       const { data, error } = await supabase
-        .from("client_audit_log" as any)
+        .from("client_audit_log")
         .select("id, action, entity_type, entity_id, details, created_at, actor_user_id")
         .eq("tenant_id", activeTenantId)
         .order("created_at", { ascending: false })
