@@ -215,6 +215,14 @@ for the batch-by-batch record). These three remain **candidates only** —
 nothing here authorizes deletion; follow the "Required gates per
 implementation PR" checklist in §7 before actioning any of them.
 
+**AuditTemplatesTable action (pending human sign-off):** Fresh reachability at
+current `origin/main` found `src/components/audit/AuditTemplatesTable.tsx`
+has no inbound imports, dynamic imports, route/menu/registry references, or
+generated-link/history references. Its former `Audits.tsx` parent was retired
+in #588; `/audits` uses `AuditsAssessments`. The component is frontend-only and
+this PR removes the orphaned file without changing active routes or backend
+objects.
+
 **Actioned candidate (PR [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686), merged 2026-09-05):** the Phase 2.6 cohort for
 `StageCellEditor` removes only the unimported `StageCellEditor` export and its
 exclusive editor/UI/data-access imports from
