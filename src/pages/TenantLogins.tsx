@@ -76,7 +76,7 @@ export default function TenantLogins() {
       ];
 
       setLoginRecords(mockData);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching data:", error);
       toast({
         title: "Error",
