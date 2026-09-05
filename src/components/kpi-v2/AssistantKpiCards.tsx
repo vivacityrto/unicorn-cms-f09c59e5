@@ -4,11 +4,16 @@ import { KpiGaugeCard } from "./KpiGaugeCard";
 import { getPeriodRange, type KpiV2Period } from "./types";
 import { pctStatus } from "@/lib/kpi-v2/status";
 import { KpiDrillDownSheet } from "./KpiDrillDownSheet";
+import type { Tables } from "@/integrations/supabase/types";
 
 interface Props {
   subjectUuid: string;
   period: KpiV2Period;
 }
+
+type TaskTenantRow = Pick<Tables<"tasks_tenants">, "id" | "due_date" | "completed_at">;
+type ActionItemRow = Pick<Tables<"client_action_items">, "id" | "due_date" | "completed_at">;
+type OpsWorkItemRow = Pick<Tables<"ops_work_items">, "id" | "due_at" | "completed_at">;
 
 /**
  * AssistantKpiCards — Tasks gauge unioned across tasks_tenants,
@@ -29,22 +34,20 @@ export function AssistantKpiCards({ subjectUuid, period }: Props) {
       const { startIso, endIso } = getPeriodRange(period);
       const startTs = `${startIso}T00:00:00.000Z`;
       const endTs = `${endIso}T23:59:59.999Z`;
-      const sb = supabase as any;
-
       const [ttCreated, ttFollowers, cai, ops] = await Promise.all([
-        sb.from("tasks_tenants")
+        supabase.from("tasks_tenants")
           .select("id, due_date, completed_at")
           .gte("created_at", startTs).lte("created_at", endTs)
           .eq("created_by", subjectUuid),
-        sb.from("tasks_tenants")
+        supabase.from("tasks_tenants")
           .select("id, due_date, completed_at")
           .gte("created_at", startTs).lte("created_at", endTs)
           .contains("followers", [subjectUuid]),
-        sb.from("client_action_items")
+        supabase.from("client_action_items")
           .select("id, due_date, completed_at")
           .gte("created_at", startTs).lte("created_at", endTs)
           .eq("assignee_user_id", subjectUuid),
-        sb.from("ops_work_items")
+        supabase.from("ops_work_items")
           .select("id, due_at, completed_at")
           .gte("created_at", startTs).lte("created_at", endTs)
           .eq("owner_user_uuid", subjectUuid),
@@ -58,13 +61,13 @@ export function AssistantKpiCards({ subjectUuid, period }: Props) {
         seen.add(`tt:${id}`);
         dueRows.push({ due, completed_at, isTs: false });
       };
-      (ttCreated.data ?? []).forEach((r: any) => pushDate(r.id, r.due_date, r.completed_at));
-      (ttFollowers.data ?? []).forEach((r: any) => pushDate(r.id, r.due_date, r.completed_at));
-      (cai.data ?? []).forEach((r: any) => {
+      (ttCreated.data ?? []).forEach((r: TaskTenantRow) => pushDate(r.id, r.due_date, r.completed_at));
+      (ttFollowers.data ?? []).forEach((r: TaskTenantRow) => pushDate(r.id, r.due_date, r.completed_at));
+      (cai.data ?? []).forEach((r: ActionItemRow) => {
         if (!r.due_date) return;
         dueRows.push({ due: r.due_date, completed_at: r.completed_at, isTs: false });
       });
-      (ops.data ?? []).forEach((r: any) => {
+      (ops.data ?? []).forEach((r: OpsWorkItemRow) => {
         if (!r.due_at) return;
         dueRows.push({ due: r.due_at, completed_at: r.completed_at, isTs: true });
       });
