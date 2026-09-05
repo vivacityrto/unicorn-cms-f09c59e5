@@ -130,12 +130,12 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
       toast({ title: "Relationship added" });
       resetDialog();
     },
-    onError: (err: any) => {
-      const msg = err?.message?.includes("tenant_rel_unique")
+    onError: (err: Error) => {
+      const msg = err.message.includes("tenant_rel_unique")
         ? "This relationship already exists"
-        : err?.message?.includes("no_self_link")
+        : err.message.includes("no_self_link")
         ? "Cannot link an organisation to itself"
-        : err?.message || "Failed to add relationship";
+        : err.message || "Failed to add relationship";
       toast({ title: "Error", description: msg, variant: "destructive" });
     },
   });
@@ -178,8 +178,8 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
       queryClient.invalidateQueries({ queryKey: ["membership-usage"] });
       toast({ title: "Updated" });
     },
-    onError: (err: any) => {
-      toast({ title: "Error", description: err?.message || "Update failed", variant: "destructive" });
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message || "Update failed", variant: "destructive" });
     },
   });
 

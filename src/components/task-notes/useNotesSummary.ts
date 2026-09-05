@@ -83,16 +83,16 @@ export function useNotesSummary(args: Args) {
     });
     try {
       await query.refetch({ throwOnError: true });
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Failed to generate summary');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to generate summary');
     }
   };
 
   const generate = async () => {
     try {
       await query.refetch({ throwOnError: true });
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Failed to generate summary');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to generate summary');
     }
   };
 

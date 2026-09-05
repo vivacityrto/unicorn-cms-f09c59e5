@@ -12,19 +12,21 @@ import { Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Moon, S
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
+interface ProfileFormData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  job_title: string;
+  timezone: string;
+  bio: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 interface ProfileTabProps {
-  formData: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-    job_title: string;
-    timezone: string;
-    bio: string;
-    newPassword: string;
-    confirmPassword: string;
-  };
-  setFormData: (data: any) => void;
+  formData: ProfileFormData;
+  setFormData: (data: ProfileFormData) => void;
   timezoneOptions: { value: string; label: string }[];
   onSaveProfile: () => Promise<void>;
   loading: boolean;
@@ -89,10 +91,10 @@ export function ProfileTab({
         newPassword: '',
         confirmPassword: '',
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {

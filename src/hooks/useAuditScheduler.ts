@@ -28,7 +28,7 @@ export function useAuditSchedule(filter: ScheduleFilter = 'all') {
     queryKey: ['audit-schedule', filter],
     queryFn: async () => {
       let query = supabase
-        .from('v_audit_schedule' as any)
+        .from('v_audit_schedule')
         .select('*')
         .order('days_until_due', { ascending: true, nullsFirst: false });
 
@@ -53,7 +53,7 @@ export function useClientAuditSchedule(tenantId: number | null | undefined) {
     enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('v_audit_schedule' as any)
+        .from('v_audit_schedule')
         .select('*')
         .eq('tenant_id', tenantId)
         .maybeSingle();
