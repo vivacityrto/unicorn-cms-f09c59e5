@@ -219,7 +219,7 @@ export function CalendarTab() {
             </div>
             <div className="space-y-2">
               <Label>Access level</Label>
-              <Select value={selectedScope} onValueChange={(v) => setSelectedScope(v as any)}>
+              <Select value={selectedScope} onValueChange={(v) => setSelectedScope(v as 'busy_only' | 'details')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

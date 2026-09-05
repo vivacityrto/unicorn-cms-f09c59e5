@@ -31,7 +31,7 @@ interface TeamUser {
   disabled: boolean;
 }
 
-interface TeamProfileFieldsProps {
+export interface TeamProfileFieldsProps {
   user: {
     user_uuid: string;
     linkedin_url?: string | null;

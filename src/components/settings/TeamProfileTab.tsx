@@ -1,7 +1,7 @@
-import { TeamProfileFields } from '@/components/profile/TeamProfileFields';
+import { TeamProfileFields, type TeamProfileFieldsProps } from '@/components/profile/TeamProfileFields';
 
 interface TeamProfileTabProps {
-  teamUserData: any;
+  teamUserData: TeamProfileFieldsProps['user'] | null | undefined;
   onSave: () => void;
 }
 
