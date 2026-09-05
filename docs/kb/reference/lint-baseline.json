@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T17:20:22.144Z",
-  "baselineSha": "4fe4b4f48321683e9c307c372c5fe9daffaf9bf6",
+  "generatedAt": "2026-09-05T17:39:30.755Z",
+  "baselineSha": "f1224bd580c5da8ac045cdc6013c7743d3a34c3d",
   "totals": {
-    "files": 1762,
-    "filesWithFindings": 256,
-    "errors": 1126,
+    "files": 1755,
+    "filesWithFindings": 255,
+    "errors": 1118,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1119,
+    "@typescript-eslint/no-explicit-any": 1111,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 458,
+      "errors": 450,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 451,
+        "@typescript-eslint/no-explicit-any": 443,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -275,10 +275,10 @@
       }
     },
     "src/hooks": {
-      "errors": 143,
+      "errors": 135,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 143,
+        "@typescript-eslint/no-explicit-any": 135,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1334,9 +1334,6 @@
     },
     "src/hooks/useClientNotifications.tsx": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/hooks/useClientWorkboard.tsx": {
-      "@typescript-eslint/no-explicit-any": 8
     },
     "src/hooks/useCodeTables.ts": {
       "@typescript-eslint/no-explicit-any": 4

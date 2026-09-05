@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -69,6 +70,15 @@ export interface WorkboardFilters {
   packageId?: number;
   stageId?: number;
   search?: string;
+}
+
+type ClientActionItemRow = Tables<'client_action_items'>;
+type UserSummary = Pick<Tables<'users'>, 'user_uuid' | 'first_name' | 'last_name' | 'avatar_url'>;
+type PackageSummary = Pick<Tables<'packages'>, 'id' | 'name'>;
+type StageSummary = Pick<Tables<'stages'>, 'id' | 'name'>;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 // =============================================
@@ -147,7 +157,7 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
 
       // Fetch assignee info
       const assigneeIds = [...new Set((data || []).map(i => i.assignee_user_id).filter(Boolean))];
-      let assigneesMap = new Map();
+      let assigneesMap = new Map<string, UserSummary>();
 
       if (assigneeIds.length > 0) {
         const { data: users } = await supabase
@@ -159,7 +169,7 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
 
       // Fetch package info
       const packageIds = [...new Set((data || []).map(i => i.package_id).filter(Boolean))];
-      let packagesMap = new Map();
+      let packagesMap = new Map<number, PackageSummary>();
 
       if (packageIds.length > 0) {
         const { data: packages } = await supabase
@@ -171,7 +181,7 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
 
       // Fetch stage info
       const stageIds = [...new Set((data || []).map(i => i.stage_id).filter(Boolean))];
-      let stagesMap = new Map();
+      let stagesMap = new Map<number, StageSummary>();
 
       if (stageIds.length > 0) {
         const { data: stagesData } = await supabase
@@ -181,19 +191,22 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
         stagesMap = new Map(stagesData?.map(s => [s.id, { id: s.id, name: s.name }]) || []);
       }
 
-      const itemsWithRelations: WorkboardItem[] = (data || []).map(item => ({
-        ...item,
-        item_type: ((item as any).item_type || 'internal') as ItemType,
+      const itemsWithRelations: WorkboardItem[] = (data || []).map((item: ClientActionItemRow) => {
+        const itemWithOptionalTags = item as ClientActionItemRow & { tags?: string[] };
+        return {
+        ...itemWithOptionalTags,
+        item_type: (item.item_type || 'internal') as ItemType,
         status: (item.status || 'todo') as ItemStatus,
         priority: (item.priority || 'medium') as ItemPriority,
-        tags: (item as any).tags || [],
+        tags: itemWithOptionalTags.tags || [],
         assignee: assigneesMap.get(item.assignee_user_id),
         package: packagesMap.get(item.package_id),
         stage: stagesMap.get(item.stage_id)
-      }));
+      };
+      });
 
       setItems(itemsWithRelations);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching workboard items:', error);
       toast({
         title: 'Error',
@@ -250,10 +263,10 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
       toast({ title: 'Action item created' });
       fetchItems();
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive'
       });
       return null;
@@ -290,10 +303,10 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
       ));
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive'
       });
       fetchItems(); // Refetch on error
@@ -319,10 +332,10 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
       toast({ title: 'Action item deleted' });
       setItems(prev => prev.filter(i => i.id !== itemId));
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive'
       });
       return false;
@@ -405,7 +418,7 @@ export function useWorkboardComments(actionItemId: string | null) {
 
       // Fetch creators
       const creatorIds = [...new Set((data || []).map(c => c.created_by).filter(Boolean))];
-      let creatorsMap = new Map();
+      let creatorsMap = new Map<string, UserSummary>();
 
       if (creatorIds.length > 0) {
         const { data: users } = await supabase
@@ -419,7 +432,7 @@ export function useWorkboardComments(actionItemId: string | null) {
         ...c,
         creator: creatorsMap.get(c.created_by)
       })));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching comments:', error);
     } finally {
       setLoading(false);
@@ -450,10 +463,10 @@ export function useWorkboardComments(actionItemId: string | null) {
       toast({ title: 'Comment added' });
       fetchComments();
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive'
       });
       return null;
@@ -467,3 +480,4 @@ export function useWorkboardComments(actionItemId: string | null) {
     addComment
   };
 }
+
