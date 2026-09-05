@@ -62,11 +62,11 @@ serve(async (req) => {
     const rawSha256 = await computeSha256(rawText);
     
     // Extract current values (no endDate means current)
-    const currentLegalName = rawData.legalNames?.find((ln: any) => !ln.endDate);
-    const currentTradingNames = rawData.tradingNames?.filter((tn: any) => !tn.endDate) || [];
+    const currentLegalName = rawData.legalNames?.find((ln) => !ln.endDate);
+    const currentTradingNames = rawData.tradingNames?.filter((tn) => !tn.endDate) || [];
     
     // Extract all trading name history
-    const tradingNamesHistory = rawData.tradingNames?.map((tn: any) => ({
+    const tradingNamesHistory = rawData.tradingNames?.map((tn) => ({
       name: tn.name,
       startDate: tn.startDate || null,
       endDate: tn.endDate || null,
@@ -89,7 +89,7 @@ serve(async (req) => {
           code: rawData.code || rtoId,
           legal_name: currentLegalName?.name || null,
           trading_name: currentTradingNames[0]?.name || null,
-          business_names: currentTradingNames.map((tn: any) => tn.name),
+          business_names: currentTradingNames.map((tn) => tn.name),
           trading_names_history: tradingNamesHistory,
           abn: abn,
           acn: acn,

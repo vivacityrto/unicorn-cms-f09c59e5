@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T21:06:35.804Z",
-  "baselineSha": "3d3a4a4bdf3a75ca32bd2f0890c1cbaee201b489",
+  "generatedAt": "2026-09-05T21:17:00.845Z",
+  "baselineSha": "63c7248e8df3fcbd033ac54fe123faf93994d358",
   "totals": {
     "files": 1754,
-    "filesWithFindings": 238,
-    "errors": 985,
+    "filesWithFindings": 237,
+    "errors": 981,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 978,
+    "@typescript-eslint/no-explicit-any": 974,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 590,
+      "errors": 586,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 590
+        "@typescript-eslint/no-explicit-any": 586
       }
     }
   },
@@ -946,13 +946,6 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/tga-rto-preview": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
     "supabase/functions/tga-rto-sync": {
       "errors": 43,
       "warnings": 0,
@@ -1703,9 +1696,6 @@
     },
     "supabase/functions/tga-rto-import/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/tga-rto-preview/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "supabase/functions/tga-rto-sync/index.ts": {
       "@typescript-eslint/no-explicit-any": 43
