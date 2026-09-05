@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T20:03:18.941Z",
-  "baselineSha": "14bd080e28b64ac385e773c43a6451d6e1e56fa4",
+  "generatedAt": "2026-09-05T20:15:01.426Z",
+  "baselineSha": "8b6a74ef91477bd7ad99025c3794ce33a33863f3",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 244,
-    "errors": 1052,
+    "filesWithFindings": 243,
+    "errors": 1041,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1045,
+    "@typescript-eslint/no-explicit-any": 1034,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 657,
+      "errors": 646,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 657
+        "@typescript-eslint/no-explicit-any": 646
       }
     }
   },
@@ -946,13 +946,6 @@
         "@typescript-eslint/no-explicit-any": 13
       }
     },
-    "supabase/functions/sync-clickup-tasks": {
-      "errors": 11,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 11
-      }
-    },
     "supabase/functions/sync-clickup-time": {
       "errors": 2,
       "warnings": 0,
@@ -1745,9 +1738,6 @@
     },
     "supabase/functions/strategic-orchestration/index.ts": {
       "@typescript-eslint/no-explicit-any": 13
-    },
-    "supabase/functions/sync-clickup-tasks/index.ts": {
-      "@typescript-eslint/no-explicit-any": 11
     },
     "supabase/functions/sync-clickup-time/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
