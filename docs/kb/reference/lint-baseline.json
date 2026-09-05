@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T02:32:24.684Z",
-  "baselineSha": "035669584a7c004b771f341d73b6d2c23fae164a",
+  "generatedAt": "2026-09-05T02:57:01.007Z",
+  "baselineSha": "82d732773368bb0d15e05e25b04114bbe132dd4e",
   "totals": {
     "files": 1758,
-    "filesWithFindings": 372,
-    "errors": 1324,
+    "filesWithFindings": 370,
+    "errors": 1310,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1317,
+    "@typescript-eslint/no-explicit-any": 1303,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 656,
+      "errors": 642,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 649,
+        "@typescript-eslint/no-explicit-any": 635,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -291,11 +291,11 @@
       }
     },
     "src/components/stage": {
-      "errors": 9,
+      "errors": 2,
       "warnings": 6,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 9,
-        "react-refresh/only-export-components": 6
+        "react-refresh/only-export-components": 6,
+        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "src/components/support-tickets": {
@@ -365,10 +365,10 @@
       }
     },
     "src/hooks": {
-      "errors": 244,
+      "errors": 237,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 244,
+        "@typescript-eslint/no-explicit-any": 237,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1454,9 +1454,6 @@
     "src/components/settings/TeamProfileTab.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/components/stage/EditStageEmailDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
     "src/components/stage/StageFrameworkSelector.tsx": {
       "react-refresh/only-export-components": 6
     },
@@ -1590,9 +1587,6 @@
     },
     "src/hooks/useAskVivAssistantChat.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useAuditActionPlan.ts": {
-      "@typescript-eslint/no-explicit-any": 7
     },
     "src/hooks/useAuditCompletion.ts": {
       "@typescript-eslint/no-explicit-any": 4
