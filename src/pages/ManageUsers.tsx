@@ -64,7 +64,7 @@ interface User {
   mobile_phone: string | null;
   user_type: 'Vivacity Team' | 'Client Parent' | 'Client Child' | 'Client' | 'Member';
   unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Integrator' | 'BGT' | 'CSC' | 'CET' | 'Admin' | 'User';
-  tenant_id: string | null;
+  tenant_id: number | null;
   disabled: boolean;
   archived: boolean;
   tenant_name?: string | null;
@@ -202,7 +202,7 @@ export default function ManageUsers() {
       console.log('Fetched users data:', usersData);
       
       // Enrich users with tenant names from the joined data
-      const enrichedUsers: User[] = (usersData || []).map((user: any) => ({
+      const enrichedUsers: User[] = (usersData || []).map((user) => ({
         user_uuid: user.user_uuid,
         first_name: user.first_name || '',
         last_name: user.last_name || '',
@@ -220,11 +220,11 @@ export default function ManageUsers() {
       console.log('Enriched users:', enrichedUsers);
       
       setUsers(enrichedUsers);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Fetch users error:', error);
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
@@ -245,7 +245,7 @@ export default function ManageUsers() {
         if (error) throw error;
         setCurrentUserRole(data?.unicorn_role || '');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching current user role:', error);
     }
   };
@@ -299,10 +299,10 @@ export default function ManageUsers() {
       });
 
       fetchUsers();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
@@ -435,11 +435,11 @@ export default function ManageUsers() {
       
       // Fetch fresh data in background
       await fetchUsers();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Delete user error:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to delete user',
+        description: error instanceof Error ? error.message : 'Failed to delete user',
         variant: 'destructive',
       });
       setDeleteDialog(null);
@@ -527,10 +527,10 @@ export default function ManageUsers() {
 
       setIsEditDialogOpen(false);
       fetchUsers();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     }
