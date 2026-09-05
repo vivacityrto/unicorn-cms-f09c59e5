@@ -146,10 +146,10 @@ Deno.serve(async (req: Request) => {
       details: {
         total_packages: signals.length,
         risk_bands: {
-          stable: snapshots.filter((s: any) => s.risk_band === 'stable').length,
-          watch: snapshots.filter((s: any) => s.risk_band === 'watch').length,
-          at_risk: snapshots.filter((s: any) => s.risk_band === 'at_risk').length,
-          immediate_attention: snapshots.filter((s: any) => s.risk_band === 'immediate_attention').length,
+          stable: snapshots.filter((s) => s.risk_band === 'stable').length,
+          watch: snapshots.filter((s) => s.risk_band === 'watch').length,
+          at_risk: snapshots.filter((s) => s.risk_band === 'at_risk').length,
+          immediate_attention: snapshots.filter((s) => s.risk_band === 'immediate_attention').length,
         },
       },
     });

@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T21:17:00.845Z",
-  "baselineSha": "63c7248e8df3fcbd033ac54fe123faf93994d358",
+  "generatedAt": "2026-09-05T21:27:11.277Z",
+  "baselineSha": "9403dfc1f8e787b91d352f63f5bb4e1c29eda35f",
   "totals": {
     "files": 1754,
-    "filesWithFindings": 237,
-    "errors": 981,
+    "filesWithFindings": 236,
+    "errors": 977,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 974,
+    "@typescript-eslint/no-explicit-any": 970,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 586,
+      "errors": 582,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 586
+        "@typescript-eslint/no-explicit-any": 582
       }
     }
   },
@@ -401,13 +401,6 @@
       }
     },
     "supabase/functions/bulk-user-action": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/calculate-predictive-risk": {
       "errors": 4,
       "warnings": 0,
       "byRule": {
@@ -1458,9 +1451,6 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/bulk-user-action/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/calculate-predictive-risk/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
     "supabase/functions/capture-outlook-email/index.ts": {
