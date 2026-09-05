@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T19:45:05.924Z",
-  "baselineSha": "048fe91eaf69b1cee5175a8f5d99b1ca012f8d03",
+  "generatedAt": "2026-09-05T20:12:48.457Z",
+  "baselineSha": "14bd080e28b64ac385e773c43a6451d6e1e56fa4",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 245,
-    "errors": 1063,
+    "filesWithFindings": 244,
+    "errors": 1052,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1056,
+    "@typescript-eslint/no-explicit-any": 1045,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 668,
+      "errors": 657,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 668
+        "@typescript-eslint/no-explicit-any": 657
       }
     }
   },
@@ -953,13 +953,6 @@
         "@typescript-eslint/no-explicit-any": 13
       }
     },
-    "supabase/functions/sync-clickup-tasks": {
-      "errors": 11,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 11
-      }
-    },
     "supabase/functions/sync-clickup-time": {
       "errors": 2,
       "warnings": 0,
@@ -1755,9 +1748,6 @@
     },
     "supabase/functions/strategic-orchestration/index.ts": {
       "@typescript-eslint/no-explicit-any": 13
-    },
-    "supabase/functions/sync-clickup-tasks/index.ts": {
-      "@typescript-eslint/no-explicit-any": 11
     },
     "supabase/functions/sync-clickup-time/index.ts": {
       "@typescript-eslint/no-explicit-any": 2

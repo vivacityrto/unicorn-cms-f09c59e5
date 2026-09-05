@@ -14,6 +14,23 @@ import { corsHeadersFor, requireCaller } from "../_shared/requireCaller.ts";
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 const RATE_LIMIT_MS = 650;
 
+interface ClickUpFieldOption { id?: string; orderindex?: string; name?: string; label?: string; }
+interface ClickUpCustomField { name?: string; value?: unknown; type?: string; type_config?: { options?: ClickUpFieldOption[] }; }
+interface ClickUpTask {
+  id: string; custom_id?: string | null; name?: string | null; description?: string | null;
+  text_content?: string | null; status?: { status?: string | null } | null;
+  priority?: { priority?: string | null } | null; parent?: string | null;
+  date_created?: string | null; date_updated?: string | null; date_closed?: string | null;
+  date_done?: string | null; due_date?: string | null; start_date?: string | null;
+  time_estimate?: number | null; time_spent?: { time?: number | null } | null;
+  assignees?: unknown; watchers?: unknown; tags?: unknown; checklists?: unknown;
+  list?: { id?: string; name?: string } | null; folder?: { id?: string; name?: string } | null;
+  space?: { id?: string; name?: string } | null; url?: string | null;
+  creator?: { id?: string; username?: string } | null; custom_fields?: ClickUpCustomField[];
+  [key: string]: unknown;
+}
+interface ClickUpApiResponse { teams?: Array<{ id: string }>; spaces?: Array<{ id: string; name: string }>; folders?: Array<{ id: string }>; lists?: Array<{ id: string; name: string }>; tasks?: ClickUpTask[]; }
+
 /** ClickUp custom field name → DB column name */
 const CUSTOM_FIELD_MAP: Record<string, string> = {
   "unicorn url": "unicorn_url",
@@ -45,7 +62,7 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function clickupGet(path: string, apiKey: string): Promise<any> {
+async function clickupGet(path: string, apiKey: string): Promise<ClickUpApiResponse> {
   const resp = await fetch(`${CLICKUP_API_BASE}${path}`, {
     headers: { Authorization: apiKey },
   });
@@ -67,7 +84,7 @@ async function discoverListId(apiKey: string): Promise<string> {
   // Step 2: Find "Client Success Team" space
   const spacesData = await clickupGet(`/team/${teamId}/space?archived=false`, apiKey);
   const space = (spacesData.spaces ?? []).find(
-    (s: any) => s.name === "Client Success Team"
+    (s) => s.name === "Client Success Team"
   );
   if (!space) throw new Error('Space "Client Success Team" not found');
   await delay(RATE_LIMIT_MS);
@@ -79,7 +96,7 @@ async function discoverListId(apiKey: string): Promise<string> {
   // Step 4: Find "Membership" list in any folder
   for (const folder of folders) {
     const listsData = await clickupGet(`/folder/${folder.id}/list?archived=false`, apiKey);
-    const list = (listsData.lists ?? []).find((l: any) => l.name === "Membership");
+    const list = (listsData.lists ?? []).find((l) => l.name === "Membership");
     if (list) return list.id;
     await delay(RATE_LIMIT_MS);
   }
@@ -87,7 +104,7 @@ async function discoverListId(apiKey: string): Promise<string> {
   // Also check folderless lists
   const folderlessData = await clickupGet(`/space/${space.id}/list?archived=false`, apiKey);
   const folderlessList = (folderlessData.lists ?? []).find(
-    (l: any) => l.name === "Membership"
+    (l) => l.name === "Membership"
   );
   if (folderlessList) return folderlessList.id;
 
@@ -95,8 +112,8 @@ async function discoverListId(apiKey: string): Promise<string> {
 }
 
 /** Fetch all tasks from a list (paginated, 100 per page) */
-async function fetchAllTasks(listId: string, apiKey: string): Promise<any[]> {
-  const allTasks: any[] = [];
+async function fetchAllTasks(listId: string, apiKey: string): Promise<ClickUpTask[]> {
+  const allTasks: ClickUpTask[] = [];
   let page = 0;
   while (true) {
     const data = await clickupGet(
@@ -113,7 +130,7 @@ async function fetchAllTasks(listId: string, apiKey: string): Promise<any[]> {
 }
 
 /** Extract a custom field value — handles different ClickUp field types */
-function extractFieldValue(field: any): string | null {
+function extractFieldValue(field: ClickUpCustomField): string | null {
   if (field.value === null || field.value === undefined) return null;
   
   // URL type: value is the URL string directly
@@ -122,7 +139,7 @@ function extractFieldValue(field: any): string | null {
   // Drop-down type: value is an order index, options are in type_config
   if (field.type === "drop_down" && field.type_config?.options) {
     const opt = field.type_config.options.find(
-      (o: any) => o.orderindex === field.value
+      (o) => o.orderindex === field.value
     );
     return opt?.name ?? String(field.value);
   }
@@ -130,7 +147,7 @@ function extractFieldValue(field: any): string | null {
   // Labels type: value is array of label IDs
   if (field.type === "labels" && Array.isArray(field.value) && field.type_config?.options) {
     const names = field.value.map((id: string) => {
-      const opt = field.type_config.options.find((o: any) => o.id === id);
+      const opt = field.type_config.options.find((o) => o.id === id);
       return opt?.label ?? id;
     });
     return names.join(", ");
@@ -145,7 +162,7 @@ function extractFieldValue(field: any): string | null {
 }
 
 /** Map a ClickUp API task to a DB row */
-function mapTaskToRow(task: any): Record<string, unknown> {
+function mapTaskToRow(task: ClickUpTask): Record<string, unknown> {
   const row: Record<string, unknown> = {
     task_id: task.id,
     custom_id: task.custom_id ?? null,
@@ -215,7 +232,7 @@ function resolveTenantIdFromUrl(url: string | null): number | null {
 
 /** Resolve tenant_id using DB lookups for stage/package patterns */
 async function resolveTenantId(
-  sb: any,
+  sb: ReturnType<typeof createServiceClient>,
   unicornUrl: string | null
 ): Promise<number | null> {
   if (!unicornUrl) return null;
