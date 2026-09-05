@@ -198,12 +198,25 @@ after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
   retirement, but a diff against `origin/main` will show that unrelated
   edit sitting in the file's history.
 
-No other file touched across batches 71-80 turned up as unreachable;
+Batch 81's live-verification pass (PR #683) turned up a third, more
+specific finding: **`StageCellEditor` itself (the named export in
+`src/components/membership/StageCellEditor.tsx`) has no importer anywhere**
+— confirmed by grep — even though the file is not fully dead. Its sibling
+export from the same file, `StageStatusDot`, is imported and actively
+rendered by `MembershipGrid.tsx`; live-clicked in the running app, a
+Membership Grid row shows only a read-only "No stage data" pill, never the
+editor. This is a narrower case than the other two: not a whole-file
+retirement candidate, but a dead export inside an otherwise-live file. Any
+future retirement pass on this file should remove only the unused
+`StageCellEditor` component/export and its exclusive imports, keeping
+`StageStatusDot` and the file itself intact.
+
+No other file touched across batches 71-81 turned up as unreachable;
 every other candidate in those batches had a real, grep-confirmed importer
 before being edited (see `docs/kb/reference/execution-efficiency-log.md`
-for the batch-by-batch record). These two remain **candidates only** —
+for the batch-by-batch record). These three remain **candidates only** —
 nothing here authorizes deletion; follow the "Required gates per
-implementation PR" checklist in §7 before actioning either one.
+implementation PR" checklist in §7 before actioning any of them.
 
 ## 6. Cross-program sequence
 
