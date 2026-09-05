@@ -61,7 +61,7 @@ export default function ClientFilesPage() {
           .order('sort_order'),
       ]);
 
-      const s = settingsRes.data as any;
+      const s = settingsRes.data;
       setSharedFolderName(s?.shared_folder_name ?? null);
       setSharedFolderUrl(s?.shared_folder_url ?? null);
       setSharedFolderItemId(s?.shared_folder_item_id ?? null);

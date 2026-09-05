@@ -62,8 +62,8 @@ export default function ClientProfilePage() {
 
       if (error) throw error;
       toast.success("Profile updated successfully");
-    } catch (err: any) {
-      toast.error("Failed to update profile: " + (err.message || "Unknown error"));
+    } catch (err) {
+      toast.error("Failed to update profile: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setSaving(false);
     }

@@ -1,5 +1,5 @@
 import { useAuth } from './useAuth';
-import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 // RBAC Permissions Configuration
 export type Permission = 
@@ -230,9 +230,7 @@ export const useRBAC = () => {
   const is_super_admin = isSuperAdmin() || profile?.unicorn_role === 'Super Admin';
   
   // Vivacity Team = internal staff (single source of truth in @/lib/roles/vivacityRoles)
-  const is_vivacity_team = VIVACITY_STAFF_ROLES.includes(
-    (profile?.unicorn_role ?? '') as any
-  );
+  const is_vivacity_team = isVivacityStaffRole(profile?.unicorn_role);
 
   // Debug logging (dev only)
   if (process.env.NODE_ENV === 'development' && profile) {
