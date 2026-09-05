@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Activity } from 'lucide-react';
+import type { Tables } from '@/integrations/supabase/types';
 
 const STATUS_COLORS: Record<string, string> = {
   healthy: 'bg-green-500',
@@ -18,13 +19,15 @@ const STATUS_COLORS: Record<string, string> = {
   critical: 'bg-red-500',
 };
 
+type HealthSnapshot = Pick<Tables<'stage_health_snapshots'>, 'stage_instance_id' | 'health_status' | 'tasks_overdue_count' | 'days_since_last_activity'>;
+
 export function PortfolioHealthWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ['portfolio-health-overview'],
     queryFn: async () => {
       // Get latest snapshot per stage_instance_id across all tenants
       const { data: snapshots, error } = await supabase
-        .from('stage_health_snapshots' as any)
+        .from('stage_health_snapshots')
         .select('id, stage_instance_id, health_status, snapshot_date, tasks_overdue_count, days_since_last_activity')
         .order('snapshot_date', { ascending: false })
         .limit(1000);
@@ -33,8 +36,8 @@ export function PortfolioHealthWidget() {
 
       // Deduplicate: latest per stage
       const seen = new Set<number>();
-      const latest: any[] = [];
-      for (const row of ((snapshots as any[]) || [])) {
+      const latest: HealthSnapshot[] = [];
+      for (const row of ((snapshots || []) as HealthSnapshot[])) {
         if (!seen.has(row.stage_instance_id)) {
           seen.add(row.stage_instance_id);
           latest.push(row);
@@ -53,8 +56,8 @@ export function PortfolioHealthWidget() {
       const total = latest.length || 1;
 
       // Find most common trigger
-      const overdueTriggers = latest.filter((s: any) => s.tasks_overdue_count > 5).length;
-      const inactivityTriggers = latest.filter((s: any) => s.days_since_last_activity > 14).length;
+      const overdueTriggers = latest.filter((s: HealthSnapshot) => s.tasks_overdue_count > 5).length;
+      const inactivityTriggers = latest.filter((s: HealthSnapshot) => s.days_since_last_activity > 14).length;
       const commonTrigger = overdueTriggers >= inactivityTriggers ? 'Overdue tasks' : 'Inactivity';
 
       return {
