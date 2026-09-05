@@ -42,11 +42,14 @@ function rpcCalls(text) {
 function requestGraph() {
   return TARGETS.flatMap((path) => {
     const text = source(path);
+    const writes = [...text.matchAll(/\.(insert|upsert|update|delete)\s*\(/g)]
+      .filter((m) => text.slice(Math.max(0, m.index - 320), m.index).includes("supabase"))
+      .map((m) => m[1]);
     return [{
       file: path,
       tables: fromCalls(text),
       rpc: rpcCalls(text),
-      writes: (text.match(/\.(insert|upsert|update|delete)\s*\(/g) || []).map((m) => m.slice(1, -1)),
+      writes,
     }];
   });
 }
