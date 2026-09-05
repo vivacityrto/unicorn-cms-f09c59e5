@@ -16,9 +16,11 @@ interface CodeRowDialogProps {
   mode: "create" | "edit" | "duplicate";
   columns: CodeTableColumn[];
   row: CodeTableRow | null;
-  onSave: (data: Record<string, any>) => void;
+  onSave: (data: Record<string, unknown>) => void;
   saving: boolean;
 }
+
+type FormValue = string | number | boolean | null | undefined;
 
 const SKIP_ON_CREATE = ["id", "created_at", "updated_at", "created_by", "updated_by"];
 const SKIP_ON_EDIT = ["id", "created_at", "updated_at", "created_by", "updated_by"];
@@ -35,14 +37,14 @@ function isRequired(col: CodeTableColumn) {
 export function CodeRowDialog({
   open, onClose, mode, columns, row, onSave, saving,
 }: CodeRowDialogProps) {
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, FormValue>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!open) return;
     if (mode === "create") {
       // Initialize with defaults
-      const defaults: Record<string, any> = {};
+      const defaults: Record<string, FormValue> = {};
       columns.forEach((col) => {
         if (col.data_type === "boolean") defaults[col.column_name] = true;
       });
@@ -69,7 +71,7 @@ export function CodeRowDialog({
 
   const handleLabelChange = useCallback(
     (newLabel: string) => {
-      const updates: Record<string, any> = { label: newLabel };
+      const updates: Record<string, FormValue> = { label: newLabel };
       if (hasValueCol) {
         updates.value = labelToValue(newLabel);
       }
@@ -78,16 +80,16 @@ export function CodeRowDialog({
     [hasValueCol]
   );
 
-  function handleChange(colName: string, value: any) {
+  function handleChange(colName: string, value: FormValue) {
     if (colName === "label" && hasLabelCol) {
-      handleLabelChange(value);
+      handleLabelChange(typeof value === "string" ? value : String(value ?? ""));
     } else {
       setFormData((prev) => ({ ...prev, [colName]: value }));
     }
   }
 
   function handleSubmit() {
-    const data: Record<string, any> = {};
+    const data: Record<string, unknown> = {};
     columns.forEach((col) => {
       if (!isEditable(col, mode)) return;
       if (formData[col.column_name] !== undefined) {
@@ -114,7 +116,7 @@ export function CodeRowDialog({
         </DialogHeader>
         <div className="space-y-4 py-2">
           {editableColumns.map((col) => {
-            const val = formData[col.column_name] ?? "";
+            const val = String(formData[col.column_name] ?? "");
             const required = isRequired(col);
 
             if (col.data_type === "boolean") {

@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T17:53:27.308Z",
-  "baselineSha": "c7d96f926ac70aec4c0d7b4e656da91396506801",
+  "generatedAt": "2026-09-05T18:05:35.280Z",
+  "baselineSha": "eff9d9a287141ccd687a0a667720d68c06d7426a",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 254,
-    "errors": 1113,
+    "filesWithFindings": 253,
+    "errors": 1107,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1106,
+    "@typescript-eslint/no-explicit-any": 1100,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 445,
+      "errors": 439,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 438,
+        "@typescript-eslint/no-explicit-any": 432,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -60,10 +60,10 @@
       }
     },
     "src/components/admin": {
-      "errors": 10,
+      "errors": 4,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 10
+        "@typescript-eslint/no-explicit-any": 4
       }
     },
     "src/components/audit": {
@@ -1134,9 +1134,6 @@
     },
     "src/components/admin/AppSettingsForm.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/components/admin/CodeRowDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/components/audit/DeleteAuditDialog.tsx": {
       "react-refresh/only-export-components": 1
