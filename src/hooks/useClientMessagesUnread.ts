@@ -22,37 +22,37 @@ export function useClientMessagesUnread(tenantId: number | null | undefined) {
     }
 
     // Load all conversations for the tenant
-    const { data: convos } = await (supabase as any)
+    const { data: convos } = await supabase
       .from('tenant_conversations')
       .select('id')
       .eq('tenant_id', tenantId);
-    const ids = (convos ?? []).map((c: any) => c.id as string);
+    const ids = (convos ?? []).map((c) => c.id);
     if (ids.length === 0) {
       setCount(0);
       return;
     }
 
     // Latest message per conversation
-    const { data: msgs } = await (supabase as any)
+    const { data: msgs } = await supabase
       .from('tenant_messages')
       .select('conversation_id, sender_type, created_at')
       .in('conversation_id', ids)
       .order('created_at', { ascending: false });
     const latest = new Map<string, { sender_type: string; created_at: string }>();
-    (msgs ?? []).forEach((m: any) => {
+    (msgs ?? []).forEach((m) => {
       if (!latest.has(m.conversation_id)) {
         latest.set(m.conversation_id, { sender_type: m.sender_type, created_at: m.created_at });
       }
     });
 
     // Participant read state for this staff user
-    const { data: parts } = await (supabase as any)
+    const { data: parts } = await supabase
       .from('conversation_participants')
       .select('conversation_id, last_read_at')
       .eq('user_id', userId)
       .in('conversation_id', ids);
     const readMap = new Map<string, string | null>();
-    (parts ?? []).forEach((p: any) => readMap.set(p.conversation_id, p.last_read_at));
+    (parts ?? []).forEach((p) => readMap.set(p.conversation_id, p.last_read_at));
 
     let unread = 0;
     for (const cid of ids) {
@@ -75,7 +75,7 @@ export function useClientMessagesUnread(tenantId: number | null | undefined) {
     const channel = supabase
       .channel(`tenant-messages-unread:${tenantId}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'tenant_messages', filter: `tenant_id=eq.${tenantId}` },
         () => {
           void refresh();

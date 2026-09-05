@@ -95,7 +95,7 @@ export function AddStageDialog({
       
       if (stageData) {
         // Update existing stage in stages table
-        const { error } = await (supabase
+        const { error } = await supabase
           .from('stages')
           .update({
             name: formData.stage_name,
@@ -105,9 +105,9 @@ export function AddStageDialog({
             status: formData.status,
             is_certified: formData.is_certified,
             certified_notes: formData.is_certified ? formData.certified_notes || null : null,
-          } as any)
-          .eq('id', stageData.id) as any);
-        
+          })
+          .eq('id', stageData.id);
+
         if (error) throw error;
         toast({
           title: "Success",
@@ -118,10 +118,24 @@ export function AddStageDialog({
         const stageKey = formData.stage_name.toLowerCase()
           .replace(/[^a-zA-Z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '') + '-' + Date.now();
-        
-        const { data: newStage, error: stageError } = await (supabase
+
+        // stages.id has no DB default/identity/sequence — every insert must supply the
+        // next available id explicitly (same approach as packages.createPackage in
+        // usePackageBuilder.tsx and ManageStages.tsx's "New Phase" flow). Without this,
+        // "Create Stage" via this dialog has never actually worked — every attempt failed
+        // with a not-null violation.
+        const { data: maxIdRow } = await supabase
+          .from('stages')
+          .select('id')
+          .order('id', { ascending: false })
+          .limit(1)
+          .single();
+        const nextId = (maxIdRow?.id ?? 0) + 1;
+
+        const { data: newStage, error: stageError } = await supabase
           .from('stages')
           .insert({
+            id: nextId,
             name: formData.stage_name,
             shortname: formData.short_name || null,
             description: formData.stage_description || null,
@@ -130,10 +144,10 @@ export function AddStageDialog({
             is_certified: formData.is_certified,
             certified_notes: formData.is_certified ? formData.certified_notes || null : null,
             stage_key: stageKey,
-          } as any)
+          })
           .select('id')
-          .single() as any);
-        
+          .single();
+
         if (stageError) throw stageError;
 
         // If tenantId is provided, add the stage to tenant's stage_ids
@@ -178,10 +192,10 @@ export function AddStageDialog({
       });
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || `Failed to ${stageData ? 'update' : 'create'} phase`,
+        description: error instanceof Error ? error.message : `Failed to ${stageData ? 'update' : 'create'} phase`,
         variant: "destructive"
       });
     } finally {

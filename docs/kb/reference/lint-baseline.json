@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T01:08:14.468Z",
-  "baselineSha": "8859db09ca76559d221d9c8f406e8d396647deef",
+  "generatedAt": "2026-09-05T01:18:17.683Z",
+  "baselineSha": "82021c6cdb58558914993598e9ed2441598d9921",
   "totals": {
-    "files": 1757,
-    "filesWithFindings": 381,
-    "errors": 1365,
+    "files": 1758,
+    "filesWithFindings": 379,
+    "errors": 1353,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1358,
+    "@typescript-eslint/no-explicit-any": 1346,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 697,
+      "errors": 685,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 690,
+        "@typescript-eslint/no-explicit-any": 678,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -32,10 +32,10 @@
   },
   "byDirectory": {
     "src/components": {
-      "errors": 34,
+      "errors": 29,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 34
+        "@typescript-eslint/no-explicit-any": 29
       }
     },
     "src/components/academy": {
@@ -372,10 +372,10 @@
       }
     },
     "src/hooks": {
-      "errors": 251,
+      "errors": 244,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 251,
+        "@typescript-eslint/no-explicit-any": 244,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1219,9 +1219,6 @@
     "src/components/AddStaffTaskDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "src/components/AddStageDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
     "src/components/AdminInviteUserDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -1651,9 +1648,6 @@
     },
     "src/hooks/useClientImpact.tsx": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/useClientMessagesUnread.ts": {
-      "@typescript-eslint/no-explicit-any": 7
     },
     "src/hooks/useClientNotifications.tsx": {
       "@typescript-eslint/no-explicit-any": 3

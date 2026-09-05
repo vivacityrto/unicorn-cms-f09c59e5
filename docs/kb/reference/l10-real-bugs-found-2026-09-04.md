@@ -469,6 +469,31 @@ on unrelated features:
   would have thrown immediately if anyone had ever called it. Removed rather
   than fixed, since there's no live caller to verify against.
 
+## Manage Stages — "Create Stage" dialog (`AddStageDialog.tsx`)
+
+### 19. "Create Stage" via `AddStageDialog` has never worked — a *fourth* independent occurrence of the same `stages.id` bug — FIXED
+Same exact root cause as items #2, #3, and #12 above: `stages.id` has no
+DB default/identity/sequence (re-confirmed live via
+`information_schema.columns` on 2026-09-05 — still `column_default: null,
+is_identity: NO`), so every insert must supply the next available id
+explicitly. This is a *fourth*, separate, previously-undiscovered call
+site — `AddStageDialog.tsx`'s "Create Stage" flow, used from the
+"Create Stage" button on `AdminManageStages.tsx` (distinct from the Stage
+Library dialog fixed under #2, `useStageExportImport.tsx`'s Import Stage
+flow documented under #3, and `ManageStages.tsx`'s own "New Phase" dialog
+fixed under #12). Fixed the same way (compute `MAX(id)+1` before
+inserting).
+
+Found during batch 55 of the `no-explicit-any` retirement: removing the
+`as any` casts on the insert forced TypeScript to check the real `stages`
+Insert type, which surfaced `id` as required, exactly as it did for the
+first three occurrences.
+
+Now a *fourth* independent place this exact bug has been rediscovered by
+hand — further reinforcing #3's original recommendation to add a real
+default/sequence to `stages.id` (and audit `packages.id` too) so this class
+of bug stops resurfacing every time someone touches a nearby insert.
+
 ## What this means practically
 
 Nothing above was caused by tonight's work — every one of these bugs
