@@ -230,7 +230,7 @@ The refreshed first-wave register exceeds that old target because it now include
 
 The clone scan also found bounded consolidation opportunities:
 
-- `AddClientTaskDialog.tsx` and `AddStaffTaskDialog.tsx` are each 319 lines at the current `origin/main` tip (638 combined) and differ by only 14 meaningful task-owner behaviors. Prefer a shared task form/controller plus thin role adapters, not a large boolean-prop component. This is the recommended first Phase 2.6 consolidation cohort after the Phase 2.5 exit checkpoint.
+- `AddClientTaskDialog.tsx` and `AddStaffTaskDialog.tsx` are each 335 physical lines at merged `origin/main` (670 combined, measured 2026-09-05). A fresh structural comparison reports 36 raw differing lines, covering the same 14 meaningful task-owner/table/label behaviors previously identified. Prefer a shared task form/controller plus thin role adapters, not a large boolean-prop component. This is the recommended first Phase 2.6 consolidation cohort after the Phase 2.5 exit checkpoint.
 - `extract-note-title` and `extract-suggest-title` Edge Functions are about 135 lines each and differ by roughly a dozen lines. A shared title-extraction service could remove about 100 lines while preserving two public endpoints.
 - `DraggableSeatCard` and `SeatCard` share a substantial presentation region. Extract a display core while leaving drag behavior in its adapter.
 - `useStageQualityCheck.tsx` contains repeated internal evaluation blocks. Consolidate them into one pure evaluation pipeline with fixtures.

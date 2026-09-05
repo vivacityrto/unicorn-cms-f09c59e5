@@ -8,8 +8,11 @@ runtime changes are included in this packet.
 ## Candidate
 
 `src/components/AddClientTaskDialog.tsx` and
-`src/components/AddStaffTaskDialog.tsx` are each 319 physical lines (638
-combined). They have one consumer: `src/pages/PackageDetail.tsx`, which mounts
+`src/components/AddStaffTaskDialog.tsx` are each 335 physical lines (670
+combined, measured at merged `origin/main` 2026-09-05). A fresh structural
+comparison reports 36 raw differing lines, covering the same 14 meaningful
+task-owner/table/label behaviors previously identified. They have one consumer:
+`src/pages/PackageDetail.tsx`, which mounts
 both dialogs for the selected stage.
 
 The route is `/admin/package/:id` under the ordinary `ProtectedRoute` and
