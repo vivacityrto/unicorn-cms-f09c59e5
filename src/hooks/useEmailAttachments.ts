@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 
 export interface EmailAttachment {
   documentId: number;
@@ -8,6 +9,10 @@ export interface EmailAttachment {
   filePath: string | null;
   originalFilename: string | null;
 }
+
+type AttachmentLink = Pick<Tables<'email_attachments'>, 'document_id' | 'order_number' | 'created_at'>;
+type DocumentSummary = Pick<Tables<'documents'>, 'id' | 'title' | 'format'>;
+type DocumentFileSummary = Pick<Tables<'document_files'>, 'document_id' | 'file_path' | 'original_filename' | 'created_at'>;
 
 export function useEmailAttachments(emailTemplateId?: number) {
   const query = useQuery({
@@ -21,7 +26,7 @@ export function useEmailAttachments(emailTemplateId?: number) {
         .order('order_number', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true });
       if (error) throw error;
-      const docIds = [...new Set((links || []).map((l: any) => l.document_id))];
+      const docIds = [...new Set((links || []).map((l: AttachmentLink) => l.document_id))];
       if (docIds.length === 0) return [];
 
       const [{ data: docs }, { data: files }] = await Promise.all([
@@ -33,14 +38,14 @@ export function useEmailAttachments(emailTemplateId?: number) {
           .order('created_at', { ascending: false }),
       ]);
 
-      const docMap = new Map((docs || []).map((d: any) => [d.id, d]));
-      const fileMap = new Map<number, any>();
-      (files || []).forEach((f: any) => {
+      const docMap = new Map((docs || []).map((d: DocumentSummary) => [d.id, d]));
+      const fileMap = new Map<number, DocumentFileSummary>();
+      (files || []).forEach((f: DocumentFileSummary) => {
         if (!fileMap.has(f.document_id)) fileMap.set(f.document_id, f);
       });
 
       return (links || [])
-        .map((l: any) => {
+        .map((l: AttachmentLink) => {
           const d = docMap.get(l.document_id);
           if (!d) return null;
           const f = fileMap.get(l.document_id);
