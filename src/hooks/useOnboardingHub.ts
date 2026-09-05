@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 export interface OnboardingHubRun {
   id: number;
@@ -60,7 +61,7 @@ export function useOnboardingHub(runId: number | null) {
         .eq("id", runId!)
         .maybeSingle();
       if (error) throw error;
-      return data as any;
+      return data as unknown as OnboardingHubRun | null;
     },
   });
 
@@ -76,7 +77,7 @@ export function useOnboardingHub(runId: number | null) {
         .eq("provisioning_run_id", runId!)
         .eq("lifecycle_type", "staff_onboarding");
       if (error) throw error;
-      const rows = (data ?? []).map((r: any) => ({
+      const rows = (data ?? []).map((r) => ({
         id: r.id,
         template_id: r.template_id,
         category: r.lifecycle_checklist_templates?.category ?? "",
@@ -103,8 +104,8 @@ export function useOnboardingHub(runId: number | null) {
         .maybeSingle();
       if (error) throw error;
       return {
-        staff_induction_video_url: (data as any)?.staff_induction_video_url ?? null,
-        staff_onboarding_workbook_url: (data as any)?.staff_onboarding_workbook_url ?? null,
+        staff_induction_video_url: data?.staff_induction_video_url ?? null,
+        staff_onboarding_workbook_url: data?.staff_onboarding_workbook_url ?? null,
       };
     },
   });
@@ -119,7 +120,7 @@ export function useOnboardingHub(runId: number | null) {
       if (!runId) throw new Error("No run id");
       const { error } = await supabase
         .from("staff_provisioning_runs")
-        .update(updates as any)
+        .update(updates as TablesUpdate<"staff_provisioning_runs">)
         .eq("id", runId);
       if (error) throw error;
 
@@ -148,7 +149,7 @@ export function useOnboardingHub(runId: number | null) {
               completed: m.completed,
               completed_at: m.completed ? new Date().toISOString() : null,
               completed_by: m.completed ? me : null,
-            } as any)
+            })
             .eq("id", target.id);
         }
       }
@@ -171,7 +172,7 @@ export function useOnboardingHub(runId: number | null) {
           completed_at: completed ? new Date().toISOString() : null,
           completed_by: completed ? me : null,
           ...(notes !== undefined ? { notes } : {}),
-        } as any)
+        })
         .eq("id", id);
       if (error) throw error;
     },
