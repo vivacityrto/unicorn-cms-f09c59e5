@@ -518,6 +518,8 @@ The optimization, RBAC, and tenant plans use different phase numbers; the follow
 1. Route/layout composition is stable. The AST route manifest is inventory evidence, not an authorization source; capability metadata consolidation remains intentionally unfinished.
 2. Phase 2.5 and the narrow Phase 2.6 lane may proceed without blocking security architecture.
 3. In parallel, RBAC P0.1/P0.6 inventory plus P1 design/approval work may run, together with tenant P0.1/P0.3 read-only production discovery and P0.2 synthetic testing confined to a separately authorized disposable environment.
+
+The tenant program's P0.1 source inventory is now tracked separately from optimization implementation: [`tenant-p0-source-inventory.md`](../codebase-state/tenant-p0-source-inventory.md). It is evidence collection only and must not be read as authority to introduce a new directory contract before the RBAC v6 staff-scope decision and shadow-mode evidence are approved.
 4. Complete RBAC P0.2–P0.5 and the full P0 correctness exit gate before RBAC P2–P4 establishes the server decision core, shadow route-capability metadata, explicit staff-scope decision, and Academy/Package/Stage AJ/CSC pilot. Do not build a second optimization-era permission registry or cut over UI gates before server enforcement.
 5. Tenant P1/P2+ and database-affecting feature redesign begin only after the RBAC staff-scope/decision-core/pilot gates required by the tenant plan.
 6. Package/time, membership/contact/lifecycle, documents/delivery, messaging, Academy, Ask Viv, and analytics redesigns ship as authorization-aware vertical slices owned by their applicable RBAC/tenant phases. They are not bundled into Phase 2.6.

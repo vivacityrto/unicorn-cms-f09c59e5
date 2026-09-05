@@ -1230,7 +1230,7 @@ This program is complete when:
 | Phase | Status | PR | Evidence/result |
 |---|---|---|---|
 | Planning and live read-only investigation | Complete 2026-09-02 | — | this council-reviewed plan; no production changes |
-| P0.1 operating-model inventory | Not started | — | — |
+| P0.1 operating-model inventory | In progress 2026-09-05 | — | Source inventory and first read-only catalog snapshot added; identity ledger, policy text/effective grants, view/RPC security, and complete write-path evidence remain open. See [`tenant-p0-source-inventory.md`](../codebase-state/tenant-p0-source-inventory.md). |
 | P0.2 disposable verification environment | Not started | — | — |
 | P0.3 browser/query baseline | Not started | — | — |
 | P1+ implementation | Not started | — | requires phase approval |
