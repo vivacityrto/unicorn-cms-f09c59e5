@@ -153,7 +153,7 @@ export const useQuarterlyConversations = () => {
     mutationFn: async ({ qc_id, links }: { qc_id: string; links: QCLinkCreate[] }) => {
       const { data, error } = await supabase.rpc('qc_create_links', {
         p_qc_id: qc_id,
-        p_links: links as any,
+        p_links: links as unknown as Json,
       });
       
       if (error) throw error;

@@ -12,7 +12,9 @@ export interface TenantBasic {
   created_at: string;
   rto_id?: string | null;
   complyhub_membership_tier?: string | null;
-  [key: string]: any;
+  xero_invoice_paid?: boolean | null;
+  xero_invoice_due_date?: string | null;
+  xero_repeating_invoice_url?: string | null;
 }
 
 /**

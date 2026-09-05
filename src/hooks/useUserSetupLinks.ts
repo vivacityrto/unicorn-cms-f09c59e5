@@ -18,7 +18,7 @@ export function useUserSetupLinks() {
     queryKey: ["dd_usersetup_links"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("dd_usersetup_links" as any)
+        .from("dd_usersetup_links")
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { nullsFirst: false })

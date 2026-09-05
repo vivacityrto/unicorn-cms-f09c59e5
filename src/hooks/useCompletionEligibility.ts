@@ -24,7 +24,7 @@ export function useCompletionEligibility(tenantId: number | null, packageInstanc
       if (!tenantId || !packageInstanceId) return null;
 
       const { data, error } = await supabase
-        .from('v_completion_eligibility' as any)
+        .from('v_completion_eligibility')
         .select('*')
         .eq('tenant_id', tenantId)
         .eq('package_instance_id', packageInstanceId)
