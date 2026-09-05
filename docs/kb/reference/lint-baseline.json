@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T21:39:44.630Z",
-  "baselineSha": "ed4e5c39901900141acdd85439b4aa503183e2e0",
+  "generatedAt": "2026-09-05T21:44:36.765Z",
+  "baselineSha": "991e46edc3a3d7762114c5ea4c910c817c534773",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 234,
-    "errors": 964,
+    "filesWithFindings": 233,
+    "errors": 963,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 957,
+    "@typescript-eslint/no-explicit-any": 956,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 569,
+      "errors": 568,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 569
+        "@typescript-eslint/no-explicit-any": 568
       }
     }
   },
@@ -804,13 +804,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3
-      }
-    },
-    "supabase/functions/scorecard-refresh": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
       }
     },
     "supabase/functions/search-organisations": {
@@ -1615,9 +1608,6 @@
     },
     "supabase/functions/scan-risk-radar/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "supabase/functions/scorecard-refresh/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/search-organisations/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
