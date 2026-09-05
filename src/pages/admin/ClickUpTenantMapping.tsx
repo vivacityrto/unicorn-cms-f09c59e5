@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, MapPin } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import type { Tables } from "@/integrations/supabase/types";
 
 const MATCH_FIELDS = [
   { value: "space_name", label: "Space Name" },
@@ -32,6 +33,10 @@ interface MappingRow {
   tenant_name?: string;
 }
 
+type MappingRecord = Tables<"clickup_tenant_mapping">;
+type TenantSummary = Pick<Tables<"tenants">, "id" | "name">;
+type MutationError = { message?: string };
+
 export default function ClickUpTenantMapping() {
   const queryClient = useQueryClient();
   const [matchField, setMatchField] = useState<MatchField>("space_name");
@@ -50,7 +55,7 @@ export default function ClickUpTenantMapping() {
       if (error) throw error;
 
       // Fetch tenant names for display
-      const tenantIds = [...new Set((data || []).map((m: any) => m.tenant_id))];
+      const tenantIds = [...new Set((data || []).map((m: MappingRecord) => m.tenant_id))];
       if (tenantIds.length === 0) return [];
 
       const { data: tenants } = await supabase
@@ -58,8 +63,8 @@ export default function ClickUpTenantMapping() {
         .select("id, name")
         .in("id", tenantIds);
 
-      const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t.name]));
-      return (data || []).map((m: any) => ({
+      const tenantMap = new Map((tenants || []).map((t: TenantSummary) => [t.id, t.name]));
+      return (data || []).map((m: MappingRecord) => ({
         ...m,
         tenant_name: tenantMap.get(m.tenant_id) || `Tenant ${m.tenant_id}`,
       })) as MappingRow[];
@@ -99,7 +104,7 @@ export default function ClickUpTenantMapping() {
       setPriority("0");
       toast.success("Mapping added");
     },
-    onError: (err: any) => toast.error(err.message || "Failed to add mapping"),
+    onError: (err: MutationError) => toast.error(err.message || "Failed to add mapping"),
   });
 
   // Toggle active
@@ -114,7 +119,7 @@ export default function ClickUpTenantMapping() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clickup-tenant-mappings"] });
     },
-    onError: (err: any) => toast.error(err.message || "Failed to update"),
+    onError: (err: MutationError) => toast.error(err.message || "Failed to update"),
   });
 
   // Delete mapping
@@ -130,7 +135,7 @@ export default function ClickUpTenantMapping() {
       queryClient.invalidateQueries({ queryKey: ["clickup-tenant-mappings"] });
       toast.success("Mapping deleted");
     },
-    onError: (err: any) => toast.error(err.message || "Failed to delete"),
+    onError: (err: MutationError) => toast.error(err.message || "Failed to delete"),
   });
 
   const canAdd = selectedTenantId && matchPattern.trim();

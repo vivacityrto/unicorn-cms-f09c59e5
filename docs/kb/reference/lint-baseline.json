@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T19:00:33.349Z",
-  "baselineSha": "5a47a1688c6a152c97f0deb9d789bfccbfc1df4c",
+  "generatedAt": "2026-09-05T19:12:20.924Z",
+  "baselineSha": "9a1586918361f16658c05ac1038a6cec4979c3d0",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 250,
-    "errors": 1089,
+    "filesWithFindings": 249,
+    "errors": 1083,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1082,
+    "@typescript-eslint/no-explicit-any": 1076,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 421,
+      "errors": 415,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 414,
+        "@typescript-eslint/no-explicit-any": 408,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -286,13 +286,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "src/pages/admin": {
-      "errors": 6,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 6
       }
     },
     "src/pages/client": {
@@ -1468,9 +1461,6 @@
     },
     "src/pages/academy/AcademyCertificatesPage.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/admin/ClickUpTenantMapping.tsx": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/pages/client/AcademyAssessmentPlayerPage.tsx": {
       "@typescript-eslint/no-explicit-any": 3
