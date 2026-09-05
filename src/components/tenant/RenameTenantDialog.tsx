@@ -109,10 +109,10 @@ export function RenameTenantDialog({
       onRenamed?.(newName);
       onOpenChange(false);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         title: "Rename failed",
-        description: err?.message || "Could not rename",
+        description: err instanceof Error ? err.message : "Could not rename",
         variant: "destructive",
       });
     },

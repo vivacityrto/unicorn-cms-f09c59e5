@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T02:57:01.007Z",
-  "baselineSha": "82d732773368bb0d15e05e25b04114bbe132dd4e",
+  "generatedAt": "2026-09-05T02:38:55.040Z",
+  "baselineSha": "035669584a7c004b771f341d73b6d2c23fae164a",
   "totals": {
     "files": 1758,
-    "filesWithFindings": 370,
-    "errors": 1310,
+    "filesWithFindings": 374,
+    "errors": 1325,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1303,
+    "@typescript-eslint/no-explicit-any": 1318,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 642,
+      "errors": 657,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 635,
+        "@typescript-eslint/no-explicit-any": 650,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -76,10 +76,10 @@
       }
     },
     "src/components/admin/reporting-obligations": {
-      "errors": 2,
+      "errors": 5,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
+        "@typescript-eslint/no-explicit-any": 5
       }
     },
     "src/components/admin/team-users": {
@@ -291,11 +291,11 @@
       }
     },
     "src/components/stage": {
-      "errors": 2,
+      "errors": 9,
       "warnings": 6,
       "byRule": {
-        "react-refresh/only-export-components": 6,
-        "@typescript-eslint/no-explicit-any": 2
+        "@typescript-eslint/no-explicit-any": 9,
+        "react-refresh/only-export-components": 6
       }
     },
     "src/components/support-tickets": {
@@ -313,11 +313,11 @@
       }
     },
     "src/components/tenant": {
-      "errors": 14,
+      "errors": 12,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 14,
-        "react-refresh/only-export-components": 1
+        "react-refresh/only-export-components": 1,
+        "@typescript-eslint/no-explicit-any": 12
       }
     },
     "src/components/ui": {
@@ -365,10 +365,10 @@
       }
     },
     "src/hooks": {
-      "errors": 237,
+      "errors": 244,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 237,
+        "@typescript-eslint/no-explicit-any": 244,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1261,6 +1261,15 @@
     "src/components/admin/reporting-obligations/BroadcastPreviewDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
+    "src/components/admin/reporting-obligations/ObligationDeleteDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/admin/reporting-obligations/ObligationFormDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/admin/reporting-obligations/ObligationsTable.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
     "src/components/admin/team-users/ProvisioningRunOverview.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -1454,6 +1463,9 @@
     "src/components/settings/TeamProfileTab.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
+    "src/components/stage/EditStageEmailDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
     "src/components/stage/StageFrameworkSelector.tsx": {
       "react-refresh/only-export-components": 6
     },
@@ -1484,12 +1496,8 @@
     "src/components/task-notes/useNotesSummary.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
-    "src/components/tenant/CloseClientModal.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
     "src/components/tenant/RenameTenantDialog.tsx": {
-      "react-refresh/only-export-components": 1,
-      "@typescript-eslint/no-explicit-any": 1
+      "react-refresh/only-export-components": 1
     },
     "src/components/tenant/TenantClickUpAISearch.tsx": {
       "@typescript-eslint/no-explicit-any": 1
@@ -1587,6 +1595,9 @@
     },
     "src/hooks/useAskVivAssistantChat.ts": {
       "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/hooks/useAuditActionPlan.ts": {
+      "@typescript-eslint/no-explicit-any": 7
     },
     "src/hooks/useAuditCompletion.ts": {
       "@typescript-eslint/no-explicit-any": 4
