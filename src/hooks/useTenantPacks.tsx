@@ -34,6 +34,8 @@ interface GeneratePackResult {
   document_count: number;
 }
 
+type RawPack = Partial<TenantPack> & Record<string, unknown>;
+
 export function useTenantPacks(tenantId?: number) {
   const [packs, setPacks] = useState<TenantPack[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +47,7 @@ export function useTenantPacks(tenantId?: number) {
     try {
       // Use raw query since types may not be updated yet
       const { data, error } = await supabase
-        .from("tenant_packs" as any)
+        .from("tenant_packs" as never)
         .select("*")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
@@ -53,11 +55,14 @@ export function useTenantPacks(tenantId?: number) {
       if (error) throw error;
       
       // Type assertion for the response
-      const typedPacks = ((data as any[]) || []).map(pack => ({
+      const typedPacks = ((data as unknown[]) || []).map(rawPack => {
+        const pack = rawPack as RawPack;
+        return {
         ...pack,
-        document_ids: (pack.document_ids as number[]) || [],
-        document_version_ids: (pack.document_version_ids as string[]) || []
-      })) as TenantPack[];
+        document_ids: (pack.document_ids as number[] | undefined) || [],
+        document_version_ids: (pack.document_version_ids as string[] | undefined) || []
+      } as TenantPack;
+      }) as TenantPack[];
       
       setPacks(typedPacks);
     } catch (err) {
@@ -109,25 +114,25 @@ export function useTenantPacks(tenantId?: number) {
       
       // Update pack record
       await supabase
-        .from("tenant_packs" as any)
+        .from("tenant_packs" as never)
         .update({
           downloaded_at: new Date().toISOString(),
           downloaded_by: user?.id
-        })
+        } as never)
         .eq("id", packId);
 
       // Log event
       const pack = packs.find(p => p.id === packId);
       if (pack) {
         await supabase
-          .from("pack_events" as any)
+          .from("pack_events" as never)
           .insert({
             pack_id: packId,
             event_type: "pack_downloaded",
             tenant_id: pack.tenant_id,
             stage_id: pack.stage_id,
             user_id: user?.id
-          });
+          } as never);
       }
 
       await fetchPacks();
@@ -142,25 +147,25 @@ export function useTenantPacks(tenantId?: number) {
       
       // Update pack record
       await supabase
-        .from("tenant_packs" as any)
+        .from("tenant_packs" as never)
         .update({
           acknowledged_at: new Date().toISOString(),
           acknowledged_by: user?.id
-        })
+        } as never)
         .eq("id", packId);
 
       // Log event
       const pack = packs.find(p => p.id === packId);
       if (pack) {
         await supabase
-          .from("pack_events" as any)
+          .from("pack_events" as never)
           .insert({
             pack_id: packId,
             event_type: "pack_acknowledged",
             tenant_id: pack.tenant_id,
             stage_id: pack.stage_id,
             user_id: user?.id
-          });
+          } as never);
       }
 
       toast.success("Pack acknowledged");
