@@ -48,7 +48,7 @@ export function useCalendarShares() {
 
       if (error) throw error;
 
-      return (data || []).map((share: any) => ({
+      return (data || []).map((share) => ({
         id: share.id,
         owner_user_uuid: share.owner_user_uuid,
         viewer_user_uuid: share.viewer_user_uuid,
@@ -77,7 +77,7 @@ export function useCalendarShares() {
 
       if (error) throw error;
 
-      return (data || []).map((member: any) => ({
+      return (data || []).map((member) => ({
         user_uuid: member.user_uuid,
         full_name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email || 'Unknown',
         email: member.email,
@@ -122,9 +122,12 @@ export function useCalendarShares() {
       toast.success('Calendar shared successfully');
       queryClient.invalidateQueries({ queryKey: ['calendar-shares-owned'] });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Failed to share calendar:', error);
-      if (error.code === '23505') {
+      const errorCode = error && typeof error === 'object' && 'code' in error
+        ? String(error.code)
+        : undefined;
+      if (errorCode === '23505') {
         toast.error('Calendar already shared with this user');
       } else {
         toast.error('Failed to share calendar');
