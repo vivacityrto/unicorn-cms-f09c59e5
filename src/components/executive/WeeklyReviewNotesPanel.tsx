@@ -25,6 +25,21 @@ import {
 import type { ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 import { format, parseISO } from 'date-fns';
 
+interface DiscussionItem {
+  client_name?: string;
+  title?: string;
+  text?: string;
+}
+
+interface PortfolioSummary {
+  immediate?: number;
+  atRisk?: number;
+  stalled?: number;
+  avgScore?: number;
+  avgScoreDelta?: number;
+  momentum?: string;
+}
+
 interface WeeklyReviewNotesPanelProps {
   tenantUuid?: string;
   rawData: ExecutiveHealthRow[];
@@ -102,10 +117,10 @@ export function WeeklyReviewNotesPanel({
 
   // Save handler (debounced via blur)
   const saveField = useCallback(
-    async (field: string, value: any) => {
+    async (field: string, value: unknown) => {
       if (effectiveReadOnly || !currentReview) return;
       try {
-        await updateReview({ [field]: value } as any);
+        await updateReview({ [field]: value } as Partial<WeeklyReviewRecord>);
       } catch {
         // toast handled by mutation
       }
@@ -178,7 +193,7 @@ export function WeeklyReviewNotesPanel({
 
   if (isLoading) return null;
 
-  const portfolioSummary = viewedReview?.portfolio_summary as Record<string, any> | undefined;
+  const portfolioSummary = viewedReview?.portfolio_summary as PortfolioSummary | undefined;
 
   return (
     <Card>
@@ -289,13 +304,13 @@ export function WeeklyReviewNotesPanel({
               </div>
             )}
             {/* Discussion items from signals */}
-            {viewedReview?.discussion_items && (viewedReview.discussion_items as any[]).length > 0 && (
+            {viewedReview?.discussion_items && viewedReview.discussion_items.length > 0 && (
               <div className="space-y-1">
                 <label className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">
-                  Discussion Items ({(viewedReview.discussion_items as any[]).length})
+                  Discussion Items ({viewedReview.discussion_items.length})
                 </label>
                 <ul className="space-y-1">
-                  {(viewedReview.discussion_items as any[]).slice(0, 6).map((item: any, i: number) => (
+                  {(viewedReview.discussion_items as unknown as DiscussionItem[]).slice(0, 6).map((item, i) => (
                     <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
                       <span className="text-primary mt-0.5">•</span>
                       <span>

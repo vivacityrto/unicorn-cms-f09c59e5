@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T01:18:17.683Z",
-  "baselineSha": "82021c6cdb58558914993598e9ed2441598d9921",
+  "generatedAt": "2026-09-05T01:44:47.332Z",
+  "baselineSha": "3f52dcce4555e07c6619556adcaa772e889dcba1",
   "totals": {
     "files": 1758,
-    "filesWithFindings": 379,
-    "errors": 1353,
+    "filesWithFindings": 377,
+    "errors": 1341,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1346,
+    "@typescript-eslint/no-explicit-any": 1334,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 685,
+      "errors": 673,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 678,
+        "@typescript-eslint/no-explicit-any": 666,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -32,10 +32,10 @@
   },
   "byDirectory": {
     "src/components": {
-      "errors": 29,
+      "errors": 24,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 29
+        "@typescript-eslint/no-explicit-any": 24
       }
     },
     "src/components/academy": {
@@ -197,10 +197,10 @@
       }
     },
     "src/components/executive": {
-      "errors": 19,
+      "errors": 12,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 19
+        "@typescript-eslint/no-explicit-any": 12
       }
     },
     "src/components/executive/ceo": {
@@ -1222,9 +1222,6 @@
     "src/components/AdminInviteUserDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "src/components/CreateDocumentDialog2.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
     "src/components/EditPackageDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
@@ -1369,9 +1366,6 @@
     },
     "src/components/executive/PortfolioHealthWidget.tsx": {
       "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/components/executive/WeeklyReviewNotesPanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 7
     },
     "src/components/executive/ceo/DiamondClientPanel.tsx": {
       "@typescript-eslint/no-explicit-any": 2
