@@ -277,3 +277,4 @@ or "2x" as a settled number from this data.
    next time.
 
 | 2026-09-06 | Phase 2.6 register reconciliation at `origin/main@471b24279` | Fresh GitHub/commit-state check confirmed AuditNavCards (#690) and AuditTemplatesTable (#691) are already merged; corrected their stale pending-sign-off dispositions. Compliance-score and completion-eligibility remain live and unretired. No source or runtime changes. | `chore/phase-2-6-register-reconcile-696` |
+| 2026-09-06 | Phase 2.5 workboard hook (`useClientWorkboard.tsx`) | Reused the fresh PR worktree pattern and existing dependency cache after one mutex-serialized install. Removed 8 explicit-any findings (8→0) using generated row/summary types; preserved optional legacy `tags` fallback. Full gates: frontend 298/15 skipped, Edge, build, KB links 672/672; typecheck only established baseline errors. SuperAdmin Playwright 4/4; no new L10 bug. Worktree removed after merge cycle. | `codex/phase-2-5-workboard` |
