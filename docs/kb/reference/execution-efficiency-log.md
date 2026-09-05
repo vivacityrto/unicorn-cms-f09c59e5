@@ -272,3 +272,5 @@ or "2x" as a settled number from this data.
    "Efficiency changes tried" too — even a null result ("tried X, no
    measurable difference") is worth recording so it isn't re-tried blind
    next time.
+
+| 2026-09-06 | Phase 2.6 register reconciliation at `origin/main@471b24279` | Fresh GitHub/commit-state check confirmed AuditNavCards (#690) and AuditTemplatesTable (#691) are already merged; corrected their stale pending-sign-off dispositions. Compliance-score and completion-eligibility remain live and unretired. No source or runtime changes. | `chore/phase-2-6-register-reconcile-696` |
