@@ -109,7 +109,7 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
     try {
       // Tell the OAuth callback to bring the user back here after auth.
       localStorage.setItem("outlook_oauth_return_to", "/my/kpi");
-      const result: any = await connect();
+      const result = await connect();
       if (result && "openedInNewTab" in result && !result.openedInNewTab && result.authUrl) {
         setPopupAuthUrl(result.authUrl);
       }
