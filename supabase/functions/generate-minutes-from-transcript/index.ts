@@ -142,7 +142,13 @@ interface AiMinutesOutput {
   confidence: Record<string, string>;
 }
 
-async function generateMinutesFromTranscript(transcriptText: string): Promise<{ result: AiMinutesOutput; tokenUsage: any }> {
+interface TokenUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+}
+
+async function generateMinutesFromTranscript(transcriptText: string): Promise<{ result: AiMinutesOutput; tokenUsage: TokenUsage | null }> {
   const chunks = chunkText(transcriptText);
 
   // For multi-chunk, summarize chunks first then combine

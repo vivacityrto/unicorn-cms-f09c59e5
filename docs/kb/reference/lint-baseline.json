@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T21:55:32.769Z",
-  "baselineSha": "b8359c0f363bb5c8db282a419622bcf7778b3dc9",
+  "generatedAt": "2026-09-05T21:59:42.352Z",
+  "baselineSha": "78d8cf63191c855a66fc8bddb281e29417a64670",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 230,
-    "errors": 960,
+    "filesWithFindings": 229,
+    "errors": 959,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 953,
+    "@typescript-eslint/no-explicit-any": 952,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 565,
+      "errors": 564,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 565
+        "@typescript-eslint/no-explicit-any": 564
       }
     }
   },
@@ -580,13 +580,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 10
-      }
-    },
-    "supabase/functions/generate-minutes-from-transcript": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
       }
     },
     "supabase/functions/generate-notifications": {
@@ -1491,9 +1484,6 @@
     },
     "supabase/functions/generate-minutes-draft/index.ts": {
       "@typescript-eslint/no-explicit-any": 10
-    },
-    "supabase/functions/generate-minutes-from-transcript/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/generate-notifications/index.ts": {
       "@typescript-eslint/no-explicit-any": 6
