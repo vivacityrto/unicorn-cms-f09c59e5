@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
@@ -9,7 +10,7 @@ export interface AuditTemplateQuestion {
   question_type: string;
   label: string;
   order_index: number;
-  options?: any[];
+  options?: Json | null;
   required?: boolean;
   category: string;
 }

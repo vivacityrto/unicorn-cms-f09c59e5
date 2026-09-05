@@ -1396,7 +1396,7 @@ export default function AuditTemplateBuilder() {
             question_type: question.question_type,
             label: question.label,
             order_index: question.order_index,
-            options: optionsWithScoring,
+            options: optionsWithScoring as unknown as Json,
             category: question.category,
             required: question.required || false
           });

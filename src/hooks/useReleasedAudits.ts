@@ -36,7 +36,7 @@ export function useReleasedAudits() {
     queryFn: async (): Promise<ReleasedAuditRow[]> => {
       if (!activeTenantId) return [];
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('client_audits')
         .select(
           `id, audit_type, snapshot_rto_name, snapshot_rto_number,
