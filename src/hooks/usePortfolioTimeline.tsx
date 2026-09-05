@@ -109,7 +109,7 @@ async function fetchPortfolioTimeline({
     .from('tenants')
     .select('id, name')
     .in('id', distinctTenantIds);
-  const nameMap = new Map<number, string>((tenants || []).map((t: any) => [t.id, t.name]));
+  const nameMap = new Map<number, string>((tenants || []).map((t) => [t.id, t.name]));
 
   const enriched = rows.map((r) => ({ ...r, tenant_name: nameMap.get(r.tenant_id) ?? 'Unknown client' }));
   const { courseInfoByCourseId, actorByUuid } = await fetchEnrollmentCourseContext(rows);
