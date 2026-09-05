@@ -218,6 +218,18 @@ for the batch-by-batch record). These three remain **candidates only** —
 nothing here authorizes deletion; follow the "Required gates per
 implementation PR" checklist in §7 before actioning any of them.
 
+**Actioned candidate (PR [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686), pending human sign-off):** the Phase 2.6 cohort for
+`StageCellEditor` removes only the unimported `StageCellEditor` export and its
+exclusive editor/UI/data-access imports from
+`src/components/membership/StageCellEditor.tsx`. The file and its live
+`StageStatusDot` export remain intact. A fresh sweep at current `origin/main`
+found no inbound import, dynamic import, route/menu/registry reference,
+history/generated-link reference, or backend object whose existence depends on
+the deleted frontend export; the related `client_package_stage_state` table
+and transition RPC remain live elsewhere and are untouched. The implementation
+PR will record the exact verification results and remains unmergeable without
+Carl's explicit sign-off.
+
 ## 6. Cross-program sequence
 
 ### Phase 2.5 checkpoint and ongoing lane
