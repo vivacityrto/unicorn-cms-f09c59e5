@@ -17,6 +17,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // separate Contact-matching step needed.
 const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
 
+interface XeroInvoiceStatusRow {
+  Status?: string;
+  DueDateString?: string;
+}
+
 function json(req: Request, status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -160,7 +165,7 @@ Deno.serve(async (req) => {
     const invoicesData = await invoicesResp.json();
     const allInvoices = invoicesData.Invoices || [];
     const NON_ACTIONABLE_STATUSES = new Set(["DRAFT", "VOIDED", "DELETED"]);
-    const mostRecent = allInvoices.find((inv: any) => !NON_ACTIONABLE_STATUSES.has(inv.Status)) ?? null;
+    const mostRecent = (allInvoices as XeroInvoiceStatusRow[]).find((inv) => !NON_ACTIONABLE_STATUSES.has(inv.Status ?? "")) ?? null;
 
     // Staff only need "is the most recent invoice paid, and if not, when
     // was it due" - not itemised detail (amounts, invoice numbers,
