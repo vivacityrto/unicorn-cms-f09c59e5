@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 
 export interface MembershipStateOption {
   code: number;
@@ -17,11 +18,11 @@ export function useMembershipStateOptions(includeComplete = false) {
     queryKey: ['dd_membership_state', includeComplete],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('dd_membership_state' as any)
+        .from('dd_membership_state')
         .select('code, value, description, seq')
         .order('seq');
       if (error) throw error;
-      const all = (data as any[]).map((d: any) => ({
+      const all = (data as Pick<Tables<'dd_membership_state'>, 'code' | 'value' | 'description' | 'seq'>[]).map((d) => ({
         code: d.code,
         value: d.value,
         label: d.description,
