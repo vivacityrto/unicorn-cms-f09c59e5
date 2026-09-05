@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, TrendingUp } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
 
 const statusOrder = ["high", "elevated", "emerging", "stable"] as const;
 
@@ -17,6 +18,11 @@ const statusColors: Record<string, string> = {
   elevated: "bg-orange-500",
   high: "bg-destructive",
 };
+
+type RiskForecastRow = Pick<
+  Tables<"tenant_risk_forecasts">,
+  "tenant_id" | "composite_risk_index" | "forecast_risk_status" | "forecast_date"
+>;
 
 export function ClientRiskForecastWidget() {
   const { data, isLoading } = useQuery({
@@ -30,14 +36,17 @@ export function ClientRiskForecastWidget() {
       if (error) throw error;
 
       // Deduplicate to latest per tenant
-      const latest = new Map<number, any>();
-      (forecasts || []).forEach((f: any) => {
+      const latest = new Map<number, RiskForecastRow>();
+      (forecasts || []).forEach((f: RiskForecastRow) => {
         if (!latest.has(f.tenant_id)) latest.set(f.tenant_id, f);
       });
 
       const all = Array.from(latest.values());
       const dist: Record<string, number> = { stable: 0, emerging: 0, elevated: 0, high: 0 };
-      all.forEach((f: any) => { dist[f.forecast_risk_status] = (dist[f.forecast_risk_status] || 0) + 1; });
+      all.forEach((f) => {
+        const status = f.forecast_risk_status as string;
+        dist[status] = (dist[status] || 0) + 1;
+      });
 
       // Count tenants with 14-day increase > 20%
       // (simplified: just count elevated + high as rising)
