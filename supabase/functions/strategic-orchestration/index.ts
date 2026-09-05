@@ -16,11 +16,18 @@ interface Priority {
   priority_type: string;
   severity_level: string;
   impact_scope: string;
-  affected_entities_json: any[];
-  recommended_actions_json: any[];
+  affected_entities_json: Array<Record<string, unknown>>;
+  recommended_actions_json: Array<{ action: string; priority: string }>;
   priority_summary: string;
   dedupe_hash: string;
 }
+
+interface DedupeRow { dedupe_hash: string; }
+interface CapacityRow { user_uuid: string; full_name: string | null; utilisation_pct: number | null; }
+interface RetentionRow { tenant_id: number; renewal_date: string | null; }
+interface StageSnapshotRow { tenant_id: number; health_status: string; }
+interface RiskRow { tenant_id: number; }
+interface ActivationRow { id: string; playbook_id: string; tenant_id: number; activation_reason: string | null; }
 
 function makeHash(type: string, key: string): string {
   const raw = `${type}:${key}`;
@@ -63,7 +70,7 @@ Deno.serve(async (req) => {
       .from("strategic_priorities")
       .select("dedupe_hash")
       .eq("resolved_flag", false);
-    const existingHashes = new Set((existingPriorities || []).map((p: any) => p.dedupe_hash));
+    const existingHashes = new Set((existingPriorities as DedupeRow[] | null || []).map((p) => p.dedupe_hash));
 
     // Archive resolved priorities > 180 days
     await sb
@@ -133,11 +140,11 @@ Deno.serve(async (req) => {
       .from("vw_consultant_capacity")
       .select("user_uuid, full_name, utilisation_pct");
 
-    const overloadedConsultants = (capacityData || []).filter((c: any) => (c.utilisation_pct || 0) > 110);
+    const overloadedConsultants = (capacityData as CapacityRow[] | null || []).filter((c) => (c.utilisation_pct || 0) > 110);
 
     if (overloadedConsultants.length >= 3) {
       // Check if any have high-risk tenants
-      const overloadedIds = overloadedConsultants.map((c: any) => c.user_uuid);
+      const overloadedIds = overloadedConsultants.map((c) => c.user_uuid);
       const { data: assignments } = await sb
         .from("tenant_members")
         .select("user_id, tenant_id")
@@ -165,7 +172,7 @@ Deno.serve(async (req) => {
           severity_level: affectedTenants.size > 0 ? "critical" : "high",
           impact_scope: affectedTenants.size > 3 ? "portfolio" : "multi_tenant",
           affected_entities_json: [
-            ...overloadedConsultants.map((c: any) => ({
+            ...overloadedConsultants.map((c) => ({
               type: "consultant", user_uuid: c.user_uuid, name: c.full_name, utilisation: c.utilisation_pct,
             })),
             ...Array.from(affectedTenants).map(t => ({ type: "tenant", tenant_id: t })),
@@ -189,7 +196,7 @@ Deno.serve(async (req) => {
       .gte("created_at", d30ago);
 
     if (retentionData && retentionData.length >= 2) {
-      const renewalSoon = retentionData.filter((r: any) => {
+      const renewalSoon = (retentionData as RetentionRow[] | null || []).filter((r) => {
         if (!r.renewal_date) return false;
         const renewalMs = new Date(r.renewal_date).getTime();
         return renewalMs - now.getTime() < 90 * 86400000 && renewalMs > now.getTime();
@@ -202,7 +209,7 @@ Deno.serve(async (req) => {
             priority_type: "retention_threat",
             severity_level: "high",
             impact_scope: renewalSoon.length > 3 ? "portfolio" : "multi_tenant",
-            affected_entities_json: renewalSoon.map((r: any) => ({
+            affected_entities_json: renewalSoon.map((r) => ({
               tenant_id: r.tenant_id, renewal_date: r.renewal_date,
             })),
             recommended_actions_json: [
@@ -224,10 +231,10 @@ Deno.serve(async (req) => {
       .eq("snapshot_date", now.toISOString().split("T")[0]);
 
     const totalStages = stageSnapshots?.length || 0;
-    const criticalStages = stageSnapshots?.filter((s: any) => s.health_status === "critical") || [];
+    const criticalStages = (stageSnapshots as StageSnapshotRow[] | null || []).filter((s) => s.health_status === "critical");
 
     if (totalStages > 0 && (criticalStages.length / totalStages) >= 0.1) {
-      const affectedTenants = [...new Set(criticalStages.map((s: any) => s.tenant_id))];
+      const affectedTenants = [...new Set(criticalStages.map((s) => s.tenant_id))];
       const hash = makeHash("operational_breakdown", `${criticalStages.length}`);
       if (!existingHashes.has(hash)) {
         priorities.push({
@@ -255,7 +262,7 @@ Deno.serve(async (req) => {
         .in("clause_ref", Array.from(regClauses))
         .in("status", ["open", "monitoring"]);
 
-      const regTenants = new Set((overlapping || []).map((r: any) => r.tenant_id));
+      const regTenants = new Set((overlapping as RiskRow[] | null || []).map((r) => r.tenant_id));
       if (regTenants.size >= 3) {
         const hash = makeHash("regulator_exposure", `${regClauses.size}`);
         if (!existingHashes.has(hash)) {
@@ -285,15 +292,15 @@ Deno.serve(async (req) => {
       .gte("activated_at", d30ago);
 
     if (activePlaybooks && activePlaybooks.length >= 5) {
-      const byPlaybook = new Map<string, any[]>();
-      for (const pb of activePlaybooks) {
+      const byPlaybook = new Map<string, ActivationRow[]>();
+      for (const pb of activePlaybooks as ActivationRow[]) {
         if (!byPlaybook.has(pb.playbook_id)) byPlaybook.set(pb.playbook_id, []);
         byPlaybook.get(pb.playbook_id)!.push(pb);
       }
 
       for (const [playbookId, activations] of byPlaybook) {
         if (activations.length >= 5) {
-          const tenants = [...new Set(activations.map((a: any) => a.tenant_id))];
+          const tenants = [...new Set(activations.map((a) => a.tenant_id))];
           const hash = makeHash("compliance_cluster", playbookId);
           if (!existingHashes.has(hash)) {
             priorities.push({

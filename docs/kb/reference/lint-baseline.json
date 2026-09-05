@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-05T20:35:08.392Z",
-  "baselineSha": "2787ea8b8a4e9f42fc47c964cd5fcdf1d70f5bf0",
+  "generatedAt": "2026-09-05T20:47:59.332Z",
+  "baselineSha": "cc829bb508334a850759bb5bd937c088cc1a71e1",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 241,
-    "errors": 1013,
+    "filesWithFindings": 240,
+    "errors": 1000,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1006,
+    "@typescript-eslint/no-explicit-any": 993,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 618,
+      "errors": 605,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 618
+        "@typescript-eslint/no-explicit-any": 605
       }
     }
   },
@@ -932,13 +932,6 @@
         "@typescript-eslint/no-explicit-any": 3
       }
     },
-    "supabase/functions/strategic-orchestration": {
-      "errors": 13,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 13
-      }
-    },
     "supabase/functions/sync-clickup-time": {
       "errors": 2,
       "warnings": 0,
@@ -1718,9 +1711,6 @@
     },
     "supabase/functions/set-invite-password/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "supabase/functions/strategic-orchestration/index.ts": {
-      "@typescript-eslint/no-explicit-any": 13
     },
     "supabase/functions/sync-clickup-time/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
