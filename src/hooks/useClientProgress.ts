@@ -30,7 +30,7 @@ export function useClientProgress(tenantId: number | null) {
       if (!tenantId) return [];
 
       const { data, error } = await supabase
-        .from('v_client_dashboard_progress' as any)
+        .from('v_client_dashboard_progress')
         .select('*')
         .eq('tenant_id', tenantId);
 

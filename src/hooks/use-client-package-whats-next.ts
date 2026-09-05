@@ -38,7 +38,7 @@ export function useClientPackageWhatsNext(packageInstanceId: number | null) {
     queryFn: async (): Promise<ClientPackageWhatsNextRow[]> => {
       if (!activeTenantId || !packageInstanceId) return [];
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from(VIEW)
         .select('*')
         .eq('tenant_id', activeTenantId)

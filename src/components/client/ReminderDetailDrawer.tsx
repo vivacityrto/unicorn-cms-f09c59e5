@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, CheckSquare, Bell, ExternalLink, MapPin, Video } from "lucide-react";
 import { format } from "date-fns";
-import type { ClientReminder } from "@/hooks/useClientReminders";
+import type { ClientReminder, ReminderMeta } from "@/hooks/useClientReminders";
 
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof Calendar; className: string }> = {
   task: { label: "Task", icon: CheckSquare, className: "bg-blue-500/10 text-blue-700 border-blue-200" },
@@ -22,7 +22,7 @@ export function ReminderDetailDrawer({ reminder, open, onOpenChange }: Props) {
 
   const config = TYPE_CONFIG[reminder.item_type] || TYPE_CONFIG.reminder;
   const Icon = config.icon;
-  const meta = reminder.meta || {};
+  const meta = (reminder.meta as ReminderMeta | null) || {};
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
