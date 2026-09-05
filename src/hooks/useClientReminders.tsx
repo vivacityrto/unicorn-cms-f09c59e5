@@ -3,6 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
+import type { Json } from "@/integrations/supabase/types";
+
+/** Known shape of the reminder's meta JSON, as read by ReminderDetailDrawer. */
+export interface ReminderMeta {
+  role?: string;
+  location?: string;
+  meeting_url?: string;
+  status?: string;
+  completed?: boolean;
+  description?: string;
+}
 
 export interface ClientReminder {
   item_type: string;
@@ -12,7 +23,7 @@ export interface ClientReminder {
   starts_at: string;
   ends_at: string | null;
   owner_user_id: string;
-  meta: Record<string, any>;
+  meta: Json | null;
 }
 
 /**
