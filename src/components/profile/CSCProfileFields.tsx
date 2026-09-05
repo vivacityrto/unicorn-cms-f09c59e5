@@ -136,10 +136,10 @@ export function CSCProfileFields({ user, canEdit, onSave }: CSCProfileFieldsProp
       });
 
       onSave();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     } finally {
