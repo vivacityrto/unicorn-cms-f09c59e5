@@ -68,12 +68,13 @@ export function TenantMergeWizard({
         title: 'Merge Complete',
         description: `"${sourceTenant.name}" has been merged into "${targetTenant.name}".`,
       });
-    } catch (err: any) {
-      setError(err.message || 'Merge failed');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : undefined;
+      setError(message || 'Merge failed');
       setStep('confirm');
       toast({
         title: 'Merge Failed',
-        description: err.message || 'An error occurred during the merge.',
+        description: message || 'An error occurred during the merge.',
         variant: 'destructive',
       });
     }
