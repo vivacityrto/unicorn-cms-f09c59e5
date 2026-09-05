@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QUERY_STALE_TIMES } from "@/lib/queryConfig";
+import type { Tables } from "@/integrations/supabase/types";
 
 export interface TriageStaffOption {
   user_uuid: string;
@@ -18,7 +19,7 @@ export function useTriageStaffOptions() {
   return useQuery({
     queryKey: ["triage-staff"],
     queryFn: async (): Promise<TriageStaffOption[]> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("users")
         .select("user_uuid, first_name, last_name, email, avatar_url, unicorn_role")
         .in("unicorn_role", TRIAGE_ROLES)
@@ -27,7 +28,7 @@ export function useTriageStaffOptions() {
         .or("kpi_pod.is.null,kpi_pod.neq.qa")
         .order("first_name", { ascending: true });
       if (error) throw error;
-      return ((data ?? []) as any[]).map((u) => ({
+      return (data ?? []).map((u: Pick<Tables<"users">, "user_uuid" | "first_name" | "last_name" | "email" | "avatar_url" | "unicorn_role">) => ({
         ...u,
         display_name:
           [u.first_name, u.last_name].filter(Boolean).join(" ").trim() ||
