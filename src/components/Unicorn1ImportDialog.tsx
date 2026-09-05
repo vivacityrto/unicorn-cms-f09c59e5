@@ -61,8 +61,8 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
       if (!data?.clients?.length) {
         toast({ title: 'No results', description: 'No matching clients found in Unicorn 1.', variant: 'destructive' });
       }
-    } catch (err: any) {
-      toast({ title: 'Search failed', description: err.message || 'Could not connect to Unicorn 1', variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Search failed', description: err instanceof Error ? err.message : 'Could not connect to Unicorn 1', variant: 'destructive' });
       setClients([]);
     } finally {
       setSearching(false);
@@ -94,8 +94,8 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
       onSuccess?.();
       onOpenChange(false);
       navigate(`/tenant/${selected.id}`);
-    } catch (err: any) {
-      toast({ title: 'Import failed', description: err.message || 'Import error', variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Import failed', description: err instanceof Error ? err.message : 'Import error', variant: 'destructive' });
     } finally {
       setImporting(false);
     }

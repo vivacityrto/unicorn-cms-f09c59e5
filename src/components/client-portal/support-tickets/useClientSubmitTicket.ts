@@ -7,7 +7,7 @@ import { useClientTenant } from '@/contexts/ClientTenantContext';
 import { useSuggestDropdowns, SuggestDropdownItem } from '@/hooks/useSuggestDropdowns';
 import { TICKET_TYPE_BY_KEY, TicketTypeKey } from '@/components/support-tickets/ticketTypeConfig';
 
-interface AnyFormValues {
+export interface AnyFormValues {
   title: string;
   urgency?: 'low' | 'medium' | 'high' | 'critical';
   description?: string;

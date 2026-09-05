@@ -60,8 +60,8 @@ export function SharePointTemplateBrowser({
       if (error) throw error;
       const ids = new Set<string>((data || []).map((row) => row.source_drive_item_id as string));
       setImportedItemIds(ids);
-    } catch (err: any) {
-      console.error('Failed to load imported item IDs:', err.message);
+    } catch (err) {
+      console.error('Failed to load imported item IDs:', err instanceof Error ? err.message : err);
     }
   }, []);
 
@@ -80,8 +80,8 @@ export function SharePointTemplateBrowser({
       setInitialLoaded(true);
       await fetchImportedItemIds();
       return data.items || [];
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to browse SharePoint');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to browse SharePoint');
       return [];
     } finally {
       setLoading(false);

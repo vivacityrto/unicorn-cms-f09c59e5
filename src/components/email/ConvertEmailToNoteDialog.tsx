@@ -81,9 +81,9 @@ export function ConvertEmailToNoteDialog({
         if (data?.error) throw new Error(data.error);
         setTitle(data?.title ?? "");
         setNoteContent(data?.note_content ?? "");
-      } catch (e: any) {
+      } catch (e) {
         if (cancelled) return;
-        setError(e?.message || "Failed to generate note");
+        setError(e instanceof Error ? e.message : "Failed to generate note");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -115,8 +115,8 @@ export function ConvertEmailToNoteDialog({
         onSuccess?.();
         onOpenChange(false);
       }
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to save note");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save note");
     } finally {
       setSaving(false);
     }

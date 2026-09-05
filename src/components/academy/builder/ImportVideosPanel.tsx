@@ -131,15 +131,15 @@ export default function ImportVideosPanel({ open, onClose, moduleId, courseId, e
         created_by: user?.id,
       }));
 
-      const { error } = await supabase.from("academy_lessons").insert(rows as any);
+      const { error } = await supabase.from("academy_lessons").insert(rows);
       if (error) throw error;
 
       qc.invalidateQueries({ queryKey: ["academy-modules-lessons"] });
       toast.success(`${rows.length} lessons imported successfully`);
       onClose();
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error(e?.message || "Failed to import videos");
+      toast.error(e instanceof Error ? e.message : "Failed to import videos");
     } finally {
       setImporting(false);
     }

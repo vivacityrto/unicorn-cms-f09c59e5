@@ -104,11 +104,13 @@ export function GovernanceDeliveryDialog({
     queryKey: ['delivery-required-tags', documentId],
     enabled: open,
     queryFn: async () => {
+      const FIELD_TAG_SELECT = 'field:dd_fields(tag)';
+      type FieldTagRow = { field: { tag: string | null } | null };
       const { data } = await supabase
         .from('document_fields')
-        .select('field:dd_fields(tag)')
+        .select<typeof FIELD_TAG_SELECT, FieldTagRow>(FIELD_TAG_SELECT)
         .eq('document_id', documentId);
-      return (data || []).map((r: any) => r.field?.tag).filter(Boolean) as string[];
+      return (data || []).map((r) => r.field?.tag).filter(Boolean) as string[];
     },
   });
 
@@ -165,7 +167,7 @@ export function GovernanceDeliveryDialog({
         .order('archived', { ascending: true })
         .order('first_name', { ascending: true });
       if (error) throw error;
-      return ((data ?? []) as any[])
+      return (data ?? [])
         .filter((u) => {
           const inTeams = Array.isArray(u.staff_teams) && u.staff_teams.includes('client_success');
           const inTeam = u.staff_team === 'client_success';
