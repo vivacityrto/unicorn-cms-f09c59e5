@@ -10,7 +10,7 @@ export function useCheckpointPhasesEnabled() {
   const { data, isLoading } = useQuery({
     queryKey: ["checkpoint-phases-enabled"],
     queryFn: async (): Promise<boolean> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("app_settings")
         .select("enable_checkpoint_phases")
         .limit(1)
