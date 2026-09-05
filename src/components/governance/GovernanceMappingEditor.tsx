@@ -115,8 +115,8 @@ export function GovernanceMappingEditor({ versionId }: GovernanceMappingEditorPr
 
       toast.success('Merge field mappings saved');
       queryClient.invalidateQueries({ queryKey: ['governance-mapping', versionId] });
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to save mappings');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save mappings');
     } finally {
       setSaving(false);
     }
