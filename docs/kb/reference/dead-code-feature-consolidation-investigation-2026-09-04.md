@@ -179,15 +179,15 @@ liveness-triage rule from §7 above and §3.3 item 5) independently
 reconfirmed two items already on this register, at current `origin/main`
 after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
 
-- **`ComplianceScoreBreakdown.tsx`** (batch 80) — zero inbound imports
-  confirmed via `Grep` across all of `src/`; only self-references (its own
-  interface/export declarations) matched. Its paired hook,
-  **`useComplianceScore.ts`**, is likewise only imported by
-  `ComplianceScoreBreakdown.tsx` itself — the whole island is still fully
-  disconnected. This matches the existing §3.2 "Compliance-score island"
-  row exactly; no new evidence changes its disposition (still: confirm
-  product/history intent before deleting, and do not infer its backing
-  view/RPC is dead from frontend disconnection alone).
+- **Correction from the current-origin sweep (2026-09-05):** the cached
+  zero-inbound evidence for **`ComplianceScoreBreakdown.tsx`** and
+  **`useComplianceScore.ts`** is stale. At `origin/main` (`a0cf450b5`),
+  `ComplianceScoreBreakdown` is imported and rendered by
+  `ComplianceScoreCard`, while `useComplianceScore` is used by both
+  `ComplianceScoreBreakdown` and `CompletionSummaryModal`. This island is
+  live and is **not** a retirement candidate. Its backing
+  `v_compliance_score_latest` view and `calculate_compliance_score` RPC also
+  remain live; no deletion or schema action is authorized.
 - **`useCompletionEligibility.ts`** (batch 78, [PR #677](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/677)) — zero inbound
   imports confirmed the same way; matches the §3.3 zero-inbound queue's
   `useCompletionEligibility` entry (that list didn't record a file
