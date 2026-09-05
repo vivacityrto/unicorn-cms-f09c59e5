@@ -55,7 +55,7 @@ export const useMeetingTodos = (meetingId?: string) => {
 
   const updateTodo = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<EosTodo> & { id: string }) => {
-      const updateData: Record<string, any> = {};
+      const updateData: Record<string, unknown> = {};
       Object.keys(updates).forEach(key => {
         if (updates[key as keyof typeof updates] !== undefined) {
           updateData[key] = updates[key as keyof typeof updates];
