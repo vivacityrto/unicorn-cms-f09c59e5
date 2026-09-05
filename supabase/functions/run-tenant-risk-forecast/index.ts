@@ -30,7 +30,7 @@ serve(async (req) => {
     const d30 = new Date(now.getTime() - 30 * 86400000).toISOString();
     const d60 = new Date(now.getTime() - 60 * 86400000).toISOString();
 
-    const results: any[] = [];
+    const results: Array<{ tenant_id: number; composite_risk_index: number; status: string }> = [];
 
     for (const tenant of tenants || []) {
       const tid = tenant.id;
@@ -44,7 +44,7 @@ serve(async (req) => {
 
       const severityWeight: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
       let currentWeighted = 0, priorWeighted = 0;
-      (recentRisks || []).forEach((r: any) => {
+      (recentRisks || []).forEach((r) => {
         const w = severityWeight[r.severity] || 1;
         if (r.created_at >= d30) currentWeighted += w;
         else priorWeighted += w;
@@ -62,7 +62,7 @@ serve(async (req) => {
         .not("standard_clause", "is", null);
 
       const clauseCounts: Record<string, number> = {};
-      (clauseRisks || []).forEach((r: any) => {
+      (clauseRisks || []).forEach((r) => {
         clauseCounts[r.standard_clause] = (clauseCounts[r.standard_clause] || 0) + 1;
       });
       const totalClauseRisks = Object.values(clauseCounts).reduce((a, b) => a + b, 0);
@@ -108,10 +108,10 @@ serve(async (req) => {
         .limit(10);
 
       const gapCategories: Record<string, number> = {};
-      (gapChecks || []).forEach((gc: any) => {
+      (gapChecks || []).forEach((gc) => {
         const gaps = gc.gap_details_json || [];
         if (Array.isArray(gaps)) {
-          gaps.forEach((g: any) => {
+          gaps.forEach((g) => {
             if (g.category) gapCategories[g.category] = (gapCategories[g.category] || 0) + 1;
           });
         }
@@ -126,7 +126,7 @@ serve(async (req) => {
         .gte("detected_at", d60);
 
       const regClauses = new Set<string>();
-      (regUpdates || []).forEach((ru: any) => {
+      (regUpdates || []).forEach((ru) => {
         const clauses = ru.affected_clauses_json || [];
         if (Array.isArray(clauses)) clauses.forEach((c: string) => regClauses.add(c));
       });
