@@ -168,8 +168,8 @@ export function ObligationFormDialog({ open, onOpenChange, obligation }: Props) 
       await upsert.mutateAsync(payload);
       toast({ title: obligation ? "Obligation updated" : "Obligation created" });
       onOpenChange(false);
-    } catch (err: any) {
-      toast({ title: "Save failed", description: err?.message ?? String(err), variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Save failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     }
   };
 

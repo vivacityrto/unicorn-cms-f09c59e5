@@ -37,10 +37,10 @@ export function ObligationsTable({ rows, isLoading, onEdit, onDelete, onBroadcas
   const handleToggle = async (o: ReportingObligationRow, next: boolean) => {
     try {
       await toggle.mutateAsync({ id: o.id, is_active: next });
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: "Update failed",
-        description: err?.message ?? String(err),
+        description: err instanceof Error ? err.message : String(err),
         variant: "destructive",
       });
     }
