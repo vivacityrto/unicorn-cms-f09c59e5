@@ -218,7 +218,7 @@ for the batch-by-batch record). These three remain **candidates only** —
 nothing here authorizes deletion; follow the "Required gates per
 implementation PR" checklist in §7 before actioning any of them.
 
-**Actioned candidate (pending human sign-off):** the Phase 2.6 cohort for
+**Actioned candidate (PR [#686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686), pending human sign-off):** the Phase 2.6 cohort for
 `StageCellEditor` removes only the unimported `StageCellEditor` export and its
 exclusive editor/UI/data-access imports from
 `src/components/membership/StageCellEditor.tsx`. The file and its live
