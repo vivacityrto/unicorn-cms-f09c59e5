@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T02:57:01.007Z",
-  "baselineSha": "82d732773368bb0d15e05e25b04114bbe132dd4e",
+  "generatedAt": "2026-09-05T03:01:17.620Z",
+  "baselineSha": "6ef965dbae1038583e45426e58f8580d506b58c8",
   "totals": {
     "files": 1758,
-    "filesWithFindings": 370,
-    "errors": 1310,
+    "filesWithFindings": 369,
+    "errors": 1308,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1303,
+    "@typescript-eslint/no-explicit-any": 1301,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 642,
+      "errors": 640,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 635,
+        "@typescript-eslint/no-explicit-any": 633,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -313,11 +313,11 @@
       }
     },
     "src/components/tenant": {
-      "errors": 14,
+      "errors": 12,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 14,
-        "react-refresh/only-export-components": 1
+        "react-refresh/only-export-components": 1,
+        "@typescript-eslint/no-explicit-any": 12
       }
     },
     "src/components/ui": {
@@ -1484,12 +1484,8 @@
     "src/components/task-notes/useNotesSummary.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
-    "src/components/tenant/CloseClientModal.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
     "src/components/tenant/RenameTenantDialog.tsx": {
-      "react-refresh/only-export-components": 1,
-      "@typescript-eslint/no-explicit-any": 1
+      "react-refresh/only-export-components": 1
     },
     "src/components/tenant/TenantClickUpAISearch.tsx": {
       "@typescript-eslint/no-explicit-any": 1

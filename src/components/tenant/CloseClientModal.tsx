@@ -128,10 +128,10 @@ export function CloseClientModal({ open, onOpenChange, tenantId, tenantName, onS
       });
       onOpenChange(false);
       onSuccess();
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: 'Close Failed',
-        description: err.message,
+        description: err instanceof Error ? err.message : String(err),
         variant: 'destructive',
       });
     } finally {
