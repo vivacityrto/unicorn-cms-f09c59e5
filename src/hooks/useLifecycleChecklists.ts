@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export interface LifecycleDropdownItem {
   id: number;
@@ -42,14 +43,16 @@ export interface LifecycleInstance {
   created_at: string;
 }
 
-const fetchDropdown = async (table: string): Promise<LifecycleDropdownItem[]> => {
+type LifecycleDropdownTable = "dd_lifecycle_type" | "dd_lifecycle_responsible_role" | "dd_lifecycle_category";
+
+const fetchDropdown = async (table: LifecycleDropdownTable): Promise<LifecycleDropdownItem[]> => {
   const { data, error } = await supabase
-    .from(table as any)
+    .from(table)
     .select("id, code, label, description, sort_order, is_active")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
   if (error) throw error;
-  return (data || []) as unknown as LifecycleDropdownItem[];
+  return (data || []) as LifecycleDropdownItem[];
 };
 
 export function useLifecycleDropdowns() {
@@ -87,7 +90,7 @@ export function useLifecycleTemplates(lifecycleType?: string) {
     queryKey,
     queryFn: async () => {
       let query = supabase
-        .from("lifecycle_checklist_templates" as any)
+        .from("lifecycle_checklist_templates")
         .select("*")
         .order("category")
         .order("sort_order", { ascending: true });
@@ -98,19 +101,20 @@ export function useLifecycleTemplates(lifecycleType?: string) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as LifecycleTemplate[];
+      return (data || []) as Tables<'lifecycle_checklist_templates'>[];
     },
   });
 
   const createTemplate = useMutation({
     mutationFn: async (template: Partial<LifecycleTemplate>) => {
+      const insertPayload = template as TablesInsert<'lifecycle_checklist_templates'>;
       const { data, error } = await supabase
-        .from("lifecycle_checklist_templates" as any)
-        .insert(template as any)
+        .from("lifecycle_checklist_templates")
+        .insert(insertPayload)
         .select()
         .single();
       if (error) throw error;
-      return data as unknown as LifecycleTemplate;
+      return data as LifecycleTemplate;
     },
     onSuccess: () => {
       toast({ title: "Template step created" });
@@ -123,14 +127,15 @@ export function useLifecycleTemplates(lifecycleType?: string) {
 
   const updateTemplate = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<LifecycleTemplate> & { id: string }) => {
+      const updatePayload = updates as TablesUpdate<'lifecycle_checklist_templates'>;
       const { data, error } = await supabase
-        .from("lifecycle_checklist_templates" as any)
-        .update(updates as any)
+        .from("lifecycle_checklist_templates")
+        .update(updatePayload)
         .eq("id", id)
         .select()
         .single();
       if (error) throw error;
-      return data as unknown as LifecycleTemplate;
+      return data as LifecycleTemplate;
     },
     onSuccess: () => {
       toast({ title: "Template step updated" });
@@ -144,8 +149,8 @@ export function useLifecycleTemplates(lifecycleType?: string) {
   const deleteTemplate = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("lifecycle_checklist_templates" as any)
-        .update({ is_active: false } as any)
+        .from("lifecycle_checklist_templates")
+        .update({ is_active: false } satisfies TablesUpdate<'lifecycle_checklist_templates'>)
         .eq("id", id);
       if (error) throw error;
     },

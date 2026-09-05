@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T16:12:10.156Z",
-  "baselineSha": "6413ff94c45f1f0eefb2906fa14d854c3062b5dd",
+  "generatedAt": "2026-09-05T16:30:42.668Z",
+  "baselineSha": "471b24279c301c312f923b952f9a1976e0578031",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 262,
-    "errors": 1147,
+    "filesWithFindings": 261,
+    "errors": 1139,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 1140,
+    "@typescript-eslint/no-explicit-any": 1132,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 479,
+      "errors": 471,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 472,
+        "@typescript-eslint/no-explicit-any": 464,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -275,10 +275,10 @@
       }
     },
     "src/hooks": {
-      "errors": 164,
+      "errors": 156,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 164,
+        "@typescript-eslint/no-explicit-any": 156,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1388,9 +1388,6 @@
     },
     "src/hooks/useKpiReview.tsx": {
       "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/hooks/useLifecycleChecklists.ts": {
-      "@typescript-eslint/no-explicit-any": 8
     },
     "src/hooks/useMeetingSeries.tsx": {
       "@typescript-eslint/no-explicit-any": 1
