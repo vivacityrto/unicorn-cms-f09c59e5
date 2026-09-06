@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useClientPackageInstances, ClientPackageInstance, ClientPackageStage } from '@/hooks/useClientPackageInstances';
+import {
+  useClientPackageInstances,
+  ClientPackageInstance,
+  ClientPackageStage,
+} from '@/hooks/useClientPackageInstances';
+import { STAGE_STATUS_MAP, STAFF_TASK_STATUS_MAP } from '@/hooks/useClientPackageInstances';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +76,15 @@ const TASK_STATUS_ID_TO_KEY: Record<number, string> = {
   3: 'blocked',
 };
 
+type StageStatus = 'not_started' | 'in_progress' | 'complete' | 'skipped';
+type StaffTaskStatus = 'open' | 'in_progress' | 'done' | 'blocked';
+
+const isStageStatus = (status: string): status is StageStatus =>
+  status in STAGE_STATUS_MAP;
+
+const isStaffTaskStatus = (status: string): status is StaffTaskStatus =>
+  status in STAFF_TASK_STATUS_MAP;
+
 export default function ClientPackageDetail() {
   const { clientPackageId } = useParams();
   const navigate = useNavigate();
@@ -118,15 +132,23 @@ export default function ClientPackageDetail() {
     setExpandedStages(newExpanded);
   };
 
-  const handleStageStatusChange = async (stageId: number, status: string) => {
-    const success = await updateStageStatus(String(stageId), status as any);
+  const handleStageStatusChange = async (
+    stageId: number,
+    status: string,
+  ) => {
+    if (!isStageStatus(status)) return;
+    const success = await updateStageStatus(String(stageId), status);
     if (success) {
       loadData();
     }
   };
 
-  const handleTeamTaskStatusChange = async (taskId: number, status: string) => {
-    const success = await updateTeamTaskStatus(String(taskId), status as any);
+  const handleTeamTaskStatusChange = async (
+    taskId: number,
+    status: string,
+  ) => {
+    if (!isStaffTaskStatus(status)) return;
+    const success = await updateTeamTaskStatus(String(taskId), status);
     if (success) {
       loadData();
     }
