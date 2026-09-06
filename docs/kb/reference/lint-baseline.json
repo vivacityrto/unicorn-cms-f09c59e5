@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T08:01:22.828Z",
-  "baselineSha": "e0ab56bf0f22be9bdad6cc4227f920c1737c5e23",
+  "generatedAt": "2026-09-06T08:40:02.600Z",
+  "baselineSha": "d2e696ffffeaa50a2eb2e6e6b2191a91af8faa72",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 173,
-    "errors": 751,
+    "filesWithFindings": 170,
+    "errors": 730,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 744,
+    "@typescript-eslint/no-explicit-any": 723,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 187,
+      "errors": 166,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 180,
+        "@typescript-eslint/no-explicit-any": 159,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -57,13 +57,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-unused-expressions": 1
-      }
-    },
-    "src/components/admin": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
       }
     },
     "src/components/audit": {
@@ -198,10 +191,10 @@
     },
     "src/lib": {},
     "src/pages": {
-      "errors": 75,
+      "errors": 58,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 75
+        "@typescript-eslint/no-explicit-any": 58
       }
     },
     "src/pages/academy": {
@@ -903,9 +896,6 @@
     "src/components/academy/builder/ImportVideosPanel.tsx": {
       "@typescript-eslint/no-unused-expressions": 1
     },
-    "src/components/admin/AppSettingsForm.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "src/components/audit/DeleteAuditDialog.tsx": {
       "react-refresh/only-export-components": 1
     },
@@ -1055,17 +1045,11 @@
     "src/pages/AdminCompliancePacks.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
-    "src/pages/ManageEmailTemplates.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/MyExitInterview.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "src/pages/OAuthConsent.tsx": {
       "@typescript-eslint/no-explicit-any": 4
     },
     "src/pages/PackageDetail.tsx": {
-      "@typescript-eslint/no-explicit-any": 41
+      "@typescript-eslint/no-explicit-any": 32
     },
     "src/pages/StageBuilder.tsx": {
       "@typescript-eslint/no-explicit-any": 3
