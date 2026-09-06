@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T14:27:22.198Z",
-  "baselineSha": "559f5172b67d186ba355b1c5fe05d9846f70f37d",
+  "generatedAt": "2026-09-06T14:37:02.752Z",
+  "baselineSha": "2e6a32754047634ac0a552de8d45a5ee60c24cd2",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 126,
-    "errors": 452,
+    "filesWithFindings": 125,
+    "errors": 421,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 445,
+    "@typescript-eslint/no-explicit-any": 414,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 364,
+      "errors": 333,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 364
+        "@typescript-eslint/no-explicit-any": 333
       }
     }
   },
@@ -447,13 +447,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/import-unicorn1-client": {
-      "errors": 31,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 31
       }
     },
     "supabase/functions/invite-or-reset-user": {
@@ -977,9 +970,6 @@
     },
     "supabase/functions/generate-staff-checklist/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/import-unicorn1-client/index.ts": {
-      "@typescript-eslint/no-explicit-any": 31
     },
     "supabase/functions/invite-or-reset-user/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
