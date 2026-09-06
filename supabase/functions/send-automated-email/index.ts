@@ -14,6 +14,7 @@ import { EMAIL_LOGO_ALT, EMAIL_LOGO_URL } from "../_shared/app-base-url.ts";
 import { escapeHtml } from "../_shared/escape-html.ts";
 import { envFromAddress } from "../_shared/email-merge.ts";
 import { normalizeAppBaseUrl, resolveEmailUrl, validatedId } from "../_shared/email-urls.ts";
+type SupabaseClient = ReturnType<typeof createClient>;
 const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
 const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN") || "mg.unicorn-cms.au";
 const MAILGUN_REGION = Deno.env.get("MAILGUN_REGION") || "EU";
@@ -52,8 +53,7 @@ function appBase(): string {
   return normalizeAppBaseUrl(Deno.env.get("APP_BASE_URL"));
 }
 
-// deno-lint-ignore no-explicit-any
-async function handle24hrConfirmation(p: Record<string, unknown>, sb: any): Promise<Response> {
+async function handle24hrConfirmation(p: Record<string, unknown>, sb: SupabaseClient): Promise<Response> {
   const rtoName = escapeHtml(p.rto_name);
   const ceoName = escapeHtml(p.ceo_name || "Team");
   const clientEmail = typeof p.client_email === "string" ? p.client_email : "";
@@ -104,8 +104,7 @@ async function handle24hrConfirmation(p: Record<string, unknown>, sb: any): Prom
   });
 }
 
-// deno-lint-ignore no-explicit-any
-async function handleEvidenceReminder(p: Record<string, unknown>, sb: any): Promise<Response> {
+async function handleEvidenceReminder(p: Record<string, unknown>, sb: SupabaseClient): Promise<Response> {
   const rtoName = String(p.rto_name ?? "");
   const ceoName = escapeHtml(p.ceo_name || "Team");
   const clientEmail = typeof p.client_email === "string" ? p.client_email : "";
@@ -152,8 +151,7 @@ async function handleEvidenceReminder(p: Record<string, unknown>, sb: any): Prom
   });
 }
 
-// deno-lint-ignore no-explicit-any
-async function handleDocsReady(p: Record<string, unknown>, sb: any): Promise<Response> {
+async function handleDocsReady(p: Record<string, unknown>, sb: SupabaseClient): Promise<Response> {
   const auditId = validatedId(p.audit_id);
   const requestId = validatedId(p.request_id);
   const rtoName = escapeHtml(p.rto_name);
