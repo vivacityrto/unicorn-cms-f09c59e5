@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T20:52:22.829Z",
-  "baselineSha": "2a3c3bbe7e5cef01d4bde13700ec7c5412e21835",
+  "generatedAt": "2026-09-06T21:01:11.007Z",
+  "baselineSha": "7fa251e6d4f216c183f11c0253f38b43b931bb46",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 62,
-    "errors": 189,
+    "filesWithFindings": 61,
+    "errors": 188,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 182,
+    "@typescript-eslint/no-explicit-any": 181,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 133,
+      "errors": 132,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 133
+        "@typescript-eslint/no-explicit-any": 132
       }
     }
   },
@@ -287,13 +287,6 @@
       "byRule": {
         "@typescript-eslint/no-explicit-any": 43
       }
-    },
-    "supabase/functions/xero-webhook": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
     }
   },
   "byFile": {
@@ -472,9 +465,6 @@
     },
     "supabase/functions/tga-rto-sync/index.ts": {
       "@typescript-eslint/no-explicit-any": 43
-    },
-    "supabase/functions/xero-webhook/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
     }
   },
   "exceptions": [
