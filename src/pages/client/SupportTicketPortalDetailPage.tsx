@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useClientSupportTicket } from '@/components/client-portal/support-tickets/useClientSupportTickets';
 import { CLIENT_STATUS_LABEL, CLIENT_STATUS_CLASS } from '@/components/client-portal/support-tickets/statusDisplay';
-import { useSuggestAttachments, getAttachmentSignedUrl } from '@/hooks/useSuggestAttachments';
+import { useSuggestAttachments, getAttachmentSignedUrl, SuggestAttachment } from '@/hooks/useSuggestAttachments';
 import { toast } from '@/hooks/use-toast';
 
 function urgencyLabel(u: string | null): string {
@@ -48,8 +48,8 @@ export default function SupportTicketPortalDetailPage() {
       const url = await getAttachmentSignedUrl(path);
       if (!url) throw new Error('Could not create download link');
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (e: any) {
-      toast({ title: 'Failed to open attachment', description: e?.message, variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Failed to open attachment', description: e instanceof Error ? e.message : 'Unable to open attachment', variant: 'destructive' });
     }
   };
 
@@ -142,7 +142,7 @@ export default function SupportTicketPortalDetailPage() {
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Attachments</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1.5">
-                {attachments.map((a: any) => (
+                {attachments.map((a: SuggestAttachment) => (
                   <button
                     key={a.id}
                     type="button"
