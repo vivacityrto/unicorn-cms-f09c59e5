@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T16:00:35.136Z",
-  "baselineSha": "aba19ca2a7f61b3c1cd58663133ea612a1753bf0",
+  "generatedAt": "2026-09-06T16:08:33.983Z",
+  "baselineSha": "cdcc01a55d9eabe82706cf7f893fdeb818944f01",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 105,
-    "errors": 307,
+    "filesWithFindings": 102,
+    "errors": 300,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 300,
+    "@typescript-eslint/no-explicit-any": 293,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 219,
+      "errors": 212,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 219
+        "@typescript-eslint/no-explicit-any": 212
       }
     }
   },
@@ -309,32 +309,11 @@
         "@typescript-eslint/no-explicit-any": 5
       }
     },
-    "supabase/functions/embed-ask-viv-corpus": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
     "supabase/functions/export-client-timeline-pdf": {
       "errors": 4,
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/extract-document-fields": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/generate-ask-viv-faqs": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "supabase/functions/generate-certificate-pdf": {
@@ -771,17 +750,8 @@
     "supabase/functions/draft-executive-summary/validation_test.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "supabase/functions/embed-ask-viv-corpus/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "supabase/functions/export-client-timeline-pdf/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/extract-document-fields/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/generate-ask-viv-faqs/index.ts": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "supabase/functions/generate-certificate-pdf/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
