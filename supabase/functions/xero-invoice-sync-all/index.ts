@@ -2,6 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { authorizeCronInvoke } from "../_shared/cron-invoke-auth.ts";
 
+// auth-gate: none -- cron-only endpoint; authorizeCronInvoke validates the
+// shared invoke secret rather than a per-user caller.
 
 const XERO_CLIENT_ID = (Deno.env.get("XERO_CLIENT_ID") ?? "").trim();
 const XERO_CLIENT_SECRET = (Deno.env.get("XERO_CLIENT_SECRET") ?? "").trim();
@@ -14,6 +16,20 @@ const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-
 // keeps URL length and per-call payload size sane without needing to
 // discover Xero's actual practical limit the hard way.
 const BATCH_SIZE = 25;
+
+interface XeroInvoice {
+  Contact?: { ContactID?: string | null } | null;
+  Status?: string | null;
+  DateString?: string | null;
+  Date?: string | null;
+  DueDateString?: string | null;
+  DueDate?: string | null;
+}
+
+interface XeroInvoiceResponse {
+  Invoices?: XeroInvoice[];
+  pagination?: { pageCount?: number };
+}
 
 function json(req: Request, status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
@@ -128,7 +144,7 @@ Deno.serve(async (req) => {
       // pagination isn't followed (confirmed against real data: two
       // tenants with genuine PAID invoices came back null because their
       // invoices landed on page 2+).
-      let invoices: any[] = [];
+      let invoices: XeroInvoice[] = [];
       let batchFailed = false;
       let page = 1;
       while (true) {
@@ -150,7 +166,7 @@ Deno.serve(async (req) => {
           break;
         }
 
-        const data = await resp.json();
+        const data = await resp.json() as XeroInvoiceResponse;
         invoices = invoices.concat(data.Invoices ?? []);
         const pageCount = data.pagination?.pageCount ?? 1;
         if (page >= pageCount) break;
@@ -167,7 +183,7 @@ Deno.serve(async (req) => {
       // data: Adelaide Aviation's most recent invoice was VOIDED,
       // masking a PAID one underneath it).
       const NON_ACTIONABLE_STATUSES = new Set(["DRAFT", "VOIDED", "DELETED"]);
-      const mostRecentByContact = new Map<string, any>();
+      const mostRecentByContact = new Map<string, XeroInvoice>();
       for (const inv of invoices) {
         const cid = inv.Contact?.ContactID;
         if (!cid || NON_ACTIONABLE_STATUSES.has(inv.Status)) continue;
