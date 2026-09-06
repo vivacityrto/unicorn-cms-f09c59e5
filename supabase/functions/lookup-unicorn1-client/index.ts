@@ -4,6 +4,11 @@ import { Connection, Request as TdsRequest, TYPES } from "npm:tedious@18.6.1";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
+type SqlType = Parameters<TdsRequest["addParameter"]>[1];
+type SqlValue = Parameters<TdsRequest["addParameter"]>[2];
+type SqlParam = { name: string; type: SqlType; value: SqlValue };
+type SqlRow = Record<string, unknown>;
+type SqlColumn = { metadata: { colName: string }; value: unknown };
 
 function connectMssql(): Promise<Connection> {
   return new Promise((resolve, reject) => {
@@ -37,10 +42,10 @@ function connectMssql(): Promise<Connection> {
 function execQuery(
   conn: Connection,
   sql: string,
-  params: { name: string; type: any; value: any }[]
-): Promise<Record<string, any>[]> {
+  params: SqlParam[]
+): Promise<SqlRow[]> {
   return new Promise((resolve, reject) => {
-    const rows: Record<string, any>[] = [];
+    const rows: SqlRow[] = [];
     const req = new TdsRequest(sql, (err: Error | undefined) => {
       if (err) reject(err);
       else resolve(rows);
@@ -48,8 +53,8 @@ function execQuery(
     for (const p of params) {
       req.addParameter(p.name, p.type, p.value);
     }
-    req.on("row", (columns: any[]) => {
-      const row: Record<string, any> = {};
+    req.on("row", (columns: SqlColumn[]) => {
+      const row: SqlRow = {};
       for (const col of columns) {
         row[col.metadata.colName] = col.value;
       }
@@ -92,7 +97,7 @@ serve(async (req) => {
 
       // Search dbo.Users where discriminator = 'client'
       let sql: string;
-      let params: { name: string; type: any; value: any }[];
+      let params: SqlParam[];
 
       if (isNumeric) {
         sql = `SELECT TOP 20 u.[Id], u.[CompanyName]
@@ -140,10 +145,11 @@ serve(async (req) => {
     } finally {
       conn.close();
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("lookup-unicorn1-client error:", err);
+    const message = err instanceof Error ? err.message : "Internal error";
     return new Response(
-      JSON.stringify({ error: err.message || "Internal error" }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
