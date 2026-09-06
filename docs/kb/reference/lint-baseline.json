@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T14:58:18.722Z",
-  "baselineSha": "eb3549610cdb7536c3c89a3b9e2bbcde37b50039",
+  "generatedAt": "2026-09-06T15:08:17.759Z",
+  "baselineSha": "e5de82e06d71da003d9ac67f3c88a128421939fa",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 120,
-    "errors": 370,
+    "filesWithFindings": 118,
+    "errors": 352,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 363,
+    "@typescript-eslint/no-explicit-any": 345,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 282,
+      "errors": 264,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 282
+        "@typescript-eslint/no-explicit-any": 264
       }
     }
   },
@@ -230,20 +230,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/ai-orchestrator": {
-      "errors": 6,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 6
-      }
-    },
-    "supabase/functions/ask-viv-assistant-client": {
-      "errors": 12,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 12
       }
     },
     "supabase/functions/ask-viv-assistant": {
@@ -839,12 +825,6 @@
     },
     "supabase/functions/add-missing-packages/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/ai-orchestrator/index.ts": {
-      "@typescript-eslint/no-explicit-any": 6
-    },
-    "supabase/functions/ask-viv-assistant-client/index.ts": {
-      "@typescript-eslint/no-explicit-any": 12
     },
     "supabase/functions/ask-viv-assistant/index.ts": {
       "@typescript-eslint/no-explicit-any": 76
