@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
+
+type SupportUser = Pick<Tables<'users'>, 'user_uuid' | 'full_name' | 'email'>;
+type HelpMessage = Pick<Tables<'help_messages'>, 'thread_id' | 'role' | 'content' | 'created_at'>;
+type HelpThreadQueryRow = Pick<Tables<'help_threads'>, 'id' | 'tenant_id' | 'user_id' | 'subject' | 'status' | 'created_at' | 'updated_at'> & {
+  tenant: { id: number; name: string | null; rto_name: string | null } | null;
+};
 
 export interface AdminHelpThreadRow {
   id: string;
@@ -30,7 +37,7 @@ export function useAdminHelpThreads() {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      const list = (threads ?? []) as any[];
+      const list = (threads ?? []) as unknown as HelpThreadQueryRow[];
       if (list.length === 0) return [];
 
       const userIds = Array.from(
@@ -43,7 +50,7 @@ export function useAdminHelpThreads() {
               .from('users')
               .select('user_uuid, full_name, email')
               .in('user_uuid', userIds)
-          : Promise.resolve({ data: [] as any[] }),
+          : Promise.resolve({ data: [] as SupportUser[] }),
         supabase
           .from('help_messages')
           .select('thread_id, role, content, created_at')
@@ -52,10 +59,10 @@ export function useAdminHelpThreads() {
       ]);
 
       const userMap = new Map<string, { user_uuid: string; full_name: string | null; email: string | null }>();
-      (users ?? []).forEach((u: any) => userMap.set(u.user_uuid, u));
+      (users ?? []).forEach((u: SupportUser) => userMap.set(u.user_uuid, u));
 
-      const msgsByThread = new Map<string, any[]>();
-      (messages ?? []).forEach((m: any) => {
+      const msgsByThread = new Map<string, HelpMessage[]>();
+      (messages ?? []).forEach((m: HelpMessage) => {
         const arr = msgsByThread.get(m.thread_id) ?? [];
         arr.push(m);
         msgsByThread.set(m.thread_id, arr);
