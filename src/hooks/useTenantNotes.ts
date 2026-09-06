@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 export interface TenantNotesData {
   last_note_date: string | null;
@@ -11,6 +12,10 @@ export interface TenantNotesData {
 export type TenantNotesMap = Record<number, TenantNotesData>;
 
 const NOTE_BATCH_SIZE = 50;
+
+type NoteRow = Pick<Tables<"notes">, "tenant_id" | "created_at" | "title" | "note_details">;
+type ClientNoteRow = Pick<Tables<"client_notes">, "tenant_id" | "created_at" | "title" | "content">;
+type RegistrationRow = Pick<Tables<"tga_rto_summary">, "tenant_id" | "registration_end_date">;
 
 /**
  * Resolves the most recent note (across notes + client_notes) and
@@ -45,12 +50,12 @@ export function useTenantNotes(tenantIds: number[]) {
         ]);
 
         const merged = [
-          ...(notesRes.data || []).map((n: any) => ({
+          ...((notesRes.data || []) as NoteRow[]).map((n) => ({
             tenant_id: n.tenant_id,
             created_at: n.created_at,
             snippet: (n.title || n.note_details || "").substring(0, 50),
           })),
-          ...(clientNotesRes.data || []).map((n: any) => ({
+          ...((clientNotesRes.data || []) as ClientNoteRow[]).map((n) => ({
             tenant_id: n.tenant_id,
             created_at: n.created_at,
             snippet: (n.title || n.content || "").substring(0, 50),
@@ -70,7 +75,7 @@ export function useTenantNotes(tenantIds: number[]) {
         .in("tenant_id", sortedIds)
         .not("registration_end_date", "is", null);
       const regEndMap: Record<number, string> = {};
-      (regEndData || []).forEach((r: any) => { regEndMap[r.tenant_id] = r.registration_end_date; });
+      (regEndData || []).forEach((r: RegistrationRow) => { regEndMap[r.tenant_id] = r.registration_end_date; });
 
       const result: TenantNotesMap = {};
       sortedIds.forEach(id => {
