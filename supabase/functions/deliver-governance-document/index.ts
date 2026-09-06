@@ -610,7 +610,8 @@ async function resolveMergeFields(
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      value = (snap?.payload as any)?.registrations?.[0]?.endDate ?? null;
+      const payload = snap?.payload as { registrations?: Array<{ endDate?: string | null }> } | null;
+      value = payload?.registrations?.[0]?.endDate ?? null;
     }
 
     rows.push({ field_tag: field.tag, field_type: field.field_type, value });
@@ -672,7 +673,7 @@ serve(async (req) => {
       });
     }
 
-    const doc = version.document as any;
+    const doc = version.document as Record<string, unknown>;
     if (!doc) {
       return new Response(JSON.stringify({ error: "Parent document not found" }), {
         status: 404,
@@ -828,7 +829,7 @@ serve(async (req) => {
       .eq("document_id", doc.id);
 
     const requiredTags = (requiredFieldRows || [])
-      .map((r: any) => r.field?.tag)
+      .map((r: { field?: { tag?: string } | null }) => r.field?.tag)
       .filter(Boolean) as string[];
 
     // 2. Check which required tags have non-empty values
