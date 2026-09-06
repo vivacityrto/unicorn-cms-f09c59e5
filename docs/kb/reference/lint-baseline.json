@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T12:16:06.739Z",
-  "baselineSha": "589454b28a062ec9bc19e9ba478e7f8fc4e762ff",
+  "generatedAt": "2026-09-06T12:25:03.793Z",
+  "baselineSha": "f763d64f1f5c8cc9feab53d92a592364bf38bcc5",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 135,
-    "errors": 598,
+    "filesWithFindings": 134,
+    "errors": 591,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 591,
+    "@typescript-eslint/no-explicit-any": 584,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 510,
+      "errors": 503,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 510
+        "@typescript-eslint/no-explicit-any": 503
       }
     }
   },
@@ -568,13 +568,6 @@
         "@typescript-eslint/no-explicit-any": 4
       }
     },
-    "supabase/functions/research-audit-intelligence": {
-      "errors": 7,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 7
-      }
-    },
     "supabase/functions/research-evidence-gap-check": {
       "errors": 4,
       "warnings": 0,
@@ -1083,9 +1076,6 @@
     },
     "supabase/functions/regulator-watch-check/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/research-audit-intelligence/index.ts": {
-      "@typescript-eslint/no-explicit-any": 7
     },
     "supabase/functions/research-evidence-gap-check/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
