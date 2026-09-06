@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T12:52:17.247Z",
-  "baselineSha": "c7919daf963c90eb36e271ae1545cd505397a36a",
+  "generatedAt": "2026-09-06T13:08:20.580Z",
+  "baselineSha": "cc41c41b07e68f86aedb4fa7aea6b1401d7b6e7f",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 132,
-    "errors": 566,
+    "filesWithFindings": 131,
+    "errors": 549,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 559,
+    "@typescript-eslint/no-explicit-any": 542,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 478,
+      "errors": 461,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 478
+        "@typescript-eslint/no-explicit-any": 461
       }
     }
   },
@@ -359,10 +359,10 @@
       }
     },
     "supabase/functions/draft-executive-summary": {
-      "errors": 22,
+      "errors": 5,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 22
+        "@typescript-eslint/no-explicit-any": 5
       }
     },
     "supabase/functions/draft-finding": {
@@ -969,9 +969,6 @@
     },
     "supabase/functions/draft-executive-summary/_validation.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "supabase/functions/draft-executive-summary/index.ts": {
-      "@typescript-eslint/no-explicit-any": 17
     },
     "supabase/functions/draft-executive-summary/validation_test.ts": {
       "@typescript-eslint/no-explicit-any": 3
