@@ -14,6 +14,8 @@ import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+type ServiceClient = ReturnType<typeof createServiceClient>;
+type VectorRpcRow = { id: string; source_type: string; record_id: string; record_label: string; chunk_text: string; similarity: number; metadata?: Record<string, unknown> | null };
 
 interface RequestPayload {
   tenant_id: number;
@@ -129,7 +131,7 @@ Deno.serve(async (req) => {
       return jsonError(req, 500, "SEARCH_ERROR", "Failed to perform vector search");
     }
 
-    const searchResults: SearchResult[] = (results || []).map((r: any) => ({
+    const searchResults: SearchResult[] = (results as VectorRpcRow[] | null || []).map((r) => ({
       id: r.id,
       source_type: r.source_type,
       record_id: r.record_id,
@@ -158,9 +160,9 @@ Deno.serve(async (req) => {
  * Validate tenant access
  */
 async function validateTenantAccess(
-  supabase: any,
+  supabase: ServiceClient,
   userId: string,
-  profile: any,
+  profile: Parameters<typeof checkSuperAdmin>[0],
   tenantId: number
 ): Promise<boolean> {
   // SuperAdmins and Vivacity Team have access to all tenants

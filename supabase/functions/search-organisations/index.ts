@@ -7,6 +7,8 @@ const SANDBOX_URL = 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/Or
 // For public sandbox, these may not be required or use default test credentials
 const SANDBOX_USERNAME = Deno.env.get('TGA_SANDBOX_USERNAME') || '';
 const SANDBOX_PASSWORD = Deno.env.get('TGA_SANDBOX_PASSWORD') || '';
+type Organisation = { code: string; name: string; trading_name: string | null; abn: string | null; address: Address | null; scope: string | null };
+type Address = { street: string | null; suburb: string | null; state: string | null; postcode: string | null };
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -132,8 +134,8 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function parseOrganisationsFromXml(xml: string): any[] {
-  const organisations: any[] = [];
+function parseOrganisationsFromXml(xml: string): Organisation[] {
+  const organisations: Organisation[] = [];
   
   try {
     // Extract organisation elements using regex (simple parsing for MVP)
@@ -172,7 +174,7 @@ function parseOrganisationsFromXml(xml: string): any[] {
   return organisations.slice(0, 10); // Limit to 10 results
 }
 
-function extractAddress(xml: string, index: number): any {
+function extractAddress(xml: string, index: number): Address | null {
   // Simple address extraction - can be enhanced
   const streetMatch = xml.match(/<a:StreetAddress[^>]*>([^<]+)<\/a:StreetAddress>/);
   const suburbMatch = xml.match(/<a:Suburb[^>]*>([^<]+)<\/a:Suburb>/);

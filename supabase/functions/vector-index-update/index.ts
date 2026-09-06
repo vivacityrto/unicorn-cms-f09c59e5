@@ -24,6 +24,8 @@ import {
   chunkText,
   buildNamespaceKey,
 } from "../_shared/vector-helpers.ts";
+type ServiceClient = ReturnType<typeof createServiceClient>;
+type VectorRecord = { id: string; label: string; text: string; mode: string; metadata: Record<string, unknown> };
 
 
 interface RequestPayload {
@@ -186,11 +188,11 @@ Deno.serve(async (req) => {
  * Fetch a specific record for indexing
  */
 async function fetchRecord(
-  supabase: any,
+  supabase: ServiceClient,
   tenantId: number,
   sourceType: string,
   recordId: string
-): Promise<{ id: string; label: string; text: string; mode: string; metadata: any } | null> {
+): Promise<VectorRecord | null> {
   try {
     switch (sourceType) {
       case "client_summary": {
