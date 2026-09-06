@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T21:21:43.778Z",
-  "baselineSha": "276f9db4cf63fa187e863f681d9a3f872b53a9e4",
+  "generatedAt": "2026-09-06T21:31:01.887Z",
+  "baselineSha": "fdc0c90c18db76691ebe79c694fac4cbea1ab2df",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 52,
-    "errors": 177,
+    "filesWithFindings": 50,
+    "errors": 173,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 170,
+    "@typescript-eslint/no-explicit-any": 166,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 51,
+      "errors": 47,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 44,
+        "@typescript-eslint/no-explicit-any": 40,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -154,11 +154,10 @@
     },
     "src/features/pdp": {},
     "src/hooks": {
-      "errors": 4,
+      "errors": 0,
       "warnings": 1,
       "byRule": {
-        "react-refresh/only-export-components": 1,
-        "@typescript-eslint/no-explicit-any": 4
+        "react-refresh/only-export-components": 1
       }
     },
     "src/lib": {},
@@ -348,12 +347,6 @@
     "src/features/pdp/workforce.ts": {},
     "src/hooks/useAuth.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/hooks/useEngagementAudit.ts": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/hooks/usePackageUsage.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "src/hooks/usePageViewTracking.ts": {},
     "src/lib/friendlyDbError.ts": {},
