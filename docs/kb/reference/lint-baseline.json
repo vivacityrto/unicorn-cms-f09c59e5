@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T15:29:17.015Z",
-  "baselineSha": "dcf3797ca55314c4f8b5069a79f30d339ce5cb58",
+  "generatedAt": "2026-09-06T15:41:06.302Z",
+  "baselineSha": "71ead7bc250db806f7ba56fd344362be858fbd87",
   "totals": {
-    "files": 1755,
-    "filesWithFindings": 114,
-    "errors": 336,
+    "files": 1756,
+    "filesWithFindings": 109,
+    "errors": 318,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 329,
+    "@typescript-eslint/no-explicit-any": 311,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 248,
+      "errors": 230,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 248
+        "@typescript-eslint/no-explicit-any": 230
       }
     }
   },
@@ -302,13 +302,6 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/deliver-governance-document": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
-      }
-    },
     "supabase/functions/draft-executive-summary": {
       "errors": 5,
       "warnings": 0,
@@ -435,32 +428,11 @@
         "@typescript-eslint/no-explicit-any": 4
       }
     },
-    "supabase/functions/record-executive-summary-decision": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
     "supabase/functions/record-finding-decision": {
       "errors": 3,
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3
-      }
-    },
-    "supabase/functions/regulator-watch-check": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/research-evidence-gap-check": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
       }
     },
     "supabase/functions/resend-invite": {
@@ -489,13 +461,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 2
-      }
-    },
-    "supabase/functions/send-automated-email": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
       }
     },
     "supabase/functions/send-composed-email": {
@@ -828,9 +793,6 @@
     "supabase/functions/delete-user/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/deliver-governance-document/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "supabase/functions/draft-executive-summary/_validation.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -888,17 +850,8 @@
     "supabase/functions/provision-m365-user/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "supabase/functions/record-executive-summary-decision/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "supabase/functions/record-finding-decision/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "supabase/functions/regulator-watch-check/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/research-evidence-gap-check/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "supabase/functions/resend-invite/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
@@ -911,9 +864,6 @@
     },
     "supabase/functions/send-action-item-due-reminders/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "supabase/functions/send-automated-email/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
     },
     "supabase/functions/send-composed-email/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
