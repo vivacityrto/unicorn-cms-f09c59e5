@@ -22,6 +22,21 @@ interface Member {
   created_at: string;
 }
 
+interface TenantUserJoin {
+  role: string | null;
+  users: {
+    user_uuid: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string;
+    phone: string | null;
+    mobile_phone: string | null;
+    unicorn_role: string | null;
+    disabled: boolean | null;
+    created_at: string;
+  } | null;
+}
+
 export default function TenantMembers() {
   const { tenantId } = useParams();
   const navigate = useNavigate();
@@ -54,9 +69,9 @@ export default function TenantMembers() {
 
       if (error) throw error;
 
-      const formattedMembers: Member[] = (data || [])
-        .filter((tu: any) => tu.users)
-        .map((tu: any) => {
+      const formattedMembers: Member[] = ((data || []) as unknown as TenantUserJoin[])
+        .filter((tu) => tu.users)
+        .map((tu) => {
           const user = tu.users;
           return {
             id: user.user_uuid,
@@ -71,7 +86,7 @@ export default function TenantMembers() {
         });
 
       setMembers(formattedMembers);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching data:", error);
       toast({
         title: "Error",

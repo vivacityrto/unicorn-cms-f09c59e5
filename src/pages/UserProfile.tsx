@@ -67,6 +67,8 @@ interface CurrentUser {
   global_role: string | null;
 }
 
+type UserQueryRow = UserData & { tenants?: { name: string } | null };
+
 export default function UserProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -159,12 +161,13 @@ export default function UserProfile() {
       }
 
       // Add tenant name to user data and cast JSON fields
-      const rawData = userData as any;
+      const rawData = userData as unknown as UserQueryRow;
+      const { tenants, ...profileData } = rawData;
       const userWithTenant: UserData = {
-        ...rawData,
+        ...profileData,
         personal_email,
         personal_phone,
-        tenant_name: rawData.tenants?.name || null,
+        tenant_name: tenants?.name || null,
         staff_team: rawData.staff_team || null,
         staff_teams: rawData.staff_teams || null,
         working_days: rawData.working_days as string[] | null,
@@ -175,13 +178,12 @@ export default function UserProfile() {
         cover_user_id: rawData.cover_user_id || null,
         superadmin_level: rawData.superadmin_level || null,
       };
-      delete (userWithTenant as any).tenants;
-
       setUser(userWithTenant);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : undefined;
       toast({
         title: 'Error',
-        description: error.message || 'Failed to load user profile',
+        description: message || 'Failed to load user profile',
         variant: 'destructive',
       });
     } finally {
