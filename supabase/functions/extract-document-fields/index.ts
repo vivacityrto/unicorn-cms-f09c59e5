@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
 
     // Store extraction results in the appropriate table
     if (doc_type === "tas") {
-      const units = (output.units || []).map((u: any) => u.unit_code || u.unit_title || "");
+      const units = (output.units || []).map((u: { unit_code?: string; unit_title?: string }) => u.unit_code || u.unit_title || "");
 
       const { data: extract, error: insertError } = await supabase
         .from("tas_extracts")
