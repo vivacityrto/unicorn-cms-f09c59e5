@@ -17,6 +17,27 @@ function clamp(v: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, v));
 }
 
+interface RetentionForecastResult {
+  tenant_id: number;
+  forecast_date: string;
+  engagement_score: number;
+  value_utilisation_score: number;
+  service_pressure_score: number;
+  risk_stress_overlap_score: number;
+  composite_retention_risk_index: number;
+  retention_status: string;
+  key_drivers_json: string[];
+}
+
+interface DurationRow {
+  duration_minutes: number | null;
+}
+
+interface PackageHoursRow {
+  allocated_hours: number | null;
+  used_hours: number | null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
@@ -48,7 +69,7 @@ Deno.serve(async (req) => {
     const d60 = new Date(Date.now() - 60 * 86400000).toISOString();
     const d30 = new Date(Date.now() - 30 * 86400000).toISOString();
 
-    const results: any[] = [];
+    const results: RetentionForecastResult[] = [];
 
     for (const tenant of tenants) {
       const tid = tenant.id;
@@ -62,7 +83,7 @@ Deno.serve(async (req) => {
         .eq("tenant_id", tid)
         .gte("created_at", d60);
       const totalConsultMins = (consults ?? []).reduce(
-        (s: number, c: any) => s + (Number(c.duration_minutes) || 0),
+        (s: number, c: DurationRow) => s + (Number(c.duration_minutes) || 0),
         0
       );
 
@@ -100,11 +121,11 @@ Deno.serve(async (req) => {
       let utilisationPct = 50; // default neutral
       if (pkgs?.length) {
         const totalAlloc = pkgs.reduce(
-          (s: number, p: any) => s + (Number(p.allocated_hours) || 0),
+          (s: number, p: PackageHoursRow) => s + (Number(p.allocated_hours) || 0),
           0
         );
         const totalUsed = pkgs.reduce(
-          (s: number, p: any) => s + (Number(p.used_hours) || 0),
+          (s: number, p: PackageHoursRow) => s + (Number(p.used_hours) || 0),
           0
         );
         utilisationPct = totalAlloc > 0 ? (totalUsed / totalAlloc) * 100 : 50;
