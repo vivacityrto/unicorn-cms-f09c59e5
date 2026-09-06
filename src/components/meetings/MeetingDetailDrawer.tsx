@@ -433,9 +433,9 @@ export function MeetingDetailDrawer({
                   onSync={() => meeting?.id && syncArtifacts(meeting.id)}
                   onShareToggle={handleShareToggle}
                   isSharingArtifact={isSharingArtifact}
-                  meetingMsSyncStatus={(meeting as any)?.ms_sync_status}
-                  meetingMsSyncError={(meeting as any)?.ms_sync_error}
-                  meetingMsLastSyncedAt={(meeting as any)?.ms_last_synced_at}
+                  meetingMsSyncStatus={meeting.ms_sync_status}
+                  meetingMsSyncError={meeting.ms_sync_error}
+                  meetingMsLastSyncedAt={meeting.ms_last_synced_at}
                 />
               </TabsContent>
             )}
