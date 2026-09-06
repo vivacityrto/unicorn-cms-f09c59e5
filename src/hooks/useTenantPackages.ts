@@ -43,9 +43,9 @@ export function useTenantPackages(tenantIds: number[]) {
             .from("packages")
             .select("id, name, full_text, slug, package_type")
             .in("id", packageIds)
-        : { data: [] as any[] };
+        : { data: [] };
 
-      const packageLookup = (packagesData || []).reduce((acc, pkg: any) => {
+      const packageLookup = (packagesData || []).reduce((acc, pkg) => {
         acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug, package_type: pkg.package_type };
         return acc;
       }, {} as Record<number, { name: string; full_text: string | null; slug: string | null; package_type: string | null }>);
@@ -55,7 +55,7 @@ export function useTenantPackages(tenantIds: number[]) {
       const includedMap: Record<number, number> = {};
       const usedMap: Record<number, number> = {};
 
-      (piData || []).forEach((pi: any) => {
+      (piData || []).forEach((pi) => {
         if (pi.package_id && packageLookup[pi.package_id]) {
           const pkg = packageLookup[pi.package_id];
           if (!allPackagesMap[pi.tenant_id]) allPackagesMap[pi.tenant_id] = [];
