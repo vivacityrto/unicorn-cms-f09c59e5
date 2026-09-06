@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T17:54:19.480Z",
-  "baselineSha": "239476d0f992c0ec923d74d5f336a7be6fbb4836",
+  "generatedAt": "2026-09-06T18:02:49.327Z",
+  "baselineSha": "9d53499b04e0870092c12c37723c3e762bd515ed",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 73,
-    "errors": 206,
+    "filesWithFindings": 66,
+    "errors": 198,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 199,
+    "@typescript-eslint/no-explicit-any": 191,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 150,
+      "errors": 142,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 150
+        "@typescript-eslint/no-explicit-any": 142
       }
     }
   },
@@ -183,13 +183,6 @@
         "@typescript-eslint/no-explicit-any": 38
       }
     },
-    "supabase/functions/activate-ghost-user": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
-      }
-    },
     "supabase/functions/add-missing-packages": {
       "errors": 1,
       "warnings": 0,
@@ -281,28 +274,7 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/invite-user": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
     "supabase/functions/mailgun-webhook": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/resend-invite": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/send-staff-onboarding-email": {
       "errors": 1,
       "warnings": 0,
       "byRule": {
@@ -328,27 +300,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 43
-      }
-    },
-    "supabase/functions/toggle-user-status": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/update-user-profile": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/update-user-role": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
       }
     },
     "supabase/functions/xero-invoice-sync-all": {
@@ -498,9 +449,6 @@
     "src/test/tenant/isolation.test.tsx": {
       "@typescript-eslint/no-explicit-any": 38
     },
-    "supabase/functions/activate-ghost-user/index.ts": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
     "supabase/functions/add-missing-packages/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -543,16 +491,7 @@
     "supabase/functions/generate-staff-checklist/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/invite-user/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
     "supabase/functions/mailgun-webhook/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/resend-invite/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/send-staff-onboarding-email/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/sync-clickup-time/index.ts": {
@@ -563,15 +502,6 @@
     },
     "supabase/functions/tga-rto-sync/index.ts": {
       "@typescript-eslint/no-explicit-any": 43
-    },
-    "supabase/functions/toggle-user-status/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/update-user-profile/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/update-user-role/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/xero-invoice-sync-all/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
