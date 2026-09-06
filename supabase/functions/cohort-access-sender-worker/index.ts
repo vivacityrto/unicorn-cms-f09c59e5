@@ -6,6 +6,16 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
+interface SenderPayload {
+  ok?: boolean;
+  [key: string]: unknown;
+}
+
+interface InvokeErrorContext {
+  json: () => Promise<unknown>;
+  text: () => Promise<string>;
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -118,7 +128,7 @@ serve(async (req) => {
 
       let outcome: "sent" | "skipped" | "failed" = "failed";
       let reason: string | null = null;
-      let payload: any = undefined;
+      let payload: SenderPayload | undefined;
       try {
         const { data, error } = await admin.functions.invoke(senderName, {
           body: invokeBody,
@@ -126,10 +136,11 @@ serve(async (req) => {
         });
 
         // supabase.functions.invoke surfaces non-2xx via `error.context`; parse if present
-        payload = data;
-        if (error && (error as any).context) {
-          try { payload = await (error as any).context.json(); }
-          catch { try { payload = JSON.parse(await (error as any).context.text()); } catch { /* noop */ } }
+        payload = data as SenderPayload | undefined;
+        const context = error?.context as InvokeErrorContext | undefined;
+        if (context) {
+          try { payload = await context.json() as SenderPayload; }
+          catch { try { payload = JSON.parse(await context.text()) as SenderPayload; } catch { /* noop */ } }
         }
 
         if (payload?.ok) {

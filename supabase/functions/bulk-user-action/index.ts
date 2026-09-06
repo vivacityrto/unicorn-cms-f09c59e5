@@ -2,6 +2,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
+interface TargetUser {
+  user_uuid: string;
+  tenant_id: number | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  unicorn_role: string | null;
+}
+
 type BulkActionBody = {
   user_uuids: string[];
   action: 'activate' | 'deactivate' | 'change_role';
@@ -86,7 +95,7 @@ Deno.serve(async (req) => {
       .select("user_uuid, tenant_id, first_name, last_name, email, unicorn_role")
       .in("user_uuid", user_uuids);
     const targetByUuid = new Map(
-      (targetUsers || []).map((u: any) => [u.user_uuid, u]),
+      (targetUsers || []).map((u) => [u.user_uuid, u as TargetUser] as const),
     );
 
     // All-or-nothing: every requested UUID must resolve to a real user
@@ -140,11 +149,11 @@ Deno.serve(async (req) => {
         console.error("Update error:", updateError);
         return jsonErr(req, 400, "UPDATE_FAILED", updateError.message);
       }
-      successUuids = (updatedUsers || []).map((u: any) => u.user_uuid);
+      successUuids = (updatedUsers || []).map((u) => u.user_uuid);
 
       // Emit one timeline event per role change
       for (const uuid of successUuids) {
-        const target: any = targetByUuid.get(uuid);
+        const target = targetByUuid.get(uuid);
         if (!target?.tenant_id) continue;
         const fullName = [target.first_name, target.last_name].filter(Boolean).join(' ').trim() || target.email || 'user';
         await emitTimelineEvent(supabase, {
@@ -195,9 +204,9 @@ Deno.serve(async (req) => {
       headers: { "content-type": "application/json", ...corsHeaders(req) },
       status: 200,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Error in bulk-user-action:", e);
-    return jsonErr(req, 500, "UNHANDLED", e?.message ?? String(e));
+    return jsonErr(req, 500, "UNHANDLED", e instanceof Error ? e.message : String(e));
   }
 });
 
