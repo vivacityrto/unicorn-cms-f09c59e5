@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T15:35:32.342Z",
-  "baselineSha": "2d273aa90bcef28b1c2bf3f39594ee2c9f7847ff",
+  "generatedAt": "2026-09-06T15:44:44.704Z",
+  "baselineSha": "54ce9ca1f6b59381cf3e7c2d902b3e643e7cb336",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 111,
-    "errors": 324,
+    "filesWithFindings": 109,
+    "errors": 318,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 317,
+    "@typescript-eslint/no-explicit-any": 311,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 236,
+      "errors": 230,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 236
+        "@typescript-eslint/no-explicit-any": 230
       }
     }
   },
@@ -302,13 +302,6 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/deliver-governance-document": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
-      }
-    },
     "supabase/functions/draft-executive-summary": {
       "errors": 5,
       "warnings": 0,
@@ -468,13 +461,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 2
-      }
-    },
-    "supabase/functions/send-automated-email": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
       }
     },
     "supabase/functions/send-composed-email": {
@@ -807,9 +793,6 @@
     "supabase/functions/delete-user/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/deliver-governance-document/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "supabase/functions/draft-executive-summary/_validation.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -881,9 +864,6 @@
     },
     "supabase/functions/send-action-item-due-reminders/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "supabase/functions/send-automated-email/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
     },
     "supabase/functions/send-composed-email/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
