@@ -41,6 +41,12 @@ const PRODUCT_NAME = "Welcome to Vivacity";
 const SUPPORT_EMAIL = "support@vivacity.com.au";
 const SUPPORT_PHONE = "1300 729 455";
 
+type JsonRecord = Record<string, unknown>;
+type EmailVariables = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as JsonRecord : {};
+}
 
 type AuthLinkType = "recovery" | "signup" | "magiclink" | "email_change";
 
@@ -65,7 +71,7 @@ function buildFromHeader(): string {
   return `${MAIL_FROM_NAME} <${MAIL_FROM_ADDRESS}>`;
 }
 
-function redactSensitive(input: any): any {
+function redactSensitive(input: unknown): unknown {
   try {
     if (input === null || input === undefined) return input;
     if (typeof input === "string") {
@@ -83,7 +89,7 @@ function redactSensitive(input: any): any {
     }
     if (Array.isArray(input)) return input.map(redactSensitive);
     if (typeof input === "object") {
-      const out: Record<string, any> = {};
+      const out: JsonRecord = {};
       for (const [k, v] of Object.entries(input)) {
         if (/token|action_link|redirect/i.test(k)) { // redacted; links use APP_BASE_URL
           out[k] = "[REDACTED]";
@@ -102,7 +108,7 @@ function redactSensitive(input: any): any {
 async function insertLog(log: {
   to_email: string;
   template_name: string;
-  variables: Record<string, any>;
+  variables: EmailVariables;
   status: string;
   error_message?: string | null;
 }) {
@@ -206,13 +212,15 @@ function buildActivateLink(token: string, type: AuthLinkType, email: string): st
   return `${APP_BASE_URL}/activate?token=${encodeURIComponent(token)}&type=${encodeURIComponent(type)}&email=${encodeURIComponent(email)}`;
 }
 
-function isLikelyHookPayload(body: any): boolean {
+function isLikelyHookPayload(body: unknown): boolean {
   try {
     if (!body || typeof body !== "object") return false;
-    const type = body?.type || body?.email_action_type || body?.event;
-    const email = body?.email || body?.user?.email;
-    const ed = body?.email_data || body?.data || {};
-    const hasTokenish = !!(ed?.token || ed?.token_hash || ed?.token_new || ed?.token_hash_new);
+    const payload = asRecord(body);
+    const user = asRecord(payload.user);
+    const ed = asRecord(payload.email_data ?? payload.data);
+    const type = payload.type || payload.email_action_type || payload.event;
+    const email = payload.email || user.email;
+    const hasTokenish = !!(ed.token || ed.token_hash || ed.token_new || ed.token_hash_new);
     const looksAuthy = !!(type && email && (ed || hasTokenish));
     return Boolean(looksAuthy);
   } catch {
@@ -220,7 +228,7 @@ function isLikelyHookPayload(body: any): boolean {
   }
 }
 
-async function sendViaMailgun(to: string, template: string, variables: Record<string, any>, subject?: string) {
+async function sendViaMailgun(to: string, template: string, variables: EmailVariables, subject?: string) {
   if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN || !MAIL_FROM_ADDRESS) {
     const msg = "Mailgun configuration missing (MAILGUN_API_KEY/MAILGUN_DOMAIN/MAIL_FROM_EMAIL)";
     return { ok: false, status: 500, raw: msg, error: msg };
@@ -244,7 +252,7 @@ async function sendViaMailgun(to: string, template: string, variables: Record<st
   return { ok: resp.ok, status: resp.status, raw, error: resp.ok ? undefined : raw };
 }
 
-function stripRequestLinkKeys(obj: Record<string, any> | null | undefined): Record<string, any> {
+function stripRequestLinkKeys(obj: EmailVariables | null | undefined): EmailVariables {
   const out = { ...(obj || {}) };
   // action_link / redirect_to / redirectTo / emailRedirectTo are never taken from the request; APP_BASE_URL only.
   for (const k of ["appBaseUrl", "action_link", "redirect_to", "redirectTo", "emailRedirectTo"]) { // APP_BASE_URL wins
@@ -263,8 +271,8 @@ serve(async (req: Request) => {
     const isHookHeader = req.headers.get("x-hook-secret") === SEND_EMAIL_HOOK_SECRET && SEND_EMAIL_HOOK_SECRET.length > 0;
 
     // Try to parse body but handle non-JSON gracefully
-    let body: any = {};
-    try { body = await req.json(); } catch { body = {}; }
+    let body: JsonRecord = {};
+    try { body = asRecord(await req.json()); } catch { body = {}; }
 
     const isHookMode = isHookHeader;
     if (!isHookMode && isLikelyHookPayload(body)) {
@@ -274,16 +282,18 @@ serve(async (req: Request) => {
 
     if (isHookMode) {
       // Payloads vary depending on Supabase version; support several shapes
-      const evtType = (body?.type || body?.email_action_type || body?.event || "").toString();
-      const email = (body?.email || body?.user?.email || body?.user?.user_metadata?.email || body?.user_metadata?.email || "").toString();
-      const emailData = body?.email_data || body?.data || {};
+      const hookUser = asRecord(body.user);
+      const hookUserMetadata = asRecord(hookUser.user_metadata);
+      const emailData = asRecord(body.email_data ?? body.data);
+      const evtType = String(body.type || body.email_action_type || body.event || "");
+      const email = String(body.email || hookUser.email || hookUserMetadata.email || asRecord(body.user_metadata).email || "");
 
       if (!evtType || !email) {
         console.log("send-email: invalid hook payload", { evtType, email });
         return new Response(JSON.stringify({ ok: false, error: "Invalid auth hook payload" }), { status: 400, headers: corsHeaders(req) });
       }
 
-      const token = emailData?.token ?? emailData?.token_hash ?? emailData?.tokenHash ?? emailData?.token_hash_new ?? emailData?.token_new;
+      const token = emailData.token ?? emailData.token_hash ?? emailData.tokenHash ?? emailData.token_hash_new ?? emailData.token_new;
       if (!token) {
         return json(req, 400, { error: "MISSING_TOKEN" });
       }
@@ -301,7 +311,7 @@ serve(async (req: Request) => {
       const verify_link = buildActivateLink(String(token), authType, email);
 
       const template = mapHookTypeToTemplate(evtType);
-      const extraVars = stripRequestLinkKeys(emailData?.variables);
+      const extraVars = stripRequestLinkKeys(asRecord(emailData.variables));
 
       const vars = {
         product_name: PRODUCT_NAME,
@@ -315,7 +325,7 @@ serve(async (req: Request) => {
       };
 
       console.log("send-email: hook", { evtType, email, template });
-      const result = await sendViaMailgun(email, template, vars, emailData?.subject);
+      const result = await sendViaMailgun(email, template, vars, typeof emailData.subject === "string" ? emailData.subject : undefined);
 
       await insertLog({
         to_email: email,
@@ -339,13 +349,13 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify({ ok: false, error: "Forbidden" }), { status: 403, headers: corsHeaders(req) });
     }
 
-    const { to, template_name, variables, subject, type: explicitType, redirect_path } = body || {};
+    const { to, template_name, variables, subject, type: explicitType, redirect_path } = body;
     if (!to || !template_name) {
       return new Response(JSON.stringify({ ok: false, error: "Missing 'to' or 'template_name'" }), { status: 400, headers: corsHeaders(req) });
     }
 
     const toEmail = Array.isArray(to) ? String(to[0] || "") : String(to);
-    const mergeVars = stripRequestLinkKeys(variables);
+    const mergeVars = stripRequestLinkKeys(asRecord(variables));
     const linkType = inferAuthLinkType(String(template_name), explicitType);
     const landing = resolveLandingPath(redirect_path, defaultLandingPath(linkType));
     if (!landing.ok) return json(req, 400, { error: "INVALID_REDIRECT_PATH" });
@@ -403,9 +413,9 @@ serve(async (req: Request) => {
       status: result.ok ? 200 : (result.status || 500),
       headers: corsHeaders(req),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("send-email: unexpected error", err);
-    return new Response(JSON.stringify({ ok: false, error: err?.message || "Internal error" }), {
+    return new Response(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : "Internal error" }), {
       status: 500,
       headers: corsHeaders(req),
     });
