@@ -7,6 +7,7 @@ import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const CENTER_X = 297.64;
 const FUCHSIA = rgb(0.929, 0.094, 0.471);
+type JsonRow = Record<string, unknown>;
 
 function jsonResponse(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -106,7 +107,7 @@ serve(async (req) => {
     const { data: pkgRow, error: pkgErr } = await supabase
       .from("packages")
       .select("name")
-      .eq("id", (piRow as any).package_id)
+      .eq("id", (piRow as JsonRow).package_id)
       .maybeSingle();
 
     if (pkgErr) {
@@ -123,13 +124,13 @@ serve(async (req) => {
       return jsonResponse(req, 500, { ok: false, code: "LOOKUP_FAILED", detail: tenantErr.message });
     }
 
-    const safeRtoName = ((tenantRow as any)?.rto_name || (tenantRow as any)?.name || "Vivacity")
+    const safeRtoName = ((tenantRow as JsonRow | null)?.rto_name || (tenantRow as JsonRow | null)?.name || "Vivacity")
       .replace(/[/\\?%*:|"<>]/g, "").trim();
     const downloadFilename = `${safeRtoName}-SuperHero-Membership-Certificate.pdf`;
 
-    const packageCode = (pkgRow as any)?.name as string | undefined;
-    const tenantName = ((tenantRow as any)?.name as string | undefined) ?? "";
-    const commencementDate = (piRow as any).start_date as string | undefined;
+    const packageCode = (pkgRow as JsonRow | null)?.name as string | undefined;
+    const tenantName = ((tenantRow as JsonRow | null)?.name as string | undefined) ?? "";
+    const commencementDate = (piRow as JsonRow).start_date as string | undefined;
 
     // 5. Tier mapping
     const tier = tierFromCode(packageCode);
