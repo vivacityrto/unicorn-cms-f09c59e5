@@ -61,7 +61,7 @@ export default function TenantDocumentDetail() {
         if (error) throw error;
         setDocData(packageDocData as PackageDocument | null);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching data:", error);
       toast({
         title: "Error",
@@ -109,7 +109,7 @@ export default function TenantDocumentDetail() {
         title: "Success",
         description: "Document downloaded successfully"
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: "Failed to download document",
@@ -129,7 +129,7 @@ export default function TenantDocumentDetail() {
       if (data?.signedUrl) {
         window.open(data.signedUrl, '_blank');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: "Failed to preview document",
