@@ -65,7 +65,7 @@ export default defineConfig({
     },
     {
       name: "persona-superadmin",
-      testMatch: /personas\/superadmin\.spec\.ts/,
+      testMatch: /personas\/(?:superadmin|operations)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/superadmin.json" },
     },
     {
