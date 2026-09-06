@@ -59,11 +59,11 @@ function validateEvent(event: TimelineEventInput): void {
   if (!VALID_EVENT_TYPES.has(event.event_type as ValidEventType)) {
     throw new Error(`Invalid event_type: "${event.event_type}". Must be one of the canonical types.`);
   }
-  if (!VALID_SOURCES.has(event.source as any)) {
+  if (!VALID_SOURCES.has(event.source)) {
     throw new Error(`Invalid source: "${event.source}".`);
   }
   const vis = event.visibility || "internal";
-  if (!VALID_VISIBILITIES.has(vis as any)) {
+  if (!VALID_VISIBILITIES.has(vis)) {
     throw new Error(`Invalid visibility: "${vis}".`);
   }
   // Business rules

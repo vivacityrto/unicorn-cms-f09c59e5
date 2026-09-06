@@ -68,7 +68,7 @@ function detectHighRiskDeadline(facts: Fact[]): EscalationTrigger[] {
       // Approaching deadline
       const urgent = deadlineRisks.find(f => {
         if (typeof f.value !== "object" || f.value === null) return false;
-        const days = (f.value as any).days_remaining;
+        const days = (f.value as { days_remaining?: unknown }).days_remaining;
         return typeof days === "number" && days <= 3;
       });
       
@@ -99,7 +99,8 @@ function detectConflictingEvidence(facts: Fact[]): EscalationTrigger[] {
     f.type === "phase_status" &&
     typeof f.value === "object" &&
     f.value !== null &&
-    (f.value as any).status === "complete"
+    typeof f.value === "object" && f.value !== null &&
+    (f.value as { status?: unknown }).status === "complete"
   );
   
   const missingEvidence = facts.filter(f => f.type === "evidence_missing");
