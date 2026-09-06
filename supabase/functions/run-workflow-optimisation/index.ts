@@ -17,6 +17,27 @@ function clamp(v: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, v));
 }
 
+interface WorkflowSignal {
+  tenant_id?: number;
+  stage_instance_id?: number;
+  consultant_user_id?: string;
+  signal_type: string;
+  signal_severity: string;
+  signal_summary: string;
+  suggested_action_json: string[];
+}
+
+interface PerformanceBaseline {
+  stage_type: string | null;
+  average_completion_days: number | null;
+}
+
+interface CapacitySnapshot {
+  user_id: string;
+  capacity_utilisation_percentage: number | null;
+  active_client_count: number | null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
@@ -34,7 +55,7 @@ Deno.serve(async (req) => {
 
   try {
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const signals: any[] = [];
+    const signals: WorkflowSignal[] = [];
     const today = new Date().toISOString().slice(0, 10);
     const d60 = new Date(Date.now() - 60 * 86400000).toISOString();
 
@@ -52,7 +73,7 @@ Deno.serve(async (req) => {
       .select("stage_type, average_completion_days");
 
     const baselineMap = new Map<string, number>();
-    (baselines ?? []).forEach((b: any) =>
+    (baselines ?? []).forEach((b: PerformanceBaseline) =>
       baselineMap.set(b.stage_type, Number(b.average_completion_days) || 30)
     );
 
@@ -87,8 +108,8 @@ Deno.serve(async (req) => {
       .limit(100);
 
     // Deduplicate: latest per consultant
-    const latestCapacity = new Map<string, any>();
-    (capacitySnapshots ?? []).forEach((c: any) => {
+    const latestCapacity = new Map<string, CapacitySnapshot>();
+    (capacitySnapshots ?? []).forEach((c: CapacitySnapshot) => {
       if (!latestCapacity.has(c.user_id)) latestCapacity.set(c.user_id, c);
     });
 
