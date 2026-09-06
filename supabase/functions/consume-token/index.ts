@@ -79,6 +79,8 @@ async function parseAndVerifyOpaqueToken(token: string) {
   }
 }
 
+// auth-gate: none -- token-possession endpoint; HMAC/hash proof and expiry
+// checks authenticate the opaque token rather than a caller JWT.
 serve(async (req: Request): Promise<Response> => {
   console.log('Consume token function called');
   
@@ -205,10 +207,11 @@ serve(async (req: Request): Promise<Response> => {
       { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Token consumption error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }

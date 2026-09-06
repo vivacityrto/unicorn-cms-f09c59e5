@@ -163,9 +163,9 @@ serve(async (req) => {
       JSON.stringify({ ok: true, mode: "invite", message: `Invitation email sent to ${email}`, data: inviteData }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Unhandled error:", e);
-    return new Response(JSON.stringify({ error: e?.message || "Unknown error" }), {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders(req) },
     });

@@ -347,8 +347,8 @@ serve(async (req) => {
       expiresAt: exp,
       message: "Token emailed successfully",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in issue-token function:", error);
-    return jsonResponse(req, { error: error?.message || "Unknown error" }, 500);
+    return jsonResponse(req, { error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });

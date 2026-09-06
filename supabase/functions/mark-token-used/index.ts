@@ -25,6 +25,8 @@ async function sha256(input: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// auth-gate: none -- token-possession endpoint; token hash + token ID and
+// conditional unexpired-row claim provide the intended authorization proof.
 serve(async (req: Request): Promise<Response> => {
   console.log('Mark token used function called');
   
@@ -108,10 +110,11 @@ serve(async (req: Request): Promise<Response> => {
       { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Mark token used error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
