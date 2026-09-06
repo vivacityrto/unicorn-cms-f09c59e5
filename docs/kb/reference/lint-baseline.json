@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T13:08:20.580Z",
-  "baselineSha": "cc41c41b07e68f86aedb4fa7aea6b1401d7b6e7f",
+  "generatedAt": "2026-09-06T13:22:31.883Z",
+  "baselineSha": "7d37b824b431d566ee5c4ff1c967aa1d0f9c20fe",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 131,
-    "errors": 549,
+    "filesWithFindings": 130,
+    "errors": 539,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 542,
+    "@typescript-eslint/no-explicit-any": 532,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 461,
+      "errors": 451,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 461
+        "@typescript-eslint/no-explicit-any": 451
       }
     }
   },
@@ -617,13 +617,6 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/send-email": {
-      "errors": 10,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 10
-      }
-    },
     "supabase/functions/send-invitation-email": {
       "errors": 1,
       "warnings": 0,
@@ -1080,9 +1073,6 @@
     },
     "supabase/functions/send-email-graph/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/send-email/index.ts": {
-      "@typescript-eslint/no-explicit-any": 10
     },
     "supabase/functions/send-invitation-email/index.ts": {
       "@typescript-eslint/no-explicit-any": 1

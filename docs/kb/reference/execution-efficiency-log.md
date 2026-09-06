@@ -1,5 +1,8 @@
 # Execution efficiency log
 
+### 2026-09-06 Phase 2.5 send-email Edge cohort (PR #888 merged)
+One authenticated Edge file (10 findings) was handled in a fresh isolated worktree with the shared Playwright-capable node_modules junction. Static gates ran concurrently under the mutex; lint ratchet reduced 10→0, frontend (298 passed/15 skipped), Edge (260), build passed, and typecheck retained only the five documented baseline errors. Unauthenticated Playwright passed 12/12 desktop/mobile login, reset, activation, protected-route, and 404 flows with no writes; auth-hook/direct outbound paths were deliberately not invoked. Baseline after merge: 539 total errors (532 explicit-any), 39 warnings across 130 files. Worktree, junction, temporary harness, server, and reports were removed.
+
 ### 2026-09-06 Phase 2.5 executive-summary Edge cohort (PR #886 merged)
 One configured audit Edge file (17 findings) was handled in a fresh isolated worktree with a shared node_modules junction. Static gates ran concurrently under the mutex; lint ratchet reduced 17→0, frontend (298 passed/15 skipped), Edge (260), build passed, and typecheck retained only the five documented baseline errors. Authenticated SuperAdmin Playwright loaded/refreshed `/tenant/7547` read-only (1/1, zero page/console errors, no writes); the AI/audit-log write path was not invoked. Supabase metadata was ACTIVE v322, but deployed source remained pre-typing and the known log-query schema error prevented invocation evidence. Baseline after merge: 549 total errors (542 explicit-any), 39 warnings across 131 files. Temporary harness, server, reports, junction, and worktree were removed.
 
