@@ -171,6 +171,24 @@ interface FindingRow {
   code_prefix: string | null;
 }
 
+type ServiceClient = ReturnType<typeof createClient>;
+type AuditRow = {
+  id: string; title?: string | null; audit_type?: string | null; risk_rating?: string | null;
+  score_total?: number | null; score_max?: number | null; score_pct?: number | null;
+  snapshot_rto_name?: string | null; snapshot_rto_number?: string | null; snapshot_cricos_code?: string | null;
+  is_rto?: boolean | null; is_cricos?: boolean | null; training_products?: unknown;
+  subject_tenant_id?: number | string | null; template_id?: string | null;
+};
+type FindingQueryRow = { id: string; summary?: string | null; detail?: string | null; regulatory_reference?: string | null; standard_reference?: string | null; impact?: string | null; priority?: string | null; client_audit_responses?: { compliance_template_questions?: { clause?: string | null } | null } | null; client_audit_sections?: { title?: string | null; code_prefix?: string | null } | null };
+type SectionQueryRow = { id: string; title?: string | null; standard_code?: string | null; code_prefix?: string | null; risk_level?: string | null; section_summary?: string | null; v_client_audit_section_completion?: { total_questions?: number | null; complete_count?: number | null; section_state?: string | null } | Array<{ total_questions?: number | null; complete_count?: number | null; section_state?: string | null }> | null };
+type ModelUsage = { prompt_tokens?: number; completion_tokens?: number };
+type ModelAttempt = { raw: unknown; usage: ModelUsage };
+type CorpusResult = CorpusChunk[];
+
+function errorCode(error: unknown): string | null {
+  return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders(req) });
@@ -209,7 +227,7 @@ Deno.serve(async (req) => {
 
   // 3. Audit access gate via RLS.
   const { data: auditRow, error: auditErr } = await userClient
-    .from('client_audits' as any)
+    .from('client_audits')
     .select(
       `id, title, audit_type, risk_rating, score_total, score_max, score_pct,
        snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code,
@@ -222,22 +240,22 @@ Deno.serve(async (req) => {
       auditId,
       callerUserId,
       errorMessage: auditErr?.message ?? null,
-      errorCode: (auditErr as any)?.code ?? null,
+      errorCode: errorCode(auditErr),
     });
     return json(req, { error: "You don't have access to this audit." }, 403);
   }
-  const audit = auditRow as Record<string, any>;
+  const audit = auditRow as AuditRow;
 
   // 3b. Resolve framework from compliance_templates.
   let templateFramework: string | null = null;
   let corpusFramework: 'SRTO_2025' | 'NATIONAL_CODE_2018' | null = null;
   if (audit.template_id) {
     const { data: tplRow } = await userClient
-      .from('compliance_templates' as any)
+      .from('compliance_templates')
       .select('framework')
       .eq('id', audit.template_id)
       .maybeSingle();
-    templateFramework = (tplRow as Record<string, any> | null)?.framework ?? null;
+    templateFramework = (tplRow as { framework?: string | null } | null)?.framework ?? null;
     switch (templateFramework) {
       case 'SRTO_2025_CHC':
       case 'SRTO_2025_MOCK':
@@ -261,7 +279,7 @@ Deno.serve(async (req) => {
   // 5. Cool-down — 5 minutes per audit.
   const cooldownSince = new Date(Date.now() - COOLDOWN_MINUTES * 60 * 1000).toISOString();
   const { count: recentCount, error: cdErr } = await admin
-    .from('client_audit_log' as any)
+    .from('client_audit_log')
     .select('id', { count: 'exact', head: true })
     .eq('action', 'ai.executive_summary_drafted')
     .eq('entity_id', auditId)
@@ -280,7 +298,7 @@ Deno.serve(async (req) => {
 
   // 6. Findings.
   const { data: findingRowsRaw, error: findingsErr } = await userClient
-    .from('client_audit_findings' as any)
+    .from('client_audit_findings')
     .select(
       `id, summary, detail, regulatory_reference, standard_reference, impact, priority,
        response_id, section_id,
@@ -293,7 +311,7 @@ Deno.serve(async (req) => {
   if (findingsErr) {
     return json(req, { error: 'Failed to load findings', detail: findingsErr.message }, 500);
   }
-  const findingRows: FindingRow[] = (findingRowsRaw ?? []).map((row: any) => ({
+  const findingRows: FindingRow[] = (findingRowsRaw ?? []).map((row: FindingQueryRow) => ({
     id: row.id,
     summary: row.summary ?? '',
     detail: row.detail ?? null,
@@ -326,7 +344,7 @@ Deno.serve(async (req) => {
 
   // 7. Sections.
   const { data: sectionRowsRaw } = await userClient
-    .from('client_audit_sections' as any)
+    .from('client_audit_sections')
     .select(
       `id, title, standard_code, audit_phase, code_prefix, risk_level, section_summary, sort_order,
        v_client_audit_section_completion:id ( total_questions, complete_count, findings_required, notes_required, section_state )`,
@@ -334,7 +352,7 @@ Deno.serve(async (req) => {
     .eq('audit_id', auditId)
     .order('sort_order', { ascending: true });
 
-  const sections = (sectionRowsRaw ?? []).map((row: any) => {
+  const sections = (sectionRowsRaw ?? []).map((row: SectionQueryRow) => {
     const v = Array.isArray(row.v_client_audit_section_completion)
       ? row.v_client_audit_section_completion[0]
       : row.v_client_audit_section_completion;
@@ -394,7 +412,7 @@ Deno.serve(async (req) => {
           throw new Error(`status=${res.status} body=${text.slice(0, 200)}`);
         }
         const j = await res.json();
-        return { clause, results: (j.results ?? []) as any[] };
+        return { clause, results: (j.results ?? []) as CorpusResult };
       }),
     );
     const seen = new Set<string>();
@@ -495,7 +513,7 @@ ${chunksBlock}
 Return your synthesis as JSON matching the schema in the system prompt. Every linked_finding_ids value must be one of the FINDING_ID values listed above. FINDING_ID is an internal database identifier for your own cross-referencing only — it must NEVER appear in the prose narrative (executive_summary, overall_finding, risk_rationale, or any narrative/summary text); describe each finding by its content there instead.`;
 
   // 10. Gateway call with one corrective retry.
-  async function callModel(extraSystem?: string): Promise<{ raw: any; usage: any }> {
+  async function callModel(extraSystem?: string): Promise<ModelAttempt> {
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT + (extraSystem ? `\n\n${extraSystem}` : '') },
       { role: 'user', content: userPrompt },
@@ -536,7 +554,7 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
     return { raw: parsed, usage: data.usage ?? {} };
   }
 
-  let attempt: { raw: any; usage: any };
+  let attempt: ModelAttempt;
   let validation: ValidationResult;
   try {
     attempt = await callModel();
@@ -605,7 +623,7 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
 
   // 11. Append-only audit log via service role.
   const { data: logRow, error: logErr } = await admin
-    .from('client_audit_log' as any)
+    .from('client_audit_log')
     .insert({
       tenant_id: Number(audit.subject_tenant_id),
       actor_user_id: callerUserId,
@@ -649,7 +667,7 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
         completion_tokens: completionTokens,
         duration_ms,
       },
-      log_id: (logRow as any).id,
+      log_id: (logRow as { id: string }).id,
     },
     200,
   );
