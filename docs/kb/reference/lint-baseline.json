@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T16:08:33.983Z",
-  "baselineSha": "cdcc01a55d9eabe82706cf7f893fdeb818944f01",
+  "generatedAt": "2026-09-06T16:17:03.344Z",
+  "baselineSha": "0d6c457ecac9c0e564bbfda323ba8cecbf89811a",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 102,
-    "errors": 300,
+    "filesWithFindings": 99,
+    "errors": 292,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 293,
+    "@typescript-eslint/no-explicit-any": 285,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 212,
+      "errors": 204,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 212
+        "@typescript-eslint/no-explicit-any": 204
       }
     }
   },
@@ -407,13 +407,6 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/search-organisations": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
-      }
-    },
     "supabase/functions/send-action-item-due-reminders": {
       "errors": 2,
       "warnings": 0,
@@ -524,20 +517,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/vector-index-update": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
-      }
-    },
-    "supabase/functions/vector-search": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
       }
     },
     "supabase/functions/xero-invoice-sync-all": {
@@ -792,9 +771,6 @@
     "supabase/functions/resend-invite/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/search-organisations/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "supabase/functions/send-action-item-due-reminders/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -842,12 +818,6 @@
     },
     "supabase/functions/update-user-role/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/vector-index-update/index.ts": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "supabase/functions/vector-search/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
     },
     "supabase/functions/xero-invoice-sync-all/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
