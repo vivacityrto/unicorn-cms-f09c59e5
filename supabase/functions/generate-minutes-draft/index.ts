@@ -20,6 +20,12 @@ interface CalendarAttendee {
   source: string;
 }
 
+interface GraphFile { id: string; name: string; createdDateTime: string; file?: unknown; }
+interface GraphSearchResult { value?: GraphFile[]; }
+interface GraphEvent { subject?: string; start?: { dateTime?: string }; end?: { dateTime?: string }; organizer?: { emailAddress?: { address?: string } }; attendees?: Array<{ emailAddress?: { address?: string; name?: string }; status?: { response?: string } }>; onlineMeeting?: { joinUrl?: string }; webLink?: string; }
+interface MeetingRow { title?: string | null; start_time?: string | null; end_time?: string | null; ms_event_id?: string | null; meeting_type?: string | null; }
+interface ParticipantRow { users?: { full_name?: string | null; email?: string | null } | null; }
+
 async function getUserGraphToken(
   supabase: ReturnType<typeof createClient>,
   userUuid: string
@@ -36,7 +42,7 @@ async function getUserGraphToken(
   return { access_token: data.access_token };
 }
 
-async function graphGet(token: string, path: string): Promise<any> {
+async function graphGet(token: string, path: string): Promise<unknown> {
   const res = await fetch(`${GRAPH_BASE_URL}${path}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -44,7 +50,7 @@ async function graphGet(token: string, path: string): Promise<any> {
     },
   });
   if (!res.ok) return null;
-  return res.json();
+  return res.json() as Promise<unknown>;
 }
 
 // ── Fetch Copilot recap from OneDrive files ─────────────────────────
@@ -73,12 +79,13 @@ async function fetchCopilotRecap(
       `/me/drive/root/search(q='${encodeURIComponent(searchQuery)}')?$top=10&$select=id,name,createdDateTime,lastModifiedDateTime,webUrl,file`
     );
 
-    if (!searchResult?.value?.length) {
+    const result = searchResult as GraphSearchResult;
+    if (!result.value?.length) {
       return { text: null, source: null, warning: "Copilot recap not found in OneDrive." };
     }
 
     // Filter to files created around meeting time
-    const candidates = searchResult.value.filter((file: any) => {
+    const candidates = result.value.filter((file) => {
       if (!file.file) return false; // skip folders
 
       // Check name patterns
@@ -103,7 +110,7 @@ async function fetchCopilotRecap(
 
     // Pick the most recent candidate
     const bestFile = candidates.sort(
-      (a: any, b: any) =>
+      (a, b) =>
         new Date(b.createdDateTime).getTime() - new Date(a.createdDateTime).getTime()
     )[0];
 
@@ -167,7 +174,8 @@ async function fetchAttendanceReport(
       return { attendees: [], source: "none", warning: "Attendance report not found." };
     }
 
-    const candidates = searchResult.value.filter((file: any) => {
+    const result = searchResult as GraphSearchResult;
+    const candidates = (result.value ?? []).filter((file) => {
       if (!file.file) return false;
       if (!/attendance/i.test(file.name)) return false;
       if (meetingEnd) {
@@ -184,7 +192,7 @@ async function fetchAttendanceReport(
     }
 
     const bestFile = candidates.sort(
-      (a: any, b: any) =>
+      (a, b) =>
         new Date(b.createdDateTime).getTime() - new Date(a.createdDateTime).getTime()
     )[0];
 
@@ -409,7 +417,8 @@ Deno.serve(async (req) => {
     let meetingSubject = meeting.title || null;
     let meetingStart = meeting.start_time || null;
     let meetingEnd = meeting.end_time || null;
-    const msEventId = (meeting as any).ms_event_id || null;
+    const meetingRow = meeting as MeetingRow;
+    const msEventId = meetingRow.ms_event_id || null;
 
     // ── Step 1: Sync meeting metadata from Graph ────────────────────
     if (hasGraph && msEventId) {
@@ -418,21 +427,22 @@ Deno.serve(async (req) => {
         `/me/events/${encodeURIComponent(msEventId)}?$select=subject,start,end,organizer,attendees,onlineMeeting,webLink,location`
       );
 
-      if (event) {
-        meetingSubject = event.subject || meetingSubject;
-        meetingStart = event.start?.dateTime || meetingStart;
-        meetingEnd = event.end?.dateTime || meetingEnd;
+      const graphEvent = event as GraphEvent;
+      if (graphEvent) {
+        meetingSubject = graphEvent.subject || meetingSubject;
+        meetingStart = graphEvent.start?.dateTime || meetingStart;
+        meetingEnd = graphEvent.end?.dateTime || meetingEnd;
         graphSynced = true;
 
         // Update meeting with synced metadata
         await supabase
           .from("eos_meetings")
           .update({
-            ms_subject: event.subject,
-            ms_start_at: event.start?.dateTime,
-            ms_end_at: event.end?.dateTime,
-            ms_organizer_email: event.organizer?.emailAddress?.address,
-            ms_join_url: event.onlineMeeting?.joinUrl || event.webLink,
+            ms_subject: graphEvent.subject,
+            ms_start_at: graphEvent.start?.dateTime,
+            ms_end_at: graphEvent.end?.dateTime,
+            ms_organizer_email: graphEvent.organizer?.emailAddress?.address,
+            ms_join_url: graphEvent.onlineMeeting?.joinUrl || graphEvent.webLink,
             ms_last_synced_at: new Date().toISOString(),
             ms_sync_status: "synced",
           })
@@ -444,7 +454,7 @@ Deno.serve(async (req) => {
           entity_id: meeting_id,
           action: "meeting_sync_metadata",
           user_id: user.id,
-          details: { subject: event.subject, graph_synced: true },
+          details: { subject: graphEvent.subject, graph_synced: true },
         });
       }
     } else if (!hasGraph) {
@@ -494,12 +504,13 @@ Deno.serve(async (req) => {
         `/me/events/${encodeURIComponent(msEventId)}?$select=attendees,organizer`
       );
 
-      if (event?.attendees) {
-        const organizerDomain = event.organizer?.emailAddress?.address
+      const graphEvent = event as GraphEvent;
+      if (graphEvent?.attendees) {
+        const organizerDomain = graphEvent.organizer?.emailAddress?.address
           ?.split("@")[1]
           ?.toLowerCase();
 
-        for (const att of event.attendees) {
+        for (const att of graphEvent.attendees) {
           const email = att.emailAddress?.address || null;
           const domain = email?.split("@")[1]?.toLowerCase();
           attendees.push({
@@ -523,8 +534,8 @@ Deno.serve(async (req) => {
         .eq("meeting_id", meeting_id);
 
       if (participants) {
-        for (const p of participants) {
-          const u = (p as any).users;
+        for (const p of (participants as ParticipantRow[])) {
+          const u = p.users;
           attendees.push({
             display_name: u?.full_name || "Unknown",
             email: u?.email || null,
@@ -637,7 +648,7 @@ Deno.serve(async (req) => {
       meeting_title: meetingSubject || meeting.title || "",
       meeting_date: dateStr,
       meeting_time: timeStr,
-      meeting_type: (meeting as any).meeting_type || "",
+      meeting_type: meetingRow.meeting_type || "",
       duration_minutes: 0,
       facilitator: userData?.full_name || "",
       minute_taker: userData?.full_name || "",
