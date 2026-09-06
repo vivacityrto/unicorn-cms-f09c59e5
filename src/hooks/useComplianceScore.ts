@@ -21,7 +21,14 @@ export interface ComplianceScore {
   overall_score: number;
   days_stale: number;
   is_stale: boolean;
-  caps_applied: Array<{ type: string; cap: number; [key: string]: any }>;
+  caps_applied: Array<{
+    type: string;
+    cap: number;
+    count?: number;
+    missing_pct?: number;
+    pct?: number;
+    days?: number;
+  }>;
   inputs: {
     total_stages: number;
     completed_stages: number;
@@ -52,7 +59,7 @@ export function useComplianceScore(tenantId: number | null, packageInstanceId: n
       if (!tenantId || !packageInstanceId) return null;
 
       const { data, error } = await supabase
-        .from('v_compliance_score_latest' as any)
+        .from('v_compliance_score_latest')
         .select('*')
         .eq('tenant_id', tenantId)
         .eq('package_instance_id', packageInstanceId)
