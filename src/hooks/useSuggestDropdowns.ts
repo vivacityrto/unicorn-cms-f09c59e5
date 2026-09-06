@@ -10,14 +10,27 @@ export interface SuggestDropdownItem {
   is_active: boolean;
 }
 
-const fetchDropdown = async (table: string, columns = 'id, code, label, description, sort_order, is_active'): Promise<SuggestDropdownItem[]> => {
+type SuggestDropdownTable =
+  | 'dd_suggest_item_type'
+  | 'dd_suggest_status'
+  | 'dd_suggest_priority'
+  | 'dd_suggest_impact_rating'
+  | 'dd_suggest_release_status'
+  | 'dd_suggest_category'
+  | 'dd_package_type'
+  | 'dd_progress_mode'
+  | 'dd_work_types'
+  | 'dd_work_sub_type';
+
+const fetchDropdown = async (table: SuggestDropdownTable, columns = 'id, code, label, description, sort_order, is_active'): Promise<SuggestDropdownItem[]> => {
   const { data, error } = await supabase
-    .from(table as any)
+    .from(table)
     .select(columns)
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
   if (error) throw error;
-  return (data || []).map((d: any) => ({ ...d, description: d.description ?? null })) as unknown as SuggestDropdownItem[];
+  const rows = (data ?? []) as unknown as Array<Partial<SuggestDropdownItem>>;
+  return rows.map((d) => ({ ...d, description: d.description ?? null })) as SuggestDropdownItem[];
 };
 
 export function useSuggestDropdowns() {
