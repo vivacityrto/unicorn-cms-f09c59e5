@@ -193,10 +193,10 @@ serve(async (req) => {
         status: 200,
       }
     );
-  } catch (error: unknown) {
-      console.error('Error in generate-meeting-recurrence:', error);
+  } catch (error: any) {
+    console.error('Error in generate-meeting-recurrence:', error);
     return new Response(
-        JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: error.message }),
       {
         headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
         status: 500,
