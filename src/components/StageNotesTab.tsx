@@ -28,6 +28,8 @@ interface StageNotesTabProps {
   packageId: number;
 }
 
+const errorMessage = (error: unknown): string => error instanceof Error ? error.message : "An unexpected error occurred";
+
 export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabProps) {
   const { toast } = useToast();
   
@@ -90,7 +92,7 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
       const { data, error } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("unicorn_role", [...VIVACITY_STAFF_ROLES]).or("kpi_pod.is.null,kpi_pod.neq.qa").order("first_name");
       if (error) throw error;
       setVivacityTeam(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching team:", error);
     }
   };
@@ -250,9 +252,9 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
       }
       setIsAddDialogOpen(false);
       resetForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving note:", error);
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: errorMessage(error), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -264,9 +266,9 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
       await deleteNote(selectedNote.id);
       setIsDeleteDialogOpen(false);
       setSelectedNote(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error deleting note:", error);
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: errorMessage(error), variant: "destructive" });
     }
   };
 
