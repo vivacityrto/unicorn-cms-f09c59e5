@@ -52,11 +52,11 @@ export function AdminInviteUserDialog({
         .eq('tenant_id', tenantId);
       if (cancelled || error) return;
       const rows = data ?? [];
-      const hasPrimary = rows.some((r: any) =>
+      const hasPrimary = rows.some((r) =>
         r.relationship_role === 'primary_contact' ||
         (!r.relationship_role && (r.primary_contact === true || r.role === 'parent')),
       );
-      const hasSecondary = rows.some((r: any) =>
+      const hasSecondary = rows.some((r) =>
         r.relationship_role === 'secondary_contact' ||
         (!r.relationship_role && r.secondary_contact === true),
       );
@@ -198,11 +198,11 @@ export function AdminInviteUserDialog({
 
       handleClose();
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Add user error:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add user',
+        description: error instanceof Error ? error.message : 'Failed to add user',
         variant: 'destructive',
       });
     } finally {
