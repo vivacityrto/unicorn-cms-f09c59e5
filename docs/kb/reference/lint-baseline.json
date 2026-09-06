@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T17:32:45.932Z",
-  "baselineSha": "e0333cad2684eba759a4658a7baf5ad230778022",
+  "generatedAt": "2026-09-06T17:45:55.491Z",
+  "baselineSha": "e3d9d558d7a73469a5f0bef7b68487ae6b3187d2",
   "totals": {
-    "files": 1756,
-    "filesWithFindings": 85,
-    "errors": 221,
+    "files": 1755,
+    "filesWithFindings": 78,
+    "errors": 211,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 214,
+    "@typescript-eslint/no-explicit-any": 204,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 165,
+      "errors": 155,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 165
+        "@typescript-eslint/no-explicit-any": 155
       }
     }
   },
@@ -337,60 +337,11 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/send-action-item-due-reminders": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
-      }
-    },
-    "supabase/functions/send-composed-email": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
-      }
-    },
-    "supabase/functions/send-email-graph": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/send-invitation-email": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/send-password-reset": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/send-self-password-reset": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
     "supabase/functions/send-staff-onboarding-email": {
       "errors": 1,
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/send-stage-email": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "supabase/functions/sync-clickup-time": {
@@ -651,29 +602,8 @@
     "supabase/functions/resend-invite/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/send-action-item-due-reminders/index.ts": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "supabase/functions/send-composed-email/index.ts": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
-    "supabase/functions/send-email-graph/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/send-invitation-email/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/send-password-reset/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/send-self-password-reset/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
     "supabase/functions/send-staff-onboarding-email/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/send-stage-email/index.ts": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "supabase/functions/sync-clickup-time/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
