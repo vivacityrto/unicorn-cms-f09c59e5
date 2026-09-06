@@ -23,6 +23,13 @@ interface Staff {
   kpi_role: string | null;
 }
 
+interface TeamDirectoryRow {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+}
+
 interface Props {
   period: KpiV2Period;
 }
@@ -237,26 +244,25 @@ export function KpiTeamSection({ period }: Props) {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const sb = supabase as any;
-      const { data: dir } = await sb.rpc("get_vivacity_team_directory");
-      const uuids = (dir ?? []).map((r: any) => r.user_uuid).filter(Boolean);
+      const { data: dir } = await supabase.rpc("get_vivacity_team_directory" as never) as unknown as { data: TeamDirectoryRow[] | null };
+      const uuids = (dir ?? []).map((r) => r.user_uuid).filter(Boolean);
       if (uuids.length === 0) {
         if (!cancelled) { setStaff([]); setLoading(false); }
         return;
       }
-      const { data: profiles } = await sb
+      const { data: profiles } = await supabase
         .from("users")
         .select("user_uuid, kpi_role, kpi_pod")
         .in("user_uuid", uuids);
       const byUuid = new Map<string, { kpi_role: string | null; kpi_pod: string | null }>();
-      (profiles ?? []).forEach((p: any) => byUuid.set(p.user_uuid, { kpi_role: p.kpi_role, kpi_pod: p.kpi_pod }));
+      (profiles ?? []).forEach((p) => byUuid.set(p.user_uuid, { kpi_role: p.kpi_role, kpi_pod: p.kpi_pod }));
 
       const merged: Staff[] = (dir ?? [])
-        .map((r: any) => {
+        .map((r) => {
           const meta = byUuid.get(r.user_uuid) ?? { kpi_role: null, kpi_pod: null };
           return { ...r, kpi_role: meta.kpi_role, kpi_pod: meta.kpi_pod } as Staff & { kpi_pod: string | null };
         })
-        .filter((s: any) => s.kpi_pod !== "qa");
+        .filter((s) => (s as Staff & { kpi_pod: string | null }).kpi_pod !== "qa");
 
       if (cancelled) return;
       setStaff(merged);
