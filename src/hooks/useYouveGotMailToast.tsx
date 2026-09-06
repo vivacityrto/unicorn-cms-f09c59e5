@@ -26,18 +26,18 @@ export function useYouveGotMailToast() {
     (async () => {
       try {
         // Get all conversations + last_read_at for current user
-        const { data: parts } = await (supabase as any)
+        const { data: parts } = await supabase
           .from("conversation_participants")
           .select("conversation_id, last_read_at")
           .eq("user_id", user.id);
 
         const readMap = new Map<string, string | null>();
-        (parts ?? []).forEach((p: any) =>
+        (parts ?? []).forEach((p) =>
           readMap.set(p.conversation_id, p.last_read_at),
         );
 
         // Pull all client messages — filter unread in JS
-        const { data: msgs, error } = await (supabase as any)
+        const { data: msgs, error } = await supabase
           .from("tenant_messages")
           .select("id, conversation_id, created_at, sender_type")
           .eq("sender_type", "client")

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 export interface ConsultantAssignmentInfo {
   assigned_consultant_user_id: string | null;
@@ -18,7 +19,7 @@ export interface AssignmentAuditEntry {
   action: string;
   selected_consultant_user_id: string | null;
   previous_consultant_user_id: string | null;
-  candidate_snapshot: any;
+  candidate_snapshot: unknown;
   new_client_weekly_required: number | null;
   onboarding_multiplier: number | null;
   selected_projected_remaining: number | null;
@@ -171,7 +172,7 @@ export function useConsultantAssignment(tenantId: number | null) {
         .update({
           assigned_consultant_user_id: consultantUserId,
           consultant_assignment_method: 'manual',
-        } as any)
+        } satisfies TablesUpdate<'tenants'>)
         .eq('id', tenantId);
 
       if (updateError) throw updateError;
@@ -197,7 +198,7 @@ export function useConsultantAssignment(tenantId: number | null) {
           candidate_snapshot: [],
           reason,
           over_capacity: false,
-        } as any);
+        } satisfies TablesInsert<'consultant_assignment_audit_log'>);
 
       if (auditError) throw auditError;
     },
