@@ -13,13 +13,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import type { CodeTable, CodeTableRow, CodeTableColumn } from "@/services/codeTablesService";
+import type { CodeTable, CodeTableRow, CodeTableColumn, CodeTableValue } from "@/services/codeTablesService";
 
 interface AppSettingsFormProps {
   table: CodeTable;
   data: CodeTableRow[];
   loading: boolean;
-  onSave: (whereClause: Record<string, any>, data: Record<string, any>) => void;
+  onSave: (whereClause: Record<string, CodeTableValue>, data: Record<string, CodeTableValue>) => void;
   onAddSetting?: (columnName: string, dataType: string, defaultValue: string) => void;
   saving: boolean;
 }
@@ -59,7 +59,7 @@ function groupColumns(columns: CodeTableColumn[]): { label: string; columns: Cod
 
 export function AppSettingsForm({ table, data, loading, onSave, onAddSetting, saving }: AppSettingsFormProps) {
   const row = data[0] ?? {};
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, CodeTableValue>>({});
   const [dirty, setDirty] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [newColName, setNewColName] = useState("");
@@ -76,7 +76,7 @@ export function AppSettingsForm({ table, data, loading, onSave, onAddSetting, sa
     }
   }, [dataJson]);
 
-  function handleChange(col: string, value: any) {
+  function handleChange(col: string, value: CodeTableValue) {
     setFormData((prev) => ({ ...prev, [col]: value }));
     setDirty(true);
   }
@@ -212,14 +212,14 @@ export function AppSettingsForm({ table, data, loading, onSave, onAddSetting, sa
                         ) : isNum ? (
                           <Input
                             type="number"
-                            value={value ?? ""}
+                            value={value == null ? "" : String(value)}
                             onChange={(e) => handleChange(col.column_name, parseInt(e.target.value) || null)}
                             className="w-28 h-8 text-right text-sm"
                           />
                         ) : (
                           <Input
                             type="text"
-                            value={value ?? ""}
+                            value={value == null ? "" : String(value)}
                             onChange={(e) => handleChange(col.column_name, e.target.value || null)}
                             className="w-full h-8 text-sm"
                             placeholder="Not set"
