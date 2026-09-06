@@ -1,5 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
+
+type NotificationRow = Pick<Tables<'user_notifications'>, 'id' | 'title' | 'message' | 'type' | 'is_read' | 'link' | 'created_at' | 'tenant_id' | 'source_id'>;
+type TenantNameRow = Pick<Tables<'tenants'>, 'id' | 'name'>;
 
 export interface Notification {
   id: string;
@@ -37,7 +41,7 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      const rows = (data || []) as any[];
+      const rows: NotificationRow[] = data || [];
 
       // Fetch tenant names for notifications that have a tenant_id
       const tenantIds = [...new Set(rows.filter(r => r.tenant_id).map(r => r.tenant_id))];
@@ -47,7 +51,7 @@ export const useNotifications = () => {
           .from('tenants')
           .select('id, name')
           .in('id', tenantIds);
-        (tenants || []).forEach((t: any) => tenantMap.set(t.id, t.name));
+        (tenants || []).forEach((t: TenantNameRow) => tenantMap.set(t.id, t.name));
       }
 
       const enriched: Notification[] = rows.map(r => ({
@@ -76,7 +80,7 @@ export const useNotifications = () => {
     try {
       const { error } = await supabase
         .from('user_notifications')
-        .update({ is_read: true } as any)
+        .update({ is_read: true })
         .eq('id', notificationId);
 
       if (error) throw error;
@@ -99,7 +103,7 @@ export const useNotifications = () => {
 
       const { error } = await supabase
         .from('user_notifications')
-        .update({ is_read: true } as any)
+        .update({ is_read: true })
         .eq('user_id', userId)
         .eq('is_read', false);
 
@@ -138,7 +142,7 @@ export const useNotifications = () => {
       channel = supabase
         .channel(`user-notifications-${userId}-${uniqueId}`)
         .on(
-          'postgres_changes' as any,
+          'postgres_changes',
           {
             event: '*',
             schema: 'public',

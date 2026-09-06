@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T05:43:55.878Z",
-  "baselineSha": "0caa0d602ca576808cbb34dfe45b8ae272294c3b",
+  "generatedAt": "2026-09-06T05:49:16.729Z",
+  "baselineSha": "0ecaa394367a0641e1134defe3d64d04cb469dd7",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 183,
-    "errors": 797,
+    "filesWithFindings": 181,
+    "errors": 789,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 790,
+    "@typescript-eslint/no-explicit-any": 782,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 233,
+      "errors": 225,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 226,
+        "@typescript-eslint/no-explicit-any": 218,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -204,20 +204,14 @@
       }
     },
     "src/hooks": {
-      "errors": 49,
+      "errors": 44,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 49,
+        "@typescript-eslint/no-explicit-any": 44,
         "react-refresh/only-export-components": 1
       }
     },
-    "src/lib": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
-      }
-    },
+    "src/lib": {},
     "src/pages": {
       "errors": 83,
       "warnings": 0,
@@ -1068,9 +1062,6 @@
     "src/hooks/useFlightPlan.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "src/hooks/useNotifications.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
     "src/hooks/usePackageUsage.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -1094,9 +1085,6 @@
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/lib/friendlyDbError.ts": {},
-    "src/lib/noteNotifications.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "src/pages/AcceptInvitation.tsx": {
       "@typescript-eslint/no-explicit-any": 4
     },

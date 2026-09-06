@@ -6,6 +6,10 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables, TablesInsert } from '@/integrations/supabase/types';
+
+type UserNameRow = Pick<Tables<'users'>, 'user_uuid' | 'first_name'>;
+type NotificationInsert = TablesInsert<'user_notifications'>;
 
 interface NoteNotificationParams {
   noteId: string;
@@ -98,11 +102,11 @@ export async function sendNoteNotifications({
       getTenantCsc(tenantId),
       allUserIds.length > 0
         ? supabase.from('users').select('user_uuid, first_name').in('user_uuid', allUserIds)
-        : Promise.resolve({ data: [] }),
+        : Promise.resolve({ data: [] as UserNameRow[] }),
     ]);
 
     const nameMap = new Map<string, string>();
-    (userNamesResult.data || []).forEach((u: any) => {
+    (userNamesResult.data || []).forEach((u: UserNameRow) => {
       nameMap.set(u.user_uuid, u.first_name || 'User');
     });
 
@@ -120,7 +124,7 @@ export async function sendNoteNotifications({
         created_by: currentUserId,
         source_id: noteId,
       }));
-      await supabase.from('user_notifications').insert(notifRows as any);
+      await supabase.from('user_notifications').insert(notifRows satisfies NotificationInsert[]);
       filteredNotifyIds.forEach(uid => {
         const name = nameMap.get(uid);
         if (name) notifiedNames.push(name);
@@ -172,7 +176,7 @@ export async function sendNoteNotifications({
           link: deepLink,
           created_by: currentUserId,
           source_id: noteId,
-        } as any);
+        } satisfies NotificationInsert);
       }
 
       try {
