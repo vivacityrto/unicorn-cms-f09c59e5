@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
+// auth-gate: none -- invitation token + email possession is the authentication
+// contract for first-time activation, before a Supabase session exists.
+
 interface Body {
   token_plaintext: string;
   email: string;
