@@ -56,6 +56,9 @@ const TEAM_LABELS: Record<string, { label: string; color: string }> = {
   software_development: { label: 'Software Development', color: 'bg-indigo-500/10 text-indigo-700 border-indigo-200' },
 };
 
+const errorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error ? error.message : fallback;
+
 export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEditClick, isEditing, isSuperAdmin = false, isViewingOwnProfile = true }: ProfileHeaderProps) {
   const { toast } = useToast();
   const { refreshProfile, user: authUser } = useAuth();
@@ -169,10 +172,10 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
 
       onAvatarChange();
       await refreshProfile();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Upload Failed',
-        description: error.message || 'Failed to upload avatar. Please try again.',
+        description: errorMessage(error, 'Failed to upload avatar. Please try again.'),
         variant: 'destructive',
       });
     } finally {
@@ -227,10 +230,10 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
 
       onAvatarChange();
       await refreshProfile();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to remove avatar',
+        description: errorMessage(error, 'Failed to remove avatar'),
         variant: 'destructive',
       });
     } finally {
@@ -272,10 +275,10 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
       });
 
       onAvatarChange(); // This refreshes the user data
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error, 'Failed to update status'),
         variant: 'destructive',
       });
     } finally {
@@ -309,10 +312,10 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
       });
 
       onAvatarChange(); // Refreshes user data
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error, 'Failed to update archive status'),
         variant: 'destructive',
       });
     } finally {
