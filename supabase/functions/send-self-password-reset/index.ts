@@ -256,7 +256,7 @@ serve(async (req: Request): Promise<Response> => {
 
     return genericSuccess(req, );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ ok: false, code: "UNEXPECTED_ERROR", detail: "An unexpected error occurred" }),

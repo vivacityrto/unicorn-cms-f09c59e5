@@ -477,8 +477,8 @@ serve(async (req) => {
       sending_as: tokenData.account_email || profile.email,
       provider: "microsoft_graph",
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[send-email-graph] Error:", e);
-    return jsonResponse(req, 500, { error: e?.message || String(e) });
+    return jsonResponse(req, 500, { error: e instanceof Error ? e.message : String(e) });
   }
 });

@@ -233,8 +233,9 @@ serve(async (req) => {
               due_date: item.due_date,
             });
             sent++;
-          } catch (sendErr: any) {
-            errors.push(`${recipientUser.email} (item ${item.id}, offset ${offsetDays}): ${sendErr?.message || sendErr}`);
+          } catch (sendErr: unknown) {
+            const message = sendErr instanceof Error ? sendErr.message : String(sendErr);
+            errors.push(`${recipientUser.email} (item ${item.id}, offset ${offsetDays}): ${message}`);
           }
         }
       }
@@ -244,9 +245,10 @@ serve(async (req) => {
       JSON.stringify({ success: true, sent, skippedAlreadySent, skippedNoEmail, errors }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } },
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("send-action-item-due-reminders error:", e);
-    return new Response(JSON.stringify({ success: false, error: e?.message || String(e) }), {
+    const message = e instanceof Error ? e.message : String(e);
+    return new Response(JSON.stringify({ success: false, error: message }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders(req) },
     });

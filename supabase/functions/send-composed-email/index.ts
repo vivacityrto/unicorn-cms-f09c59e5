@@ -232,7 +232,7 @@ serve(async (req) => {
     });
 
     const mgText = await mgRes.text();
-    let mgResult: any;
+    let mgResult: unknown;
     try {
       mgResult = JSON.parse(mgText);
     } catch {
@@ -297,8 +297,8 @@ serve(async (req) => {
       success: true,
       message: `Email sent to ${renderedTo}`,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Error:", e);
-    return jsonResponse(req, 500, { error: e?.message || String(e) });
+    return jsonResponse(req, 500, { error: e instanceof Error ? e.message : String(e) });
   }
 });
