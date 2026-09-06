@@ -43,14 +43,20 @@ function findUuidInProse(text: string): string | null {
   return m ? m[0] : null;
 }
 
-function collectRollupProse(rollup: any): string[] {
+function collectRollupProse(rollup: unknown): string[] {
   const out: string[] = [];
-  if (typeof rollup?.introduction === 'string') out.push(rollup.introduction);
-  if (typeof rollup?.closing === 'string') out.push(rollup.closing);
-  for (const g of rollup?.priority_groups ?? []) {
-    if (typeof g?.narrative === 'string') out.push(g.narrative);
-    for (const a of g?.actions ?? []) {
-      if (typeof a?.summary === 'string') out.push(a.summary);
+  if (!rollup || typeof rollup !== 'object') return out;
+  const value = rollup as { introduction?: unknown; closing?: unknown; priority_groups?: unknown };
+  if (typeof value.introduction === 'string') out.push(value.introduction);
+  if (typeof value.closing === 'string') out.push(value.closing);
+  for (const group of Array.isArray(value.priority_groups) ? value.priority_groups : []) {
+    if (!group || typeof group !== 'object') continue;
+    const g = group as { narrative?: unknown; actions?: unknown };
+    if (typeof g.narrative === 'string') out.push(g.narrative);
+    for (const action of Array.isArray(g.actions) ? g.actions : []) {
+      if (action && typeof action === 'object' && typeof (action as { summary?: unknown }).summary === 'string') {
+        out.push((action as { summary: string }).summary);
+      }
     }
   }
   return out;
@@ -128,7 +134,7 @@ export function validateDraft(
     return { ok: false, reason: 'uncertainty_notes must be string or null' };
   }
 
-  const rollup = r.action_plan_rollup as any;
+  const rollup = r.action_plan_rollup as DraftJson['action_plan_rollup'];
   if (!rollup || typeof rollup !== 'object') {
     return { ok: false, reason: 'action_plan_rollup missing' };
   }
