@@ -15,7 +15,7 @@
  * consistent to point, even if no row ends up persisted.
  */
 export async function resolveOrCreateConversation(
-  supabase: any,
+  supabase: SupabaseClient,
   userId: string,
   tenantId: number | null,
   requestedConversationId: string | null | undefined,
@@ -56,7 +56,7 @@ export async function resolveOrCreateConversation(
 
 /** Best-effort turn log. Never fails the request — conversation history is a convenience layer, not the audit trail. */
 export async function logTurn(
-  supabase: any,
+  supabase: SupabaseClient,
   conversationId: string,
   role: "user" | "assistant",
   content: string,
@@ -80,7 +80,7 @@ export async function logTurn(
  * to newest.
  */
 export async function loadConversationContext(
-  supabase: any,
+  supabase: SupabaseClient,
   conversationId: string,
   recentTurnLimit: number
 ): Promise<{
@@ -107,3 +107,4 @@ export async function loadConversationContext(
     recentTurns: (turns ?? []).reverse(),
   };
 }
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
