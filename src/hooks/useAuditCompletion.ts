@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { QueryCacheNotifyEvent } from '@tanstack/react-query';
 
 export type CompletionState =
   | 'unanswered'
@@ -52,7 +53,7 @@ export function useAuditProgress(auditId: string | undefined) {
   // Re-fetch this view whenever responses or findings invalidate.
   useEffect(() => {
     if (!auditId) return;
-    const unsub = queryClient.getQueryCache().subscribe((event: any) => {
+    const unsub = queryClient.getQueryCache().subscribe((event: QueryCacheNotifyEvent) => {
       const key = event?.query?.queryKey?.[0];
       const id = event?.query?.queryKey?.[1];
       if (
@@ -73,7 +74,7 @@ export function useAuditProgress(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async (): Promise<AuditProgress | null> => {
       const { data, error } = await supabase
-        .from('v_client_audit_progress' as any)
+        .from('v_client_audit_progress')
         .select('*')
         .eq('audit_id', auditId)
         .maybeSingle();
@@ -92,7 +93,7 @@ export function useAuditSectionCompletion(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async (): Promise<Record<string, SectionCompletion>> => {
       const { data, error } = await supabase
-        .from('v_client_audit_section_completion' as any)
+        .from('v_client_audit_section_completion')
         .select('*')
         .eq('audit_id', auditId);
       if (error) throw error;
@@ -114,7 +115,7 @@ export function useResponseCompletion(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async (): Promise<Record<string, ResponseCompletion>> => {
       const { data, error } = await supabase
-        .from('v_client_audit_response_completion' as any)
+        .from('v_client_audit_response_completion')
         .select('*')
         .eq('audit_id', auditId);
       if (error) throw error;

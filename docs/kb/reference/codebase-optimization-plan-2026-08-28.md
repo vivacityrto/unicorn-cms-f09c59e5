@@ -1428,3 +1428,25 @@ Later batches diff against `lint-baseline.json`'s `byFile`/`byRule` data, not ag
 > **Phase 2.5 email-tickets hook checkpoint (2026-09-06, merged PR #762):** `useEmailTickets.ts` is live from the email-triage tabs and detail panels; a fresh importer sweep confirmed the `email_tickets` read/update contract. Four explicit-any escape hatches were removed with generated table typing and unknown-safe update handling, preserving filters, pagination, and mutation behavior. Lint ratchet passed (4→0), frontend 298/15 skipped, Edge 260, and build passed; typecheck retained only documented baseline errors. Authenticated read-only Playwright against production-backed `/email-triage` passed (1/1, zero page/console errors); temporary harness/config/auth artifacts were deleted and port 8080 was free after teardown. No new L10 bug found.
 > **Phase 2.5 task-dialog error checkpoint (2026-09-06, merged PR #766):** `AddClientTaskDialog.tsx` and `AddStaffTaskDialog.tsx` are live from `PackageDetail.tsx`; fresh importer and parity review confirmed separate `package_client_tasks`/`package_staff_tasks` contracts and unchanged validation, date-offset, reset, and owner behavior. Two explicit-any catches were narrowed to `unknown` with `Error` checks (1→0 per file). Lint ratchet, frontend 298/15 skipped, Edge 260, build, and KB links 672/672 passed; typecheck retained only documented baseline errors. Authenticated read-only Playwright on `/admin/client-packages/15201` passed 1/1 with zero page/console errors under the mutex; temporary artifacts were deleted and port 8080 was free after teardown. No new L10 bug found.
 > **Phase 2.5 meeting-drawer checkpoint (2026-09-06, merged PR #768):** `MeetingDetailDrawer.tsx` is live from `WorkMeetings.tsx`; fresh importer/type-interface sweep confirmed `Meeting` already declares all three Microsoft sync fields. Three redundant `any` casts were replaced with direct typed access, preserving the artifacts display contract. Lint ratchet passed (3→0), frontend 298/15 skipped, Edge 260, build, and KB links 672/672 passed; typecheck retained only documented baseline errors. Authenticated read-only Playwright on `/work/meetings` passed 1/1 with zero page/console errors under the mutex; temporary artifacts were deleted and port 8080 was free after teardown. No new L10 bug found.
+### Phase 2.5 audit/client read-hook checkpoint (2026-09-06, PR pending)
+
+`useTenantPackages.ts`, `useClientAuditPortal.ts`, and `useAuditCompletion.ts`
+remain active through `ManageTenants.tsx`, client audit report surfaces, and
+the audit workspace. Fresh importer and generated-table/view checks confirmed
+the existing read-only query, client-visible filter, completion-rollup, and
+cache-invalidation contracts. Eleven explicit-any findings were removed
+(3→0, 4→0, 4→0) without changing behavior. `lint:ratchet`, frontend (298
+passed / 15 skipped), Edge (260 passed), build, and KB links (672/672) pass
+under the shared mutex. Typecheck retains only the established
+`ClientLayout.tsx`/`useKpiSummary.tsx` baseline errors. Baseline is 837
+explicit-any findings / 844 total errors / 39 warnings across 193 files.
+Authenticated browser coverage remains pending; no writes or new L10 bug were
+observed.
+**PR #798 browser-gate follow-up (2026-09-06):** `/audits` passed with
+authenticated SuperAdmin state and refresh. `/manage-tenants` rendered real
+tenant data, but its temporary assertion used a stale heading marker, while
+the session also emitted repeated hosted-Supabase `Failed to fetch` console
+errors from existing notification initialization. Keep #798 unmerged until a
+fresh session/network retry uses the current page marker and yields zero
+application console errors. Temporary browser artifacts and the server were
+removed.

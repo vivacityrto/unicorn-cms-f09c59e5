@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T02:29:45.773Z",
-  "baselineSha": "890033c229de67a02dfcaaeb40c0ea749b0ece43",
+  "generatedAt": "2026-09-06T03:12:14.184Z",
+  "baselineSha": "c8cab0553037980c7b7dafd5aee162c3e31ebb6c",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 196,
-    "errors": 855,
+    "filesWithFindings": 193,
+    "errors": 844,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 848,
+    "@typescript-eslint/no-explicit-any": 837,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 291,
+      "errors": 280,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 284,
+        "@typescript-eslint/no-explicit-any": 273,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -232,10 +232,10 @@
       }
     },
     "src/hooks": {
-      "errors": 77,
+      "errors": 66,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 77,
+        "@typescript-eslint/no-explicit-any": 66,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1094,14 +1094,8 @@
     "src/hooks/useAISuggestions.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
-    "src/hooks/useAuditCompletion.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "src/hooks/useAuth.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/hooks/useClientAuditPortal.ts": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/hooks/useCodeTables.ts": {
       "@typescript-eslint/no-explicit-any": 4
@@ -1150,9 +1144,6 @@
       "@typescript-eslint/no-explicit-any": 4
     },
     "src/hooks/useTenantNotes.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/hooks/useTenantPackages.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/hooks/useTimeEntriesPaginated.tsx": {
