@@ -13,6 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEmailTemplates, EmailTemplate } from "@/hooks/useEmailTemplates";
 import EmailTemplateEditorDialog from "@/components/email/EmailTemplateEditorDialog";
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unexpected error";
+}
+
 export default function ManageEmailTemplates() {
   const { toast } = useToast();
   const { templates, loading, createTemplate, updateTemplate, duplicateTemplate, archiveTemplate, activateTemplate } = useEmailTemplates();
@@ -43,8 +47,8 @@ export default function ManageEmailTemplates() {
         await updateTemplate(selectedTemplate.id, data);
         toast({ title: "Success", description: "Template updated successfully" });
       }
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
       throw e;
     }
   };
@@ -53,8 +57,8 @@ export default function ManageEmailTemplates() {
     try {
       await duplicateTemplate(template.id);
       toast({ title: "Success", description: "Template duplicated successfully" });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
   };
 
@@ -62,8 +66,8 @@ export default function ManageEmailTemplates() {
     try {
       await archiveTemplate(template.id);
       toast({ title: "Success", description: "Template archived" });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
   };
 
@@ -71,8 +75,8 @@ export default function ManageEmailTemplates() {
     try {
       await activateTemplate(template.id);
       toast({ title: "Success", description: "Template activated" });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
   };
 
