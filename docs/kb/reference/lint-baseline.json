@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T15:08:17.759Z",
-  "baselineSha": "e5de82e06d71da003d9ac67f3c88a128421939fa",
+  "generatedAt": "2026-09-06T15:19:37.108Z",
+  "baselineSha": "740cdcb3105b4b0518eb45d4800f90c2640507c1",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 118,
-    "errors": 352,
+    "filesWithFindings": 116,
+    "errors": 346,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 345,
+    "@typescript-eslint/no-explicit-any": 339,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 264,
+      "errors": 258,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 264
+        "@typescript-eslint/no-explicit-any": 258
       }
     }
   },
@@ -449,13 +449,6 @@
         "@typescript-eslint/no-explicit-any": 4
       }
     },
-    "supabase/functions/query-knowledge-graph": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
-      }
-    },
     "supabase/functions/record-executive-summary-decision": {
       "errors": 4,
       "warnings": 0,
@@ -496,13 +489,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 2
-      }
-    },
-    "supabase/functions/scan-risk-radar": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
       }
     },
     "supabase/functions/search-organisations": {
@@ -922,9 +908,6 @@
     "supabase/functions/provision-m365-user/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "supabase/functions/query-knowledge-graph/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "supabase/functions/record-executive-summary-decision/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
@@ -942,9 +925,6 @@
     },
     "supabase/functions/resolve-sharepoint-folder-url/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "supabase/functions/scan-risk-radar/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
     },
     "supabase/functions/search-organisations/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
