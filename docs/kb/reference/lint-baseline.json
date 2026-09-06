@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T08:57:36.958Z",
-  "baselineSha": "9e7c7a5576c3b7996f5facb1c1dc81c380192eb5",
+  "generatedAt": "2026-09-06T09:05:57.859Z",
+  "baselineSha": "acba93300ba7d711736541307373e6e33853306c",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 168,
-    "errors": 723,
+    "filesWithFindings": 167,
+    "errors": 720,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 716,
+    "@typescript-eslint/no-explicit-any": 713,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 159,
+      "errors": 156,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 152,
+        "@typescript-eslint/no-explicit-any": 149,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -32,10 +32,10 @@
   },
   "byDirectory": {
     "src/components": {
-      "errors": 4,
+      "errors": 1,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
+        "@typescript-eslint/no-explicit-any": 1
       }
     },
     "src/components/academy": {
@@ -871,9 +871,6 @@
     }
   },
   "byFile": {
-    "src/components/EditPackageDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "src/components/InviteUserDialog.tsx": {
       "@typescript-eslint/no-explicit-any": 1
     },
