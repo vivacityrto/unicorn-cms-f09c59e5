@@ -14,6 +14,22 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader2, FolderSearch } from 'lucide-react';
 import { SharePointLinkDialog } from '@/components/ui/sharepoint-link-dialog';
 import { DocumentAdditionalStagesField } from '@/components/documents/DocumentAdditionalStagesField';
+import type { Tables } from '@/integrations/supabase/types';
+
+type StageOption = Pick<Tables<'stages'>, 'id' | 'name'>;
+type FormState = {
+  title: string;
+  description: string;
+  format: string;
+  document_status: string;
+  framework_type: string;
+  category: string;
+  stage: string;
+  source_template_url: string;
+  is_core: boolean;
+  is_tenant_downloadable: boolean;
+  standard_set: string;
+};
 
 interface GovernanceDocumentEditDialogProps {
   documentId: number;
@@ -82,13 +98,13 @@ export function GovernanceDocumentEditDialog({
         .from('stages')
         .select('id, name')
         .order('name');
-      return (data as any[]) || [];
+      return data ?? [];
     },
     enabled: open,
   });
 
   // Form state
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     title: '',
     description: '',
     format: '',
@@ -147,12 +163,12 @@ export function GovernanceDocumentEditDialog({
       onSuccess();
       onOpenChange(false);
     },
-    onError: (err: any) => {
-      toast.error(err.message || 'Failed to update document');
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to update document');
     },
   });
 
-  const updateField = (field: string, value: any) => {
+  const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -268,7 +284,7 @@ export function GovernanceDocumentEditDialog({
           {/* Additional Stages */}
           <DocumentAdditionalStagesField
             documentId={documentId}
-            stages={stages as any}
+            stages={stages as StageOption[] | undefined}
             primaryStageId={form.stage ? parseInt(form.stage) : null}
           />
 

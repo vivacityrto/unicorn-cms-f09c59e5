@@ -3,6 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package } from 'lucide-react';
+import type { Tables } from '@/integrations/supabase/types';
+
+type StageRow = Pick<Tables<'stages'>, 'id' | 'name'>;
+type PackageInstanceRow = Pick<Tables<'package_instances'>, 'id' | 'package_id'>;
+type PackageRow = Pick<Tables<'packages'>, 'id' | 'name'>;
 
 interface Props {
   documentId: number;
@@ -44,15 +49,18 @@ export function GovernancePackageAssignments({ documentId }: Props) {
           : { data: [], error: null },
       ]);
 
-      const stageMap = new Map((stagesRes.data || []).map((s: any) => [s.id, s.name]));
-      const pkgInstMap = new Map((pkgInstRes.data || []).map((p: any) => [p.id, p.package_id]));
+      const stageRows: StageRow[] = stagesRes.data ?? [];
+      const packageInstanceRows: PackageInstanceRow[] = pkgInstRes.data ?? [];
+      const stageMap = new Map(stageRows.map((s) => [s.id, s.name]));
+      const pkgInstMap = new Map(packageInstanceRows.map((p) => [p.id, p.package_id]));
 
       // 4. Fetch package names
-      const pkgIds = [...new Set([...(pkgInstRes.data || []).map((p: any) => p.package_id)].filter(Boolean))];
+      const pkgIds = [...new Set(packageInstanceRows.map((p) => p.package_id).filter(Boolean))];
       const pkgRes = pkgIds.length > 0
         ? await supabase.from('packages').select('id, name').in('id', pkgIds)
         : { data: [] };
-      const pkgMap = new Map((pkgRes.data || []).map((p: any) => [p.id, p.name]));
+      const packageRows: PackageRow[] = pkgRes.data ?? [];
+      const pkgMap = new Map(packageRows.map((p) => [p.id, p.name]));
 
       // 5. Build grouped: stage → packages (deduplicated)
       const result: Record<number, { title: string; packages: string[] }> = {};
