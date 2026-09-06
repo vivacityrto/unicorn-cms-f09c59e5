@@ -66,7 +66,7 @@ export function useClientNotifications() {
     const channel = supabase
       .channel(`client-notif-live:${profile.user_uuid}:${uniqueId}`)
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
@@ -85,7 +85,7 @@ export function useClientNotifications() {
     mutationFn: async (notificationId: string) => {
       const { error } = await supabase
         .from("user_notifications")
-        .update({ is_read: true } as any)
+        .update({ is_read: true })
         .eq("id", notificationId);
       if (error) throw error;
     },
@@ -97,7 +97,7 @@ export function useClientNotifications() {
       if (!activeTenantId || !profile?.user_uuid) return;
       const { error } = await supabase
         .from("user_notifications")
-        .update({ is_read: true } as any)
+        .update({ is_read: true })
         .eq("is_read", false)
         .eq("user_id", profile.user_uuid)
         .eq("tenant_id", activeTenantId);
