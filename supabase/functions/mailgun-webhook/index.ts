@@ -9,6 +9,9 @@ import {
   verifyMailgunSignature,
 } from "../_shared/webhook-signature.ts";
 
+// auth-gate: none -- Mailgun authenticates each request with its signed
+// timestamp/token payload rather than a per-user caller.
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
