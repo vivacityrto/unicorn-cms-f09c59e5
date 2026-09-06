@@ -16,14 +16,16 @@ async function invokeObligation<T>(body: Record<string, unknown>): Promise<T> {
     body,
   });
   if (error) throw error;
-  if ((data as any)?.error) throw new Error((data as any).error);
+  if (data && typeof data === "object" && "error" in data && typeof data.error === "string") {
+    throw new Error(data.error);
+  }
   return data as T;
 }
 
 export function usePreviewObligation() {
   return useMutation({
     mutationFn: async (obligationId: number): Promise<PreviewResult> => {
-      const result = await invokeObligation<any>({
+      const result = await invokeObligation<PreviewResult>({
         scope: "reporting_obligations",
         obligation_id: obligationId,
         preview: true,
@@ -40,7 +42,7 @@ export function usePreviewObligation() {
 export function useBroadcastObligation() {
   return useMutation({
     mutationFn: async (obligationId: number): Promise<BroadcastResult> => {
-      const result = await invokeObligation<any>({
+      const result = await invokeObligation<BroadcastResult>({
         scope: "reporting_obligations",
         obligation_id: obligationId,
         broadcast: true,
