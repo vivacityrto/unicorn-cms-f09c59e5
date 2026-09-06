@@ -253,16 +253,16 @@ export function NoteFormDialog({
   const [timeWorkSubTypeOptions, setTimeWorkSubTypeOptions] = useState<{ code: string; label: string; category: string }[]>([]);
 
   useEffect(() => {
-    supabase.from('dd_work_types' as any).select('code, label').eq('is_active', true).order('sort_order')
+    supabase.from('dd_work_types' as never).select('code, label').eq('is_active', true).order('sort_order')
       .then(({ data }) => {
         if (data) setTimeWorkTypeOptions(
-          (data as any[])
+          (data as unknown as { code: string; label: string }[])
             .filter((d) => d.code !== 'parent_defined' && d.code !== 'kickstart_tas')
             .map((d) => ({ code: d.code, label: d.label }))
         );
       });
-    supabase.from('dd_work_sub_type' as any).select('code, label, category').eq('is_active', true).order('sort_order')
-      .then(({ data }) => { if (data) setTimeWorkSubTypeOptions(data as any[]); });
+    supabase.from('dd_work_sub_type' as never).select('code, label, category').eq('is_active', true).order('sort_order')
+      .then(({ data }) => { if (data) setTimeWorkSubTypeOptions(data as unknown as { code: string; label: string; category: string }[]); });
   }, []);
 
   // Reset sub type whenever work type changes
