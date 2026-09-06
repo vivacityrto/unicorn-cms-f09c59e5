@@ -6,6 +6,7 @@
 
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 interface AuditPayload {
   tenantId: number;
@@ -21,7 +22,7 @@ interface AuditPayload {
 export function useEngagementAudit() {
   const logEngagementEvent = useCallback(async (payload: AuditPayload) => {
     const { error } = await supabase
-      .from('engagement_audit_log' as any)
+      .from('engagement_audit_log')
       .insert({
         tenant_id: payload.tenantId,
         client_id: payload.clientId ?? null,
@@ -30,8 +31,8 @@ export function useEngagementAudit() {
         event_type: payload.eventType,
         tier: payload.tier ?? null,
         integrity_validation_passed: payload.validationPassed,
-        validation_notes: payload.validationNotes ?? {},
-      } as any);
+        validation_notes: (payload.validationNotes ?? {}) as Json,
+      });
 
     if (error) {
       console.error('[EngagementAudit] Failed to log:', error);
