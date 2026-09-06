@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T11:26:55.631Z",
-  "baselineSha": "745e320de8174603acfd3e49a50ae7ff86384518",
+  "generatedAt": "2026-09-06T11:38:48.592Z",
+  "baselineSha": "b21cab04e1502ff52ef2f9af0f96e7574332d3b7",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 142,
-    "errors": 639,
+    "filesWithFindings": 138,
+    "errors": 624,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 632,
+    "@typescript-eslint/no-explicit-any": 617,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 551,
+      "errors": 536,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 551
+        "@typescript-eslint/no-explicit-any": 536
       }
     }
   },
@@ -596,39 +596,11 @@
         "@typescript-eslint/no-explicit-any": 7
       }
     },
-    "supabase/functions/research-enrich-tenant": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
     "supabase/functions/research-evidence-gap-check": {
       "errors": 4,
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/research-public-snapshot": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/research-tas-context": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
-      }
-    },
-    "supabase/functions/research-template-gap-analysis": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
       }
     },
     "supabase/functions/resend-invite": {
@@ -1145,20 +1117,8 @@
     "supabase/functions/research-audit-intelligence/index.ts": {
       "@typescript-eslint/no-explicit-any": 7
     },
-    "supabase/functions/research-enrich-tenant/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
     "supabase/functions/research-evidence-gap-check/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/research-public-snapshot/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/research-tas-context/index.ts": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
-    "supabase/functions/research-template-gap-analysis/index.ts": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "supabase/functions/resend-invite/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
