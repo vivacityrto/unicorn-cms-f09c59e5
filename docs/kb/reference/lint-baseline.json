@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T15:19:37.108Z",
-  "baselineSha": "740cdcb3105b4b0518eb45d4800f90c2640507c1",
+  "generatedAt": "2026-09-06T15:29:17.015Z",
+  "baselineSha": "dcf3797ca55314c4f8b5069a79f30d339ce5cb58",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 116,
-    "errors": 346,
+    "filesWithFindings": 114,
+    "errors": 336,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 339,
+    "@typescript-eslint/no-explicit-any": 329,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 258,
+      "errors": 248,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 258
+        "@typescript-eslint/no-explicit-any": 248
       }
     }
   },
@@ -258,20 +258,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/clickup-ai-search": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/client-ai-companion": {
-      "errors": 6,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 6
       }
     },
     "supabase/functions/cohort-access-sender-worker": {
@@ -823,12 +809,6 @@
     },
     "supabase/functions/capture-outlook-email/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/clickup-ai-search/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/client-ai-companion/index.ts": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "supabase/functions/cohort-access-sender-worker/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
