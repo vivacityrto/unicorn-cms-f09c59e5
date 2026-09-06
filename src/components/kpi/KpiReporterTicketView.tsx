@@ -30,7 +30,7 @@ interface Ticket {
   reporter_uuid: string | null;
   assignee_uuid: string | null;
   opened_at: string;
-  metadata: any;
+  metadata: unknown;
 }
 interface Comm { id: number; ticket_id: number; comm_type: string; occurred_at: string; }
 interface UserRow { user_uuid: string; first_name: string | null; last_name: string | null; email: string | null; }
@@ -53,8 +53,8 @@ export function KpiReporterTicketView() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data: t } = await (supabase as any)
-        .from("kpi_tickets")
+      const { data: t } = await supabase
+        .from("kpi_tickets" as never)
         .select("id, ticket_number, title, platform, priority, status, reporter_uuid, assignee_uuid, opened_at, metadata")
         .eq("reporter_uuid", user.id)
         .order("opened_at", { ascending: false });
@@ -64,8 +64,8 @@ export function KpiReporterTicketView() {
 
       if (rows.length) {
         const ids = rows.map((r) => r.id);
-        const { data: c } = await (supabase as any)
-          .from("kpi_ticket_comms")
+        const { data: c } = await supabase
+          .from("kpi_ticket_comms" as never)
           .select("id, ticket_id, comm_type, occurred_at")
           .in("ticket_id", ids);
         const cMap: Record<number, Comm[]> = {};
@@ -74,7 +74,7 @@ export function KpiReporterTicketView() {
 
         const assigneeIds = Array.from(new Set(rows.map((r) => r.assignee_uuid).filter(Boolean) as string[]));
         if (assigneeIds.length) {
-          const { data: u } = await (supabase as any)
+          const { data: u } = await supabase
             .from("users").select("user_uuid, first_name, last_name, email")
             .in("user_uuid", assigneeIds);
           const m: Record<string, UserRow> = {};
@@ -141,7 +141,10 @@ function TicketDetail({
   assignee: UserRow | undefined;
   comms: Comm[];
 }) {
-  const description = ticket.metadata?.description ?? "—";
+  const description =
+    typeof ticket.metadata === "object" && ticket.metadata !== null && "description" in ticket.metadata
+      ? String(ticket.metadata.description ?? "—")
+      : "—";
   const commByKey = useMemo(() => {
     const m: Record<string, Comm> = {};
     comms.forEach((c) => {
