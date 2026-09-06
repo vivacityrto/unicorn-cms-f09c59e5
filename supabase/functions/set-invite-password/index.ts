@@ -103,7 +103,13 @@ serve(async (req) => {
       }
       const found = list?.users?.find((u) => u.email?.toLowerCase() === emailLc);
       if (found) {
-        authUser = found as any;
+        authUser = found
+          ? {
+              id: found.id,
+              email: found.email,
+              user_metadata: found.user_metadata as Record<string, unknown> | null,
+            }
+          : null;
         break;
       }
       if (!list?.users?.length || list.users.length < 1000) break;
@@ -114,7 +120,7 @@ serve(async (req) => {
       return json(req, 404, { ok: false, code: "AUTH_USER_NOT_FOUND" });
     }
 
-    const isGhost = (authUser.user_metadata as any)?.ghost_activation === true;
+    const isGhost = authUser.user_metadata?.ghost_activation === true;
 
     // For old activations without the flag, check if the user has ever
     // signed in. If last_sign_in_at is null they have no known password —
@@ -202,8 +208,9 @@ serve(async (req) => {
     }
 
     return json(req, 200, { ok: true, email: authUser.email });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("set-invite-password error", err);
-    return json(req, 500, { ok: false, code: "UNEXPECTED", detail: err?.message || "Unexpected error" });
+    const detail = err instanceof Error ? err.message : "Unexpected error";
+    return json(req, 500, { ok: false, code: "UNEXPECTED", detail });
   }
 });

@@ -108,8 +108,16 @@ interface PDFData {
   toDate: string;
   generatedAt: string;
   generatedBy: string;
-  events: any[];
+  events: TimelineEvent[];
   eventTypes?: string[] | null;
+}
+
+interface TimelineEvent {
+  event_type: string;
+  occurred_at: string;
+  title?: string | null;
+  creator_name?: string | null;
+  [key: string]: unknown;
 }
 
 function generatePDF(data: PDFData): string {
@@ -144,12 +152,12 @@ function generatePDF(data: PDFData): string {
   };
 
   // Group events by type
-  const eventsByType = data.events.reduce((acc: Record<string, any[]>, event: any) => {
-    const type = event.event_type as string;
+  const eventsByType = data.events.reduce<Record<string, TimelineEvent[]>>((acc, event) => {
+    const type = event.event_type;
     if (!acc[type]) acc[type] = [];
     acc[type].push(event);
     return acc;
-  }, {} as Record<string, any[]>);
+  }, {});
 
   // Build PDF content
   let yPos = 750;

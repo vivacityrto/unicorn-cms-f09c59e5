@@ -87,14 +87,14 @@ Deno.serve(async (req) => {
   // this response. Looked up via service role because client_audit_log RLS
   // restricts non-Super-Admin SELECTs.
   const { data: draftRow, error: draftErr } = await admin
-    .from('client_audit_log' as any)
+    .from('client_audit_log')
     .select('id, tenant_id, actor_user_id, entity_id, action')
     .eq('id', draftLogId)
     .maybeSingle();
   if (draftErr || !draftRow) {
     return json(req, { error: 'Draft log entry not found' }, 404);
   }
-  const d = draftRow as Record<string, any>;
+  const d = draftRow as Record<string, unknown>;
   if (d.action !== 'ai.finding_drafted') {
     return json(req, { error: 'Referenced log row is not an AI draft' }, 400);
   }
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     return json(req, { error: 'Draft log does not match this response' }, 400);
   }
 
-  const { error: insErr } = await admin.from('client_audit_log' as any).insert({
+  const { error: insErr } = await admin.from('client_audit_log').insert({
     tenant_id: d.tenant_id,
     actor_user_id: callerUserId,
     action: 'ai.finding_decision',
