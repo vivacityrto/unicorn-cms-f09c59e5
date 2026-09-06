@@ -6,6 +6,7 @@ import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json, TablesInsert } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,11 @@ type Interview = {
   submitted_at: string | null;
   submitted_by: string | null;
 };
+
+type ExitInterviewInsert = TablesInsert<"engagement_exit_interviews">;
+
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Try again.";
 
 export default function MyExitInterview() {
   const { user } = useAuth();
@@ -90,13 +96,16 @@ export default function MyExitInterview() {
       const { error } = await supabase
         .from("engagement_exit_interviews")
         .upsert(
-          { engagement_id: engagement.id, responses: nextResponses } as any,
+          {
+            engagement_id: engagement.id,
+            responses: nextResponses as unknown as Json,
+          } satisfies ExitInterviewInsert,
           { onConflict: "engagement_id" },
         );
       if (error) throw error;
     },
-    onError: (e: any) => {
-      toast({ title: "Could not save", description: e?.message ?? "Try again.", variant: "destructive" });
+    onError: (e: unknown) => {
+      toast({ title: "Could not save", description: errorMessage(e), variant: "destructive" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-exit-interview", engagement?.id] });
@@ -112,11 +121,11 @@ export default function MyExitInterview() {
         .upsert(
           {
             engagement_id: engagement.id,
-            responses,
+            responses: responses as unknown as Json,
             is_submitted: true,
             submitted_at: new Date().toISOString(),
             submitted_by: user.id,
-          } as any,
+          } satisfies ExitInterviewInsert,
           { onConflict: "engagement_id" },
         );
       if (upsertErr) throw upsertErr;
@@ -125,8 +134,8 @@ export default function MyExitInterview() {
       toast({ title: "Exit interview submitted", description: "Thank you for your feedback." });
       queryClient.invalidateQueries({ queryKey: ["my-exit-interview", engagement?.id] });
     },
-    onError: (e: any) => {
-      toast({ title: "Submission failed", description: e?.message ?? "Try again.", variant: "destructive" });
+    onError: (e: unknown) => {
+      toast({ title: "Submission failed", description: errorMessage(e), variant: "destructive" });
     },
   });
 
