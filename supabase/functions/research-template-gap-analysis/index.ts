@@ -11,6 +11,21 @@ import { corsHeaders } from "../_shared/cors.ts";
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+interface ClauseAnalysis {
+  clause: string;
+  coverage_status: string;
+  confidence?: string;
+  excerpt?: string | null;
+  improvement_note?: string | null;
+}
+
+interface TemplateAnalysis {
+  clauses: ClauseAnalysis[];
+  high_risk_gaps?: string[];
+  summary?: string;
+  language_concerns?: unknown[];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req) });
 
@@ -141,7 +156,7 @@ IMPORTANT:
     const citations = aiData.citations || [];
 
     // Parse JSON from response
-    let analysis: any;
+    let analysis: TemplateAnalysis | null = null;
     try {
       const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
       analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
@@ -182,7 +197,7 @@ IMPORTANT:
     if (ajErr) throw new Error(`Analysis job creation failed: ${ajErr.message}`);
 
     // 4. Insert clause mappings
-    const clauseMappings = (analysis.clauses || []).map((c: any) => ({
+    const clauseMappings = analysis.clauses.map((c: ClauseAnalysis) => ({
       template_analysis_job_id: analysisJob.id,
       standard_clause: c.clause,
       coverage_status: c.coverage_status,
@@ -197,9 +212,9 @@ IMPORTANT:
     }
 
     // 5. Create gap summary
-    const explicit = clauseMappings.filter((c: any) => c.coverage_status === "explicit").length;
-    const weak = clauseMappings.filter((c: any) => c.coverage_status === "weak").length;
-    const missing = clauseMappings.filter((c: any) => c.coverage_status === "missing").length;
+    const explicit = clauseMappings.filter((c) => c.coverage_status === "explicit").length;
+    const weak = clauseMappings.filter((c) => c.coverage_status === "weak").length;
+    const missing = clauseMappings.filter((c) => c.coverage_status === "missing").length;
     const highRiskGaps = (analysis.high_risk_gaps || []).length;
 
     const summaryMd = analysis.summary || "Analysis complete. Review clause mappings for details.";

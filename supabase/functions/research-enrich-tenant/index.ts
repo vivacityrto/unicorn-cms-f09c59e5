@@ -14,6 +14,12 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const WHITELISTED_PATHS = ["/", "/about", "/courses", "/contact", "/programs", "/training"];
 
+interface ResearchCitation {
+  index: number;
+  url: string;
+  retrieved_at: string;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders(req) });
@@ -177,7 +183,7 @@ Be factual. Only report what is found on the pages. Flag anything that appears i
     });
 
     let summaryMd = "";
-    let citations: any[] = [];
+    let citations: ResearchCitation[] = [];
 
     if (ppxResponse.ok) {
       const ppxData = await ppxResponse.json();
