@@ -1319,6 +1319,8 @@ SuperAdmin Playwright passed 4/4 with zero application console errors. This
 cohort is ready for its implementation PR and merge; no new L10 item was
 found.
 
+> **Phase 2.5 governance-document cluster checkpoint (2026-09-06):** `GovernanceDocumentEditDialog.tsx` and `GovernancePackageAssignments.tsx` are live from `GovernanceDocumentDetail.tsx` on the Documents surface. Fresh importer and generated-schema checks confirmed the `documents`, `stages`, `stage_instances`, `package_instances`, and `packages` read/update contracts. Eight explicit-any findings were removed (4→0 in each file) using generated row types and keyed form-state updates; document editing and assignment grouping behavior is unchanged. Lint ratchet passed (4→0 per file), frontend 298/15 skipped, Edge 260, build, and KB links 672/672 passed; typecheck retains only the documented `ClientLayout.tsx` and `useKpiSummary.tsx` baseline errors. Authenticated SuperAdmin Playwright passed 1/1 after a cold-start retry, with no application console errors on the passing run; temporary auth/junction/spec/config artifacts and the Vite process were removed. No new L10 bug was found.
+
 ### Phase 2.6 — verified retirement and bounded consolidation (council-planned 2026-09-04)
 
 **Parallel preparation checkpoint (2026-09-04):** while Phase 2.5 remains
