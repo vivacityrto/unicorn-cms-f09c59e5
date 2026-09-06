@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T01:59:52.925Z",
-  "baselineSha": "46b813938df8545174066f068bfe4bea7f4660e3",
+  "generatedAt": "2026-09-06T02:37:59.546Z",
+  "baselineSha": "890033c229de67a02dfcaaeb40c0ea749b0ece43",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 198,
-    "errors": 863,
+    "filesWithFindings": 195,
+    "errors": 855,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 856,
+    "@typescript-eslint/no-explicit-any": 848,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 299,
+      "errors": 291,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 292,
+        "@typescript-eslint/no-explicit-any": 284,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -265,13 +265,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "src/pages/client": {
-      "errors": 8,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 8
       }
     },
     "src/routes": {
@@ -1222,15 +1215,6 @@
     },
     "src/pages/academy/AcademyCertificatesPage.tsx": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/client/AcademyAssessmentPlayerPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/pages/client/AcademyAssessmentResultPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/pages/client/SupportTicketPortalDetailPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "src/routes/dashboardRoutes.tsx": {
       "react-refresh/only-export-components": 1
