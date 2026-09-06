@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T15:55:10.770Z",
-  "baselineSha": "715d2ef9bef7e60159a456d9acddd61064bb17d9",
+  "generatedAt": "2026-09-06T15:44:44.704Z",
+  "baselineSha": "54ce9ca1f6b59381cf3e7c2d902b3e643e7cb336",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 105,
-    "errors": 307,
+    "filesWithFindings": 109,
+    "errors": 318,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 300,
+    "@typescript-eslint/no-explicit-any": 311,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 219,
+      "errors": 230,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 219
+        "@typescript-eslint/no-explicit-any": 230
       }
     }
   },
@@ -400,6 +400,13 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
+    "supabase/functions/link-sharepoint-document": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
     "supabase/functions/mailgun-webhook": {
       "errors": 1,
       "warnings": 0,
@@ -414,6 +421,13 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
+    "supabase/functions/provision-m365-user": {
+      "errors": 4,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
     "supabase/functions/record-finding-decision": {
       "errors": 3,
       "warnings": 0,
@@ -426,6 +440,13 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/resolve-sharepoint-folder-url": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "supabase/functions/search-organisations": {
@@ -541,6 +562,13 @@
       }
     },
     "supabase/functions/update-user-role": {
+      "errors": 1,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/upload-sharepoint-file": {
       "errors": 1,
       "warnings": 0,
       "byRule": {
@@ -810,17 +838,26 @@
     "supabase/functions/issue-token/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
+    "supabase/functions/link-sharepoint-document/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
     "supabase/functions/mailgun-webhook/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/mark-token-used/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
+    "supabase/functions/provision-m365-user/index.ts": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
     "supabase/functions/record-finding-decision/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
     "supabase/functions/resend-invite/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/resolve-sharepoint-folder-url/index.ts": {
+      "@typescript-eslint/no-explicit-any": 2
     },
     "supabase/functions/search-organisations/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
@@ -871,6 +908,9 @@
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/update-user-role/index.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "supabase/functions/upload-sharepoint-file/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/vector-index-update/index.ts": {
