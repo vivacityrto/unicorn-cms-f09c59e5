@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T13:22:31.883Z",
-  "baselineSha": "7d37b824b431d566ee5c4ff1c967aa1d0f9c20fe",
+  "generatedAt": "2026-09-06T13:32:32.734Z",
+  "baselineSha": "4f410e2b6cc59bdb124424b66675e3423b5c82a7",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 130,
-    "errors": 539,
+    "filesWithFindings": 128,
+    "errors": 507,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 532,
+    "@typescript-eslint/no-explicit-any": 500,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 451,
+      "errors": 419,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 451
+        "@typescript-eslint/no-explicit-any": 419
       }
     }
   },
@@ -386,13 +386,6 @@
         "@typescript-eslint/no-explicit-any": 4
       }
     },
-    "supabase/functions/export-pdp-audit-pack": {
-      "errors": 16,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 16
-      }
-    },
     "supabase/functions/extract-document-fields": {
       "errors": 1,
       "warnings": 0,
@@ -419,13 +412,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 13
-      }
-    },
-    "supabase/functions/generate-client-audit-report": {
-      "errors": 16,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 16
       }
     },
     "supabase/functions/generate-meeting-recurrence": {
@@ -975,9 +961,6 @@
     "supabase/functions/export-client-timeline-pdf/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "supabase/functions/export-pdp-audit-pack/index.ts": {
-      "@typescript-eslint/no-explicit-any": 16
-    },
     "supabase/functions/extract-document-fields/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -989,9 +972,6 @@
     },
     "supabase/functions/generate-client-audit-report-docx/index.ts": {
       "@typescript-eslint/no-explicit-any": 13
-    },
-    "supabase/functions/generate-client-audit-report/index.ts": {
-      "@typescript-eslint/no-explicit-any": 16
     },
     "supabase/functions/generate-meeting-recurrence/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
