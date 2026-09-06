@@ -7,6 +7,7 @@
 
 import type {
   Fact,
+  FactCategory,
   ConfidenceLevel,
   ConfidenceFactors,
   ConfidenceResult,
@@ -112,7 +113,7 @@ function calculateCoverage(facts: Fact[]): number {
   
   let coverage = 0;
   for (const cat of expectedCategories) {
-    if (presentCategories.has(cat as any)) {
+    if (presentCategories.has(cat as FactCategory)) {
       coverage += 1;
     }
   }
@@ -149,7 +150,8 @@ function detectConflicts(facts: Fact[]): number {
     f.type === "phase_status" && 
     typeof f.value === "object" && 
     f.value !== null &&
-    (f.value as any).status === "complete"
+    typeof f.value === "object" && f.value !== null &&
+    (f.value as { status?: unknown }).status === "complete"
   );
   const evidenceMissing = facts.some(f => f.type === "evidence_missing");
   

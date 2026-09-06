@@ -196,8 +196,8 @@ Deno.test("deriveFreshnessFact - creates valid fact", () => {
 
   const result = deriveFreshnessFact(freshness, activity, "2026-02-09T10:00:00Z");
   assertEquals(result.key, "data_freshness");
-  assertEquals((result.value as any).status, "fresh");
-  assertEquals((result.value as any).days_since_activity, 3);
+  assertEquals((result.value as { status: string }).status, "fresh");
+  assertEquals((result.value as { days_since_activity: number }).days_since_activity, 3);
   assertEquals(result.source_table, "tasks");
 });
 

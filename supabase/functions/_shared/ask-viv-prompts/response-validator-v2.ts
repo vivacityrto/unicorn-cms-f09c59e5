@@ -264,7 +264,7 @@ export function validateAskVivResponse(
     headingCounts.set(heading, (headingCounts.get(heading) || 0) + 1);
   }
   for (const [heading, count] of headingCounts) {
-    if (count > 1 && requiredHeadings.includes(heading as any)) {
+    if (count > 1 && new Set(requiredHeadings).has(heading)) {
       errors.push(`Duplicate heading: ${heading} (appears ${count} times)`);
     }
   }
