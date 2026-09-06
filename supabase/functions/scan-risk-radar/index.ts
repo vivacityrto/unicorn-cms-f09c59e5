@@ -23,6 +23,7 @@ interface DetectedRisk {
   detected_by: "rule";
   data: Record<string, unknown>;
 }
+type JsonRecord = Record<string, unknown>;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
           .eq("tenant_id", tenant_id)
           .eq("phase_id", phase_id);
 
-        const existingTypes = new Set((existingDocs || []).map((d: any) => d.doc_type));
+        const existingTypes = new Set((existingDocs || []).map((d) => (d as JsonRecord).doc_type));
         const missing = [...allRequired].filter(t => !existingTypes.has(t));
 
         if (missing.length > 0) {
@@ -172,7 +173,7 @@ Deno.serve(async (req) => {
           .select("delivery_mode")
           .eq("id", tenant_id)
           .single();
-        deliveryModeSet = !!(tenant && (tenant as any).delivery_mode);
+        deliveryModeSet = !!(tenant && (tenant as JsonRecord).delivery_mode);
       } catch { /* graceful fallback */ }
 
       if (!deliveryModeSet) {
@@ -188,7 +189,7 @@ Deno.serve(async (req) => {
     }
 
     // ---- Upsert detected risks ----
-    const upsertedRisks: any[] = [];
+    const upsertedRisks: JsonRecord[] = [];
 
     for (const risk of detectedRisks) {
       const { data: existing } = await supabase
