@@ -28,6 +28,7 @@ const DAILY_CAP = 30;
 const MAX_DOC_BYTES = 25 * 1024 * 1024; // 25 MB per file
 const MAX_TEXT_CHARS_PER_DOC = 200_000;
 const STORAGE_BUCKET = 'documents';
+type JsonRow = Record<string, unknown>;
 
 function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
@@ -196,12 +197,12 @@ Deno.serve(async (req) => {
 
   // 3. Audit access gate via JWT (RLS filters).
   const { data: auditRow, error: auditErr } = await userClient
-    .from('client_audits' as any)
+    .from('client_audits')
     .select('id, audit_type, snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code, is_cricos, is_rto, subject_tenant_id, template_id')
     .eq('id', auditId)
     .maybeSingle();
   if (auditErr || !auditRow) return json(req, { error: "You don't have access to this audit." }, 403);
-  const audit = auditRow as Record<string, any>;
+  const audit = auditRow as JsonRow;
   // Note: when corpus retrieval is added here, resolve framework via
   // compliance_templates.framework and pass `framework` to
   // retrieve-srto-context (see draft-finding for the canonical mapping).
@@ -214,7 +215,7 @@ Deno.serve(async (req) => {
   // 5. Daily cap check.
   const today = new Date().toISOString().slice(0, 10);
   const { count: usedToday, error: capErr } = await admin
-    .from('ai_evidence_analysis_usage' as any)
+    .from('ai_evidence_analysis_usage')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', callerUserId)
     .eq('usage_date', today)
@@ -226,7 +227,7 @@ Deno.serve(async (req) => {
 
   // 6. Load response + question + linked documents (under caller JWT).
   const { data: responseRow, error: respErr } = await userClient
-    .from('client_audit_responses' as any)
+    .from('client_audit_responses')
     .select(`
       id, audit_id, question_id, rating, notes,
       compliance_template_questions:question_id (
@@ -238,18 +239,18 @@ Deno.serve(async (req) => {
     .eq('audit_id', auditId)
     .maybeSingle();
   if (respErr || !responseRow) return json(req, { error: 'Response not found in this audit' }, 404);
-  const r = responseRow as Record<string, any>;
+  const r = responseRow as JsonRow;
   const q = r.compliance_template_questions ?? {};
 
   const { data: links, error: linkErr } = await userClient
-    .from('client_audit_response_documents' as any)
+    .from('client_audit_response_documents')
     .select('document_id')
     .eq('response_id', responseId);
   if (linkErr) return json(req, { error: 'Failed to load linked documents', detail: linkErr.message }, 500);
   if (!links || links.length === 0) {
     return json(req, { error: 'No documents linked to this response. Link evidence first.' }, 400);
   }
-  const documentIds = (links as any[]).map((l) => l.document_id);
+  const documentIds = (links as JsonRow[]).map((l) => l.document_id);
 
   // 7. Load documents (admin — already gated by audit-access above) and
   //    enforce cross-tenant defence-in-depth: every document.tenant_id must
@@ -269,7 +270,7 @@ Deno.serve(async (req) => {
 
   // 8. Download + extract.
   const sources: { name: string; text: string; documentId: number }[] = [];
-  for (const d of docs as any[]) {
+  for (const d of docs as JsonRow[]) {
     const files: string[] = Array.isArray(d.uploaded_files) ? d.uploaded_files : [];
     const names: string[] = Array.isArray(d.file_names) ? d.file_names : [];
     for (let i = 0; i < files.length; i++) {
@@ -330,7 +331,7 @@ ${evidenceBlock}
 Return your suggestion as JSON matching the schema in the system prompt. Every quote in "excerpts" MUST appear verbatim in one of the source documents above.`;
 
   // 10. Call Gemini.
-  let raw: any;
+  let raw: unknown;
   try {
     const aiResp = await fetch(GATEWAY_URL, {
       method: 'POST',
@@ -353,7 +354,7 @@ Return your suggestion as JSON matching the schema in the system prompt. Every q
     });
 
     if (aiResp.status === 429) {
-      await admin.from('ai_evidence_analysis_usage' as any).insert({
+      await admin.from('ai_evidence_analysis_usage').insert({
         user_id: callerUserId, response_id: responseId, audit_id: auditId,
         document_count: sources.length, model: MODEL, status: 'rate_limited', error: 'gateway 429',
       });
@@ -410,7 +411,7 @@ Return your suggestion as JSON matching the schema in the system prompt. Every q
 
   // 12. Persist suggestion to client_audit_responses.
   const { error: updErr } = await admin
-    .from('client_audit_responses' as any)
+    .from('client_audit_responses')
     .update({
       ai_suggested_rating: out.suggested_rating,
       ai_suggested_notes: out.rationale,
@@ -428,7 +429,7 @@ Return your suggestion as JSON matching the schema in the system prompt. Every q
   }
 
   // 13. Log usage.
-  await admin.from('ai_evidence_analysis_usage' as any).insert({
+  await admin.from('ai_evidence_analysis_usage').insert({
     user_id: callerUserId,
     response_id: responseId,
     audit_id: auditId,
