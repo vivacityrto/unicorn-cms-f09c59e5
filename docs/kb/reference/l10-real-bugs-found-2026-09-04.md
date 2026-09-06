@@ -572,6 +572,12 @@ Opening the protected `/communications` Bulk Message dialog during Phase 2.5 ver
 
 ## What this means practically
 
+## Client Files route
+
+### 24. Client Files navigation emits a React setState-during-render warning — DOCUMENTED, NOT FIXED
+
+During the Phase 2.5 authenticated SharePoint cohort smoke test, `/client/files` loaded and remained usable, but Vite captured a React warning: `BrowserRouter` was updated while `ClientRouteGuard` was rendering. The stack points to `src/components/client/ClientRouteGuard.tsx:23` and occurs while the client layout resolves tenant access. No page error, failed route, or data write occurred, and the warning predates this typing-only cohort. Track separately as a client-route lifecycle fix; do not conflate it with the SharePoint boundary changes.
+
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that

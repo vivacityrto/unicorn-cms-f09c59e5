@@ -29,6 +29,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+type GraphRecord = Record<string, unknown>;
 
 type ProvisionMode = "full" | "save_only" | "m365_only";
 
@@ -294,7 +295,7 @@ serve(async (req) => {
 
   // Step 1: Create user in Microsoft 365
   if (doGraph) try {
-    const createResp = await graphPost<any>("/users", {
+    const createResp = await graphPost<GraphRecord>("/users", {
       accountEnabled: true,
       displayName: body.display_name,
       givenName: body.first_name,
@@ -312,7 +313,7 @@ serve(async (req) => {
       transcript.push({ step: "create_user", ok: true, detail: `Created ${body.upn} (id ${msUserId})` });
     } else if (createResp.status === 400 && JSON.stringify(createResp.data).includes("already exists")) {
       // Look up existing
-      const lookup = await graphGet<any>(`/users/${encodeURIComponent(body.upn)}`);
+      const lookup = await graphGet<GraphRecord>(`/users/${encodeURIComponent(body.upn)}`);
       if (lookup.ok) {
         msUserId = lookup.data.id;
         transcript.push({ step: "create_user", ok: true, detail: `User already exists; reusing id ${msUserId}` });
@@ -329,7 +330,7 @@ serve(async (req) => {
   // Step 2: Assign licenses (need SKU IDs)
   if (msUserId && rule.licenses && rule.licenses.length > 0) {
     try {
-      const skuResp = await graphGet<any>("/subscribedSkus?$select=skuId,skuPartNumber,prepaidUnits,consumedUnits");
+      const skuResp = await graphGet<GraphRecord>("/subscribedSkus?$select=skuId,skuPartNumber,prepaidUnits,consumedUnits");
       const skuMap = new Map<string, string>();
       if (skuResp.ok) {
         for (const s of skuResp.data?.value ?? []) {
@@ -361,7 +362,7 @@ serve(async (req) => {
   if (msUserId && rule.m365_groups && rule.m365_groups.length > 0) {
     for (const groupName of rule.m365_groups) {
       try {
-        const grpResp = await graphGet<any>(
+        const grpResp = await graphGet<GraphRecord>(
           `/groups?$filter=${encodeURIComponent(`displayName eq '${groupName.replace(/'/g, "''")}'`)}&$top=1`,
         );
         const grp = grpResp.data?.value?.[0];

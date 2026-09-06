@@ -71,8 +71,9 @@ serve(async (req) => {
       );
     }
 
-    const driveId = (settings as any)?.drive_id as string | null | undefined;
-    const itemId = (settings as any)?.shared_folder_item_id as string | null | undefined;
+    const settingValues = settings as { drive_id?: string | null; shared_folder_item_id?: string | null } | null;
+    const driveId = settingValues?.drive_id;
+    const itemId = settingValues?.shared_folder_item_id;
 
     if (!driveId || !itemId) {
       return new Response(

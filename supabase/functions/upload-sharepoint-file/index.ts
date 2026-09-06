@@ -82,7 +82,7 @@ async function findOrCreateUploadsFolder(
 
   const findJson = await findRes.json();
   const existing = Array.isArray(findJson.value)
-    ? findJson.value.find((it: any) => it?.folder)
+    ? findJson.value.find((it: { folder?: unknown }) => it?.folder)
     : null;
   if (existing?.id) return existing.id as string;
 

@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
+type GraphRecord = Record<string, unknown>;
 import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 
@@ -106,8 +108,8 @@ async function refreshTokenIfNeeded(
   return tokens.access_token;
 }
 
-async function fetchDrives(accessToken: string): Promise<any[]> {
-  const drives: any[] = [];
+async function fetchDrives(accessToken: string): Promise<GraphRecord[]> {
+  const drives: GraphRecord[] = [];
 
   // Get user's OneDrive
   try {
@@ -194,7 +196,7 @@ async function searchDriveItems(accessToken: string, driveId: string, query: str
   }
 
   const data = await response.json();
-  return (data.value || []).filter((item: any) => item.file); // Only return files, not folders
+  return (data.value || []).filter((item: GraphRecord) => item.file); // Only return files, not folders
 }
 
 async function fetchItemMetadata(accessToken: string, driveId: string, itemId: string): Promise<DriveItem> {
@@ -577,7 +579,7 @@ serve(async (req) => {
 
         console.log('[link-sharepoint] Linking email attachments:', body.attachment_list.length);
 
-        const linkedDocuments: any[] = [];
+        const linkedDocuments: GraphRecord[] = [];
         const errors: string[] = [];
 
         for (const attachment of body.attachment_list) {
