@@ -266,6 +266,7 @@ or "2x" as a settled number from this data.
 ## Adding a new entry
 
 | 2026-09-06 | Phase 2.5 suggestion-dropdown hook (merged PR #764) | Reused the persistent isolated worktree and the existing dependency cache through one temporary junction because the lane lacked `@playwright/test`. Fresh importer/generated-table sweep confirmed ten active lookup consumers. Removed 2 explicit-any findings (2→0); lint ratchet, frontend 298/15 skipped, Edge 260, build, KB links 672/672, and authenticated read-only `/email-triage` Playwright 1/1 with zero page/console errors passed under the mutex; typecheck retained only documented baseline errors. Junction, temporary probe/config/auth artifacts, and server processes were removed; port 8080 was free after teardown. | `hotfix/phase25-apply-template` |
+| 2026-09-06 | Phase 2.5 meeting-drawer typing (merged PR #768) | Reused the persistent isolated worktree and dependency cache. Fresh importer/type-interface sweep confirmed `WorkMeetings.tsx` and typed Microsoft sync fields. Removed 3 explicit-any casts (3→0); lint ratchet, frontend 298/15 skipped, Edge 260, build, KB links 672/672, and authenticated read-only `/work/meetings` Playwright 1/1 with zero page/console errors passed under the mutex; typecheck retained only documented baseline errors. Temporary probe/config/auth artifacts removed; port 8080 free after teardown. | `hotfix/phase25-apply-template` |
 
 1. After a batch merges, run `gh pr view <N> --json mergedAt` for this
    batch and the previous one in the same phase/initiative to compute
