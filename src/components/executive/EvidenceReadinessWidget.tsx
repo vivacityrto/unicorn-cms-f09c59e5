@@ -8,6 +8,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ClipboardCheck, AlertTriangle, Clock, Users } from "lucide-react";
+import type { Json } from "@/integrations/supabase/types";
+
+const countMandatory = (value: Json): number => {
+  if (!Array.isArray(value)) return 0;
+  return value.filter((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    return (item as { mandatory?: unknown }).mandatory === true;
+  }).length;
+};
 
 export function EvidenceReadinessWidget() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -28,11 +37,8 @@ export function EvidenceReadinessWidget() {
         .gte("generated_at", thirtyDaysAgo);
 
       let mandatoryGaps = 0;
-      (recentChecks || []).forEach((c: any) => {
-        const missing = c.missing_categories_json as any[];
-        if (Array.isArray(missing)) {
-          mandatoryGaps += missing.filter((m: any) => m.mandatory).length;
-        }
+      (recentChecks || []).forEach((check) => {
+        mandatoryGaps += countMandatory(check.missing_categories_json);
       });
 
       // Tenants with unresolved gaps (draft status)
@@ -41,7 +47,7 @@ export function EvidenceReadinessWidget() {
         .select("tenant_id")
         .eq("status", "draft");
 
-      const uniqueTenants = new Set((unresolvedTenants || []).map((t: any) => t.tenant_id));
+      const uniqueTenants = new Set((unresolvedTenants || []).map((tenant) => tenant.tenant_id));
 
       // Average close time (approved checks)
       const { data: closedChecks } = await supabase
