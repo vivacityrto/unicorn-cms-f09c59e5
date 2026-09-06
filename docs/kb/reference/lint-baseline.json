@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T18:10:40.542Z",
-  "baselineSha": "7f8104f366866bd2e6140813f3de51acd759e20d",
+  "generatedAt": "2026-09-06T18:18:10.923Z",
+  "baselineSha": "f5715605f3e5fdebfeea9eeec50949d9458eeeaa",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 64,
-    "errors": 193,
+    "filesWithFindings": 63,
+    "errors": 191,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 186,
+    "@typescript-eslint/no-explicit-any": 184,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 137,
+      "errors": 135,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 137
+        "@typescript-eslint/no-explicit-any": 135
       }
     }
   },
@@ -274,13 +274,6 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/sync-clickup-time": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
-      }
-    },
     "supabase/functions/tga-rto-import": {
       "errors": 1,
       "warnings": 0,
@@ -480,9 +473,6 @@
     },
     "supabase/functions/mailgun-webhook/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/sync-clickup-time/index.ts": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "supabase/functions/tga-rto-import/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
