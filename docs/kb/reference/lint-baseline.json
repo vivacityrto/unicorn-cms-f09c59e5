@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T18:18:10.923Z",
-  "baselineSha": "f5715605f3e5fdebfeea9eeec50949d9458eeeaa",
+  "generatedAt": "2026-09-06T20:52:22.829Z",
+  "baselineSha": "2a3c3bbe7e5cef01d4bde13700ec7c5412e21835",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 63,
-    "errors": 191,
+    "filesWithFindings": 62,
+    "errors": 189,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 184,
+    "@typescript-eslint/no-explicit-any": 182,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 135,
+      "errors": 133,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 135
+        "@typescript-eslint/no-explicit-any": 133
       }
     }
   },
@@ -288,13 +288,6 @@
         "@typescript-eslint/no-explicit-any": 43
       }
     },
-    "supabase/functions/xero-invoice-sync-all": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
-      }
-    },
     "supabase/functions/xero-webhook": {
       "errors": 1,
       "warnings": 0,
@@ -479,9 +472,6 @@
     },
     "supabase/functions/tga-rto-sync/index.ts": {
       "@typescript-eslint/no-explicit-any": 43
-    },
-    "supabase/functions/xero-invoice-sync-all/index.ts": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "supabase/functions/xero-webhook/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
