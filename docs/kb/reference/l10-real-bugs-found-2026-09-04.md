@@ -558,6 +558,12 @@ Found incidentally during batch 80 of the `no-explicit-any` retirement's
 live verification — `EditTimeDialog.tsx` is not one of that batch's changed
 files, so this is confirmed pre-existing and unrelated to that diff.
 
+## Client notification surfaces
+
+### 22. ClientRouteGuard updates BrowserRouter during render — DOCUMENTED, NOT FIXED
+
+During the authenticated read-only notification smoke test (`/client/inbox?tab=notifications`), the browser logged React's warning that `ClientRouteGuard` updates `BrowserRouter` while a different component is rendering. The route still rendered and no data/write failure occurred, but this render-time navigation can cause unstable transitions or repeated renders. It is pre-existing and outside the Phase 2.5 notification typing diff; schedule a focused follow-up to move the redirect/state update into an effect or event boundary and verify client-route navigation.
+
 ## What this means practically
 
 Nothing above was caused by tonight's work — every one of these bugs
