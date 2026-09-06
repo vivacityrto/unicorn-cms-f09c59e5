@@ -12,6 +12,7 @@ import {
   isPreviewBlockedError,
 } from "@/hooks/useReadOnlyGuard";
 import { friendlyDbError } from "@/lib/friendlyDbError";
+import type { TablesInsert } from "@/integrations/supabase/types";
 
 interface QuestionOption {
   value: string;
@@ -112,9 +113,9 @@ export default function AcademyAssessmentPlayerPage() {
         .order("sort_order");
       if (error) throw error;
       // Strip is_correct from options before showing to user
-      const cleaned = (data ?? []).map((q: any) => ({
+      const cleaned = (data ?? []).map((q) => ({
         ...q,
-        options: ((q.options as QuestionOption[]) || []).map(({ value, label }) => ({ value, label })),
+        options: ((q.options as unknown as QuestionOption[]) || []).map(({ value, label }) => ({ value, label })),
       })) as Question[];
       return assessment?.randomise_questions ? shuffleArray(cleaned) : cleaned;
     },
@@ -170,7 +171,7 @@ export default function AcademyAssessmentPlayerPage() {
           started_at: startedAt,
           submitted_at: now,
           time_taken_seconds: timeTaken,
-        } as any)
+        } satisfies TablesInsert<"academy_assessment_attempts">)
         .select("id")
         .single();
 
@@ -197,7 +198,7 @@ export default function AcademyAssessmentPlayerPage() {
       setSubmitted(true);
       navigate(`/academy/course/${slug}/assessment/${assessmentId}/result/${attemptId}`, { replace: true });
     },
-    onError: (e: any) => {
+    onError: (e: unknown) => {
       if (isPreviewBlockedError(e)) return;
       toast.error(friendlyDbError(e, "AcademyAssessmentPlayer.submit"));
     },
