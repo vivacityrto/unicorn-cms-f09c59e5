@@ -1319,6 +1319,8 @@ SuperAdmin Playwright passed 4/4 with zero application console errors. This
 cohort is ready for its implementation PR and merge; no new L10 item was
 found.
 
+> **Phase 2.5 client-portal assessment/support cluster checkpoint (2026-09-06):** `AcademyAssessmentPlayerPage.tsx`, `AcademyAssessmentResultPage.tsx`, and `SupportTicketPortalDetailPage.tsx` are live lazy-loaded routes in `academyRoutes.tsx`/`clientRoutes.tsx`. Fresh route/import checks confirmed the assessment attempt and support-attachment contracts. Eight explicit-any findings were removed (3+3+2) using bounded JSON/row types and unknown-safe errors; submission, scoring, attachment, and navigation behavior are unchanged. Lint ratchet passed (3→0, 3→0, 2→0), frontend 298/15 skipped, Edge 260, and build passed; typecheck retains only the documented baseline errors. A client-persona storage state was unavailable, so authenticated Demo RTO browser coverage remains a documented gap; no writes or seed data were performed. No new L10 bug was found.
+
 ### Phase 2.6 — verified retirement and bounded consolidation (council-planned 2026-09-04)
 
 **Parallel preparation checkpoint (2026-09-04):** while Phase 2.5 remains

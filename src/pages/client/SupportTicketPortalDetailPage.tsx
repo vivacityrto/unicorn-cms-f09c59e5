@@ -48,8 +48,8 @@ export default function SupportTicketPortalDetailPage() {
       const url = await getAttachmentSignedUrl(path);
       if (!url) throw new Error('Could not create download link');
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (e: any) {
-      toast({ title: 'Failed to open attachment', description: e?.message, variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Failed to open attachment', description: e instanceof Error ? e.message : undefined, variant: 'destructive' });
     }
   };
 
@@ -142,7 +142,7 @@ export default function SupportTicketPortalDetailPage() {
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Attachments</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1.5">
-                {attachments.map((a: any) => (
+                {attachments.map((a) => (
                   <button
                     key={a.id}
                     type="button"
