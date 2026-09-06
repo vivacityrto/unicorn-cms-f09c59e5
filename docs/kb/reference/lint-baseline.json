@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T07:50:42.820Z",
-  "baselineSha": "ac7439eef81315500423270123a07bb7fcb3908b",
+  "generatedAt": "2026-09-06T08:01:22.828Z",
+  "baselineSha": "e0ab56bf0f22be9bdad6cc4227f920c1737c5e23",
   "totals": {
     "files": 1756,
     "filesWithFindings": 173,
-    "errors": 754,
+    "errors": 751,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 747,
+    "@typescript-eslint/no-explicit-any": 744,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 190,
+      "errors": 187,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 183,
+        "@typescript-eslint/no-explicit-any": 180,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -32,10 +32,10 @@
   },
   "byDirectory": {
     "src/components": {
-      "errors": 7,
+      "errors": 4,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 7
+        "@typescript-eslint/no-explicit-any": 4
       }
     },
     "src/components/academy": {
@@ -889,7 +889,7 @@
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/components/InviteUserDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
+      "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/academy/VimeoPlayer.tsx": {
       "react-refresh/only-export-components": 1
