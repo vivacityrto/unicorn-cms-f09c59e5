@@ -54,7 +54,13 @@ export function CodeRowDialog({
       if (mode === "duplicate") {
         delete copy.id;
       }
-      setFormData(copy);
+      const editableValues = Object.fromEntries(
+        Object.entries(copy).filter(([, value]) =>
+          value === null || value === undefined ||
+          typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+        ),
+      ) as Record<string, FormValue>;
+      setFormData(editableValues);
     }
   }, [open, mode, row, columns]);
 

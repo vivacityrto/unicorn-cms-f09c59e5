@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface CodeTableColumn {
   column_name: string;
@@ -18,7 +19,7 @@ export interface CodeTable {
 }
 
 export interface CodeTableRow {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const codeTablesService = {
@@ -39,11 +40,11 @@ export const codeTablesService = {
     return (data as unknown as CodeTableRow[]) ?? [];
   },
 
-  async createRow(tableName: string, rowData: Record<string, any>): Promise<CodeTableRow> {
+  async createRow(tableName: string, rowData: Record<string, unknown>): Promise<CodeTableRow> {
     const { data, error } = await supabase.rpc("code_table_operation", {
       p_table_name: tableName,
       p_operation: "insert",
-      p_data: rowData,
+      p_data: rowData as unknown as Json,
     });
     if (error) throw error;
     return data as unknown as CodeTableRow;
@@ -51,24 +52,24 @@ export const codeTablesService = {
 
   async updateRow(
     tableName: string,
-    whereClause: Record<string, any>,
-    rowData: Record<string, any>
+    whereClause: Record<string, unknown>,
+    rowData: Record<string, unknown>
   ): Promise<CodeTableRow> {
     const { data, error } = await supabase.rpc("code_table_operation", {
       p_table_name: tableName,
       p_operation: "update",
-      p_data: rowData,
-      p_where_clause: whereClause,
+      p_data: rowData as unknown as Json,
+      p_where_clause: whereClause as unknown as Json,
     });
     if (error) throw error;
     return data as unknown as CodeTableRow;
   },
 
-  async deleteRow(tableName: string, whereClause: Record<string, any>): Promise<CodeTableRow> {
+  async deleteRow(tableName: string, whereClause: Record<string, unknown>): Promise<CodeTableRow> {
     const { data, error } = await supabase.rpc("code_table_operation", {
       p_table_name: tableName,
       p_operation: "delete",
-      p_where_clause: whereClause,
+      p_where_clause: whereClause as unknown as Json,
     });
     if (error) throw error;
     return data as unknown as CodeTableRow;

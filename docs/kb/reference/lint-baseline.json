@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T02:29:45.773Z",
-  "baselineSha": "890033c229de67a02dfcaaeb40c0ea749b0ece43",
+  "generatedAt": "2026-09-06T03:31:30.485Z",
+  "baselineSha": "c8cab0553037980c7b7dafd5aee162c3e31ebb6c",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 196,
-    "errors": 855,
+    "filesWithFindings": 194,
+    "errors": 846,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 848,
+    "@typescript-eslint/no-explicit-any": 839,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 291,
+      "errors": 282,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 284,
+        "@typescript-eslint/no-explicit-any": 275,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -232,10 +232,10 @@
       }
     },
     "src/hooks": {
-      "errors": 77,
+      "errors": 73,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 77,
+        "@typescript-eslint/no-explicit-any": 73,
         "react-refresh/only-export-components": 1
       }
     },
@@ -272,13 +272,6 @@
       "warnings": 1,
       "byRule": {
         "react-refresh/only-export-components": 1
-      }
-    },
-    "src/services": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
       }
     },
     "src/test/tenant": {
@@ -1103,9 +1096,6 @@
     "src/hooks/useClientAuditPortal.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
-    "src/hooks/useCodeTables.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "src/hooks/useCompliancePacks.tsx": {
       "@typescript-eslint/no-explicit-any": 5
     },
@@ -1221,9 +1211,6 @@
     },
     "src/routes/dashboardRoutes.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/services/codeTablesService.ts": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "src/test/tenant/isolation.test.tsx": {
       "@typescript-eslint/no-explicit-any": 38

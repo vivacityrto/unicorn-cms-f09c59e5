@@ -27,7 +27,7 @@ export function useTableData(tableName: string | null) {
   });
 
   const createRow = useMutation({
-    mutationFn: (rowData: Record<string, any>) =>
+    mutationFn: (rowData: Record<string, unknown>) =>
       codeTablesService.createRow(tableName!, rowData),
     onSuccess: () => {
       toast({ title: "Row created successfully" });
@@ -40,7 +40,7 @@ export function useTableData(tableName: string | null) {
   });
 
   const updateRow = useMutation({
-    mutationFn: ({ whereClause, data }: { whereClause: Record<string, any>; data: Record<string, any> }) =>
+    mutationFn: ({ whereClause, data }: { whereClause: Record<string, unknown>; data: Record<string, unknown> }) =>
       codeTablesService.updateRow(tableName!, whereClause, data),
     onSuccess: () => {
       toast({ title: "Row updated successfully" });
@@ -52,7 +52,7 @@ export function useTableData(tableName: string | null) {
   });
 
   const deleteRow = useMutation({
-    mutationFn: (whereClause: Record<string, any>) =>
+    mutationFn: (whereClause: Record<string, unknown>) =>
       codeTablesService.deleteRow(tableName!, whereClause),
     onSuccess: () => {
       toast({ title: "Row deleted successfully" });
