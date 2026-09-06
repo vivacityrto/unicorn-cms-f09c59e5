@@ -52,13 +52,15 @@ export function useAuditProgress(auditId: string | undefined) {
   // Re-fetch this view whenever responses or findings invalidate.
   useEffect(() => {
     if (!auditId) return;
-    const unsub = queryClient.getQueryCache().subscribe((event: any) => {
-      const key = event?.query?.queryKey?.[0];
-      const id = event?.query?.queryKey?.[1];
+    const unsub = queryClient.getQueryCache().subscribe((event: unknown) => {
+      if (typeof event !== 'object' || event === null || !('query' in event)) return;
+      const queryEvent = event as { type?: string; query?: { queryKey?: unknown[] } };
+      const key = queryEvent.query?.queryKey?.[0];
+      const id = queryEvent.query?.queryKey?.[1];
       if (
         (key === 'audit-responses' || key === 'audit-findings') &&
         id === auditId &&
-        event.type === 'updated'
+        queryEvent.type === 'updated'
       ) {
         queryClient.invalidateQueries({ queryKey: ['audit-completion-progress', auditId] });
         queryClient.invalidateQueries({ queryKey: ['audit-completion-sections', auditId] });
@@ -73,7 +75,7 @@ export function useAuditProgress(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async (): Promise<AuditProgress | null> => {
       const { data, error } = await supabase
-        .from('v_client_audit_progress' as any)
+        .from('v_client_audit_progress' as never)
         .select('*')
         .eq('audit_id', auditId)
         .maybeSingle();
@@ -92,7 +94,7 @@ export function useAuditSectionCompletion(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async (): Promise<Record<string, SectionCompletion>> => {
       const { data, error } = await supabase
-        .from('v_client_audit_section_completion' as any)
+        .from('v_client_audit_section_completion' as never)
         .select('*')
         .eq('audit_id', auditId);
       if (error) throw error;
@@ -114,7 +116,7 @@ export function useResponseCompletion(auditId: string | undefined) {
     enabled: !!auditId,
     queryFn: async (): Promise<Record<string, ResponseCompletion>> => {
       const { data, error } = await supabase
-        .from('v_client_audit_response_completion' as any)
+        .from('v_client_audit_response_completion' as never)
         .select('*')
         .eq('audit_id', auditId);
       if (error) throw error;
