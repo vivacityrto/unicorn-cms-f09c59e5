@@ -1,5 +1,8 @@
 # Execution efficiency log
 
+### 2026-09-06 Phase 2.5 notification-queue Edge cohort (PR #884 merged)
+One cron-only Edge file (18 findings) was handled in a fresh isolated worktree with a shared dependency junction. Initial missing-dependency overhead was avoided on retry by reusing the existing node_modules junction; lint ratchet reduced 18→0, frontend (298 passed/15 skipped), Edge (260), build passed, and typecheck retained only the five documented baseline errors. No UI caller exists, so no Playwright invocation was appropriate; production function metadata was checked read-only (ACTIVE v147), while the deployed source remained pre-typing and the log query endpoint reproduced its known schema error. Baseline after merge: 566 total errors (559 explicit-any), 39 warnings across 132 files. Worktree and junction were removed after merge; no server or browser artifacts were created.
+
 Companion to `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`'s
 efficiency-checkpoints practice (see also the portable Builder Manifest,
 `unicorn-workspace/BUILDER-MANIFEST.md` §6) — but that document is

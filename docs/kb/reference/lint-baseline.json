@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T12:34:19.522Z",
-  "baselineSha": "35941d1af82eb7f1dc8cc25ba337774a5f40d96c",
+  "generatedAt": "2026-09-06T12:52:17.247Z",
+  "baselineSha": "c7919daf963c90eb36e271ae1545cd505397a36a",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 133,
-    "errors": 584,
+    "filesWithFindings": 132,
+    "errors": 566,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 577,
+    "@typescript-eslint/no-explicit-any": 559,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 496,
+      "errors": 478,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 496
+        "@typescript-eslint/no-explicit-any": 478
       }
     }
   },
@@ -517,13 +517,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/process-notification-queue": {
-      "errors": 18,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 18
       }
     },
     "supabase/functions/provision-m365-user": {
@@ -1048,9 +1041,6 @@
     },
     "supabase/functions/mark-token-used/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/process-notification-queue/index.ts": {
-      "@typescript-eslint/no-explicit-any": 18
     },
     "supabase/functions/provision-m365-user/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
