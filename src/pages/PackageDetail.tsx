@@ -56,6 +56,10 @@ interface PackageInfo {
   total_hours?: number | null;
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unexpected error";
+}
+
 interface PackageInstanceData {
   start_date: string | null;
   end_date: string | null;
@@ -289,7 +293,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
           title: "Success",
           description: "Stage order updated successfully",
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error updating stage order:", error);
         toast({
           title: "Error",
@@ -323,7 +327,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       setIsRemoveTenantDialogOpen(false);
       setTenantToRemove(null);
       fetchPackageData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error removing tenant from package:", error);
       toast({
         title: "Error",
@@ -397,7 +401,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       const filtered = (allTenants || []).filter(tenant => !assignedTenantIds.has(tenant.id));
       
       setAvailableTenants(filtered);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching available tenants:", error);
     }
   }, [id]);
@@ -432,10 +436,10 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       setConfirmTenantData(null);
       // Navigate to tenant-specific page to add stages
       navigate(`/admin/package/${id}/tenant/${tenantId}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage(error),
         variant: "destructive"
       });
     }
@@ -456,10 +460,10 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       setSelectedTenantIds(new Set());
       fetchPackageData();
       fetchAvailableTenants();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage(error),
         variant: "destructive"
       });
     }
@@ -487,10 +491,10 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
         description: "Stage deleted successfully"
       });
       fetchPackageData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage(error),
         variant: "destructive"
       });
     }
@@ -503,7 +507,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       } = await supabase.from("package_staff_tasks").select("*").eq("package_id", Number(id)).eq("stage_id", stageId).order("order_number");
       if (error) throw error;
       setStaffTasks(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching staff tasks:", error);
     }
   };
@@ -515,7 +519,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       } = await supabase.from("package_client_tasks").select("*").eq("package_id", Number(id)).eq("stage_id", stageId).order("order_number");
       if (error) throw error;
       setClientTasks(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching client tasks:", error);
     }
   };
@@ -545,7 +549,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
         return true;
       });
       setDocuments(deduped);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching documents:", error);
     }
   };
@@ -775,7 +779,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage(error),
         variant: "destructive"
       });
     } finally {
