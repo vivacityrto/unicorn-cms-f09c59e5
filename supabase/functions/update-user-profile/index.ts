@@ -109,12 +109,13 @@ Deno.serve(async (req) => {
       headers: { "content-type": "application/json", ...corsHeaders(req) },
       status: 200,
     });
-  } catch (e: any) {
-    if (typeof e?.status === "number" && e?.code) {
-      return jsonErr(req, e.status, e.code, e.message);
+  } catch (e: unknown) {
+    const error = e as { status?: unknown; code?: unknown; message?: unknown };
+    if (typeof error.status === "number" && typeof error.code === "string") {
+      return jsonErr(req, error.status, error.code, typeof error.message === "string" ? error.message : undefined);
     }
     console.error("Error updating profile:", e);
-    return jsonErr(req, 500, "UNHANDLED", e?.message ?? String(e));
+    return jsonErr(req, 500, "UNHANDLED", e instanceof Error ? e.message : String(e));
   }
 });
 

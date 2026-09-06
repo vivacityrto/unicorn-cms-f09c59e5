@@ -100,9 +100,9 @@ Deno.serve(async (req) => {
       headers: { "content-type": "application/json", ...corsHeaders(req) },
       status: 200,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Error toggling user status:", e);
-    return jsonErr(req, 500, "UNHANDLED", e?.message ?? String(e));
+    return jsonErr(req, 500, "UNHANDLED", e instanceof Error ? e.message : String(e));
   }
 });
 

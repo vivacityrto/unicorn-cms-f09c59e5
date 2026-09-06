@@ -8,6 +8,11 @@ interface Body {
   tenant_id: number;
 }
 
+interface TenantUserRoleRow {
+  relationship_role: string | null;
+  primary_contact: boolean | null;
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function json(req: Request, status: number, body: unknown) {
@@ -148,7 +153,7 @@ serve(async (req) => {
       .maybeSingle();
 
     const relationshipRole: string =
-      (existingTU as any)?.relationship_role ||
+      (existingTU as TenantUserRoleRow | null)?.relationship_role ||
       (ghost.unicorn_role === 'Admin' ? 'primary_contact' : 'user');
 
     let tuRole: string, tuPrimary: boolean, tuSecondary: boolean, tuScope: string;
@@ -303,8 +308,8 @@ serve(async (req) => {
         ? "Account activated and invitation email sent (7-day token)"
         : "Account activated; invitation email could not be sent",
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("activate-ghost-user error", err);
-    return json(req, 500, { ok: false, code: "UNEXPECTED", detail: err?.message || "Unexpected error" });
+    return json(req, 500, { ok: false, code: "UNEXPECTED", detail: err instanceof Error ? err.message : "Unexpected error" });
   }
 });

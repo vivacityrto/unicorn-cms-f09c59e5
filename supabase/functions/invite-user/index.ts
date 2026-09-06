@@ -740,7 +740,7 @@ serve(async (req) => {
       invitation_id: insertedInvite.id,
       inviteUrl,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Unhandled error:", e);
     
     // Log failed invite attempt if we have enough context
@@ -765,7 +765,7 @@ serve(async (req) => {
           role: payload.unicorn_role || "UNKNOWN",
           outcome: "failure",
           code: "UNHANDLED_ERROR",
-          detail: e?.message || String(e),
+          detail: e instanceof Error ? e.message : String(e),
           invite_attempts: attemptCount,
         });
       }
