@@ -390,14 +390,14 @@ Deno.serve(async (req) => {
   // RLS (client_audits_staff_all + client_audits_tenant_read) ensures zero
   // rows for unauthorised callers.
   const { data: auditRow, error: auditErr } = await userClient
-    .from('client_audits' as any)
+    .from('client_audits')
     .select('id, audit_type, snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code, is_cricos, is_rto, subject_tenant_id, template_id')
     .eq('id', auditId)
     .maybeSingle();
   if (auditErr || !auditRow) {
     return json(req, { error: "You don't have access to this audit." }, 403);
   }
-  const auditRowTyped = auditRow as Record<string, any>;
+  const auditRowTyped = auditRow as Record<string, unknown>;
 
   // 3b. Resolve the audit's compliance framework so we can route corpus
   // retrieval to the right regulatory framework. CRICOS-only audits go to
@@ -406,11 +406,11 @@ Deno.serve(async (req) => {
   let corpusFramework: 'SRTO_2025' | 'NATIONAL_CODE_2018' | null = null;
   if (auditRowTyped.template_id) {
     const { data: tplRow } = await userClient
-      .from('compliance_templates' as any)
+      .from('compliance_templates')
       .select('framework')
       .eq('id', auditRowTyped.template_id)
       .maybeSingle();
-    const tplFramework = (tplRow as Record<string, any> | null)?.framework as string | undefined;
+    const tplFramework = (tplRow as Record<string, unknown> | null)?.framework as string | undefined;
     switch (tplFramework) {
       case 'SRTO_2025_CHC':
       case 'SRTO_2025_MOCK':
@@ -436,7 +436,7 @@ Deno.serve(async (req) => {
 
   // 5. Pull response + question + section in one round trip.
   const { data: responseRow, error: respErr } = await userClient
-    .from('client_audit_responses' as any)
+    .from('client_audit_responses')
     .select(
       `id, rating, notes, audit_id, section_id, question_id,
        compliance_template_questions:question_id (
@@ -452,7 +452,7 @@ Deno.serve(async (req) => {
     if (respErr) console.error('draft-finding: response lookup failed', respErr.message);
     return json(req, { error: 'Response not found or not in this audit', detail: respErr?.message ?? null }, 404);
   }
-  const r = responseRow as Record<string, any>;
+  const r = responseRow as Record<string, unknown>;
   const q = r.compliance_template_questions ?? {};
   const s = r.client_audit_sections ?? {};
 
@@ -515,7 +515,7 @@ Deno.serve(async (req) => {
     });
     if (retrievalRes.ok) {
       const retrievalJson = await retrievalRes.json();
-      chunks = (retrievalJson.results ?? []).map((row: any) => ({
+    chunks = (retrievalJson.results ?? []).map((row: Record<string, unknown>) => ({
         source_document: row.source_document,
         source_type: row.source_type,
         clause: row.clause ?? null,
@@ -535,7 +535,7 @@ Deno.serve(async (req) => {
 
   // 7. Call the gateway. Up to two attempts: one normal, one corrective if
   // the first response failed validation (parse / schema / banned terms).
-  async function callModel(extraSystem?: string): Promise<{ raw: any; usage: any }> {
+  async function callModel(extraSystem?: string): Promise<{ raw: unknown; usage: unknown }> {
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT + (extraSystem ? `\n\n${extraSystem}` : '') },
       { role: 'user', content: buildUserPrompt(ctx, auditorNoteForPrompt, chunks) },
@@ -576,7 +576,7 @@ Deno.serve(async (req) => {
     return { raw: parsed, usage: data.usage ?? {} };
   }
 
-  let attempt: { raw: any; usage: any };
+  let attempt: { raw: unknown; usage: unknown };
   let validation: ReturnType<typeof validateDraft>;
   try {
     attempt = await callModel();
@@ -631,7 +631,7 @@ Deno.serve(async (req) => {
 
   // 8. Write append-only audit log entry via service role.
   const { data: logRow, error: logErr } = await admin
-    .from('client_audit_log' as any)
+    .from('client_audit_log')
     .insert({
       tenant_id: ctx.subject_tenant_id,
       actor_user_id: callerUserId,
@@ -669,7 +669,7 @@ Deno.serve(async (req) => {
         completion_tokens: completionTokens,
         duration_ms,
       },
-      log_id: (logRow as any).id,
+      log_id: (logRow as Record<string, unknown>).id,
     },
     200,
   );
