@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T10:08:29.823Z",
-  "baselineSha": "2448547eb1e2bd1ac2bd43df46f12d87f803a829",
+  "generatedAt": "2026-09-06T10:15:44.966Z",
+  "baselineSha": "9c6e69cbb90b617996b67eda3f86bf7c5a516aba",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 152,
-    "errors": 672,
+    "filesWithFindings": 151,
+    "errors": 668,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 665,
+    "@typescript-eslint/no-explicit-any": 661,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 108,
+      "errors": 104,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 101,
+        "@typescript-eslint/no-explicit-any": 97,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -170,10 +170,10 @@
     },
     "src/lib": {},
     "src/pages": {
-      "errors": 44,
+      "errors": 40,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 44
+        "@typescript-eslint/no-explicit-any": 40
       }
     },
     "src/pages/client": {
@@ -977,9 +977,6 @@
     "src/lib/friendlyDbError.ts": {},
     "src/pages/AdminCompliancePacks.tsx": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "src/pages/OAuthConsent.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/pages/PackageDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 32
