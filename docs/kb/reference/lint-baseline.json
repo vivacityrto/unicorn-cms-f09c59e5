@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T14:49:43.278Z",
-  "baselineSha": "026abed94e481329e981ac02344a622c1aca9565",
+  "generatedAt": "2026-09-06T14:58:18.722Z",
+  "baselineSha": "eb3549610cdb7536c3c89a3b9e2bbcde37b50039",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 122,
-    "errors": 389,
+    "filesWithFindings": 120,
+    "errors": 370,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 382,
+    "@typescript-eslint/no-explicit-any": 363,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 301,
+      "errors": 282,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 301
+        "@typescript-eslint/no-explicit-any": 282
       }
     }
   },
@@ -239,13 +239,6 @@
         "@typescript-eslint/no-explicit-any": 6
       }
     },
-    "supabase/functions/analyse-evidence": {
-      "errors": 12,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 12
-      }
-    },
     "supabase/functions/ask-viv-assistant-client": {
       "errors": 12,
       "warnings": 0,
@@ -300,13 +293,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/compliance-assistant": {
-      "errors": 7,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 7
       }
     },
     "supabase/functions/consume-token": {
@@ -857,9 +843,6 @@
     "supabase/functions/ai-orchestrator/index.ts": {
       "@typescript-eslint/no-explicit-any": 6
     },
-    "supabase/functions/analyse-evidence/index.ts": {
-      "@typescript-eslint/no-explicit-any": 12
-    },
     "supabase/functions/ask-viv-assistant-client/index.ts": {
       "@typescript-eslint/no-explicit-any": 12
     },
@@ -883,9 +866,6 @@
     },
     "supabase/functions/cohort-access-sender-worker/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/compliance-assistant/index.ts": {
-      "@typescript-eslint/no-explicit-any": 7
     },
     "supabase/functions/consume-token/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
