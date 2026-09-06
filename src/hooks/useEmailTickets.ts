@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 export interface EmailTicket {
   id: string;
@@ -36,7 +37,7 @@ export function useTriageQueue() {
   return useQuery({
     queryKey: ["email-tickets", "triage"],
     queryFn: async (): Promise<EmailTicket[]> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("email_tickets")
         .select(SELECT_COLS)
         .eq("triage_status", "untriaged")
@@ -52,7 +53,7 @@ export function useAllTickets() {
   return useQuery({
     queryKey: ["email-tickets", "all"],
     queryFn: async (): Promise<EmailTicket[]> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("email_tickets")
         .select(SELECT_COLS)
         .order("received_at", { ascending: false })
@@ -69,7 +70,7 @@ export function useMyTickets() {
     queryKey: ["email-tickets", "mine", user?.id],
     queryFn: async (): Promise<EmailTicket[]> => {
       if (!user?.id) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("email_tickets")
         .select(SELECT_COLS)
         .eq("assigned_to_user_id", user.id)
@@ -92,9 +93,9 @@ export function useUpdateEmailTicket() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, patch }: UpdateEmailTicketInput) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("email_tickets")
-        .update(patch)
+        .update(patch as unknown as TablesUpdate<"email_tickets">)
         .eq("id", id)
         .select(SELECT_COLS)
         .maybeSingle();
