@@ -11,6 +11,37 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { isCronAuthorized, cronUnauthorizedResponse } from "../_shared/cron-auth.ts";
 
+interface WorkloadSnapshot {
+  user_id: string;
+  snapshot_date: string;
+  open_tasks_count: number;
+  overdue_tasks_count: number;
+  active_stages_count: number;
+  high_risk_stages_count: number;
+  consult_hours_last_30_days: number;
+  forecast_hours_next_30_days: number;
+  capacity_utilisation_percentage: number;
+  overload_risk_status: string;
+}
+
+interface StageInstanceRow {
+  stageinstance_id: number | null;
+}
+
+interface DurationRow {
+  duration_minutes: number | null;
+}
+
+interface BurnForecast {
+  tenant_id: number;
+  package_id: number;
+  total_hours_allocated: number;
+  hours_used_to_date: number;
+  average_monthly_usage: number;
+  projected_exhaustion_date: string | null;
+  burn_risk_status: string;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
@@ -39,7 +70,7 @@ Deno.serve(async (req) => {
       .select("user_uuid")
       .eq("is_vivacity_internal", true);
 
-    const workloadSnapshots: any[] = [];
+    const workloadSnapshots: WorkloadSnapshot[] = [];
 
     for (const user of staffUsers || []) {
       const userId = user.user_uuid;
@@ -78,7 +109,7 @@ Deno.serve(async (req) => {
         .in("status_id", [0, 1]);
 
       const uniqueStages = new Set(
-        (stageIds || []).map((t: any) => t.stageinstance_id).filter(Boolean)
+        (stageIds || []).map((t: StageInstanceRow) => t.stageinstance_id).filter(Boolean)
       );
       const activeStagesCount = uniqueStages.size;
 
@@ -102,7 +133,7 @@ Deno.serve(async (req) => {
         .gte("session_date", thirtyDaysAgo.split("T")[0]);
 
       const hoursLast30 = (consultLogs || []).reduce(
-        (sum: number, c: any) => sum + (c.duration_minutes || 0) / 60,
+        (sum: number, c: DurationRow) => sum + (c.duration_minutes || 0) / 60,
         0
       );
 
@@ -158,7 +189,7 @@ Deno.serve(async (req) => {
       .select("id, tenant_id, hours_included, hours_used, hours_added")
       .gt("hours_included", 0);
 
-    const burnForecasts: any[] = [];
+    const burnForecasts: BurnForecast[] = [];
 
     for (const pkg of packages || []) {
       const totalAllocated = (pkg.hours_included || 0) + (pkg.hours_added || 0);
@@ -174,7 +205,7 @@ Deno.serve(async (req) => {
         .gte("session_date", threeMonthsAgo);
 
       const totalRecentHours = (recentLogs || []).reduce(
-        (sum: number, c: any) => sum + (c.duration_minutes || 0) / 60,
+        (sum: number, c: DurationRow) => sum + (c.duration_minutes || 0) / 60,
         0
       );
       const avgMonthlyUsage = totalRecentHours / 3;
