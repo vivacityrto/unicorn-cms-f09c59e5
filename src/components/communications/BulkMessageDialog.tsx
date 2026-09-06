@@ -106,7 +106,7 @@ export function BulkMessageDialog({
   const { data: categories } = useQuery({
     queryKey: ["message-categories"],
     queryFn: async (): Promise<MessageCategory[]> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("message_categories")
         .select("id, code, name, display_order")
         .eq("is_active", true)
@@ -171,7 +171,7 @@ export function BulkMessageDialog({
     queryKey: ["broadcast-preview", debouncedKey],
     enabled: !!debouncedKey,
     queryFn: async (): Promise<PreviewRow[]> => {
-      const { data, error } = await (supabase as any).rpc(
+      const { data, error } = await supabase.rpc(
         "fn_preview_broadcast_recipients",
         {
           p_target_mode: targetMode,
@@ -218,8 +218,8 @@ export function BulkMessageDialog({
       try {
         validateAttachment(f);
         accepted.push(f);
-      } catch (err: any) {
-        toast.error(err?.message ?? "Invalid file");
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Invalid file");
       }
     }
     if (accepted.length) setQueuedFiles((prev) => [...prev, ...accepted]);
@@ -238,7 +238,7 @@ export function BulkMessageDialog({
         "Bulk Message";
 
       // 1. Insert draft campaign
-      const { data: campaign, error: insertErr } = await (supabase as any)
+      const { data: campaign, error: insertErr } = await supabase
         .from("broadcast_campaigns")
         .insert({
           title,
@@ -280,7 +280,7 @@ export function BulkMessageDialog({
       }
 
       // 3. Queue (populates broadcast_recipients)
-      const { error: queueErr } = await (supabase as any).rpc(
+      const { error: queueErr } = await supabase.rpc(
         "fn_queue_broadcast_campaign",
         { p_campaign_id: campaignId },
       );

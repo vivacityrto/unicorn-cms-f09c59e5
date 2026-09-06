@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T05:49:16.729Z",
-  "baselineSha": "0ecaa394367a0641e1134defe3d64d04cb469dd7",
+  "generatedAt": "2026-09-06T06:00:30.947Z",
+  "baselineSha": "786ca378ff8a2cd9a091893cfa08279eb06c2971",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 181,
-    "errors": 789,
+    "filesWithFindings": 180,
+    "errors": 784,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 782,
+    "@typescript-eslint/no-explicit-any": 777,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 225,
+      "errors": 220,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 218,
+        "@typescript-eslint/no-explicit-any": 213,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -89,10 +89,9 @@
       }
     },
     "src/components/communications": {
-      "errors": 6,
+      "errors": 1,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 5,
         "@typescript-eslint/no-unused-expressions": 1
       }
     },
@@ -943,9 +942,6 @@
     },
     "src/components/client/TimelineEventCard.tsx": {
       "react-refresh/only-export-components": 2
-    },
-    "src/components/communications/BulkMessageDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "src/components/communications/BulkMessageHistory.tsx": {
       "@typescript-eslint/no-unused-expressions": 1
