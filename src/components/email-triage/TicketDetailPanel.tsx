@@ -93,12 +93,12 @@ export function TicketDetailPanel({ ticket, open, onOpenChange }: Props) {
         patch: {
           status,
           resolution_notes: notes ? notes : null,
-        } as any,
+        },
       });
       toast.success("Ticket updated");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Failed to update ticket", {
-        description: err?.message ?? "Please try again.",
+        description: err instanceof Error ? err.message : "Please try again.",
       });
     }
   };
@@ -110,13 +110,13 @@ export function TicketDetailPanel({ ticket, open, onOpenChange }: Props) {
         patch: {
           status: "closed",
           resolution_notes: notes ? notes : null,
-        } as any,
+        },
       });
       toast.success("Ticket closed");
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Failed to close ticket", {
-        description: err?.message ?? "Please try again.",
+        description: err instanceof Error ? err.message : "Please try again.",
       });
     }
   };
