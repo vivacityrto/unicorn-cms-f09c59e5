@@ -1339,6 +1339,8 @@ The three-seat council investigation is complete and recorded in [`dead-code-fea
 
 Later batches diff against `lint-baseline.json`'s `byFile`/`byRule` data, not against re-derived counts, so "no compensating increase elsewhere" is checkable per the plan's Phase 2.5 exit gate (§8).
 
+> **Phase 2.5 suggestion-dropdown hook checkpoint (2026-09-06, merged PR #764):** `useSuggestDropdowns.ts` is live from package-builder, suggestion-detail, and support-ticket surfaces; fresh importer and generated-table sweep confirmed all ten lookup tables and the dynamic query contract. Two explicit-any findings were removed with an explicit table-name union and unknown-safe row normalization, preserving filters and option mapping. Lint ratchet passed (2→0), frontend 298/15 skipped, Edge 260, build, and KB links 672/672 passed; typecheck retained only documented baseline errors. Authenticated read-only Playwright against production-backed `/email-triage` passed 1/1 with zero page/console errors under the mutex; temporary artifacts were deleted and port 8080 was free after teardown. No new L10 bug found.
+
 > **Phase 2.5 production Edge verification methodology (2026-09-06):** A green
 > local Edge test run is not live production evidence. For each merged Edge
 > cohort, first confirm the deployed function is `ACTIVE` and its version
