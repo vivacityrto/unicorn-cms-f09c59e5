@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T01:59:52.925Z",
-  "baselineSha": "46b813938df8545174066f068bfe4bea7f4660e3",
+  "generatedAt": "2026-09-06T02:49:44.983Z",
+  "baselineSha": "556f49f67ac0dd6528ceb8af78d7167350a58271",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 198,
-    "errors": 863,
+    "filesWithFindings": 194,
+    "errors": 846,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 856,
+    "@typescript-eslint/no-explicit-any": 839,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 299,
+      "errors": 282,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 292,
+        "@typescript-eslint/no-explicit-any": 275,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -138,20 +138,6 @@
         "react-refresh/only-export-components": 1
       }
     },
-    "src/components/kpi-v2": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
-      }
-    },
-    "src/components/kpi": {
-      "errors": 7,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 7
-      }
-    },
     "src/components/layout": {
       "errors": 0,
       "warnings": 1,
@@ -239,10 +225,10 @@
       }
     },
     "src/hooks": {
-      "errors": 77,
+      "errors": 72,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 77,
+        "@typescript-eslint/no-explicit-any": 72,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1019,15 +1005,6 @@
     "src/components/help-center/HelpCenterContext.tsx": {
       "react-refresh/only-export-components": 1
     },
-    "src/components/kpi-v2/KpiTeamSection.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/components/kpi/KpiReporterTicketView.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/components/kpi/RaiseTicketSheet.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "src/components/layout/ClientLayout.tsx": {
       "react-refresh/only-export-components": 1
     },
@@ -1145,9 +1122,6 @@
     },
     "src/hooks/useKpiReview.tsx": {
       "@typescript-eslint/no-explicit-any": 6
-    },
-    "src/hooks/useNotifications.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "src/hooks/usePackageUsage.tsx": {
       "@typescript-eslint/no-explicit-any": 2
