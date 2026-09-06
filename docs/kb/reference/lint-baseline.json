@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T06:00:30.947Z",
-  "baselineSha": "786ca378ff8a2cd9a091893cfa08279eb06c2971",
+  "generatedAt": "2026-09-06T06:06:32.453Z",
+  "baselineSha": "10d0e5b0641f4cb2b16978fb249880c690962ddc",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 180,
-    "errors": 784,
+    "filesWithFindings": 179,
+    "errors": 779,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 777,
+    "@typescript-eslint/no-explicit-any": 772,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 220,
+      "errors": 215,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 213,
+        "@typescript-eslint/no-explicit-any": 208,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -128,13 +128,6 @@
       "warnings": 1,
       "byRule": {
         "react-refresh/only-export-components": 1
-      }
-    },
-    "src/components/meetings": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
       }
     },
     "src/components/package-builder": {
@@ -960,9 +953,6 @@
     },
     "src/components/layout/ClientLayout.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/components/meetings/MeetingAiSummaryPanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "src/components/package-builder/PackagePhasesTab.tsx": {
       "@typescript-eslint/no-unused-expressions": 1
