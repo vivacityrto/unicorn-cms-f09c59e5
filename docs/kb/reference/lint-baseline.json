@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T10:15:44.966Z",
-  "baselineSha": "9c6e69cbb90b617996b67eda3f86bf7c5a516aba",
+  "generatedAt": "2026-09-06T10:23:17.039Z",
+  "baselineSha": "203c78b74fa3a86ffde9cae865455d34980a7493",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 151,
-    "errors": 668,
+    "filesWithFindings": 149,
+    "errors": 662,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 661,
+    "@typescript-eslint/no-explicit-any": 655,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 104,
+      "errors": 98,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 97,
+        "@typescript-eslint/no-explicit-any": 91,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -170,10 +170,10 @@
     },
     "src/lib": {},
     "src/pages": {
-      "errors": 40,
+      "errors": 34,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 40
+        "@typescript-eslint/no-explicit-any": 34
       }
     },
     "src/pages/client": {
@@ -980,12 +980,6 @@
     },
     "src/pages/PackageDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 32
-    },
-    "src/pages/StageBuilder.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/pages/TenantDocumentDetail.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
     },
     "src/pages/client/AcademyAssessmentPlayerPage.tsx": {
       "@typescript-eslint/no-explicit-any": 3
