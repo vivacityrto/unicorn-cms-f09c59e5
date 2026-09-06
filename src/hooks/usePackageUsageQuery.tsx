@@ -51,6 +51,15 @@ export interface ClientPackageInfo {
   total_hours: number;
 }
 
+interface PackageInstanceRow {
+  id: number;
+  package_id: number;
+  start_date: string | null;
+  end_date: string | null;
+  hours_included: number | null;
+  is_complete: boolean;
+}
+
 // Query keys for cache management
 export const packageUsageKeys = {
   all: ['package-usage'] as const,
@@ -66,8 +75,8 @@ export function useClientPackagesQuery(clientId: number | null) {
       if (!clientId) return [];
 
       // Exclude child instances (parent_instance_id IS NULL) from top-level list
-      const { data: instances, error } = await (supabase as any)
-        .from('package_instances')
+      const { data: instances, error } = await supabase
+        .from('package_instances' as never)
         .select('id, package_id, start_date, end_date, hours_included, hours_used, is_complete')
         .eq('tenant_id', clientId)
         .eq('is_complete', false)
@@ -77,7 +86,8 @@ export function useClientPackagesQuery(clientId: number | null) {
       if (error) throw error;
       if (!instances || instances.length === 0) return [];
 
-      const packageIds = [...new Set((instances as any[]).map(i => i.package_id))] as number[];
+      const rows = instances as unknown as PackageInstanceRow[];
+      const packageIds = [...new Set(rows.map((i) => i.package_id))] as number[];
       const { data: packagesData } = await supabase
         .from('packages')
         .select('id, name, full_text, total_hours')
@@ -85,14 +95,14 @@ export function useClientPackagesQuery(clientId: number | null) {
 
       const packageMap = new Map((packagesData || []).map(p => [Number(p.id), p]));
 
-      return (instances as any[]).map(inst => {
+      return rows.map((inst) => {
         const instId = Number(inst.id);
         const pkgId = Number(inst.package_id);
         const pkg = packageMap.get(pkgId);
         return {
           id: instId,
           package_id: pkgId,
-          package_name: (pkg as any)?.full_text || pkg?.name || 'Unknown Package',
+          package_name: pkg?.full_text || pkg?.name || 'Unknown Package',
           status: inst.is_complete ? 'closed' : 'active',
           start_date: inst.start_date || '',
           end_date: inst.end_date,
