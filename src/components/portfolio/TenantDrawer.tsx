@@ -16,7 +16,30 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fetchComms: (tenantId: number) => Promise<TenantComms | null>;
-  onLogEvent: (action: string, metadata?: Record<string, any>) => void;
+  onLogEvent: (action: string, metadata?: Record<string, unknown>) => void;
+}
+
+interface DriverView {
+  driver: string;
+  value: string | number;
+  impact?: number;
+}
+
+interface NotePreview {
+  id: string | number;
+  type?: string;
+  created_at: string;
+  title?: string | null;
+  preview: string;
+}
+
+interface EmailPreview {
+  id: string | number;
+  sender_name?: string | null;
+  sender_email?: string | null;
+  created_at?: string | null;
+  subject: string;
+  preview: string;
 }
 
 const riskColors: Record<string, string> = {
@@ -27,7 +50,7 @@ const healthColors: Record<string, string> = {
 };
 
 function AttentionDriversSection({ tenant }: { tenant: PortfolioTenant }) {
-  const drivers = Array.isArray(tenant.attention_drivers_json) ? tenant.attention_drivers_json : [];
+  const drivers = (Array.isArray(tenant.attention_drivers_json) ? tenant.attention_drivers_json : []) as DriverView[];
   if (drivers.length === 0) return null;
 
   return (
@@ -37,7 +60,7 @@ function AttentionDriversSection({ tenant }: { tenant: PortfolioTenant }) {
         <Badge variant="outline" className="text-[10px] ml-auto">Score: {tenant.attention_score}</Badge>
       </h3>
       <div className="space-y-2">
-        {drivers.slice(0, 3).map((d: any, i: number) => (
+        {drivers.slice(0, 3).map((d, i) => (
           <div key={i} className="flex items-center justify-between border rounded-md p-2.5 text-sm bg-muted/30">
             <div className="flex-1 min-w-0">
               <p className="font-medium text-xs">{d.driver}</p>
@@ -180,7 +203,7 @@ export function TenantDrawer({ tenant, open, onOpenChange, fetchComms, onLogEven
               <p className="text-xs text-muted-foreground">No recent notes.</p>
             ) : (
               <div className="space-y-2">
-                {(comms?.recent_notes_json || []).map((note: any) => (
+                {((comms?.recent_notes_json ?? []) as NotePreview[]).map((note) => (
                   <div key={note.id} className="border rounded-md p-2.5 text-sm hover:bg-muted/30 transition-colors cursor-pointer"
                        onClick={() => navigate(`/tenant/${tenant.tenant_id}`)}>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
@@ -209,7 +232,7 @@ export function TenantDrawer({ tenant, open, onOpenChange, fetchComms, onLogEven
               <p className="text-xs text-muted-foreground">No recent emails.</p>
             ) : (
               <div className="space-y-2">
-                {(comms?.recent_emails_json || []).map((email: any) => (
+                {((comms?.recent_emails_json ?? []) as EmailPreview[]).map((email) => (
                   <div key={email.id} className="border rounded-md p-2.5 text-sm hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                       <span>{email.sender_name || email.sender_email || 'Unknown'}</span>
