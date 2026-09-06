@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T14:37:02.752Z",
-  "baselineSha": "2e6a32754047634ac0a552de8d45a5ee60c24cd2",
+  "generatedAt": "2026-09-06T14:49:43.278Z",
+  "baselineSha": "026abed94e481329e981ac02344a622c1aca9565",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 125,
-    "errors": 421,
+    "filesWithFindings": 122,
+    "errors": 389,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 414,
+    "@typescript-eslint/no-explicit-any": 382,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 333,
+      "errors": 301,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 333
+        "@typescript-eslint/no-explicit-any": 301
       }
     }
   },
@@ -358,13 +358,6 @@
         "@typescript-eslint/no-explicit-any": 5
       }
     },
-    "supabase/functions/draft-finding": {
-      "errors": 13,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 13
-      }
-    },
     "supabase/functions/embed-ask-viv-corpus": {
       "errors": 4,
       "warnings": 0,
@@ -400,25 +393,11 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/generate-client-audit-report-docx": {
-      "errors": 13,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 13
-      }
-    },
     "supabase/functions/generate-meeting-recurrence": {
       "errors": 1,
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/generate-membership-certificate": {
-      "errors": 6,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 6
       }
     },
     "supabase/functions/generate-notifications": {
@@ -932,9 +911,6 @@
     "supabase/functions/draft-executive-summary/validation_test.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "supabase/functions/draft-finding/index.ts": {
-      "@typescript-eslint/no-explicit-any": 13
-    },
     "supabase/functions/embed-ask-viv-corpus/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
     },
@@ -950,14 +926,8 @@
     "supabase/functions/generate-certificate-pdf/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/generate-client-audit-report-docx/index.ts": {
-      "@typescript-eslint/no-explicit-any": 13
-    },
     "supabase/functions/generate-meeting-recurrence/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/generate-membership-certificate/index.ts": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "supabase/functions/generate-notifications/index.ts": {
       "@typescript-eslint/no-explicit-any": 6
