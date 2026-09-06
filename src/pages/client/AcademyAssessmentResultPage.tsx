@@ -142,8 +142,17 @@ export default function AcademyAssessmentResultPage() {
   // Parse user answers for review
   const userAnswers: Record<number, string> = {};
   if (attempt?.answers_json && Array.isArray(attempt.answers_json)) {
-    (attempt.answers_json as any[]).forEach((a: any) => {
-      userAnswers[a.question_id] = a.selected_value;
+    (attempt.answers_json as unknown[]).forEach((answer) => {
+      if (
+        answer &&
+        typeof answer === "object" &&
+        "question_id" in answer &&
+        "selected_value" in answer &&
+        typeof answer.question_id === "number" &&
+        typeof answer.selected_value === "string"
+      ) {
+        userAnswers[answer.question_id] = answer.selected_value;
+      }
     });
   }
 
@@ -203,9 +212,9 @@ export default function AcademyAssessmentResultPage() {
       {!passed && questions.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Review Your Answers</h2>
-          {questions.map((q: any) => {
+          {questions.map((q) => {
             const userAnswer = userAnswers[q.id];
-            const options = (q.options as QuestionOption[]) || [];
+            const options = (q.options as unknown as QuestionOption[]) || [];
             const correctOpt = options.find(o => o.is_correct);
             const isCorrect = userAnswer === correctOpt?.value;
             if (isCorrect) return null; // Only show wrong answers
