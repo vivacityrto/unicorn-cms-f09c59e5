@@ -17,6 +17,16 @@ if (!XERO_WEBHOOK_KEY) {
 
 const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
 
+interface XeroInvoice {
+  Status?: string | null;
+  DueDateString?: string | null;
+  DueDate?: string | null;
+}
+
+interface XeroInvoiceResponse {
+  Invoices?: XeroInvoice[];
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -191,9 +201,9 @@ async function processInvoiceEvents(
     // DRAFT/VOIDED/DELETED carry no real financial obligation - skip
     // past those rather than letting one outrank a genuinely
     // PAID/AUTHORISED invoice just for having a later date.
-    const invoicesData = await invoicesResp.json();
+    const invoicesData = await invoicesResp.json() as XeroInvoiceResponse;
     const mostRecent = (invoicesData.Invoices ?? []).find(
-      (inv: any) => !["DRAFT", "VOIDED", "DELETED"].includes(inv.Status)
+      (inv) => !["DRAFT", "VOIDED", "DELETED"].includes(inv.Status ?? "")
     ) ?? null;
     const paid = mostRecent ? mostRecent.Status === "PAID" : null;
     const dueDate = mostRecent && !paid ? (mostRecent.DueDateString ?? mostRecent.DueDate ?? null) : null;
