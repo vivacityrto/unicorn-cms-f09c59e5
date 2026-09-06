@@ -35,6 +35,8 @@ interface CategoryPrefs {
   events: boolean;
 }
 
+type SupabaseJsonRow = Record<string, unknown>;
+
 // ── helpers ────────────────────────────────────────────────────────
 
 function taskWindow(dueDate: string, today: string): { window: string; label: string } | null {
@@ -206,7 +208,7 @@ async function generateTaskNotifications(supabase: ReturnType<typeof createServi
 
   const { data: result, error: upsertErr } = await supabase
     .from("user_notifications")
-    .upsert(rows as any, { onConflict: "dedupe_key", ignoreDuplicates: true })
+    .upsert(rows as unknown as SupabaseJsonRow[], { onConflict: "dedupe_key", ignoreDuplicates: true })
     .select("id");
 
   if (upsertErr) {
@@ -302,7 +304,7 @@ async function generateMeetingNotifications(supabase: ReturnType<typeof createSe
 
   const { data: result, error: upsertErr } = await supabase
     .from("user_notifications")
-    .upsert(rows as any, { onConflict: "dedupe_key", ignoreDuplicates: true })
+    .upsert(rows as unknown as SupabaseJsonRow[], { onConflict: "dedupe_key", ignoreDuplicates: true })
     .select("id");
 
   if (upsertErr) {
@@ -364,7 +366,7 @@ async function generateObligationNotifications(supabase: ReturnType<typeof creat
 
   const { data: result, error: upsertErr } = await supabase
     .from("user_notifications")
-    .upsert(rows as any, { onConflict: "dedupe_key", ignoreDuplicates: true })
+    .upsert(rows as unknown as SupabaseJsonRow[], { onConflict: "dedupe_key", ignoreDuplicates: true })
     .select("id");
 
   if (upsertErr) {
@@ -524,7 +526,7 @@ async function upsertNotificationsChunked(
     const chunk = rows.slice(i, i + chunkSize);
     const { data, error } = await supabase
       .from("user_notifications")
-      .upsert(chunk as any, { onConflict: "dedupe_key", ignoreDuplicates: true })
+      .upsert(chunk as unknown as SupabaseJsonRow[], { onConflict: "dedupe_key", ignoreDuplicates: true })
       .select("id");
     if (error) {
       console.error("reporting upsert error:", error.message);
@@ -612,7 +614,7 @@ async function runReportingObligations(
         .from("tenants")
         .select("id, name")
         .in("id", sampleIds);
-      sampleTenants = (tdata || []).map((t: any) => t.name).filter(Boolean);
+      sampleTenants = (tdata || []).map((t) => t.name).filter(Boolean);
     }
     return {
       tenant_count: tenantSet.size,
@@ -687,7 +689,7 @@ async function runReportingObligations(
         user_count: userSet.size,
         notifications_inserted: inserted,
       },
-    } as any);
+    } as unknown as SupabaseJsonRow);
     if (auditErr) console.error("audit_events insert error:", auditErr.message);
   }
 
