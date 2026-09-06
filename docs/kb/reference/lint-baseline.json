@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T10:49:28.431Z",
-  "baselineSha": "83be41231996a1000c77fc821cbe5492cc1313ad",
+  "generatedAt": "2026-09-06T10:57:00.595Z",
+  "baselineSha": "5c8575a8fd897c3bef1a8064837a9a6b08c13986",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 146,
-    "errors": 654,
+    "filesWithFindings": 145,
+    "errors": 652,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 647,
+    "@typescript-eslint/no-explicit-any": 645,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 90,
+      "errors": 88,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 83,
+        "@typescript-eslint/no-explicit-any": 81,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -174,13 +174,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 32
-      }
-    },
-    "src/pages/client": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "src/routes": {
@@ -977,9 +970,6 @@
     "src/lib/friendlyDbError.ts": {},
     "src/pages/PackageDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 32
-    },
-    "src/pages/client/SupportTicketPortalDetailPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
     },
     "src/routes/dashboardRoutes.tsx": {
       "react-refresh/only-export-components": 1
