@@ -564,6 +564,12 @@ files, so this is confirmed pre-existing and unrelated to that diff.
 
 During the authenticated read-only notification smoke test (`/client/inbox?tab=notifications`), the browser logged React's warning that `ClientRouteGuard` updates `BrowserRouter` while a different component is rendering. The route still rendered and no data/write failure occurred, but this render-time navigation can cause unstable transitions or repeated renders. It is pre-existing and outside the Phase 2.5 notification typing diff; schedule a focused follow-up to move the redirect/state update into an effect or event boundary and verify client-route navigation.
 
+## Bulk communications
+
+### 23. Bulk Message dialog lacks a Radix DialogTitle — DOCUMENTED, NOT FIXED
+
+Opening the protected `/communications` Bulk Message dialog during Phase 2.5 verification consistently emits Radix's accessibility error that `DialogContent` requires a `DialogTitle` (and a companion missing-description warning). The dialog is usable and no data writes were triggered, but screen-reader semantics are incomplete. This predates the typing-only change in `BulkMessageDialog.tsx`; fix by wiring the existing visible title through the dialog primitive (or adding a visually-hidden title/description), then re-run the authenticated communications smoke test.
+
 ## What this means practically
 
 Nothing above was caused by tonight's work — every one of these bugs
