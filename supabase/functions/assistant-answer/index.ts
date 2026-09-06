@@ -3,6 +3,16 @@ import { corsHeaders } from "../_shared/cors.ts";
  import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 
+ type SupabaseClientLike = ReturnType<typeof createClient>;
+ type DateRange = { start?: string; end?: string };
+ type ReportSection = { title: string; data: Record<string, unknown> };
+ type AssistantResponse = { answer?: string; summary?: string; sources?: Array<Record<string, unknown>>; refusal?: boolean; dataSources?: string[]; redactions?: string[]; [key: string]: unknown };
+ type KnowledgeItem = { id: string; source_type: string; title: string; version: number; content: string };
+ type PackageRow = { id: string; package_id?: number | null; start_date?: string | null; end_date?: string | null; is_complete?: boolean | null; hours_used?: number | null; hours_included?: number | null; hours_added?: number | null; packages?: { name?: string | null } | null };
+ type DocumentRow = { status?: string | null };
+ type RiskRow = { issue_type?: string | null; title?: string | null; impact?: string | null; status?: string | null; created_at?: string | null };
+ type RockRow = { status?: string | null };
+
  // Report types and their required data sources
  const REPORT_TYPES = {
    'client_engagement_overview': {
@@ -107,7 +117,7 @@ import { corsHeaders } from "../_shared/cors.ts";
      const body = await req.json();
      const { type, query, threadId, reportType, clientTenantId, dateRange } = body;
  
-     let response: any;
+     let response: AssistantResponse;
      let action: string;
      let sourcesUsed: string[] = [];
      let redactionsApplied: string[] = [];
@@ -177,7 +187,7 @@ import { corsHeaders } from "../_shared/cors.ts";
  });
  
  // Handle chat queries with knowledge retrieval
- async function handleChatQuery(supabase: any, query: string, userId: string) {
+ async function handleChatQuery(supabase: SupabaseClientLike, query: string, userId: string): Promise<AssistantResponse> {
    // Search for relevant knowledge items
    const { data: knowledgeItems, error: searchError } = await supabase
      .rpc('search_knowledge_items', {
@@ -200,11 +210,11 @@ import { corsHeaders } from "../_shared/cors.ts";
    }
  
    // Build context from knowledge items
-   const context = knowledgeItems.map((item: any) => 
+   const context = (knowledgeItems as unknown as KnowledgeItem[]).map((item) =>
      `[${item.source_type}] ${item.title} (v${item.version}):\n${item.content}`
    ).join('\n\n---\n\n');
  
-   const sources = knowledgeItems.map((item: any) => ({
+   const sources = (knowledgeItems as unknown as KnowledgeItem[]).map((item) => ({
      id: item.id,
      type: item.source_type,
      title: item.title,
@@ -274,11 +284,11 @@ import { corsHeaders } from "../_shared/cors.ts";
  }
  
  // Generate client summary reports
- async function generateReport(supabase: any, reportType: string, clientTenantId: number, dateRange?: { start?: string; end?: string }) {
+ async function generateReport(supabase: SupabaseClientLike, reportType: string, clientTenantId: number, dateRange?: DateRange): Promise<AssistantResponse> {
    const reportConfig = REPORT_TYPES[reportType as keyof typeof REPORT_TYPES];
    const dataSources: string[] = [];
    const redactions: string[] = [];
-   const sections: any[] = [];
+   const sections: ReportSection[] = [];
    const knownGaps: string[] = [];
  
    // Get client info
@@ -302,7 +312,7 @@ import { corsHeaders } from "../_shared/cors.ts";
      clientRtoId: tenant.rto_id,
      timePeriod: dateRange ? `${dateRange.start || 'All time'} to ${dateRange.end || 'Present'}` : 'All time',
      generatedAt: new Date().toISOString(),
-     sections: [] as any[],
+     sections: [] as ReportSection[],
      knownGaps: [] as string[],
      dataSources: [] as string[],
      redactions: [] as string[],
@@ -341,7 +351,7 @@ import { corsHeaders } from "../_shared/cors.ts";
  }
  
  // Report builders
- async function buildEngagementOverview(supabase: any, tenantId: number, dateRange: any, sections: any[], dataSources: string[], knownGaps: string[]) {
+ async function buildEngagementOverview(supabase: SupabaseClientLike, tenantId: number, dateRange: DateRange | undefined, sections: ReportSection[], dataSources: string[], knownGaps: string[]) {
    // Get package instances
    const { data: packages } = await supabase
      .from('package_instances')
@@ -362,8 +372,8 @@ import { corsHeaders } from "../_shared/cors.ts";
      title: 'Package Summary',
      data: {
        totalPackages: packages?.length || 0,
-       activePackages: packages?.filter((p: any) => !p.is_complete).length || 0,
-       completedPackages: packages?.filter((p: any) => p.is_complete).length || 0,
+       activePackages: (packages as unknown as PackageRow[] | null)?.filter((p) => !p.is_complete).length || 0,
+       completedPackages: (packages as unknown as PackageRow[] | null)?.filter((p) => p.is_complete).length || 0,
      }
    });
  
@@ -375,7 +385,7 @@ import { corsHeaders } from "../_shared/cors.ts";
    });
  }
  
- async function buildPackageUtilisation(supabase: any, tenantId: number, dateRange: any, sections: any[], dataSources: string[], knownGaps: string[]) {
+ async function buildPackageUtilisation(supabase: SupabaseClientLike, tenantId: number, dateRange: DateRange | undefined, sections: ReportSection[], dataSources: string[], knownGaps: string[]) {
    const { data: packages } = await supabase
      .from('package_instances')
      .select(`
@@ -394,7 +404,7 @@ import { corsHeaders } from "../_shared/cors.ts";
  
    sections.push({
      title: 'Package Utilisation',
-     data: packages.map((pkg: any) => ({
+     data: (packages as unknown as PackageRow[]).map((pkg) => ({
        package: pkg.packages?.name || 'Unknown',
        startDate: pkg.start_date,
        endDate: pkg.end_date,
@@ -408,7 +418,7 @@ import { corsHeaders } from "../_shared/cors.ts";
    });
  }
  
- async function buildPhaseProgression(supabase: any, tenantId: number, dateRange: any, sections: any[], dataSources: string[], knownGaps: string[]) {
+ async function buildPhaseProgression(supabase: SupabaseClientLike, tenantId: number, dateRange: DateRange | undefined, sections: ReportSection[], dataSources: string[], knownGaps: string[]) {
    const { data: documents } = await supabase
      .from('documents')
      .select('id, doc_name, status, created_at, updated_at')
@@ -422,7 +432,7 @@ import { corsHeaders } from "../_shared/cors.ts";
      return;
    }
  
-   const statusCounts = documents.reduce((acc: any, doc: any) => {
+   const statusCounts = (documents as unknown as DocumentRow[]).reduce<Record<string, number>>((acc, doc) => {
      acc[doc.status] = (acc[doc.status] || 0) + 1;
      return acc;
    }, {});
@@ -436,7 +446,7 @@ import { corsHeaders } from "../_shared/cors.ts";
    });
  }
  
- async function buildDecisionsLog(supabase: any, tenantId: number, dateRange: any, sections: any[], dataSources: string[], knownGaps: string[], redactions: string[]) {
+ async function buildDecisionsLog(supabase: SupabaseClientLike, tenantId: number, dateRange: DateRange | undefined, sections: ReportSection[], dataSources: string[], knownGaps: string[], redactions: string[]) {
    // Get approval records - note content is redacted
    const { data: approvals } = await supabase
      .from('audit_events')
@@ -456,7 +466,7 @@ import { corsHeaders } from "../_shared/cors.ts";
    });
  }
  
- async function buildRisksSummary(supabase: any, tenantId: number, dateRange: any, sections: any[], dataSources: string[], knownGaps: string[]) {
+ async function buildRisksSummary(supabase: SupabaseClientLike, tenantId: number, dateRange: DateRange | undefined, sections: ReportSection[], dataSources: string[], knownGaps: string[]) {
    // Note: eos_issues may be internal only
    const { data: risks } = await supabase
      .from('eos_issues')
@@ -475,8 +485,9 @@ import { corsHeaders } from "../_shared/cors.ts";
      return;
    }
  
-   const openRisks = risks.filter((r: any) => r.status === 'Open');
-   const resolvedRisks = risks.filter((r: any) => r.status === 'Solved');
+   const typedRisks = risks as unknown as RiskRow[];
+   const openRisks = typedRisks.filter((r) => r.status === 'Open');
+   const resolvedRisks = typedRisks.filter((r) => r.status === 'Solved');
  
    sections.push({
      title: 'Risks & Opportunities Summary',
@@ -484,11 +495,11 @@ import { corsHeaders } from "../_shared/cors.ts";
        total: risks.length,
        open: openRisks.length,
        resolved: resolvedRisks.length,
-       byImpact: risks.reduce((acc: any, r: any) => {
+       byImpact: typedRisks.reduce<Record<string, number>>((acc, r) => {
          acc[r.impact] = (acc[r.impact] || 0) + 1;
          return acc;
        }, {}),
-       openItems: openRisks.map((r: any) => ({
+       openItems: openRisks.map((r) => ({
          type: r.issue_type,
          title: r.title,
          impact: r.impact,
@@ -498,7 +509,7 @@ import { corsHeaders } from "../_shared/cors.ts";
    });
  }
  
- async function buildEosSummary(supabase: any, tenantId: number, dateRange: any, sections: any[], dataSources: string[], knownGaps: string[]) {
+ async function buildEosSummary(supabase: SupabaseClientLike, tenantId: number, dateRange: DateRange | undefined, sections: ReportSection[], dataSources: string[], knownGaps: string[]) {
    // Get rocks
    const { data: rocks } = await supabase
      .from('eos_rocks')
@@ -519,7 +530,7 @@ import { corsHeaders } from "../_shared/cors.ts";
      title: 'EOS Engagement',
      data: {
        totalRocks: rocks?.length || 0,
-       rocksByStatus: rocks?.reduce((acc: any, r: any) => {
+       rocksByStatus: (rocks as unknown as RockRow[] | null)?.reduce<Record<string, number>>((acc, r) => {
          acc[r.status] = (acc[r.status] || 0) + 1;
          return acc;
        }, {}) || {},
