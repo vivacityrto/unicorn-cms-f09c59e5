@@ -22,6 +22,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { cn } from "@/lib/utils";
 import { useNotes, Note, filterNotes, formatDuration, formatElapsedTime } from "@/hooks/useNotes";
 
+const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
+
 interface ClickUpTask {
   id: string;
   task_custom_id: string | null;
@@ -210,7 +212,7 @@ export default function TenantNotes() {
         .order("first_name");
       if (error) throw error;
       setVivacityTeam(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching team:", error);
     }
   };
@@ -225,7 +227,7 @@ export default function TenantNotes() {
         .order('date_created', { ascending: false });
       if (error) throw error;
       setClickupTasks(((data || []) as unknown) as ClickUpTask[]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching ClickUp tasks:', err);
       setClickupTasks([]);
     } finally {
@@ -340,8 +342,8 @@ export default function TenantNotes() {
         setPendingPackageInstanceId(null);
       }
       resetForm();
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -376,8 +378,8 @@ export default function TenantNotes() {
       await deleteNote(selectedNote.id);
       setSelectedNote(null);
       setIsDeleteDialogOpen(false);
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
     }
   };
 
