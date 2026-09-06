@@ -52,7 +52,7 @@ async function sendMailgun(to: string, subject: string, html: string, text: stri
 }
 
 async function sendGraph(
-  admin: { from: (t: string) => any },
+  admin: ReturnType<typeof createClient>,
   userId: string,
   to: string,
   subject: string,

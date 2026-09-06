@@ -337,12 +337,12 @@ serve(async (req) => {
       email: invitation.email,
     });
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Unhandled error:", e);
     return jsonResponse(req, 500, {
       ok: false,
       code: "UNHANDLED_ERROR",
-      detail: e?.message || String(e),
+      detail: e instanceof Error ? e.message : String(e),
     });
   }
 });

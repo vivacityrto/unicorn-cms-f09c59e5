@@ -174,10 +174,10 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Unexpected error:', error);
     return new Response(
-      JSON.stringify({ ok: false, code: 'INTERNAL_ERROR', detail: error.message }),
+      JSON.stringify({ ok: false, code: 'INTERNAL_ERROR', detail: error instanceof Error ? error.message : 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
