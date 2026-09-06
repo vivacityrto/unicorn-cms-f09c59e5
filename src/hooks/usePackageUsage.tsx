@@ -64,7 +64,7 @@ export function usePackageUsage(clientId: number | null) {
 
     // Fetch active package instances
     // Exclude child instances from top-level list
-    const { data: instances, error } = await (supabase as any)
+    const { data: instances, error } = await supabase
       .from('package_instances')
       .select('id, package_id, start_date, end_date, hours_included, hours_used, is_complete')
       .eq('tenant_id', clientId)
@@ -83,7 +83,7 @@ export function usePackageUsage(clientId: number | null) {
     }
 
     // Fetch package details
-    const packageIds = [...new Set((instances as any[]).map(i => i.package_id))] as number[];
+    const packageIds = [...new Set(instances.map(i => i.package_id))];
     const { data: packagesData } = await supabase
       .from('packages')
       .select('id, name, total_hours')
