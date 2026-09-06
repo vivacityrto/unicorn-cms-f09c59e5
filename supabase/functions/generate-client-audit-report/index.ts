@@ -71,6 +71,30 @@ const PALE = rgb(0.96, 0.96, 0.97);
 const DARK = rgb(0.1, 0.1, 0.15);
 const WHITE = rgb(1, 1, 1);
 
+type JsonRecord = Record<string, unknown>;
+interface AuditRecord extends JsonRecord {
+  id: string; audit_type?: string | null; title?: string | null;
+  subject_tenant_id?: number | string | null; snapshot_rto_name?: string | null;
+  snapshot_rto_number?: string | null; snapshot_cricos_code?: string | null;
+  snapshot_site_address?: string | null; snapshot_website?: string | null;
+  snapshot_phone?: string | null; snapshot_email?: string | null;
+  snapshot_ceo?: string | null; snapshot_other_contacts?: string | null;
+  lead_auditor_id?: string | null; assisted_by_id?: string | null;
+  report_prepared_by_id?: string | null; training_products?: string | null;
+  is_cricos?: boolean | null; is_rto?: boolean | null; risk_rating?: string | null;
+  score_total?: number | null; score_max?: number | null; score_pct?: number | null;
+  executive_summary?: string | null; overall_finding?: string | null;
+  risk_rationale?: string | null; conducted_at?: string | null;
+  opening_meeting_at?: string | null; closing_meeting_at?: string | null;
+  document_deadline_at?: string | null; audit_location?: string | null;
+  audit_is_online?: boolean | null; template_id?: string | null;
+}
+interface AuditSection extends JsonRecord { id: string; title?: string | null; audit_phase?: string | null; }
+interface AuditQuestion extends JsonRecord { clause?: string | null; audit_statement?: string | null; sort_order?: number | null; }
+interface AuditResponse extends JsonRecord { id: string; section_id?: string | null; question_text?: string | null; rating?: string | null; notes?: string | null; is_flagged?: boolean | null; compliance_template_questions?: AuditQuestion | null; }
+interface AuditFinding extends JsonRecord { id: string; section_id?: string | null; summary?: string | null; detail?: string | null; regulatory_reference?: string | null; standard_reference?: string | null; impact?: string | null; priority?: string | null; finding_code?: string | null; client_audit_sections?: { title?: string | null } | null; }
+interface AuditAction extends JsonRecord { id: string; assigned_to?: string | null; title?: string | null; description?: string | null; status?: string | null; priority?: string | null; due_date?: string | null; }
+
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
 const MARGIN_X = 50;
@@ -161,7 +185,7 @@ function riskRatingColour(rr: string | null | undefined): RGB {
 
 /** Highest-priority finding raised against a section, or null if none. */
 const PRIORITY_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
-function sectionRiskFromFindings(sectionId: string, findings: any[]): string | null {
+function sectionRiskFromFindings(sectionId: string, findings: AuditFinding[]): string | null {
   let best: string | null = null;
   let bestRank = 0;
   for (const f of findings) {
@@ -339,7 +363,7 @@ Deno.serve(async (req) => {
   if (!auditId) return json(req, { error: 'audit_id is required' }, 400);
 
   const { data: auditRow, error: auditErr } = await userClient
-    .from('client_audits' as any)
+    .from('client_audits')
     .select(
       'id, audit_type, title, doc_number, status, ' +
       'subject_tenant_id, snapshot_rto_name, snapshot_rto_number, ' +
@@ -357,7 +381,7 @@ Deno.serve(async (req) => {
     .eq('id', auditId)
     .maybeSingle();
   if (auditErr || !auditRow) return json(req, { error: "You don't have access to this audit." }, 403);
-  const audit = auditRow as Record<string, any>;
+  const audit = auditRow as unknown as AuditRecord;
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
@@ -368,7 +392,7 @@ Deno.serve(async (req) => {
     const { data: tpl } = await admin
       .from('compliance_templates').select('name, framework')
       .eq('id', audit.template_id).maybeSingle();
-    if (tpl) templateName = (tpl as any).name || templateName;
+    if (tpl) templateName = (tpl as unknown as { name?: string | null }).name || templateName;
   }
 
   let leadAuditorName = '—';
@@ -376,46 +400,49 @@ Deno.serve(async (req) => {
     const { data: la } = await admin
       .from('users').select('first_name, last_name')
       .eq('user_uuid', audit.lead_auditor_id).maybeSingle();
-    if (la) leadAuditorName = `${(la as any).first_name ?? ''} ${(la as any).last_name ?? ''}`.trim() || '—';
+    if (la) {
+      const lead = la as unknown as { first_name?: string | null; last_name?: string | null };
+      leadAuditorName = `${lead.first_name ?? ''} ${lead.last_name ?? ''}`.trim() || '—';
+    }
   }
 
   let tenantName = audit.snapshot_rto_name || 'Unknown Provider';
   if (!audit.snapshot_rto_name) {
     const { data: tn } = await admin
       .from('tenants').select('name').eq('id', audit.subject_tenant_id).maybeSingle();
-    if (tn) tenantName = (tn as any).name || tenantName;
+    if (tn) tenantName = (tn as unknown as { name?: string | null }).name || tenantName;
   }
 
   const { data: sectionsRaw } = await admin
     .from('client_audit_sections')
     .select('id, title, standard_code, code_prefix, sort_order, audit_phase, score_total, score_max, risk_level, section_summary')
     .eq('audit_id', auditId).order('sort_order');
-  const sections = (sectionsRaw ?? []) as any[];
+  const sections = (sectionsRaw ?? []) as unknown as AuditSection[];
 
   const { data: responsesRaw } = await admin
     .from('client_audit_responses')
     .select('id, audit_id, section_id, question_id, question_text, rating, notes, is_flagged, score, compliance_template_questions:question_id (clause, audit_statement, sort_order)')
     .eq('audit_id', auditId);
-  const responses = (responsesRaw ?? []) as any[];
+  const responses = (responsesRaw ?? []) as unknown as AuditResponse[];
 
   const { data: findingsRaw } = await admin
     .from('client_audit_findings')
     .select('id, summary, detail, regulatory_reference, standard_reference, impact, priority, finding_code, section_id, response_id, client_audit_sections:section_id (title, code_prefix, standard_code)')
     .eq('audit_id', auditId);
-  const findings = (findingsRaw ?? []) as any[];
+  const findings = (findingsRaw ?? []) as unknown as AuditFinding[];
 
   const { data: actionsRaw } = await admin
     .from('client_audit_actions')
     .select('id, finding_id, title, description, status, priority, action_type, delivery_model, standard_reference, due_date, assigned_to, evidence_required, client_audit_findings:finding_id (summary, priority)')
     .eq('audit_id', auditId);
-  const actions = (actionsRaw ?? []) as any[];
+  const actions = (actionsRaw ?? []) as unknown as AuditAction[];
 
   const assigneeIds = Array.from(new Set(actions.map((a) => a.assigned_to).filter(Boolean))) as string[];
   const assigneeNames: Record<string, string> = {};
   if (assigneeIds.length) {
     const { data: assignees } = await admin
       .from('users').select('user_uuid, first_name, last_name').in('user_uuid', assigneeIds);
-    for (const a of (assignees ?? []) as any[]) {
+    for (const a of (assignees ?? []) as unknown as Array<{ user_uuid: string; first_name?: string | null; last_name?: string | null }>) {
       assigneeNames[a.user_uuid] = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim();
     }
   }
@@ -433,7 +460,7 @@ Deno.serve(async (req) => {
 
   const generatedDate = fmtDate(new Date().toISOString());
   const ctx: RenderCtx = {
-    doc, helv, helvBold, pageNum: 0, current: null as any,
+    doc, helv, helvBold, pageNum: 0, current: null as unknown as PageCtx,
     totalLabel: tenantName,
     generatedLabel: `Generated ${generatedDate}`,
     drawHeader: false,
@@ -735,7 +762,7 @@ Deno.serve(async (req) => {
   if (sections.length > 0) {
     newPage(ctx);
     drawHeading(ctx, 'Detailed Responses', FS_H1, ACAI, 0, 8);
-    const responsesBySection = new Map<string, any[]>();
+    const responsesBySection = new Map<string, AuditResponse[]>();
     for (const r of responses) {
       const sid = r.section_id || '_orphan';
       if (!responsesBySection.has(sid)) responsesBySection.set(sid, []);
@@ -806,7 +833,7 @@ Deno.serve(async (req) => {
 
   const generatedAt = new Date().toISOString();
   const { error: updErr } = await admin
-    .from('client_audits' as any)
+    .from('client_audits')
     .update({
       report_pdf_path: storagePath,
       report_generated_at: generatedAt,
@@ -824,7 +851,7 @@ Deno.serve(async (req) => {
   const { data: signedData } = await admin.storage
     .from(BUCKET).createSignedUrl(storagePath, 3600);
 
-  await admin.from('client_audit_log' as any).insert({
+  await admin.from('client_audit_log').insert({
     tenant_id: Number(audit.subject_tenant_id),
     actor_user_id: callerUserId,
     action: 'audit.report_generated',

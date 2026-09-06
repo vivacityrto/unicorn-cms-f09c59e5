@@ -10,6 +10,15 @@ interface RequestBody {
   user_id?: string | null; // optional: single staff member. Omit/null = every staff member with PDP activity in this tenant.
 }
 
+interface TenantUserRow { access_scope?: string | null; relationship_role?: string | null; }
+interface CycleRow { id: string; audience_code?: string | null; cycle_year?: number | null; cycle_start_date?: string | null; cycle_end_date?: string | null; target_pd_hours?: number | null; status?: string | null; notes?: string | null; }
+interface CurrencyRow { audience_code?: string | null; cycle_year?: number | null; actual_pd_hours?: number | null; target_pd_hours?: number | null; percent_complete?: number | null; currency_status?: string | null; }
+interface EvidenceRow { cycle_id: string; evidence_type?: string | null; title?: string | null; occurred_on?: string | null; duration_minutes?: number | null; status?: string | null; }
+interface GoalRow { cycle_id: string; title?: string | null; target_hours?: number | null; status?: string | null; }
+interface ReviewRow { cycle_id: string; review_type?: string | null; review_date?: string | null; outcome?: string | null; signed_off_at?: string | null; }
+interface CyclePack extends CycleRow { audienceLabel?: string | null; evidence: EvidenceRow[]; goals: GoalRow[]; reviews: ReviewRow[]; }
+interface StaffPack { userId: string; fullName: string; email: string; currency: CurrencyRow[]; cycles: CyclePack[]; }
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -58,7 +67,7 @@ Deno.serve(async (req) => {
       .eq('tenant_id', tenant_id);
 
     const isTenantAdmin = (tuRows || []).some(
-      (r: any) => r.access_scope === 'full' && ['primary_contact', 'secondary_contact'].includes(r.relationship_role)
+      (r: TenantUserRow) => r.access_scope === 'full' && ['primary_contact', 'secondary_contact'].includes(r.relationship_role || '')
     );
 
     let isInternal = false;
@@ -98,11 +107,11 @@ Deno.serve(async (req) => {
       if (cycleUsersErr) {
         console.error('cycleUsers error', cycleUsersErr);
       }
-      staffUserIds = Array.from(new Set((cycleUsers || []).map((r: any) => r.user_id)));
+      staffUserIds = Array.from(new Set((cycleUsers || []).map((r: { user_id: string }) => r.user_id)));
     }
 
     // --- Assemble per-staff data ---
-    const staffPacks: any[] = [];
+    const staffPacks: StaffPack[] = [];
 
     for (const uid of staffUserIds) {
       const { data: userRow } = await supabase
@@ -125,11 +134,11 @@ Deno.serve(async (req) => {
         .eq('tenant_id', tenant_id)
         .order('cycle_year', { ascending: false });
 
-      const cycleIds = (cycleRows || []).map((c: any) => c.id);
+      const cycleIds = (cycleRows || []).map((c: CycleRow) => c.id);
 
-      let evidenceRows: any[] = [];
-      let goalRows: any[] = [];
-      let reviewRows: any[] = [];
+      let evidenceRows: EvidenceRow[] = [];
+      let goalRows: GoalRow[] = [];
+      let reviewRows: ReviewRow[] = [];
       if (cycleIds.length > 0) {
         const [{ data: ev }, { data: goals }, { data: reviews }] = await Promise.all([
           supabase
@@ -153,11 +162,11 @@ Deno.serve(async (req) => {
       }
 
       // Audience labels
-      const audienceCodes = Array.from(new Set((cycleRows || []).map((c: any) => c.audience_code).filter(Boolean)));
+      const audienceCodes = Array.from(new Set((cycleRows || []).map((c: CycleRow) => c.audience_code).filter((code): code is string => Boolean(code))));
       const audienceLabels: Record<string, string> = {};
       if (audienceCodes.length > 0) {
         const { data: auds } = await supabase.from('pdp_audiences').select('code, label').in('code', audienceCodes);
-        (auds || []).forEach((a: any) => (audienceLabels[a.code] = a.label));
+        (auds || []).forEach((a: { code: string; label?: string | null }) => (audienceLabels[a.code] = a.label || a.code));
       }
 
       staffPacks.push({
@@ -165,12 +174,12 @@ Deno.serve(async (req) => {
         fullName: userRow?.full_name || 'Unknown staff member',
         email: userRow?.email || '',
         currency: currencyRows || [],
-        cycles: (cycleRows || []).map((c: any) => ({
+        cycles: (cycleRows || []).map((c: CycleRow) => ({
           ...c,
           audienceLabel: audienceLabels[c.audience_code] || c.audience_code,
-          evidence: evidenceRows.filter((e: any) => e.cycle_id === c.id),
-          goals: goalRows.filter((g: any) => g.cycle_id === c.id),
-          reviews: reviewRows.filter((r: any) => r.cycle_id === c.id),
+          evidence: evidenceRows.filter((e) => e.cycle_id === c.id),
+          goals: goalRows.filter((g) => g.cycle_id === c.id),
+          reviews: reviewRows.filter((r) => r.cycle_id === c.id),
         })),
       });
     }
@@ -205,7 +214,7 @@ interface PDFData {
   tenantName: string;
   generatedAt: string;
   generatedBy: string;
-  staffPacks: any[];
+  staffPacks: StaffPack[];
 }
 
 function generatePDF(data: PDFData): string {
@@ -235,7 +244,7 @@ function generatePDF(data: PDFData): string {
 
   const titleCase = (s?: string | null) => (s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const escapeText = (text: any) => {
+  const escapeText = (text: unknown) => {
     return String(text ?? '')
       .replace(/\\/g, '\\\\')
       .replace(/\(/g, '\\(')
@@ -287,7 +296,7 @@ function generatePDF(data: PDFData): string {
 
     for (const cycle of staff.cycles) {
       const currency = data.staffPacks
-        ? staff.currency.find((c: any) => c.cycle_year === cycle.cycle_year && c.audience_code === cycle.audience_code)
+        ? staff.currency.find((c) => c.cycle_year === cycle.cycle_year && c.audience_code === cycle.audience_code)
         : null;
 
       line(
