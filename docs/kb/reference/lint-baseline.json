@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T10:23:17.039Z",
-  "baselineSha": "203c78b74fa3a86ffde9cae865455d34980a7493",
+  "generatedAt": "2026-09-06T10:37:17.382Z",
+  "baselineSha": "6a1349693ae246579be3e1d163ed0ae00b47510a",
   "totals": {
-    "files": 1756,
-    "filesWithFindings": 149,
-    "errors": 662,
+    "files": 1755,
+    "filesWithFindings": 147,
+    "errors": 656,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 655,
+    "@typescript-eslint/no-explicit-any": 649,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 98,
+      "errors": 92,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 91,
+        "@typescript-eslint/no-explicit-any": 85,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -177,10 +177,10 @@
       }
     },
     "src/pages/client": {
-      "errors": 8,
+      "errors": 2,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 8
+        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "src/routes": {
@@ -980,12 +980,6 @@
     },
     "src/pages/PackageDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 32
-    },
-    "src/pages/client/AcademyAssessmentPlayerPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/pages/client/AcademyAssessmentResultPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
     },
     "src/pages/client/SupportTicketPortalDetailPage.tsx": {
       "@typescript-eslint/no-explicit-any": 2
