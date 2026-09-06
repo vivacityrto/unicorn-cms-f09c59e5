@@ -1,6 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyXeroSignature } from "../_shared/webhook-signature.ts";
 
+// auth-gate: none -- webhook endpoint authenticates each request with the
+// XERO_WEBHOOK_KEY HMAC signature rather than a per-user caller.
+
 // No corsHeaders needed - Xero calls this server-to-server, never from a browser.
 
 const XERO_WEBHOOK_KEY = (Deno.env.get("XERO_WEBHOOK_KEY") ?? "").trim();
@@ -16,6 +19,16 @@ if (!XERO_WEBHOOK_KEY) {
 }
 
 const CONTACT_ID_RE = /\/contact\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
+
+interface XeroInvoice {
+  Status?: string | null;
+  DueDateString?: string | null;
+  DueDate?: string | null;
+}
+
+interface XeroInvoiceResponse {
+  Invoices?: XeroInvoice[];
+}
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -191,9 +204,9 @@ async function processInvoiceEvents(
     // DRAFT/VOIDED/DELETED carry no real financial obligation - skip
     // past those rather than letting one outrank a genuinely
     // PAID/AUTHORISED invoice just for having a later date.
-    const invoicesData = await invoicesResp.json();
+    const invoicesData = await invoicesResp.json() as XeroInvoiceResponse;
     const mostRecent = (invoicesData.Invoices ?? []).find(
-      (inv: any) => !["DRAFT", "VOIDED", "DELETED"].includes(inv.Status)
+      (inv) => !["DRAFT", "VOIDED", "DELETED"].includes(inv.Status ?? "")
     ) ?? null;
     const paid = mostRecent ? mostRecent.Status === "PAID" : null;
     const dueDate = mostRecent && !paid ? (mostRecent.DueDateString ?? mostRecent.DueDate ?? null) : null;
