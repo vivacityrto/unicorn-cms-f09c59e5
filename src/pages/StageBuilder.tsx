@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { STAGE_TEMPLATES, StageTemplate, TemplateTask, TemplateEmail } from '@/lib/stage-templates';
 import { useStageTypeOptions } from '@/hooks/useStageTypeOptions';
+import type { TablesInsert } from '@/integrations/supabase/types';
 
 
 const PACKAGE_TYPE_OPTIONS = [
@@ -246,7 +247,7 @@ export default function StageBuilder() {
       const stageKey = `${baseKey}-${Date.now()}`;
 
       // 1. Create the stage
-      const { data: newStage, error: stageError } = await (supabase
+      const { data: newStage, error: stageError } = await supabase
         .from('stages')
         .insert({
           name: state.stageName,
@@ -257,9 +258,9 @@ export default function StageBuilder() {
           is_reusable: true,
           dashboard_visible: true,
           is_archived: false,
-        } as any)
+        } as unknown as TablesInsert<'stages'>)
         .select()
-        .single() as any);
+        .single();
 
       if (stageError || !newStage) throw new Error(stageError?.message || 'Failed to create stage');
 
@@ -310,11 +311,11 @@ export default function StageBuilder() {
         title: 'Stage Created!',
         description: `"${state.stageName}" has been created successfully.`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create stage:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create stage',
+        description: error instanceof Error ? error.message : 'Failed to create stage',
         variant: 'destructive',
       });
     } finally {
