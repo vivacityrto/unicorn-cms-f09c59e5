@@ -55,8 +55,8 @@ export default function TenantMembers() {
       if (error) throw error;
 
       const formattedMembers: Member[] = (data || [])
-        .filter((tu: any) => tu.users)
-        .map((tu: any) => {
+        .filter((tu) => tu.users)
+        .map((tu) => {
           const user = tu.users;
           return {
             id: user.user_uuid,
@@ -71,7 +71,7 @@ export default function TenantMembers() {
         });
 
       setMembers(formattedMembers);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching data:", error);
       toast({
         title: "Error",
