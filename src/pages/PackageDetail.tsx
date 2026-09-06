@@ -27,6 +27,7 @@ import { AddExistingDocumentDialog } from "@/components/AddExistingDocumentDialo
 import { AddExistingStageDialog } from "@/components/AddExistingStageDialog";
 import { StageNotesTab } from "@/components/StageNotesTab";
 import { cn } from "@/lib/utils";
+import type { Tables } from "@/integrations/supabase/types";
 import {
   DndContext,
   closestCenter,
@@ -55,6 +56,15 @@ interface PackageInfo {
   duration_months?: number | null;
   total_hours?: number | null;
 }
+
+type StaffTask = Omit<Tables<'package_staff_tasks'>, 'id'> & { id: number };
+type ClientTask = Omit<Tables<'package_client_tasks'>, 'id'> & { id: number };
+type Document = Tables<'documents'> & { is_active?: boolean };
+type TenantUserCount = Pick<Tables<'tenant_users'>, 'tenant_id'>;
+type ConnectedTenant = Pick<Tables<'connected_tenants'>, 'tenant_id' | 'user_uuid'>;
+type UserSummary = Pick<Tables<'users'>, 'user_uuid' | 'first_name' | 'last_name' | 'avatar_url'>;
+type AdminState = Pick<Tables<'users'>, 'tenant_id' | 'state'>;
+type StateOption = Pick<Tables<'dd_states'>, 'legacy_code' | 'label'>;
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unexpected error";
@@ -235,13 +245,13 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
   const [isClientTaskDialogOpen, setIsClientTaskDialogOpen] = useState(false);
   const [isEditPackageDialogOpen, setIsEditPackageDialogOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<StageData | null>(null);
-  const [staffTasks, setStaffTasks] = useState<any[]>([]);
-  const [clientTasks, setClientTasks] = useState<any[]>([]);
-  const [editingStaffTask, setEditingStaffTask] = useState<any | null>(null);
-  const [editingClientTask, setEditingClientTask] = useState<any | null>(null);
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [staffTasks, setStaffTasks] = useState<StaffTask[]>([]);
+  const [clientTasks, setClientTasks] = useState<ClientTask[]>([]);
+  const [editingStaffTask, setEditingStaffTask] = useState<StaffTask | null>(null);
+  const [editingClientTask, setEditingClientTask] = useState<ClientTask | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
-  const [editingDocument, setEditingDocument] = useState<any | null>(null);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
   const [isAddExistingDocDialogOpen, setIsAddExistingDocDialogOpen] = useState(false);
   const [isAddExistingStageDialogOpen, setIsAddExistingStageDialogOpen] = useState(false);
   const [isRemoveTenantDialogOpen, setIsRemoveTenantDialogOpen] = useState(false);
@@ -281,10 +291,10 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
         }));
 
         for (const update of updates) {
-          const { error } = await (supabase
-            .from('package_stages' as any)
-            .update({ order_number: update.order_number })
-            .eq('id', update.id) as any);
+          const { error } = await supabase
+            .from('package_stages')
+            .update({ order_number: update.order_number } as never)
+            .eq('id', update.id);
 
           if (error) throw error;
         }
@@ -352,8 +362,8 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aVal: any = a[sortField];
-      let bVal: any = b[sortField];
+      let aVal: string | number = a[sortField];
+      let bVal: string | number = b[sortField];
       if (sortField === "created_at") {
         aVal = new Date(aVal).getTime();
         bVal = new Date(bVal).getTime();
@@ -397,7 +407,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       if (instancesError) throw instancesError;
       
       // Filter out tenants that already have this package
-      const assignedTenantIds = new Set((existingInstances || []).map((i: any) => i.tenant_id));
+      const assignedTenantIds = new Set((existingInstances || []).map((i) => i.tenant_id));
       const filtered = (allTenants || []).filter(tenant => !assignedTenantIds.has(tenant.id));
       
       setAvailableTenants(filtered);
@@ -481,10 +491,10 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
   };
   const handleDeleteStage = async (stageId: number) => {
     try {
-      const { error } = await (supabase
+      const { error } = await supabase
         .from("stages")
         .delete()
-        .eq("id", stageId) as any);
+        .eq("id", stageId);
       if (error) throw error;
       toast({
         title: "Success",
@@ -506,7 +516,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
         error
       } = await supabase.from("package_staff_tasks").select("*").eq("package_id", Number(id)).eq("stage_id", stageId).order("order_number");
       if (error) throw error;
-      setStaffTasks(data || []);
+      setStaffTasks((data || []).map((task) => ({ ...task, id: Number(task.id) })));
     } catch (error: unknown) {
       console.error("Error fetching staff tasks:", error);
     }
@@ -518,7 +528,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
         error
       } = await supabase.from("package_client_tasks").select("*").eq("package_id", Number(id)).eq("stage_id", stageId).order("order_number");
       if (error) throw error;
-      setClientTasks(data || []);
+      setClientTasks((data || []).map((task) => ({ ...task, id: Number(task.id) })));
     } catch (error: unknown) {
       console.error("Error fetching client tasks:", error);
     }
@@ -537,13 +547,13 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
         supabase.from("documents").select("*").eq("package_id", Number(id)).eq("stage", stageId).order("id"),
         additionalIds.length > 0
           ? supabase.from("documents").select("*").in("id", additionalIds).order("id")
-          : Promise.resolve({ data: [] as any[], error: null } as any),
+          : Promise.resolve({ data: [] as Document[], error: null }),
       ]);
       if (primaryRes.error) throw primaryRes.error;
 
-      const merged = [...(primaryRes.data || []), ...(((linkedRes as any)?.data) || [])];
+      const merged = [...(primaryRes.data || []), ...(linkedRes.data || [])];
       const seen = new Set<number>();
-      const deduped = merged.filter((d: any) => {
+      const deduped = merged.filter((d) => {
         if (seen.has(d.id)) return false;
         seen.add(d.id);
         return true;
@@ -595,7 +605,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       // Fetch stages based on tenant's stage_ids if on tenant page
       if (tenantId) {
         // Fetch package instance with all required fields - use instanceId if available for precision
-        let fetchedInstance: any = null;
+        let fetchedInstance: Pick<Tables<'package_instances'>, 'start_date' | 'end_date' | 'manager_id' | 'hours_included' | 'hours_used' | 'hours_added'> | null = null;
         if (instanceId) {
           const { data } = await supabase
             .from("package_instances")
@@ -657,14 +667,14 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
           
           if (stageIds.length > 0) {
             // Fetch stages from stages table where id is in stage_ids
-            const { data: stagesData, error: stagesError } = await (supabase
+            const { data: stagesData, error: stagesError } = await supabase
               .from("stages")
               .select("*")
               .in("id", stageIds)
-              .order("id") as any);
+              .order("id");
             
             if (!stagesError) {
-              const mappedStages = (stagesData || []).map((stage: any, index: number) => ({
+              const mappedStages = (stagesData || []).map((stage, index: number) => ({
                 id: stage.id,
                 package_id: Number(id),
                 stage_name: stage.name,
@@ -673,7 +683,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                 video_url: stage.videourl,
                 order_number: index + 1,
                 is_active: true,
-                created_at: stage.created_at,
+                created_at: stage.dateimported,
                 updated_at: stage.updated_at,
                 status: stage.status || 'not_started'
               }));
@@ -701,10 +711,10 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       
       if (instancesError) throw instancesError;
       
-      const packageTenantIds = (instances || []).map((i: any) => i.tenant_id).filter(Boolean);
+      const packageTenantIds = (instances || []).map((i) => i.tenant_id).filter(Boolean);
       
       // Fetch tenant details if any tenants have this package
-      let tenantsData: any[] = [];
+      let tenantsData: TenantData[] = [];
       let tenantsError = null;
       
       if (packageTenantIds.length > 0) {
@@ -719,18 +729,18 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       if (tenantsError) throw tenantsError;
       console.log("Tenants for package", id, ":", tenantsData);
 
-      const tenantIds = (tenantsData || []).map((t: any) => t.id);
+      const tenantIds = tenantsData.map((t) => t.id);
 
       // Batch fetch member counts
       const { data: memberCounts } = await supabase.from("tenant_users").select("tenant_id").in("tenant_id", tenantIds);
-      const memberCountMap = (memberCounts || []).reduce((acc: Record<number, number>, user: any) => {
+      const memberCountMap = (memberCounts || []).reduce((acc: Record<number, number>, user: TenantUserCount) => {
         acc[user.tenant_id] = (acc[user.tenant_id] || 0) + 1;
         return acc;
       }, {});
 
       // Batch fetch CSC data
       const { data: connectedData } = await supabase.from("connected_tenants").select("tenant_id, user_uuid").in("tenant_id", tenantIds);
-      const connectedMap = (connectedData || []).reduce((acc: Record<number, string>, conn: any) => {
+      const connectedMap = (connectedData || []).reduce((acc: Record<number, string>, conn: ConnectedTenant) => {
         if (!acc[conn.tenant_id]) {
           acc[conn.tenant_id] = conn.user_uuid;
         }
@@ -740,7 +750,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       // Batch fetch CSC user names
       const userUuids = Object.values(connectedMap).filter(Boolean);
       const { data: usersData } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("user_uuid", userUuids);
-      const userDataMap = (usersData || []).reduce((acc: Record<string, { name: string; avatar_url: string | null }>, user: any) => {
+      const userDataMap = (usersData || []).reduce((acc: Record<string, { name: string; avatar_url: string | null }>, user: UserSummary) => {
         acc[user.user_uuid] = {
           name: `${user.first_name} ${user.last_name}`,
           avatar_url: user.avatar_url
@@ -750,13 +760,13 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
 
       // Fetch state from first admin user for each tenant
       const { data: adminUsersData } = await supabase.from("users").select("tenant_id, state").eq("unicorn_role", "Admin").in("tenant_id", tenantIds);
-      const stateCodes = [...new Set(adminUsersData?.map((u: any) => u.state).filter(Boolean) || [])];
-      const { data: statesData } = await supabase.from("dd_states" as any).select("legacy_code, label").in("legacy_code", stateCodes);
-      const stateDescMap = (statesData || []).reduce((acc: Record<number, string>, state: any) => {
+      const stateCodes = [...new Set(adminUsersData?.map((u: AdminState) => u.state).filter(Boolean) || [])];
+      const { data: statesData } = await supabase.from("dd_states").select("legacy_code, label").in("legacy_code", stateCodes);
+      const stateDescMap = (statesData || []).reduce((acc: Record<string, string>, state: StateOption) => {
         acc[state.legacy_code] = state.label;
         return acc;
       }, {});
-      const stateMap = (adminUsersData || []).reduce((acc: Record<number, string | null>, user: any) => {
+      const stateMap = (adminUsersData || []).reduce((acc: Record<number, string | null>, user: AdminState) => {
         if (!acc[user.tenant_id] && user.state) {
           acc[user.tenant_id] = stateDescMap[user.state] || "";
         }
@@ -764,7 +774,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       }, {});
 
       // Merge all data
-      const tenantsWithCounts = (tenantsData || []).map((tenant: any) => ({
+      const tenantsWithCounts = tenantsData.map((tenant) => ({
         ...tenant,
         user_count: memberCountMap[tenant.id] || 0,
         csc_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
@@ -773,10 +783,10 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       }));
 
       // Split into active and all tenants
-      const active = tenantsWithCounts.filter((t: any) => t.status === "active");
+      const active = tenantsWithCounts.filter((t) => t.status === "active");
       setActiveTenants(active);
       setAllTenants(tenantsWithCounts);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: errorMessage(error),
@@ -1315,7 +1325,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                           if (confirm("Are you sure you want to delete this staff task?")) {
                             const {
                               error
-                            } = await supabase.from("package_staff_tasks").delete().eq("id", task.id);
+                            } = await supabase.from("package_staff_tasks").delete().eq("id", String(task.id));
                             if (error) {
                               toast({
                                 title: "Error",
@@ -1400,7 +1410,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                           if (confirm("Are you sure you want to delete this client task?")) {
                             const {
                               error
-                            } = await supabase.from("package_client_tasks").delete().eq("id", task.id);
+                            } = await supabase.from("package_client_tasks").delete().eq("id", String(task.id));
                             if (error) {
                               toast({
                                 title: "Error",
