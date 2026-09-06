@@ -38,6 +38,8 @@
  */
 
 import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
+type ServiceClient = ReturnType<typeof createServiceClient>;
+type JsonRecord = Record<string, unknown>;
 import { extractToken, verifyAuth, type UserProfile } from "../_shared/auth-helpers.ts";
 import { jsonError, jsonRaw } from "../_shared/response-helpers.ts";
 import {
@@ -161,7 +163,7 @@ Write naturally in Australian English — you don't need to follow any fixed sec
 /** Rollout gate: master flag, then all-tenants or beta-ring for this specific tenant. */
 async function isClientAssistantEnabledForTenant(
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: ServiceClient,
   tenantId: number
 ): Promise<boolean> {
   try {
@@ -187,7 +189,7 @@ async function isClientAssistantEnabledForTenant(
 /** Token-based daily cap — checked in addition to the request-count cap (ai_client_query_usage), since an agentic tool-use loop's cost per request varies far more than the deterministic function that cap was ported from. */
 async function checkClientTokenUsageCap(
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: ServiceClient,
   userId: string
 ): Promise<{ withinCap: boolean; used: number; cap: number }> {
   const { data: settings } = await supabase
@@ -212,7 +214,7 @@ async function checkClientTokenUsageCap(
 /** Record actual token usage from this request, upserting today's row — service-role, matching the staff table's precedent. */
 async function recordClientTokenUsage(
   // deno-lint-ignore no-explicit-any
-  serviceClient: any,
+  serviceClient: ServiceClient,
   userId: string,
   inputTokens: number,
   outputTokens: number
@@ -254,7 +256,7 @@ async function recordClientTokenUsage(
 /** Resolve an existing conversation the caller owns, or start a new one for this tenant. */
 async function resolveOrCreateClientConversation(
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: ServiceClient,
   userId: string,
   tenantId: number,
   requestedConversationId: string | null | undefined,
@@ -294,7 +296,7 @@ async function resolveOrCreateClientConversation(
 /** Best-effort turn log — never fails the request. */
 async function logClientTurn(
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: ServiceClient,
   conversationId: string,
   role: "user" | "assistant",
   content: string,
@@ -315,7 +317,7 @@ async function logClientTurn(
 
 async function loadRecentTurns(
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: ServiceClient,
   conversationId: string,
   limit: number
 ): Promise<{ role: "user" | "assistant"; content: string }[]> {
@@ -332,7 +334,7 @@ async function executeClientTool(
   name: string,
   input: Record<string, unknown>,
   // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: ServiceClient,
   tenantId: number,
   userId: string,
   profile: UserProfile,
@@ -377,7 +379,7 @@ async function executeClientTool(
       if (error) throw new Error(error.message);
       const matches = data || [];
       return {
-        result: { matches: matches.map((m: any) => ({ heading: m.heading, content: m.content, similarity: m.similarity })) },
+        result: { matches: matches.map((m: JsonRecord) => ({ heading: m.heading, content: m.content, similarity: m.similarity })) },
         summary: matches.length === 0 ? `search_my_documents("${query}") — no matches` : `search_my_documents("${query}") — ${matches.length} match(es)`,
       };
     } catch (err) {
@@ -403,12 +405,12 @@ async function executeClientTool(
         .limit(50);
       if (certErr) throw new Error(certErr.message);
 
-      const enrolmentList = (enrolments || []).map((e: any) => ({
+      const enrolmentList = (enrolments || []).map((e: JsonRecord) => ({
         course: e.academy_courses?.title ?? `Course ${e.course_id}`,
         status: e.status,
         completed_at: e.completed_at,
       }));
-      const certificateList = (certificates || []).map((c: any) => ({
+      const certificateList = (certificates || []).map((c: JsonRecord) => ({
         course: c.academy_courses?.title ?? `Course ${c.course_id}`,
         certificate_number: c.certificate_number,
         issued_at: c.issued_at,
@@ -491,7 +493,7 @@ async function executeClientTool(
 
       const now = new Date();
       const filtered = (rows || []).filter(
-        (u: any) =>
+        (u: JsonRecord) =>
           !person ||
           (u.display_name ?? "").toLowerCase().includes(person) ||
           (u.email ?? "").toLowerCase().includes(person)
@@ -509,7 +511,7 @@ async function executeClientTool(
         };
       }
 
-      const people = filtered.map((u: any) => {
+      const people = filtered.map((u: JsonRecord) => {
         let diagnosis: string;
         let recommended_action: string;
         if (u.row_type === "invited") {
