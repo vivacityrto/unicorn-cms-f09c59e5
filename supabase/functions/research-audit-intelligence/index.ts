@@ -14,7 +14,12 @@ import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-async function auditLog(supabase: any, userId: string, jobId: string, action: string, details?: any) {
+interface FocusArea { theme?: string; attention_reason?: string; standard_clause?: string; evidence_areas?: string[]; }
+interface RiskTrend { theme?: string; affected_provider_types?: string[]; operational_risk_area?: string; }
+interface ChecklistItem { item?: string; standard_clause?: string; priority?: string; }
+interface PerplexityResponse { choices?: Array<{ message?: { content?: string } }>; citations?: string[]; }
+
+async function auditLog(supabase: ReturnType<typeof createClient>, userId: string, jobId: string, action: string, details?: unknown) {
   await supabase.from("research_audit_log").insert({
     user_id: userId,
     job_id: jobId,
@@ -197,14 +202,14 @@ End with: "This pack provides contextual preparation guidance only and does not 
     });
 
     let summaryMd = "";
-    let citations: any[] = [];
-    let focusAreas: any[] = [];
-    let riskTrends: any[] = [];
-    let checklist: any[] = [];
-    let riskFlags: any[] = [];
+    let citations: Array<{ index: number; url: string; snippet: string; retrieved_at: string }> = [];
+    let focusAreas: FocusArea[] = [];
+    let riskTrends: RiskTrend[] = [];
+    let checklist: ChecklistItem[] = [];
+    let riskFlags: Array<Record<string, string>> = [];
 
     if (ppxResponse.ok) {
-      const ppxData = await ppxResponse.json();
+      const ppxData = await ppxResponse.json() as PerplexityResponse;
       summaryMd = ppxData.choices?.[0]?.message?.content || "";
       citations = (ppxData.citations || []).map((url: string, i: number) => ({
         index: i + 1,
@@ -216,32 +221,32 @@ End with: "This pack provides contextual preparation guidance only and does not 
       // Extract structured JSON blocks
       const focusMatch = summaryMd.match(/```json:focus_areas\s*([\s\S]*?)```/);
       if (focusMatch?.[1]) {
-        try { focusAreas = JSON.parse(focusMatch[1].trim()); } catch (e) { console.error("Parse focus_areas:", e); }
+        try { focusAreas = JSON.parse(focusMatch[1].trim()) as FocusArea[]; } catch (e) { console.error("Parse focus_areas:", e); }
       }
 
       const trendsMatch = summaryMd.match(/```json:risk_trends\s*([\s\S]*?)```/);
       if (trendsMatch?.[1]) {
-        try { riskTrends = JSON.parse(trendsMatch[1].trim()); } catch (e) { console.error("Parse risk_trends:", e); }
+        try { riskTrends = JSON.parse(trendsMatch[1].trim()) as RiskTrend[]; } catch (e) { console.error("Parse risk_trends:", e); }
       }
 
       const checklistMatch = summaryMd.match(/```json:checklist\s*([\s\S]*?)```/);
       if (checklistMatch?.[1]) {
-        try { checklist = JSON.parse(checklistMatch[1].trim()); } catch (e) { console.error("Parse checklist:", e); }
+        try { checklist = JSON.parse(checklistMatch[1].trim()) as ChecklistItem[]; } catch (e) { console.error("Parse checklist:", e); }
       }
 
       // Also try generic json block for risk flags
       const genericMatch = summaryMd.match(/```json\s*([\s\S]*?)```/);
       if (genericMatch?.[1] && !focusMatch) {
-        try { riskFlags = JSON.parse(genericMatch[1].trim()); } catch (_) { /* ignore */ }
+        try { riskFlags = JSON.parse(genericMatch[1].trim()) as Array<Record<string, string>>; } catch (_) { /* ignore */ }
       }
 
       // Build risk_flags from focus areas for research_findings compatibility
       riskFlags = focusAreas.map(fa => ({
-        risk_category: fa.theme,
-        standard_clause: fa.standard_clause,
+        risk_category: String(fa.theme ?? ""),
+        standard_clause: String(fa.standard_clause ?? ""),
         severity: "medium",
         source_url: "",
-        claim_excerpt: fa.attention_reason,
+        claim_excerpt: String(fa.attention_reason ?? ""),
       }));
 
       await auditLog(supabase, user.id, job.id, "analysis_completed", {
