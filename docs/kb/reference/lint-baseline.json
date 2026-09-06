@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T10:37:17.382Z",
-  "baselineSha": "6a1349693ae246579be3e1d163ed0ae00b47510a",
+  "generatedAt": "2026-09-06T10:49:28.431Z",
+  "baselineSha": "83be41231996a1000c77fc821cbe5492cc1313ad",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 147,
-    "errors": 656,
+    "filesWithFindings": 146,
+    "errors": 654,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 649,
+    "@typescript-eslint/no-explicit-any": 647,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 92,
+      "errors": 90,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 85,
+        "@typescript-eslint/no-explicit-any": 83,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -170,10 +170,10 @@
     },
     "src/lib": {},
     "src/pages": {
-      "errors": 34,
+      "errors": 32,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 34
+        "@typescript-eslint/no-explicit-any": 32
       }
     },
     "src/pages/client": {
@@ -975,9 +975,6 @@
     },
     "src/hooks/usePageViewTracking.ts": {},
     "src/lib/friendlyDbError.ts": {},
-    "src/pages/AdminCompliancePacks.tsx": {
-      "@typescript-eslint/no-explicit-any": 2
-    },
     "src/pages/PackageDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 32
     },
