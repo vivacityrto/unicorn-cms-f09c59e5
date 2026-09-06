@@ -3,6 +3,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
+type ClickupTask = {
+  task_id: string;
+  custom_id: string | null;
+  name: string | null;
+  status: string | null;
+  date_created: string | null;
+  time_estimate: number | null;
+  time_spent: number | null;
+  creator_username: string | null;
+};
+type ClickupComment = { task_id: string; comment_text: string | null; comment_date: string | null; comment_by: string | null };
+type TenantNote = { title: string | null; note_details: string | null; note_type: string | null; created_at: string | null; parent_type: string | null };
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders(req) });
@@ -56,7 +69,7 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(200);
 
-    const taskContext = (tasks || []).map((t: any) => ({
+    const taskContext = (tasks as ClickupTask[] | null || []).map((t) => ({
       id: t.custom_id || t.task_id,
       name: t.name,
       status: t.status,
@@ -66,14 +79,14 @@ serve(async (req) => {
       creator: t.creator_username,
     }));
 
-    const commentContext = (comments || []).map((c: any) => ({
+    const commentContext = (comments as ClickupComment[] | null || []).map((c) => ({
       task_id: c.task_id,
       text: c.comment_text,
       date: c.comment_date,
       by: c.comment_by,
     }));
 
-    const noteContext = (notes || []).map((n: any) => ({
+    const noteContext = (notes as TenantNote[] | null || []).map((n) => ({
       title: n.title,
       content: n.note_details,
       type: n.note_type,
@@ -81,7 +94,7 @@ serve(async (req) => {
       parent_type: n.parent_type,
     }));
 
-    const commentContextFormatted = (comments || []).map((c: any) => ({
+    const commentContextFormatted = (comments as ClickupComment[] | null || []).map((c) => ({
       task_id: c.task_id,
       text: c.comment_text,
       date: c.comment_date ? new Date(c.comment_date).toLocaleDateString("en-AU") : null,
