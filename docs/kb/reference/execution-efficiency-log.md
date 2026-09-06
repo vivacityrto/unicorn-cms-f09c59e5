@@ -31,6 +31,21 @@ possible (real timestamps, real line counts) rather than estimated.
 - Findings/errors deltas come from `docs/kb/reference/lint-baseline.json`,
   regenerated and compared before/after every batch — never estimated.
 
+## Standing batching decision (2026-09-06)
+
+To reduce repeated PR/worktree/browser overhead without weakening evidence,
+Phase 2.5 now defaults to feature-coherent batches of roughly 5–10 files or
+15–40 findings. Each file still receives fresh importer/reachability and
+generated-schema review; the full static gate chain and one consolidated
+authenticated read-only Playwright pass run once per PR. The lint baseline is
+regenerated once after the batch. Schema/RLS/RPC/Edge-contract work remains
+separate and is deferred when it needs a product or migration decision.
+
+The first measured checkpoint is PR #791: the baseline was refreshed against
+`origin/main` SHA `46b813938` (previous artifact SHA `78d8cf6`) and moved to
+856 `no-explicit-any` findings across 198 files, with 39 warnings. JSON
+validation and KB-link checks passed; the PR merged as `890033c22`.
+
 ## Codebase optimization plan — `react-hooks/exhaustive-deps` phase (closed)
 
 | Batch | PR | Merged (UTC) | Cycle time | Findings fixed | Notes |

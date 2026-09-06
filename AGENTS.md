@@ -289,6 +289,18 @@ The bar for any of these: does it reduce repeated overhead without
 skipping, weakening, or reordering-around a verification step? If yes,
 it's fair game to apply proactively, not just when asked.
 
+**Phase 2.5 batching default (standing):** when remaining findings share a
+feature area and contract, group roughly 5–10 files or 15–40 findings into
+one PR. Perform fresh reachability and generated-schema checks for every file,
+but run the full lint/typecheck/frontend-test/Edge-test/build chain once per
+PR and one consolidated authenticated read-only Playwright pass over its
+affected routes. Regenerate `lint-baseline.json` once after the batch. Keep
+schema/RLS/RPC/Edge-contract changes in separate explicitly authorized work;
+defer them rather than mixing them into frontend typing batches. Reuse the
+isolated worktree and dependency cache, serialize heavy commands with the
+machine-wide mutex, and remove temporary auth state, junctions, servers, and
+artifacts after each PR.
+
 ## Local dev server troubleshooting (Windows)
 
 **`npm run dev` hangs forever at `[optimizer] scanning dependencies...`**
