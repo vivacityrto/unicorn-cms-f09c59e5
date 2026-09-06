@@ -4,6 +4,33 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { appUrl } from "../_shared/app-base-url.ts";
 import { cronUnauthorizedResponse, isCronAuthorized } from "../_shared/cron-auth.ts";
 
+type ServiceClient = ReturnType<typeof createClient>;
+type NotificationType = "due_soon" | "overdue" | "reminder_24h" | "reminder_10m" | string;
+type NotificationSchedule = {
+  id: number | string;
+  user_id: string;
+  tenant_id: number | string;
+  entity_type: string;
+  entity_id: number | string;
+  notification_type: NotificationType;
+};
+type QuietHours = { start: string; end: string };
+type UserNotificationPrefs = { quiet_hours?: QuietHours | null; email_enabled?: boolean; inapp_enabled?: boolean };
+type NotificationData = {
+  task_name?: string;
+  description?: string;
+  due_date?: string;
+  days_overdue?: number;
+  task_url?: string;
+  tenant_name?: string;
+  meeting_title?: string;
+  meeting_url?: string;
+  [key: string]: unknown;
+};
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -112,13 +139,13 @@ const handler = async (req: Request): Promise<Response> => {
 
         processed++;
         console.log(`Successfully processed notification ${notification.id}`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Error processing notification ${notification.id}:`, error);
         await supabase
           .from("notification_schedule")
           .update({
             status: "failed",
-            error_message: error.message,
+            error_message: errorMessage(error),
             updated_at: new Date().toISOString(),
           })
           .eq("id", notification.id);
@@ -140,10 +167,10 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in process-notification-queue:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage(error) }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders(req) },
@@ -152,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-async function validateNotification(supabase: any, notification: any): Promise<boolean> {
+async function validateNotification(supabase: ServiceClient, notification: NotificationSchedule): Promise<boolean> {
   const { entity_type, entity_id, notification_type } = notification;
 
   if (entity_type === "task") {
@@ -182,7 +209,7 @@ async function validateNotification(supabase: any, notification: any): Promise<b
   return true;
 }
 
-function isInQuietHours(quietHours: any): boolean {
+function isInQuietHours(quietHours: QuietHours | null | undefined): boolean {
   if (!quietHours) return false;
 
   const now = new Date();
@@ -196,7 +223,7 @@ function isInQuietHours(quietHours: any): boolean {
   return currentTime >= start && currentTime <= end;
 }
 
-function calculateNextAvailableTime(quietHours: any): Date {
+function calculateNextAvailableTime(quietHours: QuietHours): Date {
   const now = new Date();
   const endTime = quietHours.end;
   const [hours, minutes] = endTime.split(":").map(Number);
@@ -211,7 +238,7 @@ function calculateNextAvailableTime(quietHours: any): Date {
   return nextAvailable;
 }
 
-async function getNotificationData(supabase: any, notification: any): Promise<any> {
+async function getNotificationData(supabase: ServiceClient, notification: NotificationSchedule): Promise<NotificationData> {
   const { entity_type, entity_id, notification_type } = notification;
 
   if (entity_type === "task") {
@@ -238,7 +265,7 @@ async function getNotificationData(supabase: any, notification: any): Promise<an
   return {};
 }
 
-async function sendEmailNotification(supabase: any, notification: any, data: any, _userPrefs: any): Promise<void> {
+async function sendEmailNotification(supabase: ServiceClient, notification: NotificationSchedule, data: NotificationData, _userPrefs: UserNotificationPrefs): Promise<void> {
   const { data: user } = await supabase.auth.admin.getUserById(notification.user_id);
   if (!user?.user?.email) {
     console.error("User email not found");
@@ -267,7 +294,7 @@ async function sendEmailNotification(supabase: any, notification: any, data: any
   });
 }
 
-async function sendInAppNotification(supabase: any, notification: any, data: any): Promise<void> {
+async function sendInAppNotification(supabase: ServiceClient, notification: NotificationSchedule, data: NotificationData): Promise<void> {
   await supabase.from("notification_tenants").insert({
     tenant_id: notification.tenant_id,
     user_id: notification.user_id,
@@ -279,7 +306,7 @@ async function sendInAppNotification(supabase: any, notification: any, data: any
   });
 }
 
-function getNotificationTitle(type: string, _data: any): string {
+function getNotificationTitle(type: string, _data: NotificationData): string {
   switch (type) {
     case "due_soon":
       return `Task Due Soon`;
@@ -294,7 +321,7 @@ function getNotificationTitle(type: string, _data: any): string {
   }
 }
 
-function getNotificationMessage(type: string, data: any): string {
+function getNotificationMessage(type: string, data: NotificationData): string {
   switch (type) {
     case "due_soon":
       return `${data.task_name} is due on ${data.due_date}`;
