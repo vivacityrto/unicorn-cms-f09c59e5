@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 
 export interface AdminHelpThreadRow {
   id: string;
@@ -16,6 +17,18 @@ export interface AdminHelpThreadRow {
   first_user_message: string | null;
 }
 
+interface HelpThreadQueryRow {
+  id: string;
+  user_id: string | null;
+  subject: string | null;
+  status: string | null;
+  created_at: string;
+  updated_at: string;
+  tenant: { id: number; name: string | null; rto_name: string | null } | null;
+}
+
+type HelpMessageRow = Pick<Tables<"help_messages">, "thread_id" | "role" | "content" | "created_at">;
+
 export function useAdminHelpThreads() {
   return useQuery({
     queryKey: ['admin-help-threads'],
@@ -30,7 +43,7 @@ export function useAdminHelpThreads() {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      const list = (threads ?? []) as any[];
+      const list = (threads ?? []) as unknown as HelpThreadQueryRow[];
       if (list.length === 0) return [];
 
       const userIds = Array.from(
@@ -39,11 +52,8 @@ export function useAdminHelpThreads() {
 
       const [{ data: users }, { data: messages }] = await Promise.all([
         userIds.length
-          ? supabase
-              .from('users')
-              .select('user_uuid, full_name, email')
-              .in('user_uuid', userIds)
-          : Promise.resolve({ data: [] as any[] }),
+          ? supabase.from('users').select('user_uuid, full_name, email').in('user_uuid', userIds)
+          : Promise.resolve({ data: [] }),
         supabase
           .from('help_messages')
           .select('thread_id, role, content, created_at')
@@ -52,10 +62,10 @@ export function useAdminHelpThreads() {
       ]);
 
       const userMap = new Map<string, { user_uuid: string; full_name: string | null; email: string | null }>();
-      (users ?? []).forEach((u: any) => userMap.set(u.user_uuid, u));
+      (users ?? []).forEach((u) => userMap.set(u.user_uuid, u));
 
-      const msgsByThread = new Map<string, any[]>();
-      (messages ?? []).forEach((m: any) => {
+      const msgsByThread = new Map<string, HelpMessageRow[]>();
+      (messages ?? []).forEach((m) => {
         const arr = msgsByThread.get(m.thread_id) ?? [];
         arr.push(m);
         msgsByThread.set(m.thread_id, arr);

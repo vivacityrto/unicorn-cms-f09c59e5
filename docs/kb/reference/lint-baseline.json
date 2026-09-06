@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T02:29:45.773Z",
-  "baselineSha": "890033c229de67a02dfcaaeb40c0ea749b0ece43",
+  "generatedAt": "2026-09-06T03:23:29.291Z",
+  "baselineSha": "c8cab0553037980c7b7dafd5aee162c3e31ebb6c",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 196,
-    "errors": 855,
+    "filesWithFindings": 195,
+    "errors": 850,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 848,
+    "@typescript-eslint/no-explicit-any": 843,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 291,
+      "errors": 286,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 284,
+        "@typescript-eslint/no-explicit-any": 279,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -179,13 +179,6 @@
       "warnings": 6,
       "byRule": {
         "react-refresh/only-export-components": 6
-      }
-    },
-    "src/components/support-tickets": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
       }
     },
     "src/components/tenant": {
@@ -1032,9 +1025,6 @@
     },
     "src/components/stage/StageFrameworkSelector.tsx": {
       "react-refresh/only-export-components": 6
-    },
-    "src/components/support-tickets/useAdminHelpThreads.ts": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "src/components/tenant/RenameTenantDialog.tsx": {
       "react-refresh/only-export-components": 1
