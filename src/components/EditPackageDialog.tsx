@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { useSuggestDropdowns } from "@/hooks/useSuggestDropdowns";
 
@@ -89,10 +90,10 @@ export const EditPackageDialog = ({ open, onOpenChange, onSuccess, packageData }
         setPendingTotalHours(newTotalHours);
         setShowPropagateDialog(true);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to update package',
         variant: 'destructive'
       });
     }
@@ -101,10 +102,9 @@ export const EditPackageDialog = ({ open, onOpenChange, onSuccess, packageData }
   const handlePropagateToInstances = async () => {
     if (!packageData) return;
     try {
-      const client: any = supabase;
-      const { error } = await client
+      const { error } = await supabase
         .from('package_instances')
-        .update({ included_minutes: pendingTotalHours * 60 })
+        .update({ included_minutes: pendingTotalHours * 60 } satisfies TablesUpdate<'package_instances'>)
         .eq('package_id', packageData.id)
         .eq('is_active', true);
       if (error) throw error;
@@ -112,10 +112,10 @@ export const EditPackageDialog = ({ open, onOpenChange, onSuccess, packageData }
         title: 'Instances Updated',
         description: `Active instances updated to ${pendingTotalHours}h included.`
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update instances',
+        description: error instanceof Error ? error.message : 'Failed to update instances',
         variant: 'destructive'
       });
     } finally {
