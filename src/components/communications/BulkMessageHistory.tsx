@@ -31,7 +31,7 @@ function CampaignReadMetric({ campaignId }: { campaignId: string }) {
   const { data: recipients = [], isLoading } = useQuery({
     queryKey: ["broadcast-recipient-read-count", campaignId],
     queryFn: async (): Promise<RecipientRow[]> => {
-      const { data, error } = await (supabase as any).from("broadcast_recipients").select("read_at").eq("campaign_id", campaignId);
+      const { data, error } = await supabase.from("broadcast_recipients").select("read_at").eq("campaign_id", campaignId);
       if (error) throw error;
       return (data ?? []) as RecipientRow[];
     },
@@ -45,7 +45,7 @@ function CampaignRecipients({ campaignId }: { campaignId: string }) {
   const { data: recipients = [], isLoading } = useQuery({
     queryKey: ["broadcast-recipients", campaignId],
     queryFn: async (): Promise<RecipientRow[]> => {
-      const { data, error } = await (supabase as any).from("broadcast_recipients").select("id, tenant_id, user_id, delivery_status, sent_at, read_at, failure_reason").eq("campaign_id", campaignId).order("read_at", { ascending: false, nullsFirst: false });
+      const { data, error } = await supabase.from("broadcast_recipients").select("id, tenant_id, user_id, delivery_status, sent_at, read_at, failure_reason").eq("campaign_id", campaignId).order("read_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return (data ?? []) as RecipientRow[];
     },
@@ -63,7 +63,7 @@ function CampaignRecipients({ campaignId }: { campaignId: string }) {
   const { data: tenants = [] } = useQuery({
     queryKey: ["broadcast-recipient-tenants", campaignId, tenantIds.join(",")], enabled: tenantIds.length > 0,
     queryFn: async (): Promise<TenantMini[]> => {
-      const { data, error } = await (supabase as any).from("tenants").select("id, name").in("id", tenantIds);
+      const { data, error } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
       if (error) throw error;
       return (data ?? []) as TenantMini[];
     },
@@ -115,7 +115,7 @@ export function BulkMessageHistory() {
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["broadcast-campaigns"],
     queryFn: async (): Promise<CampaignRow[]> => {
-      const { data, error } = await (supabase as any).from("broadcast_campaigns").select("id, title, target_mode, package_type, status, total_recipients, total_sent, total_failed, created_at, sent_at, created_by").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("broadcast_campaigns").select("id, title, target_mode, package_type, status, total_recipients, total_sent, total_failed, created_at, sent_at, created_by").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CampaignRow[];
     },
