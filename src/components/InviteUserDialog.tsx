@@ -19,6 +19,10 @@ import {
   unicornRoleFromRelationship,
 } from '@/lib/roles/relationshipRole';
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unexpected error';
+}
+
 interface InviteUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -144,9 +148,9 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
         });
         if (error) throw error;
         setImportResults(data?.users || []);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Search error:', err);
-        toast({ title: 'Search failed', description: err.message, variant: 'destructive' });
+        toast({ title: 'Search failed', description: errorMessage(err), variant: 'destructive' });
       } finally {
         setImportSearching(false);
       }
@@ -207,9 +211,9 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
       setImportResults(prev => prev.filter(r => r.ID !== u.ID));
       setSelectedImportUser(null);
       onSuccess?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Import error:', err);
-      toast({ title: 'Import failed', description: err.message, variant: 'destructive' });
+      toast({ title: 'Import failed', description: errorMessage(err), variant: 'destructive' });
     } finally {
       setImporting(false);
     }
@@ -276,11 +280,11 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
 
       handleClose();
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending invitation:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to send invitation',
+        description: errorMessage(error),
         variant: 'destructive',
       });
     } finally {
