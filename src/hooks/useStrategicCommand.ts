@@ -6,13 +6,14 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface StrategicSignal {
   id: string;
   signal_type: string;
   signal_severity: string;
   signal_summary: string;
-  affected_entities_json: any;
+  affected_entities_json: Json;
   generated_at: string;
 }
 
@@ -52,7 +53,7 @@ export function usePortfolioRisk() {
   return useQuery({
     queryKey: ['strategic-portfolio-risk'],
     queryFn: async (): Promise<PortfolioRiskRow[]> => {
-      const { data, error } = await supabase.rpc('get_strategic_portfolio_risk' as any);
+      const { data, error } = await supabase.rpc('get_strategic_portfolio_risk' as never);
       if (error) throw error;
       return (data ?? []) as unknown as PortfolioRiskRow[];
     },
@@ -64,7 +65,7 @@ export function useCapacityPressure() {
   return useQuery({
     queryKey: ['strategic-capacity-pressure'],
     queryFn: async (): Promise<CapacityPressureRow[]> => {
-      const { data, error } = await supabase.rpc('get_strategic_capacity_pressure' as any);
+      const { data, error } = await supabase.rpc('get_strategic_capacity_pressure' as never);
       if (error) throw error;
       return (data ?? []) as unknown as CapacityPressureRow[];
     },
@@ -83,7 +84,13 @@ export function useRisingTenants() {
         .order('composite_risk_index', { ascending: false })
         .limit(20);
       if (error) throw error;
-      return (data ?? []) as any[];
+      return (data ?? []) as unknown as Array<{
+        tenant_id: number;
+        composite_risk_index: number;
+        forecast_risk_status: string;
+        forecast_date: string;
+        key_risk_drivers_json: Json;
+      }>;
     },
     staleTime: 60_000,
   });
