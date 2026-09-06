@@ -310,10 +310,10 @@ const handler = async (req: Request): Promise<Response> => {
       messageId: result?.id,
       invite_url: inviteUrl,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-invitation-email:", error);
     return jsonResponse(req, 500, {
-      error: error?.message || "Failed to send invitation email",
+      error: error instanceof Error ? error.message : "Failed to send invitation email",
     });
   }
 };

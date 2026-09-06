@@ -46,7 +46,7 @@ interface PackageRow {
 
 interface StageRow {
   id: number;
-  title: string;
+  name: string;
 }
 
 interface UserRow {
@@ -205,7 +205,8 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (stage) {
-        mergeData["StageName"] = (stage as any).name || "";
+        const typedStage = stage as StageRow;
+        mergeData["StageName"] = typedStage.name || "";
       }
     }
 
@@ -443,10 +444,10 @@ const handler = async (req: Request): Promise<Response> => {
       { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-stage-email:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Internal server error" }),
       { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
