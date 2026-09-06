@@ -18,6 +18,21 @@ interface TokenRecord {
   scope?: string;
 }
 
+interface GraphAttendee {
+  emailAddress?: { name?: string; address?: string };
+  type?: string;
+}
+
+interface GraphEvent {
+  iCalUId?: string;
+  onlineMeeting?: { joinUrl?: string };
+  organizer?: { emailAddress?: { name?: string; address?: string } };
+  attendees?: GraphAttendee[];
+  body?: { content?: string };
+  start?: { dateTime?: string };
+  end?: { dateTime?: string };
+}
+
 export interface ArtifactResult {
   artifact_type: 'recording' | 'transcript' | 'shared_file';
   title: string;
@@ -164,7 +179,7 @@ async function refreshTokenIfNeeded(
 
 // ── Graph helpers ────────────────────────────────────────────────────
 
-async function fetchEventDetails(accessToken: string, eventId: string) {
+async function fetchEventDetails(accessToken: string, eventId: string): Promise<GraphEvent> {
   const url = `https://graph.microsoft.com/v1.0/me/events/${eventId}?$select=id,iCalUId,subject,body,start,end,location,organizer,attendees,onlineMeeting,webLink,isCancelled,sensitivity`;
 
   const res = await fetch(url, {
@@ -176,7 +191,7 @@ async function fetchEventDetails(accessToken: string, eventId: string) {
     throw new Error(`Graph event fetch failed (${res.status}): ${errText}`);
   }
 
-  return await res.json();
+  return await res.json() as GraphEvent;
 }
 
 async function resolveShareLink(
@@ -395,7 +410,7 @@ serve(async (req) => {
 
     console.log('[sync-artifacts] Fetching event details for:', eventId);
 
-    let graphEvent: any;
+    let graphEvent: GraphEvent;
     try {
       graphEvent = await fetchEventDetails(accessToken, eventId);
     } catch (fetchErr) {
@@ -431,7 +446,7 @@ serve(async (req) => {
     if (attendees.length > 0) {
       await supabaseAdmin.from('meeting_participants').delete().eq('meeting_id', meetingId);
 
-      const participants = attendees.map((a: any) => ({
+      const participants = attendees.map((a: GraphAttendee) => ({
         meeting_id: meetingId,
         participant_email: a.emailAddress?.address || '',
         participant_name: a.emailAddress?.name || null,
@@ -566,7 +581,7 @@ serve(async (req) => {
         const durationMins = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
 
         const attendeeNames = (graphEvent.attendees || [])
-          .map((a: any) => a.emailAddress?.name || a.emailAddress?.address)
+          .map((a: GraphAttendee) => a.emailAddress?.name || a.emailAddress?.address)
           .filter(Boolean);
 
         const dateStr = startTime.toISOString().split('T')[0];
