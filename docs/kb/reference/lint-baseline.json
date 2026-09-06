@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T21:01:11.007Z",
-  "baselineSha": "7fa251e6d4f216c183f11c0253f38b43b931bb46",
+  "generatedAt": "2026-09-06T21:11:30.786Z",
+  "baselineSha": "4fe85f36f68582518ba58908a9943a8c53645350",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 61,
-    "errors": 188,
+    "filesWithFindings": 55,
+    "errors": 182,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 181,
+    "@typescript-eslint/no-explicit-any": 175,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 132,
+      "errors": 126,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 132
+        "@typescript-eslint/no-explicit-any": 126
       }
     }
   },
@@ -204,13 +204,6 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/capture-outlook-email": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
     "supabase/functions/create-client-audit": {
       "errors": 1,
       "warnings": 0,
@@ -232,42 +225,7 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/delete-user": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/generate-certificate-pdf": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
     "supabase/functions/generate-meeting-recurrence": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/generate-release-documents": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/generate-staff-checklist": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/mailgun-webhook": {
       "errors": 1,
       "warnings": 0,
       "byRule": {
@@ -430,9 +388,6 @@
     "supabase/functions/bulk-send-invitations/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/capture-outlook-email/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
     "supabase/functions/create-client-audit/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -442,22 +397,7 @@
     "supabase/functions/dashboard-test-seed/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/delete-user/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/generate-certificate-pdf/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
     "supabase/functions/generate-meeting-recurrence/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/generate-release-documents/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/generate-staff-checklist/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/mailgun-webhook/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
     "supabase/functions/tga-rto-import/index.ts": {

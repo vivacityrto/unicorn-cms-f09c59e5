@@ -578,6 +578,10 @@ Opening the protected `/communications` Bulk Message dialog during Phase 2.5 ver
 
 During the Phase 2.5 authenticated SharePoint cohort smoke test, `/client/files` loaded and remained usable, but Vite captured a React warning: `BrowserRouter` was updated while `ClientRouteGuard` was rendering. The stack points to `src/components/client/ClientRouteGuard.tsx:23` and occurs while the client layout resolves tenant access. No page error, failed route, or data write occurred, and the warning predates this typing-only cohort. Track separately as a client-route lifecycle fix; do not conflate it with the SharePoint boundary changes.
 
+### 25. Meeting recurrence Edge function has no recognizable caller authorization gate — DOCUMENTED, DEFERRED
+
+Fresh Phase 2.5 reachability review confirmed `generate-meeting-recurrence` is invoked by `useEosMeetingRecurrences` and inserts recurrence/occurrence rows using the caller's bearer token, but the function has no explicit `auth.getUser`/permission helper or other recognizable gate. Its existing RLS-backed behavior was left unchanged and the attempted type-only cleanup was reverted. This requires a dedicated auth/RBAC and RLS review before any further cleanup or production invocation; no writes were performed during verification.
+
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
