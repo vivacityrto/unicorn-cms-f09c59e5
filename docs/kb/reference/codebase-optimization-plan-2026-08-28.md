@@ -1442,3 +1442,11 @@ the shared mutex. `typecheck` retains only the established baseline errors in
 tenant names in a typed follow-up lookup. Baseline regenerated at 848 errors,
 39 warnings, and 193 files with findings. Authenticated SuperAdmin
 Playwright remains the final PR gate; no writes or new L10 bug were observed.
+**Browser-gate follow-up (2026-09-06):** The authenticated read-only probe for
+PR #796 passed the tenant members and documents routes. The dashboard passed
+route assertions on retry, but the reused SuperAdmin storage session produced
+repeated hosted-Supabase `Failed to fetch` console errors during existing
+auth/notification initialization. This is an environment/session coverage
+blocker, not attributed to the five typing changes; do not merge until a fresh
+session/network retry yields zero application console errors. All temporary
+browser artifacts and the dev server were removed.
