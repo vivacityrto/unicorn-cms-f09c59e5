@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T08:40:02.600Z",
-  "baselineSha": "d2e696ffffeaa50a2eb2e6e6b2191a91af8faa72",
+  "generatedAt": "2026-09-06T08:48:43.057Z",
+  "baselineSha": "8ebd01413706ee089ef60cc2234c7971429108ce",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 170,
-    "errors": 730,
+    "filesWithFindings": 169,
+    "errors": 726,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 723,
+    "@typescript-eslint/no-explicit-any": 719,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 166,
+      "errors": 162,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 159,
+        "@typescript-eslint/no-explicit-any": 155,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -175,10 +175,10 @@
     },
     "src/features/pdp": {},
     "src/hooks/admin": {
-      "errors": 7,
+      "errors": 3,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 7
+        "@typescript-eslint/no-explicit-any": 3
       }
     },
     "src/hooks": {
@@ -995,9 +995,6 @@
       "react-refresh/only-export-components": 1
     },
     "src/features/pdp/workforce.ts": {},
-    "src/hooks/admin/use-broadcast-obligation.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "src/hooks/admin/use-reporting-obligations.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
