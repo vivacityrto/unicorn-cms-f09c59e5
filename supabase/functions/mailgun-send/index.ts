@@ -26,10 +26,13 @@ const MAILGUN_REGION = (Deno.env.get("MAILGUN_REGION") || "EU").toUpperCase(); /
 
 type RoleType = "Admin" | "Staff" | "Super Admin" | string;
 
+type MergeVars = Record<string, unknown>;
+interface EmailSendInsert { template_id: string; to_address: string; merge_vars: MergeVars; mailgun_message_id: string | null; status: string; error: string | null; }
+interface AuditLogInsert { user_uuid: string; action: string; entity_type: string; entity_id: string; field_name: string; old_value: string | null; new_value: string; }
 interface SendEmailRequest {
   templateSlug: string;
   to: string;
-  mergeVars?: Record<string, any>;
+  mergeVars?: MergeVars;
   overrides?: {
     subject?: string;
     from?: string;
@@ -50,13 +53,13 @@ function getMailgunBase(): string {
   return MAILGUN_REGION === "EU" ? "https://api.eu.mailgun.net" : "https://api.mailgun.net";
 }
 
-function safeString(v: any): string {
+function safeString(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (typeof v === "string") return v;
   try { return JSON.stringify(v); } catch { return String(v); }
 }
 
-function renderTemplate(tpl: string, vars: Record<string, any>): string {
+function renderTemplate(tpl: string, vars: MergeVars): string {
   if (!tpl) return "";
   return tpl.replace(/{{\s*([\w.]+)\s*}}/g, (_m, key) => safeString(vars?.[key] ?? ""));
 }
@@ -127,7 +130,7 @@ serve(async (req: Request) => {
 
     const body = (await req.json()) as SendEmailRequest;
     const { templateSlug, to, overrides = {} } = body || {};
-    const mergeVars: Record<string, any> = { ...(body?.mergeVars || {}) };
+    const mergeVars: MergeVars = { ...(body?.mergeVars || {}) };
     if (!templateSlug || !to) {
       return new Response(JSON.stringify({ ok: false, error: "Missing templateSlug or to" }), { status: 400, headers: corsHeaders(req) });
     }
@@ -165,7 +168,7 @@ serve(async (req: Request) => {
       mailgun_message_id: mg.id || null,
       status: sendStatus,
       error: mg.error || null,
-    } as any);
+    } satisfies EmailSendInsert);
 
     if (insErr) {
       console.error("mailgun-send: failed to insert email_sends", insErr);
@@ -186,7 +189,7 @@ serve(async (req: Request) => {
           status: sendStatus,
           message_id: mg.id || null,
         }),
-      } as any);
+      } satisfies AuditLogInsert);
     } catch (e) {
       console.warn("mailgun-send: audit_log insert skipped/failed:", e);
     }
@@ -203,9 +206,10 @@ serve(async (req: Request) => {
       status: mg.ok ? 200 : (mg.status || 500),
       headers: { "Content-Type": "application/json", ...corsHeaders(req) },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("mailgun-send: unexpected error", err);
-    return new Response(JSON.stringify({ ok: false, error: err?.message || "Internal error" }), {
+    const message = err instanceof Error ? err.message : "Internal error";
+    return new Response(JSON.stringify({ ok: false, error: message }), {
       status: 500,
       headers: corsHeaders(req),
     });
