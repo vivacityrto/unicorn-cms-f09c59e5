@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T06:14:05.859Z",
-  "baselineSha": "4975093b34f0680c94afc263a8960d2f56bb4dd5",
+  "generatedAt": "2026-09-06T06:21:28.420Z",
+  "baselineSha": "c2954799208f0abd1b09c88834a3edd4c253f624",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 178,
-    "errors": 774,
+    "filesWithFindings": 177,
+    "errors": 770,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 767,
+    "@typescript-eslint/no-explicit-any": 763,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 210,
+      "errors": 206,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 203,
+        "@typescript-eslint/no-explicit-any": 199,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -189,10 +189,10 @@
       }
     },
     "src/hooks": {
-      "errors": 44,
+      "errors": 40,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 44,
+        "@typescript-eslint/no-explicit-any": 40,
         "react-refresh/only-export-components": 1
       }
     },
@@ -1016,9 +1016,6 @@
     },
     "src/hooks/useAuth.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/hooks/useClientAuditPortal.ts": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/hooks/useComplianceScore.ts": {
       "@typescript-eslint/no-explicit-any": 2
