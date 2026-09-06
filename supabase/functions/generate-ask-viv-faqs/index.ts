@@ -18,6 +18,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { callAnthropicHaiku, extractText } from '../_shared/anthropic-client.ts';
 import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
+type FaqCandidate = { prompt?: string; answer?: string; category?: string };
 
 const MIN_TURNS_REQUIRED = 5;
 const MAX_TURNS_SAMPLED = 500;
@@ -41,8 +42,8 @@ function parseFaqJson(text: string): RawFaq[] {
   const parsed = JSON.parse(cleaned);
   if (!Array.isArray(parsed)) throw new Error('Expected a JSON array');
   return parsed
-    .filter((f: any) => f && typeof f.prompt === 'string' && f.prompt.trim().length > 0)
-    .map((f: any) => ({
+    .filter((f: FaqCandidate) => f && typeof f.prompt === 'string' && f.prompt.trim().length > 0)
+    .map((f: FaqCandidate) => ({
       prompt: String(f.prompt).trim(),
       category: typeof f.category === 'string' && f.category.trim() ? f.category.trim() : 'General',
       occurrence_count: Number.isFinite(f.occurrence_count) ? Math.max(1, Math.round(f.occurrence_count)) : 1,

@@ -34,6 +34,7 @@ import { encode as encodeTokens } from 'npm:gpt-tokenizer@^2.5.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { generateEmbeddingsBatch, EMBEDDING_DIMENSIONS as EMBED_DIMS } from '../_shared/openai-embeddings.ts';
 import { requireCaller, FeatureKeys } from '../_shared/requireCaller.ts';
+type CorpusRow = Record<string, unknown>;
 
 const TARGET_TOKENS = 800;
 const OVERLAP_TOKENS = 150;
@@ -169,7 +170,7 @@ interface SourceConfig {
   sourceType: string;
   cursorColumn: string;
   select: string;
-  toDoc: (row: any) => Doc | null;
+  toDoc: (row: CorpusRow) => Doc | null;
 }
 
 const SOURCES: SourceConfig[] = [
@@ -239,7 +240,7 @@ const SOURCES: SourceConfig[] = [
     select:
       'id, tenant_id, meeting_type, period_range, headlines, issues, todos, rocks, cascades, segue_shares, rating, created_at, meeting_id, eos_meetings!inner(title, scheduled_date, status)',
     toDoc: (row) => {
-      const meeting = (row as any).eos_meetings;
+      const meeting = (row as CorpusRow).eos_meetings as CorpusRow | null | undefined;
       const scheduledDate: string | null = meeting?.scheduled_date ?? null;
       const dateLabel = scheduledDate ? scheduledDate.slice(0, 10) : row.period_range ?? null;
       const parts = [`EOS ${row.meeting_type ?? 'meeting'} summary${dateLabel ? ` — ${dateLabel}` : ''}`];
@@ -348,11 +349,11 @@ async function ingestSource(
 
   // Composite ordering (cursorColumn, id) guarantees the last row in the
   // batch is the true high-water mark — no separate max-tracking needed.
-  const lastRow = (rows as any[])[rows.length - 1];
+  const lastRow = (rows as CorpusRow[])[rows.length - 1];
   const maxCursor: string | null = lastRow[config.cursorColumn] ?? null;
   const maxId: string | null = lastRow.id ? String(lastRow.id) : null;
 
-  for (const row of rows as any[]) {
+  for (const row of rows as CorpusRow[]) {
     rows_processed++;
 
     try {
