@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T09:51:45.841Z",
-  "baselineSha": "ecbd00e1ef75e26a3a53908dc9d7def0b0f2f803",
+  "generatedAt": "2026-09-06T09:59:53.026Z",
+  "baselineSha": "3b0999982bf9bda30a70ab1c07e444898932d58e",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 157,
-    "errors": 690,
+    "filesWithFindings": 155,
+    "errors": 682,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 683,
+    "@typescript-eslint/no-explicit-any": 675,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 126,
+      "errors": 118,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 119,
+        "@typescript-eslint/no-explicit-any": 111,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -170,10 +170,10 @@
     },
     "src/lib": {},
     "src/pages": {
-      "errors": 58,
+      "errors": 50,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 58
+        "@typescript-eslint/no-explicit-any": 50
       }
     },
     "src/pages/academy": {
@@ -994,17 +994,11 @@
     "src/pages/StageBuilder.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "src/pages/TeamSettings.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "src/pages/TenantDocumentDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/pages/TenantMembers.tsx": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/pages/TenantNotes.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/pages/UserProfile.tsx": {
       "@typescript-eslint/no-explicit-any": 3
