@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T13:32:32.734Z",
-  "baselineSha": "4f410e2b6cc59bdb124424b66675e3423b5c82a7",
+  "generatedAt": "2026-09-06T13:45:42.573Z",
+  "baselineSha": "efb98afc59e1fc88dc61e66833e41a5c2d43260f",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 128,
-    "errors": 507,
+    "filesWithFindings": 127,
+    "errors": 470,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 500,
+    "@typescript-eslint/no-explicit-any": 463,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 419,
+      "errors": 382,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 419
+        "@typescript-eslint/no-explicit-any": 382
       }
     }
   },
@@ -258,13 +258,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 76
-      }
-    },
-    "supabase/functions/assistant-answer": {
-      "errors": 37,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 37
       }
     },
     "supabase/functions/bulk-send-invitations": {
@@ -903,9 +896,6 @@
     },
     "supabase/functions/ask-viv-assistant/index.ts": {
       "@typescript-eslint/no-explicit-any": 76
-    },
-    "supabase/functions/assistant-answer/index.ts": {
-      "@typescript-eslint/no-explicit-any": 37
     },
     "supabase/functions/bulk-send-invitations/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
