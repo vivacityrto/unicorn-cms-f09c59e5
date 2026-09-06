@@ -22,7 +22,7 @@ interface StageRelease {
   status: string;
   created_at: string;
   released_at: string | null;
-  stage?: { title: string };
+  stage?: { name: string } | null;
 }
 
 export default function AdminCompliancePacks() {
@@ -61,14 +61,14 @@ export default function AdminCompliancePacks() {
     const fetchReleases = async () => {
       setLoadingReleases(true);
       const { data } = await supabase
-        .from('stage_releases' as any)
+        .from('stage_releases')
         .select(`
           id, stage_id, status, created_at, released_at,
           stage:stages(name)
         `)
         .eq('tenant_id', parseInt(selectedTenant))
         .order('created_at', { ascending: false })
-        .limit(50) as any;
+        .limit(50);
       
       setReleases((data || []) as unknown as StageRelease[]);
       setLoadingReleases(false);
@@ -175,7 +175,7 @@ export default function AdminCompliancePacks() {
                   <SelectContent>
                     {releases.map(r => (
                       <SelectItem key={r.id} value={r.id}>
-                        {r.stage?.title || `Stage ${r.stage_id}`} - {r.status} ({format(new Date(r.created_at), 'MMM d, yyyy')})
+                        {r.stage?.name || `Stage ${r.stage_id}`} - {r.status} ({format(new Date(r.created_at), 'MMM d, yyyy')})
                       </SelectItem>
                     ))}
                   </SelectContent>
