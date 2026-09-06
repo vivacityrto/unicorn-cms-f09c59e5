@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T04:49:47.108Z",
-  "baselineSha": "4fe6430ad2550865fc611aafa8af1a6442364344",
+  "generatedAt": "2026-09-06T04:57:42.312Z",
+  "baselineSha": "5058f564ef33b9caae34f596245868d8cfae560f",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 191,
-    "errors": 832,
+    "filesWithFindings": 190,
+    "errors": 828,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 825,
+    "@typescript-eslint/no-explicit-any": 821,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 268,
+      "errors": 264,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 261,
+        "@typescript-eslint/no-explicit-any": 257,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -108,13 +108,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3
-      }
-    },
-    "src/components/documents": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
       }
     },
     "src/components/email-triage": {
@@ -989,9 +982,6 @@
     },
     "src/components/dashboard/WeekTasksTable.tsx": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/components/documents/DocumentAdditionalStagesField.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/components/email-triage/TicketDetailPanel.tsx": {
       "@typescript-eslint/no-explicit-any": 4

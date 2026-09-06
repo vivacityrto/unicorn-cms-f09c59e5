@@ -15,6 +15,8 @@ interface StageOption {
   name: string;
 }
 
+interface StageLinkRow { stage_id: number; }
+
 interface Props {
   /** Document being edited. When null/undefined the picker is idle. */
   documentId: number | null | undefined;
@@ -79,12 +81,12 @@ export function DocumentAdditionalStagesField({
     (async () => {
       setLoading(true);
       const { data, error } = await supabase
-        .from('document_stage_links' as any)
+        .from('document_stage_links' as never)
         .select('stage_id')
         .eq('document_id', documentId);
       if (!cancelled) {
         if (!error && data) {
-          setSelected(new Set((data as any[]).map((r) => r.stage_id as number)));
+          setSelected(new Set((data as unknown as StageLinkRow[]).map((r) => r.stage_id)));
         }
         setLoading(false);
       }
@@ -112,7 +114,7 @@ export function DocumentAdditionalStagesField({
 
     if (isSelected) {
       const { error } = await supabase
-        .from('document_stage_links' as any)
+        .from('document_stage_links' as never)
         .delete()
         .eq('document_id', documentId)
         .eq('stage_id', stageId);
@@ -123,8 +125,8 @@ export function DocumentAdditionalStagesField({
       next.delete(stageId);
     } else {
       const { error } = await supabase
-        .from('document_stage_links' as any)
-        .insert({ document_id: documentId, stage_id: stageId });
+        .from('document_stage_links' as never)
+        .insert({ document_id: documentId, stage_id: stageId } as never);
       if (error) {
         toast.error(`Failed to add stage link: ${error.message}`);
         return;
