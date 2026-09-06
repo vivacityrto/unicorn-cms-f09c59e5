@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { 
+import {
   Building2, 
   Users, 
   Search, 
@@ -26,6 +26,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
 
 interface TenantInfo {
   id: number;
@@ -101,10 +103,10 @@ export default function TeamSettings() {
           setUserDetails(userData);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     }
@@ -131,10 +133,10 @@ export default function TeamSettings() {
         activeUsers: active,
         disabledUsers: (data || []).length - active,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -198,10 +200,10 @@ export default function TeamSettings() {
       });
 
       fetchTeamUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     }
@@ -520,7 +522,7 @@ export default function TeamSettings() {
             />
           </div>
 
-          <Select value={sortField} onValueChange={(value: any) => setSortField(value)}>
+          <Select value={sortField} onValueChange={value => setSortField(value as typeof sortField)}>
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
