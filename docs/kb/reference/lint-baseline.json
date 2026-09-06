@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T16:30:45.362Z",
-  "baselineSha": "2c5f21b611333f08072914a345d3d260a66fc33c",
+  "generatedAt": "2026-09-06T16:49:37.087Z",
+  "baselineSha": "459b7f18be2550a488af9cd32d41a95fcf62a87f",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 95,
-    "errors": 279,
+    "filesWithFindings": 92,
+    "errors": 265,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 272,
+    "@typescript-eslint/no-explicit-any": 258,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 191,
+      "errors": 177,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 191
+        "@typescript-eslint/no-explicit-any": 177
       }
     }
   },
@@ -246,25 +246,11 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/bulk-user-action": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
     "supabase/functions/capture-outlook-email": {
       "errors": 1,
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/cohort-access-sender-worker": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
       }
     },
     "supabase/functions/consume-token": {
@@ -321,13 +307,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/generate-notifications": {
-      "errors": 6,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 6
       }
     },
     "supabase/functions/generate-recovery-link": {
@@ -675,14 +654,8 @@
     "supabase/functions/bulk-send-invitations/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/bulk-user-action/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "supabase/functions/capture-outlook-email/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/cohort-access-sender-worker/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "supabase/functions/consume-token/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
@@ -710,9 +683,6 @@
     },
     "supabase/functions/generate-meeting-recurrence/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/generate-notifications/index.ts": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "supabase/functions/generate-recovery-link/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
