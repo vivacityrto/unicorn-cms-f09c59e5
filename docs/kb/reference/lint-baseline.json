@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T02:29:45.773Z",
-  "baselineSha": "890033c229de67a02dfcaaeb40c0ea749b0ece43",
+  "generatedAt": "2026-09-06T04:10:08.845Z",
+  "baselineSha": "c8cab0553037980c7b7dafd5aee162c3e31ebb6c",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 196,
-    "errors": 855,
+    "filesWithFindings": 195,
+    "errors": 851,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 848,
+    "@typescript-eslint/no-explicit-any": 844,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 291,
+      "errors": 287,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 284,
+        "@typescript-eslint/no-explicit-any": 280,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -247,10 +247,10 @@
       }
     },
     "src/pages": {
-      "errors": 87,
+      "errors": 83,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 87
+        "@typescript-eslint/no-explicit-any": 83
       }
     },
     "src/pages/academy": {
@@ -1172,9 +1172,6 @@
       "@typescript-eslint/no-explicit-any": 2
     },
     "src/pages/ClientInboxPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
-    "src/pages/Login.tsx": {
       "@typescript-eslint/no-explicit-any": 4
     },
     "src/pages/ManageEmailTemplates.tsx": {
