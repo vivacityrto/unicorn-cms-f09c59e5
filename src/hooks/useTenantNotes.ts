@@ -45,12 +45,12 @@ export function useTenantNotes(tenantIds: number[]) {
         ]);
 
         const merged = [
-          ...(notesRes.data || []).map((n: any) => ({
+          ...(notesRes.data || []).map((n) => ({
             tenant_id: n.tenant_id,
             created_at: n.created_at,
             snippet: (n.title || n.note_details || "").substring(0, 50),
           })),
-          ...(clientNotesRes.data || []).map((n: any) => ({
+          ...(clientNotesRes.data || []).map((n) => ({
             tenant_id: n.tenant_id,
             created_at: n.created_at,
             snippet: (n.title || n.content || "").substring(0, 50),
@@ -70,7 +70,7 @@ export function useTenantNotes(tenantIds: number[]) {
         .in("tenant_id", sortedIds)
         .not("registration_end_date", "is", null);
       const regEndMap: Record<number, string> = {};
-      (regEndData || []).forEach((r: any) => { regEndMap[r.tenant_id] = r.registration_end_date; });
+      (regEndData || []).forEach((r) => { regEndMap[r.tenant_id] = r.registration_end_date; });
 
       const result: TenantNotesMap = {};
       sortedIds.forEach(id => {

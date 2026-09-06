@@ -18,27 +18,6 @@ export interface TimeEntriesFilters {
   dateTo?: Date;
 }
 
-function applyFilters(query: any, filters: TimeEntriesFilters) {
-  let q = query.eq('tenant_id', filters.tenantId);
-  if (filters.packageInstanceIds && filters.packageInstanceIds.length > 0) {
-    q = q.in('package_instance_id', filters.packageInstanceIds);
-  }
-  if (filters.workTypeIds && filters.workTypeIds.length > 0) {
-    q = q.in('work_type', filters.workTypeIds);
-  }
-  if (filters.dateFrom) {
-    const start = new Date(filters.dateFrom);
-    start.setHours(0, 0, 0, 0);
-    q = q.gte('start_at', start.toISOString());
-  }
-  if (filters.dateTo) {
-    const end = new Date(filters.dateTo);
-    end.setHours(23, 59, 59, 999);
-    q = q.lte('start_at', end.toISOString());
-  }
-  return q;
-}
-
 /** Server-side filtered + paginated time entries, replacing the old
  *  fetch-100-then-filter-in-the-browser approach - every filter combination
  *  now queries the database directly instead of slicing an already-capped
@@ -47,10 +26,13 @@ export function useTimeEntriesPaginated(filters: TimeEntriesFilters, page: numbe
   return useQuery({
     queryKey: ['time-entries-paginated', filters, page],
     queryFn: async () => {
-      const query = applyFilters(
-        (supabase as any).from('time_entries').select('*', { count: 'exact' }),
-        filters
-      )
+      let query = supabase.from('time_entries').select('*', { count: 'exact' });
+      query = query.eq('tenant_id', filters.tenantId);
+      if (filters.packageInstanceIds?.length) query = query.in('package_instance_id', filters.packageInstanceIds);
+      if (filters.workTypeIds?.length) query = query.in('work_type', filters.workTypeIds);
+      if (filters.dateFrom) { const start = new Date(filters.dateFrom); start.setHours(0, 0, 0, 0); query = query.gte('start_at', start.toISOString()); }
+      if (filters.dateTo) { const end = new Date(filters.dateTo); end.setHours(23, 59, 59, 999); query = query.lte('start_at', end.toISOString()); }
+      query = query
         .order('start_at', { ascending: false })
         .range((page - 1) * TIME_ENTRIES_PAGE_SIZE, (page - 1) * TIME_ENTRIES_PAGE_SIZE + TIME_ENTRIES_PAGE_SIZE - 1);
 
@@ -70,10 +52,13 @@ const EXPORT_ROW_CAP = 5000;
 export async function fetchAllMatchingTimeEntries(
   filters: TimeEntriesFilters
 ): Promise<{ rows: TimeEntry[]; truncated: boolean }> {
-  const query = applyFilters(
-    (supabase as any).from('time_entries').select('*'),
-    filters
-  )
+  let query = supabase.from('time_entries').select('*');
+  query = query.eq('tenant_id', filters.tenantId);
+  if (filters.packageInstanceIds?.length) query = query.in('package_instance_id', filters.packageInstanceIds);
+  if (filters.workTypeIds?.length) query = query.in('work_type', filters.workTypeIds);
+  if (filters.dateFrom) { const start = new Date(filters.dateFrom); start.setHours(0, 0, 0, 0); query = query.gte('start_at', start.toISOString()); }
+  if (filters.dateTo) { const end = new Date(filters.dateTo); end.setHours(23, 59, 59, 999); query = query.lte('start_at', end.toISOString()); }
+  query = query
     .order('start_at', { ascending: false })
     .limit(EXPORT_ROW_CAP + 1);
 
