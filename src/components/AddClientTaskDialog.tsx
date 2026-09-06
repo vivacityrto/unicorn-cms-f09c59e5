@@ -126,10 +126,10 @@ export function AddClientTaskDialog({ open, onOpenChange, onSuccess, packageId, 
       
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || `Failed to ${editTask ? 'update' : 'create'} client task`,
+        description: error instanceof Error ? error.message : `Failed to ${editTask ? 'update' : 'create'} client task`,
         variant: "destructive"
       });
     } finally {
