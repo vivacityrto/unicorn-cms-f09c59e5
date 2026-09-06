@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T16:17:03.344Z",
-  "baselineSha": "0d6c457ecac9c0e564bbfda323ba8cecbf89811a",
+  "generatedAt": "2026-09-06T16:30:45.362Z",
+  "baselineSha": "2c5f21b611333f08072914a345d3d260a66fc33c",
   "totals": {
-    "files": 1756,
-    "filesWithFindings": 99,
-    "errors": 292,
+    "files": 1755,
+    "filesWithFindings": 95,
+    "errors": 279,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 285,
+    "@typescript-eslint/no-explicit-any": 272,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 204,
+      "errors": 191,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 204
+        "@typescript-eslint/no-explicit-any": 191
       }
     }
   },
@@ -197,13 +197,6 @@
         "@typescript-eslint/no-explicit-any": 4
       }
     },
-    "supabase/functions/_shared": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
-      }
-    },
     "supabase/functions/_shared/ask-viv-fact-builder": {
       "errors": 2,
       "warnings": 0,
@@ -216,6 +209,13 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    "supabase/functions/_shared": {
+      "errors": 2,
+      "warnings": 0,
+      "byRule": {
+        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "supabase/functions/activate-ghost-user": {
@@ -309,13 +309,6 @@
         "@typescript-eslint/no-explicit-any": 5
       }
     },
-    "supabase/functions/export-client-timeline-pdf": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
     "supabase/functions/generate-certificate-pdf": {
       "errors": 1,
       "warnings": 0,
@@ -393,13 +386,6 @@
         "@typescript-eslint/no-explicit-any": 1
       }
     },
-    "supabase/functions/record-finding-decision": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
-      }
-    },
     "supabase/functions/resend-invite": {
       "errors": 1,
       "warnings": 0,
@@ -461,13 +447,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 2
-      }
-    },
-    "supabase/functions/set-invite-password": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
       }
     },
     "supabase/functions/sync-clickup-time": {
@@ -675,9 +654,6 @@
     "supabase/functions/_shared/ai-brain/escalation-detector.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
-    "supabase/functions/_shared/ask-viv-conversations.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "supabase/functions/_shared/ask-viv-fact-builder/freshness_test.ts": {
       "@typescript-eslint/no-explicit-any": 2
     },
@@ -729,9 +705,6 @@
     "supabase/functions/draft-executive-summary/validation_test.ts": {
       "@typescript-eslint/no-explicit-any": 3
     },
-    "supabase/functions/export-client-timeline-pdf/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "supabase/functions/generate-certificate-pdf/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -765,9 +738,6 @@
     "supabase/functions/mark-token-used/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
-    "supabase/functions/record-finding-decision/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "supabase/functions/resend-invite/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
     },
@@ -794,9 +764,6 @@
     },
     "supabase/functions/send-stage-email/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "supabase/functions/set-invite-password/index.ts": {
-      "@typescript-eslint/no-explicit-any": 3
     },
     "supabase/functions/sync-clickup-time/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
