@@ -2,6 +2,16 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { Database } from "@/integrations/supabase/types";
+
+type ChecklistInstance = Pick<
+  Database["public"]["Tables"]["lifecycle_checklist_instances"]["Row"],
+  "completed"
+>;
+type SetupPrompt = Pick<
+  Database["public"]["Tables"]["user_profile_setup_prompts"]["Row"],
+  "dismissed_until"
+>;
 
 export interface StaffOnboardingStatus {
   runId: number | null;
@@ -78,7 +88,7 @@ export function useStaffOnboardingStatus() {
         .eq("lifecycle_type", "staff_onboarding");
 
       const total = instances?.length ?? 0;
-      const done = (instances ?? []).filter((i: any) => i.completed).length;
+      const done = ((instances as ChecklistInstance[] | null) ?? []).filter((i) => i.completed).length;
       const isComplete = total > 0 && done === total;
 
       const { data: prompt } = await supabase
@@ -87,7 +97,7 @@ export function useStaffOnboardingStatus() {
         .eq("user_uuid", userUuid)
         .maybeSingle();
 
-      const dismissedUntil = (prompt as any)?.dismissed_until ?? null;
+      const dismissedUntil = (prompt as SetupPrompt | null)?.dismissed_until ?? null;
       const dismissedActive =
         dismissedUntil && new Date(dismissedUntil).getTime() > Date.now();
 
@@ -118,7 +128,7 @@ export function useStaffOnboardingStatus() {
       await supabase
         .from("user_profile_setup_prompts")
         .upsert(
-          { user_uuid: userUuid, dismissed_until: until, last_shown_at: new Date().toISOString() } as any,
+          { user_uuid: userUuid, dismissed_until: until, last_shown_at: new Date().toISOString() },
           { onConflict: "user_uuid" }
         );
     },
@@ -131,7 +141,7 @@ export function useStaffOnboardingStatus() {
       await supabase
         .from("user_profile_setup_prompts")
         .upsert(
-          { user_uuid: userUuid, dismissed_until: null, last_shown_at: new Date().toISOString() } as any,
+          { user_uuid: userUuid, dismissed_until: null, last_shown_at: new Date().toISOString() },
           { onConflict: "user_uuid" }
         );
     },
