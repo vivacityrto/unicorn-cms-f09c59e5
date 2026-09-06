@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T05:17:29.937Z",
-  "baselineSha": "e88bb11aebe4cdbfd2279a298ad490d35791d9f9",
+  "generatedAt": "2026-09-06T05:22:52.495Z",
+  "baselineSha": "8cebc9f27c83501cda989458839f18f3444f126c",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 187,
-    "errors": 814,
+    "filesWithFindings": 186,
+    "errors": 810,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 807,
+    "@typescript-eslint/no-explicit-any": 803,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 250,
+      "errors": 246,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 243,
+        "@typescript-eslint/no-explicit-any": 239,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -108,13 +108,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 3
-      }
-    },
-    "src/components/email-triage": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
       }
     },
     "src/components/help-center": {
@@ -982,9 +975,6 @@
     },
     "src/components/dashboard/WeekTasksTable.tsx": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/components/email-triage/TicketDetailPanel.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/components/help-center/HelpCenterContext.tsx": {
       "react-refresh/only-export-components": 1
