@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T11:15:15.952Z",
-  "baselineSha": "bed16b20d73e5f32f8876f7d5b41ad462668cd5e",
+  "generatedAt": "2026-09-06T11:26:55.631Z",
+  "baselineSha": "745e320de8174603acfd3e49a50ae7ff86384518",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 144,
-    "errors": 648,
+    "filesWithFindings": 142,
+    "errors": 639,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 641,
+    "@typescript-eslint/no-explicit-any": 632,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 560,
+      "errors": 551,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 560
+        "@typescript-eslint/no-explicit-any": 551
       }
     }
   },
@@ -645,20 +645,6 @@
         "@typescript-eslint/no-explicit-any": 2
       }
     },
-    "supabase/functions/run-retention-forecast": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/run-workload-forecast": {
-      "errors": 5,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 5
-      }
-    },
     "supabase/functions/scan-risk-radar": {
       "errors": 3,
       "warnings": 0,
@@ -1179,12 +1165,6 @@
     },
     "supabase/functions/resolve-sharepoint-folder-url/index.ts": {
       "@typescript-eslint/no-explicit-any": 2
-    },
-    "supabase/functions/run-retention-forecast/index.ts": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/run-workload-forecast/index.ts": {
-      "@typescript-eslint/no-explicit-any": 5
     },
     "supabase/functions/scan-risk-radar/index.ts": {
       "@typescript-eslint/no-explicit-any": 3
