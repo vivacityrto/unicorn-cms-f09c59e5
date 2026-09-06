@@ -20,6 +20,8 @@ function genericSuccess(req: Request): Response {
   );
 }
 
+// auth-gate: none -- intentionally public self-service reset endpoint; it
+// prevents enumeration and is protected by per-email/per-IP rate limiting.
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
