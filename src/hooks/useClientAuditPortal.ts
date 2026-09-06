@@ -28,9 +28,9 @@ export function useClientAuditReports(tenantId: number | null | undefined) {
     queryKey: ['client-audit-reports', tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from('client_audits' as any)
-        .select('id, title, audit_type, conducted_at, risk_rating, score_pct, report_released_at, report_released_by, report_release_notes, report_acknowledged_at, report_acknowledged_by, report_pdf_path, report_docx_path, executive_summary, overall_finding, lead_auditor_id, snapshot_rto_name, subject_tenant_id') as any)
+      const { data, error } = await supabase
+        .from('client_audits')
+        .select('id, title, audit_type, conducted_at, risk_rating, score_pct, report_released_at, report_released_by, report_release_notes, report_acknowledged_at, report_acknowledged_by, report_pdf_path, report_docx_path, executive_summary, overall_finding, lead_auditor_id, snapshot_rto_name, subject_tenant_id')
         .eq('subject_tenant_id', tenantId)
         .eq('report_client_visible', true)
         .order('report_released_at', { ascending: false });
@@ -45,9 +45,9 @@ export function useClientActionPlanEnhanced(tenantId: number | null | undefined)
     queryKey: ['client-action-plan-enhanced', tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from('v_audit_action_plan' as any)
-        .select('*') as any)
+      const { data, error } = await supabase
+        .from('v_audit_action_plan')
+        .select('*')
         .eq('subject_tenant_id', tenantId)
         .eq('report_client_visible', true)
         .neq('status', 'cancelled')
