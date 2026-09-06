@@ -1442,3 +1442,11 @@ under the shared mutex. Typecheck retains only the established
 explicit-any findings / 844 total errors / 39 warnings across 193 files.
 Authenticated browser coverage remains pending; no writes or new L10 bug were
 observed.
+**PR #798 browser-gate follow-up (2026-09-06):** `/audits` passed with
+authenticated SuperAdmin state and refresh. `/manage-tenants` rendered real
+tenant data, but its temporary assertion used a stale heading marker, while
+the session also emitted repeated hosted-Supabase `Failed to fetch` console
+errors from existing notification initialization. Keep #798 unmerged until a
+fresh session/network retry uses the current page marker and yields zero
+application console errors. Temporary browser artifacts and the server were
+removed.
