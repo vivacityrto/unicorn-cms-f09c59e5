@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T11:53:01.351Z",
-  "baselineSha": "f33053148e35fe13889ab70369ba4b0937de63bd",
+  "generatedAt": "2026-09-06T12:04:23.146Z",
+  "baselineSha": "3aa92e66a57c2b3ba7068c443c6aa097825a29bc",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 137,
-    "errors": 615,
+    "filesWithFindings": 136,
+    "errors": 605,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 608,
+    "@typescript-eslint/no-explicit-any": 598,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 527,
+      "errors": 517,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 527
+        "@typescript-eslint/no-explicit-any": 517
       }
     }
   },
@@ -447,13 +447,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 6
-      }
-    },
-    "supabase/functions/generate-minutes-draft": {
-      "errors": 10,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 10
       }
     },
     "supabase/functions/generate-notifications": {
@@ -1046,9 +1039,6 @@
     },
     "supabase/functions/generate-membership-certificate/index.ts": {
       "@typescript-eslint/no-explicit-any": 6
-    },
-    "supabase/functions/generate-minutes-draft/index.ts": {
-      "@typescript-eslint/no-explicit-any": 10
     },
     "supabase/functions/generate-notifications/index.ts": {
       "@typescript-eslint/no-explicit-any": 6
