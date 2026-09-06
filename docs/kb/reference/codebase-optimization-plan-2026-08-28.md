@@ -1,5 +1,7 @@
 # Codebase Optimization and KB Renewal Plan
 
+> **Phase 2.5 notification-queue Edge checkpoint (2026-09-06, PR #884 merged):** Fresh source/config reachability confirmed `process-notification-queue` is configured as a cron-only worker with no frontend caller. Eighteen explicit-any queue, quiet-hours, notification-data, and error boundaries were replaced with bounded local types and unknown-safe messages; cron authorization, queue status transitions, email/in-app dispatch, and all write contracts are unchanged. Lint ratchet passed (18→0), frontend (298/15 skipped), Edge (260), build passed; typecheck retained only the five documented baseline errors. No Playwright route exists for this cron-only/write-capable function, so it was not invoked. Supabase confirms the function ACTIVE (v147), but the deployed source is still the pre-typing revision; production log querying reproduced the known schema-field error, so live invocation parity is not claimed. Regenerated baseline after merge: 566 total errors (559 `no-explicit-any`), 39 warnings across 132 files. No new L10 bug; deployment/source parity remains a follow-up.
+
 > **Last updated:** 2026-08-28 · **Reconsider by:** 2026-11-28 · **Confidence:** high on repository measurements and the May–August change history; medium on effort and net-LOC forecasts until each slice completes its characterization pass.
 >
 > **Reflects commit:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458).
