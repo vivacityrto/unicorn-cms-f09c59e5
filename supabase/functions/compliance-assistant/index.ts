@@ -19,6 +19,7 @@ import { extractToken, verifyAuth, checkVivacityTeam, checkSuperAdmin, UserProfi
 import { jsonOk, jsonError, jsonRaw } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
+type ServiceClient = ReturnType<typeof createServiceClient>;
 
 // AI Brain imports (for reasoning engine)
 import {
@@ -143,7 +144,7 @@ function citationLabel(vr: VectorResult): string {
  * beta users next, then everyone once ask_viv_llm_generation_all_staff flips.
  */
 async function isLlmGenerationEnabledForUser(
-  supabase: any,
+  supabase: ServiceClient,
   userId: string,
   profile: UserProfile
 ): Promise<boolean> {
@@ -692,7 +693,7 @@ Deno.serve(async (req) => {
  * classification, and the two-write audit model unchanged.
  */
 async function handlePortfolioRequest(
-  supabase: any,
+  supabase: ServiceClient,
   user: { id: string; email?: string },
   profile: UserProfile,
   question: string,
@@ -866,7 +867,7 @@ function buildPortfolioFallbackMarkdown(portfolioFacts: { facts: DerivedFact[] }
 
 /** Records portfolio-specific audit context that doesn't fit the tenant-scoped updateAuditLog's shape. */
 async function updateAuditLogPortfolioExtras(
-  supabase: any,
+  supabase: ServiceClient,
   auditLogId: string,
   tenantIdsTouched: number[],
   generationMode: string,
@@ -898,7 +899,7 @@ async function updateAuditLogPortfolioExtras(
  * Validate that the user has access to the specified tenant
  */
 async function validateTenantAccess(
-  supabase: any,
+  supabase: ServiceClient,
   userId: string,
   profile: UserProfile,
   tenantId: number
@@ -925,7 +926,7 @@ async function validateTenantAccess(
  * Perform vector search for the question
  */
 async function performVectorSearch(
-  supabase: any,
+  supabase: ServiceClient,
   tenantId: number,
   query: string,
 ): Promise<VectorResult[]> {
@@ -956,7 +957,7 @@ async function performVectorSearch(
       return [];
     }
 
-    return (results || []).map((r: any) => ({
+    return (results || []).map((r: Record<string, unknown>) => ({
       id: r.id,
       source_type: r.source_type,
       source_document: r.source_document,
@@ -1545,7 +1546,7 @@ interface AuditUpdateExtra {
  * "Audit logged" badge.
  */
 async function updateAuditLog(
-  supabase: any,
+  supabase: ServiceClient,
   auditLogId: string,
   response: ComplianceResponse,
   extra: AuditUpdateExtra
