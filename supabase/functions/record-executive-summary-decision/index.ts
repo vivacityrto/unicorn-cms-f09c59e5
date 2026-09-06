@@ -26,6 +26,7 @@ interface FieldDecision {
   decision: 'accepted' | 'edited' | 'rejected';
   edit_distance_pct: number | null;
 }
+type AuditLogRow = { tenant_id: number | null; actor_user_id: string | null; entity_id: string | null; action: string | null };
 
 function parseFieldDecision(raw: unknown): FieldDecision | null | string {
   if (raw === undefined || raw === null) return null;
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
 
   const fields: Record<string, FieldDecision | null> = {};
   for (const key of ['executive_summary', 'overall_finding', 'risk_rationale'] as const) {
-    const parsed = parseFieldDecision((body as any)[key]);
+    const parsed = parseFieldDecision(body[key]);
     if (typeof parsed === 'string') {
       return json(req, { error: `${key}: ${parsed}` }, 400);
     }
@@ -106,14 +107,14 @@ Deno.serve(async (req) => {
   // this audit. Service-role lookup because client_audit_log RLS restricts
   // non-Super-Admin SELECTs.
   const { data: draftRow, error: draftErr } = await admin
-    .from('client_audit_log' as any)
+    .from('client_audit_log' as never)
     .select('id, tenant_id, actor_user_id, entity_id, action')
     .eq('id', draftLogId)
     .maybeSingle();
   if (draftErr || !draftRow) {
     return json(req, { error: 'Draft log entry not found' }, 404);
   }
-  const d = draftRow as Record<string, any>;
+  const d = draftRow as unknown as AuditLogRow;
   if (d.action !== 'ai.executive_summary_drafted') {
     return json(req, { error: 'Referenced log row is not an AI executive summary draft' }, 400);
   }
@@ -124,7 +125,7 @@ Deno.serve(async (req) => {
     return json(req, { error: 'Draft log does not match this audit' }, 400);
   }
 
-  const { error: insErr } = await admin.from('client_audit_log' as any).insert({
+  const { error: insErr } = await admin.from('client_audit_log' as never).insert({
     tenant_id: d.tenant_id,
     actor_user_id: callerUserId,
     action: 'ai.executive_summary_decision',
