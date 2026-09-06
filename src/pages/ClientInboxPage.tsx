@@ -52,6 +52,10 @@ type TabValue = "all" | "messages" | "notifications";
 
 const VALID_TABS: TabValue[] = ["all", "messages", "notifications"];
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Invalid file";
+}
+
 /** Map any incoming legacy ?type= or ?tab= search param into a valid tab. */
 function resolveTabFromParams(search: URLSearchParams): TabValue {
   const tab = search.get("tab");
@@ -236,8 +240,8 @@ function MessagesTab() {
       try {
         validateAttachment(f);
         accepted.push(f);
-      } catch (err: any) {
-        toast.error(err?.message ?? "Invalid file");
+      } catch (err: unknown) {
+        toast.error(errorMessage(err));
       }
     }
     setQueuedFiles(prev => {
@@ -263,13 +267,13 @@ function MessagesTab() {
     const filesToUpload = queuedFiles;
     setComposerText("");
     setQueuedFiles([]);
-    const result: any = await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
+    const result = await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
     if (result?.messageId && activeTenantId != null && filesToUpload.length > 0) {
       for (const f of filesToUpload) {
         try {
           await uploadMessageAttachment(supabase, f, activeTenantId, selectedId, result.messageId);
-        } catch (err: any) {
-          toast.warning(`Attachment "${f.name}" failed to upload: ${err?.message ?? "unknown error"}`);
+        } catch (err: unknown) {
+          toast.warning(`Attachment "${f.name}" failed to upload: ${errorMessage(err)}`);
         }
       }
     }
@@ -302,8 +306,8 @@ function MessagesTab() {
         try {
           validateAttachment(file);
           images.push(file);
-        } catch (err: any) {
-          toast.error(err?.message ?? "Invalid file");
+        } catch (err: unknown) {
+          toast.error(errorMessage(err));
         }
       }
     }
