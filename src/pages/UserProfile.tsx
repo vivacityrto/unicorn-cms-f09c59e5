@@ -16,6 +16,8 @@ import { TimeInboxSettings } from '@/components/profile/TimeInboxSettings';
 import { OutlookIntegration } from '@/components/profile/OutlookIntegration';
 import { CelebrationSettings } from '@/components/profile/CelebrationSettings';
 
+const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
+
 interface UserData {
   user_uuid: string;
   first_name: string;
@@ -159,12 +161,12 @@ export default function UserProfile() {
       }
 
       // Add tenant name to user data and cast JSON fields
-      const rawData = userData as any;
+      const { tenants, ...rawData } = userData;
       const userWithTenant: UserData = {
         ...rawData,
         personal_email,
         personal_phone,
-        tenant_name: rawData.tenants?.name || null,
+        tenant_name: tenants && !Array.isArray(tenants) ? tenants.name || null : null,
         staff_team: rawData.staff_team || null,
         staff_teams: rawData.staff_teams || null,
         working_days: rawData.working_days as string[] | null,
@@ -175,13 +177,11 @@ export default function UserProfile() {
         cover_user_id: rawData.cover_user_id || null,
         superadmin_level: rawData.superadmin_level || null,
       };
-      delete (userWithTenant as any).tenants;
-
       setUser(userWithTenant);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to load user profile',
+        description: getErrorMessage(error) || 'Failed to load user profile',
         variant: 'destructive',
       });
     } finally {

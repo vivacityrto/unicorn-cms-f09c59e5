@@ -51,8 +51,8 @@ function useMyCertificates() {
 
       // Fallback course-title lookup for any cert missing metadata.course_title.
       const missingTitleIds = certs
-        .filter((c: any) => !(c.metadata?.course_title))
-        .map((c: any) => c.course_id as number);
+        .filter((c) => !(c.metadata && typeof c.metadata === 'object' && !Array.isArray(c.metadata) && 'course_title' in c.metadata))
+        .map((c) => c.course_id as number);
 
       const titleMap = new Map<number, string>();
       if (missingTitleIds.length > 0) {
@@ -60,16 +60,16 @@ function useMyCertificates() {
           .from("academy_courses")
           .select("id, title")
           .in("id", missingTitleIds);
-        (courses ?? []).forEach((c: any) => titleMap.set(c.id, c.title));
+        (courses ?? []).forEach((c) => titleMap.set(c.id, c.title));
       }
 
-      return certs.map((c: any) => ({
+      return certs.map((c) => ({
         id: c.id,
         certificate_number: c.certificate_number,
         course_id: c.course_id,
         course_title:
-          c.metadata?.course_title ?? titleMap.get(c.course_id) ?? `Course ${c.course_id}`,
-        recipient_full_name: c.metadata?.recipient_full_name ?? null,
+          c.metadata && typeof c.metadata === 'object' && !Array.isArray(c.metadata) && 'course_title' in c.metadata ? String(c.metadata.course_title) : titleMap.get(c.course_id) ?? `Course ${c.course_id}`,
+        recipient_full_name: c.metadata && typeof c.metadata === 'object' && !Array.isArray(c.metadata) && 'recipient_full_name' in c.metadata ? String(c.metadata.recipient_full_name) : null,
         issued_at: c.issued_at,
         expires_at: c.expires_at,
         public_url: c.public_url,
