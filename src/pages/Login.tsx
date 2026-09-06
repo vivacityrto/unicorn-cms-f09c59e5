@@ -11,6 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 import vivacityLogo from "@/assets/vivacity-logo-colour.svg";
 import { LogIn, KeyRound, Sparkles } from "lucide-react";
 
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -57,10 +61,10 @@ const Login = () => {
       });
 
       navigate(nextPath ?? "/post-sign-in", nextPath ? { replace: true } : { state: { fresh: true } });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Login failed",
-        description: error.message || "Invalid credentials",
+        description: errorMessage(error, "Invalid login credentials"),
         variant: "destructive",
       });
     } finally {
@@ -104,12 +108,12 @@ const Login = () => {
         description: "If an account exists with this email, you'll receive a reset link shortly.",
       });
       setShowForgotPassword(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Password reset error:", error);
       
       toast({
         title: "Password Reset Error",
-        description: error.message || "Unable to send password reset email. Please try again later.",
+        description: errorMessage(error, "Unable to send password reset email. Please try again later."),
         variant: "destructive",
       });
     } finally {
@@ -143,10 +147,10 @@ const Login = () => {
         description: "Check your email for the login link",
       });
       setShowMagicLink(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage(error, "Unable to send magic link"),
         variant: "destructive",
       });
     } finally {
@@ -272,10 +276,10 @@ const Login = () => {
                         },
                       });
                       if (error) throw error;
-                    } catch (err: any) {
+                    } catch (err: unknown) {
                       toast({
                         title: 'Microsoft login failed',
-                        description: err.message || 'Unable to sign in with Microsoft',
+                        description: errorMessage(err, 'Unable to sign in with Microsoft'),
                         variant: 'destructive',
                       });
                       setIsLoading(false);
