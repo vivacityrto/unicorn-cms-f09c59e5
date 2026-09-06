@@ -6,11 +6,43 @@ const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 const RATE_LIMIT_MS = 650;
 const BATCH_SIZE = 50;
 
+interface ClickUpInterval {
+  id?: string | number;
+  time?: string | number;
+  start?: string | number;
+  end?: string | number;
+  description?: string | null;
+  billable?: boolean;
+}
+
+interface ClickUpTimeGroup {
+  user?: { username?: string | null; email?: string | null } | null;
+  intervals?: ClickUpInterval[];
+}
+
+interface ClickUpTimeResponse {
+  data?: ClickUpTimeGroup[];
+}
+
+interface ClickUpTimeEntry {
+  clickup_interval_id: string;
+  task_id: string;
+  tenant_id: number | null;
+  user_name: string | null;
+  user_email: string | null;
+  duration_ms: number;
+  start_at: string | null;
+  end_at: string | null;
+  description: string | null;
+  billable: boolean;
+  imported_at: string;
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function clickupGet(path: string, apiKey: string): Promise<any> {
+async function clickupGet(path: string, apiKey: string): Promise<unknown> {
   const resp = await fetch(`${CLICKUP_API_BASE}${path}`, {
     headers: { Authorization: apiKey },
   });
@@ -100,12 +132,12 @@ Deno.serve(async (req) => {
 
     for (const task of tasks) {
       try {
-        const timeData = await clickupGet(`/task/${task.task_id}/time`, CLICKUP_API_KEY);
+        const timeData = await clickupGet(`/task/${task.task_id}/time`, CLICKUP_API_KEY) as ClickUpTimeResponse;
         
         // Response structure: data[] = { user, time, intervals[] }
         // Each data item groups intervals by user
         const userGroups = timeData?.data ?? [];
-        const seen = new Map<string, any>();
+        const seen = new Map<string, ClickUpTimeEntry>();
 
         for (const group of userGroups) {
           const userName = group.user?.username ?? null;
@@ -147,8 +179,8 @@ Deno.serve(async (req) => {
 
         tasksProcessed++;
         await delay(RATE_LIMIT_MS);
-      } catch (e) {
-        errors.push(`Task ${task.task_id}: ${(e as Error).message}`);
+      } catch (e: unknown) {
+        errors.push(`Task ${task.task_id}: ${e instanceof Error ? e.message : String(e)}`);
         tasksProcessed++;
         await delay(RATE_LIMIT_MS);
       }
@@ -169,10 +201,10 @@ Deno.serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("sync-clickup-time error:", err);
     return new Response(
-      JSON.stringify({ error: (err as Error).message }),
+      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
       { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }
