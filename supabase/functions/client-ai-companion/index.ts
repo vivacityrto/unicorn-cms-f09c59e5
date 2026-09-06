@@ -31,6 +31,10 @@ const ESCALATION_RESPONSE =
 const FOOTER =
   "\n\n---\n*This guidance supports preparation only. Vivacity will review and confirm alignment with the Standards for RTOs 2025.*";
 
+type JsonRecord = Record<string, unknown>;
+type CompanionContext = { stageName: string | null; evidenceCategories: string[]; clauses: string[]; checklistSummary: string | null };
+type SupabaseClient = ReturnType<typeof createClient>;
+
 const MODE_CAPABILITIES: Record<string, { allowed: string; restricted: string }> = {
   orientation: {
     allowed:
@@ -52,7 +56,7 @@ const MODE_CAPABILITIES: Record<string, { allowed: string; restricted: string }>
   },
 };
 
-function buildSystemPrompt(mode: string, contextData: any): string {
+function buildSystemPrompt(mode: string, contextData: CompanionContext): string {
   const caps = MODE_CAPABILITIES[mode] ?? MODE_CAPABILITIES.orientation;
 
   let context = "";
@@ -242,7 +246,7 @@ Deno.serve(async (req) => {
 
     const messages = [
       { role: "system", content: buildSystemPrompt(currentMode, contextData) },
-      ...(history ?? []).map((m: any) => ({
+      ...(history ?? []).map((m: JsonRecord) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content: m.message_content,
       })),
@@ -340,11 +344,11 @@ async function callAI(systemPrompt: string, userMessage: string): Promise<string
 }
 
 async function getContextData(
-  sb: any,
+  sb: SupabaseClient,
   tenantId: number | null,
   stageInstanceId: number | null
-): Promise<any> {
-  const result: any = {
+): Promise<CompanionContext> {
+  const result: CompanionContext = {
     stageName: null,
     evidenceCategories: [],
     clauses: [],
@@ -383,7 +387,7 @@ async function getContextData(
       .limit(10);
 
     if (edges?.length) {
-      result.clauses = edges.map((e: any) => e.target_label).filter(Boolean);
+      result.clauses = edges.map((e: JsonRecord) => e.target_label).filter((label): label is string => typeof label === "string");
     }
   }
 
