@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { FlightPlan, MonthFocus } from '@/types/flightPlan';
 import { getQuarterDueDate } from '@/types/flightPlan';
+import type { TablesInsert } from '@/integrations/supabase/types';
 
 const defaultMonthFocus: MonthFocus = { items: [], indicators: [], notes: '' };
 
@@ -64,9 +65,9 @@ export function useFlightPlan(quarter: number, year: number) {
 
       // If no existing plan, add created_by
       if (!flightPlan) {
-        (payload as any).created_by = profile?.user_uuid;
+        payload.created_by = profile?.user_uuid;
       } else {
-        (payload as any).id = flightPlan.id;
+        payload.id = flightPlan.id;
       }
 
       // tenant_id defaults from the current user's profile above, but `updates`
@@ -76,7 +77,7 @@ export function useFlightPlan(quarter: number, year: number) {
 
       const { data, error } = await supabase
         .from('eos_flight_plans')
-        .upsert(payload as any)
+        .upsert(payload as unknown as TablesInsert<'eos_flight_plans'>)
         .select()
         .single();
 
