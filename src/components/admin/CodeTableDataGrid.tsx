@@ -178,7 +178,7 @@ export function CodeTableDataGrid({
                 </TableRow>
               ) : (
                 sorted.map((row, idx) => (
-                  <TableRow key={row[pk] ?? idx}>
+                  <TableRow key={String(row[pk] ?? idx)}>
                     {visibleColumns.map((col) => (
                       <TableCell key={col.column_name}>
                         {formatCellValue(row[col.column_name], col.data_type)}
