@@ -1319,6 +1319,8 @@ SuperAdmin Playwright passed 4/4 with zero application console errors. This
 cohort is ready for its implementation PR and merge; no new L10 item was
 found.
 
+> **Phase 2.5 KPI surfaces checkpoint (2026-09-06):** `KpiTeamSection.tsx`, `KpiReporterTicketView.tsx`, and `RaiseTicketSheet.tsx` are live from `KpiPage.tsx`, `MyKpiDashboardPage.tsx`, and `KpiDashboard.tsx`. Fresh importer and generated-table/RPC checks confirmed the KPI directory, ticket/comms, users, and ticket-number contracts. Twelve explicit-any findings were removed (5+4+3) using generated row types, bounded JSON metadata, and unknown-safe errors; KPI reads and ticket submission behavior are unchanged. Lint ratchet passed (5→0, 4→0, 3→0), frontend 298/15 skipped, Edge 260, and build passed; typecheck retains only the documented baseline errors. Demo RTO client storage was unavailable, so client-persona Playwright remains a documented coverage gap; no writes or seed data were performed. No new L10 bug was found.
+
 ### Phase 2.6 — verified retirement and bounded consolidation (council-planned 2026-09-04)
 
 **Parallel preparation checkpoint (2026-09-04):** while Phase 2.5 remains

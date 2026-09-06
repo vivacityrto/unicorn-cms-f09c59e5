@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Loader2, CheckCircle2, Circle } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import type { Json, Tables } from "@/integrations/supabase/types";
 
 const PLATFORM_LABEL: Record<string, string> = { unicorn: "Unicorn CMS", complyhub_ai: "ComplyHub AI" };
 const PRIORITY_LABEL: Record<string, string> = { critical: "Critical", high: "High", standard: "Standard" };
@@ -30,10 +31,10 @@ interface Ticket {
   reporter_uuid: string | null;
   assignee_uuid: string | null;
   opened_at: string;
-  metadata: any;
+  metadata: Json;
 }
-interface Comm { id: number; ticket_id: number; comm_type: string; occurred_at: string; }
-interface UserRow { user_uuid: string; first_name: string | null; last_name: string | null; email: string | null; }
+type Comm = Pick<Tables<"kpi_ticket_comms">, "id" | "ticket_id" | "comm_type" | "occurred_at">;
+type UserRow = Pick<Tables<"users">, "user_uuid" | "first_name" | "last_name" | "email">;
 
 function fullName(u: UserRow | undefined) {
   if (!u) return "—";
@@ -53,7 +54,7 @@ export function KpiReporterTicketView() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data: t } = await (supabase as any)
+      const { data: t } = await supabase
         .from("kpi_tickets")
         .select("id, ticket_number, title, platform, priority, status, reporter_uuid, assignee_uuid, opened_at, metadata")
         .eq("reporter_uuid", user.id)
@@ -64,7 +65,7 @@ export function KpiReporterTicketView() {
 
       if (rows.length) {
         const ids = rows.map((r) => r.id);
-        const { data: c } = await (supabase as any)
+        const { data: c } = await supabase
           .from("kpi_ticket_comms")
           .select("id, ticket_id, comm_type, occurred_at")
           .in("ticket_id", ids);
@@ -74,7 +75,7 @@ export function KpiReporterTicketView() {
 
         const assigneeIds = Array.from(new Set(rows.map((r) => r.assignee_uuid).filter(Boolean) as string[]));
         if (assigneeIds.length) {
-          const { data: u } = await (supabase as any)
+          const { data: u } = await supabase
             .from("users").select("user_uuid, first_name, last_name, email")
             .in("user_uuid", assigneeIds);
           const m: Record<string, UserRow> = {};
@@ -141,7 +142,10 @@ function TicketDetail({
   assignee: UserRow | undefined;
   comms: Comm[];
 }) {
-  const description = ticket.metadata?.description ?? "—";
+  const metadata = ticket.metadata;
+  const description = metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? String((metadata as Record<string, Json>).description ?? "—")
+    : "—";
   const commByKey = useMemo(() => {
     const m: Record<string, Comm> = {};
     comms.forEach((c) => {

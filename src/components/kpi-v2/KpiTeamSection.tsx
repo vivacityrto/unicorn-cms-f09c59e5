@@ -14,6 +14,15 @@ import {
   fetchRetention, fetchCommunication, fetchCscTasks, fetchAssistantTasks,
 } from "@/lib/kpi-v2/fetchers";
 import { KpiDrillDownSheet, type KpiDrillDownKind } from "./KpiDrillDownSheet";
+import type { Tables } from "@/integrations/supabase/types";
+
+type DirectoryRow = {
+  user_uuid: string;
+  first_name: string;
+  last_name: string;
+  avatar_url: string;
+};
+type ProfileRow = Pick<Tables<"users">, "user_uuid" | "kpi_role" | "kpi_pod">;
 
 interface Staff {
   user_uuid: string;
@@ -237,26 +246,26 @@ export function KpiTeamSection({ period }: Props) {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const sb = supabase as any;
-      const { data: dir } = await sb.rpc("get_vivacity_team_directory");
-      const uuids = (dir ?? []).map((r: any) => r.user_uuid).filter(Boolean);
+      const { data: dir } = await supabase.rpc("get_vivacity_team_directory");
+      const directoryRows: DirectoryRow[] = dir ?? [];
+      const uuids = directoryRows.map((r) => r.user_uuid).filter(Boolean);
       if (uuids.length === 0) {
         if (!cancelled) { setStaff([]); setLoading(false); }
         return;
       }
-      const { data: profiles } = await sb
+      const { data: profiles } = await supabase
         .from("users")
         .select("user_uuid, kpi_role, kpi_pod")
         .in("user_uuid", uuids);
       const byUuid = new Map<string, { kpi_role: string | null; kpi_pod: string | null }>();
-      (profiles ?? []).forEach((p: any) => byUuid.set(p.user_uuid, { kpi_role: p.kpi_role, kpi_pod: p.kpi_pod }));
+      (profiles as ProfileRow[] | null ?? []).forEach((p) => byUuid.set(p.user_uuid, { kpi_role: p.kpi_role, kpi_pod: p.kpi_pod }));
 
-      const merged: Staff[] = (dir ?? [])
-        .map((r: any) => {
+      const merged: Staff[] = directoryRows
+        .map((r) => {
           const meta = byUuid.get(r.user_uuid) ?? { kpi_role: null, kpi_pod: null };
           return { ...r, kpi_role: meta.kpi_role, kpi_pod: meta.kpi_pod } as Staff & { kpi_pod: string | null };
         })
-        .filter((s: any) => s.kpi_pod !== "qa");
+        .filter((s) => s.kpi_pod !== "qa");
 
       if (cancelled) return;
       setStaff(merged);

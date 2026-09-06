@@ -9,6 +9,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import type { TablesInsert } from "@/integrations/supabase/types";
 
 type Platform = "unicorn" | "complyhub_ai";
 type Priority = "critical" | "high" | "standard";
@@ -45,8 +46,8 @@ export function RaiseTicketButton({ variant = "default" }: { variant?: "default"
       }
       setDevs(
         (data ?? [])
-          .filter((u: any) => !u.archived && !u.disabled)
-          .map((u: any) => ({ user_uuid: u.user_uuid, first_name: u.first_name, last_name: u.last_name })),
+          .filter((u) => !u.archived && !u.disabled)
+          .map((u) => ({ user_uuid: u.user_uuid, first_name: u.first_name, last_name: u.last_name })),
       );
     })();
   }, [open]);
@@ -77,7 +78,7 @@ export function RaiseTicketButton({ variant = "default" }: { variant?: "default"
       const ticketNumber = numData as unknown as string;
 
       const externalId = `internal-${crypto.randomUUID()}`;
-      const { error } = await supabase.from("kpi_tickets").insert({
+      const payload = {
         ticket_number: ticketNumber,
         platform,
         external_id: externalId,
@@ -88,14 +89,15 @@ export function RaiseTicketButton({ variant = "default" }: { variant?: "default"
         reporter_uuid: profile.user_uuid,
         assignee_uuid: assignee || null,
         metadata: { description: description.trim(), source: "raise_ticket_sheet" },
-      });
+      } satisfies TablesInsert<"kpi_tickets">;
+      const { error } = await supabase.from("kpi_tickets").insert(payload);
       if (error) throw error;
       toast.success(`Ticket ${ticketNumber} raised`);
       reset();
       setOpen(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("[RaiseTicket] submit", e);
-      toast.error(e?.message ?? "Failed to raise ticket");
+      toast.error(e instanceof Error ? e.message : "Failed to raise ticket");
     } finally {
       setSubmitting(false);
     }
