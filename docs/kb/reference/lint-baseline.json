@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T13:45:42.573Z",
-  "baselineSha": "efb98afc59e1fc88dc61e66833e41a5c2d43260f",
+  "generatedAt": "2026-09-06T14:27:22.198Z",
+  "baselineSha": "559f5172b67d186ba355b1c5fe05d9846f70f37d",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 127,
-    "errors": 470,
+    "filesWithFindings": 126,
+    "errors": 452,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 463,
+    "@typescript-eslint/no-explicit-any": 445,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 382,
+      "errors": 364,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 382
+        "@typescript-eslint/no-explicit-any": 364
       }
     }
   },
@@ -205,10 +205,10 @@
       }
     },
     "supabase/functions/_shared/ask-viv-fact-builder": {
-      "errors": 20,
+      "errors": 2,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 20
+        "@typescript-eslint/no-explicit-any": 2
       }
     },
     "supabase/functions/_shared/ask-viv-prompts": {
@@ -866,9 +866,6 @@
     },
     "supabase/functions/_shared/ask-viv-conversations.ts": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "supabase/functions/_shared/ask-viv-fact-builder/data-retrieval.ts": {
-      "@typescript-eslint/no-explicit-any": 18
     },
     "supabase/functions/_shared/ask-viv-fact-builder/freshness_test.ts": {
       "@typescript-eslint/no-explicit-any": 2
