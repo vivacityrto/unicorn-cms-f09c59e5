@@ -2,6 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { authorizeCronInvoke } from "../_shared/cron-invoke-auth.ts";
 
+// auth-gate: none -- cron-only endpoint; authorizeCronInvoke validates the
+// shared invoke secret rather than a per-user caller.
 
 const XERO_CLIENT_ID = (Deno.env.get("XERO_CLIENT_ID") ?? "").trim();
 const XERO_CLIENT_SECRET = (Deno.env.get("XERO_CLIENT_SECRET") ?? "").trim();
