@@ -188,15 +188,29 @@ async function extractAny(path: string, bytes: Uint8Array): Promise<string> {
   }
 }
 
+interface SourceRow {
+  id?: string | number;
+  tenant_id?: number | null;
+  file_path?: string | null;
+  storage_path?: string | null;
+  file_name?: string | null;
+  documents?: { tenant_id?: number | null; title?: string | null } | null;
+  [key: string]: unknown;
+}
+interface FilterQuery {
+  not: (...args: (string | null)[]) => FilterQuery;
+  eq: (...args: (string | null)[]) => FilterQuery;
+  neq: (...args: (string | null)[]) => FilterQuery;
+}
 interface SourceConfig {
   table: string;
   cursorColumn: string;
   select: string;
-  extraFilter?: (query: any) => any;
+  extraFilter?: (query: FilterQuery) => FilterQuery;
   bucket: string;
-  pathOf: (row: any) => string;
-  headingOf: (row: any) => string;
-  tenantOf: (row: any) => number | null;
+  pathOf: (row: SourceRow) => string;
+  headingOf: (row: SourceRow) => string;
+  tenantOf: (row: SourceRow) => number | null;
 }
 
 const SOURCES: SourceConfig[] = [
@@ -206,8 +220,8 @@ const SOURCES: SourceConfig[] = [
     select: 'id, tenant_id, file_path, file_name, document_version_id, updated_at',
     extraFilter: (q) => q.not('document_version_id', 'is', null),
     bucket: 'document-files',
-    pathOf: (row) => row.file_path,
-    headingOf: (row) => row.file_name,
+    pathOf: (row) => row.file_path ?? '',
+    headingOf: (row) => row.file_name ?? '',
     tenantOf: (row) => row.tenant_id ?? null,
   },
   {
@@ -215,8 +229,8 @@ const SOURCES: SourceConfig[] = [
     cursorColumn: 'generated_at',
     select: 'id, tenant_id, storage_path, file_name, generated_at',
     bucket: 'package-documents',
-    pathOf: (row) => row.storage_path,
-    headingOf: (row) => row.file_name,
+    pathOf: (row) => row.storage_path ?? '',
+    headingOf: (row) => row.file_name ?? '',
     tenantOf: (row) => row.tenant_id ?? null,
   },
   {
@@ -225,8 +239,8 @@ const SOURCES: SourceConfig[] = [
     select: 'id, tenant_id, storage_path, file_name, status, completed_at',
     extraFilter: (q) => q.eq('status', 'success'),
     bucket: 'compliance-packs',
-    pathOf: (row) => row.storage_path,
-    headingOf: (row) => row.file_name,
+    pathOf: (row) => row.storage_path ?? '',
+    headingOf: (row) => row.file_name ?? '',
     tenantOf: (row) => row.tenant_id ?? null,
   },
   {
@@ -241,8 +255,8 @@ const SOURCES: SourceConfig[] = [
     select: 'id, document_id, storage_path, file_name, status, created_at, documents!document_versions_document_id_fkey(tenant_id, title)',
     extraFilter: (q) => q.eq('status', 'published').not('storage_path', 'is', null).neq('storage_path', ''),
     bucket: 'document-files',
-    pathOf: (row) => row.storage_path,
-    headingOf: (row) => row.documents?.title ?? row.file_name,
+    pathOf: (row) => row.storage_path ?? '',
+    headingOf: (row) => row.documents?.title ?? row.file_name ?? '',
     tenantOf: (row) => row.documents?.tenant_id ?? null,
   },
 ];
@@ -287,7 +301,7 @@ async function ingestSource(
   }
 
   let query = admin.from(config.table).select(config.select);
-  if (config.extraFilter) query = config.extraFilter(query);
+  if (config.extraFilter) query = config.extraFilter(query as unknown as FilterQuery) as typeof query;
   if (opts.tenantIdFilter !== null) {
     query = query.eq('tenant_id', opts.tenantIdFilter);
   } else if (since) {
@@ -312,11 +326,12 @@ async function ingestSource(
     return { rows_processed, docs_skipped, chunks_inserted, chunks_deleted, errors };
   }
 
-  const lastRow = (rows as any[])[rows.length - 1];
+  const typedRows = rows as SourceRow[];
+  const lastRow = typedRows[typedRows.length - 1];
   const maxCursor: string | null = lastRow[config.cursorColumn] ?? null;
   const maxId: string | null = lastRow.id ? String(lastRow.id) : null;
 
-  for (const row of rows as any[]) {
+  for (const row of typedRows) {
     rows_processed++;
 
     const path = config.pathOf(row);
