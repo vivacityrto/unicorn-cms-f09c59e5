@@ -21,6 +21,11 @@ export interface DocumentRequest {
   assignee_name?: string | null;
 }
 
+interface DocumentRequestRow extends DocumentRequest {
+  creator?: { first_name: string | null; last_name: string | null } | null;
+  assignee?: { first_name: string | null; last_name: string | null } | null;
+}
+
 export const documentRequestKeys = {
   all: ['document-requests'] as const,
   list: (tenantId: number) => [...documentRequestKeys.all, 'list', tenantId] as const,
@@ -31,15 +36,15 @@ export function useDocumentRequests(tenantId: number | null) {
     queryKey: documentRequestKeys.list(tenantId!),
     queryFn: async () => {
       if (!tenantId) return [];
-      const { data, error } = await ((supabase as any)
-        .from('tenant_document_requests')
+      const { data, error } = await (supabase
+        .from('tenant_document_requests' as never)
         .select(`
           *,
           creator:users!tenant_document_requests_created_by_user_id_fkey(first_name, last_name),
           assignee:users!tenant_document_requests_assigned_to_user_id_fkey(first_name, last_name)
         `)
         .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false }) as any);
+        .order('created_at', { ascending: false }) as unknown as Promise<{ data: DocumentRequestRow[] | null; error: Error | null }>);
 
       if (error) {
         // Fallback without joins if FK aliases fail
@@ -52,7 +57,7 @@ export function useDocumentRequests(tenantId: number | null) {
         return (fallback ?? []) as DocumentRequest[];
       }
 
-      return (data ?? []).map((r: any) => ({
+      return (data ?? []).map((r) => ({
         ...r,
         creator_name: r.creator
           ? `${r.creator.first_name || ''} ${r.creator.last_name || ''}`.trim()
@@ -135,10 +140,10 @@ export function useCreateDocumentRequest() {
         description: 'Your document request has been submitted.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Request failed',
-        description: error.message || 'Could not create request',
+        description: error instanceof Error ? error.message : 'Could not create request',
         variant: 'destructive',
       });
     },
@@ -167,10 +172,10 @@ export function useCancelDocumentRequest() {
       });
       toast({ title: 'Request cancelled' });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Failed to cancel',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Could not cancel request',
         variant: 'destructive',
       });
     },
