@@ -1,6 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyXeroSignature } from "../_shared/webhook-signature.ts";
 
+// auth-gate: none -- webhook endpoint authenticates each request with the
+// XERO_WEBHOOK_KEY HMAC signature rather than a per-user caller.
+
 // No corsHeaders needed - Xero calls this server-to-server, never from a browser.
 
 const XERO_WEBHOOK_KEY = (Deno.env.get("XERO_WEBHOOK_KEY") ?? "").trim();
