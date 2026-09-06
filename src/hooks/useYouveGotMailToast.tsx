@@ -3,8 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { Tables } from "@/integrations/supabase/types";
 
 const SESSION_KEY = "ygm_shown";
+
+type ParticipantRow = Pick<Tables<"conversation_participants">, "conversation_id" | "last_read_at">;
+type MessageRow = Pick<Tables<"tenant_messages">, "conversation_id" | "created_at">;
 
 /**
  * "You've got mail" toast — fires once per fresh login for Vivacity internal staff
@@ -26,18 +30,18 @@ export function useYouveGotMailToast() {
     (async () => {
       try {
         // Get all conversations + last_read_at for current user
-        const { data: parts } = await (supabase as any)
+        const { data: parts } = await supabase
           .from("conversation_participants")
           .select("conversation_id, last_read_at")
           .eq("user_id", user.id);
 
         const readMap = new Map<string, string | null>();
-        (parts ?? []).forEach((p: any) =>
+        (parts ?? []).forEach((p: ParticipantRow) =>
           readMap.set(p.conversation_id, p.last_read_at),
         );
 
         // Pull all client messages — filter unread in JS
-        const { data: msgs, error } = await (supabase as any)
+        const { data: msgs, error } = await supabase
           .from("tenant_messages")
           .select("id, conversation_id, created_at, sender_type")
           .eq("sender_type", "client")
@@ -48,7 +52,7 @@ export function useYouveGotMailToast() {
 
         const unreadConvos = new Set<string>();
         let unreadMessages = 0;
-        for (const m of msgs ?? []) {
+        for (const m of (msgs ?? []) as MessageRow[]) {
           const lastRead = readMap.get(m.conversation_id);
           if (!lastRead || new Date(m.created_at) > new Date(lastRead)) {
             unreadMessages++;

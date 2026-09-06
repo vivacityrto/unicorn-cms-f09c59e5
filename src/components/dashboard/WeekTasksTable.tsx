@@ -29,6 +29,16 @@ interface OverdueTask {
   follower_users?: FollowerUser[];
 }
 
+interface TaskRow {
+  id: string;
+  task_name: string;
+  description: string | null;
+  due_date: string | null;
+  status: string | null;
+  tenant_id: number;
+  followers: string[] | null;
+}
+
 export const WeekTasksTable = () => {
   const { data: queryResult, isLoading } = useQuery({
     queryKey: ["dashboard-overdue-tasks"],
@@ -42,7 +52,7 @@ export const WeekTasksTable = () => {
         .lt("due_date", today)
         .neq("status", "completed");
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("tasks_tenants")
         .select(`
           id,
@@ -51,8 +61,7 @@ export const WeekTasksTable = () => {
           due_date,
           status,
           tenant_id,
-          followers,
-          tenants (name)
+          followers
         `)
         .lt("due_date", today)
         .neq("status", "completed")
@@ -62,7 +71,18 @@ export const WeekTasksTable = () => {
       if (error) throw error;
 
       // Get all unique follower IDs
-      const allFollowerIds = [...new Set((data || []).flatMap((t: any) => t.followers || []))];
+      const taskRows = (data || []) as unknown as TaskRow[];
+      const allFollowerIds = [...new Set(taskRows.flatMap((t) => t.followers || []))];
+
+      const tenantIds = [...new Set(taskRows.map((task) => task.tenant_id))];
+      const tenantNames = new Map<number, string>();
+      if (tenantIds.length > 0) {
+        const { data: tenantsData } = await supabase
+          .from("tenants")
+          .select("id, name")
+          .in("id", tenantIds);
+        for (const tenant of tenantsData || []) tenantNames.set(tenant.id, tenant.name);
+      }
       
       // Fetch follower user details
       let followerUsers: FollowerUser[] = [];
@@ -74,18 +94,18 @@ export const WeekTasksTable = () => {
         followerUsers = usersData || [];
       }
 
-      const tasks = (data || []).map((task: any) => ({
+      const tasks: OverdueTask[] = taskRows.map((task) => ({
         id: task.id,
         task_name: task.task_name,
         description: task.description,
         due_date: task.due_date,
         status: task.status,
         tenant_id: task.tenant_id,
-        tenant_name: task.tenants?.name,
+        tenant_name: tenantNames.get(task.tenant_id),
         followers: task.followers || [],
-        follower_users: (task.followers || []).map((fid: string) => 
+        follower_users: (task.followers || []).map((fid) =>
           followerUsers.find(u => u.user_uuid === fid)
-        ).filter(Boolean),
+        ).filter((user): user is FollowerUser => Boolean(user)),
       }));
 
       return { tasks, totalCount: totalCount || 0 };
