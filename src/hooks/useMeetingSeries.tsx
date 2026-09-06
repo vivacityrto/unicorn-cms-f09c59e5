@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { MeetingType, EosMeeting } from '@/types/eos';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface MeetingSeries {
   id: string;
@@ -28,7 +29,7 @@ export interface MeetingSeries {
 
 export interface MeetingInstance extends Omit<EosMeeting, 'status'> {
   series_id?: string;
-  agenda_snapshot?: Record<string, any>;
+  agenda_snapshot?: Json;
   actual_duration_minutes?: number;
   started_at?: string;
   closed_at?: string;
