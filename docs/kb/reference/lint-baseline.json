@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-06T12:25:03.793Z",
-  "baselineSha": "f763d64f1f5c8cc9feab53d92a592364bf38bcc5",
+  "generatedAt": "2026-09-06T12:34:19.522Z",
+  "baselineSha": "35941d1af82eb7f1dc8cc25ba337774a5f40d96c",
   "totals": {
     "files": 1755,
-    "filesWithFindings": 134,
-    "errors": 591,
+    "filesWithFindings": 133,
+    "errors": 584,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 584,
+    "@typescript-eslint/no-explicit-any": 577,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
@@ -23,10 +23,10 @@
       }
     },
     "supabase/functions": {
-      "errors": 503,
+      "errors": 496,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 503
+        "@typescript-eslint/no-explicit-any": 496
       }
     }
   },
@@ -377,13 +377,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 4
-      }
-    },
-    "supabase/functions/embed-ask-viv-documents": {
-      "errors": 7,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 7
       }
     },
     "supabase/functions/export-client-timeline-pdf": {
@@ -995,9 +988,6 @@
     },
     "supabase/functions/embed-ask-viv-corpus/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
-    },
-    "supabase/functions/embed-ask-viv-documents/index.ts": {
-      "@typescript-eslint/no-explicit-any": 7
     },
     "supabase/functions/export-client-timeline-pdf/index.ts": {
       "@typescript-eslint/no-explicit-any": 4
