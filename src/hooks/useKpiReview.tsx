@@ -39,6 +39,8 @@ interface Params {
   periodEnd: string;
 }
 
+type SupabaseResult<T> = { data: T | null; error: Error | null };
+
 const ROLE_TO_DD: Record<KpiRole, string> = {
   csc: "csc_consultant",
   cst: "cst_assistant",
@@ -64,33 +66,33 @@ export function useKpiReview({ subjectUuid, role, periodType, periodStart, perio
     }
     setLoading(true);
     const ddRole = ROLE_TO_DD[role];
-    const { data: rev } = await (supabase as any)
-      .from("kpi_reviews")
+    const { data: rev } = await (supabase
+      .from("kpi_reviews" as never)
       .select("*")
       .eq("subject_uuid", subjectUuid)
       .eq("kpi_role", ddRole)
       .eq("period_type", periodType)
       .eq("period_start", periodStart)
-      .maybeSingle();
+      .maybeSingle() as unknown as Promise<SupabaseResult<KpiReview>>);
     setReview((rev as KpiReview | null) ?? null);
 
     if (rev?.id) {
-      const { data: so } = await (supabase as any)
-        .from("kpi_review_signoffs")
+      const { data: so } = await (supabase
+        .from("kpi_review_signoffs" as never)
         .select("*")
         .eq("review_id", rev.id)
-        .order("signed_at", { ascending: true });
+        .order("signed_at", { ascending: true }) as unknown as Promise<SupabaseResult<KpiReviewSignoff[]>>);
       setSignoffs((so as KpiReviewSignoff[]) ?? []);
     } else {
       setSignoffs([]);
     }
 
-    const { data: comp } = await (supabase as any).rpc("compute_kpi_overall_status", {
+    const { data: comp } = await (supabase.rpc("compute_kpi_overall_status" as never, {
       p_kpi_role: ddRole,
       p_subject_uuid: subjectUuid,
       p_period_start: periodStart,
       p_period_end: periodEnd,
-    });
+    } as never) as unknown as SupabaseResult<Array<{ overall_status: OverallStatus | null; metrics: Record<string, unknown> }> | { overall_status: OverallStatus | null; metrics: Record<string, unknown> }>);
     const first = Array.isArray(comp) ? comp[0] : comp;
     setPreviewStatus((first?.overall_status as OverallStatus | null) ?? null);
     setPreviewMetrics((first?.metrics as Record<string, unknown>) ?? {});
@@ -104,14 +106,14 @@ export function useKpiReview({ subjectUuid, role, periodType, periodStart, perio
   const save = useCallback(async (notes: string) => {
     if (!subjectUuid) return null;
     setBusy(true);
-    const { data, error } = await (supabase as any).rpc("upsert_kpi_review", {
+    const { data, error } = await (supabase.rpc("upsert_kpi_review" as never, {
       p_subject_uuid: subjectUuid,
       p_kpi_role: ROLE_TO_DD[role],
       p_period_type: periodType,
       p_period_start: periodStart,
       p_period_end: periodEnd,
       p_notes: notes,
-    });
+    } as never) as unknown as SupabaseResult<KpiReview>);
     setBusy(false);
     if (error) throw error;
     await load();
@@ -122,12 +124,12 @@ export function useKpiReview({ subjectUuid, role, periodType, periodStart, perio
   const signOff = useCallback(async (signoffType: string, comment: string) => {
     if (!review || !user?.id) return;
     setBusy(true);
-    const { error } = await (supabase as any).from("kpi_review_signoffs").insert({
+    const { error } = await (supabase.from("kpi_review_signoffs" as never).insert({
       review_id: review.id,
       reviewer_user_id: user.id,
       signoff_type: signoffType,
       comment: comment || null,
-    });
+    } as never) as unknown as SupabaseResult<null>);
     setBusy(false);
     if (error) throw error;
     await load();
@@ -136,10 +138,10 @@ export function useKpiReview({ subjectUuid, role, periodType, periodStart, perio
   const lock = useCallback(async () => {
     if (!review) return;
     setBusy(true);
-    const { error } = await (supabase as any)
-      .from("kpi_reviews")
-      .update({ locked_at: new Date().toISOString() })
-      .eq("id", review.id);
+    const { error } = await (supabase
+      .from("kpi_reviews" as never)
+      .update({ locked_at: new Date().toISOString() } as never)
+      .eq("id", review.id) as unknown as Promise<SupabaseResult<null>>);
     setBusy(false);
     if (error) throw error;
     await load();
