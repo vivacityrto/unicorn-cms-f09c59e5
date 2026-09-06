@@ -390,6 +390,8 @@ or "2x" as a settled number from this data.
 Three findings were handled in one feature-coherent file; parallel static gates and one targeted authenticated browser pass were used, with no writes. Baseline regenerated after merge: 706 explicit-any / 714 total errors / 39 warnings across 165 files. Temporary artifacts/server were cleaned and port 8080 confirmed free.
 ### 2026-09-06 Phase 2.5 settings/notes cohort (PR #853 merged)
 Two active pages (8 findings) were handled together; static suites ran under the mutex and one consolidated authenticated read-only Playwright pass covered both routes. Baseline after merge: 682 explicit-any / 691 total / 39 warnings across 155 files. Temporary resources were removed.
+### 2026-09-06 Phase 2.5 academy/tenant pages cohort (PR #855 merged)
+Three active pages (9 findings) were handled together; static suites ran under the mutex and one consolidated authenticated read-only Playwright pass covered the cohort. Baseline after merge: 672 explicit-any / 681 total / 39 warnings across 152 files. Temporary resources were removed; an accidental duplicate PR was closed before merge.
 ### 2026-09-06 Phase 2.5 consultant/mail hooks cohort (PR #850 merged)
 Two related hooks (7 findings) were handled together; static suites ran under the mutex and one consolidated authenticated read-only Playwright pass covered both affected routes. Baseline after merge: 690 explicit-any / 699 total / 39 warnings across 157 files. Temporary resources were removed.
 ### 2026-09-06 Phase 2.5 tenant-hooks cohort (PR #848 merged)
