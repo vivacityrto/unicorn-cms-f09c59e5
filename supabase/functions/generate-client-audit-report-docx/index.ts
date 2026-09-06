@@ -40,6 +40,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+type JsonRow = Record<string, unknown>;
 
 function json(req: Request, body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
@@ -66,7 +67,7 @@ function fmtDate(v: string | null | undefined): string {
  * the Section Rollup derives Risk from findings instead of those columns.
  */
 const SECTION_RISK_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
-function sectionRiskFromFindings(sectionId: string, findings: any[]): string | null {
+function sectionRiskFromFindings(sectionId: string, findings: JsonRow[]): string | null {
   let best: string | null = null;
   let bestRank = 0;
   for (const f of findings) {
@@ -256,7 +257,7 @@ Deno.serve(async (req) => {
     if (auditErr || !auditRow) {
       return json(req, { error: "You don't have access to this audit." }, 403);
     }
-    const audit = auditRow as any;
+    const audit = auditRow as JsonRow;
 
     // Use service-role for related rows so RLS on staff-only tables can't
     // silently return zero findings/sections (mirrors the PDF generator).
@@ -282,15 +283,15 @@ Deno.serve(async (req) => {
         .select('id, section_id, question_id, question_text, rating, notes, score, is_flagged, evidence_urls, responded_by, responded_at')
         .eq('audit_id', auditId),
     ]);
-    const findings = (findingsRes.data ?? []) as any[];
-    const actions = (actionsRes.data ?? []) as any[];
-    const sections = (sectionsRes.data ?? []) as any[];
-    const responses = (responsesRes.data ?? []) as any[];
+    const findings = (findingsRes.data ?? []) as JsonRow[];
+    const actions = (actionsRes.data ?? []) as JsonRow[];
+    const sections = (sectionsRes.data ?? []) as JsonRow[];
+    const responses = (responsesRes.data ?? []) as JsonRow[];
 
     // Load template questions for these sections so we can render each
     // question's text + clause even when the response row doesn't cache it.
     const templateSectionIds = sections.map((s) => s.template_section_id).filter(Boolean) as string[];
-    let templateQuestions: any[] = [];
+    let templateQuestions: JsonRow[] = [];
     if (templateSectionIds.length > 0) {
       const { data: tq, error: tqError } = await admin
         .from('compliance_template_questions')
@@ -315,7 +316,7 @@ Deno.serve(async (req) => {
         .from('users')
         .select('user_uuid, first_name, last_name, email')
         .in('user_uuid', Array.from(userIds));
-      for (const u of (users ?? []) as any[]) {
+      for (const u of (users ?? []) as JsonRow[]) {
         const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || '';
         if (name) userNames.set(u.user_uuid, name);
       }
@@ -538,7 +539,7 @@ Deno.serve(async (req) => {
     if (findings.length === 0) {
       children.push(para('No findings recorded.', { italic: true }));
     } else {
-      const actionsByFinding = new Map<string, any[]>();
+      const actionsByFinding = new Map<string, JsonRow[]>();
       for (const a of actions) {
         if (!a.finding_id) continue;
         const arr = actionsByFinding.get(a.finding_id) ?? [];
@@ -660,8 +661,8 @@ Deno.serve(async (req) => {
           not_sighted: '888888',
         };
 
-        const responsesByQuestion = new Map<string, any>();
-        const responsesBySection = new Map<string, any[]>();
+      const responsesByQuestion = new Map<string, JsonRow>();
+      const responsesBySection = new Map<string, JsonRow[]>();
         for (const r of responses) {
           if (r.question_id) responsesByQuestion.set(r.question_id, r);
           if (r.section_id) {
@@ -670,7 +671,7 @@ Deno.serve(async (req) => {
             responsesBySection.set(r.section_id, arr);
           }
         }
-        const questionsBySection = new Map<string, any[]>();
+      const questionsBySection = new Map<string, JsonRow[]>();
         for (const q of templateQuestions) {
           const arr = questionsBySection.get(q.section_id) ?? [];
           arr.push(q);
@@ -686,7 +687,7 @@ Deno.serve(async (req) => {
 
           const seenResponseIds = new Set<string>();
           const renderResponse = (
-            r: any | undefined,
+            r: JsonRow | undefined,
             fallbackText: string | null,
             clause: string | null,
           ) => {
