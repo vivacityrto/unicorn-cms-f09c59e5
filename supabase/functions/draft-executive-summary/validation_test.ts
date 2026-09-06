@@ -74,7 +74,7 @@ Deno.test('validateDraft: rejects empty executive_summary', () => {
 });
 
 Deno.test('validateDraft: rejects invalid confidence', () => {
-  const result = validateDraft(goodDraft({ confidence: 'sky-high' as any }), validIds);
+  const result = validateDraft(goodDraft({ confidence: 'sky-high' as unknown as DraftJson['confidence'] }), validIds);
   assert(!result.ok);
   assert(result.reason.includes('confidence'));
 });
@@ -178,7 +178,7 @@ Deno.test('validateDraft: rejects multiple fabricated finding IDs and lists them
 
 Deno.test('validateDraft: rejects missing action_plan_rollup', () => {
   const draft = goodDraft();
-  delete (draft as any).action_plan_rollup;
+  delete (draft as unknown as Record<string, unknown>).action_plan_rollup;
   const result = validateDraft(draft, validIds);
   assert(!result.ok);
   assert(result.reason.includes('action_plan_rollup'));
@@ -186,7 +186,7 @@ Deno.test('validateDraft: rejects missing action_plan_rollup', () => {
 
 Deno.test('validateDraft: rejects invalid priority_group priority', () => {
   const draft = goodDraft();
-  (draft.action_plan_rollup.priority_groups[0] as any).priority = 'urgent';
+  (draft.action_plan_rollup.priority_groups[0] as unknown as Record<string, unknown>).priority = 'urgent';
   const result = validateDraft(draft, validIds);
   assert(!result.ok);
   assert(result.reason.includes('priority'));
