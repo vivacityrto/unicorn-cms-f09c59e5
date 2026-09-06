@@ -8,6 +8,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Mail, Lock, User, Phone } from 'lucide-react';
 import unicornLogo from '@/assets/unicorn-logo-login.png';
 
+interface InvitationTokenResult {
+  status?: string;
+  expires_at?: string;
+  email?: string;
+  tenant_id?: number | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  unicorn_role?: string | null;
+  error?: string;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unable to validate invitation';
+}
+
 export default function AcceptInvitation() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -57,7 +72,11 @@ const [invitationData, setInvitationData] = useState<{
         throw new Error('Failed to validate invitation');
       }
 
-      const result = rpcResult as any;
+      const result = rpcResult as InvitationTokenResult | null;
+
+      if (!result) {
+        throw new Error('Invitation validation returned no result');
+      }
 
       if (result?.error) {
         throw new Error(result.error);
@@ -105,10 +124,10 @@ setInvitationData({
         firstName: data.first_name || '',
         lastName: data.last_name || '',
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Invalid invitation',
-        description: error.message || 'Unable to validate invitation',
+        description: errorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -169,9 +188,9 @@ setInvitationData({
 
       console.error('Failed to finalize invitation:', result);
       return { ok: false, code: result.code, message: result.message };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error in finalizeInvitation:', error);
-      return { ok: false, code: 'EXCEPTION', message: error?.message };
+      return { ok: false, code: 'EXCEPTION', message: errorMessage(error) };
     }
   };
 
@@ -366,10 +385,10 @@ unicorn_role: invitationData!.unicornRole,
       });
 
       setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Signup failed',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive',
       });
     } finally {

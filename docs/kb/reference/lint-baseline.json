@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T06:30:55.107Z",
-  "baselineSha": "4b4e41ffe88adc1c5887f35bf14242719b73b4bc",
+  "generatedAt": "2026-09-06T06:40:06.572Z",
+  "baselineSha": "bfec58e603848dc83bebedcb5f06dda8b4004597",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 176,
-    "errors": 766,
+    "filesWithFindings": 175,
+    "errors": 762,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 759,
+    "@typescript-eslint/no-explicit-any": 755,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 202,
+      "errors": 198,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 195,
+        "@typescript-eslint/no-explicit-any": 191,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -198,10 +198,10 @@
     },
     "src/lib": {},
     "src/pages": {
-      "errors": 83,
+      "errors": 79,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 83
+        "@typescript-eslint/no-explicit-any": 79
       }
     },
     "src/pages/academy": {
@@ -1055,9 +1055,6 @@
       "@typescript-eslint/no-explicit-any": 3
     },
     "src/lib/friendlyDbError.ts": {},
-    "src/pages/AcceptInvitation.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
-    },
     "src/pages/AdminCompliancePacks.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
