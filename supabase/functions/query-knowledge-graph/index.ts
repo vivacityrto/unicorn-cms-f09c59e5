@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+type JsonRecord = Record<string, unknown>;
 
 
 serve(async (req) => {
@@ -36,7 +37,7 @@ serve(async (req) => {
       const { data: nodes, error: nErr } = await nodesQuery;
       if (nErr) throw nErr;
 
-      const nodeIds = (nodes || []).map((n: any) => n.id);
+      const nodeIds = (nodes || []).map((n) => String((n as JsonRecord).id));
       if (nodeIds.length === 0) {
         return new Response(JSON.stringify({ nodes: [], edges: [] }), {
           headers: { ...corsHeaders(req), "Content-Type": "application/json" },
@@ -57,9 +58,10 @@ serve(async (req) => {
       let allNodes = [...(nodes || [])];
       if (max_depth >= 2 && edges && edges.length > 0) {
         const connectedIds = new Set<string>();
-        edges.forEach((e: any) => {
-          if (!nodeIds.includes(e.from_node_id)) connectedIds.add(e.from_node_id);
-          if (!nodeIds.includes(e.to_node_id)) connectedIds.add(e.to_node_id);
+        edges.forEach((e) => {
+          const edge = e as JsonRecord;
+          if (!nodeIds.includes(String(edge.from_node_id))) connectedIds.add(String(edge.from_node_id));
+          if (!nodeIds.includes(String(edge.to_node_id))) connectedIds.add(String(edge.to_node_id));
         });
         if (connectedIds.size > 0) {
           const { data: hop2Nodes } = await supabase
@@ -125,8 +127,9 @@ serve(async (req) => {
         .select("node_type");
 
       const distribution: Record<string, number> = {};
-      (typeDist || []).forEach((n: any) => {
-        distribution[n.node_type] = (distribution[n.node_type] || 0) + 1;
+      (typeDist || []).forEach((n) => {
+        const nodeType = String((n as JsonRecord).node_type);
+        distribution[nodeType] = (distribution[nodeType] || 0) + 1;
       });
 
       return new Response(
