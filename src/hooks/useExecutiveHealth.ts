@@ -26,7 +26,7 @@ export interface ExecutiveHealthRow {
   risk_health: number;
   consult_health: number;
   days_stale: number;
-  caps_applied: any;
+  caps_applied: unknown;
   compliance_calculated_at: string | null;
   operational_risk_score: number;
   risk_band: RiskBand;
@@ -110,7 +110,7 @@ export function useExecutiveHealth() {
   const { data: rawData, isLoading, error } = useQuery({
     queryKey: ['executive-health'],
     queryFn: async (): Promise<ExecutiveHealthRow[]> => {
-      const { data, error } = await supabase.rpc('get_executive_client_health' as any);
+      const { data, error } = await supabase.rpc('get_executive_client_health' as never);
       if (error) throw error;
       return (data ?? []) as unknown as ExecutiveHealthRow[];
     },
@@ -121,7 +121,7 @@ export function useExecutiveHealth() {
     queryKey: ['executive-watchlist'],
     queryFn: async (): Promise<WatchlistItem[]> => {
       const { data, error } = await supabase
-        .from('v_executive_watchlist_7d' as any)
+        .from('v_executive_watchlist_7d' as never)
         .select('*');
       if (error) throw error;
       return (data ?? []) as unknown as WatchlistItem[];

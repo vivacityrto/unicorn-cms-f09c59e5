@@ -42,7 +42,7 @@ export function useExecutiveMomentum() {
     queryKey: ['executive-momentum'],
     queryFn: async (): Promise<MomentumData[]> => {
       const { data, error } = await supabase
-        .from('v_exec_execution_momentum_7d' as any)
+        .from('v_exec_execution_momentum_7d' as never)
         .select('*');
       if (error) throw error;
       return (data ?? []) as unknown as MomentumData[];
@@ -64,7 +64,7 @@ export function useExecSystemHealth() {
     queryKey: ['exec-system-health'],
     queryFn: async (): Promise<SystemHealthData[]> => {
       const { data, error } = await supabase
-        .from('v_exec_system_health' as any)
+        .from('v_exec_system_health' as never)
         .select('*');
       if (error) throw error;
       return (data ?? []) as unknown as SystemHealthData[];
@@ -77,7 +77,7 @@ export function useConsultantDistribution() {
   return useQuery({
     queryKey: ['executive-consultant-dist'],
     queryFn: async (): Promise<ConsultantDistRow[]> => {
-      const { data, error } = await supabase.rpc('get_executive_consultant_distribution' as any);
+      const { data, error } = await supabase.rpc('get_executive_consultant_distribution' as never);
       if (error) throw error;
       return (data ?? []) as unknown as ConsultantDistRow[];
     },
