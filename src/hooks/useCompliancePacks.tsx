@@ -35,8 +35,8 @@ export function useCompliancePacks() {
   const fetchExports = useCallback(async (tenantId?: number) => {
     setLoading(true);
     try {
-      let query = (supabase as any)
-        .from('compliance_pack_exports')
+      let query = supabase
+        .from('compliance_pack_exports' as never)
         .select(`
           *,
           tenant:tenants(id, name),
@@ -52,7 +52,7 @@ export function useCompliancePacks() {
       const { data, error } = await query;
       if (error) throw error;
       setExports((data || []) as unknown as CompliancePackExport[]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch exports:', error);
     } finally {
       setLoading(false);
@@ -93,10 +93,10 @@ export function useCompliancePacks() {
       });
 
       return exportRecord.id;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create export',
+        description: error instanceof Error ? error.message : 'Failed to create export',
         variant: 'destructive'
       });
       return null;
@@ -118,10 +118,10 @@ export function useCompliancePacks() {
       });
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Export Failed',
-        description: error.message || 'Failed to generate compliance pack',
+        description: error instanceof Error ? error.message : 'Failed to generate compliance pack',
         variant: 'destructive'
       });
       return false;
@@ -138,7 +138,7 @@ export function useCompliancePacks() {
 
       if (error) throw error;
       return data.signedUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
         description: 'Failed to get download link',
