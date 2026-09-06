@@ -25,6 +25,8 @@ async function sha256(input: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// auth-gate: none -- token-possession endpoint; token hash + token ID and
+// conditional unexpired-row claim provide the intended authorization proof.
 serve(async (req: Request): Promise<Response> => {
   console.log('Mark token used function called');
   

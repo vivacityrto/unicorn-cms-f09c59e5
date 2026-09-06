@@ -79,6 +79,8 @@ async function parseAndVerifyOpaqueToken(token: string) {
   }
 }
 
+// auth-gate: none -- token-possession endpoint; HMAC/hash proof and expiry
+// checks authenticate the opaque token rather than a caller JWT.
 serve(async (req: Request): Promise<Response> => {
   console.log('Consume token function called');
   
