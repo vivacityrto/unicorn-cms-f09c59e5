@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T08:48:43.057Z",
-  "baselineSha": "8ebd01413706ee089ef60cc2234c7971429108ce",
+  "generatedAt": "2026-09-06T08:57:36.958Z",
+  "baselineSha": "9e7c7a5576c3b7996f5facb1c1dc81c380192eb5",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 169,
-    "errors": 726,
+    "filesWithFindings": 168,
+    "errors": 723,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 719,
+    "@typescript-eslint/no-explicit-any": 716,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 162,
+      "errors": 159,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 155,
+        "@typescript-eslint/no-explicit-any": 152,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -174,13 +174,6 @@
       }
     },
     "src/features/pdp": {},
-    "src/hooks/admin": {
-      "errors": 3,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 3
-      }
-    },
     "src/hooks": {
       "errors": 32,
       "warnings": 1,
@@ -995,9 +988,6 @@
       "react-refresh/only-export-components": 1
     },
     "src/features/pdp/workforce.ts": {},
-    "src/hooks/admin/use-reporting-obligations.ts": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
     "src/hooks/useAISuggestions.tsx": {
       "@typescript-eslint/no-explicit-any": 2
     },
