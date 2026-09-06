@@ -15,6 +15,13 @@ import { validateExternalScrapeUrl } from "../_shared/safe-fetch-url.ts";
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+interface SnapshotCitation {
+  index: number;
+  url: string;
+  snippet: string;
+  retrieved_at: string;
+}
+
 const SCRAPE_PATHS = [
   "/",
   "/courses",
@@ -37,7 +44,7 @@ async function computeHash(content: string): Promise<string> {
   return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function auditLog(supabase: any, userId: string, jobId: string, action: string, details?: any) {
+async function auditLog(supabase: ReturnType<typeof createClient>, userId: string, jobId: string, action: string, details?: unknown) {
   await supabase.from("research_audit_log").insert({
     user_id: userId,
     job_id: jobId,
@@ -254,8 +261,8 @@ End your analysis with: "This analysis highlights potential risk indicators only
     });
 
     let summaryMd = "";
-    let citations: any[] = [];
-    let riskFlags: any[] = [];
+    let citations: SnapshotCitation[] = [];
+    let riskFlags: unknown[] = [];
 
     if (ppxResponse.ok) {
       const ppxData = await ppxResponse.json();

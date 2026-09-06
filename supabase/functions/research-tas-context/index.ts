@@ -24,6 +24,13 @@ import { validateExternalScrapeUrl } from "../_shared/safe-fetch-url.ts";
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+interface TasCitation {
+  index: number;
+  url: string;
+  snippet: string;
+  retrieved_at: string;
+}
+
 const CLIENT_SCRAPE_PATHS = [
   "/courses",
   "/programs",
@@ -43,7 +50,7 @@ async function computeHash(content: string): Promise<string> {
   return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function auditLog(supabase: any, userId: string, jobId: string, action: string, details?: any) {
+async function auditLog(supabase: ReturnType<typeof createClient>, userId: string, jobId: string, action: string, details?: unknown) {
   await supabase.from("research_audit_log").insert({
     user_id: userId,
     job_id: jobId,
@@ -361,9 +368,9 @@ End with: "This brief highlights potential risk indicators only and does not det
     });
 
     let summaryMd = "";
-    let citations: any[] = [];
-    let riskFlags: any[] = [];
-    let briefJson: any = {};
+    let citations: TasCitation[] = [];
+    let riskFlags: unknown[] = [];
+    let briefJson: Record<string, unknown> = {};
 
     if (ppxResponse.ok) {
       const ppxData = await ppxResponse.json();
