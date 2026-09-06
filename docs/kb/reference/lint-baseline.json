@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T09:59:53.026Z",
-  "baselineSha": "3b0999982bf9bda30a70ab1c07e444898932d58e",
+  "generatedAt": "2026-09-06T10:08:29.823Z",
+  "baselineSha": "2448547eb1e2bd1ac2bd43df46f12d87f803a829",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 155,
-    "errors": 682,
+    "filesWithFindings": 152,
+    "errors": 672,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 675,
+    "@typescript-eslint/no-explicit-any": 665,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 118,
+      "errors": 108,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 111,
+        "@typescript-eslint/no-explicit-any": 101,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -170,17 +170,10 @@
     },
     "src/lib": {},
     "src/pages": {
-      "errors": 50,
+      "errors": 44,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 50
-      }
-    },
-    "src/pages/academy": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
+        "@typescript-eslint/no-explicit-any": 44
       }
     },
     "src/pages/client": {
@@ -996,15 +989,6 @@
     },
     "src/pages/TenantDocumentDetail.tsx": {
       "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/pages/TenantMembers.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/pages/UserProfile.tsx": {
-      "@typescript-eslint/no-explicit-any": 3
-    },
-    "src/pages/academy/AcademyCertificatesPage.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/pages/client/AcademyAssessmentPlayerPage.tsx": {
       "@typescript-eslint/no-explicit-any": 3
