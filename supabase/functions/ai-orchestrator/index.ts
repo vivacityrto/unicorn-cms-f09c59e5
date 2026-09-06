@@ -29,6 +29,7 @@ const ALLOWED_TASK_TYPES = [
 ] as const;
 
 type TaskType = typeof ALLOWED_TASK_TYPES[number];
+type JsonRecord = Record<string, unknown>;
 
 // ============= Input Schemas =============
 
@@ -456,7 +457,7 @@ async function isFeatureEnabled(
     .limit(1)
     .single();
 
-  if (settings && (settings as any)[flagName] === true) {
+  if (settings && (settings as JsonRecord)[flagName] === true) {
     return { enabled: true };
   }
 
@@ -543,10 +544,10 @@ Deno.serve(async (req) => {
       const latency = Date.now() - startMs;
       // Log blocked request
       await writeAuditEvent(supabase, {
-        tenant_id: (body as any)?.tenant_id || 0,
+        tenant_id: (body as JsonRecord)?.tenant_id || 0,
         actor_user_id: user.id,
-        feature: (body as any)?.feature || "unknown",
-        task_type: (body as any)?.task_type || "unknown",
+        feature: (body as JsonRecord)?.feature || "unknown",
+        task_type: (body as JsonRecord)?.task_type || "unknown",
         request_id: requestId,
         input_hash: simpleHash(JSON.stringify(body)),
         context_hash: simpleHash(""),
@@ -696,10 +697,10 @@ Deno.serve(async (req) => {
     }
 
     // Extract citations if present
-    const citations = (output as any).citations || null;
+    const citations = (output as JsonRecord).citations || null;
 
     // Apply confidence cap for stale data
-    let finalConfidence = (output as any).confidence || null;
+    let finalConfidence = (output as JsonRecord).confidence || null;
     if (confidenceCap !== null && finalConfidence !== null) {
       finalConfidence = Math.min(finalConfidence, confidenceCap);
     }
