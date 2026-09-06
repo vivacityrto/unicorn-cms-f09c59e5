@@ -4,17 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+type OAuthAuthorizationDetails = {
+  redirect_url?: string | null;
+  redirect_to?: string | null;
+  client?: { name?: string | null } | null;
+};
+
 // Narrow local type for the beta `supabase.auth.oauth` namespace.
 type OAuthAuthClient = {
   getAuthorizationDetails: (
     id: string,
-  ) => Promise<{ data: any; error: { message: string } | null }>;
+  ) => Promise<{ data: OAuthAuthorizationDetails | null; error: { message: string } | null }>;
   approveAuthorization: (
     id: string,
-  ) => Promise<{ data: any; error: { message: string } | null }>;
+  ) => Promise<{ data: OAuthAuthorizationDetails | null; error: { message: string } | null }>;
   denyAuthorization: (
     id: string,
-  ) => Promise<{ data: any; error: { message: string } | null }>;
+  ) => Promise<{ data: OAuthAuthorizationDetails | null; error: { message: string } | null }>;
 };
 
 function getOAuthClient(): OAuthAuthClient | null {
@@ -25,7 +31,7 @@ function getOAuthClient(): OAuthAuthClient | null {
 export default function OAuthConsent() {
   const [params] = useSearchParams();
   const authorizationId = params.get("authorization_id") ?? "";
-  const [details, setDetails] = useState<any>(null);
+  const [details, setDetails] = useState<OAuthAuthorizationDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
