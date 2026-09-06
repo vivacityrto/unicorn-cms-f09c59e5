@@ -45,8 +45,8 @@ export function RaiseTicketButton({ variant = "default" }: { variant?: "default"
       }
       setDevs(
         (data ?? [])
-          .filter((u: any) => !u.archived && !u.disabled)
-          .map((u: any) => ({ user_uuid: u.user_uuid, first_name: u.first_name, last_name: u.last_name })),
+          .filter((u) => !u.archived && !u.disabled)
+          .map((u) => ({ user_uuid: u.user_uuid, first_name: u.first_name, last_name: u.last_name })),
       );
     })();
   }, [open]);
@@ -93,9 +93,9 @@ export function RaiseTicketButton({ variant = "default" }: { variant?: "default"
       toast.success(`Ticket ${ticketNumber} raised`);
       reset();
       setOpen(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("[RaiseTicket] submit", e);
-      toast.error(e?.message ?? "Failed to raise ticket");
+      toast.error(e instanceof Error ? e.message : "Failed to raise ticket");
     } finally {
       setSubmitting(false);
     }
