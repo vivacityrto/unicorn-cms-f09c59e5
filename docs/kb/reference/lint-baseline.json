@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T16:53:22.919Z",
-  "baselineSha": "a63c9e3e32d0129d7a28093f4e9b2d47a082db1c",
+  "generatedAt": "2026-09-06T17:13:38.056Z",
+  "baselineSha": "7ca9c62409b1c6f0f22cae921ab3457b7e03ddd3",
   "totals": {
-    "files": 1755,
-    "filesWithFindings": 92,
-    "errors": 265,
+    "files": 1763,
+    "filesWithFindings": 91,
+    "errors": 233,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 258,
+    "@typescript-eslint/no-explicit-any": 226,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 88,
+      "errors": 56,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 81,
+        "@typescript-eslint/no-explicit-any": 49,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -169,13 +169,6 @@
       }
     },
     "src/lib": {},
-    "src/pages": {
-      "errors": 32,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 32
-      }
-    },
     "src/routes": {
       "errors": 0,
       "warnings": 1,
@@ -618,9 +611,6 @@
     },
     "src/hooks/usePageViewTracking.ts": {},
     "src/lib/friendlyDbError.ts": {},
-    "src/pages/PackageDetail.tsx": {
-      "@typescript-eslint/no-explicit-any": 32
-    },
     "src/routes/dashboardRoutes.tsx": {
       "react-refresh/only-export-components": 1
     },
