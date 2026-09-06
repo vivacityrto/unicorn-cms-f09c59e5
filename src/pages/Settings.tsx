@@ -13,9 +13,27 @@ import { CalendarTab } from '@/components/settings/CalendarTab';
 import { TeamProfileTab } from '@/components/settings/TeamProfileTab';
 import { AdminActionsTab } from '@/components/settings/AdminActionsTab';
 import { NotificationPrefsTab } from '@/components/settings/NotificationPrefsTab';
+import type { TeamProfileFieldsProps } from '@/components/profile/TeamProfileFields';
 
 const TAB_VALUES = ['profile', 'time', 'calendar', 'notifications', 'team', 'admin'] as const;
 type TabValue = typeof TAB_VALUES[number];
+type TeamUserData = TeamProfileFieldsProps['user'];
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : 'Unexpected error.';
+
+const toStringArray = (value: unknown): string[] | null =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : null;
+
+const toWorkingHours = (value: unknown): { start: string; end: string } | null => {
+  if (!value || typeof value !== 'object') return null;
+  const hours = value as { start?: unknown; end?: unknown };
+  return typeof hours.start === 'string' && typeof hours.end === 'string'
+    ? { start: hours.start, end: hours.end }
+    : null;
+};
 
 export default function Settings() {
   const { toast } = useToast();
@@ -25,7 +43,7 @@ export default function Settings() {
   
   const [loading, setLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [teamUserData, setTeamUserData] = useState<any>(null);
+  const [teamUserData, setTeamUserData] = useState<TeamUserData | null>(null);
   const [liveTime, setLiveTime] = useState('');
   const [timezoneOptions, setTimezoneOptions] = useState<{ value: string; label: string }[]>([]);
   const [formData, setFormData] = useState({
@@ -127,8 +145,8 @@ export default function Settings() {
         user_uuid: userData.user_uuid,
         linkedin_url: userData.linkedin_url,
         booking_url: userData.booking_url,
-        working_days: userData.working_days,
-        working_hours: userData.working_hours,
+        working_days: toStringArray(userData.working_days),
+        working_hours: toWorkingHours(userData.working_hours),
         availability_note: userData.availability_note,
         public_holiday_region: userData.public_holiday_region,
         is_csc: userData.is_csc,
@@ -139,10 +157,10 @@ export default function Settings() {
         user_type: userData.user_type,
         unicorn_role: userData.unicorn_role,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive',
       });
     }
@@ -178,10 +196,10 @@ export default function Settings() {
         title: 'Success',
         description: 'Profile updated successfully',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive',
       });
     } finally {
