@@ -98,8 +98,10 @@ serve(async (req) => {
     }
 
     // 6a. Recipient name
-    const metadata = (cert.metadata ?? {}) as Record<string, any>;
-    let recipientName: string | null = metadata.recipient_full_name ?? null;
+      const metadata = (cert.metadata ?? {}) as Record<string, unknown>;
+      let recipientName: string | null = typeof metadata.recipient_full_name === "string"
+        ? metadata.recipient_full_name
+        : null;
     if (!recipientName) {
       const { data: userRow } = await supabase
         .from("users")

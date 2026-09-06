@@ -9,8 +9,21 @@ import {
   verifyMailgunSignature,
 } from "../_shared/webhook-signature.ts";
 
+// auth-gate: none -- Mailgun authenticates each request with its signed
+// timestamp/token payload rather than a per-user caller.
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+interface MailgunWebhookBody {
+  signature?: { timestamp?: unknown; token?: unknown; signature?: unknown };
+  "event-data"?: {
+    event?: string;
+    severity?: string;
+    timestamp?: unknown;
+    message?: { headers?: Record<string, string | undefined> };
+  };
+}
 const SIGNING_KEY = (Deno.env.get("MAILGUN_WEBHOOK_SIGNING_KEY") ?? "").trim();
 
 if (!SIGNING_KEY) {
@@ -50,7 +63,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const body = await req.json().catch(() => null) as any;
+    const body = await req.json().catch(() => null) as MailgunWebhookBody | null;
     if (!body || typeof body !== "object") {
       console.log("mailgun-webhook: invalid JSON body");
       return json(req, 401, { ok: false, error: "Invalid signature" });

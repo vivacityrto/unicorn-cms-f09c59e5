@@ -284,8 +284,8 @@ serve(async (req) => {
           for (const source of dataSources || []) {
             if (source.table_data && Array.isArray(source.table_data)) {
               // Extract first column values as list
-              listData[source.name] = source.table_data.map((row: any) => 
-                Object.values(row)[0] as string
+                listData[source.name] = source.table_data.map((row) => 
+                  Object.values(row as Record<string, unknown>)[0] as string
               ).filter(Boolean);
             }
           }
