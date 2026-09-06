@@ -210,7 +210,7 @@ import { corsHeaders } from "../_shared/cors.ts";
    }
  
    // Build context from knowledge items
-   const context = (knowledgeItems as unknown as KnowledgeItem[]).map((item) => 
+   const context = (knowledgeItems as unknown as KnowledgeItem[]).map((item) =>
      `[${item.source_type}] ${item.title} (v${item.version}):\n${item.content}`
    ).join('\n\n---\n\n');
  
