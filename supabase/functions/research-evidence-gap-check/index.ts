@@ -15,6 +15,8 @@ import { FeatureKeys, requireCaller } from "../_shared/requireCaller.ts";
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+type JsonRecord = Record<string, unknown>;
+type ResearchFile = { id: string; file_name: string | null; tags?: unknown; folder_path?: string | null; document_type?: string | null };
 
 // Keyword mappings for file classification
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -32,7 +34,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   "Complaints and Appeals Records": ["complaint", "appeal", "grievance", "dispute"],
 };
 
-async function auditLog(supabase: any, userId: string, jobId: string, action: string, details?: any) {
+async function auditLog(supabase: ReturnType<typeof createClient>, userId: string, jobId: string, action: string, details?: JsonRecord) {
   await supabase.from("research_audit_log").insert({
     user_id: userId,
     job_id: jobId,
@@ -155,14 +157,14 @@ Deno.serve(async (req) => {
 
     // Combine all files
     const allFiles = [
-      ...(portalDocs || []).map((d: any) => ({
+      ...(portalDocs as ResearchFile[] | null || []).map((d) => ({
         id: d.id,
         name: d.file_name || "",
         tags: Array.isArray(d.tags) ? d.tags : [],
         folder: d.folder_path || "",
         type: d.document_type || "",
       })),
-      ...(docFiles || []).map((d: any) => ({
+      ...(docFiles as ResearchFile[] | null || []).map((d) => ({
         id: d.id,
         name: d.file_name || "",
         tags: Array.isArray(d.tags) ? d.tags : [],

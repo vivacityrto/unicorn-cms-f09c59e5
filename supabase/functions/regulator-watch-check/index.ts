@@ -10,6 +10,9 @@
  * Auth: Service-level (cron) or SuperAdmin manual trigger
  */
 import { corsHeaders } from "../_shared/cors.ts";
+
+type WatchEntry = { id: string; name: string; url: string; last_checked_at: string | null; check_frequency_days: number | null; last_content_hash: string | null; created_by: string; category?: string | null };
+type AffectedArea = { area?: string; standard_clause?: string; impact_type?: string };
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 
@@ -79,7 +82,7 @@ Deno.serve(async (req) => {
 
     // Filter entries due for check
     const now = Date.now();
-    const dueEntries = entries.filter((e: any) => {
+    const dueEntries = (entries as WatchEntry[]).filter((e) => {
       if (!e.last_checked_at) return true;
       const freqDays = e.check_frequency_days || 7;
       const lastChecked = new Date(e.last_checked_at).getTime();
@@ -189,8 +192,8 @@ Deno.serve(async (req) => {
         // Perplexity analysis
         let impactLevel = "moderate";
         let changeSummaryMd = "";
-        let affectedAreas: any[] = [];
-        let citations: any[] = [];
+        let affectedAreas: AffectedArea[] = [];
+        let citations: Array<{ index: number; url: string; retrieved_at: string }> = [];
 
         if (perplexityKey) {
           try {
@@ -260,7 +263,7 @@ End with: "This summary identifies potential operational impacts only. Human rev
                 job_id: job.id,
                 summary_md: changeSummaryMd,
                 citations_json: citations,
-                risk_flags_json: affectedAreas.map((a: any) => ({
+                risk_flags_json: affectedAreas.map((a) => ({
                   risk_category: a.area || "Regulator Change",
                   standard_clause: a.standard_clause || "Unknown",
                   severity: impactLevel,
