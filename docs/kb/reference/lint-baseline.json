@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-06T05:22:52.495Z",
-  "baselineSha": "8cebc9f27c83501cda989458839f18f3444f126c",
+  "generatedAt": "2026-09-06T05:28:39.077Z",
+  "baselineSha": "e73c2a6af65129d50454feef0d3cba171af129d2",
   "totals": {
     "files": 1756,
-    "filesWithFindings": 186,
-    "errors": 810,
+    "filesWithFindings": 185,
+    "errors": 806,
     "warnings": 39
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 803,
+    "@typescript-eslint/no-explicit-any": 799,
     "react-refresh/only-export-components": 39,
     "@typescript-eslint/no-unused-expressions": 7
   },
   "bySourceClass": {
     "src": {
-      "errors": 246,
+      "errors": 242,
       "warnings": 39,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 239,
+        "@typescript-eslint/no-explicit-any": 235,
         "react-refresh/only-export-components": 39,
         "@typescript-eslint/no-unused-expressions": 7
       }
@@ -136,13 +136,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 5
-      }
-    },
-    "src/components/notes": {
-      "errors": 4,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 4
       }
     },
     "src/components/package-builder": {
@@ -987,9 +980,6 @@
     },
     "src/components/meetings/MeetingAiSummaryPanel.tsx": {
       "@typescript-eslint/no-explicit-any": 5
-    },
-    "src/components/notes/NoteFormDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 4
     },
     "src/components/package-builder/PackagePhasesTab.tsx": {
       "@typescript-eslint/no-unused-expressions": 1
