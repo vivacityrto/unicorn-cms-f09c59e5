@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export interface DdLookupRow {
   id: number;
@@ -107,7 +108,7 @@ export function useReportingObligations() {
       const recMap = new Map<number, { value: string; label: string }>();
       for (const r of recurrencesRes.data || []) recMap.set(r.id, { value: r.value, label: r.label });
 
-      return (obligationsRes.data || []).map((o: any) => ({
+      return (obligationsRes.data || []).map((o) => ({
         ...o,
         audience_value: audMap.get(o.audience_id)?.value,
         audience_label: audMap.get(o.audience_id)?.label,
@@ -126,7 +127,7 @@ export function useUpsertReportingObligation() {
       if (id != null) {
         const { data, error } = await supabase
           .from("compliance_obligations")
-          .update(payload as any)
+          .update(payload satisfies TablesUpdate<"compliance_obligations">)
           .eq("id", id)
           .select("id")
           .single();
@@ -135,7 +136,7 @@ export function useUpsertReportingObligation() {
       }
       const { data, error } = await supabase
         .from("compliance_obligations")
-        .insert(payload as any)
+        .insert(payload satisfies TablesInsert<"compliance_obligations">)
         .select("id")
         .single();
       if (error) throw error;
