@@ -53,7 +53,13 @@ function normalizePreviewText(...parts: Array<string | null | undefined>) {
   return joined.replace(/\s+/g, " ").trim();
 }
 
-function buildPreviewText(emailData: any) {
+interface OutlookEmailPreview {
+  body?: { content?: string | null } | null;
+  bodyPreview?: string | null;
+  subject?: string | null;
+}
+
+function buildPreviewText(emailData: OutlookEmailPreview) {
   return normalizePreviewText(
     htmlToPlainText(emailData?.body?.content),
     emailData?.bodyPreview,

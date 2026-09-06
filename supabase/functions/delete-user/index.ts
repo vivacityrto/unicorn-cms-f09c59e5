@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
       headers: { "content-type": "application/json", ...corsHeaders(req) },
       status: 200,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Error deleting user:", e);
     return jsonErr(req, 500, "INTERNAL_ERROR", "An unexpected error occurred");
   }

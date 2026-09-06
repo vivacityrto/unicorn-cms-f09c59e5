@@ -52,7 +52,7 @@ serve(async (req) => {
 
     if (tErr) throw tErr;
 
-    const rows = (templates ?? []).map((t: any) => ({
+      const rows = (templates ?? []).map((t: { id: number }) => ({
       template_id: t.id,
       lifecycle_type: "staff_onboarding",
       provisioning_run_id: run_id,
