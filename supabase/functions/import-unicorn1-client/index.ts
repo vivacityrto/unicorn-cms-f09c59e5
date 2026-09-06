@@ -5,6 +5,8 @@ import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 type SvcClient = ReturnType<typeof createClient>;
+type QueryParam = { name: string; type: (typeof TYPES)[keyof typeof TYPES]; value: unknown };
+type JsonRow = Record<string, unknown>;
 
 
 function connectMssql(): Promise<Connection> {
@@ -39,10 +41,10 @@ function connectMssql(): Promise<Connection> {
 function execQuery(
   conn: Connection,
   sql: string,
-  params: { name: string; type: any; value: any }[]
-): Promise<Record<string, any>[]> {
+  params: QueryParam[]
+): Promise<JsonRow[]> {
   return new Promise((resolve, reject) => {
-    const rows: Record<string, any>[] = [];
+    const rows: JsonRow[] = [];
     const req = new TdsRequest(sql, (err: Error | undefined) => {
       if (err) reject(err);
       else resolve(rows);
@@ -50,8 +52,8 @@ function execQuery(
     for (const p of params) {
       req.addParameter(p.name, p.type, p.value);
     }
-    req.on("row", (columns: any[]) => {
-      const row: Record<string, any> = {};
+    req.on("row", (columns: Array<{ metadata: { colName: string }; value: unknown }>) => {
+      const row: JsonRow = {};
       for (const col of columns) {
         row[col.metadata.colName] = col.value;
       }
@@ -73,7 +75,7 @@ async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): 
     .from("package_instances")
     .select("id")
     .eq("tenant_id", tenantId);
-  const piIds = (pkgRows ?? []).map((r: any) => Number(r.id));
+  const piIds = (pkgRows ?? []).map((r) => Number(r.id));
 
   if (piIds.length === 0) return counts;
 
@@ -81,7 +83,7 @@ async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): 
     .from("stage_instances")
     .select("id")
     .in("packageinstance_id", piIds);
-  const siIds = (siRows ?? []).map((r: any) => Number(r.id));
+  const siIds = (siRows ?? []).map((r) => Number(r.id));
 
   // ---- Stage-child rows ----
   if (siIds.length > 0) {
@@ -105,7 +107,7 @@ async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): 
       counts.document_instances = (counts.document_instances ?? 0) + (c4 ?? 0);
 
       // Null linked_stage_instance_id on client_audits to release SET NULL FK
-      await (svcClient.from("client_audits") as any)
+      await svcClient.from("client_audits")
         .update({ linked_stage_instance_id: null })
         .in("linked_stage_instance_id", batch);
     }
@@ -120,12 +122,12 @@ async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): 
 
   // ---- Package-level child rows ----
   // Null parent_instance_id on any child packages (e.g. add-on linked packages)
-  await (svcClient.from("package_instances") as any)
+  await svcClient.from("package_instances")
     .update({ parent_instance_id: null })
     .in("parent_instance_id", piIds);
 
   // Null ops_work_items.package_instance_id (don't delete operational work items)
-  await (svcClient.from("ops_work_items") as any)
+  await svcClient.from("ops_work_items")
     .update({ package_instance_id: null })
     .in("package_instance_id", piIds);
 
@@ -140,16 +142,16 @@ async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): 
       .from("phase_instances").delete({ count: "exact" }).in("package_instance_id", batch);
     counts.phase_instances = (counts.phase_instances ?? 0) + (ph ?? 0);
 
-    const { count: sl } = await (svcClient.from("package_instance_state_log") as any)
+    const { count: sl } = await svcClient.from("package_instance_state_log")
       .delete({ count: "exact" }).in("package_instance_id", batch);
     counts.package_instance_state_log = (counts.package_instance_state_log ?? 0) + (sl ?? 0);
 
-    const { count: cs } = await (svcClient.from("compliance_score_snapshots") as any)
+    const { count: cs } = await svcClient.from("compliance_score_snapshots")
       .delete({ count: "exact" }).in("package_instance_id", batch);
     counts.compliance_score_snapshots = (counts.compliance_score_snapshots ?? 0) + (cs ?? 0);
 
     // package_notes: cascade-on-delete in schema, but be explicit so cleanup is observable
-    const { count: pn } = await (svcClient.from("package_notes") as any)
+    const { count: pn } = await svcClient.from("package_notes")
       .delete({ count: "exact" }).in("package_instance_id", batch);
     if (pn !== null && pn !== undefined) counts.package_notes = (counts.package_notes ?? 0) + (pn ?? 0);
   }
@@ -220,7 +222,7 @@ async function seedChildInstances(
   if (opts.documents) {
     const { data: linkRows } = await svcClient
       .from("document_stage_links").select("document_id").eq("stage_id", stageId);
-    const additionalIds = (linkRows ?? []).map((r: any) => r.document_id);
+    const additionalIds = (linkRows ?? []).map((r) => (r as JsonRow).document_id);
 
     let docsQuery = svcClient.from("documents").select("id");
     docsQuery = additionalIds.length > 0
@@ -276,7 +278,7 @@ serve(async (req) => {
       email_instances: !!import_options?.email_instances,
     };
 
-    const results: Record<string, any> = { imported: {} };
+    const results: JsonRow = { imported: {} };
     const conn = await connectMssql();
 
     // Mapping of Unicorn 1 PackageInstance.Id -> actual Unicorn 2 package_instances.id
@@ -426,7 +428,7 @@ serve(async (req) => {
           .select("id, u1_packageid")
           .eq("tenant_id", client_id);
         for (const r of existingPis ?? []) {
-          if ((r as any).u1_packageid) piIdMap.set(Number((r as any).u1_packageid), Number((r as any).id));
+          if ((r as JsonRow).u1_packageid) piIdMap.set(Number((r as JsonRow).u1_packageid), Number((r as JsonRow).id));
         }
       }
 
@@ -461,7 +463,7 @@ serve(async (req) => {
 
           // Valid stages in U2
           const { data: allStages } = await svcClient.from("stages").select("id");
-          const validStageIds = new Set((allStages ?? []).map((s: any) => Number(s.id)));
+          const validStageIds = new Set((allStages ?? []).map((s) => Number((s as JsonRow).id)));
 
           for (const s of stages) {
             const u1Sid = Number(s.Id ?? s.id);
@@ -518,7 +520,7 @@ serve(async (req) => {
             .select("id, package_id")
             .in("id", targetPis);
 
-          const pkgIdSet = new Set<number>((pis ?? []).map((r: any) => Number(r.package_id)));
+          const pkgIdSet = new Set<number>((pis ?? []).map((r) => Number((r as JsonRow).package_id)));
           const { data: tpls } = await svcClient
             .from("package_stages")
             .select("package_id, stage_id, sort_order")
@@ -526,9 +528,9 @@ serve(async (req) => {
 
           const tplsByPkg = new Map<number, { stage_id: number; sort_order: number | null }[]>();
           for (const t of tpls ?? []) {
-            const k = Number((t as any).package_id);
+            const k = Number((t as JsonRow).package_id);
             if (!tplsByPkg.has(k)) tplsByPkg.set(k, []);
-            tplsByPkg.get(k)!.push({ stage_id: Number((t as any).stage_id), sort_order: (t as any).sort_order ?? null });
+            tplsByPkg.get(k)!.push({ stage_id: Number((t as JsonRow).stage_id), sort_order: (t as JsonRow).sort_order ?? null });
           }
 
           // Existing stage instances per pi
@@ -538,14 +540,14 @@ serve(async (req) => {
             .in("packageinstance_id", targetPis);
           const existingByPi = new Map<number, Set<number>>();
           for (const si of existingSis ?? []) {
-            const pi = Number((si as any).packageinstance_id);
+            const pi = Number((si as JsonRow).packageinstance_id);
             if (!existingByPi.has(pi)) existingByPi.set(pi, new Set());
-            existingByPi.get(pi)!.add(Number((si as any).stage_id));
+            existingByPi.get(pi)!.add(Number((si as JsonRow).stage_id));
           }
 
           for (const pi of pis ?? []) {
-            const piId = Number((pi as any).id);
-            const pkgId = Number((pi as any).package_id);
+            const piId = Number((pi as JsonRow).id);
+            const pkgId = Number((pi as JsonRow).package_id);
             const tplStages = tplsByPkg.get(pkgId) ?? [];
             const have = existingByPi.get(piId) ?? new Set<number>();
             for (const t of tplStages) {
@@ -572,9 +574,9 @@ serve(async (req) => {
       if (needsSeed) {
         const { data: piRows } = await svcClient
           .from("package_instances").select("id").eq("tenant_id", client_id);
-        const localPiIds = (piRows ?? []).map((r: any) => Number(r.id));
+        const localPiIds = (piRows ?? []).map((r) => Number((r as JsonRow).id));
 
-        let newSiRows: any[] = [];
+        let newSiRows: JsonRow[] = [];
         if (localPiIds.length > 0) {
           const { data } = await svcClient
             .from("stage_instances")
@@ -618,7 +620,7 @@ serve(async (req) => {
     } finally {
       conn.close();
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("import-unicorn1-client error:", err);
     return new Response(
       JSON.stringify({ error: err.message || "Internal error" }),
