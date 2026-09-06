@@ -26,12 +26,16 @@ interface MeetingSummary {
   created_by_user_id: string;
   source: string;
   summary_text: string;
-  decisions: Array<{ text: string }>;
+  decisions: Array<{ text: string } | string>;
   action_items: Array<{ description: string; assignee?: string }>;
-  risks_raised: Array<{ text: string }>;
+  risks_raised: Array<{ text: string } | string>;
   confidence: number | null;
   ai_event_id: string | null;
   created_at: string;
+}
+
+function summaryItemText(item: { text: string } | string): string {
+  return typeof item === 'string' ? item : item.text;
 }
 
 export function MeetingAiSummaryPanel({ meetingId, tenantId }: MeetingAiSummaryPanelProps) {
@@ -152,10 +156,10 @@ export function MeetingAiSummaryPanel({ meetingId, tenantId }: MeetingAiSummaryP
     if (!existingSummary) return;
     setEditedSummary(existingSummary.summary_text);
     setEditedDecisions(
-      (existingSummary.decisions || []).map((d: any) => d.text || d).join('\n')
+      (existingSummary.decisions || []).map(summaryItemText).join('\n')
     );
     setEditedRisks(
-      (existingSummary.risks_raised || []).map((r: any) => r.text || r).join('\n')
+      (existingSummary.risks_raised || []).map(summaryItemText).join('\n')
     );
     setIsEditing(true);
   };
@@ -327,10 +331,10 @@ export function MeetingAiSummaryPanel({ meetingId, tenantId }: MeetingAiSummaryP
             {(existingSummary.decisions || []).length === 0 && (
               <li className="text-muted-foreground text-xs">None identified</li>
             )}
-            {(existingSummary.decisions || []).map((d: any, i: number) => (
+            {(existingSummary.decisions || []).map((d, i) => (
               <li key={i} className="flex gap-2">
                 <span className="text-muted-foreground">•</span>
-                <span>{d.text || d}</span>
+                <span>{summaryItemText(d)}</span>
               </li>
             ))}
           </ul>
@@ -353,7 +357,7 @@ export function MeetingAiSummaryPanel({ meetingId, tenantId }: MeetingAiSummaryP
           {(existingSummary.action_items || []).length === 0 && (
             <p className="text-muted-foreground text-xs">None identified</p>
           )}
-          {(existingSummary.action_items || []).map((item: any, i: number) => (
+          {(existingSummary.action_items || []).map((item, i) => (
             <div key={i} className="flex items-start gap-2">
               <Checkbox
                 checked={selectedActionItems.has(i)}
@@ -390,10 +394,10 @@ export function MeetingAiSummaryPanel({ meetingId, tenantId }: MeetingAiSummaryP
             {(existingSummary.risks_raised || []).length === 0 && (
               <li className="text-muted-foreground text-xs">None identified</li>
             )}
-            {(existingSummary.risks_raised || []).map((r: any, i: number) => (
+            {(existingSummary.risks_raised || []).map((r, i) => (
               <li key={i} className="flex gap-2">
                 <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
-                <span>{r.text || r}</span>
+                <span>{summaryItemText(r)}</span>
               </li>
             ))}
           </ul>
