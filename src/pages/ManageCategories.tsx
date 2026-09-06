@@ -41,6 +41,9 @@ interface Category {
   creator_avatar?: string | null;
 }
 
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : 'Unexpected error.';
+
 export default function ManageCategories() {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -64,11 +67,11 @@ export default function ManageCategories() {
 
       if (error) throw error;
       setCategories((data || []) as unknown as Category[]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching categories:', error);
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -115,10 +118,10 @@ export default function ManageCategories() {
       setFormData({ name: '', description: '' });
       setIsCreateDialogOpen(false);
       fetchCategories();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive',
       });
     }
@@ -151,10 +154,10 @@ export default function ManageCategories() {
       setEditingCategory(null);
       setIsEditDialogOpen(false);
       fetchCategories();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive',
       });
     }
@@ -179,10 +182,10 @@ export default function ManageCategories() {
       });
 
       fetchCategories();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: errorMessage(error),
         variant: 'destructive',
       });
     }
