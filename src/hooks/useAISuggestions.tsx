@@ -8,7 +8,7 @@ export interface AISuggestion {
   meeting_id?: string;
   scope: 'pre_meeting' | 'in_meeting';
   suggestion_type: 'issue' | 'priority' | 'todo';
-  payload: any;
+  payload: Record<string, unknown>;
   status: 'shown' | 'accepted' | 'dismissed';
   created_at: string;
 }
@@ -49,7 +49,7 @@ export const useAISuggestions = (meetingId?: string, tenantId?: number) => {
     },
     onSuccess: (data) => {
       // Store suggestions in database
-      const suggestionsToInsert = data.suggestions.map((s: any) => ({
+      const suggestionsToInsert = data.suggestions.map((s: Record<string, unknown>) => ({
         tenant_id: tenantId,
         meeting_id: meetingId,
         scope: meetingId ? 'in_meeting' : 'pre_meeting',

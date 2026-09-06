@@ -32,7 +32,16 @@ const CAP_ICONS: Record<string, typeof AlertTriangle> = {
   staleness: Clock,
 };
 
-const CAP_LABELS: Record<string, (cap: any) => string> = {
+interface ComplianceCap {
+  type: string;
+  cap: number;
+  count?: number;
+  missing_pct?: number;
+  pct?: number;
+  days?: number;
+}
+
+const CAP_LABELS: Record<string, (cap: ComplianceCap) => string> = {
   critical_risk: (c) => `${c.count} active critical risk${c.count > 1 ? 's' : ''} — capped at ${c.cap}`,
   missing_docs: (c) => `${c.missing_pct}% required docs missing — capped at ${c.cap}`,
   phase_lock: (c) => `Stage completion at ${c.pct}% — capped at ${c.cap}`,
