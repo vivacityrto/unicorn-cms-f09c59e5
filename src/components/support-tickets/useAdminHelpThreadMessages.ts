@@ -8,7 +8,7 @@ export interface AdminHelpMessageRow {
   role: string;
   content: string;
   created_at: string;
-  metadata: any;
+  metadata: unknown;
   sender_name?: string | null;
 }
 
@@ -24,7 +24,7 @@ export function useAdminHelpThreadMessages(threadId: string | null) {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      const rows = (data ?? []) as any[];
+      const rows = data ?? [];
 
       const senderIds = Array.from(
         new Set(rows.map((r) => r.sender_id).filter((v): v is string => !!v)),
@@ -35,7 +35,7 @@ export function useAdminHelpThreadMessages(threadId: string | null) {
           .from('users')
           .select('user_uuid, full_name, email')
           .in('user_uuid', senderIds);
-        (users ?? []).forEach((u: any) =>
+        (users ?? []).forEach((u) =>
           nameMap.set(u.user_uuid, u.full_name || u.email || null),
         );
       }
