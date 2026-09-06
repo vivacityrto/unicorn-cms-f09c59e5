@@ -31,7 +31,7 @@ export function useCscAssignments(tenantIds: number[]) {
       if (error) throw error;
 
       const cscMap: Record<number, string> = {};
-      (assignments || []).forEach((a: any) => { cscMap[a.tenant_id] = a.csc_user_id; });
+      (assignments || []).forEach((a) => { cscMap[a.tenant_id] = a.csc_user_id; });
 
       const userUuids = [...new Set(Object.values(cscMap).filter(Boolean))];
       const { data: usersData } = userUuids.length > 0
@@ -39,10 +39,10 @@ export function useCscAssignments(tenantIds: number[]) {
             .from("users")
             .select("user_uuid, first_name, last_name, avatar_url, archived")
             .in("user_uuid", userUuids)
-        : { data: [] as any[] };
+        : { data: [] };
 
       const userMap: Record<string, { name: string; avatar: string | null; archived: boolean }> = {};
-      (usersData || []).forEach((u: any) => {
+      (usersData || []).forEach((u) => {
         userMap[u.user_uuid] = {
           name: `${u.first_name || ""} ${u.last_name || ""}`.trim(),
           avatar: u.avatar_url,
