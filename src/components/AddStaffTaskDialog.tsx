@@ -126,10 +126,10 @@ export function AddStaffTaskDialog({ open, onOpenChange, onSuccess, packageId, s
       
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || `Failed to ${editTask ? 'update' : 'create'} staff task`,
+        description: error instanceof Error ? error.message : `Failed to ${editTask ? 'update' : 'create'} staff task`,
         variant: "destructive"
       });
     } finally {
