@@ -511,6 +511,20 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   independently re-verified and could carry the same risk — noted as
   unconfirmed in the register rather than assumed correct or re-checked
   under this already-large batch.
+- **P6-B `usePortfolioCockpit.ts` retired, decision preserved.** Zero
+  repo-wide imports; its consumer `PortfolioTable.tsx` and the related
+  `ConsultantAssignmentCard.tsx` were already deleted 2026-08-27 (dead-code
+  batches 8/12 and 11/12) — independently confirmed orphaned even earlier,
+  in `docs/audit-log/entries/2026-07-27-csc-assignment-silent-failure.md`,
+  predating and unrelated to this session's stale-worktree §7bis findings.
+  Per this cohort's own instruction, the old policy this hook encoded
+  (restricting the portfolio view to a non-staff user's own assigned-CSC
+  tenants) is preserved in the dead-code register rather than lost with
+  the code — current live behavior (the real triage dashboard) shows the
+  full portfolio to all staff, a deliberate difference from this old,
+  unreachable model. All of its Supabase calls are on shared
+  views/tables also used by the live triage dashboard — no backend object
+  retired.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
@@ -520,7 +534,7 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   functions' own retirement decisions; the unverified `StageCellEditor`
   dead-export finding; the remaining "data/workflow
   hooks" in the
-  zero-inbound queue: `useStageReleases`/`usePortfolioCockpit`/
+  zero-inbound queue: `useStageReleases`/
   `useMeetingSeries`/`useMeetingMinutes`/`useKpiReview`/
   `useAISuggestions`/`useEosDrafts`/`useDocumentScan`/`useEngagementAudit`
   — each has its own caution note requiring a
