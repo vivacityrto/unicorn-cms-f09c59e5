@@ -56,11 +56,30 @@ type RowFor<R extends KpiRole> = R extends "csc"
   ? CstSummaryRow
   : DevSummaryRow;
 
-const VIEW: Record<KpiRole, "v_kpi_csc_summary" | "v_kpi_cst_summary" | "v_kpi_dev_summary"> = {
-  csc: "v_kpi_csc_summary",
-  cst: "v_kpi_cst_summary",
-  dev: "v_kpi_dev_summary",
-};
+async function fetchSummaryRows(role: KpiRole, subjectUuid: string, sinceDate: string) {
+  if (role === "csc") {
+    return supabase
+      .from("v_kpi_csc_summary")
+      .select("*")
+      .eq("subject_uuid", subjectUuid)
+      .gte("period_start", sinceDate)
+      .order("period_start", { ascending: false });
+  }
+  if (role === "cst") {
+    return supabase
+      .from("v_kpi_cst_summary")
+      .select("*")
+      .eq("subject_uuid", subjectUuid)
+      .gte("period_start", sinceDate)
+      .order("period_start", { ascending: false });
+  }
+  return supabase
+    .from("v_kpi_dev_summary")
+    .select("*")
+    .eq("subject_uuid", subjectUuid)
+    .gte("period_start", sinceDate)
+    .order("period_start", { ascending: false });
+}
 
 export function useKpiSummary<R extends KpiRole>(role: R, subjectUuid: string | null | undefined, weeks = 12) {
   const [rows, setRows] = useState<RowFor<R>[]>([]);
@@ -78,15 +97,10 @@ export function useKpiSummary<R extends KpiRole>(role: R, subjectUuid: string | 
     (async () => {
       const since = new Date();
       since.setDate(since.getDate() - weeks * 7);
-      const { data, error } = await supabase
-        .from(VIEW[role])
-        .select("*")
-        .eq("subject_uuid", subjectUuid)
-        .gte("period_start", since.toISOString().slice(0, 10))
-        .order("period_start", { ascending: false });
+      const { data, error } = await fetchSummaryRows(role, subjectUuid, since.toISOString().slice(0, 10));
       if (cancelled) return;
       if (error) setError(error.message);
-      setRows((data ?? []) as RowFor<R>[]);
+      setRows((data ?? []) as unknown as RowFor<R>[]);
       setLoading(false);
     })();
     return () => {

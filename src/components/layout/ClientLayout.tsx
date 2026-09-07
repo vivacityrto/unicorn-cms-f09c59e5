@@ -86,7 +86,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         },
         (payload: RealtimePostgresChangesPayload<Tables<"tenant_messages">>) => {
           const row = payload?.new;
-          if (!row) return;
+          if (!row || !("sender_user_uuid" in row) || !("conversation_id" in row)) return;
           if (currentUserUuid && row.sender_user_uuid === currentUserUuid) return;
 
           queryClient.invalidateQueries({ queryKey: ["conversation-messages", row.conversation_id] });
