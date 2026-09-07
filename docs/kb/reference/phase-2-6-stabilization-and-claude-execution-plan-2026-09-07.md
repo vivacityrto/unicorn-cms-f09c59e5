@@ -437,14 +437,25 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `document_links` table were deliberately left untouched — their own
   retirement needs separate Edge/schema authorization, not inferred from
   a frontend-only cleanup.
+- **P6-B abandoned bulk-generation steps retired.** `PackageFilterStep.tsx`,
+  `ScopeStep.tsx`, `StageDocFilterStep.tsx`, `useTenantSharepointStatus.ts`
+  (386 LOC). **Caution satisfied, not skipped:** confirmed the active
+  targeted bulk-generation flow is `TargetedMode.tsx` (imported by the live
+  `BulkGenerateNew.tsx`, reached from `BulkGenerateButton.tsx`'s
+  `/manage-documents/bulk-generate/new` link), and that `BulkGenerateNew.tsx`
+  imports only `TargetedMode` — no reference to any of the 4 retired files,
+  confirming the older step-wizard was fully superseded, not one of two
+  live variants. All 4 files' Supabase calls are plain reads on shared core
+  tables (`packages`, `tenants`, `stages`, `tenant_sharepoint_settings`) —
+  no exclusive backend object retired.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
   cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
   core — blocked on missing Playwright coverage, the remaining product/
-  reachability-gated islands: bulk-generation-steps/Reassignment/
-  Compliance-score, the empty `document_links` table/`link-sharepoint-
-  document` Edge Function's own retirement decision, the "data/workflow
+  reachability-gated islands: Reassignment/Compliance-score, the empty
+  `document_links` table/`link-sharepoint-document` Edge Function's own
+  retirement decision, the "data/workflow
   hooks" half of the
   zero-inbound queue: `useStageReleases`/`usePortfolioCockpit`/
   `useMeetingSeries`/`usePackageUsage`/`useMeetingMinutes`/`useKpiReview`/
