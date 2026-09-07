@@ -753,6 +753,34 @@ order mismatch never gets compiler-checked. Deliberately not fixed in PR
 packet — left for a small, separate follow-up fix (add the missing `req`
 argument to all three call sites) plus its own PR.
 
+### 29. `tga-rto-import`'s `handleImport`/`handleStatus` reference an out-of-scope `req` — DOCUMENTED, NOT FIXED (found 2026-09-07)
+
+`supabase/functions/tga-rto-import/index.ts`'s `handleImport(supabase, userId,
+body, correlationId)` and `handleStatus(supabase, correlationId)` both call
+`jsonResponse(req, {...})` internally on every return path, but neither
+function receives `req` as a parameter — `req` only exists in the outer
+`serve(async (req) => {...})` closure. Every real invocation of the
+`action=import` or default/status path throws `ReferenceError: req is not
+defined` at the `jsonResponse(req, ...)` call, so the function cannot
+successfully return a response on any code path through either handler. The
+same `jsonResponse(req, ...)`-without-`req`-in-scope shape as item 28 above
+(`bulk-send-invitations`), found independently the same day in a different
+function while verifying a manual Edge Function deploy, not via typing work.
+Confirmed pre-existing (not introduced by this session) via
+`git log --oneline -5 -- supabase/functions/tga-rto-import/index.ts` — the
+last substantive edit was PR #303 (`fix(security): replace wildcard CORS
+with an APP_BASE_URL allowlist`), long before Phase 2.6. Found while
+byte-for-byte-verifying a manual deploy of this function during P5-A's Edge
+Function auto-deploy recovery (see `docs/kb/reference/execution-efficiency-
+log.md`'s 2026-09-07 entry and this repo's `AGENTS.md` → "Supabase
+deployment workflow") — the manual deploy shipped the file exactly as it
+exists on `origin/main` (pre-existing bug included, not a transcription
+error), so **tga-rto-import is currently non-functional on both actions**
+until this is fixed. Not fixed here — out of scope for a deploy-recovery
+task; needs `req` threaded into both function signatures as a parameter and
+both call sites updated. Worth fixing together with item 28 given the
+identical bug shape, but tracked separately since they're different files.
+
 ## Carl-reported regressions (2026-09-07) — DOCUMENTED, NOT INVESTIGATED
 
 Reported directly by Carl, not surfaced by this session's typing work.

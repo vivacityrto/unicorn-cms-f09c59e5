@@ -781,26 +781,51 @@ app-layer allowlist are the actual defense for anything invoked from
 
 ## Supabase deployment workflow
 
-**Edge Functions auto-deploy on merge to `main`** via Supabase's native
-GitHub sync integration (configured on Supabase's dashboard side —
-Project Settings → Integrations → GitHub — not a file in this repo;
-`.github/workflows/*.yml` contains no deploy step). Confirmed empirically
-2026-09-07: PR #970 (`ask-viv-assistant` typing) merged to `main` at
-05:29 UTC; the function's deployed version advanced 147→148 at 05:41 UTC
-(~12 min sync lag), and the deployed source was verified byte-for-byte
-consistent with the merged commit (new `SupabaseClient` import and row
-interfaces present, zero remaining `any`). Pushing to a PR branch does
-**not** trigger a deploy — only a merge to `main` does. This corrects an
-earlier version of this section, which claimed no automatic deployment
-existed; that claim was wrong for Edge Functions specifically.
+**Edge Functions auto-deploy on merge to `main` via Supabase's native
+GitHub sync integration — but it has since been observed to fail
+silently, so treat it as unreliable, not just laggy.** The mechanism is
+configured on Supabase's dashboard side (Project Settings → Integrations
+→ GitHub — not a file in this repo; `.github/workflows/*.yml` contains no
+deploy step). It worked as expected once (2026-09-07, PR #970:
+`ask-viv-assistant` merged 05:29 UTC, deployed version advanced 147→148 by
+05:41 UTC, source verified byte-for-byte consistent) — but the very same
+day, PRs #967/#968 (7 functions total: `tga-rto-sync`,
+`add-missing-packages`, `tga-rto-import`, `bulk-send-invitations`,
+`create-client-audit`, `dashboard-test-seed`,
+`create-tasks-from-minutes`) merged and **none of the 7 auto-deployed** —
+confirmed via a real source diff (not just a stale timestamp) 20+ minutes
+post-merge, e.g. `tga-rto-sync`'s deployed `index.ts` still had the
+pre-fix `const norm = (v: any) => ...` line. Carl independently confirmed
+Codex hit the identical failure the same day. Root cause not diagnosed
+(dashboard-side integration, no repo-visible logs); no fix identified —
+just do not trust it.
+
+**Standing practice until Supabase's sync is proven reliable again:**
+after merging any PR that touches `supabase/functions/**`, check
+`list_edge_functions` for each changed function ~15 min post-merge. If the
+version hasn't advanced, deploy manually via `mcp__supabase__
+deploy_edge_function` — reconstruct the file/`_shared/*.ts` dependency
+closure from `git show origin/main:<path>` for each, matching the
+function's existing `verify_jwt` setting (check via `list_edge_functions`
+first, don't default to `true`). Manual deploys risk transcription errors
+from retyping large files into the tool call's JSON, so verify after:
+extract the deployed source via `get_edge_function` and diff it against
+`git show origin/main:<path>`. When reproducing that comparison by hand
+(rather than scripting the extraction), expect false-positive
+whitespace-only diffs from your own retyping, not the deploy — a
+mismatch limited to trailing spaces or blank-line whitespace is very
+likely your reproduction, not the deployed content; re-check by eye
+against the original tool output before treating it as a real
+discrepancy.
 
 Because of this, **do not merge an Edge Function PR into `main` without
 being ready for it to go live** — a merge is a production deployment, not
-just a repo change. Still perform a post-merge check (via Supabase MCP
+just a repo change, whether or not the auto-deploy actually fires. Still
+perform a post-merge check (via Supabase MCP
 `list_edge_functions`/`get_edge_function`, or `query_logs`) that the
-version advanced and the source matches, since sync lag is real
-(observed ~12 minutes) and the mechanism has no repo-visible confirmation
-of its own.
+version advanced and the source matches — this is no longer optional
+diligence, it's the only signal you have that the function is actually
+live.
 
 **Migrations are a separate, MCP-controlled path** — apply hosted
 Supabase migrations through the configured Supabase MCP tools
