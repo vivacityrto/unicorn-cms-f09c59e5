@@ -178,8 +178,19 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   alone. No live Playwright pass was done pre-merge for this reason —
   there's nothing new deployed to exercise yet; live verification happens
   after merge once the sync integration deploys it.
+- **P4-C (identity and lookup reads) done, pending merge.** Process Audit
+  Log (#20), Edit/Add Time person lookup (#21), and `AddTimeDialog`'s
+  note-insert (unnumbered) all fixed against confirmed live schema — none
+  needed a decision packet. See Packet P4-C's own section (§7) for full
+  detail. Also surfaced a parked, explicitly-deferred finding: person-picker
+  dropdowns built on `public.users` list system/test/bulk-operation accounts
+  unfiltered — logged as RBAC v6 plan §13 item 14, not actioned here.
+  **Note for whoever merges second:** this PR and P4-B/P6-B's PR (#975,
+  also pending) both edit this progress-log section from the same
+  `origin/main` base — expect a textual merge conflict on this paragraph,
+  not a real logical conflict; resolve by keeping both bullets.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-B/C/D, P6-B, P7 — several of these require
+  infra decision), P3-A, P4-B, P4-D, P6-B, P7 — several of these require
   live-schema investigation, product/security decisions, or their own
   separately authorized packets per §1's rules.
 
@@ -399,6 +410,39 @@ Address Stage Preview (#5), Bulk Generate (#8), and Tenant Documents (#17) by re
 Investigate and fix Process Audit Log (#20), Edit/Add Time person lookup (#21), and the unnumbered `AddTimeDialog` missing-parent-column issue. Confirm the actual identity columns and joins from the live schema before editing.
 
 **Stop condition:** if the correct identity model is unclear, produce a decision packet instead of guessing.
+
+**Status (2026-09-07): done, pending merge.** All three fixed — none needed
+a decision packet, the correct identity model was confirmed live via
+`pg_constraint`/`pg_get_functiondef` in every case:
+- **#20** (`useProcessAuditLog`): two-step fetch against `public.users` by
+  `user_uuid` (kept in sync with `auth.users.id` by the
+  `link_auth_user_to_profile` trigger), matching `useStageAuditLog.tsx`'s
+  existing pattern for the same actor-resolution problem.
+- **#21** (`EditTimeDialog.tsx`/`AddTimeDialog.tsx`): fixed the wrong
+  `tenant_users.user_uuid` → `user_id` column, plus a second bug found
+  alongside it — `EditTimeDialog.tsx`'s "Person" select was wired to the
+  wrong state (`vivacityStaff` instead of the already-merged `teamMembers`),
+  so even a correct query would never have surfaced tenant contacts there.
+- **`AddTimeDialog` note-insert** (unnumbered, L10's "also found" list):
+  `notes.client_id`/`package_instance_id` aren't real columns; replaced
+  with the real `parent_type`/`parent_id`/`package_id` shape, matching the
+  existing convention in `useNotes.tsx`'s `createNote` and
+  `ClientStructuredNotesTab.tsx` — an existing established mapping, not a
+  guess.
+
+Live-verified on Demo RTO (tenant 7547): #20 against a real process with 10
+audit entries; #21's Person/Notify dropdowns now list all 7 real tenant
+contacts; the note-insert fix end-to-end (real time entry + linked note
+created, verified via SQL, then deleted). Zero console errors throughout.
+Full detail: `l10-real-bugs-found-2026-09-04.md` items #15/#20/#21 and the
+execution-efficiency log's P4-C entry.
+
+**Parked, not part of this packet:** live-verifying these dropdowns
+surfaced that `public.users` person-pickers list system/bulk-operation/
+test accounts unfiltered alongside real people (e.g. "Bulk Generate",
+"Test", "Ghost", "K_Account" all appeared next to real staff/tenant
+contacts in the Notify dropdown). Logged as RBAC v6 plan §13 item 14 — a
+council-scoped decision, explicitly deferred by Carl, not actioned here.
 
 ### Packet P4-D — schema/product decision queue
 
