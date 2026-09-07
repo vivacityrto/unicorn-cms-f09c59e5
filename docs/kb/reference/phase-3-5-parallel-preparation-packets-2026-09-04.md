@@ -18,6 +18,17 @@ and the smallest implementation unit that should follow each gate.
 
 ## Current coordination state
 
+> **Truth-sync update (2026-09-07, Phase 2.6 stabilization plan Packet
+> P0-C):** this section is a historical snapshot at the `237d7de9`
+> branch-cut and is stale. Phase 2.5 is now formally closed as a
+> prerequisite gate (closeout checkpoint at `origin/main@ddd2fec78`, PR
+> #953). The task-dialog consolidation packet (P6-A) and the rest of Phase
+> 2.6/3 preparation are no longer gated on it — do not treat the bullets
+> below as current blockers. Phase 3 itself remains preparation-only: no
+> implementation PR for the lifecycle-checklists pilot exists yet, and none
+> is authorized until Packet P6-A has parity evidence per the stabilization
+> plan §9.
+
 - Phase 2.5 remains active; the latest merged package-builder cluster is PR
   #594. The repo-wide `no-explicit-any` exit gate is not yet reached.
 - Phase 2.6 dead-code retirement cohorts and Audit UUID convergence are

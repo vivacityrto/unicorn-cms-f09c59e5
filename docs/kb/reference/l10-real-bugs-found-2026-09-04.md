@@ -564,6 +564,13 @@ files, so this is confirmed pre-existing and unrelated to that diff.
 
 During the authenticated read-only notification smoke test (`/client/inbox?tab=notifications`), the browser logged React's warning that `ClientRouteGuard` updates `BrowserRouter` while a different component is rendering. The route still rendered and no data/write failure occurred, but this render-time navigation can cause unstable transitions or repeated renders. It is pre-existing and outside the Phase 2.5 notification typing diff; schedule a focused follow-up to move the redirect/state update into an effect or event boundary and verify client-route navigation.
 
+**Truth-sync note (2026-09-07, Phase 2.6 stabilization plan Packet P0-C):**
+this is the same root cause as [#24](#24-client-files-navigation-emits-a-react-setstate-during-render-warning--documented-not-fixed)
+— both are `src/components/client/ClientRouteGuard.tsx:23` updating
+`BrowserRouter` during render, surfaced on two different routes. Fix once
+(Packet P4-A) and it resolves both entries; do not treat them as two
+separate bugs or duplicate the fix effort.
+
 ## Bulk communications
 
 ### 23. Bulk Message dialog lacks a Radix DialogTitle — DOCUMENTED, NOT FIXED
@@ -577,6 +584,10 @@ Opening the protected `/communications` Bulk Message dialog during Phase 2.5 ver
 ### 24. Client Files navigation emits a React setState-during-render warning — DOCUMENTED, NOT FIXED
 
 During the Phase 2.5 authenticated SharePoint cohort smoke test, `/client/files` loaded and remained usable, but Vite captured a React warning: `BrowserRouter` was updated while `ClientRouteGuard` was rendering. The stack points to `src/components/client/ClientRouteGuard.tsx:23` and occurs while the client layout resolves tenant access. No page error, failed route, or data write occurred, and the warning predates this typing-only cohort. Track separately as a client-route lifecycle fix; do not conflate it with the SharePoint boundary changes.
+
+**Truth-sync note (2026-09-07, Phase 2.6 stabilization plan Packet P0-C):**
+this is the same root cause as [#22](#22-clientrouteguard-updates-browserrouter-during-render--documented-not-fixed),
+not a second bug — see that entry. Fix once (Packet P4-A) for both.
 
 ### 25. Meeting recurrence Edge function has no recognizable caller authorization gate — DOCUMENTED, DEFERRED
 
