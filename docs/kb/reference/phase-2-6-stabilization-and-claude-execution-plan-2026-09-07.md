@@ -465,14 +465,26 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `docs/kb/handoffs/rbac-v6-gate-closure-plan.md`'s census of files
   needing future `useListableStaff()` migration (9→8 files), rather than
   migrating dead code.
+- **P6-B Compliance-score island retired (frontend only).**
+  `ComplianceScoreBreakdown.tsx` (146 LOC), `useComplianceScore.ts`
+  (115 LOC). **The caution's own instruction — "do not infer its backing
+  view or RPC is dead" — was checked against production data, not
+  inferred:** `compliance_score_snapshots` (the table `v_compliance_score_
+  latest` reads and `calculate_compliance_score` RPC writes) has 0 rows,
+  ever, and no `cron.job` invokes the RPC. This feature has never actually
+  computed a score for any tenant/package from any path — no frontend
+  caller, no cron, no data. Retired the 2 frontend files only;
+  `calculate_compliance_score`, `v_compliance_score_latest`, and the
+  empty `compliance_score_snapshots` table are deliberately left
+  untouched — their own retirement needs separate Edge/schema
+  authorization.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
   cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
-  core — blocked on missing Playwright coverage, the remaining product/
-  reachability-gated islands: Compliance-score, the empty
-  `document_links` table/`link-sharepoint-document` Edge Function's own
-  retirement decision, the "data/workflow
+  core — blocked on missing Playwright coverage; the empty
+  `document_links`/`compliance_score_snapshots` tables and their Edge/RPC
+  functions' own retirement decisions; the "data/workflow
   hooks" half of the
   zero-inbound queue: `useStageReleases`/`usePortfolioCockpit`/
   `useMeetingSeries`/`usePackageUsage`/`useMeetingMinutes`/`useKpiReview`/
