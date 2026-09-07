@@ -10,18 +10,61 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 const PAGE_SIZE = 500;
 
+// ── TGA scope item shape (training.gov.au /scope API) ───────────────
+// TGA's payload uses inconsistent field-name variants across endpoints
+// (camelCase vs snake_case, flattened vs nested under scope/trainingProduct/
+// tga_data) — this models every field this file actually reads, not the
+// full upstream schema. The index signature preserves passthrough of
+// whatever other fields TGA sends (spread verbatim into the tga_data jsonb
+// column at staging time).
+interface TgaNestedFields {
+  usageRecommendation?: string;
+  usage_recommendation?: string;
+  usageRecommendationCode?: string;
+  usage_recommendation_code?: string;
+  status?: string;
+  statusCode?: string;
+  endDate?: string;
+  end_date?: string;
+  scopeEndDate?: string;
+  scope_end_date?: string;
+  registrationEndDate?: string;
+  registration_end_date?: string;
+  rtoEndDate?: string;
+  rto_end_date?: string;
+}
+
+interface TgaScopeItem extends TgaNestedFields {
+  componentType?: string;
+  type?: string;
+  code?: string;
+  trainingComponentCode?: string;
+  title?: string;
+  name?: string;
+  supersededBy?: string;
+  scope?: TgaNestedFields;
+  trainingProduct?: TgaNestedFields;
+  tga_data?: TgaNestedFields;
+  // populated by classifyAndFilter before staging
+  scope_state?: "current" | "teach_out";
+  usageRecommendation_raw?: string | null;
+  status_raw?: string | null;
+  endDate_raw?: string | null;
+  [key: string]: unknown;
+}
+
 // ── Robust field extraction helpers ─────────────────────────────────
-const norm = (v: any) => String(v ?? "").trim();
+const norm = (v: unknown) => String(v ?? "").trim();
 
 /** Walk nested dot-paths; return first non-empty value found */
-const pick = (obj: any, paths: string[]): any => {
+const pick = (obj: unknown, paths: string[]): unknown => {
   for (const p of paths) {
     const parts = p.split(".");
-    let cur = obj;
+    let cur: unknown = obj;
     let ok = true;
     for (const part of parts) {
       if (cur && typeof cur === "object" && Object.prototype.hasOwnProperty.call(cur, part)) {
-        cur = cur[part];
+        cur = (cur as Record<string, unknown>)[part];
       } else {
         ok = false;
         break;
@@ -32,7 +75,7 @@ const pick = (obj: any, paths: string[]): any => {
   return null;
 };
 
-const getUsage = (item: any) => pick(item, [
+const getUsage = (item: TgaScopeItem): string | null => pick(item, [
   // Scope-level usage recommendation (what TGA displays)
   "scope.usageRecommendation",
   "scope.usage_recommendation",
@@ -48,9 +91,9 @@ const getUsage = (item: any) => pick(item, [
   "trainingProduct.usage_recommendation",
   "tga_data.usageRecommendation",
   "tga_data.usage_recommendation",
-]);
+]) as string | null;
 
-const getStatus = (item: any) => pick(item, [
+const getStatus = (item: TgaScopeItem): string | null => pick(item, [
   "scope.status",
   "scope.statusCode",
   "status",
@@ -58,9 +101,9 @@ const getStatus = (item: any) => pick(item, [
   "trainingProduct.status",
   "trainingProduct.statusCode",
   "tga_data.status",
-]);
+]) as string | null;
 
-const getEndDate = (item: any) => pick(item, [
+const getEndDate = (item: TgaScopeItem): string | null => pick(item, [
   // Scope-level end dates (what TGA displays in the table)
   "scope.endDate",
   "scope.end_date",
@@ -82,11 +125,11 @@ const getEndDate = (item: any) => pick(item, [
   "end_date",
   "tga_data.endDate",
   "tga_data.end_date",
-]);
+]) as string | null;
 
-const toDate = (v: any): Date | null => {
+const toDate = (v: unknown): Date | null => {
   if (!v) return null;
-  const d = new Date(v);
+  const d = new Date(v as string | number | Date);
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
@@ -109,7 +152,7 @@ interface ClassifyResult {
   dropDetail?: string;
 }
 
-function classify(item: any): ClassifyResult {
+function classify(item: TgaScopeItem): ClassifyResult {
   const usageRaw = getUsage(item);
   const statusRaw = getStatus(item);
   const endRaw = getEndDate(item);
@@ -143,7 +186,7 @@ function classify(item: any): ClassifyResult {
 }
 
 /** Safe wrapper — never throws, captures exceptions as drop reasons */
-function safeClassify(item: any): ClassifyResult & { drop?: string; error?: string; sampleKeys?: string[] | string } {
+function safeClassify(item: TgaScopeItem): ClassifyResult & { drop?: string; error?: string; sampleKeys?: string[] | string } {
   try {
     return classify(item);
   } catch (e) {
@@ -200,8 +243,8 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
 }
 
 // Fetch ALL scope items with pagination
-async function fetchAllScopeUnfiltered(rtoId: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
-  const items: any[] = [];
+async function fetchAllScopeUnfiltered(rtoId: string): Promise<{ items: TgaScopeItem[]; urls: string[]; error?: string }> {
+  const items: TgaScopeItem[] = [];
   const urls: string[] = [];
   let offset = 0;
   let hasMore = true;
@@ -232,8 +275,8 @@ async function fetchAllScopeUnfiltered(rtoId: string): Promise<{ items: any[]; u
 }
 
 // Fetch qualifications via filtered API endpoint (unfiltered scope endpoint omits current quals)
-async function fetchQualificationsFiltered(rtoId: string): Promise<{ items: any[]; urls: string[] }> {
-  const items: any[] = [];
+async function fetchQualificationsFiltered(rtoId: string): Promise<{ items: TgaScopeItem[]; urls: string[] }> {
+  const items: TgaScopeItem[] = [];
   const urls: string[] = [];
   let offset = 0;
   let hasMore = true;
@@ -266,8 +309,8 @@ async function fetchQualificationsFiltered(rtoId: string): Promise<{ items: any[
 }
 
 // Categorise raw scope items by componentType
-function categoriseScope(items: any[]): Record<string, any[]> {
-  const result: Record<string, any[]> = { qualification: [], unit: [], skillSet: [], accreditedCourse: [], trainingPackage: [] };
+function categoriseScope(items: TgaScopeItem[]): Record<string, TgaScopeItem[]> {
+  const result: Record<string, TgaScopeItem[]> = { qualification: [], unit: [], skillSet: [], accreditedCourse: [], trainingPackage: [] };
   for (const item of items) {
     const ct = (item.componentType || item.type || '').toLowerCase();
     if (ct === 'qualification') result.qualification.push(item);
@@ -292,20 +335,20 @@ interface TypeDiagnostics {
   teach_out: number;
   dropped: number;
   drop_reasons: Record<string, number>;
-  sample_item?: { code: string; usageRaw: string | null; statusRaw: string | null; endRaw: string | null; scope_state: string | null };
-  sample_dropped?: { code: string; usageRaw: string | null; statusRaw: string | null; endRaw: string | null; dropReason: string | null };
+  sample_item?: { code?: string; usageRaw: string | null; statusRaw: string | null; endRaw: string | null; scope_state: string | null; scope_endDate_candidate?: unknown; product_endDate_candidate?: unknown };
+  sample_dropped?: { code?: string; usageRaw: string | null; statusRaw: string | null; endRaw: string | null; dropReason: string | null; scope_endDate_candidate?: unknown; product_endDate_candidate?: unknown };
 }
 
 // Classify + categorise, returning diagnostics
-function classifyAndFilter(categorised: Record<string, any[]>): {
-  filtered: Record<string, any[]>;
+function classifyAndFilter(categorised: Record<string, TgaScopeItem[]>): {
+  filtered: Record<string, TgaScopeItem[]>;
   diagnostics: Record<string, TypeDiagnostics>;
 } {
-  const filtered: Record<string, any[]> = {};
+  const filtered: Record<string, TgaScopeItem[]> = {};
   const diagnostics: Record<string, TypeDiagnostics> = {};
 
   for (const [type, items] of Object.entries(categorised)) {
-    const kept: any[] = [];
+    const kept: TgaScopeItem[] = [];
     const diag: TypeDiagnostics = { raw_total: items.length, kept: 0, current: 0, teach_out: 0, dropped: 0, drop_reasons: {} };
 
     for (const item of items) {
@@ -346,8 +389,97 @@ function classifyAndFilter(categorised: Record<string, any[]>): {
   return { filtered, diagnostics };
 }
 
+// ── TGA organisation details shape (training.gov.au /organisation API) ──
+interface TgaLegalName {
+  name?: string;
+  endDate?: string;
+  abns?: Array<{ abn?: string } | string>;
+  acn?: string;
+}
+
+interface TgaTradingName {
+  name?: string;
+  endDate?: string;
+}
+
+interface TgaWebAddress {
+  webAddress?: string;
+  endDate?: string;
+}
+
+interface TgaRegistration {
+  startDate?: string;
+  endDate?: string;
+  registrationManagerDescription?: string;
+  registrationManager?: string;
+  legalAuthorityDescription?: string;
+  legalAuthority?: string;
+  exerciserDescription?: string;
+  exerciser?: string;
+}
+
+interface TgaClassification {
+  schemeDescription?: string;
+  endDate?: string;
+  isPrimary?: boolean;
+  valueDescription?: string;
+  value?: string;
+}
+
+interface TgaAddressDetail {
+  line1?: string;
+  line2?: string;
+  suburb?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+  locationName?: string;
+}
+
+interface TgaContact {
+  endDate?: string;
+  roleDescription?: string;
+  role?: string;
+  contactType?: string;
+  type?: string;
+  title?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  jobTitle?: string;
+  position?: string;
+  organisationName?: string;
+  phone?: string;
+  mobile?: string;
+  fax?: string;
+  email?: string;
+  address?: TgaAddressDetail;
+}
+
+interface TgaAddress extends TgaAddressDetail {
+  endDate?: string;
+  addressType?: string;
+  address?: TgaAddressDetail;
+  phone?: string;
+  fax?: string;
+  email?: string;
+  webAddress?: string;
+}
+
+interface TgaOrgData {
+  legalNames?: TgaLegalName[];
+  tradingNames?: TgaTradingName[];
+  webAddresses?: TgaWebAddress[];
+  registrations?: TgaRegistration[];
+  classifications?: TgaClassification[];
+  contacts?: TgaContact[];
+  addresses?: TgaAddress[];
+  status?: string;
+  [key: string]: unknown;
+}
+
 // Fetch organization details
-async function fetchOrgDetails(rtoId: string): Promise<{ data: any; url: string; error?: string }> {
+async function fetchOrgDetails(rtoId: string): Promise<{ data: TgaOrgData | null; url: string; error?: string }> {
   const url = `https://training.gov.au/api/organisation/${rtoId}?api-version=1.0&include=all`;
   log('info', 'Fetching org details', { url });
   try {
@@ -360,6 +492,19 @@ async function fetchOrgDetails(rtoId: string): Promise<{ data: any; url: string;
   } catch (err) {
     return { data: null, url, error: String(err) };
   }
+}
+
+interface TgaStagingRow {
+  tenant_id: number;
+  code: string;
+  title: string;
+  scope_type: string;
+  status: string;
+  is_superseded: boolean;
+  superseded_by: string | null;
+  tga_data: TgaScopeItem;
+  last_refreshed_at: string;
+  sync_run_id: string;
 }
 
 async function updateJobStatus(jobId: string | null, status: string, payload: Record<string, unknown>, lastError?: string | null) {
@@ -428,9 +573,9 @@ serve(async (req) => {
     progress.stage = 'parsing_org';
 
     // Parse org details
-    const currentLegalName = orgData.legalNames?.find((ln: any) => !ln.endDate);
+    const currentLegalName = orgData.legalNames?.find((ln) => !ln.endDate);
     const legalName = currentLegalName?.name || null;
-    const currentTradingNames = orgData.tradingNames?.filter((tn: any) => !tn.endDate) || [];
+    const currentTradingNames = orgData.tradingNames?.filter((tn) => !tn.endDate) || [];
     const tradingName = currentTradingNames[0]?.name || null;
 
     let abn: string | null = null;
@@ -439,7 +584,7 @@ serve(async (req) => {
       abn = typeof abnEntry === 'object' && abnEntry.abn ? String(abnEntry.abn) : abnEntry ? String(abnEntry) : null;
     }
     const acn = currentLegalName?.acn || null;
-    const currentWebEntry = orgData.webAddresses?.find((w: any) => !w.endDate);
+    const currentWebEntry = orgData.webAddresses?.find((w) => !w.endDate);
     const website = currentWebEntry?.webAddress || null;
 
     let registrationStartDate: string | null = null;
@@ -456,12 +601,12 @@ serve(async (req) => {
       // RTOs in "Re-Registration Pending" where the most recent endDate may already be past
       // but the registration is still legally in force while the renewal is considered.
       // The TGA payload is NOT reliably ordered, so we must not pick by array position.
-      const sortedByEnd = [...orgData.registrations].sort((a: any, b: any) => {
+      const sortedByEnd = [...orgData.registrations].sort((a, b) => {
         const ad = a.endDate ? new Date(a.endDate).getTime() : Number.POSITIVE_INFINITY;
         const bd = b.endDate ? new Date(b.endDate).getTime() : Number.POSITIVE_INFINITY;
         return bd - ad; // descending: open-ended first, then newest endDate
       });
-      const currentReg = sortedByEnd.find((r: any) => !r.endDate || new Date(r.endDate) > now) || sortedByEnd[0];
+      const currentReg = sortedByEnd.find((r) => !r.endDate || new Date(r.endDate) > now) || sortedByEnd[0];
       if (currentReg) {
         registrationStartDate = currentReg.startDate || null;
         registrationEndDate = currentReg.endDate || null;
@@ -469,13 +614,13 @@ serve(async (req) => {
         legalAuthority = currentReg.legalAuthorityDescription || currentReg.legalAuthority || null;
         exerciser = currentReg.exerciserDescription || currentReg.exerciser || null;
       }
-      const allStartDates = orgData.registrations.map((r: any) => r.startDate).filter(Boolean).sort();
+      const allStartDates = orgData.registrations.map((r) => r.startDate).filter(Boolean).sort();
       if (allStartDates.length > 0) initialRegistrationDate = allStartDates[0];
     }
 
     let organisationType: string | null = null;
     if (orgData.classifications?.length > 0) {
-      const orgTypeClass = orgData.classifications.find((c: any) => c.schemeDescription === 'Training Organisation Type' && !c.endDate && c.isPrimary !== false);
+      const orgTypeClass = orgData.classifications.find((c) => c.schemeDescription === 'Training Organisation Type' && !c.endDate && c.isPrimary !== false);
       if (orgTypeClass) organisationType = orgTypeClass.valueDescription || orgTypeClass.value || null;
     }
 
@@ -505,7 +650,7 @@ serve(async (req) => {
     
     // Remove any qualifications from the unfiltered results and replace with filtered ones
     const nonQualItems = scopeResult.items.filter(
-      (i: any) => (i.componentType || '').toLowerCase() !== 'qualification'
+      (i) => (i.componentType || '').toLowerCase() !== 'qualification'
     );
     scopeResult.items = [...nonQualItems, ...qualResult.items];
     log('info', `Replaced qualifications: ${qualResult.items.length} from filtered API (removed unfiltered quals)`);
@@ -530,7 +675,7 @@ serve(async (req) => {
 
     // Classify with diagnostics
     const { filtered, diagnostics } = classifyAndFilter(categorised);
-    (diagnostics as any).payload_shapes = payloadShapes;
+    (diagnostics as Record<string, TypeDiagnostics> & { payload_shapes?: typeof payloadShapes }).payload_shapes = payloadShapes;
 
     const keptTotal = Object.values(filtered).reduce((sum, arr) => sum + arr.length, 0);
     const rawTotal = scopeResult.items.length;
@@ -543,7 +688,7 @@ serve(async (req) => {
       log('warn', warnMsg, { diagnostics });
 
       // Collect top drop reasons + sample dropped items for debugging
-      const allDropped: any[] = [];
+      const allDropped: Array<{ type: string } & NonNullable<TypeDiagnostics['sample_dropped']>> = [];
       for (const [type, diag] of Object.entries(diagnostics)) {
         if (type === 'payload_shapes') continue;
         const d = diag as TypeDiagnostics;
@@ -587,7 +732,7 @@ serve(async (req) => {
 
       // Build staging rows, deduplicating by code (TGA can return same code as explicit + implicit)
       const seenCodes = new Set<string>();
-      const stagingRows: any[] = [];
+      const stagingRows: TgaStagingRow[] = [];
       for (const item of items) {
         const code = item.code || item.trainingComponentCode || 'UNKNOWN';
         if (seenCodes.has(code)) continue;
@@ -645,7 +790,7 @@ serve(async (req) => {
       throw new Error(`Swap failed: ${swapError.message}. Old data preserved.`);
     }
 
-    const swapData = swapResult as any;
+    const swapData = swapResult as ({ error?: string } & Record<string, unknown>) | null;
     if (swapData?.error) {
       log('error', 'Swap returned error', { swapData });
       throw new Error(`Swap returned error: ${swapData.error}. Old data preserved.`);
@@ -670,11 +815,11 @@ serve(async (req) => {
     // ── PERSIST CONTACTS ────────────────────────────────────────────
     progress.stage = 'persisting_contacts';
     const contacts = orgData.contacts || [];
-    const currentContacts = contacts.filter((c: any) => !c.endDate);
+    const currentContacts = contacts.filter((c) => !c.endDate);
 
     await supabaseAdmin.from('tga_rto_contacts').delete().eq('tenant_id', tenantIdNum).eq('rto_code', rtoId);
 
-    const contactRows = currentContacts.map((contact: any) => {
+    const contactRows = currentContacts.map((contact) => {
       const addrParts = [contact.address?.line1, contact.address?.line2, contact.address?.suburb, contact.address?.state, contact.address?.postcode].filter(Boolean);
       return {
         tenant_id: tenantIdNum, rto_code: rtoId,
@@ -691,7 +836,7 @@ serve(async (req) => {
 
     // Deduplicate by (contact_type, name) to avoid unique constraint violations
     const seen = new Set<string>();
-    const uniqueContactRows = contactRows.filter((row: any) => {
+    const uniqueContactRows = contactRows.filter((row) => {
       const key = `${row.contact_type}::${row.name}`;
       if (seen.has(key)) return false;
       seen.add(key);
@@ -707,14 +852,14 @@ serve(async (req) => {
     // ── PERSIST ADDRESSES & DELIVERY LOCATIONS ──────────────────────
     progress.stage = 'persisting_addresses';
     const addresses = orgData.addresses || [];
-    const currentAddresses = addresses.filter((addr: any) => !addr.endDate);
-    const headOfficeAddrs = currentAddresses.filter((a: any) => a.addressType === 'headOffice');
-    const postalAddrs = currentAddresses.filter((a: any) => a.addressType === 'postal');
-    const deliveryLocationAddrs = currentAddresses.filter((a: any) => a.addressType === 'deliveryLocation');
+    const currentAddresses = addresses.filter((addr) => !addr.endDate);
+    const headOfficeAddrs = currentAddresses.filter((a) => a.addressType === 'headOffice');
+    const postalAddrs = currentAddresses.filter((a) => a.addressType === 'postal');
+    const deliveryLocationAddrs = currentAddresses.filter((a) => a.addressType === 'deliveryLocation');
 
     await supabaseAdmin.from('tga_rto_addresses').delete().eq('tenant_id', tenantIdNum).eq('rto_code', rtoId);
 
-    const addressRows = [...headOfficeAddrs, ...postalAddrs].map((addr: any) => ({
+    const addressRows = [...headOfficeAddrs, ...postalAddrs].map((addr) => ({
       tenant_id: tenantIdNum, rto_code: rtoId, address_type: addr.addressType,
       address_line_1: addr.address?.line1 || addr.line1 || null, address_line_2: addr.address?.line2 || addr.line2 || null,
       suburb: addr.address?.suburb || addr.suburb || null, state: addr.address?.state || addr.state || null,
@@ -730,7 +875,7 @@ serve(async (req) => {
 
     await supabaseAdmin.from('tga_rto_delivery_locations').delete().eq('tenant_id', tenantIdNum).eq('rto_code', rtoId);
 
-    const deliveryRows = deliveryLocationAddrs.map((addr: any) => ({
+    const deliveryRows = deliveryLocationAddrs.map((addr) => ({
       tenant_id: tenantIdNum, rto_code: rtoId,
       location_name: addr.address?.locationName || addr.locationName || 'Unnamed Location',
       address_line_1: addr.address?.line1 || addr.line1 || null, address_line_2: addr.address?.line2 || addr.line2 || null,

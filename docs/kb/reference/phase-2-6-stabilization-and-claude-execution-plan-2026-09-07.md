@@ -148,6 +148,19 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   permission classifier. Logged as a standing rule: future write-testing on
   this plan uses Demo RTO, a seeded tenant, or an inactive tenant — never
   whatever real tenant happens to have convenient data.
+- **P5-A batch 2/3 (`tga-rto-sync`, 43 findings), merged.**
+  [#968](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/968).
+  Rather than casting every property access to `unknown` (which would
+  have forced assertions at ~150 downstream sites), modelled the actual
+  TGA REST API shapes (`TgaScopeItem`, `TgaOrgData` + its nested
+  collection types, `TgaStagingRow`). All 43 fixes are pure
+  type-annotation changes — verified via full diff review plus a
+  standalone `tsc --noEmit` pass against a stubbed copy of the file (0
+  errors), since `supabase/functions/**` isn't covered by either
+  tsconfig and has never actually been type-checked otherwise. Added a
+  new `auth-gate.test.mjs` (function had no prior test coverage).
+  Post-merge Edge-deploy check pending (per `AGENTS.md`'s "Supabase
+  deployment workflow" — confirm deployed version/source via Supabase MCP).
 - **P5-A batch 1/3 (6 single-finding Edge Functions), merged.**
   [#967](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/967).
   Fixed `add-missing-packages`, `bulk-send-invitations`,
@@ -194,7 +207,7 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   linter alone would not have caught. Also surfaced (left alone, out of
   scope) 6 pre-existing type errors in two untouched `_shared` files.
   Added `auth-gate.test.mjs` (function had zero prior test coverage).
-  **P5-A is now fully addressed pending these 3 PRs merging** (#967, #968,
+  **P5-A is now fully complete** — all 3 PRs merged (#967, #968,
   #970 — 6 + 43 + 76 = 125 of the 166 baseline `no-explicit-any` findings;
   the remaining 41 were the isolation-test findings via P1-C and the two
   frontier frontend files already resolved earlier).
@@ -236,20 +249,19 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   dropdowns built on `public.users` list system/test/bulk-operation accounts
   unfiltered — logged as RBAC v6 plan §13 item 14, not actioned here.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-D, P5-A batch 2/3 (`tga-rto-sync`, #968), the
-  rest of P6-B, P7 — several of these require live-schema investigation,
-  product/security decisions, or their own separately authorized packets
-  per §1's rules.
+  infra decision), P3-A, P4-D, the rest of P6-B, P7 — several of these
+  require live-schema investigation, product/security decisions, or their
+  own separately authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
 duplicates, typecheck 0 errors. The P6-A retirement's own drop from 166→128
 errors and 243→240 routes reflects the retired page's own `any` findings
-and its 3 removed routes, not a regression. **#970, #975, #976, and #967
-have since merged**; only #968 (`tga-rto-sync`, 43 findings) remains
-pending. Once it merges, this brings the count to 3 (128 minus 125 across
-the three P5-A batches) — the residual 3 being `generate-meeting-recurrence`
-(1, deliberately excluded, tied to its own L10 #25 auth-review packet) and
+and its 3 removed routes, not a regression. **All three P5-A batches
+(#967, #968, #970), P4-B/P6-B (#975), and P4-C (#976) have now merged** —
+this brings the count to 3 (128 minus 125 across the three P5-A batches) —
+the residual 3 being `generate-meeting-recurrence` (1, deliberately
+excluded, tied to its own L10 #25 auth-review packet) and
 `InviteUserDialog.tsx`/`AddWorkboardItemDialog.tsx` (2, per §8's own P5-A
 item 2-3, requiring reachability confirmation and a bounded cross-schema
 adapter respectively — not yet started). The route count (240) and
