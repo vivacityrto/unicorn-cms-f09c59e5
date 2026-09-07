@@ -42,7 +42,7 @@ request; it is not an application-level success assertion.
 |---:|---|---|---:|---:|---|---|
 | 3 | `seed-compliance-tasks-nightly` | `0 2 * * *` | 30 | 8 | 22 recent successes; older failures used an invalid `system_job_runs` status | Keep; monitor |
 | 4 | `audit-24hr-confirmation` | `0 21 * * *` | 30 | 0 | Legacy function writes obsolete `notification_schedule.payload` if a matching appointment exists | Retire or migrate |
-| 5 | `audit-evidence-reminders` | `0 22 * * *` | 30 | 0 | Legacy function filters `evidence_requests.status = 'sent'`; no current consumer verified | Retire or migrate |
+| 5 | `audit-evidence-reminders` | `0 22 * * *` | 30 | 0 | Legacy function filters `evidence_requests.status = 'sent'`; successful SQL invocation does not prove delivery | Retire or migrate |
 | 6 | `audit-flag-overdue-chcs` | `0 0 1 * *` | 1 | 1 | Fails: `notification_schedule.payload` does not exist | Retire after owner confirmation |
 | 8 | `generate-notifications-meetings-v2` | `0 * * * *` | 720 | 0 | Current notification generator | Keep |
 | 9 | `generate-notifications-daily-v2` | `5 0 * * *` | 30 | 0 | Current notification generator | Keep |
@@ -92,9 +92,19 @@ following `SECURITY DEFINER` functions still reference it:
 - `audit_send_evidence_reminders()` — uses a documented status mismatch and
   calls the email Edge Function directly.
 
-`notification_audit_log` remains present but has no current frontend consumer
-identified in this pass. Dropping either table requires a separate dependency,
-retention and rollback review.
+`notification_schedule` is also referenced by the current
+`process-notification-queue` Edge Function and `send-automated-email`; it is
+not safe to drop as part of M2. `notification_audit_log` is written by the
+current `process-notification-outbox` Edge Function even though no frontend
+consumer was identified in this pass. Dropping either table requires a
+separate dependency, retention and rollback review.
+
+M2 read-only preflight confirmed the exact production jobs and their recent
+run evidence before the corrective migration was authored. Jobs 4 and 5
+reported `succeeded`/`1 row` but that only proves the SQL invocation completed;
+job 6 failed on the missing `notification_schedule.payload` column. The M2
+migration unschedules only the three exact job names and preserves all legacy
+tables/functions for the later M3 decision.
 
 ## Migration replay inventory
 

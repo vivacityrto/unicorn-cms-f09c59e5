@@ -26,6 +26,15 @@ cron/HTTP side effects, migration-time mutations, and edits to existing
 migration history unless a concrete, short-lived allowlist entry matches.
 No hosted state changed. M2 remains product-owner gated.
 
+**2026-09-07, session 4 — Packet M2 authored after product-owner approval:**
+read-only production preflight confirmed jobs 4–6 and their failure/success
+evidence, and found that the notification tables still have active Edge
+Function readers/writers. Added a guarded, idempotent corrective migration to
+unschedule only the three legacy audit job names, with an ID-reuse check and a
+postflight assertion. Tables and helper functions are intentionally retained
+for M3. No hosted state changed; the migration is ready for separately
+authorized application.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then
