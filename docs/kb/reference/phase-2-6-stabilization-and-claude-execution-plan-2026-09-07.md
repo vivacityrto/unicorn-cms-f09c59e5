@@ -4,7 +4,7 @@
 >
 > **Prepared:** 2026-09-07
 >
-> **Evidence base:** `origin/main@b24bbca57`, the four-initiative audit supplied on 2026-09-07, current lint/typecheck/routes/KB-link checks, and the Phase 2.6 investigation
+> **Evidence base:** `origin/main@b24bbca57`, the four-initiative audit supplied on 2026-09-07, current lint/typecheck/routes/KB-link checks, the Phase 2.6 investigation, and read-only Supabase MCP checks of production plus the `tenant-isolation-qa` preview branch
 >
 > **Parent plan:** [Codebase Optimization and KB Renewal Plan](codebase-optimization-plan-2026-08-28.md)
 >
@@ -428,7 +428,178 @@ Historical Phase 2.5 cleanup is documented, but current zero-residue status must
 
 The hardened suite must use a unique run ID, reverse-order cleanup, failure propagation, and post-cleanup assertions. A green test with skipped live RLS coverage is not an exit condition.
 
-## 12. Definition of done
+## 12. Cron and migration stabilization packets
+
+This track is a prerequisite for the safe QA environment required by P1-C and
+is also the migration-safety work needed before Phase 3. It is operational and
+schema work, not a Phase 2.6 frontend-retirement cohort. No packet below
+authorizes a production change by itself.
+
+### Current evidence and safety boundary
+
+- Production has 27 active `pg_cron` jobs. The current jobs are a mixture of
+  healthy maintenance, partially working forecast jobs, and legacy audit
+  reminder jobs.
+- The persistent `tenant-isolation-qa` preview branch is reusable, but it is
+  currently unhealthy: it has no `pg_cron` extension, only 17 of production's
+  329 migrations applied, and stops at
+  `20260714074920_enable_retention_and_risk_forecast_cron.sql` with
+  `schema "cron" does not exist`.
+- That migration also contains a production URL. Enabling `pg_cron` in QA or
+  replaying it without an environment guard could make QA invoke production
+  Edge Functions. Do not enable the extension, inject a service-role key, reset
+  the branch, or apply a migration until the packets below are reviewed.
+- An HTTP cron run marked successful only proves that `pg_net` accepted the
+  request; it does not prove that the Edge Function produced valid output.
+
+### Cron disposition ledger
+
+| Jobs | Current evidence | Disposition |
+|---|---|---|
+| `audit-flag-overdue-chcs` (#6) | Repeatedly fails because `notification_schedule.payload` no longer exists | Retire after owner confirmation |
+| `audit-evidence-reminders` (#5) | Legacy/half-shipped path; its status filter does not match the current evidence contract | Retire or formally migrate |
+| `audit-24hr-confirmation` (#4) | Legacy path using the removed `notification_schedule.payload` contract | Retire or formally migrate |
+| `run-tenant-risk-forecast` (#20) and `run-retention-forecast` (#21) | Active requests but zero forecast rows | Product decision: repair and prove output, or retire |
+| `run-stage-health-monitor` (#15) | Writes snapshots, but progress is universally zero and health is not trustworthy | Contain and fix; do not silently retire |
+| `run-workload-forecast` (#14) | Workload snapshots exist, but burn-forecast output is empty | Fix and add output-health checks |
+| `regulator-watch-check` (#29) | Active function with no current repository owner/reference found | Ownership review |
+| Bulk-document reclaim/purge (#18/#19) | Current maintenance functions exist | Keep unless a usage audit proves they are obsolete |
+| Notifications, calendar, invites, Ask Viv, Xero, activity digest, locks, and stalled-job recovery | Current consumers or operational evidence exist | Keep |
+
+The immediate retirement candidate group is jobs 4, 5, and 6. Jobs 20 and 21
+must receive an explicit repair-or-retire decision; they must not remain active
+as apparently successful no-op jobs.
+
+### Packet M0 — read-only cron and migration inventory
+
+Produce a versioned inventory before changing hosted state. Capture, per job:
+
+- schedule, active state, target function/SQL, migration origin and target URL;
+- recent `cron.job_run_details`, including exact failures;
+- database function and Edge Function existence, callers, grants and ownership;
+- tables written and freshness/row-count evidence; and
+- repository references, product owner and proposed disposition.
+
+Also inventory migration-time `INSERT`, `UPDATE`, `DELETE`, backup-table,
+`cron.*`, `pg_net`, hard-coded URL and hard-coded-ID operations. The inventory
+must distinguish data changes that execute during migration from function bodies
+that only write when later invoked.
+
+**Exit:** a committed Markdown/JSON matrix exists, with every active job and
+every migration risk classified as keep, fix, retire, or owner decision.
+
+### Packet M1 — migration safety scanner and CI guardrail
+
+Add a repository script (for example, `scripts/audit-migrations.mjs`) that
+scans `supabase/migrations/**` and reports:
+
+- production project references and literal `supabase.co` URLs;
+- `cron.schedule`, `cron.unschedule`, `net.http_*` and extension assumptions;
+- migration-time DML, destructive predicates, backup tables and hard-coded IDs;
+- named backfill, seed, requeue, duplicate-removal and cleanup migrations; and
+- whether each operation is replay-safe in an empty QA project.
+
+Add a CI check that rejects new production URLs or cron registrations unless a
+short-lived, reviewed allowlist entry includes the target project, owner,
+reason and expiry. Do not rewrite already-applied migration history as a quick
+fix.
+
+**Exit:** a fresh migration cannot silently schedule production work or perform
+an unreviewed data mutation during QA replay.
+
+### Packet M2 — controlled retirement of legacy audit jobs
+
+After product-owner confirmation, add one idempotent corrective migration or
+controlled Supabase operation that unschedules jobs 4, 5 and 6 and records the
+reason. Guard the operation for environments where `cron` is absent, and
+postflight-assert that the named jobs are gone.
+
+Do not drop `notification_schedule`, `notification_audit_log`, or their helper
+functions in the same change. First prove there are no current readers,
+writers, grants, triggers or retention obligations; then handle object removal
+in a separately reviewed packet with an auditable rollback/restore procedure.
+
+### Packet M3 — notification legacy decision
+
+Choose exactly one path:
+
+1. migrate audit reminders to the current notification-outbox/send-email path,
+   with a corrected schema contract and regression tests; or
+2. retire the audit reminder functions, schedules and legacy notification
+   structures after dependency and retention sign-off.
+
+If retained, the `payload` mismatch and the evidence status-filter mismatch are
+blocking correctness defects, not typing cleanup.
+
+### Packet M4 — forecast and health output integrity
+
+- Add Client Health H0.0 containment so invalid stage-health data is shown as
+  unavailable/data-repair-in-progress rather than relabelled as trustworthy.
+- For jobs 14 and 15, define freshness, row-count and non-zero-output
+  expectations; make violations fail visibly instead of recording a successful
+  no-op.
+- For jobs 20 and 21, repair and prove forecast inserts, or unschedule them
+  after the product decision.
+- Run authenticated, read-only Playwright checks for `/dashboard`,
+  `/executive`, `/triage-dashboard` and the affected Ask Viv surface. Do not
+  seed or mutate dashboard data.
+
+### Packet M5 — environment-safe migration replay
+
+Stop adding environment-specific cron registration to ordinary schema
+migrations. Move scheduling to a controlled deployment step that derives the
+target URL from the selected project, defaults to no schedules in preview/QA,
+and refuses unapproved project refs.
+
+For the existing failed QA branch, select and document one replay strategy
+before acting:
+
+- a reviewed replay-safe patch/baseline that lets unapplied migrations run
+  without cron or production URLs; or
+- a clean schema baseline followed by only the approved, environment-neutral
+  migrations.
+
+Do not reset, delete or mark migrations applied in QA until that strategy is
+approved and the resulting schema is checked against the migration inventory.
+
+**Exit:** the preview branch is healthy, migration-complete, contains no cron
+jobs by default, and cannot call production as a side effect of replay.
+
+### Packet M6 — P1-C QA authorization and isolation proof
+
+Only after M0–M5:
+
+- confirm QA project URL and project ref are on the disposable-project
+  allowlist;
+- create a QA-only service-role secret and keep it out of ordinary CI;
+- run P1-C with unique run IDs, project-level serialization, strict reverse
+  cleanup, cleanup-failure propagation and residue assertions; and
+- add the protected manual/nightly workflow only after repeated clean runs.
+
+The workflow must be manual/nightly, protected by an Actions environment, and
+unavailable to forked pull requests. A production service-role key is never a
+valid substitute.
+
+### Verification contract for M0–M6
+
+Every implementation PR runs the repository gates appropriate to its scope:
+
+```text
+npm run lint:ratchet
+npm run typecheck
+npm run test:frontend
+npm run test:edge
+npm run build
+npm run check:kb-links
+```
+
+Migration packets additionally require Supabase MCP preflight/postflight
+queries, migration-history checks, exact cron/job assertions, and a fresh
+zero-residue inventory. Playwright is read-only and risk-scoped; it is required
+for dashboard, auth, route or query-behavior changes, but is not a substitute
+for the live RLS suite.
+
+## 13. Definition of done
 
 This stabilization programme is complete when:
 
@@ -443,8 +614,8 @@ This stabilization programme is complete when:
 - the task-dialog consolidation has parity tests and read-only browser evidence; and
 - the Phase 3 lifecycle pilot has characterization tests, a measured boundary, and no authorization or tenant-scope drift.
 
-## 13. Claude Code handoff prompt
+## 14. Claude Code handoff prompt
 
 ```text
-Execute docs/kb/reference/phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md one packet at a time from fresh origin/main worktrees. Begin with P0 truth sync and open-PR disposition; preserve PR #612’s unique dashboard-timeout evidence before closing it. Do not merge unattended. For every implementation PR, perform reachability and generated-schema checks, acquire the shared heavy-command lock, run lint:ratchet, typecheck, frontend tests, Edge tests, build, and the applicable KB/routes/Playwright checks. Keep database, RLS, RPC, grant, permission, tenant-scope and production-data work separately authorized. Never place a production service-role key in ordinary CI. Update the L10, residue and execution ledgers as evidence changes. Stop on ambiguous authorization, schema, ownership, product, or browser evidence and report the exact decision required.
+Execute docs/kb/reference/phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md one packet at a time from fresh origin/main worktrees. Begin with P0 truth sync and open-PR disposition; preserve PR #612’s unique dashboard-timeout evidence before closing it. Treat M0–M6 as the cron/migration safety track that must precede P1-C's QA credential and workflow. Do not merge unattended. For every implementation PR, perform reachability and generated-schema checks, acquire the shared heavy-command lock, run lint:ratchet, typecheck, frontend tests, Edge tests, build, and the applicable KB/routes/Playwright checks. Keep database, RLS, RPC, grant, permission, tenant-scope, cron, migration and production-data work separately authorized. Never place a production service-role key in ordinary CI. Update the L10, residue, cron inventory and execution ledgers as evidence changes. Stop on ambiguous authorization, schema, ownership, product, or browser evidence and report the exact decision required.
 ```
