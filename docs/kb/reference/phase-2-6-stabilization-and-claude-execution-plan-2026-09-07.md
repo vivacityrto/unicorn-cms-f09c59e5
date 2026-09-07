@@ -56,6 +56,13 @@ branches have no repository caller and currently reference the removed
 `payload` column. Recommendation: execute the staged retirement path in Packet
 M3-A through M3-C below, retaining `notification_audit_log`.
 
+**2026-09-07, session 7 — M3-A applied after explicit authorization:**
+the new migration dropped only the three legacy audit routines. Postflight
+confirmed no matching routines remain, jobs 4–6 remain absent, both legacy
+tables remain present/RLS-enabled with zero rows, and the notification outbox
+remains unchanged at 738 failed and 242 skipped rows. Supabase recorded
+`retire_legacy_audit_functions` as migration `20260907052028`. M3-B is next.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then
@@ -594,7 +601,9 @@ Prepare an idempotent migration that drops only:
 Preflight must re-check that the functions are service-role-only, no trigger or
 view references them, and jobs 4–6 remain absent. Apply only after explicit
 production authorization; postflight must assert that the three routines no
-longer exist and that both legacy tables are unchanged.
+longer exist and that both legacy tables are unchanged. **Completed
+2026-09-07:** migration `retire_legacy_audit_functions` was applied and
+postflight passed; no table, outbox, or cron state changed.
 
 #### M3-B — retire dormant queue references
 

@@ -176,7 +176,7 @@
       }
     },
     "legacyFunctions": {
-      "decision": "drop-after-explicit-authorization",
+      "decision": "retired-m3-a-2026-09-07",
       "routines": [
         "public.audit_flag_overdue_chcs()",
         "public.audit_send_24hr_confirmation()",
@@ -186,7 +186,9 @@
       "repositoryCallers": [],
       "anonExecute": false,
       "authenticatedExecute": false,
-      "serviceRoleExecute": true
+      "serviceRoleExecute": true,
+      "postflightRoutinesRemaining": [],
+      "migrationHistoryVersion": "20260907052028"
     },
     "outboxTerminalRows": {
       "failed": 738,
@@ -194,5 +196,5 @@
       "sent": 0
     }
   },
-  "nextPacket": "M3-A (legacy function retirement approval)"
+  "nextPacket": "M3-B (dormant edge-path retirement)"
 }
