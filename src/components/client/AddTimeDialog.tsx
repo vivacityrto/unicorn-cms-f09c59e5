@@ -31,7 +31,6 @@ import { NotifyClientCheckbox } from './NotifyClientCheckbox';
 import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import type { ScopeTag } from '@/hooks/useTenantMemberships';
-import type { TablesInsert } from '@/integrations/supabase/types';
 
 interface WorkTypeOption {
   code: string;
@@ -207,29 +206,26 @@ export function AddTimeDialog({
         .order('first_name')
         .limit(200);
 
-      // Fetch tenant users via tenant_users junction
+      // Fetch tenant users via tenant_users junction. Two-step fetch —
+      // tenant_users has no `user_uuid` column (the real column is
+      // `user_id`, FK'd to users.user_uuid via tenant_users_user_id_fkey);
+      // the previous embedded select 400'd on every call, silently leaving
+      // tenant contacts out of this list.
       let tenantUsers: TeamMember[] = [];
       if (tenantId) {
-        // The result type is passed explicitly as a generic argument to
-        // .select() because this nested-embed shape otherwise makes the
-        // Supabase client's automatic embed-inference recurse too deep
-        // ("Type instantiation is excessively deep and possibly infinite").
-        type TenantUserWithProfile = {
-          user_uuid: string;
-          users: { user_uuid: string; first_name: string | null; last_name: string | null; avatar_url: string | null; disabled: boolean | null } | null;
-        };
         const { data: tuData } = await supabase
           .from('tenant_users')
-          .select<
-            'user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)',
-            TenantUserWithProfile
-          >('user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)')
+          .select('user_id')
           .eq('tenant_id', tenantId)
           .limit(200);
-        if (tuData) {
-          tenantUsers = tuData
-            .map((tu) => tu.users)
-            .filter((u): u is NonNullable<typeof u> => !!u && !u.disabled)
+        const tenantUserIds = [...new Set((tuData || []).map(tu => tu.user_id))];
+        if (tenantUserIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('users')
+            .select('user_uuid, first_name, last_name, avatar_url, disabled')
+            .in('user_uuid', tenantUserIds);
+          tenantUsers = (profiles || [])
+            .filter((u): u is NonNullable<typeof u> => !u.disabled)
             .map((u) => ({
               user_uuid: u.user_uuid,
               first_name: u.first_name,
@@ -919,26 +915,21 @@ export function AddTimeDialog({
           activePackages={noteFormActivePackages}
           onSave={async (data) => {
             // Insert the note here, then link the prelinked time entry.
-            // KNOWN BUGS (pre-existing, found while removing `any` here - see
-            // execution-efficiency-log.md), one fixed and two left:
-            // - FIXED: this set `user_id` (notes' legacy numeric column, wrong
-            //   type for the auth UUID) and never set `created_by`, which is
-            //   required with no DB default - useNotes.tsx's createNote (the
-            //   canonical insert path) sets created_by and never touches
-            //   user_id/user_uuid at all. Matched to that canonical shape.
-            // - NOT FIXED: `client_id` and `package_instance_id` are not real
-            //   columns on `notes` at all (confirmed against generated types -
-            //   the real columns are `package_id`/`parent_id`/`parent_type`).
-            //   Every insert through this exact code path has always been
-            //   rejected by PostgREST with an unknown-column error. Left as an
-            //   honest cast rather than guessing the intended parent_type/
-            //   parent_id mapping, which needs a product decision (out of
-            //   scope for a type-only batch).
+            // `client_id` and `package_instance_id` are not real columns on
+            // `notes` (confirmed against generated types) - every insert
+            // through this code path 400'd with an unknown-column error.
+            // Fixed to match the real parent_type/parent_id/package_id shape
+            // useNotes.tsx's createNote and ClientStructuredNotesTab.tsx use
+            // for the same package-instance-vs-tenant distinction.
+            const hasPackageInstance = data.packageInstanceId !== 'none';
+            const parentId = hasPackageInstance ? Number(data.packageInstanceId) : tenantId;
             const { data: inserted, error } = await supabase
               .from('notes')
               .insert({
                 tenant_id: tenantId,
-                client_id: clientId,
+                parent_type: hasPackageInstance ? 'package_instance' : 'tenant',
+                parent_id: parentId,
+                package_id: hasPackageInstance ? (selectedInstance?.package_id ?? null) : null,
                 created_by: user?.id ?? '',
                 title: data.title || null,
                 note_details: data.content,
@@ -946,9 +937,8 @@ export function AddTimeDialog({
                 priority: data.priority,
                 status: data.status,
                 is_pinned: data.isPinned,
-                package_instance_id: data.packageInstanceId !== 'none' ? Number(data.packageInstanceId) : (selectedInstance?.id ?? null),
                 timeentry_id: pendingTimeEntryId,
-              } as unknown as TablesInsert<'notes'>)
+              })
               .select('id')
               .single();
             if (error) throw error;

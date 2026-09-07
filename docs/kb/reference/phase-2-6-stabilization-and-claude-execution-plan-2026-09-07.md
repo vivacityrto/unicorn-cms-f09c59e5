@@ -14,6 +14,65 @@
 
 ## Progress log
 
+**2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
+migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
+and its JSON companion. No hosted state changed. M1 is next.
+
+**2026-09-07, session 3 — Packet M1 implemented:** added the repository
+migration scanner, unit tests, empty reviewed-exception allowlist, CI
+guardrail, and usage documentation. The full-tree audit reports historical
+findings without failing; changed-only CI mode blocks new production URLs,
+cron/HTTP side effects, migration-time mutations, and edits to existing
+migration history unless a concrete, short-lived allowlist entry matches.
+No hosted state changed. M2 remains product-owner gated.
+
+**2026-09-07, session 4 — Packet M2 authored after product-owner approval:**
+read-only production preflight confirmed jobs 4–6 and their failure/success
+evidence, and found that the notification tables still have active Edge
+Function readers/writers. Added a guarded, idempotent corrective migration to
+unschedule only the three legacy audit job names, with an ID-reuse check and a
+postflight assertion. Tables and helper functions are intentionally retained
+for M3. The migration was then applied in session 5 after separate explicit
+authorization.
+
+**2026-09-07, session 5 — Packet M2 applied after explicit authorization:**
+the guarded migration unscheduled only `audit-24hr-confirmation` (job 4),
+`audit-evidence-reminders` (job 5), and `audit-flag-overdue-chcs` (job 6) in
+production. Postflight confirmed 24 active jobs remain, zero rows for the
+retired names, unchanged neighboring schedules, and migration-history entry
+`20260907050651`. Historical run details remain; notification tables and
+helper functions were not changed. M3 is next.
+
+**2026-09-07, session 6 — Packet M3 dependency review completed (read-only):**
+production has zero rows in both `notification_schedule` and
+`notification_audit_log`; all three legacy audit functions are executable only
+by `service_role`/`postgres`, with no triggers or views depending on either
+table. The three database functions have no active schedule after M2 and no
+repository caller. `notification_audit_log` is nevertheless written by the
+active `process-notification-outbox` worker and must remain. `notification_schedule`
+is still read by the deployed but unscheduled `process-notification-queue`
+worker and written by the three audit branches of `send-automated-email`; those
+branches have no repository caller and currently reference the removed
+`payload` column. Recommendation: execute the staged retirement path in Packet
+M3-A through M3-C below, retaining `notification_audit_log`.
+
+**2026-09-07, session 7 — M3-A applied after explicit authorization:**
+the new migration dropped only the three legacy audit routines. Postflight
+confirmed no matching routines remain, jobs 4–6 remain absent, both legacy
+tables remain present/RLS-enabled with zero rows, and the notification outbox
+remains unchanged at 738 failed and 242 skipped rows. Supabase recorded
+`retire_legacy_audit_functions` as migration `20260907052028`. M3-B is next.
+
+**2026-09-07, session 8 — M3-B implemented:** removed the three dormant
+`notification_schedule` writes from `send-automated-email` while preserving
+its three email response paths, and replaced the unused
+`process-notification-queue` worker with a credential-free HTTP 410 retirement
+stub. The shared cron-auth inventory no longer treats the retired worker as an
+active cron function; `notification_schedule` and the active
+`process-notification-outbox` contract remain intact for M3-C/M3-D. Static
+regression tests pass. Production state is unchanged pending reviewed PR
+merge, after which the native Supabase GitHub sync will deploy the Edge change.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then
@@ -89,7 +148,7 @@
   permission classifier. Logged as a standing rule: future write-testing on
   this plan uses Demo RTO, a seeded tenant, or an inactive tenant — never
   whatever real tenant happens to have convenient data.
-- **P5-A batch 1/3 (6 single-finding Edge Functions), pending merge.**
+- **P5-A batch 1/3 (6 single-finding Edge Functions), merged.**
   [#967](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/967).
   Fixed `add-missing-packages`, `bulk-send-invitations`,
   `create-client-audit`, `create-tasks-from-minutes`, `dashboard-test-seed`,
@@ -109,18 +168,96 @@
   pre-existing `bulk-send-invitations` bug: 3 call sites call its own
   `jsonResponse(req, status, body)` helper without `req`, so those
   validation-failure paths throw instead of returning a structured error.
+  Post-merge Edge-deploy check pending (per `AGENTS.md`'s "Supabase
+  deployment workflow" — confirm deployed version/source via Supabase MCP).
+- **P5-A batch 3/3 (`ask-viv-assistant`, 76 findings, the largest remaining
+  file), merged and deploy-verified.**
+  [#970](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/970),
+  merged at commit `db2c46105` (05:29 UTC). Confirmed live via Supabase MCP:
+  deployed version advanced 147→148 at 05:41 UTC (~12 min sync lag via
+  Supabase's native GitHub sync integration, confirmed independently by
+  Codex the same day — see `AGENTS.md`'s "Supabase deployment workflow"
+  section, correction pending in PR #972), source verified byte-identical
+  to the merged commit, and 3 live Playwright test conversations returned
+  correct real data with zero new console errors and clean production
+  logs.
+  Staff-only agentic tool-calling assistant (21 tools in one `executeTool`
+  dispatcher) — the client portal calls a separate, untouched
+  `ask-viv-assistant-client` function. Modelled 20 local row-shape
+  interfaces, one per distinct query/RPC result shape, replacing per-
+  callback `any` annotations with a single cast at first read (same
+  pattern as #968). The standalone `tsc --noEmit` pass against the real,
+  unmodified `_shared/**` dependency tree (not just a stub) surfaced two
+  real narrowing gaps this fixed (`rank_clients_by_activity`/
+  `get_activity_trend` both divided a dynamically-keyed column value
+  without narrowing `unknown` to `number` first) — genuine bugs the
+  linter alone would not have caught. Also surfaced (left alone, out of
+  scope) 6 pre-existing type errors in two untouched `_shared` files.
+  Added `auth-gate.test.mjs` (function had zero prior test coverage).
+  **P5-A is now fully addressed pending these 3 PRs merging** (#967, #968,
+  #970 — 6 + 43 + 76 = 125 of the 166 baseline `no-explicit-any` findings;
+  the remaining 41 were the isolation-test findings via P1-C and the two
+  frontier frontend files already resolved earlier).
+  **Process note:** discovered mid-batch that Edge Functions on this
+  project deploy via Supabase's native GitHub sync integration on merge
+  to `main` (not a repo-committed Action — none of `.github/workflows/*`
+  reference deploy/supabase), contradicting `AGENTS.md`'s current "no
+  automatic Supabase deployment workflow" claim. Correcting that claim is
+  deliberately deferred until the mechanism is empirically confirmed on a
+  real merge (per Carl's instruction), not assumed from this discovery
+  alone. No live Playwright pass was done pre-merge for this reason —
+  there's nothing new deployed to exercise yet; live verification happens
+  after merge once the sync integration deploys it.
+- **P4-B (invalid relationship reads) done, plus a P6-B retirement it
+  surfaced, pending merge.** Two genuine `packages:package_id`-embed no-FK
+  bugs fixed (`StagePreviewDialog.tsx`, `BulkGenerateDocumentsDialog.tsx`) —
+  same two-step-fetch pattern as `GeneratedDocumentsTab.tsx`'s existing fix,
+  no speculative FK added. Fixing a third instance in
+  `TenantDocuments.tsx` was paused mid-task after Carl noticed the page for
+  the first time; reachability triage (matching the P6-A lesson above)
+  found `TenantDocuments.tsx`, `TenantDocumentsHub.tsx`,
+  `TenantDocumentDetail.tsx`, and `TenantDocumentDetailWrapper.tsx` (+ their
+  3 routes) were unreachable dead code whose only live equivalent
+  (`ClientDetail.tsx`'s embedded Documents tab) was already fixed. Retired
+  all 4 files and redirected the 3 routes instead of fixing dead code — see
+  `dead-code-feature-consolidation-investigation-2026-09-04.md` §7quater and
+  L10 item #17's update for the full investigation. Verified live:
+  `StagePreviewDialog.tsx`'s fixed query and all 3 retirement redirects,
+  zero console errors; `BulkGenerateDocumentsDialog.tsx`'s own dialog could
+  not be opened live (`package_stage_documents` has zero non-deleted rows
+  in production right now, for any stage — a pre-existing, unrelated data
+  fact) so its fix rests on static verification + code-pattern review only,
+  disclosed as a coverage gap rather than silently claimed as tested.
+- **P4-C (identity and lookup reads) done and merged (PR #976).** Process
+  Audit Log (#20), Edit/Add Time person lookup (#21), and `AddTimeDialog`'s
+  note-insert (unnumbered) all fixed against confirmed live schema — none
+  needed a decision packet. See Packet P4-C's own section (§7) for full
+  detail. Also surfaced a parked, explicitly-deferred finding: person-picker
+  dropdowns built on `public.users` list system/test/bulk-operation accounts
+  unfiltered — logged as RBAC v6 plan §13 item 14, not actioned here.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-B/C/D, P5-A batches 2–3 (`tga-rto-sync`,
-  `ask-viv-assistant`), P6-B, P7 — several of these require live-schema
-  investigation, product/security decisions, or their own separately
-  authorized packets per §1's rules.
+  infra decision), P3-A, P4-D, P5-A batch 2/3 (`tga-rto-sync`, #968), the
+  rest of P6-B, P7 — several of these require live-schema investigation,
+  product/security decisions, or their own separately authorized packets
+  per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
 duplicates, typecheck 0 errors. The P6-A retirement's own drop from 166→128
 errors and 243→240 routes reflects the retired page's own `any` findings
-and its 3 removed routes, not a regression. PR #967 (pending merge) will
-bring this to 122 errors once merged (128 minus the 6 fixed in this batch).
+and its 3 removed routes, not a regression. **#970, #975, #976, and #967
+have since merged**; only #968 (`tga-rto-sync`, 43 findings) remains
+pending. Once it merges, this brings the count to 3 (128 minus 125 across
+the three P5-A batches) — the residual 3 being `generate-meeting-recurrence`
+(1, deliberately excluded, tied to its own L10 #25 auth-review packet) and
+`InviteUserDialog.tsx`/`AddWorkboardItemDialog.tsx` (2, per §8's own P5-A
+item 2-3, requiring reachability confirmation and a bounded cross-schema
+adapter respectively — not yet started). The route count (240) and
+retirement history above are current as of the P4-B/P6-B retirement noted
+above — this whole paragraph's error/warning counts are otherwise a
+snapshot around #970's merge and not re-verified against every later commit;
+re-run `npm run lint:ratchet`-adjacent full-repo lint before trusting the
+exact numbers if it's been a while.
 
 ## 1. Outcome and operating principles
 
@@ -320,11 +457,56 @@ Address Stage Preview (#5), Bulk Generate (#8), and Tenant Documents (#17) by re
 
 **Required evidence:** live foreign-key catalog, generated types, forbidden/empty/error handling, and query-count/performance note.
 
+**Status (2026-09-07): done, pending merge.** #5 and #8 fixed via the
+two-step-fetch pattern (batched `Map` lookups, `pg_constraint`-verified no
+real FK exists, matching the pattern `GeneratedDocumentsTab.tsx` already
+used). #17 turned out to be dead code — see the P6-B retirement below and
+`dead-code-feature-consolidation-investigation-2026-09-04.md` §7quater; no
+separate fix was made or is needed. Live evidence: #5's fixed query and
+#17's retirement redirects verified with zero console errors; #8's dialog
+could not be opened live (`package_stage_documents` has zero non-deleted
+rows in production for any stage right now — pre-existing, unrelated to
+this PR) so it rests on static verification only, disclosed as a coverage
+gap.
+
 ### Packet P4-C — identity and lookup reads
 
 Investigate and fix Process Audit Log (#20), Edit/Add Time person lookup (#21), and the unnumbered `AddTimeDialog` missing-parent-column issue. Confirm the actual identity columns and joins from the live schema before editing.
 
 **Stop condition:** if the correct identity model is unclear, produce a decision packet instead of guessing.
+
+**Status (2026-09-07): done, pending merge.** All three fixed — none needed
+a decision packet, the correct identity model was confirmed live via
+`pg_constraint`/`pg_get_functiondef` in every case:
+- **#20** (`useProcessAuditLog`): two-step fetch against `public.users` by
+  `user_uuid` (kept in sync with `auth.users.id` by the
+  `link_auth_user_to_profile` trigger), matching `useStageAuditLog.tsx`'s
+  existing pattern for the same actor-resolution problem.
+- **#21** (`EditTimeDialog.tsx`/`AddTimeDialog.tsx`): fixed the wrong
+  `tenant_users.user_uuid` → `user_id` column, plus a second bug found
+  alongside it — `EditTimeDialog.tsx`'s "Person" select was wired to the
+  wrong state (`vivacityStaff` instead of the already-merged `teamMembers`),
+  so even a correct query would never have surfaced tenant contacts there.
+- **`AddTimeDialog` note-insert** (unnumbered, L10's "also found" list):
+  `notes.client_id`/`package_instance_id` aren't real columns; replaced
+  with the real `parent_type`/`parent_id`/`package_id` shape, matching the
+  existing convention in `useNotes.tsx`'s `createNote` and
+  `ClientStructuredNotesTab.tsx` — an existing established mapping, not a
+  guess.
+
+Live-verified on Demo RTO (tenant 7547): #20 against a real process with 10
+audit entries; #21's Person/Notify dropdowns now list all 7 real tenant
+contacts; the note-insert fix end-to-end (real time entry + linked note
+created, verified via SQL, then deleted). Zero console errors throughout.
+Full detail: `l10-real-bugs-found-2026-09-04.md` items #15/#20/#21 and the
+execution-efficiency log's P4-C entry.
+
+**Parked, not part of this packet:** live-verifying these dropdowns
+surfaced that `public.users` person-pickers list system/bulk-operation/
+test accounts unfiltered alongside real people (e.g. "Bulk Generate",
+"Test", "Ghost", "K_Account" all appeared next to real staff/tenant
+contacts in the Notify dropdown). Logged as RBAC v6 plan §13 item 14 — a
+council-scoped decision, explicitly deferred by Carl, not actioned here.
 
 ### Packet P4-D — schema/product decision queue
 
@@ -382,6 +564,19 @@ At branch cut, regenerate the AST import graph, exact-export census, route manif
 Retain `usePackageUsage.tsx` and every live replacement identified in the Phase 2.6 register. Never delete an Audit page without UUID/deep-link characterization.
 
 **Exit:** every candidate is retired, consolidated, retained with rationale, or deferred; before/after LOC and graph metrics are recorded; no backend object is removed by frontend evidence alone.
+
+**Cohort done, 2026-09-07 (surfaced by P4-B, not from the named-cohort list
+above): `/tenant/:tenantId/document(s)...` route tree.**
+`TenantDocuments.tsx`, `TenantDocumentsHub.tsx`, `TenantDocumentDetail.tsx`,
+`TenantDocumentDetailWrapper.tsx` + 3 routes retired as zero-inbound —
+exhaustive `navigate()`/`Link to=`/route-manifest sweep found no real entry
+point, and the live equivalent (`ClientDetail.tsx`'s embedded Documents
+tab) was already fixed independently. Full writeup:
+`dead-code-feature-consolidation-investigation-2026-09-04.md` §7quater.
+Before/after metrics: 1,727→1,724 tracked files, 490,147→489,187 physical
+lines (−960). No backend object removed — `documents`,
+`document_versions`, `document_stage_links` all remain live schema used by
+the real equivalent.
 
 ## 9. Phase 3 pilot packets
 
@@ -459,9 +654,9 @@ authorizes a production change by itself.
 
 ### Current evidence and safety boundary
 
-- Production has 27 active `pg_cron` jobs. The current jobs are a mixture of
-  healthy maintenance, partially working forecast jobs, and legacy audit
-  reminder jobs.
+- Production has 24 active `pg_cron` jobs after M2 retired three legacy audit
+  schedules. The remaining jobs are a mixture of healthy maintenance and
+  partially working forecast/health jobs.
 - The persistent `tenant-isolation-qa` preview branch is reusable, but it is
   currently unhealthy: it has no `pg_cron` extension, only 17 of production's
   329 migrations applied, and stops at
@@ -488,9 +683,9 @@ authorizes a production change by itself.
 | Bulk-document reclaim/purge (#18/#19) | Current maintenance functions exist | Keep unless a usage audit proves they are obsolete |
 | Notifications, calendar, invites, Ask Viv, Xero, activity digest, locks, and stalled-job recovery | Current consumers or operational evidence exist | Keep |
 
-The immediate retirement candidate group is jobs 4, 5, and 6. Jobs 20 and 21
-must receive an explicit repair-or-retire decision; they must not remain active
-as apparently successful no-op jobs.
+M2 retired the former immediate retirement candidate group (jobs 4, 5, and 6).
+Jobs 20 and 21 still require an explicit repair-or-retire decision; they must
+not remain active as apparently successful no-op jobs.
 
 ### Packet M0 — read-only cron and migration inventory
 
@@ -509,6 +704,9 @@ that only write when later invoked.
 
 **Exit:** a committed Markdown/JSON matrix exists, with every active job and
 every migration risk classified as keep, fix, retire, or owner decision.
+
+**Artifact:** [Cron and Migration Inventory — 2026-09-07](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
+and its [machine-readable companion](../codebase-state/cron-and-migration-inventory-2026-09-07.json).
 
 ### Packet M1 — migration safety scanner and CI guardrail
 
@@ -529,12 +727,17 @@ fix.
 **Exit:** a fresh migration cannot silently schedule production work or perform
 an unreviewed data mutation during QA replay.
 
+**Implementation:** the scanner usage and reviewed-exception contract are
+documented in [Migration safety guardrail — 2026-09-07](../codebase-state/migration-safety-guardrail-2026-09-07.md).
+
 ### Packet M2 — controlled retirement of legacy audit jobs
 
 After product-owner confirmation, add one idempotent corrective migration or
 controlled Supabase operation that unschedules jobs 4, 5 and 6 and records the
 reason. Guard the operation for environments where `cron` is absent, and
-postflight-assert that the named jobs are gone.
+postflight-assert that the named jobs are gone. **Completed 2026-09-07:** the
+production migration is recorded as `retire_legacy_audit_cron_jobs`; postflight
+found zero retired jobs and 24 active jobs. Historical run records remain.
 
 Do not drop `notification_schedule`, `notification_audit_log`, or their helper
 functions in the same change. First prove there are no current readers,
@@ -543,15 +746,62 @@ in a separately reviewed packet with an auditable rollback/restore procedure.
 
 ### Packet M3 — notification legacy decision
 
-Choose exactly one path:
+The read-only dependency review supports a staged version of path 2 (retire),
+not migration to a new reminder workflow. Production has zero rows in both
+legacy tables. The three legacy database functions are service-role-only,
+unscheduled after M2, have no trigger/view dependency, and have no repository
+caller. `notification_audit_log` is not dead: the active
+`process-notification-outbox` worker writes success/failure delivery records to
+it, so it remains in the live notification contract. `notification_schedule`
+is dormant but cannot be dropped yet because the deployed
+`process-notification-queue` reads it and `send-automated-email` still writes
+it in three unreachable audit branches; both paths reference the removed
+`payload` column.
 
-1. migrate audit reminders to the current notification-outbox/send-email path,
-   with a corrected schema contract and regression tests; or
-2. retire the audit reminder functions, schedules and legacy notification
-   structures after dependency and retention sign-off.
+#### M3-A — retire the three legacy database functions
 
-If retained, the `payload` mismatch and the evidence status-filter mismatch are
-blocking correctness defects, not typing cleanup.
+Prepare an idempotent migration that drops only:
+
+- `public.audit_flag_overdue_chcs()`;
+- `public.audit_send_24hr_confirmation()`; and
+- `public.audit_send_evidence_reminders()`.
+
+Preflight must re-check that the functions are service-role-only, no trigger or
+view references them, and jobs 4–6 remain absent. Apply only after explicit
+production authorization; postflight must assert that the three routines no
+longer exist and that both legacy tables are unchanged. **Completed
+2026-09-07:** migration `retire_legacy_audit_functions` was applied and
+postflight passed; no table, outbox, or cron state changed.
+
+#### M3-B — retire dormant queue references
+
+Remove the three audit-only insert branches from `send-automated-email` and
+retire the deployed `process-notification-queue` worker through a separately
+reviewed Edge change (no cron job or frontend caller exists). Run Edge tests,
+lint ratchet, typecheck, build, and a read-only function health check. Do not
+drop `notification_schedule` in the same Edge deployment.
+
+#### M3-C — drop `notification_schedule` only after a quiet-period proof
+
+After M3-B, verify no deployed function, migration, trigger, view, or frontend
+caller references the table; confirm zero rows and zero recent access/error
+evidence; then apply a separately authorized, reversible migration to drop the
+table and its indexes/policies. Postflight must assert the relation is absent
+and that `notification_audit_log` and `notification_outbox` remain intact.
+
+#### M3-D — retain and govern `notification_audit_log`
+
+Keep the table because `process-notification-outbox` writes it. Add a separate
+retention/observability decision later (the current table is empty, while
+`notification_outbox` contains 980 terminal failed/skipped rows). Do not drop
+or rewrite its foreign key to `notification_outbox` as part of M3-A through
+M3-C.
+
+If the product owner instead wants audit reminders restored, stop this staged
+retirement and open a migration path that uses `notification_outbox` and the
+current email sender, with corrected schemas, dedupe, recipient policy, and
+regression tests. The current `payload` mismatch and `status = 'sent'` filter
+are blocking correctness defects, not typing cleanup.
 
 ### Packet M4 — forecast and health output integrity
 

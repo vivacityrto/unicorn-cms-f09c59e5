@@ -59,34 +59,38 @@ interface StageUsageData {
   }>;
 }
 
-// Result-row shapes for the nested `packages:package_id (name)` embeds below —
-// typed explicitly to avoid the "excessively deep" inference error Supabase's
-// query builder otherwise hits on this join shape.
+// Result-row shapes for the 4 queries below. None of these tables
+// (package_staff_tasks, package_client_tasks, package_stage_emails,
+// documents) has a real foreign key from package_id to packages
+// (confirmed via pg_constraint) — a `packages:package_id (name)` embed
+// 400s with "could not find a relationship" on every one of them. Select
+// package_id directly and resolve names via a separate batch lookup
+// below instead (see packageNameById), rather than a speculative embed.
 interface TeamTaskQueryRow {
   id: string;
   name: string;
   owner_role: string;
   estimated_hours: number | null;
   is_mandatory: boolean | null;
-  packages: { name: string } | null;
+  package_id: number | null;
 }
 interface ClientTaskQueryRow {
   id: string;
   name: string;
   instructions: string | null;
-  packages: { name: string } | null;
+  package_id: number | null;
 }
 interface EmailQueryRow {
   id: number;
   trigger_type: string;
   recipient_type: string;
-  packages: { name: string } | null;
+  package_id: number | null;
   email_templates: { internal_name: string } | null;
 }
 interface DocumentQueryRow {
   id: number;
   title: string;
-  packages: { name: string } | null;
+  package_id: number | null;
 }
 
 // Stage types loaded dynamically via useStageTypeOptions hook
@@ -127,8 +131,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
       let documentsQuery = supabase
         .from('documents')
         .select<string, DocumentQueryRow>(`
-          id, title,
-          packages:package_id (name)
+          id, title, package_id
         `);
       if (additionalIds.length > 0) {
         documentsQuery = documentsQuery.or(
@@ -144,24 +147,21 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
         supabase
           .from('package_staff_tasks')
           .select<string, TeamTaskQueryRow>(`
-            id, name, owner_role, estimated_hours, is_mandatory,
-            packages:package_id (name)
+            id, name, owner_role, estimated_hours, is_mandatory, package_id
           `)
           .eq('stage_id', stage.id)
           .order('order_number', { ascending: true }),
         supabase
           .from('package_client_tasks')
           .select<string, ClientTaskQueryRow>(`
-            id, name, instructions,
-            packages:package_id (name)
+            id, name, instructions, package_id
           `)
           .eq('stage_id', stage.id)
           .order('order_number', { ascending: true }),
         supabase
           .from('package_stage_emails')
           .select<string, EmailQueryRow>(`
-            id, trigger_type, recipient_type,
-            packages:package_id (name),
+            id, trigger_type, recipient_type, package_id,
             email_templates:email_template_id (internal_name)
           `)
           .eq('stage_id', stage.id)
@@ -169,23 +169,43 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
         documentsQuery,
       ]);
 
+      // No real FK from any of the 4 tables' package_id to packages (see the
+      // row-shape comment above) — resolve package names via one batch
+      // lookup instead of a per-table embed.
+      const allPackageIds = Array.from(new Set(
+        [
+          ...(teamTasksResult.data || []).map((t) => t.package_id),
+          ...(clientTasksResult.data || []).map((t) => t.package_id),
+          ...(emailsResult.data || []).map((e) => e.package_id),
+          ...(documentsResult.data || []).map((d) => d.package_id),
+        ].filter((id): id is number => id != null),
+      ));
+      const packageNameById = new Map<number, string>();
+      if (allPackageIds.length > 0) {
+        const { data: packageRows } = await supabase
+          .from('packages')
+          .select('id, name')
+          .in('id', allPackageIds);
+        for (const p of packageRows || []) packageNameById.set(p.id, p.name);
+      }
+
       setUsageData({
         teamTasks: (teamTasksResult.data || []).map((t) => ({
           ...t,
-          package_name: t.packages?.name
+          package_name: t.package_id != null ? packageNameById.get(t.package_id) : undefined
         })),
         clientTasks: (clientTasksResult.data || []).map((t) => ({
           ...t,
-          package_name: t.packages?.name
+          package_name: t.package_id != null ? packageNameById.get(t.package_id) : undefined
         })),
         emails: (emailsResult.data || []).map((e) => ({
           ...e,
           template_name: e.email_templates?.internal_name,
-          package_name: e.packages?.name
+          package_name: e.package_id != null ? packageNameById.get(e.package_id) : undefined
         })),
         documents: (documentsResult.data || []).map((d) => ({
           ...d,
-          package_name: d.packages?.name
+          package_name: d.package_id != null ? packageNameById.get(d.package_id) : undefined
         }))
       });
     } catch (error) {

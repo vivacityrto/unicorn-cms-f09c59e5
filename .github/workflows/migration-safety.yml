@@ -1,0 +1,31 @@
+name: Migration safety guardrails
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  audit-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run migration scanner tests
+        run: node --test scripts/audit-migrations.test.mjs
+
+      - name: Reject unsafe migration additions
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            node scripts/audit-migrations.mjs --changed-only --base-ref "origin/${BASE_REF}"
+          else
+            node scripts/audit-migrations.mjs --changed-only --base-ref "$BEFORE_SHA"
+          fi

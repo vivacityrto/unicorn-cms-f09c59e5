@@ -43,6 +43,10 @@ type TargetMode = "everyone" | "members" | "tier" | "package_type";
 type Tier = "diamond" | "gold" | "ruby" | "sapphire" | "amethyst";
 type PackageType = "membership" | "project" | "audit" | "regulatory_submission";
 
+// `parent` is the legacy tenant_users.role value; normal client users are
+// represented by relationship_role=`user` while retaining role=`child`.
+const BROADCAST_INCLUDE_ROLES = ["parent", "user"];
+
 const TIER_OPTIONS: { value: Tier; label: string }[] = [
   { value: "diamond", label: "Diamond" },
   { value: "gold", label: "Gold" },
@@ -176,7 +180,7 @@ export function BulkMessageDialog({
         {
           p_target_mode: targetMode,
           p_package_type: targetingPackageType,
-          p_include_roles: ["parent"],
+          p_include_roles: BROADCAST_INCLUDE_ROLES,
         },
       );
       if (error) throw error;
@@ -193,7 +197,7 @@ export function BulkMessageDialog({
 
   const audienceLabel = useMemo(() => {
     if (targetMode === "everyone") return "Everyone (all active tenants)";
-    if (targetMode === "members") return "All active members";
+    if (targetMode === "members") return "All active members and users";
     if (targetMode === "tier" && tier) {
       const t = TIER_OPTIONS.find((o) => o.value === tier);
       return `${t?.label ?? tier} members`;
@@ -245,7 +249,7 @@ export function BulkMessageDialog({
           body: body.trim(),
           target_mode: targetMode,
           package_type: targetingPackageType,
-          include_roles: ["parent"],
+          include_roles: BROADCAST_INCLUDE_ROLES,
           status: "draft",
           created_by: currentUserId,
         })

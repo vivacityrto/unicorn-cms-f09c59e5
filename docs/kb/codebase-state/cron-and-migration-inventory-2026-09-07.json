@@ -1,0 +1,200 @@
+{
+  "capturedAt": "2026-09-07",
+  "repositoryEvidence": "origin/main@b5c79c9b4",
+  "productionProjectRef": "yxkgdalkbrriasiyyrwk",
+  "qa": {
+    "branch": "tenant-isolation-qa",
+    "projectRef": "iqichbimamlyjpaguddl",
+    "branchId": "a3727ad5-3ea0-4189-9eab-ec60f2f420d6",
+    "parentProjectRef": "yxkgdalkbrriasiyyrwk",
+    "status": "MIGRATIONS_FAILED",
+    "withData": false,
+    "appliedMigrations": 17,
+    "pgCronInstalled": false,
+    "cronSchemaPresent": false,
+    "pgNetInstalled": true,
+    "failureMigration": "20260714074920_enable_retention_and_risk_forecast_cron.sql",
+    "failure": "schema cron does not exist"
+  },
+  "production": {
+    "appliedMigrations": 329,
+    "activeCronJobs": 24,
+    "cronExtensions": {
+      "pg_cron": "1.6",
+      "pg_net": "0.14.0"
+    },
+    "jobs": [
+      {"id":3,"name":"seed-compliance-tasks-nightly","schedule":"0 2 * * *","runs30d":30,"failed30d":8,"disposition":"keep-monitor"},
+      {"id":4,"name":"audit-24hr-confirmation","schedule":"0 21 * * *","runs30d":30,"failed30d":0,"disposition":"retired-m2-2026-09-07"},
+      {"id":5,"name":"audit-evidence-reminders","schedule":"0 22 * * *","runs30d":30,"failed30d":0,"disposition":"retired-m2-2026-09-07"},
+      {"id":6,"name":"audit-flag-overdue-chcs","schedule":"0 0 1 * *","runs30d":1,"failed30d":1,"disposition":"retired-m2-2026-09-07"},
+      {"id":8,"name":"generate-notifications-meetings-v2","schedule":"0 * * * *","runs30d":720,"failed30d":0,"disposition":"keep"},
+      {"id":9,"name":"generate-notifications-daily-v2","schedule":"5 0 * * *","runs30d":30,"failed30d":0,"disposition":"keep"},
+      {"id":10,"name":"process-notification-outbox","schedule":"*/5 * * * *","runs30d":8640,"failed30d":0,"disposition":"keep"},
+      {"id":11,"name":"sync-outlook-calendar-every-30min","schedule":"*/30 * * * *","runs30d":1440,"failed30d":0,"disposition":"keep"},
+      {"id":12,"name":"close-stale-preview-sessions","schedule":"0 */4 * * *","runs30d":180,"failed30d":0,"disposition":"keep"},
+      {"id":13,"name":"reclaim-stale-cohort-locks","schedule":"*/5 * * * *","runs30d":8640,"failed30d":0,"disposition":"keep"},
+      {"id":14,"name":"run-workload-forecast-nightly","schedule":"0 16 * * *","runs30d":30,"failed30d":0,"disposition":"fix-output-health"},
+      {"id":15,"name":"run-stage-health-monitor-nightly","schedule":"0 15 * * *","runs30d":30,"failed30d":0,"disposition":"contain-and-fix"},
+      {"id":16,"name":"email_tickets_flag_sla_breaches","schedule":"*/5 * * * *","runs30d":8640,"failed30d":0,"disposition":"keep"},
+      {"id":17,"name":"generate-notifications-reporting-obligations","schedule":"15 0 * * *","runs30d":30,"failed30d":0,"disposition":"keep"},
+      {"id":18,"name":"bulk-documents-reclaim-locks","schedule":"*/5 * * * *","runs30d":8640,"failed30d":0,"disposition":"keep-pending-usage-review"},
+      {"id":19,"name":"bulk-documents-purge-items","schedule":"15 3 * * *","runs30d":30,"failed30d":0,"disposition":"keep-pending-usage-review"},
+      {"id":20,"name":"run-tenant-risk-forecast-nightly","schedule":"0 13 * * *","runs30d":30,"failed30d":0,"disposition":"repair-or-retire"},
+      {"id":21,"name":"run-retention-forecast-nightly","schedule":"0 14 * * *","runs30d":30,"failed30d":0,"disposition":"repair-or-retire"},
+      {"id":22,"name":"reconcile-invite-delivery-status","schedule":"*/20 * * * *","runs30d":2160,"failed30d":0,"disposition":"keep"},
+      {"id":23,"name":"send-action-item-due-reminders-nightly","schedule":"0 20 * * *","runs30d":30,"failed30d":0,"disposition":"keep"},
+      {"id":24,"name":"embed-ask-viv-corpus-incremental","schedule":"*/30 * * * *","runs30d":1440,"failed30d":0,"disposition":"keep"},
+      {"id":25,"name":"embed-ask-viv-documents-incremental","schedule":"*/30 * * * *","runs30d":1440,"failed30d":0,"disposition":"keep"},
+      {"id":26,"name":"portal-activity-digest-daily","schedule":"15 0 * * *","runs30d":30,"failed30d":0,"disposition":"keep"},
+      {"id":27,"name":"generate-ask-viv-faqs-daily","schedule":"17 3 * * *","runs30d":30,"failed30d":0,"disposition":"keep"},
+      {"id":28,"name":"xero-invoice-sync-all-every-6h","schedule":"0 */6 * * *","runs30d":120,"failed30d":0,"disposition":"keep"},
+      {"id":29,"name":"regulator-watch-check-weekly","schedule":"0 4 * * 1","runs30d":3,"failed30d":0,"disposition":"owner-review"},
+      {"id":30,"name":"bulk-generate-resume-stalled","schedule":"*/2 * * * *","runs30d":13060,"failed30d":0,"disposition":"keep"}
+    ],
+    "outputTables": [
+      {"table":"stage_health_snapshots","rows":357471,"latest":"2026-09-06T15:00:17.96448Z","nonzeroProgress":0},
+      {"table":"workload_snapshots","rows":2510,"latest":"2026-09-06T16:00:09.292271Z"},
+      {"table":"tenant_risk_forecasts","rows":0,"latest":null},
+      {"table":"tenant_retention_forecasts","rows":0,"latest":null},
+      {"table":"tenant_package_burn_forecast","rows":0,"latest":null},
+      {"table":"evidence_gap_checks","rows":0,"latest":null}
+    ]
+  },
+  "migrationAudit": {
+    "repositoryMigrationFiles": 1539,
+    "nonRollbackMigrationFiles": 1517,
+    "filesWithEnvironmentUrls": 14,
+    "filesWithCronOperations": 17,
+    "postFailureNamedDataCandidates": 29,
+    "namedDataCandidates": [
+      "20260714070914_backfill_null_package_instance_id_from_package_id.sql",
+      "20260714071007_backfill_remaining_orphan_time_entries_via_package_template_id_v2.sql",
+      "20260714071041_backfill_hours_used_all_package_instances.sql",
+      "20260715050200_preview_document_delete_vivacity_team_gate.sql",
+      "20260723063428_eos_overhaul_m2_backfill_configurations.sql",
+      "20260723063944_eos_overhaul_m4_data_cleanup_non_6372_templates.sql",
+      "20260723064007_eos_overhaul_m5_structural_cleanup.sql",
+      "20260724003626_eos_overhaul_m13_seed_skipped_meeting_status.sql",
+      "20260731052036_restore_assistant_messages_update_delete.sql",
+      "20260806054746_fix_relationship_role_swap_timeline_backfill.sql",
+      "20260811233425_remove_duplicate_stage_document_templates.sql",
+      "20260811234930_remove_orphaned_duplicate_documents.sql",
+      "20260811235553_harden_delete_document_cascade_c3_reconcile.sql",
+      "20260812001546_merge_asqa_audit_report_duplicate.sql",
+      "20260812002039_merge_delivery_assessment_plan_duplicate.sql",
+      "20260812003200_merge_general_consultation_report_duplicate.sql",
+      "20260812004123_merge_industry_survey_form_duplicate.sql",
+      "20260812005047_merge_q1d3_rpl_kit_duplicate.sql",
+      "20260812005158_merge_rectification_action_plan_duplicate.sql",
+      "20260812005317_merge_rectification_table_of_contents_duplicate.sql",
+      "20260812005419_merge_training_needs_analysis_duplicate.sql",
+      "20260812022846_remove_mismatched_photo_uploads.sql",
+      "20260815080000_unlink_email_soft_delete_and_permission.sql",
+      "20260819024148_requeue_skipped_bulk_document_items.sql",
+      "20260819025736_requeued_to_job_id_traceability.sql",
+      "20260820130000_backfill_renewal_history_from_audit_log.sql",
+      "20260825050000_harden_delete_document_cascade_client_stage_and_delivery.sql",
+      "20260827010000_accept_invitation_archives_matching_contact.sql",
+      "20260828053926_backfill_academy_courses_estimated_minutes.sql"
+    ],
+    "postFailureEnvironmentUrlFiles": [
+      "20260714074920_enable_retention_and_risk_forecast_cron.sql",
+      "20260727043013_action_item_notify_reminders.sql",
+      "20260803051036_ask_viv_corpus_ingestion.sql",
+      "20260803052814_ask_viv_documents_ingestion_cron.sql",
+      "20260804041038_ask_viv_suggested_faqs.sql",
+      "20260805063000_xero_invoice_sync_all_schedule.sql",
+      "20260815080000_cron_invoke_secret_header.sql",
+      "20260819234500_bulk_generate_stall_resilience.sql"
+    ],
+    "cronOrigins": [
+      {"migration":"20260217031153_00d3b571-8cd1-4654-9a9a-380d2f117844.sql","jobs":[3]},
+      {"migration":"20260428033759_a7b79724-3c60-4c72-9369-4dee643fb3df.sql","operation":"temporary validate-user-uuid-fks-offpeak schedule"},
+      {"migration":"20260511230952_4babc47a-29f6-4aec-afc8-64ba31a03f8c.sql","operation":"unschedules predecessor notification jobs"},
+      {"migration":"20260514233447_c6354641-3932-40da-90b6-716df2d99a3a.sql","jobs":[10]},
+      {"migration":"20260521032656_254d38e3-1cdc-49cc-a2fb-35edaeee4302.sql","jobs":[11]},
+      {"migration":"20260524233113_6d6c2df3-df44-4f9f-b4d2-d042c3d67698.sql","jobs":[12]},
+      {"migration":"20260531025451_47ef503e-2ecd-4b75-879c-bfb3f5cbbf51.sql","jobs":[13]},
+      {"migration":"20260617040107_54551699-c7b3-4f54-89b5-a03692cf5d2e.sql","jobs":[16]},
+      {"migration":"20260714074920_enable_retention_and_risk_forecast_cron.sql","jobs":[20,21]},
+      {"migration":"20260727043013_action_item_notify_reminders.sql","jobs":[23]},
+      {"migration":"20260803051036_ask_viv_corpus_ingestion.sql","jobs":[24]},
+      {"migration":"20260803052814_ask_viv_documents_ingestion_cron.sql","jobs":[25]},
+      {"migration":"20260804041038_ask_viv_suggested_faqs.sql","jobs":[27]},
+      {"migration":"20260804060000_client_portal_page_view_tracking.sql","jobs":[26]},
+      {"migration":"20260805063000_xero_invoice_sync_all_schedule.sql","jobs":[28]},
+      {"migration":"20260815080000_cron_invoke_secret_header.sql","jobs":[22,11,28]},
+      {"migration":"20260819234500_bulk_generate_stall_resilience.sql","jobs":[30]}
+    ],
+    "unresolvedJobOrigins": [4,5,6,8,9,14,15,17,18,19]
+  },
+  "legacyFunctions": [
+    "public.audit_flag_overdue_chcs()",
+    "public.audit_send_24hr_confirmation()",
+    "public.audit_send_evidence_reminders()"
+  ],
+  "legacyNotificationDependencies": {
+    "notification_schedule": {
+      "edgeFunctionReadersOrWriters": [
+        "process-notification-queue",
+        "send-automated-email"
+      ],
+      "retainedForM2": true
+    },
+    "notification_audit_log": {
+      "edgeFunctionWriters": ["process-notification-outbox"],
+      "retainedForM2": true
+    }
+  },
+  "m2": {
+    "status": "applied",
+    "migration": "20260907120000_retire_legacy_audit_cron_jobs.sql",
+    "jobs": [4, 5, 6],
+    "hostedStateChanged": true,
+    "preflightConfirmed": true,
+    "postflightJobsRemaining": [],
+    "activeCronJobsAfter": 24,
+    "migrationHistoryVersion": "20260907050651",
+    "historicalRunDetailsRetained": true
+  },
+  "m3": {
+    "status": "investigated-no-hosted-change",
+    "legacyTables": {
+      "notification_schedule": {
+        "rows": 0,
+        "rlsEnabled": true,
+        "currentReaders": ["process-notification-queue"],
+        "currentWriters": ["send-automated-email"],
+        "dropBlockedUntil": "M3-B edge retirement and quiet-period proof"
+      },
+      "notification_audit_log": {
+        "rows": 0,
+        "rlsEnabled": true,
+        "currentWriters": ["process-notification-outbox"],
+        "decision": "retain"
+      }
+    },
+    "legacyFunctions": {
+      "decision": "retired-m3-a-2026-09-07",
+      "routines": [
+        "public.audit_flag_overdue_chcs()",
+        "public.audit_send_24hr_confirmation()",
+        "public.audit_send_evidence_reminders()"
+      ],
+      "activeCronJobs": [],
+      "repositoryCallers": [],
+      "anonExecute": false,
+      "authenticatedExecute": false,
+      "serviceRoleExecute": true,
+      "postflightRoutinesRemaining": [],
+      "migrationHistoryVersion": "20260907052028"
+    },
+    "outboxTerminalRows": {
+      "failed": 738,
+      "skipped": 242,
+      "sent": 0
+    }
+  },
+  "nextPacket": "M3-B (dormant edge-path retirement)"
+}

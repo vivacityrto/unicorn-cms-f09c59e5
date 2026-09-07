@@ -30,9 +30,12 @@ interface Tenant {
 
 type GenerationStep = 'scope' | 'review' | 'progress' | 'complete';
 
+// client_package_stage_state.tenant_id has no real foreign key to tenants
+// (confirmed via pg_constraint) — a `tenants(id, name)` embed 400s with
+// "could not find a relationship". Select tenant_id alone and resolve
+// names via a separate batch lookup below.
 interface TenantPackageStageStateRow {
   tenant_id: number;
-  tenants: { id: number; name: string } | null;
 }
 
 interface GenerationResult {
@@ -70,7 +73,7 @@ export function BulkGenerateDocumentsDialog({
       // Get tenants with this package through client_package_stage_state
       const { data, error } = await supabase
         .from('client_package_stage_state')
-        .select<'tenant_id, tenants(id, name)', TenantPackageStageStateRow>('tenant_id, tenants(id, name)')
+        .select<'tenant_id', TenantPackageStageStateRow>('tenant_id')
         .eq('package_id', packageId)
         .order('tenant_id');
 
@@ -79,10 +82,19 @@ export function BulkGenerateDocumentsDialog({
       // Get unique tenants and their client_legacy references
       const uniqueTenantIds = [...new Set((data || []).map((d) => d.tenant_id))];
 
+      // No real FK from client_package_stage_state.tenant_id to tenants —
+      // resolve names via one batch lookup instead of an embed.
+      const tenantNameById = new Map<number, string>();
+      if (uniqueTenantIds.length > 0) {
+        const { data: tenantRows } = await supabase
+          .from('tenants')
+          .select('id, name')
+          .in('id', uniqueTenantIds);
+        for (const t of tenantRows || []) tenantNameById.set(t.id, t.name);
+      }
+
       const tenantsWithLegacy = await Promise.all(
         uniqueTenantIds.map(async (tenantId) => {
-          const tenantData = (data || []).find((d) => d.tenant_id === tenantId);
-          
           // Try to find client_legacy_id
           const { data: clientData } = await supabase
             .from('clients_legacy')
@@ -92,7 +104,7 @@ export function BulkGenerateDocumentsDialog({
 
           return {
             id: tenantId,
-            name: tenantData?.tenants?.name || `Tenant ${tenantId}`,
+            name: tenantNameById.get(tenantId) || `Tenant ${tenantId}`,
             client_legacy_id: clientData?.id || null
           } as Tenant;
         })
