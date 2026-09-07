@@ -488,6 +488,9 @@ that only write when later invoked.
 **Exit:** a committed Markdown/JSON matrix exists, with every active job and
 every migration risk classified as keep, fix, retire, or owner decision.
 
+**Artifact:** [Cron and Migration Inventory — 2026-09-07](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
+and its [machine-readable companion](../codebase-state/cron-and-migration-inventory-2026-09-07.json).
+
 ### Packet M1 — migration safety scanner and CI guardrail
 
 Add a repository script (for example, `scripts/audit-migrations.mjs`) that
