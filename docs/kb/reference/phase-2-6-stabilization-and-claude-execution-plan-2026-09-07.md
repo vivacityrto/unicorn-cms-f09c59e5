@@ -424,13 +424,28 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   long-standing P5-A item 2 reachability question** (carried since Phase
   2.5 closeout as one of the residual 3 `no-explicit-any` findings) —
   confirmed genuinely dead rather than typed.
+- **P6-B SharePoint document-link UI island retired (frontend only).**
+  `LinkedDocumentsList.tsx`, `SharePointDocumentPicker.tsx`,
+  `useDocumentLinks.tsx` (1,088 LOC): the cluster's only entry point had
+  zero repo-wide references beyond its own internal cross-imports.
+  **The caution's own instruction — "do not infer the endpoint or
+  `document_links` is unused" — was checked against production data, not
+  inferred:** `document_links` has 0 rows, ever, while
+  `document_stage_links` (the table the live document-stage-linking
+  feature actually uses) has 678 real rows. Retired the 3 frontend files
+  only; the `link-sharepoint-document` Edge Function and the empty
+  `document_links` table were deliberately left untouched — their own
+  retirement needs separate Edge/schema authorization, not inferred from
+  a frontend-only cleanup.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
   cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
   core — blocked on missing Playwright coverage, the remaining product/
-  reachability-gated islands: SharePoint/bulk-generation-steps/
-  Reassignment/Compliance-score, the "data/workflow hooks" half of the
+  reachability-gated islands: bulk-generation-steps/Reassignment/
+  Compliance-score, the empty `document_links` table/`link-sharepoint-
+  document` Edge Function's own retirement decision, the "data/workflow
+  hooks" half of the
   zero-inbound queue: `useStageReleases`/`usePortfolioCockpit`/
   `useMeetingSeries`/`usePackageUsage`/`useMeetingMinutes`/`useKpiReview`/
   `useAISuggestions`/`useEosDrafts`/`useDocumentScan`/`useEngagementAudit`/
