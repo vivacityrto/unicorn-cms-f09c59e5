@@ -32,8 +32,16 @@ evidence, and found that the notification tables still have active Edge
 Function readers/writers. Added a guarded, idempotent corrective migration to
 unschedule only the three legacy audit job names, with an ID-reuse check and a
 postflight assertion. Tables and helper functions are intentionally retained
-for M3. No hosted state changed; the migration is ready for separately
-authorized application.
+for M3. The migration was then applied in session 5 after separate explicit
+authorization.
+
+**2026-09-07, session 5 — Packet M2 applied after explicit authorization:**
+the guarded migration unscheduled only `audit-24hr-confirmation` (job 4),
+`audit-evidence-reminders` (job 5), and `audit-flag-overdue-chcs` (job 6) in
+production. Postflight confirmed 24 active jobs remain, zero rows for the
+retired names, unchanged neighboring schedules, and migration-history entry
+`20260907050651`. Historical run details remain; notification tables and
+helper functions were not changed. M3 is next.
 
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
@@ -458,9 +466,9 @@ authorizes a production change by itself.
 
 ### Current evidence and safety boundary
 
-- Production has 27 active `pg_cron` jobs. The current jobs are a mixture of
-  healthy maintenance, partially working forecast jobs, and legacy audit
-  reminder jobs.
+- Production has 24 active `pg_cron` jobs after M2 retired three legacy audit
+  schedules. The remaining jobs are a mixture of healthy maintenance and
+  partially working forecast/health jobs.
 - The persistent `tenant-isolation-qa` preview branch is reusable, but it is
   currently unhealthy: it has no `pg_cron` extension, only 17 of production's
   329 migrations applied, and stops at
@@ -487,9 +495,9 @@ authorizes a production change by itself.
 | Bulk-document reclaim/purge (#18/#19) | Current maintenance functions exist | Keep unless a usage audit proves they are obsolete |
 | Notifications, calendar, invites, Ask Viv, Xero, activity digest, locks, and stalled-job recovery | Current consumers or operational evidence exist | Keep |
 
-The immediate retirement candidate group is jobs 4, 5, and 6. Jobs 20 and 21
-must receive an explicit repair-or-retire decision; they must not remain active
-as apparently successful no-op jobs.
+M2 retired the former immediate retirement candidate group (jobs 4, 5, and 6).
+Jobs 20 and 21 still require an explicit repair-or-retire decision; they must
+not remain active as apparently successful no-op jobs.
 
 ### Packet M0 — read-only cron and migration inventory
 
@@ -539,7 +547,9 @@ documented in [Migration safety guardrail — 2026-09-07](../codebase-state/migr
 After product-owner confirmation, add one idempotent corrective migration or
 controlled Supabase operation that unschedules jobs 4, 5 and 6 and records the
 reason. Guard the operation for environments where `cron` is absent, and
-postflight-assert that the named jobs are gone.
+postflight-assert that the named jobs are gone. **Completed 2026-09-07:** the
+production migration is recorded as `retire_legacy_audit_cron_jobs`; postflight
+found zero retired jobs and 24 active jobs. Historical run records remain.
 
 Do not drop `notification_schedule`, `notification_audit_log`, or their helper
 functions in the same change. First prove there are no current readers,

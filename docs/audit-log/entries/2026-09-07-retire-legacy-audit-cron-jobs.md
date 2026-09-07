@@ -4,9 +4,9 @@
 
 **Packet:** M2
 
-**Scope:** repository migration authoring and read-only production preflight
+**Scope:** repository migration authoring, production application, and postflight
 
-**Hosted state changed:** no
+**Hosted state changed:** yes — schedules only
 
 ## Decision
 
@@ -39,6 +39,11 @@ separate M3 dependency and retention decision.
 - unschedules only the three approved job names; and
 - raises if any of those names remain after unscheduling.
 
-The migration is allowlisted for the production project reference with a
-short expiry because it intentionally changes hosted scheduling when applied.
-It has not been applied by this audit.
+The migration was allowlisted for the production project reference with a
+short expiry because it intentionally changes hosted scheduling. It was
+applied after explicit authorization. Postflight confirmed zero rows for jobs
+4–6, 24 active jobs remain, neighboring schedules are unchanged, and the
+migration is recorded in Supabase history as
+`20260907050651 / retire_legacy_audit_cron_jobs`. Historical
+`cron.job_run_details` rows remain; no notification tables or helper functions
+were changed.

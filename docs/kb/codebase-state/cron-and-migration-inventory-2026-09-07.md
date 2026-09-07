@@ -1,6 +1,6 @@
 # Cron and Migration Inventory
 
-> **Status:** M0 read-only inventory; no hosted state changed
+> **Status:** M0 inventory complete; M2 retirement applied to production
 >
 > **Captured:** 2026-09-07
 >
@@ -13,13 +13,10 @@
 
 ## Executive result
 
-Production has 27 active cron jobs. The current schedule is not uniformly
+Production now has 24 active cron jobs (27 before M2). The current schedule is not uniformly
 healthy:
 
-- jobs 4, 5 and 6 are a legacy audit-reminder path; job 6 fails because its
-  function inserts into the removed `notification_schedule.payload` column,
-  while jobs 4 and 5 can report a successful SQL invocation without proving
-  that a notification was delivered;
+- jobs 4, 5 and 6 were a legacy audit-reminder path and were unscheduled by M2;
 - jobs 20 and 21 invoke successfully but their forecast tables contain zero
   rows;
 - job 15 writes stage-health rows, but all 357,471 rows have
@@ -41,9 +38,9 @@ request; it is not an application-level success assertion.
 | ID | Job | Schedule | 30d runs | Failed | Latest evidence | Disposition |
 |---:|---|---|---:|---:|---|---|
 | 3 | `seed-compliance-tasks-nightly` | `0 2 * * *` | 30 | 8 | 22 recent successes; older failures used an invalid `system_job_runs` status | Keep; monitor |
-| 4 | `audit-24hr-confirmation` | `0 21 * * *` | 30 | 0 | Legacy function writes obsolete `notification_schedule.payload` if a matching appointment exists | Retire or migrate |
-| 5 | `audit-evidence-reminders` | `0 22 * * *` | 30 | 0 | Legacy function filters `evidence_requests.status = 'sent'`; successful SQL invocation does not prove delivery | Retire or migrate |
-| 6 | `audit-flag-overdue-chcs` | `0 0 1 * *` | 1 | 1 | Fails: `notification_schedule.payload` does not exist | Retire after owner confirmation |
+| 4 | `audit-24hr-confirmation` | `0 21 * * *` | 30 | 0 | Legacy function used obsolete `notification_schedule.payload`; unscheduled by M2 | Retired by M2 (2026-09-07) |
+| 5 | `audit-evidence-reminders` | `0 22 * * *` | 30 | 0 | Legacy status filter did not match the current evidence contract; unscheduled by M2 | Retired by M2 (2026-09-07) |
+| 6 | `audit-flag-overdue-chcs` | `0 0 1 * *` | 1 | 1 | Failed because `notification_schedule.payload` does not exist; unscheduled by M2 | Retired by M2 (2026-09-07) |
 | 8 | `generate-notifications-meetings-v2` | `0 * * * *` | 720 | 0 | Current notification generator | Keep |
 | 9 | `generate-notifications-daily-v2` | `5 0 * * *` | 30 | 0 | Current notification generator | Keep |
 | 10 | `process-notification-outbox` | `*/5 * * * *` | 8,640 | 0 | Current outbox processor | Keep |
@@ -100,11 +97,14 @@ consumer was identified in this pass. Dropping either table requires a
 separate dependency, retention and rollback review.
 
 M2 read-only preflight confirmed the exact production jobs and their recent
-run evidence before the corrective migration was authored. Jobs 4 and 5
+run evidence before the corrective migration was applied. Jobs 4 and 5
 reported `succeeded`/`1 row` but that only proves the SQL invocation completed;
 job 6 failed on the missing `notification_schedule.payload` column. The M2
-migration unschedules only the three exact job names and preserves all legacy
-tables/functions for the later M3 decision.
+migration unscheduled only the three exact job names and preserved all legacy
+tables/functions for the later M3 decision. Postflight confirmed zero rows for
+jobs 4–6, 24 active jobs remain, all neighboring schedules are unchanged, and
+the migration is recorded in Supabase migration history. Historical
+`cron.job_run_details` rows remain for auditability.
 
 ## Migration replay inventory
 
@@ -190,12 +190,17 @@ function. The complete list is in the JSON companion.
 
 ## M0 disposition and next packet
 
-M0 is complete as an evidence pass. No job was unscheduled, no extension was
-enabled, no migration was applied, and no production data was changed.
+M0 is complete as an evidence pass. M2 is now applied: only the three approved
+legacy audit schedules were unscheduled; no extension, table, function, or
+production data was changed.
 
 Next implementation order:
 
-1. M1 — add the migration scanner and CI guardrail;
-2. obtain product ownership decisions for jobs 4, 5, 6, 20, 21 and 29;
-3. select the QA replay strategy; and
-4. only then execute M2–M6 and unblock the live P1-C isolation suite.
+1. M3 — decide whether the retained legacy notification objects are migrated
+   to the current outbox path or retired after dependency/retention sign-off;
+2. M4 — contain and repair/retire the forecast and stage-health jobs after the
+   product metric decision;
+3. select the QA replay strategy and execute the remaining migration packets;
+   and
+4. unblock the live P1-C isolation suite. M2 is complete; its historical run
+   records remain available for audit.
