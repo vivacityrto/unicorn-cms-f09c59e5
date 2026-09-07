@@ -404,11 +404,14 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `v_progress_anchor_inputs` views, same reasoning), and
   `stage-registry.ts` (pure TypeScript type re-exports, zero runtime
   code). All confirmed zero repo-wide references beyond their own files.
-  **Deliberately not touched:** `useClientAICompanion` (calls server
-  objects per the register's own caution — an orphaned frontend caller is
-  not server-object retirement evidence) and `StandardsPicker.tsx` (may
-  represent roadmap intent, needs a product decision) — both correctly
-  excluded per the register's existing dispositions, not overlooked.
+  **Deliberately not touched, product decisions received 2026-09-08:**
+  `useClientAICompanion` (kept — Carl confirmed the backend, a
+  substantial Standards-for-RTOs-2025-gated AI companion tagged "Phase
+  17," is earmarked for reuse in a future client health feature, not
+  dead) and `StandardsPicker.tsx` (kept — a ready-made standards-clause
+  picker for the otherwise-live PDP feature area, never wired into
+  `StaffPdpsPage.tsx`'s form). Both decisions and full rationale
+  recorded in the dead-code register's §3.3.
 - **P6-B Workboard UI island retired.** `AddWorkboardItemDialog.tsx`,
   `WorkboardBoardView.tsx`, `WorkboardItemDrawer.tsx`,
   `WorkboardListView.tsx`, and `useClientWorkboard.tsx` (1,765 LOC): zero
@@ -643,16 +646,44 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   Also removed the dead "View Minutes"/"View Attendance" links (and the
   now-unused `Eye` icon import) from `MeetingExecutionPanel.tsx` — no
   pages will be built for `/eos/meetings/:id/minutes`/`/attendance`.
+- **`useClientAICompanion`/`StandardsPicker.tsx` decided: KEEP, both
+  earmarked for future work, documented in the register.**
+  `useClientAICompanion.ts`'s backend (`client-ai-companion` Edge
+  Function, "Phase 17") is a substantial Standards-for-RTOs-2025-gated
+  AI companion Carl confirmed is intended for a future client health
+  feature — not dead despite zero frontend imports and empty session
+  tables. `StandardsPicker.tsx` is a ready-made standards-clause picker
+  for the live PDP feature area, never wired into `StaffPdpsPage.tsx`'s
+  form. Investigating the compliance-score item below surfaced the same
+  pattern a second time: `calculate_compliance_score` is a real,
+  sophisticated composite scoring engine (phase completion,
+  documentation coverage, risk health, consult health, plus
+  staleness/critical-risk/missing-docs caps) computed from genuinely
+  live tables, not a stub — Carl confirmed **keep** this too, same
+  reasoning as the AI companion, not a retirement candidate. Full
+  rationale for all three recorded in the dead-code register.
+- **P6-B `document_links`/`document_link_audit` backend retired, Carl
+  explicitly authorized 2026-09-08.** Both 0 rows, ever; the frontend UI
+  was already retired 2026-09-07; the live document-stage-linking
+  feature was superseded from day one onto the differently-named
+  `document_stage_links` table (678 rows, untouched). Guarded migration
+  (`20260908010000_retire_document_links.sql`) dropped both tables plus
+  the `update_document_links_updated_at` trigger function; postflight
+  confirmed. `link-sharepoint-document`'s source and config entry
+  removed from the repo — the deployed Edge Function itself stays
+  ACTIVE but unreachable (no `delete_edge_function` MCP tool available;
+  manual dashboard deletion is a disclosed follow-up, not done here).
+  `merge_tenants()`'s defensive per-table loop references `document_links`
+  and will log a harmless `document_links_error` on future tenant merges
+  instead of failing — disclosed, not fixed. No allowlist entry needed
+  (pure DDL, no risk-category match in `audit-migrations.mjs`). Audit
+  entry: `docs/audit-log/entries/2026-09-08-retire-document-links.md`.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
   cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
-  core — blocked on missing Playwright coverage; the empty
-  `document_links`/`compliance_score_snapshots` tables and their Edge/RPC
-  functions' own retirement decisions; `useClientAICompanion`
-  and `StandardsPicker.tsx` — the two remaining "UX/platform artifacts"
-  zero-inbound candidates, both requiring a product decision before
-  touching), P7 — several of these require live-schema investigation,
+  core — blocked on missing Playwright coverage), P7 — several of these
+  require live-schema investigation,
   product/security decisions, or their own separately
   authorized packets per §1's rules.
 
