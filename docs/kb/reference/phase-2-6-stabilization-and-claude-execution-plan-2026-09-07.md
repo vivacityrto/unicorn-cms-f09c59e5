@@ -26,6 +26,43 @@ cron/HTTP side effects, migration-time mutations, and edits to existing
 migration history unless a concrete, short-lived allowlist entry matches.
 No hosted state changed. M2 remains product-owner gated.
 
+**2026-09-07, session 4 — Packet M2 authored after product-owner approval:**
+read-only production preflight confirmed jobs 4–6 and their failure/success
+evidence, and found that the notification tables still have active Edge
+Function readers/writers. Added a guarded, idempotent corrective migration to
+unschedule only the three legacy audit job names, with an ID-reuse check and a
+postflight assertion. Tables and helper functions are intentionally retained
+for M3. The migration was then applied in session 5 after separate explicit
+authorization.
+
+**2026-09-07, session 5 — Packet M2 applied after explicit authorization:**
+the guarded migration unscheduled only `audit-24hr-confirmation` (job 4),
+`audit-evidence-reminders` (job 5), and `audit-flag-overdue-chcs` (job 6) in
+production. Postflight confirmed 24 active jobs remain, zero rows for the
+retired names, unchanged neighboring schedules, and migration-history entry
+`20260907050651`. Historical run details remain; notification tables and
+helper functions were not changed. M3 is next.
+
+**2026-09-07, session 6 — Packet M3 dependency review completed (read-only):**
+production has zero rows in both `notification_schedule` and
+`notification_audit_log`; all three legacy audit functions are executable only
+by `service_role`/`postgres`, with no triggers or views depending on either
+table. The three database functions have no active schedule after M2 and no
+repository caller. `notification_audit_log` is nevertheless written by the
+active `process-notification-outbox` worker and must remain. `notification_schedule`
+is still read by the deployed but unscheduled `process-notification-queue`
+worker and written by the three audit branches of `send-automated-email`; those
+branches have no repository caller and currently reference the removed
+`payload` column. Recommendation: execute the staged retirement path in Packet
+M3-A through M3-C below, retaining `notification_audit_log`.
+
+**2026-09-07, session 7 — M3-A applied after explicit authorization:**
+the new migration dropped only the three legacy audit routines. Postflight
+confirmed no matching routines remain, jobs 4–6 remain absent, both legacy
+tables remain present/RLS-enabled with zero rows, and the notification outbox
+remains unchanged at 738 failed and 242 skipped rows. Supabase recorded
+`retire_legacy_audit_functions` as migration `20260907052028`. M3-B is next.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then
@@ -449,9 +486,9 @@ authorizes a production change by itself.
 
 ### Current evidence and safety boundary
 
-- Production has 27 active `pg_cron` jobs. The current jobs are a mixture of
-  healthy maintenance, partially working forecast jobs, and legacy audit
-  reminder jobs.
+- Production has 24 active `pg_cron` jobs after M2 retired three legacy audit
+  schedules. The remaining jobs are a mixture of healthy maintenance and
+  partially working forecast/health jobs.
 - The persistent `tenant-isolation-qa` preview branch is reusable, but it is
   currently unhealthy: it has no `pg_cron` extension, only 17 of production's
   329 migrations applied, and stops at
@@ -478,9 +515,9 @@ authorizes a production change by itself.
 | Bulk-document reclaim/purge (#18/#19) | Current maintenance functions exist | Keep unless a usage audit proves they are obsolete |
 | Notifications, calendar, invites, Ask Viv, Xero, activity digest, locks, and stalled-job recovery | Current consumers or operational evidence exist | Keep |
 
-The immediate retirement candidate group is jobs 4, 5, and 6. Jobs 20 and 21
-must receive an explicit repair-or-retire decision; they must not remain active
-as apparently successful no-op jobs.
+M2 retired the former immediate retirement candidate group (jobs 4, 5, and 6).
+Jobs 20 and 21 still require an explicit repair-or-retire decision; they must
+not remain active as apparently successful no-op jobs.
 
 ### Packet M0 — read-only cron and migration inventory
 
@@ -530,7 +567,9 @@ documented in [Migration safety guardrail — 2026-09-07](../codebase-state/migr
 After product-owner confirmation, add one idempotent corrective migration or
 controlled Supabase operation that unschedules jobs 4, 5 and 6 and records the
 reason. Guard the operation for environments where `cron` is absent, and
-postflight-assert that the named jobs are gone.
+postflight-assert that the named jobs are gone. **Completed 2026-09-07:** the
+production migration is recorded as `retire_legacy_audit_cron_jobs`; postflight
+found zero retired jobs and 24 active jobs. Historical run records remain.
 
 Do not drop `notification_schedule`, `notification_audit_log`, or their helper
 functions in the same change. First prove there are no current readers,
@@ -539,15 +578,62 @@ in a separately reviewed packet with an auditable rollback/restore procedure.
 
 ### Packet M3 — notification legacy decision
 
-Choose exactly one path:
+The read-only dependency review supports a staged version of path 2 (retire),
+not migration to a new reminder workflow. Production has zero rows in both
+legacy tables. The three legacy database functions are service-role-only,
+unscheduled after M2, have no trigger/view dependency, and have no repository
+caller. `notification_audit_log` is not dead: the active
+`process-notification-outbox` worker writes success/failure delivery records to
+it, so it remains in the live notification contract. `notification_schedule`
+is dormant but cannot be dropped yet because the deployed
+`process-notification-queue` reads it and `send-automated-email` still writes
+it in three unreachable audit branches; both paths reference the removed
+`payload` column.
 
-1. migrate audit reminders to the current notification-outbox/send-email path,
-   with a corrected schema contract and regression tests; or
-2. retire the audit reminder functions, schedules and legacy notification
-   structures after dependency and retention sign-off.
+#### M3-A — retire the three legacy database functions
 
-If retained, the `payload` mismatch and the evidence status-filter mismatch are
-blocking correctness defects, not typing cleanup.
+Prepare an idempotent migration that drops only:
+
+- `public.audit_flag_overdue_chcs()`;
+- `public.audit_send_24hr_confirmation()`; and
+- `public.audit_send_evidence_reminders()`.
+
+Preflight must re-check that the functions are service-role-only, no trigger or
+view references them, and jobs 4–6 remain absent. Apply only after explicit
+production authorization; postflight must assert that the three routines no
+longer exist and that both legacy tables are unchanged. **Completed
+2026-09-07:** migration `retire_legacy_audit_functions` was applied and
+postflight passed; no table, outbox, or cron state changed.
+
+#### M3-B — retire dormant queue references
+
+Remove the three audit-only insert branches from `send-automated-email` and
+retire the deployed `process-notification-queue` worker through a separately
+reviewed Edge change (no cron job or frontend caller exists). Run Edge tests,
+lint ratchet, typecheck, build, and a read-only function health check. Do not
+drop `notification_schedule` in the same Edge deployment.
+
+#### M3-C — drop `notification_schedule` only after a quiet-period proof
+
+After M3-B, verify no deployed function, migration, trigger, view, or frontend
+caller references the table; confirm zero rows and zero recent access/error
+evidence; then apply a separately authorized, reversible migration to drop the
+table and its indexes/policies. Postflight must assert the relation is absent
+and that `notification_audit_log` and `notification_outbox` remain intact.
+
+#### M3-D — retain and govern `notification_audit_log`
+
+Keep the table because `process-notification-outbox` writes it. Add a separate
+retention/observability decision later (the current table is empty, while
+`notification_outbox` contains 980 terminal failed/skipped rows). Do not drop
+or rewrite its foreign key to `notification_outbox` as part of M3-A through
+M3-C.
+
+If the product owner instead wants audit reminders restored, stop this staged
+retirement and open a migration path that uses `notification_outbox` and the
+current email sender, with corrected schemas, dedupe, recipient policy, and
+regression tests. The current `payload` mismatch and `status = 'sent'` filter
+are blocking correctness defects, not typing cleanup.
 
 ### Packet M4 — forecast and health output integrity
 
