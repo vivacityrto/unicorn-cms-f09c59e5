@@ -139,8 +139,16 @@ remains unchanged at 738 failed and 242 skipped rows. Supabase recorded
   this plan uses Demo RTO, a seeded tenant, or an inactive tenant — never
   whatever real tenant happens to have convenient data.
 - **P5-A batch 3/3 (`ask-viv-assistant`, 76 findings, the largest remaining
-  file), pending merge.**
-  [#970](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/970).
+  file), merged and deploy-verified.**
+  [#970](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/970),
+  merged at commit `db2c46105` (05:29 UTC). Confirmed live via Supabase MCP:
+  deployed version advanced 147→148 at 05:41 UTC (~12 min sync lag via
+  Supabase's native GitHub sync integration, confirmed independently by
+  Codex the same day — see `AGENTS.md`'s "Supabase deployment workflow"
+  section, correction pending in PR #972), source verified byte-identical
+  to the merged commit, and 3 live Playwright test conversations returned
+  correct real data with zero new console errors and clean production
+  logs.
   Staff-only agentic tool-calling assistant (21 tools in one `executeTool`
   dispatcher) — the client portal calls a separate, untouched
   `ask-viv-assistant-client` function. Modelled 20 local row-shape
@@ -168,23 +176,48 @@ remains unchanged at 738 failed and 242 skipped rows. Supabase recorded
   alone. No live Playwright pass was done pre-merge for this reason —
   there's nothing new deployed to exercise yet; live verification happens
   after merge once the sync integration deploys it.
+- **P4-B (invalid relationship reads) done, plus a P6-B retirement it
+  surfaced, pending merge.** Two genuine `packages:package_id`-embed no-FK
+  bugs fixed (`StagePreviewDialog.tsx`, `BulkGenerateDocumentsDialog.tsx`) —
+  same two-step-fetch pattern as `GeneratedDocumentsTab.tsx`'s existing fix,
+  no speculative FK added. Fixing a third instance in
+  `TenantDocuments.tsx` was paused mid-task after Carl noticed the page for
+  the first time; reachability triage (matching the P6-A lesson above)
+  found `TenantDocuments.tsx`, `TenantDocumentsHub.tsx`,
+  `TenantDocumentDetail.tsx`, and `TenantDocumentDetailWrapper.tsx` (+ their
+  3 routes) were unreachable dead code whose only live equivalent
+  (`ClientDetail.tsx`'s embedded Documents tab) was already fixed. Retired
+  all 4 files and redirected the 3 routes instead of fixing dead code — see
+  `dead-code-feature-consolidation-investigation-2026-09-04.md` §7quater and
+  L10 item #17's update for the full investigation. Verified live:
+  `StagePreviewDialog.tsx`'s fixed query and all 3 retirement redirects,
+  zero console errors; `BulkGenerateDocumentsDialog.tsx`'s own dialog could
+  not be opened live (`package_stage_documents` has zero non-deleted rows
+  in production right now, for any stage — a pre-existing, unrelated data
+  fact) so its fix rests on static verification + code-pattern review only,
+  disclosed as a coverage gap rather than silently claimed as tested.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-B/C/D, P6-B, P7 — several of these require
-  live-schema investigation, product/security decisions, or their own
-  separately authorized packets per §1's rules.
+  infra decision), P3-A, P4-C, P4-D, the rest of P6-B, P7 — several of
+  these require live-schema investigation, product/security decisions, or
+  their own separately authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
 duplicates, typecheck 0 errors. The P6-A retirement's own drop from 166→128
 errors and 243→240 routes reflects the retired page's own `any` findings
-and its 3 removed routes, not a regression. PRs #967, #968, and #970
-(all pending merge) will together bring this to 3 errors once merged
-(128 minus 125 across the three P5-A batches) — the residual 3 being
-`generate-meeting-recurrence` (1, deliberately excluded, tied to its own
-L10 #25 auth-review packet) and `InviteUserDialog.tsx`/
-`AddWorkboardItemDialog.tsx` (2, per §8's own P5-A item 2-3, requiring
-reachability confirmation and a bounded cross-schema adapter
-respectively — not yet started).
+and its 3 removed routes, not a regression. **#970 has since merged**
+(76 of the 125 P5-A findings); #967 and #968 remain pending. Once all
+three merge, this brings the count to 3 (128 minus 125 across the three
+P5-A batches) — the residual 3 being `generate-meeting-recurrence` (1,
+deliberately excluded, tied to its own L10 #25 auth-review packet) and
+`InviteUserDialog.tsx`/`AddWorkboardItemDialog.tsx` (2, per §8's own P5-A
+item 2-3, requiring reachability confirmation and a bounded cross-schema
+adapter respectively — not yet started). The route count (240) and
+retirement history above are current as of the P4-B/P6-B retirement noted
+below — this whole paragraph's error/warning counts are otherwise a
+snapshot at #970's merge and not re-verified against every later commit;
+re-run `npm run lint:ratchet`-adjacent full-repo lint before trusting the
+exact numbers if it's been a while.
 
 ## 1. Outcome and operating principles
 
@@ -384,6 +417,18 @@ Address Stage Preview (#5), Bulk Generate (#8), and Tenant Documents (#17) by re
 
 **Required evidence:** live foreign-key catalog, generated types, forbidden/empty/error handling, and query-count/performance note.
 
+**Status (2026-09-07): done, pending merge.** #5 and #8 fixed via the
+two-step-fetch pattern (batched `Map` lookups, `pg_constraint`-verified no
+real FK exists, matching the pattern `GeneratedDocumentsTab.tsx` already
+used). #17 turned out to be dead code — see the P6-B retirement below and
+`dead-code-feature-consolidation-investigation-2026-09-04.md` §7quater; no
+separate fix was made or is needed. Live evidence: #5's fixed query and
+#17's retirement redirects verified with zero console errors; #8's dialog
+could not be opened live (`package_stage_documents` has zero non-deleted
+rows in production for any stage right now — pre-existing, unrelated to
+this PR) so it rests on static verification only, disclosed as a coverage
+gap.
+
 ### Packet P4-C — identity and lookup reads
 
 Investigate and fix Process Audit Log (#20), Edit/Add Time person lookup (#21), and the unnumbered `AddTimeDialog` missing-parent-column issue. Confirm the actual identity columns and joins from the live schema before editing.
@@ -446,6 +491,19 @@ At branch cut, regenerate the AST import graph, exact-export census, route manif
 Retain `usePackageUsage.tsx` and every live replacement identified in the Phase 2.6 register. Never delete an Audit page without UUID/deep-link characterization.
 
 **Exit:** every candidate is retired, consolidated, retained with rationale, or deferred; before/after LOC and graph metrics are recorded; no backend object is removed by frontend evidence alone.
+
+**Cohort done, 2026-09-07 (surfaced by P4-B, not from the named-cohort list
+above): `/tenant/:tenantId/document(s)...` route tree.**
+`TenantDocuments.tsx`, `TenantDocumentsHub.tsx`, `TenantDocumentDetail.tsx`,
+`TenantDocumentDetailWrapper.tsx` + 3 routes retired as zero-inbound —
+exhaustive `navigate()`/`Link to=`/route-manifest sweep found no real entry
+point, and the live equivalent (`ClientDetail.tsx`'s embedded Documents
+tab) was already fixed independently. Full writeup:
+`dead-code-feature-consolidation-investigation-2026-09-04.md` §7quater.
+Before/after metrics: 1,727→1,724 tracked files, 490,147→489,187 physical
+lines (−960). No backend object removed — `documents`,
+`document_versions`, `document_stage_links` all remain live schema used by
+the real equivalent.
 
 ## 9. Phase 3 pilot packets
 
