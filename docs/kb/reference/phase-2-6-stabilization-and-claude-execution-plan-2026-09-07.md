@@ -570,6 +570,25 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   neither of which is a registered route — pre-existing dead links this
   retirement doesn't create or worsen; building the missing pages or
   removing the links is a product decision, left to the dead-code register.
+- **P6-B `useKpiReview.tsx` retired, genuine product gap uncovered (not
+  just orphaning).** Zero repo-wide imports, fresh check in this batch's
+  own worktree. `kpi_reviews`/`kpi_review_signoffs` each have 1 real row
+  (no cron references) and a live sibling — `MyKpiSignOffSection.tsx`
+  (routed via `MyKpiDashboardPage.tsx`) — reads/inserts into the same two
+  tables directly, for the *subject*-side view/sign-off flow. But
+  `compute_kpi_overall_status`, `upsert_kpi_review`, and the `locked_at`
+  lock action (the *reviewer*-side create/edit path) have no caller
+  anywhere else — this hook was the only frontend path to create or lock
+  a review. `MyKpiDashboardPage.tsx` links to `/admin/kpi-review` ("Open
+  reviewer view"), and `ProtectedRoute.tsx` carves out `/admin/kpi-*` for
+  `kpi_role === 'reviewer'` users, but no such route is registered
+  anywhere — the reviewer-side page this hook backed appears removed or
+  never finished, independent of this retirement. Retiring the
+  already-unreachable hook changes nothing (nothing could call it), but
+  the reviewer workflow itself is currently broken — whether to rebuild
+  `/admin/kpi-review` or formally retire the create/lock RPCs is a
+  product decision, recorded in the dead-code register rather than acted
+  on here. Both RPCs and `locked_at` left untouched.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
@@ -578,9 +597,10 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `document_links`/`compliance_score_snapshots` tables and their Edge/RPC
   functions' own retirement decisions; the unverified `StageCellEditor`
   dead-export finding; the dead `/eos/meetings/:id/minutes`/`/attendance`
-  links in `MeetingExecutionPanel.tsx`; the remaining "data/workflow
-  hooks" in the
-  zero-inbound queue: `useKpiReview`/`useAISuggestions`/`useEosDrafts`/
+  links in `MeetingExecutionPanel.tsx`; the missing `/admin/kpi-review`
+  reviewer page and its create/lock RPCs' disposition; the remaining
+  "data/workflow hooks" in the
+  zero-inbound queue: `useAISuggestions`/`useEosDrafts`/
   `useDocumentScan`/`useEngagementAudit`
   — each has its own caution note requiring a
   server-object/sibling-comparison/policy-preservation check before
