@@ -409,11 +409,27 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   not server-object retirement evidence) and `StandardsPicker.tsx` (may
   represent roadmap intent, needs a product decision) — both correctly
   excluded per the register's existing dispositions, not overlooked.
+- **P6-B Workboard UI island retired.** `AddWorkboardItemDialog.tsx`,
+  `WorkboardBoardView.tsx`, `WorkboardItemDrawer.tsx`,
+  `WorkboardListView.tsx`, and `useClientWorkboard.tsx` (1,765 LOC): zero
+  repo-wide references to any of the 5 beyond their own internal
+  cross-imports — no page or route renders any of the 4 view components.
+  **Caution satisfied, not skipped:** `client_action_items`/
+  `client_action_item_comments` (the tables this hook reads/writes) are
+  genuinely still live — `ClientActionItemsTab.tsx`, `ClientTasksPage.tsx`,
+  `TasksManagement.tsx`, several KPI-v2 components, and the Ask Viv fact
+  builder's backend all read the same tables through a completely
+  different, active UI. This is a superseded duplicate feature, not dead
+  database infrastructure. **Also resolves `AddWorkboardItemDialog.tsx`'s
+  long-standing P5-A item 2 reachability question** (carried since Phase
+  2.5 closeout as one of the residual 3 `no-explicit-any` findings) —
+  confirmed genuinely dead rather than typed.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
-  consumer graph above), P4-D, the rest of P6-B (SeatCard display core —
-  blocked on missing Playwright coverage, the remaining product/
-  reachability-gated islands: Workboard/SharePoint/bulk-generation-steps/
+  consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
+  cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
+  core — blocked on missing Playwright coverage, the remaining product/
+  reachability-gated islands: SharePoint/bulk-generation-steps/
   Reassignment/Compliance-score, the "data/workflow hooks" half of the
   zero-inbound queue: `useStageReleases`/`usePortfolioCockpit`/
   `useMeetingSeries`/`usePackageUsage`/`useMeetingMinutes`/`useKpiReview`/
@@ -433,10 +449,17 @@ and its 3 removed routes, not a regression. **All three P5-A batches
 (#967, #968, #970), P4-B/P6-B (#975), and P4-C (#976) have now merged** —
 this brings the count to 3 (128 minus 125 across the three P5-A batches) —
 the residual 3 being `generate-meeting-recurrence` (1, deliberately
-excluded, tied to its own L10 #25 auth-review packet) and
-`InviteUserDialog.tsx`/`AddWorkboardItemDialog.tsx` (2, per §8's own P5-A
-item 2-3, requiring reachability confirmation and a bounded cross-schema
-adapter respectively — not yet started). The route count (240) and
+excluded from typing scope, tied to its own L10 #25 auth-review packet —
+that packet's auth gate was added in P3-A item 3/PR #979, but the file's
+`catch (error: any)` itself was left untouched as out of scope for a
+security-only fix) and `InviteUserDialog.tsx`/`AddWorkboardItemDialog.tsx`
+(2, per §8's own P5-A item 2-3). **`AddWorkboardItemDialog.tsx`'s
+reachability question is now resolved**: retired 2026-09-07 as part of
+P6-B's Workboard UI cluster retirement (§3.2) — confirmed genuinely dead,
+zero repo-wide references, with a live successor UI
+(`ClientActionItemsTab.tsx`) still managing the same `client_action_items`
+table. `InviteUserDialog.tsx`'s bounded cross-schema adapter remains not
+started. The route count (240) and
 retirement history above are current as of the P4-B/P6-B retirement noted
 above — this whole paragraph's error/warning counts are otherwise a
 snapshot around #970's merge and not re-verified against every later commit;
