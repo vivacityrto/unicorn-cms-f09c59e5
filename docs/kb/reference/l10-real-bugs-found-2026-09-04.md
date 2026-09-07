@@ -285,6 +285,12 @@ removal preserved the existing (broken) behavior via an explicit narrow
 cast, matching item 15's established pattern, rather than silently
 patching it.
 
+**Update (Phase 2.6 Packet P4-B/P6-B, 2026-09-07):** `TenantDocuments.tsx`
+was retired as unreachable dead code (see item #17) — its copy of this bug
+no longer exists. `GeneratedDocumentsTab.tsx`'s copy is the real, live
+instance and remains open, unfixed, pending the same product decision on
+the correct legacy-mapping source.
+
 ## Manage Stages — audit trail (`AdminManageStages.tsx`)
 
 ### 14. Stage archive/restore has never recorded an audit trail entry — DOCUMENTED, NOT FIXED (compliance-relevant)
@@ -370,29 +376,42 @@ frontend change.
 
 ## Tenant Documents — package-name lookup has no real FK (`TenantDocuments.tsx`)
 
-### 17. Tenant Documents page has never loaded documents for any tenant with an assigned package — DOCUMENTED, NOT FIXED (missing FK, same root cause as #5/#8)
-`TenantDocuments.tsx`'s document list embeds `packages:package_id(name)`
+### 17. Tenant Documents page has never loaded documents for any tenant with an assigned package — RESOLVED VIA RETIREMENT (2026-09-07)
+`TenantDocuments.tsx`'s document list embedded `packages:package_id(name)`
 on the `documents` table — but **`documents.package_id` has no foreign key
 to `packages` at all** (confirmed via `pg_constraint`: `documents` has
 exactly two FKs, `created_by → auth.users` and
 `current_published_version_id → document_versions`; nothing on
 `package_id`). Every real request for a tenant that actually has an
-assigned package 400s with "could not find a relationship" — reproduced
+assigned package 400d with "could not find a relationship" — reproduced
 live for HPA Training Pty Ltd (tenant #6278), which has a real package and
 a "Failed to load documents" toast on this exact page. Tenants checked
 during batch 41's own verification (Demo RTO and others) all happened to
 have zero packages/documents, so the query's `if (tenantPackageIds.length
 > 0)` guard never fired and this failure mode went unnoticed there.
 
-Same root cause and fix pattern as items #5 and #8 above (an embed
-assuming a FK relationship that was never created) — a two-step fetch
-(load documents, then separately fetch package names by id and merge
-client-side) would work without a migration, or an actual FK could be
-added. Not fixed here: this predates tonight's `no-explicit-any` work
-entirely (the query string is unchanged from before batch 41's type-only
-edit) and is a pre-existing production bug on a page most tenants happen
-not to exercise, not something to silently patch as a side effect of a
-type-retirement batch.
+**Update (Phase 2.6 Packet P4-B/P6-B, 2026-09-07):** root-caused as dead
+code, matching item #27's precedent — `TenantDocuments.tsx` (route
+`/tenant/:tenantId/documents`), `TenantDocumentsHub.tsx`
+(`/tenant/:tenantId/documents-hub`), `TenantDocumentDetail.tsx`, and
+`TenantDocumentDetailWrapper.tsx` (`/tenant/:tenantId/document/:documentId`)
+had **zero real navigation entry points anywhere in the app** — no
+`navigate()`/`Link to=` call site referenced any of these three routes,
+and neither file had been touched by any of this repo's typing/fix batches
+except ancient Lovable auto-commits. The real, live "Documents" tab is
+`ClientDetail.tsx`'s embedded `DocumentsHub.tsx` (route
+`/tenant/:tenantId?tab=documents`), whose `GeneratedDocumentsTab.tsx`
+already carries the identical two-step-fetch fix for this exact
+`packages:package_id` no-FK bug, applied independently in an earlier,
+unrelated-sounding commit. Rather than duplicate that fix onto dead code,
+all 4 files and their 3 routes were retired, replaced with
+`<Navigate replace>` redirects to the real Documents tab (matching the
+existing `LegacyAuditTabRedirect`/`/admin/governance-documents` precedent
+for retired routes with possible stray bookmarks/external links). Verified
+live: all 3 old routes redirect correctly with zero console errors, and
+the real Documents tab (including its Generated sub-tab, exercising the
+already-fixed two-step fetch) loads correctly. No separate fix to
+`TenantDocuments.tsx` was made or is needed.
 
 ## Notification preferences (`useNotificationPrefs.ts`)
 
