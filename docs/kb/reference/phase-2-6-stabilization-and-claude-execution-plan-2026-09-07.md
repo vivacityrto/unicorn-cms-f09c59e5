@@ -148,6 +148,28 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   permission classifier. Logged as a standing rule: future write-testing on
   this plan uses Demo RTO, a seeded tenant, or an inactive tenant — never
   whatever real tenant happens to have convenient data.
+- **P5-A batch 1/3 (6 single-finding Edge Functions), merged.**
+  [#967](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/967).
+  Fixed `add-missing-packages`, `bulk-send-invitations`,
+  `create-client-audit`, `create-tasks-from-minutes`, `dashboard-test-seed`,
+  `tga-rto-import` — every single-occurrence `no-explicit-any` finding in
+  `supabase/functions/**` outside `tga-rto-sync` (43 findings) and
+  `ask-viv-assistant` (76 findings), both deferred to their own
+  contract-sized batches, and `generate-meeting-recurrence` (excluded per
+  this section's own rule, tied to L10 #25's auth review). All 6 fixes are
+  compiler-provable type-only changes (catch-narrowing, an existing typed
+  `EdgeRuntime`-global pattern reused from 3 other functions, a new
+  `MinutesContent` JSON-blob type, a redundant any-cast removal, and a
+  `SupabaseClientAny = any` alias swapped for the real untyped
+  `SupabaseClient` import already used in `_shared/`) — no live Playwright
+  pass required. Added 5 missing `*.test.mjs` static-assertion files
+  (test:edge 260→265 passing). Found, documented (L10 #28), but
+  deliberately did not fix — behavioral change, out of scope here — a
+  pre-existing `bulk-send-invitations` bug: 3 call sites call its own
+  `jsonResponse(req, status, body)` helper without `req`, so those
+  validation-failure paths throw instead of returning a structured error.
+  Post-merge Edge-deploy check pending (per `AGENTS.md`'s "Supabase
+  deployment workflow" — confirm deployed version/source via Supabase MCP).
 - **P5-A batch 3/3 (`ask-viv-assistant`, 76 findings, the largest remaining
   file), merged and deploy-verified.**
   [#970](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/970),
@@ -214,25 +236,26 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   dropdowns built on `public.users` list system/test/bulk-operation accounts
   unfiltered — logged as RBAC v6 plan §13 item 14, not actioned here.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-D, the rest of P6-B, P7 — several of these
-  require live-schema investigation, product/security decisions, or their
-  own separately authorized packets per §1's rules.
+  infra decision), P3-A, P4-D, P5-A batch 2/3 (`tga-rto-sync`, #968), the
+  rest of P6-B, P7 — several of these require live-schema investigation,
+  product/security decisions, or their own separately authorized packets
+  per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
 duplicates, typecheck 0 errors. The P6-A retirement's own drop from 166→128
 errors and 243→240 routes reflects the retired page's own `any` findings
-and its 3 removed routes, not a regression. **#970 has since merged**
-(76 of the 125 P5-A findings); #967 and #968 remain pending. Once all
-three merge, this brings the count to 3 (128 minus 125 across the three
-P5-A batches) — the residual 3 being `generate-meeting-recurrence` (1,
-deliberately excluded, tied to its own L10 #25 auth-review packet) and
+and its 3 removed routes, not a regression. **#970, #975, #976, and #967
+have since merged**; only #968 (`tga-rto-sync`, 43 findings) remains
+pending. Once it merges, this brings the count to 3 (128 minus 125 across
+the three P5-A batches) — the residual 3 being `generate-meeting-recurrence`
+(1, deliberately excluded, tied to its own L10 #25 auth-review packet) and
 `InviteUserDialog.tsx`/`AddWorkboardItemDialog.tsx` (2, per §8's own P5-A
 item 2-3, requiring reachability confirmation and a bounded cross-schema
 adapter respectively — not yet started). The route count (240) and
 retirement history above are current as of the P4-B/P6-B retirement noted
-below — this whole paragraph's error/warning counts are otherwise a
-snapshot at #970's merge and not re-verified against every later commit;
+above — this whole paragraph's error/warning counts are otherwise a
+snapshot around #970's merge and not re-verified against every later commit;
 re-run `npm run lint:ratchet`-adjacent full-repo lint before trusting the
 exact numbers if it's been a while.
 

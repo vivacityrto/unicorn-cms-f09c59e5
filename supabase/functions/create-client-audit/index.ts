@@ -187,9 +187,10 @@ Deno.serve(async (req) => {
         }),
       }).catch((e) => console.error("research-audit-intelligence trigger failed", e));
 
-      // deno-lint-ignore no-explicit-any
-      const edgeRuntime = (globalThis as any).EdgeRuntime;
-      if (edgeRuntime && typeof edgeRuntime.waitUntil === "function") {
+      const edgeRuntime = (globalThis as unknown as {
+        EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void };
+      }).EdgeRuntime;
+      if (edgeRuntime?.waitUntil) {
         edgeRuntime.waitUntil(packPromise);
       }
     }
