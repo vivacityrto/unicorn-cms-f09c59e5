@@ -1,4 +1,14 @@
 {
   "version": 1,
-  "entries": []
+  "entries": [
+    {
+      "id": "m2-retire-legacy-audit-cron-jobs",
+      "file": "supabase/migrations/20260907120000_retire_legacy_audit_cron_jobs.sql",
+      "categories": ["production-url", "cron-unschedule"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Product-owner-approved M2 retirement of broken legacy audit reminder jobs 4, 5, and 6; tables and helper functions remain in place.",
+      "expires": "2026-10-07"
+    }
+  ]
 }
