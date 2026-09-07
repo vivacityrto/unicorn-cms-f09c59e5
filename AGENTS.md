@@ -781,11 +781,34 @@ app-layer allowlist are the actual defense for anything invoked from
 
 ## Supabase deployment workflow
 
-Deploy hosted Supabase migrations and Edge Functions through the configured
-Supabase MCP tools. Do not rely on GitHub Actions or the Supabase CLI for
-production deployment; the repository intentionally has no automatic
-Supabase deployment workflow because production migration history may contain
-MCP-applied changes that are not present in every checkout.
+**Edge Functions auto-deploy on merge to `main`** via Supabase's native
+GitHub sync integration (configured on Supabase's dashboard side —
+Project Settings → Integrations → GitHub — not a file in this repo;
+`.github/workflows/*.yml` contains no deploy step). Confirmed empirically
+2026-09-07: PR #970 (`ask-viv-assistant` typing) merged to `main` at
+05:29 UTC; the function's deployed version advanced 147→148 at 05:41 UTC
+(~12 min sync lag), and the deployed source was verified byte-for-byte
+consistent with the merged commit (new `SupabaseClient` import and row
+interfaces present, zero remaining `any`). Pushing to a PR branch does
+**not** trigger a deploy — only a merge to `main` does. This corrects an
+earlier version of this section, which claimed no automatic deployment
+existed; that claim was wrong for Edge Functions specifically.
+
+Because of this, **do not merge an Edge Function PR into `main` without
+being ready for it to go live** — a merge is a production deployment, not
+just a repo change. Still perform a post-merge check (via Supabase MCP
+`list_edge_functions`/`get_edge_function`, or `query_logs`) that the
+version advanced and the source matches, since sync lag is real
+(observed ~12 minutes) and the mechanism has no repo-visible confirmation
+of its own.
+
+**Migrations are a separate, MCP-controlled path** — apply hosted
+Supabase migrations through the configured Supabase MCP tools
+(`apply_migration`), not GitHub Actions or the Supabase CLI. Whether the
+GitHub sync integration also touches `supabase/migrations/**` on merge is
+not yet confirmed either way; until it is, continue treating migrations
+as exclusively MCP-deployed and do not assume a migration merged to
+`main` has applied itself.
 
 ## Session end (commit conventions)
 
