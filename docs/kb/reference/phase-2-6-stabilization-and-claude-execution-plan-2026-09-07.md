@@ -43,6 +43,19 @@ retired names, unchanged neighboring schedules, and migration-history entry
 `20260907050651`. Historical run details remain; notification tables and
 helper functions were not changed. M3 is next.
 
+**2026-09-07, session 6 — Packet M3 dependency review completed (read-only):**
+production has zero rows in both `notification_schedule` and
+`notification_audit_log`; all three legacy audit functions are executable only
+by `service_role`/`postgres`, with no triggers or views depending on either
+table. The three database functions have no active schedule after M2 and no
+repository caller. `notification_audit_log` is nevertheless written by the
+active `process-notification-outbox` worker and must remain. `notification_schedule`
+is still read by the deployed but unscheduled `process-notification-queue`
+worker and written by the three audit branches of `send-automated-email`; those
+branches have no repository caller and currently reference the removed
+`payload` column. Recommendation: execute the staged retirement path in Packet
+M3-A through M3-C below, retaining `notification_audit_log`.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then
@@ -558,15 +571,60 @@ in a separately reviewed packet with an auditable rollback/restore procedure.
 
 ### Packet M3 — notification legacy decision
 
-Choose exactly one path:
+The read-only dependency review supports a staged version of path 2 (retire),
+not migration to a new reminder workflow. Production has zero rows in both
+legacy tables. The three legacy database functions are service-role-only,
+unscheduled after M2, have no trigger/view dependency, and have no repository
+caller. `notification_audit_log` is not dead: the active
+`process-notification-outbox` worker writes success/failure delivery records to
+it, so it remains in the live notification contract. `notification_schedule`
+is dormant but cannot be dropped yet because the deployed
+`process-notification-queue` reads it and `send-automated-email` still writes
+it in three unreachable audit branches; both paths reference the removed
+`payload` column.
 
-1. migrate audit reminders to the current notification-outbox/send-email path,
-   with a corrected schema contract and regression tests; or
-2. retire the audit reminder functions, schedules and legacy notification
-   structures after dependency and retention sign-off.
+#### M3-A — retire the three legacy database functions
 
-If retained, the `payload` mismatch and the evidence status-filter mismatch are
-blocking correctness defects, not typing cleanup.
+Prepare an idempotent migration that drops only:
+
+- `public.audit_flag_overdue_chcs()`;
+- `public.audit_send_24hr_confirmation()`; and
+- `public.audit_send_evidence_reminders()`.
+
+Preflight must re-check that the functions are service-role-only, no trigger or
+view references them, and jobs 4–6 remain absent. Apply only after explicit
+production authorization; postflight must assert that the three routines no
+longer exist and that both legacy tables are unchanged.
+
+#### M3-B — retire dormant queue references
+
+Remove the three audit-only insert branches from `send-automated-email` and
+retire the deployed `process-notification-queue` worker through a separately
+reviewed Edge change (no cron job or frontend caller exists). Run Edge tests,
+lint ratchet, typecheck, build, and a read-only function health check. Do not
+drop `notification_schedule` in the same Edge deployment.
+
+#### M3-C — drop `notification_schedule` only after a quiet-period proof
+
+After M3-B, verify no deployed function, migration, trigger, view, or frontend
+caller references the table; confirm zero rows and zero recent access/error
+evidence; then apply a separately authorized, reversible migration to drop the
+table and its indexes/policies. Postflight must assert the relation is absent
+and that `notification_audit_log` and `notification_outbox` remain intact.
+
+#### M3-D — retain and govern `notification_audit_log`
+
+Keep the table because `process-notification-outbox` writes it. Add a separate
+retention/observability decision later (the current table is empty, while
+`notification_outbox` contains 980 terminal failed/skipped rows). Do not drop
+or rewrite its foreign key to `notification_outbox` as part of M3-A through
+M3-C.
+
+If the product owner instead wants audit reminders restored, stop this staged
+retirement and open a migration path that uses `notification_outbox` and the
+current email sender, with corrected schemas, dedupe, recipient policy, and
+regression tests. The current `payload` mismatch and `status = 'sent'` filter
+are blocking correctness defects, not typing cleanup.
 
 ### Packet M4 — forecast and health output integrity
 

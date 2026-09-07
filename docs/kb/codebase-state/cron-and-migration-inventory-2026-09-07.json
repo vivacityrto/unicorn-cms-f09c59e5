@@ -158,5 +158,41 @@
     "migrationHistoryVersion": "20260907050651",
     "historicalRunDetailsRetained": true
   },
-  "nextPacket": "M3"
+  "m3": {
+    "status": "investigated-no-hosted-change",
+    "legacyTables": {
+      "notification_schedule": {
+        "rows": 0,
+        "rlsEnabled": true,
+        "currentReaders": ["process-notification-queue"],
+        "currentWriters": ["send-automated-email"],
+        "dropBlockedUntil": "M3-B edge retirement and quiet-period proof"
+      },
+      "notification_audit_log": {
+        "rows": 0,
+        "rlsEnabled": true,
+        "currentWriters": ["process-notification-outbox"],
+        "decision": "retain"
+      }
+    },
+    "legacyFunctions": {
+      "decision": "drop-after-explicit-authorization",
+      "routines": [
+        "public.audit_flag_overdue_chcs()",
+        "public.audit_send_24hr_confirmation()",
+        "public.audit_send_evidence_reminders()"
+      ],
+      "activeCronJobs": [],
+      "repositoryCallers": [],
+      "anonExecute": false,
+      "authenticatedExecute": false,
+      "serviceRoleExecute": true
+    },
+    "outboxTerminalRows": {
+      "failed": 738,
+      "skipped": 242,
+      "sent": 0
+    }
+  },
+  "nextPacket": "M3-A (legacy function retirement approval)"
 }

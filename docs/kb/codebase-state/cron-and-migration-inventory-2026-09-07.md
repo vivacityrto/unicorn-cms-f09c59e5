@@ -106,6 +106,19 @@ jobs 4–6, 24 active jobs remain, all neighboring schedules are unchanged, and
 the migration is recorded in Supabase migration history. Historical
 `cron.job_run_details` rows remain for auditability.
 
+## M3 notification legacy review
+
+The M3 dependency review found zero rows in both legacy tables. The three
+legacy audit routines are service-role-only, unscheduled after M2, and have no
+repository callers, so they are candidates for a separately authorized
+function-drop migration. `notification_audit_log` must remain because the
+active `process-notification-outbox` worker writes delivery success/failure
+records to it. `notification_schedule` is not yet removable: the deployed but
+unscheduled `process-notification-queue` worker reads it and
+`send-automated-email` contains three unreachable audit-only writers. Those
+code paths must be retired before a quiet-period proof and a separately
+authorized table-drop migration.
+
 ## Migration replay inventory
 
 The repository contains 1,539 migration files, of which 1,517 are non-rollback
