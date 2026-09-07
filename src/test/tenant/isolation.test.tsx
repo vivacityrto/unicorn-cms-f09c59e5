@@ -15,6 +15,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 
@@ -67,10 +68,34 @@ type AuditEventRow = Pick<
   "id" | "entity" | "action" | "user_id" | "entity_id"
 >;
 
-const RUN_ID = `vitest-${Date.now().toString(36)}-${Math.random()
-  .toString(36)
-  .slice(2, 8)}`;
+interface FixtureLedger {
+  tenantIds: number[];
+  authUserIds: string[];
+  profileUserIds: string[];
+  tenantMemberIds: string[];
+  conversationIds: string[];
+  participantKeys: string[];
+  messageIds: string[];
+  auditEventIds: string[];
+}
+
+const RUN_ID = `vitest-${randomUUID()}`;
 const PASS = "Passw0rd!Test-Vitest";
+
+const fixtureLedger: FixtureLedger = {
+  tenantIds: [],
+  authUserIds: [],
+  profileUserIds: [],
+  tenantMemberIds: [],
+  conversationIds: [],
+  participantKeys: [],
+  messageIds: [],
+  auditEventIds: [],
+};
+
+function recordOnce<T>(values: T[], value: T) {
+  if (!values.includes(value)) values.push(value);
+}
 
 let svc: SupabaseClient<Database>;
 
@@ -110,6 +135,8 @@ async function makePersona(
     throw new Error(`createUser ${label}: ${error?.message}`);
   }
   const authId = created.user.id;
+  recordOnce(fixtureLedger.authUserIds, authId);
+  recordOnce(fixtureLedger.profileUserIds, authId);
 
   // The `link_auth_user_to_profile` trigger may have created a stub row;
   // upsert on user_uuid handles both create and update paths.
@@ -141,7 +168,7 @@ async function makePersona(
   return { email, authId, client };
 }
 
-async function addTenantMember(tenantId: number, userId: string) {
+async function addTenantMember(tenantId: number, userId: string): Promise<string> {
   const membership: TenantMemberInsert = {
     tenant_id: tenantId,
     user_id: userId,
@@ -149,8 +176,15 @@ async function addTenantMember(tenantId: number, userId: string) {
     status: "active",
     joined_at: new Date().toISOString(),
   };
-  const { error } = await svc.from("tenant_members").insert(membership);
+  const { data, error } = await svc
+    .from("tenant_members")
+    .insert(membership)
+    .select("id")
+    .single();
   if (error) throw new Error(`tenant_members: ${error.message}`);
+  if (!data) throw new Error("tenant_members: insert returned no row");
+  recordOnce(fixtureLedger.tenantMemberIds, data.id);
+  return data.id;
 }
 
 async function createConversation(
@@ -172,6 +206,7 @@ async function createConversation(
     .single();
   if (error || !data) throw new Error(`tenant_conversations: ${error?.message}`);
   const row: ConversationIdRow = data;
+  recordOnce(fixtureLedger.conversationIds, row.id);
   return row.id;
 }
 
@@ -188,6 +223,7 @@ async function addParticipant(
   };
   const { error } = await svc.from("conversation_participants").insert(participant);
   if (error) throw new Error(`participant: ${error.message}`);
+  recordOnce(fixtureLedger.participantKeys, `${conversationId}:${userId}`);
 }
 
 async function seedMessage(
@@ -200,10 +236,16 @@ async function seedMessage(
     tenant_id: tenantId,
     sender_user_uuid: senderAuthId,
     sender_type: "client",
-    body: "seed message",
+    body: `seed message ${RUN_ID}`,
   };
-  const { error } = await svc.from("tenant_messages").insert(message);
+  const { data, error } = await svc
+    .from("tenant_messages")
+    .insert(message)
+    .select("id")
+    .single();
   if (error) throw new Error(`seed message: ${error.message}`);
+  if (!data) throw new Error("seed message: insert returned no row");
+  recordOnce(fixtureLedger.messageIds, data.id);
 }
 
 describe.skipIf(!RLS_SUITE_ENABLED).sequential(
@@ -227,6 +269,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
         .single();
       if (tAErr || !tA) throw new Error(`tenant A: ${tAErr?.message}`);
       tenantA = tA.id;
+      recordOnce(fixtureLedger.tenantIds, tenantA);
 
       const tenantBInsert: TenantInsert = {
         name: `Test Tenant B ${RUN_ID}`,
@@ -240,6 +283,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
         .single();
       if (tBErr || !tB) throw new Error(`tenant B: ${tBErr?.message}`);
       tenantB = tB.id;
+      recordOnce(fixtureLedger.tenantIds, tenantB);
 
       // Personas.
       A1 = await makePersona("a1", "Client User");
@@ -356,7 +400,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
           tenant_id: tenantA,
           sender_user_uuid: A1.authId,
           sender_type: "client",
-          body: "test send",
+          body: `test send ${RUN_ID}`,
         })
         .select("id")
         .single();
@@ -364,6 +408,9 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
       expect(data).toBeTruthy();
       const insertedMessage: TenantMessageIdRow | null = data;
       a1InsertedMessageId = insertedMessage?.id ?? null;
+      if (a1InsertedMessageId) {
+        recordOnce(fixtureLedger.messageIds, a1InsertedMessageId);
+      }
       expect(a1InsertedMessageId).toBeTruthy();
     });
 
@@ -373,7 +420,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
         tenant_id: tenantA,
         sender_user_uuid: A1.authId,
         sender_type: "client",
-        body: "should fail",
+        body: `should fail ${RUN_ID}`,
       });
       expectRlsViolation(error);
     });
@@ -384,7 +431,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
         tenant_id: tenantB,
         sender_user_uuid: A1.authId,
         sender_type: "client",
-        body: "should fail",
+        body: `should fail ${RUN_ID}`,
       });
       expectRlsViolation(error);
     });
@@ -428,7 +475,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
         tenant_id: tenantA,
         sender_user_uuid: B1.authId,
         sender_type: "client",
-        body: "should fail",
+        body: `should fail ${RUN_ID}`,
       });
       expectRlsViolation(error);
     });
@@ -463,14 +510,19 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
     });
 
     it("14. S INSERT into convA as staff → success (tm_insert_staff)", async () => {
-      const { error } = await S.client.from("tenant_messages").insert({
-        conversation_id: convA,
-        tenant_id: tenantA,
-        sender_user_uuid: S.authId,
-        sender_type: "staff",
-        body: "staff reply",
-      });
+      const { data, error } = await S.client
+        .from("tenant_messages")
+        .insert({
+          conversation_id: convA,
+          tenant_id: tenantA,
+          sender_user_uuid: S.authId,
+          sender_type: "staff",
+          body: `staff reply ${RUN_ID}`,
+        })
+        .select("id")
+        .single();
       expect(error).toBeNull();
+      if (data) recordOnce(fixtureLedger.messageIds, data.id);
     });
 
     /* ---------------- Audit trigger (M2) ---------------- */
@@ -485,6 +537,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
       expect(error).toBeNull();
       expect((data?.length ?? 0)).toBeGreaterThanOrEqual(1);
       const auditRows: AuditEventRow[] = data ?? [];
+      auditRows.forEach((row) => recordOnce(fixtureLedger.auditEventIds, row.id));
       expect(auditRows.some((row) => row.user_id === A1.authId)).toBe(true);
     });
   },
