@@ -134,7 +134,11 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
   const togglePinnedExpand = (noteId: string) => {
     setExpandedPinnedNotes(prev => {
       const next = new Set(prev);
-      next.has(noteId) ? next.delete(noteId) : next.add(noteId);
+      if (next.has(noteId)) {
+        next.delete(noteId);
+      } else {
+        next.add(noteId);
+      }
       return next;
     });
   };

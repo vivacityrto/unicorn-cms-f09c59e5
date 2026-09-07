@@ -68,7 +68,11 @@ export default function NewEnrolmentModal({ open, onOpenChange }: Props) {
   const toggleLearner = (key: string) => {
     setSelectedLearners((prev) => {
       const n = new Set(prev);
-      n.has(key) ? n.delete(key) : n.add(key);
+      if (n.has(key)) {
+        n.delete(key);
+      } else {
+        n.add(key);
+      }
       return n;
     });
   };
@@ -76,7 +80,11 @@ export default function NewEnrolmentModal({ open, onOpenChange }: Props) {
   const toggleCourse = (id: number) => {
     setSelectedCourses((prev) => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) {
+        n.delete(id);
+      } else {
+        n.add(id);
+      }
       return n;
     });
   };

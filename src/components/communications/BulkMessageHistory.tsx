@@ -87,7 +87,7 @@ function CampaignRecipients({ campaignId }: { campaignId: string }) {
       {recipientsByTenant.map(([tenantId, tenantRecipients]) => {
         const isOpen = expandedTenantIds.has(tenantId);
         const tenantReadCount = tenantRecipients.filter((recipient) => recipient.read_at).length;
-        return <Collapsible key={tenantId} open={isOpen} onOpenChange={(open) => setExpandedTenantIds((previous) => { const next = new Set(previous); open ? next.add(tenantId) : next.delete(tenantId); return next; })} className="rounded-lg border border-border bg-background">
+        return <Collapsible key={tenantId} open={isOpen} onOpenChange={(open) => setExpandedTenantIds((previous) => { const next = new Set(previous); if (open) { next.add(tenantId); } else { next.delete(tenantId); } return next; })} className="rounded-lg border border-border bg-background">
           <CollapsibleTrigger className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/40">
             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-90" />
             <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">{tenantMap.get(tenantId)?.name ?? `Client #${tenantId}`}</p><p className="text-xs text-muted-foreground">{tenantReadCount} of {tenantRecipients.length} recipients read</p></div>
