@@ -448,12 +448,29 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   live variants. All 4 files' Supabase calls are plain reads on shared core
   tables (`packages`, `tenants`, `stages`, `tenant_sharepoint_settings`) —
   no exclusive backend object retired.
+- **P6-B Reassignment island retired.** `ReassignConsultantDialog.tsx`
+  (129 LOC), `useConsultantAssignment.tsx` (228 LOC). **Caution satisfied,
+  not skipped:** confirmed active CSC assignment contracts are preserved
+  — `BulkReassignCscDialog.tsx` (live, imported by `ManageTenants.tsx`) is
+  a completely independent implementation that doesn't use
+  `useConsultantAssignment.tsx` at all. `ReassignConsultantDialog.tsx`'s
+  only caller was actually removed 2026-08-27 (`235c3a3ce`), predating a
+  later claim in `codebase-optimization-plan-2026-08-28.md` (batch 9a)
+  that Playwright "verified live... the Reassign Consultant dialog" —
+  **corrected there**, since that claim almost certainly conflated this
+  dead dialog with the similarly-named, genuinely-live
+  `BulkReassignCscDialog.tsx` typed in the same batch (the same class of
+  gap as the earlier `WeekTasksTable` correction). Per this cohort's own
+  instruction, removed the dead duplicated staff-listing predicate from
+  `docs/kb/handoffs/rbac-v6-gate-closure-plan.md`'s census of files
+  needing future `useListableStaff()` migration (9→8 files), rather than
+  migrating dead code.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
   cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
   core — blocked on missing Playwright coverage, the remaining product/
-  reachability-gated islands: Reassignment/Compliance-score, the empty
+  reachability-gated islands: Compliance-score, the empty
   `document_links` table/`link-sharepoint-document` Edge Function's own
   retirement decision, the "data/workflow
   hooks" half of the
