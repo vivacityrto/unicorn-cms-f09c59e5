@@ -42,12 +42,30 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   port set in `vite.config.ts`).
 - Build: `npm run build` (production; also inlines critical CSS + writes
   `version.json`). `npm run build:dev` for a development-mode build.
-- Lint: `npm run lint`. NOTE: the codebase currently reports **~4,100
-  pre-existing eslint errors** (measured 2026-09-01; corrected from an
-  earlier vaguer "many thousands" here — 97% of them are a single rule,
-  `@typescript-eslint/no-explicit-any`, including in `supabase/functions/**`);
-  a non-zero exit is the current baseline, not an environment problem.
-  `eslint.config.js`'s top-level `ignores` now also excludes
+- Lint: `npm run lint`. NOTE: this used to report ~4,100 pre-existing
+  eslint errors (measured 2026-09-01, 97% a single rule,
+  `@typescript-eslint/no-explicit-any`) — that backlog is now **eliminated**,
+  driven down via the Phase 2.5 any-retirement program (~90 merged PRs,
+  closed at PR #953) and the Phase 2.6 stabilization plan's P1-A/P1-B/P5-A
+  packets plus dead-code retirement (`docs/kb/reference/
+  phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md`). As of
+  2026-09-08 (`origin/main@e5930f908`), `npm run lint` reports **2 errors,
+  44 warnings** (46 problems; `docs/kb/reference/lint-baseline.json` tracks
+  42 of those — 2 errors, 40 warnings — the 4 remaining warnings are
+  "unused eslint-disable directive" notices with no `ruleId`, which the
+  baseline script deliberately doesn't attribute to a rule). The 2 errors
+  are both `@typescript-eslint/no-explicit-any`, both known and deliberate:
+  `InviteUserDialog.tsx` (a reviewed `unicorn1` cross-schema exception) and
+  `supabase/functions/generate-meeting-recurrence/index.ts` (auth-gate fix
+  already shipped in PR #979; its own typing cleanup was explicitly
+  deferred, per Packet P3-A item 3's "add explicit caller authorization
+  and negative tests before any typing cleanup" rule). The 44 warnings are
+  almost entirely `react-refresh/only-export-components` (40) — a
+  Fast-Refresh style concern, not correctness — plus the 4 stale
+  eslint-disable notices above. Re-run `npm run lint:baseline` before
+  trusting this if it's been a while; a non-zero exit is still expected
+  (2 known errors), just no longer a ~4,100-error wall.
+  `eslint.config.js`'s top-level `ignores` also excludes
   `.worktrees/**`/`worktrees/**`/`.claude/worktrees/**` — without it, ESLint
   was re-linting the full contents of any stray nested git worktree left
   inside the repo (see "Local dev server troubleshooting" below for the
@@ -57,10 +75,11 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   full-repo check — for every `.ts`/`.tsx` file changed since
   `origin/main` (override the base with `LINT_RATCHET_BASE`), it compares
   that file's lint error count before vs. after. A file that already had
-  errors and still has the *same* count after your change passes (fixing
-  the ~4,100-error backlog isn't required to ship a PR); a file with *more*
-  errors than before, or a brand-new file with any errors at all, fails the
-  check. Runs in CI on every PR (`.github/workflows/lint-ratchet.yml`).
+  errors and still has the *same* count after your change passes (this
+  guard against regression stays useful even with the backlog gone — see
+  the lint NOTE above); a file with *more* errors than before, or a
+  brand-new file with any errors at all, fails the check. Runs in CI on
+  every PR (`.github/workflows/lint-ratchet.yml`).
   Separately, `@typescript-eslint/no-unused-vars` (off repo-wide) is now
   `error` for `src/services/**` and `src/contexts/**` specifically — both
   tested at zero violations, the plan's requested "one bounded directory"

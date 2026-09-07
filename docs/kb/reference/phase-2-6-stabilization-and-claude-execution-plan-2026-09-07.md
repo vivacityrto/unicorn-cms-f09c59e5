@@ -668,6 +668,19 @@ snapshot around #970's merge and not re-verified against every later commit;
 re-run `npm run lint:ratchet`-adjacent full-repo lint before trusting the
 exact numbers if it's been a while.
 
+**2026-09-08 — full-repo lint reconciled, confirms the count above.** Fresh
+`npm run lint` + `npm run lint:baseline` at `origin/main@e5930f908` (after
+all P6-B zero-inbound retirements this session): **2 errors, 44 warnings**
+(46 problems; `lint-baseline.json` — regenerated — tracks 42 rule-attributed
+findings, 2 errors/40 warnings, the other 4 warnings being ruleId-less
+"unused eslint-disable directive" notices). The 2 errors are exactly the
+two this paragraph already named (`generate-meeting-recurrence`,
+`InviteUserDialog.tsx`) — no new `any` regressions since #970. Full
+reconciliation against §2's original 173/166/39 baseline table, and
+`AGENTS.md`'s now-corrected "~4,100 pre-existing eslint errors" line, is
+recorded in §2's own reconciliation note. `AddWorkboardItemDialog.tsx`'s
+resolution above still stands.
+
 ## 1. Outcome and operating principles
 
 Phase 2.5 is formally closed as a prerequisite gate, not as a claim that every lint finding is gone. The next objective is a controlled stabilization pass that:
@@ -692,7 +705,7 @@ The following rules apply to every packet:
 
 ## 2. Current baseline and exit targets
 
-| Measure | Current | Stabilization target |
+| Measure | As authored 2026-09-07 | Stabilization target |
 |---|---:|---:|
 | ESLint errors | 173 | 0 |
 | `@typescript-eslint/no-explicit-any` | 166 | 0, or explicitly approved residuals in a later contract packet |
@@ -704,7 +717,7 @@ The following rules apply to every packet:
 | KB links | 672 checked, 0 broken | Remain green whenever KB files change |
 | Phase 2.6 retirement | 9,209 lines already removed | Every remaining candidate classified and individually evidenced |
 
-The 173 lint errors are distributed as follows:
+The 173 lint errors (as authored) were distributed as follows:
 
 - 76 in `supabase/functions/ask-viv-assistant/index.ts`;
 - 43 in `supabase/functions/tga-rto-sync/index.ts`;
@@ -713,6 +726,46 @@ The 173 lint errors are distributed as follows:
 - 2 frontend files: `InviteUserDialog.tsx` and `AddWorkboardItemDialog.tsx`.
 
 The seven non-`any` errors are expression-only ternaries in `NewEnrolmentModal.tsx`, `ImportVideosPanel.tsx`, `AuditPreparationSection.tsx`, `ClientTimelineTab.tsx`, and `BulkMessageHistory.tsx` (with two findings in the first file). Convert them to explicit `if/else` statements without changing behavior.
+
+> **Reconciled 2026-09-08 — every row above is now stale, in a good way.**
+> Fresh `npm run lint` + `npm run lint:baseline` at `origin/main@e5930f908`:
+> **2 errors, 44 warnings** (46 problems total; `lint-baseline.json` tracks
+> 42 rule-attributed findings — 2 errors, 40 warnings — the other 4
+> warnings are ruleId-less "unused eslint-disable directive" notices the
+> baseline script doesn't attribute to a rule). Reconciling against the
+> table above, by what closed each gap:
+> - **`ask-viv-assistant` (76) and `tga-rto-sync` (43):** fixed, P5-A
+>   batches 2-3 (PRs #968, #970).
+> - **`isolation.test.tsx` (38):** fixed, P1-C steps 1-5 by Codex (PRs
+>   #962-#963) — typed the live RLS suite against generated schema.
+> - **7 single-finding Edge Functions:** fixed, P5-A batch 1 (PR #967).
+> - **`AddWorkboardItemDialog.tsx`:** retired outright as dead code (P6-B,
+>   this session), not fixed — zero repo-wide imports.
+> - **`InviteUserDialog.tsx`:** still present — a deliberately retained,
+>   reviewed `unicorn1` cross-schema exception, not a gap.
+> - **The 7 non-`any` errors (`no-unused-expressions`):** fixed, P1-A (PR
+>   #957).
+> - **TypeScript errors (5 → 0):** fixed, P1-B (PR #958).
+> - **The 2 errors remaining today** are both `@typescript-eslint/no-explicit-any`:
+>   `InviteUserDialog.tsx` (the exception above) and
+>   `supabase/functions/generate-meeting-recurrence/index.ts` (its auth
+>   gate shipped in PR #979; typing cleanup was explicitly deferred per
+>   this packet's own P3-A item 3 rule — auth before typing).
+> - **Warnings (39 → 44, a net increase):** `react-refresh/only-export-components`
+>   went 39 → 40 (net +1 across churn, not investigated further — a
+>   Fast-Refresh style concern, not correctness); 4 new "unused
+>   eslint-disable directive" notices appeared (`useDebouncedAutosave.ts`,
+>   `workforce.ts`, `usePageViewTracking.ts`, `friendlyDbError.ts`) — stale
+>   disable comments left over from fixes elsewhere, not yet cleaned up.
+>
+> **Net effect: the `no-explicit-any` elimination effort (§2's original
+> exit target) is functionally done** — 2 residuals remain, both already
+> individually documented and one already exception-approved. `ESLint
+> errors: 0` is not literally met (2 remain) but both are known,
+> deliberate, and tracked, not backlog. Frontend tests, routes, and KB
+> links in the table above were not re-verified as part of this
+> reconciliation pass (it was scoped to the ESLint/TypeScript rows only,
+> per what was asked) — re-check those separately before trusting them.
 
 ## 3. Execution order and dependency graph
 
