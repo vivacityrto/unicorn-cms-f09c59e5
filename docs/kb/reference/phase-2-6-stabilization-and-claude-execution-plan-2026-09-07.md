@@ -14,6 +14,18 @@
 
 ## Progress log
 
+**2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
+migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
+and its JSON companion. No hosted state changed. M1 is next.
+
+**2026-09-07, session 3 — Packet M1 implemented:** added the repository
+migration scanner, unit tests, empty reviewed-exception allowlist, CI
+guardrail, and usage documentation. The full-tree audit reports historical
+findings without failing; changed-only CI mode blocks new production URLs,
+cron/HTTP side effects, migration-time mutations, and edits to existing
+migration history unless a concrete, short-lived allowlist entry matches.
+No hosted state changed. M2 remains product-owner gated.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then
@@ -488,6 +500,9 @@ that only write when later invoked.
 **Exit:** a committed Markdown/JSON matrix exists, with every active job and
 every migration risk classified as keep, fix, retire, or owner decision.
 
+**Artifact:** [Cron and Migration Inventory — 2026-09-07](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
+and its [machine-readable companion](../codebase-state/cron-and-migration-inventory-2026-09-07.json).
+
 ### Packet M1 — migration safety scanner and CI guardrail
 
 Add a repository script (for example, `scripts/audit-migrations.mjs`) that
@@ -506,6 +521,9 @@ fix.
 
 **Exit:** a fresh migration cannot silently schedule production work or perform
 an unreviewed data mutation during QA replay.
+
+**Implementation:** the scanner usage and reviewed-exception contract are
+documented in [Migration safety guardrail — 2026-09-07](../codebase-state/migration-safety-guardrail-2026-09-07.md).
 
 ### Packet M2 — controlled retirement of legacy audit jobs
 
