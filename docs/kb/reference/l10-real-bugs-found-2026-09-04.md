@@ -573,9 +573,24 @@ separate bugs or duplicate the fix effort.
 
 ## Bulk communications
 
-### 23. Bulk Message dialog lacks a Radix DialogTitle — DOCUMENTED, NOT FIXED
+### 23. Bulk Message dialog lacks a Radix DialogTitle — ALREADY FIXED (verified 2026-09-07)
 
 Opening the protected `/communications` Bulk Message dialog during Phase 2.5 verification consistently emits Radix's accessibility error that `DialogContent` requires a `DialogTitle` (and a companion missing-description warning). The dialog is usable and no data writes were triggered, but screen-reader semantics are incomplete. This predates the typing-only change in `BulkMessageDialog.tsx`; fix by wiring the existing visible title through the dialog primitive (or adding a visually-hidden title/description), then re-run the authenticated communications smoke test.
+
+**Verification (2026-09-07, Phase 2.6 stabilization plan Packet P4-A):**
+re-checked `src/components/communications/BulkMessageDialog.tsx` at
+`origin/main@75d02f9` — it already renders `AppModalTitle` (which wraps
+Radix's `DialogPrimitive.Title`, confirmed in `src/components/ui/app-modal.tsx`)
+inside `AppModalHeader`, and its confirmation `AlertDialog` already has an
+`AlertDialogTitle`. No code change was needed here; some earlier PR between
+this entry being written and now already fixed it without updating this
+register. Not independently reproduced live this session for this dialog specifically.
+A separate DialogTitle console error was observed this session while
+verifying an unrelated Phase 2.6 packet (P1-A), triggered by opening
+`NewEnrolmentModal` (`src/components/academy/admin/NewEnrolmentModal.tsx`,
+which does render an `AppModalTitle`) — the actual source wasn't isolated
+(no stack trace accompanied that specific console message) and is left as
+an unfiled, not-yet-root-caused observation rather than guessed at here.
 
 ## What this means practically
 
