@@ -210,7 +210,7 @@ const TOOLS: AnthropicToolDefinition[] = [
   {
     name: "get_portfolio_attention",
     description:
-      "Get a platform-wide view of which active clients most need attention right now, ranked by an attention score — your own assigned clients first, then the top of the rest of the portfolio. Use this for questions like 'who needs attention across my clients' or 'what should I focus on today'. Important: the attention score itself is coarse right now — several of its inputs (evidence gaps, risk events, overdue compliance tasks) are barely populated platform-wide, so most clients cluster at similar scores. Always lead your answer with the concrete drivers and raw counts (overdue tasks, days since activity, stage health) rather than the bare score number, since the score alone is not very discriminating today.",
+      "Get a platform-wide view of which active clients most need attention right now, ranked by an attention score — your own assigned clients first, then the top of the rest of the portfolio. Use this for questions like 'who needs attention across my clients' or 'what should I focus on today'. Important: the attention score itself is coarse right now — several of its inputs (evidence gaps, risk events, overdue compliance tasks) are barely populated platform-wide, so most clients cluster at similar scores. Always lead your answer with concrete available drivers and raw counts (overdue tasks, days since activity, renewal, burn, and risk) rather than the bare score number. Legacy stage-health labels are unavailable during data repair and must not be presented as health evidence.",
     input_schema: { type: "object", properties: {} },
   },
   {
