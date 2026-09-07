@@ -538,6 +538,23 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `stage_releases`/`stage_release_items` tables, the two RPCs, and both
   Edge Functions are all deliberately left untouched pending their own
   backend-impact review.
+- **P6-B `useMeetingSeries.tsx` retired, live replacement confirmed.**
+  Zero repo-wide imports, fresh check in this batch's own worktree. Its
+  "calls server objects" caution was checked, not skipped: the
+  `eos_meeting_series` table has real production data (8 rows, no cron
+  job references it) and all 5 RPCs it called (`create_meeting_series`,
+  `update_meeting_series`, `generate_series_instances`,
+  `start_meeting_instance`, `complete_meeting_instance`) have no other
+  frontend caller — none of that backend was touched. Sibling comparison
+  found `useEosConfigMeetingActions.tsx` (Stage 2 "type + date only"
+  scheduling, M6/M8 migrations) is the live functional replacement — it
+  calls `create_meeting_from_configuration`/`sync_meeting_to_configuration`/
+  `skip_meeting_occurrence` and invalidates the same `eos-meeting-series`/
+  `eos-meetings` query keys, the same supersession pattern as
+  `usePackageUsage`→`usePackageUsageQuery`. The shared `eos_meetings`
+  table this hook also read is untouched and remains heavily used
+  elsewhere (`useNextMeeting`, `useEosReadiness`, `useEosHealth`,
+  `LiveMeetingView.tsx`, etc.).
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
@@ -547,7 +564,7 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   functions' own retirement decisions; the unverified `StageCellEditor`
   dead-export finding; the remaining "data/workflow
   hooks" in the
-  zero-inbound queue: `useMeetingSeries`/`useMeetingMinutes`/
+  zero-inbound queue: `useMeetingMinutes`/
   `useKpiReview`/`useAISuggestions`/`useEosDrafts`/`useDocumentScan`/
   `useEngagementAudit`
   — each has its own caution note requiring a
