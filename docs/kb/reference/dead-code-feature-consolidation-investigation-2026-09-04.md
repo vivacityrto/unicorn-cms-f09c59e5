@@ -62,7 +62,9 @@ The formerly unused Audit shells and their exclusive legacy dependencies were ch
 
 The following are candidates, not a bulk-deletion list:
 
-- Data/workflow hooks: ~~`useStageReleases` (396 LOC)~~, ~~`usePortfolioCockpit` (316)~~, ~~`useMeetingSeries` (285)~~, ~~`usePackageUsage` (266)~~, ~~`useMeetingMinutes` (207)~~, ~~`useKpiReview` (149)~~, ~~`useAISuggestions` (122)~~, `useEosDrafts` (100), `useDocumentScan` (46), `useEngagementAudit` (42), and ~~`useCompletionEligibility` (39)~~.
+- Data/workflow hooks: ~~`useStageReleases` (396 LOC)~~, ~~`usePortfolioCockpit` (316)~~, ~~`useMeetingSeries` (285)~~, ~~`usePackageUsage` (266)~~, ~~`useMeetingMinutes` (207)~~, ~~`useKpiReview` (149)~~, ~~`useAISuggestions` (122)~~, ~~`useEosDrafts` (100)~~, `useDocumentScan` (46), `useEngagementAudit` (42), and ~~`useCompletionEligibility` (39)~~.
+
+**✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useEosDrafts.tsx` (100 LOC) — exports `useEosVtoDrafts` and `useEosChartDrafts` (not a `useEosDrafts` symbol itself; the register name is the filename), both zero repo-wide imports, verified fresh in this batch's own worktree. Backend-impact check performed: `eos_vto_drafts` and `eos_chart_drafts` are both empty (0 rows) in production, no cron references, and neither `propose_vto_change` nor `propose_chart_change` RPC has any other frontend caller — genuinely never used. All left untouched.
 
 **✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useAISuggestions.tsx` (122 LOC) — zero repo-wide imports, verified fresh in this batch's own worktree. Its "calls server objects" caution was checked, not skipped: `ai_suggestions` is empty (0 rows) in production, no cron references, and neither the `ai-generate-suggestions` Edge Function nor the `accept_ai_suggestion` RPC has any other frontend caller — genuinely never used, the same category as `useMeetingMinutes`. (An unrelated `aiSuggestion` prop in `src/components/audit/workspace/QuestionCard.tsx` is a same-named coincidence in the audit-evidence feature area, not this hook's `ai_suggestions` table.) The Edge Function, RPC, and table are all left untouched.
 
