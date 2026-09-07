@@ -701,6 +701,46 @@ order mismatch never gets compiler-checked. Deliberately not fixed in PR
 packet — left for a small, separate follow-up fix (add the missing `req`
 argument to all three call sites) plus its own PR.
 
+## Carl-reported regressions (2026-09-07) — DOCUMENTED, NOT INVESTIGATED
+
+Reported directly by Carl, not surfaced by this session's typing work.
+No root cause, affected file, or reproduction has been confirmed yet — added
+here as a todo queue for triage under a future packet (most likely fits
+alongside P4-B/C's "invalid relationship reads"/"identity and lookup"
+framing once each is root-caused), not as verified L10 entries in the same
+sense as items 1–28 above.
+
+### 29. Editing or deleting package stage tasks no longer works
+
+On a package's stage, staff and client task IDs are reportedly mangled, so
+clicking Delete or saving an edit on any of those tasks fails silently or
+errors — an admin cleaning up a package stage can't remove or change tasks
+at all.
+
+### 30. RTO scope end dates can go missing
+
+On a client's training.gov.au scope lists (qualifications, units, skill
+sets, courses, training packages), the end/expiry date reportedly now
+ignores the stored date column and only reads it from the raw sync
+snapshot — so staff checking when a qualification comes off scope can see
+a blank or stale date and mis-advise the client.
+
+### 31. Client portal admins can remove their own login by mistake
+
+The "Swap to Contact" action in the client portal's Users page is
+reportedly offered on the signed-in admin's own row, so a client admin can
+convert themselves into a contact and instantly lose their own Unicorn
+login and seat — the equivalent staff-side screen deliberately hides this
+action for the signed-in user's own account.
+
+### 32. Past meeting summaries no longer show cascade messages
+
+"One Phrase Close" reportedly replaced the old cascade messages in meeting
+summaries, but summaries recorded before the change still hold cascade
+text that is now hidden — so someone opening an older meeting summary
+sees that section vanish and loses the key messages recorded at that
+meeting.
+
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
