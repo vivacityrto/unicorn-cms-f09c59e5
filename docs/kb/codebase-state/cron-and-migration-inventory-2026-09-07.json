@@ -134,5 +134,25 @@
     "public.audit_send_24hr_confirmation()",
     "public.audit_send_evidence_reminders()"
   ],
-  "nextPacket": "M1"
+  "legacyNotificationDependencies": {
+    "notification_schedule": {
+      "edgeFunctionReadersOrWriters": [
+        "process-notification-queue",
+        "send-automated-email"
+      ],
+      "retainedForM2": true
+    },
+    "notification_audit_log": {
+      "edgeFunctionWriters": ["process-notification-outbox"],
+      "retainedForM2": true
+    }
+  },
+  "m2": {
+    "status": "authored-not-applied",
+    "migration": "20260907120000_retire_legacy_audit_cron_jobs.sql",
+    "jobs": [4, 5, 6],
+    "hostedStateChanged": false,
+    "preflightConfirmed": true
+  },
+  "nextPacket": "M3 (after separately authorized M2 application)"
 }
