@@ -505,12 +505,18 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   session (stale/diverged worktree mistaken for `origin/main`, not the
   earlier two sessions' "already-removed caller, claim made later
   anyway" pattern). `useCompletionEligibility.ts` (39 LOC) retired
-  frontend-only; its `v_completion_eligibility` view is untouched. **Flagged,
-  not chased further:** the same §7bis section's `StageCellEditor`/
-  `MembershipGrid.tsx` finding from the same timeframe hasn't been
-  independently re-verified and could carry the same risk — noted as
-  unconfirmed in the register rather than assumed correct or re-checked
-  under this already-large batch.
+  frontend-only; its `v_completion_eligibility` view is untouched.
+  **Correction (2026-09-08):** the flag added here that the same §7bis
+  section's `StageCellEditor`/`MembershipGrid.tsx` finding "hasn't been
+  independently re-verified and could carry the same risk" was itself
+  wrong — checking the dead-code register directly shows that finding
+  was already fully actioned in
+  [PR #686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686)
+  (merged 2026-09-05), predating this session's dead-code work entirely,
+  with its own live-verified Playwright pass and a "no other file touched
+  across batches 71-81 turned up as unreachable" close-out note. The
+  StageCellEditor risk was never live; this flag was raised without first
+  checking whether the register already resolved it.
 - **P6-B `usePortfolioCockpit.ts` retired, decision preserved.** Zero
   repo-wide imports; its consumer `PortfolioTable.tsx` and the related
   `ConsultantAssignmentCard.tsx` were already deleted 2026-08-27 (dead-code
@@ -613,23 +619,28 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `ExcelBindingStatusBadge.tsx`) independently invokes the same function
   with an equivalent implementation — genuine functional duplication,
   not a dead backend. The Edge Function is untouched and remains live.
+- **P6-B `useEngagementAudit.ts` retired, backend confirmed genuinely
+  unused — last "data/workflow hooks" zero-inbound candidate closed.**
+  Zero repo-wide imports, fresh check in this batch's own worktree. Its
+  only server object, `engagement_audit_log` (insert-only), is empty (0
+  rows) in production with no cron references and no other caller — the
+  same disposition as the already-retired sibling `engagement-guardrails.ts`
+  (same never-shipped celebration-governance feature area). Table left
+  untouched. Every hook in the original "data/workflow hooks" zero-inbound
+  list (§3.3 of the dead-code register) is now retired.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
   cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
   core — blocked on missing Playwright coverage; the empty
   `document_links`/`compliance_score_snapshots` tables and their Edge/RPC
-  functions' own retirement decisions; the unverified `StageCellEditor`
-  dead-export finding; the dead `/eos/meetings/:id/minutes`/`/attendance`
+  functions' own retirement decisions; the dead `/eos/meetings/:id/minutes`/`/attendance`
   links in `MeetingExecutionPanel.tsx`; the missing `/admin/kpi-review`
-  reviewer page and its create/lock RPCs' disposition; the remaining
-  "data/workflow hooks" in the
-  zero-inbound queue: `useEngagementAudit`
-  — each has its own caution note requiring a
-  server-object/sibling-comparison/policy-preservation check before
-  touching, `useClientAICompanion`, `StandardsPicker.tsx`), P7 — several
-  of these require live-schema investigation, product/security decisions,
-  or their own separately
+  reviewer page and its create/lock RPCs' disposition; `useClientAICompanion`
+  and `StandardsPicker.tsx` — the two remaining "UX/platform artifacts"
+  zero-inbound candidates, both requiring a product decision before
+  touching), P7 — several of these require live-schema investigation,
+  product/security decisions, or their own separately
   authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
