@@ -101,16 +101,35 @@ No hosted state changed. M2 remains product-owner gated.
   permission classifier. Logged as a standing rule: future write-testing on
   this plan uses Demo RTO, a seeded tenant, or an inactive tenant — never
   whatever real tenant happens to have convenient data.
+- **P5-A batch 2/3 (`tga-rto-sync`, 43 findings), pending merge.**
+  [#968](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/968).
+  Rather than casting every property access to `unknown` (which would
+  have forced assertions at ~150 downstream sites), modelled the actual
+  TGA REST API shapes (`TgaScopeItem`, `TgaOrgData` + its nested
+  collection types, `TgaStagingRow`). All 43 fixes are pure
+  type-annotation changes — verified via full diff review plus a
+  standalone `tsc --noEmit` pass against a stubbed copy of the file (0
+  errors), since `supabase/functions/**` isn't covered by either
+  tsconfig and has never actually been type-checked otherwise. Added a
+  new `auth-gate.test.mjs` (function had no prior test coverage).
+  Branched before [#967](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/967)
+  (P5-A batch 1/3) was pushed, so this section doesn't yet list that PR
+  — expect a normal docs-only merge conflict here if #967 lands first;
+  resolve by keeping both entries, not by dropping either.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-B/C/D, P5-A, P6-B, P7 — several of these
-  require live-schema investigation, product/security decisions, or their
-  own separately authorized packets per §1's rules.
+  infra decision), P3-A, P4-B/C/D, P5-A batch 3 (`ask-viv-assistant`,
+  76 findings), P6-B, P7 — several of these require live-schema
+  investigation, product/security decisions, or their own separately
+  authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
 duplicates, typecheck 0 errors. The P6-A retirement's own drop from 166→128
 errors and 243→240 routes reflects the retired page's own `any` findings
-and its 3 removed routes, not a regression.
+and its 3 removed routes, not a regression. PR #968 (pending merge) will
+bring this to 85 errors once merged (128 minus 43 from this batch); PR
+#967 (also pending, filed separately) will bring a further 6 off whichever
+total is current when it lands.
 
 ## 1. Outcome and operating principles
 
