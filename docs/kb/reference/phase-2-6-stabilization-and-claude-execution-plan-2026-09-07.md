@@ -589,6 +589,16 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `/admin/kpi-review` or formally retire the create/lock RPCs is a
   product decision, recorded in the dead-code register rather than acted
   on here. Both RPCs and `locked_at` left untouched.
+- **P6-B `useAISuggestions.tsx` retired, backend confirmed genuinely
+  unused.** Zero repo-wide imports, fresh check in this batch's own
+  worktree. Its "calls server objects" caution was checked, not skipped:
+  `ai_suggestions` is empty (0 rows) in production, no cron references,
+  and neither the `ai-generate-suggestions` Edge Function nor the
+  `accept_ai_suggestion` RPC has any other frontend caller — the same
+  "genuinely never used" category as `useMeetingMinutes`, not merely
+  orphaned later. (A same-named `aiSuggestion` prop in
+  `QuestionCard.tsx`'s audit-evidence feature is an unrelated
+  coincidence.) Edge Function, RPC, and table all left untouched.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
@@ -600,7 +610,7 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   links in `MeetingExecutionPanel.tsx`; the missing `/admin/kpi-review`
   reviewer page and its create/lock RPCs' disposition; the remaining
   "data/workflow hooks" in the
-  zero-inbound queue: `useAISuggestions`/`useEosDrafts`/
+  zero-inbound queue: `useEosDrafts`/
   `useDocumentScan`/`useEngagementAudit`
   — each has its own caution note requiring a
   server-object/sibling-comparison/policy-preservation check before
