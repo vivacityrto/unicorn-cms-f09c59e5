@@ -248,6 +248,25 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   detail. Also surfaced a parked, explicitly-deferred finding: person-picker
   dropdowns built on `public.users` list system/test/bulk-operation accounts
   unfiltered — logged as RBAC v6 plan §13 item 14, not actioned here.
+- **Edge Function auto-deploy confirmed unreliable, not just laggy — all 7
+  functions from #967/#968 manually redeployed, correction merged (PR
+  #977).** Post-merge checks found none of the 7 functions changed by
+  #967/#968 had auto-deployed 20+ minutes after merge (confirmed via a
+  real source diff, e.g. `tga-rto-sync`'s live source still had the
+  pre-fix `const norm = (v: any) => ...`), directly contradicting the
+  "confirmed reliable" claim recorded above for #970 and in PR #972.
+  Carl independently confirmed Codex hit the identical failure the same
+  day. All 7 (`tga-rto-sync`, `add-missing-packages`, `tga-rto-import`,
+  `bulk-send-invitations`, `create-client-audit`, `dashboard-test-seed`,
+  `create-tasks-from-minutes`) were manually deployed via Supabase MCP
+  and verified byte-for-byte against `origin/main`. Also found and logged
+  (L10 item 29, not fixed — out of scope) a second instance of the same
+  bug shape as item 28: `tga-rto-import`'s `handleImport`/`handleStatus`
+  call `jsonResponse(req, ...)` with `req` out of scope, a guaranteed
+  `ReferenceError` on every real invocation, pre-existing since PR #303.
+  `AGENTS.md`'s "Supabase deployment workflow" section now documents the
+  manual-deploy fallback and treats auto-deploy as something to verify
+  every time, not trust.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A, P4-D, the rest of P6-B, P7 — several of these
   require live-schema investigation, product/security decisions, or their
