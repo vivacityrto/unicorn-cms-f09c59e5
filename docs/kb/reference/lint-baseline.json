@@ -1,32 +1,30 @@
 {
-  "generatedAt": "2026-09-06T21:31:01.887Z",
-  "baselineSha": "fdc0c90c18db76691ebe79c694fac4cbea1ab2df",
+  "generatedAt": "2026-09-07T23:07:07.317Z",
+  "baselineSha": "e5930f9089ed6c2fcfbbfe58de40954de7d674a8",
   "totals": {
-    "files": 1755,
-    "filesWithFindings": 50,
-    "errors": 173,
-    "warnings": 39
+    "files": 1721,
+    "filesWithFindings": 35,
+    "errors": 2,
+    "warnings": 40
   },
   "byRule": {
-    "@typescript-eslint/no-explicit-any": 166,
-    "react-refresh/only-export-components": 39,
-    "@typescript-eslint/no-unused-expressions": 7
+    "@typescript-eslint/no-explicit-any": 2,
+    "react-refresh/only-export-components": 40
   },
   "bySourceClass": {
     "src": {
-      "errors": 47,
-      "warnings": 39,
+      "errors": 1,
+      "warnings": 40,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 40,
-        "react-refresh/only-export-components": 39,
-        "@typescript-eslint/no-unused-expressions": 7
+        "@typescript-eslint/no-explicit-any": 1,
+        "react-refresh/only-export-components": 40
       }
     },
     "supabase/functions": {
-      "errors": 126,
+      "errors": 1,
       "warnings": 0,
       "byRule": {
-        "@typescript-eslint/no-explicit-any": 126
+        "@typescript-eslint/no-explicit-any": 1
       }
     }
   },
@@ -45,20 +43,6 @@
         "react-refresh/only-export-components": 4
       }
     },
-    "src/components/academy/admin": {
-      "errors": 2,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-unused-expressions": 2
-      }
-    },
-    "src/components/academy/builder": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-unused-expressions": 1
-      }
-    },
     "src/components/audit": {
       "errors": 0,
       "warnings": 1,
@@ -74,18 +58,10 @@
       }
     },
     "src/components/client": {
-      "errors": 2,
+      "errors": 0,
       "warnings": 5,
       "byRule": {
-        "@typescript-eslint/no-unused-expressions": 2,
         "react-refresh/only-export-components": 5
-      }
-    },
-    "src/components/communications": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-unused-expressions": 1
       }
     },
     "src/components/help-center": {
@@ -103,10 +79,9 @@
       }
     },
     "src/components/package-builder": {
-      "errors": 1,
+      "errors": 0,
       "warnings": 1,
       "byRule": {
-        "@typescript-eslint/no-unused-expressions": 1,
         "react-refresh/only-export-components": 1
       }
     },
@@ -129,13 +104,6 @@
       "warnings": 8,
       "byRule": {
         "react-refresh/only-export-components": 8
-      }
-    },
-    "src/components/workboard": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
       }
     },
     "src/contexts": {
@@ -163,58 +131,9 @@
     "src/lib": {},
     "src/routes": {
       "errors": 0,
-      "warnings": 1,
+      "warnings": 2,
       "byRule": {
-        "react-refresh/only-export-components": 1
-      }
-    },
-    "src/test/tenant": {
-      "errors": 38,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 38
-      }
-    },
-    "supabase/functions/add-missing-packages": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/ask-viv-assistant": {
-      "errors": 76,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 76
-      }
-    },
-    "supabase/functions/bulk-send-invitations": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/create-client-audit": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/create-tasks-from-minutes": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/dashboard-test-seed": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
+        "react-refresh/only-export-components": 2
       }
     },
     "supabase/functions/generate-meeting-recurrence": {
@@ -222,20 +141,6 @@
       "warnings": 0,
       "byRule": {
         "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/tga-rto-import": {
-      "errors": 1,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 1
-      }
-    },
-    "supabase/functions/tga-rto-sync": {
-      "errors": 43,
-      "warnings": 0,
-      "byRule": {
-        "@typescript-eslint/no-explicit-any": 43
       }
     }
   },
@@ -249,12 +154,6 @@
     "src/components/academy/WorkshopSegmentSplit.tsx": {
       "react-refresh/only-export-components": 3
     },
-    "src/components/academy/admin/NewEnrolmentModal.tsx": {
-      "@typescript-eslint/no-unused-expressions": 2
-    },
-    "src/components/academy/builder/ImportVideosPanel.tsx": {
-      "@typescript-eslint/no-unused-expressions": 1
-    },
     "src/components/audit/DeleteAuditDialog.tsx": {
       "react-refresh/only-export-components": 1
     },
@@ -265,12 +164,8 @@
       "react-refresh/only-export-components": 1
     },
     "src/components/audit/workspace/useDebouncedAutosave.ts": {},
-    "src/components/client/AuditPreparationSection.tsx": {
-      "@typescript-eslint/no-unused-expressions": 1
-    },
     "src/components/client/ClientTimelineTab.tsx": {
-      "react-refresh/only-export-components": 1,
-      "@typescript-eslint/no-unused-expressions": 1
+      "react-refresh/only-export-components": 1
     },
     "src/components/client/ScopeSelectorBadge.tsx": {
       "react-refresh/only-export-components": 2
@@ -278,17 +173,11 @@
     "src/components/client/TimelineEventCard.tsx": {
       "react-refresh/only-export-components": 2
     },
-    "src/components/communications/BulkMessageHistory.tsx": {
-      "@typescript-eslint/no-unused-expressions": 1
-    },
     "src/components/help-center/HelpCenterContext.tsx": {
       "react-refresh/only-export-components": 1
     },
     "src/components/layout/ClientLayout.tsx": {
       "react-refresh/only-export-components": 1
-    },
-    "src/components/package-builder/PackagePhasesTab.tsx": {
-      "@typescript-eslint/no-unused-expressions": 1
     },
     "src/components/package-builder/PackageReadinessIndicator.tsx": {
       "react-refresh/only-export-components": 1
@@ -323,9 +212,6 @@
     "src/components/ui/toggle.tsx": {
       "react-refresh/only-export-components": 1
     },
-    "src/components/workboard/AddWorkboardItemDialog.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
     "src/contexts/ClientPreviewContext.tsx": {
       "react-refresh/only-export-components": 1
     },
@@ -351,37 +237,10 @@
     "src/hooks/usePageViewTracking.ts": {},
     "src/lib/friendlyDbError.ts": {},
     "src/routes/dashboardRoutes.tsx": {
-      "react-refresh/only-export-components": 1
-    },
-    "src/test/tenant/isolation.test.tsx": {
-      "@typescript-eslint/no-explicit-any": 38
-    },
-    "supabase/functions/add-missing-packages/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/ask-viv-assistant/index.ts": {
-      "@typescript-eslint/no-explicit-any": 76
-    },
-    "supabase/functions/bulk-send-invitations/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/create-client-audit/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/create-tasks-from-minutes/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/dashboard-test-seed/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
+      "react-refresh/only-export-components": 2
     },
     "supabase/functions/generate-meeting-recurrence/index.ts": {
       "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/tga-rto-import/index.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "supabase/functions/tga-rto-sync/index.ts": {
-      "@typescript-eslint/no-explicit-any": 43
     }
   },
   "exceptions": [
