@@ -677,6 +677,30 @@ icon button) and every one of its features was either disconnected from
 the real data model or a strictly less-capable duplicate of a live,
 actively-used equivalent elsewhere. No separate fix was made or is needed.
 
+### 28. `bulk-send-invitations` per-tenant validation errors crash instead of returning a structured response — DOCUMENTED, NOT FIXED (found 2026-09-07)
+
+Found during Phase 2.6 stabilization Packet P5-A's Edge Function typing
+pass (PR #967), while typing `bulk-send-invitations/index.ts` — not caused
+by the typing change itself, pre-existing. Three call sites
+(`tenant_ids must be an array of numbers` at ~line 98, tenant-access-check
+failure at ~line 106, and cross-tenant `FORBIDDEN` at ~line 113) call the
+file's own `jsonResponse(req, status, body)` helper as `jsonResponse(422,
+{...})` / `jsonResponse(500, {...})` / `jsonResponse(403, {...})` — omitting
+the required `req` first argument. This shifts every argument one position:
+`status` receives the body object, `body` is `undefined`, and `req` is a
+plain number. `jsonResponse` spreads `corsHeaders(req)` into the response
+headers, so `corsHeaders(422)` runs against a number instead of a `Request`
+— whatever that helper does with `req.headers`/`req.method` internally will
+throw, turning what should be a structured 422/500/403 JSON error response
+into an unhandled exception (a bare 500 with no diagnostic body) for exactly
+the three validation paths meant to explain *why* the batch was rejected.
+Not caught by `npm run typecheck`: `supabase/functions/**` isn't included in
+either `tsconfig.app.json` or `tsconfig.node.json`, so this arity/argument-
+order mismatch never gets compiler-checked. Deliberately not fixed in PR
+#967 — it's a behavioral change, out of scope for a lint/typing-only
+packet — left for a small, separate follow-up fix (add the missing `req`
+argument to all three call sites) plus its own PR.
+
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that

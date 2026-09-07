@@ -89,16 +89,38 @@
   permission classifier. Logged as a standing rule: future write-testing on
   this plan uses Demo RTO, a seeded tenant, or an inactive tenant — never
   whatever real tenant happens to have convenient data.
+- **P5-A batch 1/3 (6 single-finding Edge Functions), pending merge.**
+  [#967](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/967).
+  Fixed `add-missing-packages`, `bulk-send-invitations`,
+  `create-client-audit`, `create-tasks-from-minutes`, `dashboard-test-seed`,
+  `tga-rto-import` — every single-occurrence `no-explicit-any` finding in
+  `supabase/functions/**` outside `tga-rto-sync` (43 findings) and
+  `ask-viv-assistant` (76 findings), both deferred to their own
+  contract-sized batches, and `generate-meeting-recurrence` (excluded per
+  this section's own rule, tied to L10 #25's auth review). All 6 fixes are
+  compiler-provable type-only changes (catch-narrowing, an existing typed
+  `EdgeRuntime`-global pattern reused from 3 other functions, a new
+  `MinutesContent` JSON-blob type, a redundant any-cast removal, and a
+  `SupabaseClientAny = any` alias swapped for the real untyped
+  `SupabaseClient` import already used in `_shared/`) — no live Playwright
+  pass required. Added 5 missing `*.test.mjs` static-assertion files
+  (test:edge 260→265 passing). Found, documented (L10 #28), but
+  deliberately did not fix — behavioral change, out of scope here — a
+  pre-existing `bulk-send-invitations` bug: 3 call sites call its own
+  `jsonResponse(req, status, body)` helper without `req`, so those
+  validation-failure paths throw instead of returning a structured error.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-B/C/D, P5-A, P6-B, P7 — several of these
-  require live-schema investigation, product/security decisions, or their
-  own separately authorized packets per §1's rules.
+  infra decision), P3-A, P4-B/C/D, P5-A batches 2–3 (`tga-rto-sync`,
+  `ask-viv-assistant`), P6-B, P7 — several of these require live-schema
+  investigation, product/security decisions, or their own separately
+  authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
 duplicates, typecheck 0 errors. The P6-A retirement's own drop from 166→128
 errors and 243→240 routes reflects the retired page's own `any` findings
-and its 3 removed routes, not a regression.
+and its 3 removed routes, not a regression. PR #967 (pending merge) will
+bring this to 122 errors once merged (128 minus the 6 fixed in this batch).
 
 ## 1. Outcome and operating principles
 
