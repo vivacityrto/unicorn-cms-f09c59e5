@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 
@@ -487,21 +486,38 @@ export function useProcessAuditLog(processId: string | undefined) {
     queryFn: async (): Promise<ProcessAuditEntry[]> => {
       if (!processId) return [];
 
-      const PROCESS_AUDIT_LOG_SELECT = `
-        *,
-        actor:users!process_audit_log_actor_user_id_fkey(first_name, last_name, email)
-      `;
-      type ProcessAuditLogRow = Tables<'process_audit_log'> & {
-        actor: { first_name: string | null; last_name: string | null; email: string } | null;
-      };
+      // Two-step fetch — process_audit_log.actor_user_id FKs to auth.users,
+      // not public.users, so PostgREST can never resolve an embedded
+      // `users!process_audit_log_actor_user_id_fkey(...)` select (PGRST200).
+      // public.users.user_uuid is kept in sync with auth.users.id by the
+      // `link_auth_user_to_profile` trigger, so it's the correct join key.
       const { data, error } = await supabase
         .from('process_audit_log')
-        .select<typeof PROCESS_AUDIT_LOG_SELECT, ProcessAuditLogRow>(PROCESS_AUDIT_LOG_SELECT)
+        .select('*')
         .eq('process_id', processId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as unknown as ProcessAuditEntry[];
+
+      const rows = data || [];
+      const actorIds = [...new Set(rows.filter(r => r.actor_user_id).map(r => r.actor_user_id as string))];
+      const actorMap = new Map<string, { first_name: string | null; last_name: string | null; email: string }>();
+
+      if (actorIds.length > 0) {
+        const { data: actors } = await supabase
+          .from('users')
+          .select('user_uuid, first_name, last_name, email')
+          .in('user_uuid', actorIds);
+
+        (actors || []).forEach(a => {
+          actorMap.set(a.user_uuid, { first_name: a.first_name, last_name: a.last_name, email: a.email });
+        });
+      }
+
+      return rows.map(r => ({
+        ...r,
+        actor: r.actor_user_id ? actorMap.get(r.actor_user_id) : undefined,
+      })) as unknown as ProcessAuditEntry[];
     },
     enabled: !!user && !!processId,
   });
