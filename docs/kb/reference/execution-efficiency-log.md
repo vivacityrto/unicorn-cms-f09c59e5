@@ -225,6 +225,37 @@ deletion is authorized by this note — `usePackageUsage.tsx` simply remains a
 genuine Phase 2.6 zero-inbound candidate, to be actioned only through its own
 Packet P5-A/P6-B implementation PR with the full reachability/gate checklist.
 
+## Phase 2.6 stabilization plan (2026-09-07)
+
+Executing `docs/kb/reference/phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md`
+one packet at a time; see that plan's own "Progress log" section for the
+narrative version of what's below.
+
+| Packet | PR | Merged (UTC) | Notes |
+|---|---|---|---|
+| P0-A | #794–#800, #822 (closed, not merged) | 2026-09-07 01:11–01:12 | All 8 superseded Phase 2.5 PRs closed with superseding-PR evidence; every changed file already clean on `origin/main`. |
+| P0-B | [#955](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/955) | 2026-09-07 01:13:33 | Preserved PR #612's dashboard-500 evidence as L10 #26; #612 closed after. |
+| P0-C | [#956](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/956) | 2026-09-07 01:14:11 | Truth-sync against source; found and corrected the plan's own `usePackageUsage.tsx` liveness claim and 9,209-line figure (see the truth-sync note above) rather than accepting them as given. |
+| P1-A | [#957](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/957) | 2026-09-07 01:14:46 | 6 of 7 targeted ternary-as-statement/prefer-const fixes; missed one (`PackagePhasesTab.tsx`), caught during post-merge verification and fixed same-day in a follow-up ([#960](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/960), open). |
+| P1-B | [#958](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/958) | 2026-09-07 01:18:40 | Typecheck 5→0; added `.github/workflows/typecheck.yml`. Rebased once after #956 to resolve an `AGENTS.md` conflict (both PRs touched the same typecheck paragraph — expected given the plan's own sequencing). |
+| P4-A | [#959](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/959) | 2026-09-07 01:19:28 | Fixed L10 #22/#24 (verified live: SuperAdmin hitting `/client/home` now redirects with 0 console warnings, was 1) and #11 (verified live against a real affected account's actual profile data, not a synthetic case). #23 confirmed already fixed elsewhere; annotated, not re-implemented. |
+
+All five merged PRs carried full static-gate evidence (lint:ratchet,
+typecheck, frontend/Edge tests, build, KB links where applicable) plus
+targeted live SuperAdmin Playwright verification; merges were run
+sequentially in dependency order with a mergeability re-check between each
+(GitHub reports `UNKNOWN` for several seconds after a base-branch update
+before settling to `CLEAN`/`CONFLICTING` — worth a short poll loop rather
+than merging on stale mergeability data). One real conflict occurred
+(#958 vs. #956, both editing `AGENTS.md`'s typecheck paragraph) and was
+resolved by rebasing #958's branch and re-verifying lint/typecheck/KB-links
+before force-pushing the rebase.
+
+P1-C (isolation-suite hardening) is blocked on an infrastructure decision
+(disposable QA Supabase project + service-role key) outside this session's
+authority; handed off to Codex with the specific ask rather than guessed at
+or skipped silently.
+
 ## RBAC v6
 
 *(No batches logged yet under this initiative as of this file's creation.
