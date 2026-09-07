@@ -57,6 +57,33 @@ export function ClientRouteGuard({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const tenantResolved = activeTenantId !== null && !tenantUserLoading;
+  // Staff impersonation bypasses tenant_user gating — staff already have access.
+  const staffBypass = tenantResolved && !isPreview && isVivacityStaff;
+
+  const path = location.pathname;
+  const isAcademyAllowed = ACADEMY_ONLY_ALLOWED_PREFIXES.some((p) => path.startsWith(p));
+  const requiresUserMgmt = USER_MANAGEMENT_PREFIXES.some((p) => path.startsWith(p));
+  const blockedUserMgmt =
+    tenantResolved && !staffBypass && !isPreview && requiresUserMgmt && !canManagePortalUsers;
+
+  // Redirects are side effects of a route/access decision, not something to
+  // trigger during render — calling navigate() directly in the render body
+  // updates the router (a different component) while this one is still
+  // rendering, which React flags as an unsafe cross-component update.
+  useEffect(() => {
+    if (staffBypass) {
+      navigate("/manage-tenants", { replace: true });
+    }
+  }, [staffBypass, navigate]);
+
+  useEffect(() => {
+    if (blockedUserMgmt) {
+      console.warn("[ClientRouteGuard] Blocked /client/users — requires canManagePortalUsers");
+      navigate("/client/home", { replace: true });
+    }
+  }, [blockedUserMgmt, navigate]);
+
   if (authLoading || !session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -65,7 +92,7 @@ export function ClientRouteGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (activeTenantId === null || tenantUserLoading) {
+  if (!tenantResolved) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -74,24 +101,16 @@ export function ClientRouteGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  // Staff impersonation bypasses tenant_user gating — staff already have access.
-  if (!isPreview && isVivacityStaff) {
-    navigate("/manage-tenants", { replace: true });
+  if (staffBypass) {
     return null;
   }
 
   if (!isPreview) {
-    const path = location.pathname;
-    const isAcademyAllowed = ACADEMY_ONLY_ALLOWED_PREFIXES.some((p) => path.startsWith(p));
-
     if (isAcademyOnly && !isAcademyAllowed) {
       return <AcademyOnlyFallback />;
     }
 
-    const requiresUserMgmt = USER_MANAGEMENT_PREFIXES.some((p) => path.startsWith(p));
-    if (requiresUserMgmt && !canManagePortalUsers) {
-      console.warn("[ClientRouteGuard] Blocked /client/users — requires canManagePortalUsers");
-      navigate("/client/home", { replace: true });
+    if (blockedUserMgmt) {
       return null;
     }
 

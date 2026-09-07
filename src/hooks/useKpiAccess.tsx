@@ -5,8 +5,11 @@ import { useAuth } from "@/hooks/useAuth";
  * True for SuperAdmins and profiles where `users.kpi_role = 'reviewer'`.
  */
 export function useKpiAccess() {
-  const { profile, loading } = useAuth();
-  const isSuperAdmin = profile?.global_role === "SuperAdmin";
+  const { profile, loading, isSuperAdmin: checkIsSuperAdmin } = useAuth();
+  // Checks both global_role (legacy) and unicorn_role (current standard) —
+  // a profile with only unicorn_role === 'Super Admin' set was previously
+  // missed here, hiding the Team KPI toggle for real SuperAdmin accounts.
+  const isSuperAdmin = checkIsSuperAdmin();
   const isReviewer = profile?.kpi_role === "reviewer";
   return {
     isSuperAdmin,
