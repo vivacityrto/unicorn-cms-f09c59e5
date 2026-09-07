@@ -267,10 +267,27 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `AGENTS.md`'s "Supabase deployment workflow" section now documents the
   manual-deploy fallback and treats auto-deploy as something to verify
   every time, not trust.
+- **P3-A item 3 (`generate-meeting-recurrence` auth, L10 #25) done and
+  merged.** Live schema review found the RLS policies on
+  `eos_meeting_recurrences`/`eos_meeting_occurrences` already fully enforce
+  per-tenant facilitator/eos-admin authorization on every write
+  (`WITH CHECK` against `is_eos_admin`/`can_facilitate_eos`/
+  `is_super_admin`) — the flagged gap was a missing application-layer gate,
+  not an open write path. Added `requireCaller(req,
+  FeatureKeys.staffMeetings)` before any DB access, plus a server-side
+  check that the caller-supplied `tenant_id` actually matches the
+  referenced `meeting_id`'s real tenant (RLS's `WITH CHECK` only verifies
+  authorization *for* the supplied `tenant_id`, not that `meeting_id`
+  genuinely belongs to it). Deliberately kept the existing RLS-backed
+  forwarded-JWT client for the writes themselves — no switch to a
+  service-role client, so the finer-grained facilitator/eos-admin boundary
+  is unchanged. Added `auth-gate.test.mjs`; manually deployed (Edge
+  auto-deploy still unreliable, see the finding above) and live-verified
+  against Demo RTO with test data cleaned up afterward.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-D, the rest of P6-B, P7 — several of these
-  require live-schema investigation, product/security decisions, or their
-  own separately authorized packets per §1's rules.
+  infra decision), P3-A items 1-2, P4-D, the rest of P6-B, P7 — several of
+  these require live-schema investigation, product/security decisions, or
+  their own separately authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
