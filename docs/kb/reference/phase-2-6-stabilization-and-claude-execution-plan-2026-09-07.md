@@ -505,12 +505,18 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   session (stale/diverged worktree mistaken for `origin/main`, not the
   earlier two sessions' "already-removed caller, claim made later
   anyway" pattern). `useCompletionEligibility.ts` (39 LOC) retired
-  frontend-only; its `v_completion_eligibility` view is untouched. **Flagged,
-  not chased further:** the same §7bis section's `StageCellEditor`/
-  `MembershipGrid.tsx` finding from the same timeframe hasn't been
-  independently re-verified and could carry the same risk — noted as
-  unconfirmed in the register rather than assumed correct or re-checked
-  under this already-large batch.
+  frontend-only; its `v_completion_eligibility` view is untouched.
+  **Correction (2026-09-08):** the flag added here that the same §7bis
+  section's `StageCellEditor`/`MembershipGrid.tsx` finding "hasn't been
+  independently re-verified and could carry the same risk" was itself
+  wrong — checking the dead-code register directly shows that finding
+  was already fully actioned in
+  [PR #686](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/686)
+  (merged 2026-09-05), predating this session's dead-code work entirely,
+  with its own live-verified Playwright pass and a "no other file touched
+  across batches 71-81 turned up as unreachable" close-out note. The
+  StageCellEditor risk was never live; this flag was raised without first
+  checking whether the register already resolved it.
 - **P6-B `usePortfolioCockpit.ts` retired, decision preserved.** Zero
   repo-wide imports; its consumer `PortfolioTable.tsx` and the related
   `ConsultantAssignmentCard.tsx` were already deleted 2026-08-27 (dead-code
@@ -628,8 +634,7 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
   core — blocked on missing Playwright coverage; the empty
   `document_links`/`compliance_score_snapshots` tables and their Edge/RPC
-  functions' own retirement decisions; the unverified `StageCellEditor`
-  dead-export finding; the dead `/eos/meetings/:id/minutes`/`/attendance`
+  functions' own retirement decisions; the dead `/eos/meetings/:id/minutes`/`/attendance`
   links in `MeetingExecutionPanel.tsx`; the missing `/admin/kpi-review`
   reviewer page and its create/lock RPCs' disposition; `useClientAICompanion`
   and `StandardsPicker.tsx` — the two remaining "UX/platform artifacts"

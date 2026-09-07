@@ -233,12 +233,19 @@ after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
   current `origin/main`. `useCompletionEligibility.ts` had zero real
   importers and was retired in P6-B alongside `usePackageUsage.tsx` — see
   the "data/workflow hooks" bullet in §3.3 below.
-- **Flagged for a future re-check, not verified in this pass:** the
+- ~~**Flagged for a future re-check, not verified in this pass:** the
   `StageCellEditor`/`MembershipGrid.tsx` finding immediately below this
   list was made in the same PR #683 timeframe as the two now-corrected
   claims above — it hasn't been independently re-verified against true
   current `origin/main` and could be subject to the same stale-worktree
-  risk. Treat it as unconfirmed until someone re-checks it fresh.
+  risk. Treat it as unconfirmed until someone re-checks it fresh.~~ **This
+  flag was itself stale (corrected 2026-09-08, Phase 2.6 P6-B) — the flag
+  was carried forward without checking whether the finding it worried about
+  had already been resolved.** It had: see the "Actioned candidate (PR #686,
+  merged 2026-09-05)" entry a few lines below, which predates this flag's
+  own re-statement in the Phase 2.6 stabilization plan on 2026-09-07. The
+  `StageCellEditor` export is already retired, `StageStatusDot` and the file
+  are intact, and it was live-verified via Playwright at the time.
 Batch 81's live-verification pass (PR #683) turned up a third, more
 specific finding: **`StageCellEditor` itself (the named export in
 `src/components/membership/StageCellEditor.tsx`) has no importer anywhere**
