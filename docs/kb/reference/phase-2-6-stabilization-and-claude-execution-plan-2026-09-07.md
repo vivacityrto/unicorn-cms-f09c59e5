@@ -606,6 +606,13 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   empty (0 rows) in production, no cron references, and neither
   `propose_vto_change` nor `propose_chart_change` RPC has any other
   frontend caller. All left untouched.
+- **P6-B `useDocumentScan.tsx` retired, live sibling confirmed.** Zero
+  repo-wide imports, fresh check in this batch's own worktree. Its only
+  server object, the `scan-document` Edge Function, has a live sibling
+  caller — `useExcelBindings.tsx` (imported by
+  `ExcelBindingStatusBadge.tsx`) independently invokes the same function
+  with an equivalent implementation — genuine functional duplication,
+  not a dead backend. The Edge Function is untouched and remains live.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
@@ -617,7 +624,7 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   links in `MeetingExecutionPanel.tsx`; the missing `/admin/kpi-review`
   reviewer page and its create/lock RPCs' disposition; the remaining
   "data/workflow hooks" in the
-  zero-inbound queue: `useDocumentScan`/`useEngagementAudit`
+  zero-inbound queue: `useEngagementAudit`
   — each has its own caution note requiring a
   server-object/sibling-comparison/policy-preservation check before
   touching, `useClientAICompanion`, `StandardsPicker.tsx`), P7 — several
