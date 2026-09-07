@@ -196,6 +196,35 @@ Tracked here after-the-fact since these merges predate this log recording them; 
 
 See [`dead-code-feature-consolidation-investigation-2026-09-04.md`](dead-code-feature-consolidation-investigation-2026-09-04.md) for the full candidate register and remaining cohorts.
 
+**Truth-sync note (2026-09-07, Phase 2.6 stabilization plan Packet P0-C):**
+`docs/kb/reference/phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md`
+states Phase 2.6 "has already retired 9,209 lines across the merged
+cohorts." Summing this table's own per-PR figures (#570 ~2,521 + #571
+~2,474 + #574 ~223 + #577 ~1,224 + #579 186 + #586 23 + #588 1,607 exact +
+#690 85 + #691 300 + #686 224 = **8,867**) does not exactly reconcile to
+9,209 — a ~342-line gap, within the range of the several `~`-prefixed
+approximate figures above, not evidence of a missing or double-counted PR.
+Treat 9,209 as an approximate total, not an exact reconciled figure, until
+someone re-derives it from a fresh whole-repo LOC diff against the
+pre-Phase-2.6 baseline SHA.
+
+Separately, that same stabilization-plan packet asserts `usePackageUsage.tsx`
+is "live and must not remain in retirement queues," grouped with three other
+files. A fresh `origin/main@75d02f9` grep for `from '@/hooks/usePackageUsage'`
+(the plain module, not its sibling) finds **zero importers** — this matches
+the still-current disposition already recorded above at the 2026-09-06
+exit-audit checkpoint ("`usePackageUsage.tsx` (2) ... queued for Phase 2.6
+dead-code reachability gates"), not a live file. Its replacement,
+`usePackageUsageQuery.tsx`, is the one actually imported by
+`useTenantTimeTracker.tsx` and `PackageBreakdownModal.tsx`. The other three
+names in that same stabilization-plan sentence — `ComplianceScoreBreakdown`,
+`useComplianceScore`, `useCompletionEligibility` — are correctly live per the
+existing 2026-09-05 correction in the dead-code register (§7bis) and PR
+#689; do not conflate their disposition with `usePackageUsage.tsx`'s. No
+deletion is authorized by this note — `usePackageUsage.tsx` simply remains a
+genuine Phase 2.6 zero-inbound candidate, to be actioned only through its own
+Packet P5-A/P6-B implementation PR with the full reachability/gate checklist.
+
 ## RBAC v6
 
 *(No batches logged yet under this initiative as of this file's creation.

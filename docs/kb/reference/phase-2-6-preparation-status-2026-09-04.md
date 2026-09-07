@@ -5,6 +5,15 @@
 This is a preparation-only checkpoint. No runtime, schema, RBAC, tenant,
 RLS, RPC, Edge, or database behavior was changed.
 
+> **Truth-sync update (2026-09-07, Phase 2.6 stabilization plan Packet
+> P0-C):** the "Blocking implementation" section below is now stale. Phase
+> 2.5 is formally closed as a prerequisite gate (see the closeout checkpoint
+> at `origin/main@ddd2fec78`, PR #953, in the parent optimization plan), so
+> Phase 2.6 preparation and the task-dialog implementation (Packet P6-A) are
+> no longer blocked by it. This does not mean every Phase 2.5 lint finding
+> is resolved — see the stabilization plan's own baseline — only that the
+> sequencing gate recorded below has been cleared.
+
 ## Completed preparation
 
 - Task-dialog characterization is recorded in

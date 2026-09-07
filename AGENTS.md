@@ -76,10 +76,18 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   failing — superseding an earlier note here about pre-existing mock-gap/RBAC
   failures; re-verify before trusting that figure if it's been a while.
   `npm run typecheck` is intentionally **not** chained into `npm run test`:
-  it currently reports one pre-existing error (`ContactDirectory.tsx`
-  TS2345, an object literal missing `csc_user_id`) that predates P0.2 and is
-  out of scope for a tooling PR to fix — a follow-up, not something this
-  change introduced. `npm run typecheck` **is not** `tsc -b --noEmit`: that
+  as of 2026-09-07 (`origin/main@75d02f9`, verified for the Phase 2.6
+  stabilization plan's Packet P0-C truth-sync) it reports **five** current
+  errors, not the one (`ContactDirectory.tsx` TS2345) originally noted here
+  at P0.2 — that file is clean now. The current five are three `TS2339`s in
+  `src/components/layout/ClientLayout.tsx` (realtime message payload fields
+  read on a type that can be `{}`) and one `TS2345`/one `TS2352` in
+  `src/hooks/useKpiSummary.tsx` (a dynamic relation-name cast against the
+  generated schema). Both are tracked as Packet P1-B in
+  `docs/kb/reference/phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md`
+  and are not yet fixed; `npm run typecheck` is **not** a CI gate yet either
+  — no workflow currently runs it, so a new type error is not caught before
+  merge. `npm run typecheck` **is not** `tsc -b --noEmit`: that
   composite/project-references invocation reliably crashes with
   `JavaScript heap out of memory` after ~6.5 minutes on this codebase's
   default V8 heap (~2 GB), regardless of system load. The script instead
