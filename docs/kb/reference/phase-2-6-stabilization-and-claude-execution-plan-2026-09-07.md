@@ -63,6 +63,16 @@ tables remain present/RLS-enabled with zero rows, and the notification outbox
 remains unchanged at 738 failed and 242 skipped rows. Supabase recorded
 `retire_legacy_audit_functions` as migration `20260907052028`. M3-B is next.
 
+**2026-09-07, session 8 — M3-B implemented:** removed the three dormant
+`notification_schedule` writes from `send-automated-email` while preserving
+its three email response paths, and replaced the unused
+`process-notification-queue` worker with a credential-free HTTP 410 retirement
+stub. The shared cron-auth inventory no longer treats the retired worker as an
+active cron function; `notification_schedule` and the active
+`process-notification-outbox` contract remain intact for M3-C/M3-D. Static
+regression tests pass. Production state is unchanged pending reviewed PR
+merge, after which the native Supabase GitHub sync will deploy the Edge change.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then

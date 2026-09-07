@@ -15,7 +15,6 @@ const helperSrc = readFileSync(join(here, "cron-auth.ts"), "utf8");
 
 const AFFECTED = [
   "process-notification-outbox",
-  "process-notification-queue",
   "generate-notifications",
   "send-action-item-due-reminders",
 ];
