@@ -478,18 +478,52 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   empty `compliance_score_snapshots` table are deliberately left
   untouched — their own retirement needs separate Edge/schema
   authorization.
+- **P6-B `usePackageUsage.tsx` + `useCompletionEligibility.ts` retired; a
+  real stale-worktree process-integrity finding surfaced along the way.**
+  `usePackageUsage.tsx` (266 LOC): zero repo-wide imports; its "compare
+  behavior before retirement" caution was checked, not skipped — the live
+  `usePackageUsageQuery.tsx` calls the identical three RPCs
+  (`rpc_get_package_usage`, `rpc_check_package_thresholds`,
+  `rpc_dismiss_alert`), and `useTenantPackages.ts` also shares them,
+  confirming true functional supersession. While verifying this, the
+  dead-code register's own §7bis (dated 2026-09-05) was found to contain
+  **two wrong "confirmed live" corrections** — for this exact
+  `ComplianceScoreBreakdown`/`useComplianceScore` pair (already retired
+  earlier today, before this contradiction was caught) and for
+  `useCompletionEligibility.ts` (claimed live via `useCompletionCascade.ts`).
+  Root cause: §7bis's checks were run against commit `a0cf450b5`, labeled
+  as "current `origin/main`" but actually the exact commit the still-open
+  `.claude/worktrees/any-retirement-batch6` worktree (branch
+  `hotfix/p2p5-any-batch84`) sits on — a branch cut *before* 2026-08-27's
+  dead-code batches 4/12 and 11/12 deleted every one of §7bis's claimed
+  live callers (`useCompletionCascade.ts`, `ComplianceScoreCard.tsx`,
+  `CompletionSummaryModal.tsx`). Both `git merge-base --is-ancestor` checks
+  against those deletion commits and fresh repo-wide greps confirmed all
+  three files were genuinely dead. Corrected §7bis, the dependent
+  `execution-efficiency-log.md` note, and this plan's own earlier P6-B
+  entry accordingly — a third, distinct false-verification root cause this
+  session (stale/diverged worktree mistaken for `origin/main`, not the
+  earlier two sessions' "already-removed caller, claim made later
+  anyway" pattern). `useCompletionEligibility.ts` (39 LOC) retired
+  frontend-only; its `v_completion_eligibility` view is untouched. **Flagged,
+  not chased further:** the same §7bis section's `StageCellEditor`/
+  `MembershipGrid.tsx` finding from the same timeframe hasn't been
+  independently re-verified and could carry the same risk — noted as
+  unconfirmed in the register rather than assumed correct or re-checked
+  under this already-large batch.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
   cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
   core — blocked on missing Playwright coverage; the empty
   `document_links`/`compliance_score_snapshots` tables and their Edge/RPC
-  functions' own retirement decisions; the "data/workflow
-  hooks" half of the
+  functions' own retirement decisions; the unverified `StageCellEditor`
+  dead-export finding; the remaining "data/workflow
+  hooks" in the
   zero-inbound queue: `useStageReleases`/`usePortfolioCockpit`/
-  `useMeetingSeries`/`usePackageUsage`/`useMeetingMinutes`/`useKpiReview`/
-  `useAISuggestions`/`useEosDrafts`/`useDocumentScan`/`useEngagementAudit`/
-  `useCompletionEligibility` — each has its own caution note requiring a
+  `useMeetingSeries`/`useMeetingMinutes`/`useKpiReview`/
+  `useAISuggestions`/`useEosDrafts`/`useDocumentScan`/`useEngagementAudit`
+  — each has its own caution note requiring a
   server-object/sibling-comparison/policy-preservation check before
   touching, `useClientAICompanion`, `StandardsPicker.tsx`), P7 — several
   of these require live-schema investigation, product/security decisions,

@@ -62,14 +62,16 @@ The formerly unused Audit shells and their exclusive legacy dependencies were ch
 
 The following are candidates, not a bulk-deletion list:
 
-- Data/workflow hooks: `useStageReleases` (396 LOC), `usePortfolioCockpit` (316), `useMeetingSeries` (285), `usePackageUsage` (266), `useMeetingMinutes` (207), `useKpiReview` (149), `useAISuggestions` (122), `useEosDrafts` (100), `useDocumentScan` (46), `useEngagementAudit` (42), and `useCompletionEligibility` (39).
+- Data/workflow hooks: `useStageReleases` (396 LOC), `usePortfolioCockpit` (316), `useMeetingSeries` (285), ~~`usePackageUsage` (266)~~, `useMeetingMinutes` (207), `useKpiReview` (149), `useAISuggestions` (122), `useEosDrafts` (100), `useDocumentScan` (46), `useEngagementAudit` (42), and ~~`useCompletionEligibility` (39)~~.
+
+**✅ Retired 2026-09-07 (Phase 2.6 P6-B):** `usePackageUsage.tsx` (266 LOC) — zero repo-wide imports (`from '@/hooks/usePackageUsage'` matches nowhere). Its caution below ("compare behavior before retirement") was checked, not skipped: the live `usePackageUsageQuery.tsx` (4 real callers: `ClientTimeSummaryCard.tsx`, `PackageBreakdownModal.tsx`, `TenantTimeTrackerBar.tsx`, `useTenantTimeTracker.tsx`) calls the identical three RPCs the old hook did (`rpc_get_package_usage`, `rpc_check_package_thresholds`, `rpc_dismiss_alert`), and `useTenantPackages.ts` also calls the same RPCs — genuinely shared, live backend contract, confirming true functional supersession rather than a same-named coincidence. No backend object retired. Also retired `useCompletionEligibility.ts` (39 LOC) in the same PR — **§7bis's 2026-09-05 "confirmed live via `useCompletionCascade.ts`" claim was itself wrong**, based on a stale, diverged worktree rather than true `origin/main` (see the correction added to §7bis above); `useCompletionCascade.ts` was deleted 2026-08-27, `useCompletionEligibility.ts` has had zero real importers since. Its `v_completion_eligibility` view is left untouched — retirement is frontend-only.
 - UX/platform artifacts: ~~`useDevOverflowWarning` (234)~~, ~~`engagement-guardrails.ts` (187)~~, ~~`useYouveGotMailToast` (168)~~, `useClientAICompanion` (142, calls server objects — see below, not retired here), ~~`useProgressAnchors` (102)~~, ~~`stage-registry.ts` (86)~~, and `features/pdp/components/StandardsPicker.tsx` (198, roadmap-intent — see below, not retired here).
 
 **✅ Retired 2026-09-07 (Phase 2.6 P6-B)**, the 5 struck-through above: `useDevOverflowWarning.ts` (dev-only overflow diagnostic, no-op in production, zero backend calls), `engagement-guardrails.ts` (pure celebration-governance validation logic, zero backend calls), `useYouveGotMailToast.tsx` (read-only query against the shared `conversation_participants`/`tenant_messages` tables — deleting the frontend hook doesn't retire either table, both remain heavily used elsewhere), `useProgressAnchors.ts` (read-only query against the shared `v_phase_actions_remaining`/`v_progress_anchor_inputs` views — same reasoning, views untouched), and `stage-registry.ts` (pure TypeScript type re-exports derived from the generated `Database` type, zero runtime code). All confirmed zero repo-wide references beyond their own files before deletion.
 
 Important dispositions:
 
-- `usePackageUsage.tsx` has an active newer sibling, `usePackageUsageQuery.tsx`; compare behavior before retirement.
+- ~~`usePackageUsage.tsx` has an active newer sibling, `usePackageUsageQuery.tsx`; compare behavior before retirement.~~ Done — see the ✅ Retired note above.
 - `usePortfolioCockpit.ts` contains an old restricted-portfolio model. Preserve the recorded operating-policy decision even if the implementation is retired.
 - `useStageReleases`, `useMeetingSeries`, `useMeetingMinutes`, `useAISuggestions`, and `useClientAICompanion` call server objects. Removing an orphaned frontend caller is not server-object retirement evidence.
 - `StandardsPicker` may represent roadmap intent; it requires a product decision.
@@ -181,7 +183,7 @@ liveness-triage rule from §7 above and §3.3 item 5) independently
 reconfirmed two items already on this register, at current `origin/main`
 after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
 
-- **Correction from the current-origin sweep (2026-09-05):** the cached
+- ~~**Correction from the current-origin sweep (2026-09-05):** the cached
   zero-inbound evidence for **`ComplianceScoreBreakdown.tsx`** and
   **`useComplianceScore.ts`** is stale. At `origin/main` (`a0cf450b5`),
   `ComplianceScoreBreakdown` is imported and rendered by
@@ -189,14 +191,40 @@ after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
   `ComplianceScoreBreakdown` and `CompletionSummaryModal`. This island is
   live and is **not** a retirement candidate. Its backing
   `v_compliance_score_latest` view and `calculate_compliance_score` RPC also
-  remain live; no deletion or schema action is authorized.
-- **Correction from the current-origin sweep (2026-09-05):** the cached
+  remain live; no deletion or schema action is authorized.~~ **This
+  correction was itself wrong — re-corrected 2026-09-07, Phase 2.6 P6-B.**
+  `a0cf450b5` was not current `origin/main` on 2026-09-05 despite being
+  labeled as such — it's the exact commit the still-open
+  `.claude/worktrees/any-retirement-batch6` worktree (branch
+  `hotfix/p2p5-any-batch84`) was sitting on, a branch cut *before*
+  2026-08-27's dead-code batch 11/12 (`c1dcf097f`) deleted both
+  `ComplianceScoreCard.tsx` and `CompletionSummaryModal.tsx`. Whoever ran
+  this "fresh" reachability check on 2026-09-05 almost certainly ran it
+  inside that stale, diverged worktree rather than against true
+  `origin/main`, so it saw callers that had already been gone for 9 days.
+  Confirmed via `git merge-base --is-ancestor c1dcf097f origin/main` (true)
+  and a repo-wide grep (zero real importers of either file). Retired for
+  real in P6-B — see the dead-code register's §3.2 "Compliance-score
+  island" entry.
+- ~~**Correction from the current-origin sweep (2026-09-05):** the cached
   zero-inbound evidence for **`useCompletionEligibility.ts`** is stale. At
   `origin/main` (`a0cf450b5`), it is imported and executed by
   `useCompletionCascade.ts`, so it is live and is **not** a retirement
   candidate. Its `v_completion_eligibility` view remains a live backend
   contract. PR #677's earlier type-only cast cleanup does not change this
-  disposition.
+  disposition.~~ **This correction was itself wrong too — re-corrected
+  2026-09-07, Phase 2.6 P6-B.** Same root cause as above: `useCompletionCascade.ts`
+  (the claimed live caller) was deleted 2026-08-27 in dead-code batch 4/12
+  (`d551e764c`), also before this "fresh" check's date, also an ancestor of
+  current `origin/main`. `useCompletionEligibility.ts` had zero real
+  importers and was retired in P6-B alongside `usePackageUsage.tsx` — see
+  the "data/workflow hooks" bullet in §3.3 below.
+- **Flagged for a future re-check, not verified in this pass:** the
+  `StageCellEditor`/`MembershipGrid.tsx` finding immediately below this
+  list was made in the same PR #683 timeframe as the two now-corrected
+  claims above — it hasn't been independently re-verified against true
+  current `origin/main` and could be subject to the same stale-worktree
+  risk. Treat it as unconfirmed until someone re-checks it fresh.
 Batch 81's live-verification pass (PR #683) turned up a third, more
 specific finding: **`StageCellEditor` itself (the named export in
 `src/components/membership/StageCellEditor.tsx`) has no importer anywhere**
