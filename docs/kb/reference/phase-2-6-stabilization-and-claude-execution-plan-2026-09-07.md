@@ -628,15 +628,28 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   (same never-shipped celebration-governance feature area). Table left
   untouched. Every hook in the original "data/workflow hooks" zero-inbound
   list (§3.3 of the dead-code register) is now retired.
+- **P6-B dead-link/broken-feature cleanup, product decisions received
+  2026-09-08.** Carl confirmed `/kpi` (`KpiPage.tsx`, "kpi-v2") is the
+  canonical live KPI feature — retire anything tied to the old
+  "kpi-review" sign-off concept rather than build it out. Retired
+  `MyKpiSignOffSection.tsx` (zero repo-wide imports once removed from
+  its one caller), the broken "Open reviewer view" link and its
+  now-unused `canViewAnyStaff`/`useKpiAccess` wiring in
+  `MyKpiDashboardPage.tsx`, and `ProtectedRoute.tsx`'s dead
+  `/admin/kpi-*` carve-out. `useKpiAccess.tsx`'s `isReviewer` check
+  itself is untouched — it's what powers `/kpi`'s real Team KPI toggle.
+  `kpi_reviews`/`kpi_review_signoffs` tables and the create/lock RPCs
+  remain deliberately untouched pending their own schema authorization.
+  Also removed the dead "View Minutes"/"View Attendance" links (and the
+  now-unused `Eye` icon import) from `MeetingExecutionPanel.tsx` — no
+  pages will be built for `/eos/meetings/:id/minutes`/`/attendance`.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
   cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
   core — blocked on missing Playwright coverage; the empty
   `document_links`/`compliance_score_snapshots` tables and their Edge/RPC
-  functions' own retirement decisions; the dead `/eos/meetings/:id/minutes`/`/attendance`
-  links in `MeetingExecutionPanel.tsx`; the missing `/admin/kpi-review`
-  reviewer page and its create/lock RPCs' disposition; `useClientAICompanion`
+  functions' own retirement decisions; `useClientAICompanion`
   and `StandardsPicker.tsx` — the two remaining "UX/platform artifacts"
   zero-inbound candidates, both requiring a product decision before
   touching), P7 — several of these require live-schema investigation,
