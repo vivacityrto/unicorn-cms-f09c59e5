@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { KpiDashboard } from "@/components/kpi/KpiDashboard";
-import { MyKpiSignOffSection } from "@/components/kpi/MyKpiSignOffSection";
 import { KpiEmailLogSection } from "@/components/kpi/KpiEmailLogSection";
 import { KpiMonthlySummaryCards } from "@/components/kpi/KpiMonthlySummaryCards";
 import { KpiTasksSection } from "@/components/kpi/KpiTasksSection";
@@ -10,11 +9,8 @@ import { KpiDeveloperTicketQueue } from "@/components/kpi/KpiDeveloperTicketQueu
 import { KpiReporterTicketView } from "@/components/kpi/KpiReporterTicketView";
 import { RaiseTicketButton } from "@/components/kpi/RaiseTicketSheet";
 import { Loader2, LayoutDashboard, CheckSquare, Ticket, Mail } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useKpiAccess } from "@/hooks/useKpiAccess";
 import type { KpiRole } from "@/hooks/useKpiSummary";
 
 type Period = "weekly" | "monthly" | "quarterly";
@@ -41,7 +37,6 @@ type TabKey = "kpi_overview" | "tasks" | "tickets" | "email_log";
  */
 export function MyKpiContent({ showHeader = true }: { showHeader?: boolean }) {
   const { profile, loading } = useAuth();
-  const { canViewAnyStaff } = useKpiAccess();
   const [period, setPeriod] = useState<Period>("weekly");
   const [taskCount, setTaskCount] = useState(0);
   const [ticketCount, setTicketCount] = useState(0);
@@ -106,16 +101,9 @@ export function MyKpiContent({ showHeader = true }: { showHeader?: boolean }) {
   return (
     <div className="space-y-4">
       {showHeader && (
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">My KPI dashboard</h2>
-            <p className="text-sm text-muted-foreground">Your KPI rollup and role-specific activity.</p>
-          </div>
-          {canViewAnyStaff && (
-            <Button asChild variant="outline" size="sm">
-              <Link to="/admin/kpi-review">Open reviewer view</Link>
-            </Button>
-          )}
+        <div>
+          <h2 className="text-xl font-semibold">My KPI dashboard</h2>
+          <p className="text-sm text-muted-foreground">Your KPI rollup and role-specific activity.</p>
         </div>
       )}
 
@@ -171,7 +159,6 @@ export function MyKpiContent({ showHeader = true }: { showHeader?: boolean }) {
             periodLabel={PERIOD_LABEL[period]}
             hideSections
           />
-          <MyKpiSignOffSection />
         </TabsContent>
 
         {visibleTabs.includes("tasks") && (

@@ -1,15 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Calendar, 
-  Users, 
-  CheckCircle2, 
+import {
+  Calendar,
+  Users,
+  CheckCircle2,
   AlertTriangle,
   FileText,
   ExternalLink,
-  Play,
-  Eye
+  Play
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -178,22 +177,6 @@ export function MeetingExecutionPanel({ meetingSeries }: MeetingExecutionPanelPr
                       <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1 border-t">
                         <span>{series.lastMeeting.todosCreated} To-Dos created</span>
                         <span>{series.lastMeeting.idsAdded} IDS items</span>
-                      </div>
-
-                      {/* Quick Actions */}
-                      <div className="flex gap-2 pt-2">
-                        <Link to={`/eos/meetings/${series.lastMeeting.id}/minutes`} className="flex-1">
-                          <Button variant="ghost" size="sm" className="w-full text-xs h-7">
-                            <Eye className="h-3 w-3 mr-1" />
-                            View Minutes
-                          </Button>
-                        </Link>
-                        <Link to={`/eos/meetings/${series.lastMeeting.id}/attendance`} className="flex-1">
-                          <Button variant="ghost" size="sm" className="w-full text-xs h-7">
-                            <Users className="h-3 w-3 mr-1" />
-                            Attendance
-                          </Button>
-                        </Link>
                       </div>
                     </>
                   ) : (
