@@ -582,6 +582,58 @@ During the Phase 2.5 authenticated SharePoint cohort smoke test, `/client/files`
 
 Fresh Phase 2.5 reachability review confirmed `generate-meeting-recurrence` is invoked by `useEosMeetingRecurrences` and inserts recurrence/occurrence rows using the caller's bearer token, but the function has no explicit `auth.getUser`/permission helper or other recognizable gate. Its existing RLS-backed behavior was left unchanged and the attempted type-only cleanup was reverted. This requires a dedicated auth/RBAC and RLS review before any further cleanup or production invocation; no writes were performed during verification.
 
+## Main staff dashboard (`/triage-dashboard`)
+
+### 26. Attention Ranking / Priority Inbox / Labour Efficiency sections are down in production — URGENT, NOT FIXED
+
+Preserved from PR #612 (opened 2026-09-04, closed without merge 2026-09-07 per
+the Phase 2.6 stabilization plan's Packet P0-B — this entry is the retained
+evidence). While live-verifying batch 23's type-safety change to
+`useDashboardTriage.ts`, the verification agent found that four of its
+backend queries are **currently returning HTTP 500** against production,
+reproduced identically across two full page reloads:
+
+- `v_dashboard_attention_ranked` (feeds the attention-ranked tenant list, top
+  5, full portfolio, and low-attention list — all render empty)
+- `v_dashboard_priority_inbox`
+- `v_dashboard_behavioural_prompts`
+- `v_dashboard_labour_efficiency`
+
+Response body: `{"code":"57014","message":"canceling statement due to
+statement timeout"}`. The UI degrades gracefully (empty tables/fallback
+content, no crash), which is likely why this hasn't been noticed as an
+outage — it just looks like "no data" rather than an error.
+
+**Confirmed not caused by batch 23's work**: `git diff` showed that PR's
+changes to `useDashboardTriage.ts` were purely type-level (removing `as any`
+casts, adding proper generated types) — the actual query text sent to
+PostgREST was byte-for-byte unchanged.
+
+**Investigated at the time**: the `authenticated` Postgres role has an
+8-second `statement_timeout` (`anon` has 3s). Running the
+`v_dashboard_attention_ranked` query directly as `postgres` (which bypasses
+RLS) completed in ~267ms — not slow at all. `tenants` (the view's base
+table) has RLS policies that call `is_super_admin_safe()` /
+`app.user_can_access_tenant()` per row. This strongly suggests the real
+query, executed through PostgREST as the authenticated role with RLS
+policies actually active, produces a much worse query plan than the one a
+superuser sees — a common RLS performance cliff — but a definitive
+same-session repro as a real authenticated user wasn't achieved (a simulated
+JWT via `request.jwt.claims` didn't reproduce the SuperAdmin's row access,
+so it can't be confirmed as fully diagnosed).
+
+**Not fixed here** — needs reproduction with a real authenticated Playwright
+session's network tab plus `pg_stat_statements`/`auto_explain` on the live
+role, and a design decision on the fix (RLS policy rewrite, materializing the
+view, or a covering index). Track as a distinct dashboard reliability bug,
+linked to Client Health H0.0 containment
+(`docs/kb/reference/client-health-activity-analytics-plan-2026-09-03.md`) —
+both surface the same underlying stage-health signal, so H0.0's "unavailable"
+containment messaging should also cover these four views until the timeout
+is resolved. This is an active production issue on the primary staff
+dashboard, not a backlog item; see Phase 2.6 stabilization plan Packet P3-A
+item 2 for the containment/fix packet.
+
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
