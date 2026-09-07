@@ -63,7 +63,9 @@ The formerly unused Audit shells and their exclusive legacy dependencies were ch
 The following are candidates, not a bulk-deletion list:
 
 - Data/workflow hooks: `useStageReleases` (396 LOC), `usePortfolioCockpit` (316), `useMeetingSeries` (285), `usePackageUsage` (266), `useMeetingMinutes` (207), `useKpiReview` (149), `useAISuggestions` (122), `useEosDrafts` (100), `useDocumentScan` (46), `useEngagementAudit` (42), and `useCompletionEligibility` (39).
-- UX/platform artifacts: `useDevOverflowWarning` (234), `engagement-guardrails.ts` (187), `useYouveGotMailToast` (168), `useClientAICompanion` (142), `useProgressAnchors` (102), `stage-registry.ts` (86), and `features/pdp/components/StandardsPicker.tsx` (198).
+- UX/platform artifacts: ~~`useDevOverflowWarning` (234)~~, ~~`engagement-guardrails.ts` (187)~~, ~~`useYouveGotMailToast` (168)~~, `useClientAICompanion` (142, calls server objects — see below, not retired here), ~~`useProgressAnchors` (102)~~, ~~`stage-registry.ts` (86)~~, and `features/pdp/components/StandardsPicker.tsx` (198, roadmap-intent — see below, not retired here).
+
+**✅ Retired 2026-09-07 (Phase 2.6 P6-B)**, the 5 struck-through above: `useDevOverflowWarning.ts` (dev-only overflow diagnostic, no-op in production, zero backend calls), `engagement-guardrails.ts` (pure celebration-governance validation logic, zero backend calls), `useYouveGotMailToast.tsx` (read-only query against the shared `conversation_participants`/`tenant_messages` tables — deleting the frontend hook doesn't retire either table, both remain heavily used elsewhere), `useProgressAnchors.ts` (read-only query against the shared `v_phase_actions_remaining`/`v_progress_anchor_inputs` views — same reasoning, views untouched), and `stage-registry.ts` (pure TypeScript type re-exports derived from the generated `Database` type, zero runtime code). All confirmed zero repo-wide references beyond their own files before deletion.
 
 Important dispositions:
 

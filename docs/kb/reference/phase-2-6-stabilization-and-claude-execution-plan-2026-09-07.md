@@ -394,14 +394,35 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   silently absorbed. This is the same class of gap as PR #0-C's
   `usePackageUsage.tsx` correction earlier in this plan: a "confirmed
   live" claim that reachability triage later disproved.
+- **P6-B zero-inbound UX/platform artifacts cohort (5 of 7) retired.**
+  `useDevOverflowWarning.ts` (dev-only overflow diagnostic, no-op in
+  production), `engagement-guardrails.ts` (pure celebration-governance
+  validation logic), `useYouveGotMailToast.tsx` (read-only against the
+  shared `conversation_participants`/`tenant_messages` tables — deleting
+  the frontend hook doesn't retire either table), `useProgressAnchors.ts`
+  (read-only against the shared `v_phase_actions_remaining`/
+  `v_progress_anchor_inputs` views, same reasoning), and
+  `stage-registry.ts` (pure TypeScript type re-exports, zero runtime
+  code). All confirmed zero repo-wide references beyond their own files.
+  **Deliberately not touched:** `useClientAICompanion` (calls server
+  objects per the register's own caution — an orphaned frontend caller is
+  not server-object retirement evidence) and `StandardsPicker.tsx` (may
+  represent roadmap intent, needs a product decision) — both correctly
+  excluded per the register's existing dispositions, not overlooked.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, the rest of P6-B (SeatCard display core —
   blocked on missing Playwright coverage, the remaining product/
   reachability-gated islands: Workboard/SharePoint/bulk-generation-steps/
-  Reassignment/Compliance-score, zero-inbound
-  candidates), P7 — several of these require live-schema investigation,
-  product/security decisions, or their own separately
+  Reassignment/Compliance-score, the "data/workflow hooks" half of the
+  zero-inbound queue: `useStageReleases`/`usePortfolioCockpit`/
+  `useMeetingSeries`/`usePackageUsage`/`useMeetingMinutes`/`useKpiReview`/
+  `useAISuggestions`/`useEosDrafts`/`useDocumentScan`/`useEngagementAudit`/
+  `useCompletionEligibility` — each has its own caution note requiring a
+  server-object/sibling-comparison/policy-preservation check before
+  touching, `useClientAICompanion`, `StandardsPicker.tsx`), P7 — several
+  of these require live-schema investigation, product/security decisions,
+  or their own separately
   authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
