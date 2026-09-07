@@ -555,6 +555,21 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   table this hook also read is untouched and remains heavily used
   elsewhere (`useNextMeeting`, `useEosReadiness`, `useEosHealth`,
   `LiveMeetingView.tsx`, etc.).
+- **P6-B `useMeetingMinutes.tsx` retired, backend confirmed genuinely
+  unused (not merely orphaned).** Zero repo-wide imports, fresh check in
+  this batch's own worktree. Its "calls server objects" caution was
+  checked, not skipped: `eos_meeting_minutes_versions` and
+  `eos_minutes_audit_log` are both empty (0 rows) in production, no cron
+  references either, and all 6 RPCs it called (`save_meeting_minutes`,
+  `finalise_meeting_minutes`, `create_minutes_revision`,
+  `lock_meeting_minutes`, `unlock_meeting_minutes`,
+  `restore_minutes_version`) have no other frontend caller — unlike
+  `useStageReleases`/`useMeetingSeries`, this backend was never actually
+  used. **Separate finding, flagged not fixed:** `MeetingExecutionPanel.tsx`
+  still links to `/eos/meetings/:id/minutes` and `/eos/meetings/:id/attendance`,
+  neither of which is a registered route — pre-existing dead links this
+  retirement doesn't create or worsen; building the missing pages or
+  removing the links is a product decision, left to the dead-code register.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
@@ -562,11 +577,11 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   core — blocked on missing Playwright coverage; the empty
   `document_links`/`compliance_score_snapshots` tables and their Edge/RPC
   functions' own retirement decisions; the unverified `StageCellEditor`
-  dead-export finding; the remaining "data/workflow
+  dead-export finding; the dead `/eos/meetings/:id/minutes`/`/attendance`
+  links in `MeetingExecutionPanel.tsx`; the remaining "data/workflow
   hooks" in the
-  zero-inbound queue: `useMeetingMinutes`/
-  `useKpiReview`/`useAISuggestions`/`useEosDrafts`/`useDocumentScan`/
-  `useEngagementAudit`
+  zero-inbound queue: `useKpiReview`/`useAISuggestions`/`useEosDrafts`/
+  `useDocumentScan`/`useEngagementAudit`
   — each has its own caution note requiring a
   server-object/sibling-comparison/policy-preservation check before
   touching, `useClientAICompanion`, `StandardsPicker.tsx`), P7 — several
