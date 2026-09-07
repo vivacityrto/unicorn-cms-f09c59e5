@@ -364,12 +364,28 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `StageQualityPanel.tsx`, `useStageSimulation.tsx`,
   `AdminStageDetail.tsx`) import unchanged names/shapes — no caller edits
   needed.
+- **P6-B network-status island retired.** `NetworkStatusIndicator.tsx` +
+  `useNetworkStatus.ts` (302 LOC): zero repo-wide references beyond the two
+  files themselves, created in the same original commit and never mounted
+  anywhere despite the component's own docstring suggesting
+  `AuthenticatedLayout`/`App.tsx`. Pure browser-API code (`navigator.onLine`,
+  Network Information API) — no server/RPC/Edge Function dependency, so
+  none of the caution this cohort's sibling islands need (SharePoint,
+  Workboard, Reassignment, Compliance-score all have live backend ties per
+  `dead-code-feature-consolidation-investigation-2026-09-04.md` §3.2).
+  **SeatCard display core explicitly not started** — the packet itself
+  gates it behind independent Playwright drag-and-drop coverage for both
+  `SeatCard`/`DraggableSeatCard` interactive contexts, which doesn't exist
+  yet; building that test infrastructure is its own scoped prerequisite,
+  not something to improvise inside a consolidation PR.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
-  consumer graph above), P4-D, the rest of P6-B (SeatCard display core,
-  the product/reachability-gated islands, old standalone UI candidates,
-  zero-inbound candidates), P7 — several of these require live-schema
-  investigation, product/security decisions, or their own separately
+  consumer graph above), P4-D, the rest of P6-B (SeatCard display core —
+  blocked on missing Playwright coverage, the remaining product/
+  reachability-gated islands: Workboard/SharePoint/bulk-generation-steps/
+  Reassignment/Compliance-score, old standalone UI candidates, zero-inbound
+  candidates), P7 — several of these require live-schema investigation,
+  product/security decisions, or their own separately
   authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
