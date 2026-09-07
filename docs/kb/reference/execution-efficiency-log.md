@@ -1,5 +1,14 @@
 # Execution efficiency log
 
+### 2026-09-07 — M4 H0.0 containment and output-health guardrails
+The M4 stabilization batch reused the existing dependency junction instead of
+installing dependencies in the worktree. A shared unavailable state replaced
+legacy stage-health labels on the dashboard, executive widget, triage tables,
+tenant drawer, and filter; the Ask Viv hotspot tool now returns a generic
+data-repair-in-progress result. Jobs 14 and 15 gained input/output reconciliation
+and visible 503 failures for partial writes. Targeted Vitest passed (2/2) and
+the Edge suite passed (265/265); no production state was changed.
+
 ### 2026-09-07 — M3-B deployment verification completed; M3-C quiet period started
 After native Git sync lagged, the explicitly authorized manual deployment
 published `process-notification-queue` v171 (410 retirement stub) and

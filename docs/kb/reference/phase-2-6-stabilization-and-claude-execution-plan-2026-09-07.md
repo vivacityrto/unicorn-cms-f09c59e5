@@ -713,6 +713,16 @@ are blocking correctness defects, not typing cleanup.
 
 ### Packet M4 — forecast and health output integrity
 
+**Session 12 status (2026-09-07): H0.0 containment implemented; jobs 14/15
+output-health checks implemented; deployment and dashboard Playwright evidence
+remain open.** The affected frontend surfaces now show an explicit
+“Unavailable — data repair in progress” state, and the stage-health filter and
+Ask Viv hotspot tool no longer present the legacy labels as trustworthy. The
+nightly stage-health and workload functions now return a visible `503` when
+input/output counts do not reconcile or an insert fails, and include an
+`output_health` payload on successful/not-applicable runs. No production
+deployment was performed for this M4 code in this session.
+
 - Add Client Health H0.0 containment so invalid stage-health data is shown as
   unavailable/data-repair-in-progress rather than relabelled as trustworthy.
 - For jobs 14 and 15, define freshness, row-count and non-zero-output

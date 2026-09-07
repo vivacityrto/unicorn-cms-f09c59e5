@@ -65,10 +65,11 @@ Deno.serve(async (req) => {
     // ── STEP 1: Consultant Workload Snapshots ──
 
     // Get all vivacity staff with capacity profiles
-    const { data: staffUsers } = await sb
+    const { data: staffUsers, error: staffUsersError } = await sb
       .from("users")
       .select("user_uuid")
       .eq("is_vivacity_internal", true);
+    if (staffUsersError) throw staffUsersError;
 
     const workloadSnapshots: WorkloadSnapshot[] = [];
 
@@ -162,7 +163,6 @@ Deno.serve(async (req) => {
       workloadSnapshots.push({
         user_id: userId,
         snapshot_date: today,
-        snapshot_date: today,
         open_tasks_count: openTasks || 0,
         overdue_tasks_count: overdueTasks || 0,
         active_stages_count: activeStagesCount,
@@ -175,19 +175,24 @@ Deno.serve(async (req) => {
     }
 
     // Batch insert workload snapshots
+    let workloadInsertError: string | null = null;
     if (workloadSnapshots.length > 0) {
       const { error } = await sb
         .from("workload_snapshots")
         .insert(workloadSnapshots);
-      if (error) console.error("Workload insert error:", error);
+      if (error) {
+        console.error("Workload insert error:", error);
+        workloadInsertError = error.message;
+      }
     }
 
     // ── STEP 2: Package Burn Forecasts ──
 
-    const { data: packages } = await sb
+    const { data: packages, error: packagesError } = await sb
       .from("package_instances")
       .select("id, tenant_id, hours_included, hours_used, hours_added")
       .gt("hours_included", 0);
+    if (packagesError) throw packagesError;
 
     const burnForecasts: BurnForecast[] = [];
 
@@ -239,11 +244,40 @@ Deno.serve(async (req) => {
     }
 
     // Batch insert burn forecasts
+    let burnInsertError: string | null = null;
     if (burnForecasts.length > 0) {
       const { error } = await sb
         .from("tenant_package_burn_forecast")
         .insert(burnForecasts);
-      if (error) console.error("Burn forecast insert error:", error);
+      if (error) {
+        console.error("Burn forecast insert error:", error);
+        burnInsertError = error.message;
+      }
+    }
+
+    const staffInputCount = staffUsers?.length ?? 0;
+    const packageInputCount = packages?.length ?? 0;
+    const outputIncomplete =
+      workloadInsertError !== null ||
+      burnInsertError !== null ||
+      workloadSnapshots.length !== staffInputCount ||
+      burnForecasts.length !== packageInputCount;
+    if (outputIncomplete) {
+      return new Response(
+        JSON.stringify({
+          error: "Workload forecast output incomplete",
+          output_health: {
+            status: "failed",
+            staff_input_count: staffInputCount,
+            workload_output_count: workloadSnapshots.length,
+            package_input_count: packageInputCount,
+            burn_output_count: burnForecasts.length,
+            workload_insert_error: workloadInsertError,
+            burn_insert_error: burnInsertError,
+          },
+        }),
+        { status: 503, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(
@@ -251,6 +285,14 @@ Deno.serve(async (req) => {
         message: "Workload forecast completed",
         workload_snapshots: workloadSnapshots.length,
         burn_forecasts: burnForecasts.length,
+        output_health: {
+          status: staffInputCount === 0 && packageInputCount === 0 ? "not_applicable" : "ok",
+          staff_input_count: staffInputCount,
+          workload_output_count: workloadSnapshots.length,
+          package_input_count: packageInputCount,
+          burn_output_count: burnForecasts.length,
+          snapshot_date: today,
+        },
         workload_summary: {
           stable: workloadSnapshots.filter((s) => s.overload_risk_status === "stable").length,
           elevated: workloadSnapshots.filter((s) => s.overload_risk_status === "elevated").length,

@@ -61,7 +61,11 @@ Deno.serve(async (req) => {
 
     if (!stages || stages.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No active stages found", processed: 0 }),
+        JSON.stringify({
+          message: "No active stages found",
+          processed: 0,
+          output_health: { status: "not_applicable", input_count: 0, output_count: 0 },
+        }),
         { headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
@@ -217,6 +221,7 @@ Deno.serve(async (req) => {
     }
 
     // 5. Batch insert snapshots
+    const insertFailures: string[] = [];
     if (snapshots.length > 0) {
       const batchSize = 100;
       for (let i = 0; i < snapshots.length; i += batchSize) {
@@ -226,8 +231,27 @@ Deno.serve(async (req) => {
           .upsert(batch, { onConflict: "stage_instance_id,snapshot_date" });
         if (insertErr) {
           console.error("Insert error batch", i, insertErr);
+          insertFailures.push(`batch ${i}: ${insertErr.message}`);
         }
       }
+    }
+
+    // A successful HTTP response must mean that every active input produced a
+    // persisted snapshot. Missing package mappings or partial writes are
+    // operational failures, not successful no-ops.
+    if (insertFailures.length > 0 || snapshots.length !== stages.length) {
+      return new Response(
+        JSON.stringify({
+          error: "Stage health output incomplete",
+          output_health: {
+            status: "failed",
+            input_count: stages.length,
+            output_count: snapshots.length,
+            insert_failures: insertFailures,
+          },
+        }),
+        { status: 503, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
+      );
     }
 
     // 6. Refresh materialized view
@@ -242,6 +266,13 @@ Deno.serve(async (req) => {
       JSON.stringify({
         message: "Stage health monitor completed",
         processed: snapshots.length,
+        output_health: {
+          status: "ok",
+          input_count: stages.length,
+          output_count: snapshots.length,
+          non_zero_output: snapshots.length > 0,
+          snapshot_date: today,
+        },
         summary: {
           healthy: snapshots.filter((s) => s.health_status === "healthy").length,
           monitoring: snapshots.filter((s) => s.health_status === "monitoring").length,

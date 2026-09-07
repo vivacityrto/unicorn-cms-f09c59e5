@@ -281,7 +281,7 @@ const TOOLS: AnthropicToolDefinition[] = [
   {
     name: "get_stage_health_hotspots",
     description:
-      "Find which clients currently have the most at-risk (critical or monitoring) package/phase stages, based on the latest stage health snapshot per stage — not historical snapshots. Optionally scope to one staff member's CSC caseload. Use this for 'which clients have the most at-risk stages' or 'where are the compliance hotspots' questions.",
+      "Stage-health hotspots are temporarily unavailable while the underlying metric is being repaired. Do not present stage health as healthy, at risk, or critical; use raw task, risk, gap, activity, and deadline tools instead.",
     input_schema: {
       type: "object",
       properties: {
@@ -597,11 +597,6 @@ interface AttentionRankedRow {
   burn_risk_status: string | null;
   days_to_renewal: number | null;
   risk_status: string | null;
-}
-
-interface StageHealthRow {
-  tenant_id: number;
-  health_status: string;
 }
 
 interface ConsultantLoadRow {
@@ -1382,62 +1377,10 @@ async function executeTool(
   }
 
   if (name === "get_stage_health_hotspots") {
-    const cscName = typeof input.csc_name === "string" ? input.csc_name.trim() : "";
-    const limit = Math.min(Math.max(Number(input.limit) || 10, 1), 25);
-    try {
-      let scopeTenantIds: number[] | null = null;
-      if (cscName) {
-        const resolved = await resolveStaffNameToTenantIds(supabase, cscName);
-        if (resolved.ambiguous) {
-          return { result: { staff_matches: resolved.candidates }, summary: `get_stage_health_hotspots("${cscName}") — ambiguous staff name` };
-        }
-        scopeTenantIds = resolved.tenantIds;
-        if (scopeTenantIds.length === 0) {
-          return { result: { hotspots: [] }, summary: `get_stage_health_hotspots("${cscName}") — no clients assigned` };
-        }
-      }
-
-      let query = supabase
-        .from("v_stage_health_latest")
-        .select("tenant_id, health_status")
-        .in("health_status", ["critical", "monitoring"])
-        .limit(10000);
-      if (scopeTenantIds) query = query.in("tenant_id", scopeTenantIds);
-      const { data: rows, error } = await query;
-      if (error) throw new Error(error.message);
-
-      const counts = new Map<number, { critical: number; monitoring: number }>();
-      for (const row of (rows ?? []) as StageHealthRow[]) {
-        const entry = counts.get(row.tenant_id) ?? { critical: 0, monitoring: 0 };
-        if (row.health_status === "critical") entry.critical++;
-        else entry.monitoring++;
-        counts.set(row.tenant_id, entry);
-      }
-
-      const tenantIds = [...counts.keys()];
-      const tenantNameById = new Map<number, string>();
-      if (tenantIds.length > 0) {
-        const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
-        for (const t of (tenantRows ?? []) as Array<{ id: number; name: string }>) tenantNameById.set(t.id, t.name);
-      }
-
-      const hotspots = tenantIds
-        .map((tid) => ({
-          tenant_id: tid,
-          name: tenantNameById.get(tid) ?? null,
-          critical_stages: counts.get(tid)!.critical,
-          monitoring_stages: counts.get(tid)!.monitoring,
-        }))
-        .sort((a, b) => b.critical_stages - a.critical_stages || b.monitoring_stages - a.monitoring_stages)
-        .slice(0, limit);
-
-      return {
-        result: { hotspots },
-        summary: `get_stage_health_hotspots(${cscName || "platform-wide"}) — top ${hotspots.length} of ${tenantIds.length} client(s) with at-risk stages`,
-      };
-    } catch (err) {
-      return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "get_stage_health_hotspots failed" };
-    }
+    return {
+      result: { status: "unavailable", reason: "data_repair_in_progress" },
+      summary: "get_stage_health_hotspots — unavailable while stage-health data is repaired",
+    };
   }
 
   if (name === "get_consultant_workload_comparison") {
