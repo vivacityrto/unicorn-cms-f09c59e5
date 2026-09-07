@@ -14,6 +14,10 @@
 
 ## Progress log
 
+**2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
+migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
+and its JSON companion. No hosted state changed. M1 is next.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then
