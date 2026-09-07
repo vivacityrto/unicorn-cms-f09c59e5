@@ -599,6 +599,13 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   orphaned later. (A same-named `aiSuggestion` prop in
   `QuestionCard.tsx`'s audit-evidence feature is an unrelated
   coincidence.) Edge Function, RPC, and table all left untouched.
+- **P6-B `useEosDrafts.tsx` retired, backend confirmed genuinely
+  unused.** Exports `useEosVtoDrafts`/`useEosChartDrafts` (register name
+  is the filename), both zero repo-wide imports, fresh check in this
+  batch's own worktree. `eos_vto_drafts`/`eos_chart_drafts` are both
+  empty (0 rows) in production, no cron references, and neither
+  `propose_vto_change` nor `propose_chart_change` RPC has any other
+  frontend caller. All left untouched.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
@@ -610,8 +617,7 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   links in `MeetingExecutionPanel.tsx`; the missing `/admin/kpi-review`
   reviewer page and its create/lock RPCs' disposition; the remaining
   "data/workflow hooks" in the
-  zero-inbound queue: `useEosDrafts`/
-  `useDocumentScan`/`useEngagementAudit`
+  zero-inbound queue: `useDocumentScan`/`useEngagementAudit`
   — each has its own caution note requiring a
   server-object/sibling-comparison/policy-preservation check before
   touching, `useClientAICompanion`, `StandardsPicker.tsx`), P7 — several
