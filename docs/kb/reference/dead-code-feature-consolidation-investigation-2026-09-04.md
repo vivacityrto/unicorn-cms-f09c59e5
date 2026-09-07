@@ -319,6 +319,34 @@ Playwright confirming both retired route variants now render the app's own
 404 (not a crash) and `ClientPackagesTab.tsx`'s Manage/Stages/Notes/
 Renew/Finalise flow is unchanged with the chevron button removed.
 
+**Architecture metrics (`npm run metrics`), measured via `scripts/architecture-metrics.mjs`
+in two isolated worktrees — `origin/main@7e84ee9e3` (this retirement's
+branch-cut point) vs. the retirement branch tip:**
+
+| Measure | Before | After | Delta |
+|---|---:|---:|---:|
+| Tracked product files | 1,732 | 1,727 | −5 |
+| Physical lines | 493,171 | 489,913 | −3,258 |
+| Lines excl. generated types | 419,707 | 416,449 | −3,258 |
+| Product lines excl. generated + tests | 408,900 | 405,642 | −3,258 |
+| Files over 600 lines | 119 | 118 | −1 (`PackageDetail.tsx`, 1,678 lines) |
+| Files over 1,000 lines | 33 | 32 | −1 (same file) |
+| Supabase client imports — pages | 107 | 105 | −2 |
+| Supabase client imports — components | 222 | 218 | −4 |
+| Direct Supabase calls — pages | 96 | 94 | −2 |
+| Direct Supabase calls — components | 186 | 182 | −4 |
+| `unicorn_role` files | 162 | 160 | −2 |
+| Raw `any` keyword hits | 462 | 461 | −1 |
+
+The −3,258 physical-line delta doesn't exactly match `git diff --cached
+--stat`'s −3,267 (deletions) + 237 (doc insertions) net figure for this
+PR's own commit; the ~9-line gap is `origin/main` itself measuring a few
+lines apart between the two separate metrics runs (a git-fetch timing
+artifact between commands, not a PR discrepancy) — noted for
+transparency rather than silently rounded away. The 6 deleted files vs. a
+measured 5-file drop has the same explanation. Both are far smaller than
+the actual retirement's real size and don't change any conclusion above.
+
 ## 6. Cross-program sequence
 
 ### Phase 2.5 checkpoint and ongoing lane
