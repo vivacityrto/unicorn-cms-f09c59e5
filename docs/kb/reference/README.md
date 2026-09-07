@@ -26,6 +26,7 @@ This mirrors — and doesn't replace — the KB's own precedence rule (`referenc
 | `codebase-optimization-plan-2026-08-28.md` | active | Phases 0, 1, and 2 are complete; Phase 2.5 is actively retiring lint/type debt and Phase 2.6 is now a council-reviewed retirement/consolidation proposal. The plan remains the live execution ledger and authorizes no production mutation or merge by itself. |
 | `dashboard-overhaul-mockup.md` | historical | One-off analysis snapshot (2026-07-03); its companion `.html` mockup is missing from the repo (noted in the doc itself). |
 | `dead-code-feature-consolidation-investigation-2026-09-04.md` | planning | Council-reviewed candidate register and cross-program Phase 2.6 proposal; explicitly authorizes no deletion, database mutation, permission change, deployment, or merge. |
+| `phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md` | planning | Current stabilization ledger and Claude Code execution packets for open-PR closeout, L10 bugs, lint/typecheck gates, safe test-data handling, remaining Phase 2.6 work, and the Phase 3 pilot. |
 | `decision-trail.md` | active | Living ADR log — individual ADRs carry their own Decided/Superseded/Reversed status inline; the doc as a whole is the current canonical decision record. |
 | `dev-guardrails.md` | active | Standing guardrails. |
 | `flow-patterns.md` | active | Living pattern reference. |
