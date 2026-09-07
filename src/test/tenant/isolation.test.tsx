@@ -15,6 +15,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 
@@ -67,10 +68,141 @@ type AuditEventRow = Pick<
   "id" | "entity" | "action" | "user_id" | "entity_id"
 >;
 
-const RUN_ID = `vitest-${Date.now().toString(36)}-${Math.random()
-  .toString(36)
-  .slice(2, 8)}`;
+interface FixtureLedger {
+  tenantIds: number[];
+  authUserIds: string[];
+  profileUserIds: string[];
+  tenantMemberIds: string[];
+  conversationIds: string[];
+  participantKeys: string[];
+  messageIds: string[];
+  auditEventIds: string[];
+}
+
+interface CleanupFailure {
+  resource: string;
+  error: unknown;
+}
+
+const RUN_ID = `vitest-${randomUUID()}`;
 const PASS = "Passw0rd!Test-Vitest";
+
+const fixtureLedger: FixtureLedger = {
+  tenantIds: [],
+  authUserIds: [],
+  profileUserIds: [],
+  tenantMemberIds: [],
+  conversationIds: [],
+  participantKeys: [],
+  messageIds: [],
+  auditEventIds: [],
+};
+
+function recordOnce<T>(values: T[], value: T) {
+  if (!values.includes(value)) values.push(value);
+}
+
+function formatCleanupError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return JSON.stringify(error);
+}
+
+async function attemptCleanup(
+  failures: CleanupFailure[],
+  resource: string,
+  operation: () => PromiseLike<{ error: { message?: string } | null }>,
+) {
+  try {
+    const { error } = await operation();
+    if (error) {
+      failures.push({
+        resource,
+        error: new Error(error.message ?? "Supabase cleanup returned an error"),
+      });
+    }
+  } catch (error) {
+    failures.push({ resource, error });
+  }
+}
+
+async function cleanupFixtures(): Promise<CleanupFailure[]> {
+  if (!svc) return [];
+
+  const failures: CleanupFailure[] = [];
+
+  // Delete children before their conversations, users and tenants.
+  for (const messageId of fixtureLedger.messageIds) {
+    await attemptCleanup(failures, `tenant_messages/${messageId}`, () =>
+      svc.from("tenant_messages").delete().eq("id", messageId),
+    );
+  }
+
+  for (const auditEventId of fixtureLedger.auditEventIds) {
+    await attemptCleanup(failures, `audit_events/${auditEventId}`, () =>
+      svc.from("audit_events").delete().eq("id", auditEventId),
+    );
+  }
+
+  for (const participantKey of fixtureLedger.participantKeys) {
+    const separator = participantKey.indexOf(":");
+    const conversationId = participantKey.slice(0, separator);
+    const userId = participantKey.slice(separator + 1);
+    await attemptCleanup(
+      failures,
+      `conversation_participants/${participantKey}`,
+      () =>
+        svc
+          .from("conversation_participants")
+          .delete()
+          .eq("conversation_id", conversationId)
+          .eq("user_id", userId),
+    );
+  }
+
+  for (const conversationId of fixtureLedger.conversationIds) {
+    await attemptCleanup(
+      failures,
+      `tenant_conversations/${conversationId}`,
+      () => svc.from("tenant_conversations").delete().eq("id", conversationId),
+    );
+  }
+
+  for (const memberId of fixtureLedger.tenantMemberIds) {
+    await attemptCleanup(failures, `tenant_members/${memberId}`, () =>
+      svc.from("tenant_members").delete().eq("id", memberId),
+    );
+  }
+
+  for (const profileUserId of fixtureLedger.profileUserIds) {
+    await attemptCleanup(failures, `users/${profileUserId}`, () =>
+      svc.from("users").delete().eq("user_uuid", profileUserId),
+    );
+  }
+
+  for (const authUserId of fixtureLedger.authUserIds) {
+    await attemptCleanup(failures, `auth.users/${authUserId}`, async () => {
+      const { error } = await svc.auth.admin.deleteUser(authUserId);
+      return { error };
+    });
+  }
+
+  for (const tenantId of fixtureLedger.tenantIds) {
+    await attemptCleanup(failures, `tenants/${tenantId}`, () =>
+      svc.from("tenants").delete().eq("id", tenantId),
+    );
+  }
+
+  return failures;
+}
+
+function throwCleanupFailures(failures: CleanupFailure[]) {
+  if (!failures.length) return;
+  const details = failures
+    .map(({ resource, error }) => `${resource}: ${formatCleanupError(error)}`)
+    .join("; ");
+  throw new Error(`[tenant isolation] cleanup failed: ${details}`);
+}
 
 let svc: SupabaseClient<Database>;
 
@@ -86,6 +218,7 @@ let convA = "";
 let convA2 = "";
 let convA_noStaff = "";
 let convB = "";
+let setupFailed = false;
 
 // Captured from test 4 so test 15 can assert on the exact audit row.
 let a1InsertedMessageId: string | null = null;
@@ -110,6 +243,8 @@ async function makePersona(
     throw new Error(`createUser ${label}: ${error?.message}`);
   }
   const authId = created.user.id;
+  recordOnce(fixtureLedger.authUserIds, authId);
+  recordOnce(fixtureLedger.profileUserIds, authId);
 
   // The `link_auth_user_to_profile` trigger may have created a stub row;
   // upsert on user_uuid handles both create and update paths.
@@ -141,7 +276,7 @@ async function makePersona(
   return { email, authId, client };
 }
 
-async function addTenantMember(tenantId: number, userId: string) {
+async function addTenantMember(tenantId: number, userId: string): Promise<string> {
   const membership: TenantMemberInsert = {
     tenant_id: tenantId,
     user_id: userId,
@@ -149,8 +284,15 @@ async function addTenantMember(tenantId: number, userId: string) {
     status: "active",
     joined_at: new Date().toISOString(),
   };
-  const { error } = await svc.from("tenant_members").insert(membership);
+  const { data, error } = await svc
+    .from("tenant_members")
+    .insert(membership)
+    .select("id")
+    .single();
   if (error) throw new Error(`tenant_members: ${error.message}`);
+  if (!data) throw new Error("tenant_members: insert returned no row");
+  recordOnce(fixtureLedger.tenantMemberIds, data.id);
+  return data.id;
 }
 
 async function createConversation(
@@ -172,6 +314,7 @@ async function createConversation(
     .single();
   if (error || !data) throw new Error(`tenant_conversations: ${error?.message}`);
   const row: ConversationIdRow = data;
+  recordOnce(fixtureLedger.conversationIds, row.id);
   return row.id;
 }
 
@@ -188,6 +331,7 @@ async function addParticipant(
   };
   const { error } = await svc.from("conversation_participants").insert(participant);
   if (error) throw new Error(`participant: ${error.message}`);
+  recordOnce(fixtureLedger.participantKeys, `${conversationId}:${userId}`);
 }
 
 async function seedMessage(
@@ -200,10 +344,16 @@ async function seedMessage(
     tenant_id: tenantId,
     sender_user_uuid: senderAuthId,
     sender_type: "client",
-    body: "seed message",
+    body: `seed message ${RUN_ID}`,
   };
-  const { error } = await svc.from("tenant_messages").insert(message);
+  const { data, error } = await svc
+    .from("tenant_messages")
+    .insert(message)
+    .select("id")
+    .single();
   if (error) throw new Error(`seed message: ${error.message}`);
+  if (!data) throw new Error("seed message: insert returned no row");
+  recordOnce(fixtureLedger.messageIds, data.id);
 }
 
 describe.skipIf(!RLS_SUITE_ENABLED).sequential(
@@ -214,109 +364,92 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
         auth: { persistSession: false, autoRefreshToken: false },
       });
 
-      // Tenants — let DB assign bigint id.
-      const tenantAInsert: TenantInsert = {
-        name: `Test Tenant A ${RUN_ID}`,
-        slug: `test-tenant-a-${RUN_ID}`.toLowerCase(),
-        status: "active",
-      };
-      const { data: tA, error: tAErr } = await svc
-        .from("tenants")
-        .insert(tenantAInsert)
-        .select("id")
-        .single();
-      if (tAErr || !tA) throw new Error(`tenant A: ${tAErr?.message}`);
-      tenantA = tA.id;
+      try {
+        // Tenants — let DB assign bigint id.
+        const tenantAInsert: TenantInsert = {
+          name: `Test Tenant A ${RUN_ID}`,
+          slug: `test-tenant-a-${RUN_ID}`.toLowerCase(),
+          status: "active",
+        };
+        const { data: tA, error: tAErr } = await svc
+          .from("tenants")
+          .insert(tenantAInsert)
+          .select("id")
+          .single();
+        if (tAErr || !tA) throw new Error(`tenant A: ${tAErr?.message}`);
+        tenantA = tA.id;
+        recordOnce(fixtureLedger.tenantIds, tenantA);
 
-      const tenantBInsert: TenantInsert = {
-        name: `Test Tenant B ${RUN_ID}`,
-        slug: `test-tenant-b-${RUN_ID}`.toLowerCase(),
-        status: "active",
-      };
-      const { data: tB, error: tBErr } = await svc
-        .from("tenants")
-        .insert(tenantBInsert)
-        .select("id")
-        .single();
-      if (tBErr || !tB) throw new Error(`tenant B: ${tBErr?.message}`);
-      tenantB = tB.id;
+        const tenantBInsert: TenantInsert = {
+          name: `Test Tenant B ${RUN_ID}`,
+          slug: `test-tenant-b-${RUN_ID}`.toLowerCase(),
+          status: "active",
+        };
+        const { data: tB, error: tBErr } = await svc
+          .from("tenants")
+          .insert(tenantBInsert)
+          .select("id")
+          .single();
+        if (tBErr || !tB) throw new Error(`tenant B: ${tBErr?.message}`);
+        tenantB = tB.id;
+        recordOnce(fixtureLedger.tenantIds, tenantB);
 
-      // Personas.
-      A1 = await makePersona("a1", "Client User");
-      A2 = await makePersona("a2", "Client User");
-      B1 = await makePersona("b1", "Client User");
-      S = await makePersona("s", "Team Member");
+        // Personas.
+        A1 = await makePersona("a1", "Client User");
+        A2 = await makePersona("a2", "Client User");
+        B1 = await makePersona("b1", "Client User");
+        S = await makePersona("s", "Team Member");
 
-      // Tenant memberships — S has none (staff identity is unicorn_role).
-      await addTenantMember(tenantA, A1.authId);
-      await addTenantMember(tenantA, A2.authId);
-      await addTenantMember(tenantB, B1.authId);
+        // Tenant memberships — S has none (staff identity is unicorn_role).
+        await addTenantMember(tenantA, A1.authId);
+        await addTenantMember(tenantA, A2.authId);
+        await addTenantMember(tenantB, B1.authId);
 
-      // Conversations.
-      convA = await createConversation(tenantA, A1.authId);
-      convA2 = await createConversation(tenantA, A2.authId);
-      convA_noStaff = await createConversation(tenantA, A1.authId);
-      convB = await createConversation(tenantB, B1.authId);
+        // Conversations.
+        convA = await createConversation(tenantA, A1.authId);
+        convA2 = await createConversation(tenantA, A2.authId);
+        convA_noStaff = await createConversation(tenantA, A1.authId);
+        convB = await createConversation(tenantB, B1.authId);
 
-      // Participants. convA_noStaff intentionally has NO staff row — proves
-      // tm_select_staff bypasses the participant check rather than matching it.
-      await addParticipant(convA, A1.authId, "member");
-      await addParticipant(convA, S.authId, "csc");
+        // Participants. convA_noStaff intentionally has NO staff row — proves
+        // tm_select_staff bypasses the participant check rather than matching it.
+        await addParticipant(convA, A1.authId, "member");
+        await addParticipant(convA, S.authId, "csc");
 
-      await addParticipant(convA2, A2.authId, "member");
-      await addParticipant(convA2, S.authId, "csc");
+        await addParticipant(convA2, A2.authId, "member");
+        await addParticipant(convA2, S.authId, "csc");
 
-      await addParticipant(convA_noStaff, A1.authId, "member");
+        await addParticipant(convA_noStaff, A1.authId, "member");
 
-      await addParticipant(convB, B1.authId, "member");
-      await addParticipant(convB, S.authId, "csc");
+        await addParticipant(convB, B1.authId, "member");
+        await addParticipant(convB, S.authId, "csc");
 
-      // Seed one message per conversation.
-      await seedMessage(convA, tenantA, A1.authId);
-      await seedMessage(convA2, tenantA, A2.authId);
-      await seedMessage(convA_noStaff, tenantA, A1.authId);
-      await seedMessage(convB, tenantB, B1.authId);
+        // Seed one message per conversation.
+        await seedMessage(convA, tenantA, A1.authId);
+        await seedMessage(convA2, tenantA, A2.authId);
+        await seedMessage(convA_noStaff, tenantA, A1.authId);
+        await seedMessage(convB, tenantB, B1.authId);
+      } catch (error) {
+        setupFailed = true;
+        const cleanupFailures = await cleanupFixtures();
+        if (cleanupFailures.length) {
+          const cleanupDetails = cleanupFailures
+            .map(({ resource, error: cleanupError }) =>
+              `${resource}: ${formatCleanupError(cleanupError)}`,
+            )
+            .join("; ");
+          throw new Error(
+            `Tenant isolation fixture setup failed: ${formatCleanupError(error)}; ` +
+              `cleanup failed: ${cleanupDetails}`,
+          );
+        }
+        throw error;
+      }
     }, 60_000);
 
     afterAll(async () => {
-      if (!svc) return;
-      try {
-        const convIds = [convA, convA2, convA_noStaff, convB].filter(Boolean);
-        const userIds = [A1, A2, B1, S].filter(Boolean).map((p) => p.authId);
-
-        if (convIds.length) {
-          await svc.from("tenant_messages").delete().in("conversation_id", convIds);
-          await svc
-            .from("conversation_participants")
-            .delete()
-            .in("conversation_id", convIds);
-          await svc.from("tenant_conversations").delete().in("id", convIds);
-        }
-        if (userIds.length) {
-          await svc
-            .from("audit_events")
-            .delete()
-            .eq("entity", "tenant_message")
-            .in("user_id", userIds);
-        }
-        const tenantIds = [tenantA, tenantB].filter((id) => id > 0);
-        if (tenantIds.length) {
-          await svc.from("tenant_members").delete().in("tenant_id", tenantIds);
-        }
-        if (userIds.length) {
-          await svc.from("users").delete().in("user_uuid", userIds);
-        }
-        if (tenantIds.length) {
-          await svc.from("tenants").delete().in("id", tenantIds);
-        }
-        for (const p of [A1, A2, B1, S]) {
-          if (p?.authId) {
-            await svc.auth.admin.deleteUser(p.authId).catch(() => {});
-          }
-        }
-      } catch (err) {
-        console.warn("[tenant isolation] cleanup error:", err);
-      }
+      if (!svc || setupFailed) return;
+      throwCleanupFailures(await cleanupFixtures());
     }, 60_000);
 
     /* ---------------- Persona A1 ---------------- */
@@ -356,7 +489,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
           tenant_id: tenantA,
           sender_user_uuid: A1.authId,
           sender_type: "client",
-          body: "test send",
+          body: `test send ${RUN_ID}`,
         })
         .select("id")
         .single();
@@ -364,6 +497,9 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
       expect(data).toBeTruthy();
       const insertedMessage: TenantMessageIdRow | null = data;
       a1InsertedMessageId = insertedMessage?.id ?? null;
+      if (a1InsertedMessageId) {
+        recordOnce(fixtureLedger.messageIds, a1InsertedMessageId);
+      }
       expect(a1InsertedMessageId).toBeTruthy();
     });
 
@@ -373,7 +509,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
         tenant_id: tenantA,
         sender_user_uuid: A1.authId,
         sender_type: "client",
-        body: "should fail",
+        body: `should fail ${RUN_ID}`,
       });
       expectRlsViolation(error);
     });
@@ -384,7 +520,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
         tenant_id: tenantB,
         sender_user_uuid: A1.authId,
         sender_type: "client",
-        body: "should fail",
+        body: `should fail ${RUN_ID}`,
       });
       expectRlsViolation(error);
     });
@@ -428,7 +564,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
         tenant_id: tenantA,
         sender_user_uuid: B1.authId,
         sender_type: "client",
-        body: "should fail",
+        body: `should fail ${RUN_ID}`,
       });
       expectRlsViolation(error);
     });
@@ -463,14 +599,19 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
     });
 
     it("14. S INSERT into convA as staff → success (tm_insert_staff)", async () => {
-      const { error } = await S.client.from("tenant_messages").insert({
-        conversation_id: convA,
-        tenant_id: tenantA,
-        sender_user_uuid: S.authId,
-        sender_type: "staff",
-        body: "staff reply",
-      });
+      const { data, error } = await S.client
+        .from("tenant_messages")
+        .insert({
+          conversation_id: convA,
+          tenant_id: tenantA,
+          sender_user_uuid: S.authId,
+          sender_type: "staff",
+          body: `staff reply ${RUN_ID}`,
+        })
+        .select("id")
+        .single();
       expect(error).toBeNull();
+      if (data) recordOnce(fixtureLedger.messageIds, data.id);
     });
 
     /* ---------------- Audit trigger (M2) ---------------- */
@@ -485,6 +626,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
       expect(error).toBeNull();
       expect((data?.length ?? 0)).toBeGreaterThanOrEqual(1);
       const auditRows: AuditEventRow[] = data ?? [];
+      auditRows.forEach((row) => recordOnce(fixtureLedger.auditEventIds, row.id));
       expect(auditRows.some((row) => row.user_id === A1.authId)).toBe(true);
     });
   },

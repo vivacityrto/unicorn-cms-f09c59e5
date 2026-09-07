@@ -12,62 +12,6 @@
 >
 > **Related bug register:** [L10 real bugs found](l10-real-bugs-found-2026-09-04.md)
 
-## Progress log
-
-**2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
-
-- **P0-A** (superseded PR closeout): all 8 listed PRs (#794–#800, #822) confirmed
-  superseded — every changed file already clean (0 explicit-any, 0 ESLint
-  errors) on `origin/main` — and closed without merge, with superseding-PR
-  links recorded in each closing comment.
-- **P0-B** (PR #612 evidence preservation): [#955](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/955),
-  merged. Preserved the dashboard-500 statement-timeout evidence as L10 item
-  #26, linked to Client Health H0.0 containment, then closed #612.
-- **P0-C** (truth-sync): [#956](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/956),
-  merged. Verified and corrected the packet's own claims against source —
-  typecheck error count/CI-gate status, Phase 2.5/2.6/3 sequencing notes,
-  #22/#24 duplicate root cause. **Found one factual error in this plan
-  itself**, not silently accepted: `usePackageUsage.tsx` is NOT live (zero
-  importers on `origin/main`, superseded by `usePackageUsageQuery.tsx`) —
-  corrected in `execution-efficiency-log.md`, not reclassified as safe to
-  retire without its own gated packet. Also flagged the plan's "9,209 lines
-  retired" figure as an approximation (~8,867 by direct per-PR sum, a
-  ~342-line gap within normal rounding of several `~`-prefixed entries).
-- **P1-A** (7 non-`any` lint errors): [#957](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/957),
-  merged — plus a same-day follow-up, [#960](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/960)
-  (`PackagePhasesTab.tsx`), open. §2's "seven non-`any` errors" undercounted
-  by one: there were 7 ternary-as-statement findings across 6 files plus 1
-  `prefer-const`, not the "seven, including two in the first file"
-  description — #957 fixed 7 of the 8, #960 fixes the missed 8th. Several
-  of the five named files also live at different paths than stated (e.g.
-  `NewEnrolmentModal.tsx` is under `src/components/academy/admin/`, not
-  `src/components/admin/`).
-- **P1-B** (typecheck to zero + CI gate): [#958](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/958),
-  merged. `ClientLayout.tsx` and `useKpiSummary.tsx` fixed; typecheck is 0
-  errors; `.github/workflows/typecheck.yml` added as a real, non-exempted
-  CI gate.
-- **P4-A** (small frontend correctness): [#959](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/959),
-  merged. Fixed L10 #22/#24 (`ClientRouteGuard` render-time `navigate()`)
-  and #11 (`useKpiAccess` missing the `unicorn_role` SuperAdmin check —
-  verified live against a real affected account, `carl@vivacity.com.au`,
-  whose profile has `global_role: null, unicorn_role: "Super Admin"`).
-  Confirmed #23 (`BulkMessageDialog` DialogTitle) was already fixed by an
-  earlier, unrelated PR; annotated rather than re-implemented.
-- **P1-C (isolation-suite hardening): blocked, not started.** Requires an
-  allowlisted disposable QA Supabase project with its own service-role key.
-  Neither exists yet and provisioning one is a Carl/Vivacity infrastructure
-  decision, not something available to an agent session. See the L10/plan
-  handoff given to Codex the same day for the specific ask.
-- **Not yet started:** P2 (depends on P1-C), P3-A, P4-B/C/D, P5, P6, P7 —
-  several of these require live-schema investigation, product/security
-  decisions, or their own separately authorized packets per §1's rules.
-
-Lint after all six merges: 166 errors (all `no-explicit-any`), 44 warnings —
-down from the plan's opening 173/166/39 (the 166→166 apparent match is
-coincidental: the opening baseline undercounted non-`any` errors by one, as
-noted under P1-A above). Route count remains 243 with 0 duplicates. KB links
-remain 676/0 broken.
-
 ## 1. Outcome and operating principles
 
 Phase 2.5 is formally closed as a prerequisite gate, not as a claim that every lint finding is gone. The next objective is a controlled stabilization pass that:
