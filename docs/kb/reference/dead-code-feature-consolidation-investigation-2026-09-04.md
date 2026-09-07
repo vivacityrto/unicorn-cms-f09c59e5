@@ -62,7 +62,9 @@ The formerly unused Audit shells and their exclusive legacy dependencies were ch
 
 The following are candidates, not a bulk-deletion list:
 
-- Data/workflow hooks: ~~`useStageReleases` (396 LOC)~~, ~~`usePortfolioCockpit` (316)~~, ~~`useMeetingSeries` (285)~~, ~~`usePackageUsage` (266)~~, ~~`useMeetingMinutes` (207)~~, ~~`useKpiReview` (149)~~, ~~`useAISuggestions` (122)~~, ~~`useEosDrafts` (100)~~, ~~`useDocumentScan` (46)~~, `useEngagementAudit` (42), and ~~`useCompletionEligibility` (39)~~.
+- Data/workflow hooks: ~~`useStageReleases` (396 LOC)~~, ~~`usePortfolioCockpit` (316)~~, ~~`useMeetingSeries` (285)~~, ~~`usePackageUsage` (266)~~, ~~`useMeetingMinutes` (207)~~, ~~`useKpiReview` (149)~~, ~~`useAISuggestions` (122)~~, ~~`useEosDrafts` (100)~~, ~~`useDocumentScan` (46)~~, ~~`useEngagementAudit` (42)~~, and ~~`useCompletionEligibility` (39)~~. **All zero-inbound data/workflow hooks in this list are now retired.**
+
+**✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useEngagementAudit.ts` (42 LOC) — zero repo-wide imports, verified fresh in this batch's own worktree. Its only server object, `engagement_audit_log` (insert-only), is empty (0 rows) in production with no cron references and no other caller — genuinely never used, the same disposition as the already-retired sibling `engagement-guardrails.ts` (pure celebration-governance validation logic from the same never-shipped feature area). Table left untouched.
 
 **✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useDocumentScan.tsx` (46 LOC) — zero repo-wide imports, verified fresh in this batch's own worktree. Its only server object is the `scan-document` Edge Function, which has a live sibling caller: `useExcelBindings.tsx` (imported by `ExcelBindingStatusBadge.tsx`) independently invokes the same `scan-document` function with an equivalent implementation (auth check + `functions.invoke('scan-document', ...)`) — genuine functional duplication/supersession, not a dead backend. The Edge Function is untouched and remains live via that caller.
 
