@@ -340,13 +340,37 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   fix would risk silently changing AI-generated content or executive
   reporting behavior without the evidence base the plan requires. Left as
   a properly scoped follow-up, not guessed at.
+- **P6-B `useStageQualityCheck` evaluator cohort done.** Extracted the
+  shared A-E structure/team-task/client-task/email/document checks from
+  `useStageQualityCheck.tsx` (745 LOC, two near-duplicated pipelines) into
+  a pure `stageQualityEvaluator.ts` with no Supabase calls, used by both
+  the live dashboard hook and the `computeStageQuality` certification
+  guardrail. Preserved both real behavioral differences the plan's own
+  candidate writeup didn't fully characterize: (1) the hook shows a
+  generic "Emails"/"Documents linked" pass check for stage types outside
+  the categories that specifically require them, which the certification
+  guardrail deliberately omits (`includeGenericEmailPass`/
+  `includeGenericDocumentPass` options); (2) the "certified integrity"
+  self-check (section F) is display-only, appended by the hook after
+  calling the shared evaluator, and intentionally not part of
+  `computeStageQuality` — that function IS the certification gate, so
+  checking "is this already-certified stage still passing" would be
+  circular. Both call sites' own Supabase-fetch logic is otherwise
+  untouched (same queries, same tables, same package/template branching).
+  Added 29 parity fixture tests (`stageQualityEvaluator.test.ts`) per the
+  plan's own gate ("No focused fixtures currently exist; add parity
+  fixtures first") covering every check category and both option
+  combinations. All 4 real call sites (`PublishStageDialog.tsx`,
+  `StageQualityPanel.tsx`, `useStageSimulation.tsx`,
+  `AdminStageDetail.tsx`) import unchanged names/shapes — no caller edits
+  needed.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
-  consumer graph above), P4-D, the rest of P6-B (`useStageQualityCheck`
-  evaluator, SeatCard display core, the product/reachability-gated
-  islands, old standalone UI candidates, zero-inbound candidates), P7 —
-  several of these require live-schema investigation, product/security
-  decisions, or their own separately authorized packets per §1's rules.
+  consumer graph above), P4-D, the rest of P6-B (SeatCard display core,
+  the product/reachability-gated islands, old standalone UI candidates,
+  zero-inbound candidates), P7 — several of these require live-schema
+  investigation, product/security decisions, or their own separately
+  authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
