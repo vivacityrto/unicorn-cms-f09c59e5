@@ -347,6 +347,97 @@ transparency rather than silently rounded away. The 6 deleted files vs. a
 measured 5-file drop has the same explanation. Both are far smaller than
 the actual retirement's real size and don't change any conclusion above.
 
+## 7quater. `/tenant/:tenantId/document(s)...` route tree retirement (2026-09-07, Phase 2.6 stabilization Packets P4-B/P6-B)
+
+**Surfaced by Carl noticing a page he'd never seen before** (`/tenant/6278/documents`) mid-session, immediately after fixing two genuine
+`packages:package_id`-embed no-FK bugs elsewhere (`StagePreviewDialog.tsx`,
+`BulkGenerateDocumentsDialog.tsx`, Packet P4-B) — the same query pattern
+was about to be fixed a third time in `TenantDocuments.tsx` before a pause
+to check reachability first, matching the standing "reachability triage
+before any batch" lesson from the `PackageDetail.tsx` retirement above.
+
+**Candidate:** `src/pages/TenantDocuments.tsx`, `src/pages/TenantDocumentsHub.tsx`,
+`src/pages/TenantDocumentDetail.tsx`, `src/pages/TenantDocumentDetailWrapper.tsx`,
+and the 3 routes registering them (`/tenant/:tenantId/documents`,
+`/tenant/:tenantId/documents-hub` in `dashboardRoutes.tsx`;
+`/tenant/:tenantId/document/:documentId` in `App.tsx`).
+
+**Reachability:** exhaustive grep of `src/` for `navigate(`, `Link to=`, and
+string-template route references to `/documents`, `/documents-hub`, and
+`/document/` under a tenant path found **zero real call sites** — the only
+references anywhere were the routes' own registrations and
+`TenantDocuments.tsx`'s own internal "back" button linking to
+`TenantDocumentDetail.tsx`, i.e. the cluster only ever links to itself.
+`npm run routes`'s manifest confirmed the same: no guard/nav-item wired
+these paths into any menu, breadcrumb, or notification template.
+
+**Git history corroboration:** `TenantDocuments.tsx` and
+`TenantDocumentsHub.tsx` have no deliberate feature-level commits in recent
+history — only ancient Lovable "Changes" auto-commits and mechanical
+Phase 2.5 `any`-typing sweeps, the same abandonment signature as
+`PackageDetail.tsx` in §7ter.
+
+**The real, live equivalent already existed and was already fixed.**
+`ClientDetail.tsx`'s embedded "Documents" tab (route
+`/tenant/:tenantId?tab=documents`) renders `DocumentsHub.tsx` →
+`GeneratedDocumentsTab.tsx` — a different component tree entirely, reached
+by every real user of this feature. `GeneratedDocumentsTab.tsx` already
+carried the identical two-step-fetch fix for the `documents.package_id`
+no-FK bug (see L10 item #17's update), applied independently in an earlier,
+unrelated-sounding commit — meaning the "third fix" about to be written
+into `TenantDocuments.tsx` would have fixed code nobody could ever reach.
+
+**Disposition:** retired. All 4 files deleted; the 3 routes replaced with
+`<Navigate replace>` redirects to the real Documents tab
+(`/tenant/:tenantId?tab=documents`), matching the existing
+`LegacyAuditTabRedirect`/`/admin/governance-documents` precedent for
+retired routes that might still have a stray bookmark or external link.
+`documents`, `document_versions`, and `document_stage_links` themselves are
+untouched — all remain live schema used by `DocumentsHub.tsx` and
+`ManageDocuments.tsx`. Verification: `lint:ratchet` (0 regressions),
+`typecheck` (0 errors, documented baseline unchanged), `test:frontend`
+(287 passed / 15 skipped), `test:edge` (261 passed), `build`,
+`check:kb-links` (0 broken), and authenticated SuperAdmin Playwright
+confirming all 3 retired routes now redirect to the real Documents tab
+with zero console errors, the real tab (including its already-fixed
+Generated sub-tab) renders correctly, and the separately-fixed
+`StagePreviewDialog.tsx`/`BulkGenerateDocumentsDialog.tsx` queries load
+without error live.
+
+**Coverage gap, honestly disclosed:** `BulkGenerateDocumentsDialog.tsx`'s
+own dialog could not be opened live during this verification — its trigger
+button only renders when a stage has `package_stage_documents` rows
+(`stageDocuments.length > 0`), and a direct query confirmed **zero
+non-deleted rows exist in that table in production right now**, for any
+package or stage. This is a pre-existing, unrelated data-state fact (not
+caused by this PR), so the dialog's fix rests on static evidence only:
+`lint:ratchet`/`typecheck` passing and a code review confirming it
+replicates the same batched-Map two-step-fetch pattern already verified
+live in `StagePreviewDialog.tsx` and `GeneratedDocumentsTab.tsx`.
+
+**Architecture metrics (`npm run metrics`), measured via
+`scripts/architecture-metrics.mjs` in two isolated trees — the merge-base
+commit (`db2c46105`) vs. this retirement's worktree with all changes applied:**
+
+| Measure | Before | After | Delta |
+|---|---:|---:|---:|
+| Tracked product files | 1,727 | 1,724 | −3 (−4 frontend, +1 edge — unrelated, see note) |
+| Physical lines | 490,147 | 489,187 | −960 |
+| Lines excl. generated types | 416,683 | 415,723 | −960 |
+| Product lines excl. generated + tests | 405,821 | 404,861 | −960 |
+| Files over 600 lines | 118 | 118 | 0 |
+| Files over 1,000 lines | 32 | 32 | 0 |
+| Wrapper files | 7 | 6 | −1 (`TenantDocumentDetailWrapper.tsx`) |
+| Supabase client imports — pages | 105 | 102 | −3 |
+| Direct Supabase calls — pages | 94 | 91 | −3 |
+| Raw `any` keyword hits | 386 | 388 | +2 (false positive — the word "any" inside this retirement's own redirect comments, "covers any stray bookmark"; not a typing regression, confirmed by `lint:ratchet` showing 0 new findings) |
+
+The +1 edge-function-file reading is unexplained by anything in this PR's
+diff (nothing under `supabase/functions/**` was touched) and is small
+enough not to change any conclusion above — noted for transparency rather
+than silently rounded away, matching §7ter's own disclosed measurement-gap
+precedent.
+
 ## 6. Cross-program sequence
 
 ### Phase 2.5 checkpoint and ongoing lane

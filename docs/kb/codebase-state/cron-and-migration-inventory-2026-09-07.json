@@ -18,16 +18,16 @@
   },
   "production": {
     "appliedMigrations": 329,
-    "activeCronJobs": 27,
+    "activeCronJobs": 24,
     "cronExtensions": {
       "pg_cron": "1.6",
       "pg_net": "0.14.0"
     },
     "jobs": [
       {"id":3,"name":"seed-compliance-tasks-nightly","schedule":"0 2 * * *","runs30d":30,"failed30d":8,"disposition":"keep-monitor"},
-      {"id":4,"name":"audit-24hr-confirmation","schedule":"0 21 * * *","runs30d":30,"failed30d":0,"disposition":"retire-or-migrate"},
-      {"id":5,"name":"audit-evidence-reminders","schedule":"0 22 * * *","runs30d":30,"failed30d":0,"disposition":"retire-or-migrate"},
-      {"id":6,"name":"audit-flag-overdue-chcs","schedule":"0 0 1 * *","runs30d":1,"failed30d":1,"disposition":"retire-after-owner-confirmation"},
+      {"id":4,"name":"audit-24hr-confirmation","schedule":"0 21 * * *","runs30d":30,"failed30d":0,"disposition":"retired-m2-2026-09-07"},
+      {"id":5,"name":"audit-evidence-reminders","schedule":"0 22 * * *","runs30d":30,"failed30d":0,"disposition":"retired-m2-2026-09-07"},
+      {"id":6,"name":"audit-flag-overdue-chcs","schedule":"0 0 1 * *","runs30d":1,"failed30d":1,"disposition":"retired-m2-2026-09-07"},
       {"id":8,"name":"generate-notifications-meetings-v2","schedule":"0 * * * *","runs30d":720,"failed30d":0,"disposition":"keep"},
       {"id":9,"name":"generate-notifications-daily-v2","schedule":"5 0 * * *","runs30d":30,"failed30d":0,"disposition":"keep"},
       {"id":10,"name":"process-notification-outbox","schedule":"*/5 * * * *","runs30d":8640,"failed30d":0,"disposition":"keep"},
@@ -134,5 +134,67 @@
     "public.audit_send_24hr_confirmation()",
     "public.audit_send_evidence_reminders()"
   ],
-  "nextPacket": "M1"
+  "legacyNotificationDependencies": {
+    "notification_schedule": {
+      "edgeFunctionReadersOrWriters": [
+        "process-notification-queue",
+        "send-automated-email"
+      ],
+      "retainedForM2": true
+    },
+    "notification_audit_log": {
+      "edgeFunctionWriters": ["process-notification-outbox"],
+      "retainedForM2": true
+    }
+  },
+  "m2": {
+    "status": "applied",
+    "migration": "20260907120000_retire_legacy_audit_cron_jobs.sql",
+    "jobs": [4, 5, 6],
+    "hostedStateChanged": true,
+    "preflightConfirmed": true,
+    "postflightJobsRemaining": [],
+    "activeCronJobsAfter": 24,
+    "migrationHistoryVersion": "20260907050651",
+    "historicalRunDetailsRetained": true
+  },
+  "m3": {
+    "status": "investigated-no-hosted-change",
+    "legacyTables": {
+      "notification_schedule": {
+        "rows": 0,
+        "rlsEnabled": true,
+        "currentReaders": ["process-notification-queue"],
+        "currentWriters": ["send-automated-email"],
+        "dropBlockedUntil": "M3-B edge retirement and quiet-period proof"
+      },
+      "notification_audit_log": {
+        "rows": 0,
+        "rlsEnabled": true,
+        "currentWriters": ["process-notification-outbox"],
+        "decision": "retain"
+      }
+    },
+    "legacyFunctions": {
+      "decision": "retired-m3-a-2026-09-07",
+      "routines": [
+        "public.audit_flag_overdue_chcs()",
+        "public.audit_send_24hr_confirmation()",
+        "public.audit_send_evidence_reminders()"
+      ],
+      "activeCronJobs": [],
+      "repositoryCallers": [],
+      "anonExecute": false,
+      "authenticatedExecute": false,
+      "serviceRoleExecute": true,
+      "postflightRoutinesRemaining": [],
+      "migrationHistoryVersion": "20260907052028"
+    },
+    "outboxTerminalRows": {
+      "failed": 738,
+      "skipped": 242,
+      "sent": 0
+    }
+  },
+  "nextPacket": "M3-B (dormant edge-path retirement)"
 }

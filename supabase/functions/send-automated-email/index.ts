@@ -91,13 +91,6 @@ async function handle24hrConfirmation(p: Record<string, unknown>, sb: SupabaseCl
     `Reminder: Compliance Health Check tomorrow — ${String(p.rto_name ?? "")}`,
     wrapHtml("Opening Meeting Tomorrow", body),
   );
-  await sb.from("notification_schedule").insert({
-    tenant_id: Number(tenantId),
-    notification_type: "audit_24hr_confirmation",
-    payload: { audit_id: auditId, mailgun_id: id, sent_to: to },
-    scheduled_for: new Date().toISOString(),
-    status: "sent",
-  });
   return new Response(JSON.stringify({ success: true, message_id: id }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
@@ -114,7 +107,6 @@ async function handleEvidenceReminder(p: Record<string, unknown>, sb: SupabaseCl
   const auditorName = escapeHtml(p.auditor_name);
   const auditorEmail = typeof p.auditor_email === "string" ? p.auditor_email : undefined;
   const auditId = validatedId(p.audit_id);
-  const requestId = validatedId(p.request_id);
 
   if (!tenantId) throw new Error("tenant_id is required");
 
@@ -138,22 +130,14 @@ async function handleEvidenceReminder(p: Record<string, unknown>, sb: SupabaseCl
     `Action required: ${outstandingCount} document${outstandingCount > 1 ? "s" : ""} outstanding — due ${daysLeft === 1 ? "tomorrow" : `in ${daysLeft} days`} — ${rtoName}`,
     wrapHtml("Evidence Deadline Reminder", body),
   );
-  await sb.from("notification_schedule").insert({
-    tenant_id: Number(tenantId),
-    notification_type: "audit_evidence_reminder",
-    payload: { audit_id: auditId, request_id: requestId, days_left: daysLeft, outstanding_count: outstandingCount, mailgun_id: id },
-    scheduled_for: new Date().toISOString(),
-    status: "sent",
-  });
   return new Response(JSON.stringify({ success: true, message_id: id }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });
 }
 
-async function handleDocsReady(p: Record<string, unknown>, sb: SupabaseClient): Promise<Response> {
+async function handleDocsReady(p: Record<string, unknown>): Promise<Response> {
   const auditId = validatedId(p.audit_id);
-  const requestId = validatedId(p.request_id);
   const rtoName = escapeHtml(p.rto_name);
   const itemsReceived = escapeHtml(p.items_received);
   const itemsTotal = escapeHtml(p.items_total);
@@ -174,13 +158,6 @@ async function handleDocsReady(p: Record<string, unknown>, sb: SupabaseClient): 
     `All evidence received — ${String(p.rto_name ?? "")} — ready for document review`,
     wrapHtml("Evidence Ready for Review", body),
   );
-  await sb.from("notification_schedule").insert({
-    tenant_id: null,
-    notification_type: "audit_docs_ready",
-    payload: { audit_id: auditId, request_id: requestId, rto_name: String(p.rto_name ?? ""), auditor_email: auditorEmail, mailgun_id: id },
-    scheduled_for: new Date().toISOString(),
-    status: "sent",
-  });
   return new Response(JSON.stringify({ success: true, message_id: id }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
@@ -211,7 +188,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (body.automation === "audit_24hr_confirmation") return withCors(await handle24hrConfirmation(body, supabase));
     if (body.automation === "audit_evidence_reminder") return withCors(await handleEvidenceReminder(body, supabase));
-    if (body.automation === "audit_docs_ready") return withCors(await handleDocsReady(body, supabase));
+    if (body.automation === "audit_docs_ready") return withCors(await handleDocsReady(body));
 
     const { task_id, document_id, email_id, trigger_type } = body;
     let tenant_id: number | undefined;

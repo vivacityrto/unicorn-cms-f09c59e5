@@ -85,7 +85,6 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
   const [notifyClient, setNotifyClient] = useState(false);
-  const [vivacityStaff, setVivacityStaff] = useState<TeamMember[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
 
   // Fetch work types
@@ -120,30 +119,25 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         .order('first_name')
         .limit(200);
 
-      setVivacityStaff(staffData || []);
-
       let tenantUsers: TeamMember[] = [];
       if (entry.tenant_id) {
-        // The result type is passed explicitly as a generic argument to
-        // .select() because this nested-embed shape otherwise makes the
-        // Supabase client's automatic embed-inference recurse too deep
-        // ("Type instantiation is excessively deep and possibly infinite").
-        type TenantUserWithProfile = {
-          user_uuid: string;
-          users: { user_uuid: string; first_name: string | null; last_name: string | null; avatar_url: string | null; disabled: boolean | null } | null;
-        };
+        // Two-step fetch — tenant_users has no `user_uuid` column (the real
+        // column is `user_id`, FK'd to users.user_uuid via
+        // tenant_users_user_id_fkey); the previous embedded select 400'd on
+        // every call, silently leaving tenant contacts out of this list.
         const { data: tuData } = await supabase
           .from('tenant_users')
-          .select<
-            'user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)',
-            TenantUserWithProfile
-          >('user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)')
+          .select('user_id')
           .eq('tenant_id', entry.tenant_id)
           .limit(200);
-        if (tuData) {
-          tenantUsers = tuData
-            .map((tu) => tu.users)
-            .filter((u): u is NonNullable<typeof u> => !!u && !u.disabled)
+        const tenantUserIds = [...new Set((tuData || []).map(tu => tu.user_id))];
+        if (tenantUserIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('users')
+            .select('user_uuid, first_name, last_name, avatar_url, disabled')
+            .in('user_uuid', tenantUserIds);
+          tenantUsers = (profiles || [])
+            .filter((u): u is NonNullable<typeof u> => !u.disabled)
             .map((u) => ({
               user_uuid: u.user_uuid,
               first_name: u.first_name,
@@ -363,7 +357,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
                     <span className="font-medium">Me (current user)</span>
                   </SelectItem>
                 )}
-                {vivacityStaff
+                {teamMembers
                   .filter(m => m.user_uuid !== user?.id)
                   .map(member => (
                     <SelectItem key={member.user_uuid} value={member.user_uuid}>

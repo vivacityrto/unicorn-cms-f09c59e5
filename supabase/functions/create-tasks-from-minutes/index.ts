@@ -16,6 +16,17 @@ interface ActionInput {
   confidence?: string;
 }
 
+interface MinutesContentAction {
+  action_id: string;
+  task_id?: string;
+  [key: string]: unknown;
+}
+
+interface MinutesContent {
+  actions?: MinutesContentAction[];
+  [key: string]: unknown;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
@@ -157,13 +168,13 @@ Deno.serve(async (req) => {
     }
 
     // Update minutes content with task_ids
-    const content = typeof minutes.content === "string"
+    const content: MinutesContent = typeof minutes.content === "string"
       ? JSON.parse(minutes.content)
-      : minutes.content || {};
+      : (minutes.content as MinutesContent) || {};
 
     if (Array.isArray(content.actions)) {
       for (const ct of createdTasks) {
-        const actionItem = content.actions.find((a: any) => a.action_id === ct.action_id);
+        const actionItem = content.actions.find((a) => a.action_id === ct.action_id);
         if (actionItem) {
           actionItem.task_id = ct.task_id;
         }
