@@ -378,12 +378,28 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   `SeatCard`/`DraggableSeatCard` interactive contexts, which doesn't exist
   yet; building that test infrastructure is its own scoped prerequisite,
   not something to improvise inside a consolidation PR.
+- **P6-B "old standalone UI" pair retired.** `client/BulkUploadDialog.tsx`
+  (345 LOC) and `dashboard/WeekTasksTable.tsx` (250 LOC): zero repo-wide
+  references to either beyond the files themselves, no exclusive backend
+  objects (the dialog's one Supabase call is a shared `package-documents`
+  storage upload; the table's calls are plain reads on shared tables).
+  **Process-integrity finding surfaced by this reachability check:**
+  `WeekTasksTable`'s only caller was deleted 2026-08-27 (`c1dcf097f`), but
+  a 2026-09-06 PR (#842) explicitly claimed "fresh reachability confirmed
+  `WeekTasksTable` is active on `/dashboard`" with a claimed Playwright
+  pass — `/dashboard` is served by `MainDashboard.tsx`, which never
+  imported it. The component had been orphaned for 10 days when that
+  claim was made. Corrected in `execution-efficiency-log.md` and
+  `codebase-optimization-plan-2026-08-28.md`'s own PR #842 entries — not
+  silently absorbed. This is the same class of gap as PR #0-C's
+  `usePackageUsage.tsx` correction earlier in this plan: a "confirmed
+  live" claim that reachability triage later disproved.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, the rest of P6-B (SeatCard display core —
   blocked on missing Playwright coverage, the remaining product/
   reachability-gated islands: Workboard/SharePoint/bulk-generation-steps/
-  Reassignment/Compliance-score, old standalone UI candidates, zero-inbound
+  Reassignment/Compliance-score, zero-inbound
   candidates), P7 — several of these require live-schema investigation,
   product/security decisions, or their own separately
   authorized packets per §1's rules.
