@@ -33,8 +33,7 @@ import {
   Calendar as CalendarIcon, 
   Clock, 
   AlertCircle, 
-  CheckCircle2, 
-  ChevronRight,
+  CheckCircle2,
   ChevronDown,
   Plus,
   PlayCircle,
@@ -768,16 +767,6 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                         </div>
                         );
                       })()}
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}/instance/${pkg.id}`);
-                        }}
-                      >
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      </Button>
                     </div>
                 </div>
               </CardContent>

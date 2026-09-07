@@ -12,6 +12,87 @@
 >
 > **Related bug register:** [L10 real bugs found](l10-real-bugs-found-2026-09-04.md)
 
+## Progress log
+
+**2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
+
+> **Restoration note:** this whole section was added in PR #961 and then
+> silently deleted by PR #963 ("test: track tenant isolation fixture
+> identities") — a real content-loss incident, not a deliberate edit; #963's
+> diff shows a clean 56-line removal of exactly this section, alongside an
+> identical removal in `execution-efficiency-log.md`. Restored here with
+> updates for what's happened since.
+
+- **P0-A** (superseded PR closeout): all 8 listed PRs (#794–#800, #822) confirmed
+  superseded — every changed file already clean (0 explicit-any, 0 ESLint
+  errors) on `origin/main` — and closed without merge, with superseding-PR
+  links recorded in each closing comment.
+- **P0-B** (PR #612 evidence preservation): [#955](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/955),
+  merged. Preserved the dashboard-500 statement-timeout evidence as L10 item
+  #26, linked to Client Health H0.0 containment, then closed #612.
+- **P0-C** (truth-sync): [#956](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/956),
+  merged. Verified and corrected the packet's own claims against source —
+  typecheck error count/CI-gate status, Phase 2.5/2.6/3 sequencing notes,
+  #22/#24 duplicate root cause. **Found one factual error in this plan
+  itself**, not silently accepted: `usePackageUsage.tsx` is NOT live (zero
+  importers on `origin/main`, superseded by `usePackageUsageQuery.tsx`) —
+  corrected in `execution-efficiency-log.md`, not reclassified as safe to
+  retire without its own gated packet. Also flagged the plan's "9,209 lines
+  retired" figure as an approximation (~8,867 by direct per-PR sum, a
+  ~342-line gap within normal rounding of several `~`-prefixed entries).
+- **P1-A** (7 non-`any` lint errors): [#957](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/957)
+  and follow-up [#960](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/960)
+  (`PackagePhasesTab.tsx`), both merged. §2's "seven non-`any` errors"
+  undercounted by one: there were 7 ternary-as-statement findings across 6
+  files plus 1 `prefer-const`, not the "seven, including two in the first
+  file" description — #957 fixed 7 of the 8, #960 fixed the missed 8th.
+  Several of the five named files also live at different paths than stated
+  (e.g. `NewEnrolmentModal.tsx` is under `src/components/academy/admin/`,
+  not `src/components/admin/`).
+- **P1-B** (typecheck to zero + CI gate): [#958](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/958),
+  merged. `ClientLayout.tsx` and `useKpiSummary.tsx` fixed; typecheck is 0
+  errors; `.github/workflows/typecheck.yml` added as a real, non-exempted
+  CI gate.
+- **P1-C (isolation-suite hardening): in progress by Codex.**
+  [#962](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/962),
+  open — placeholders removed, live RLS suite typed against generated
+  schema. Still correctly credential-gated pending Carl's disposable-QA-
+  project decision, which remains outstanding; do not wire in a service-role
+  secret until that decision lands.
+- **P4-A** (small frontend correctness): [#959](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/959),
+  merged. Fixed L10 #22/#24 (`ClientRouteGuard` render-time `navigate()`)
+  and #11 (`useKpiAccess` missing the `unicorn_role` SuperAdmin check —
+  verified live against a real affected account, `carl@vivacity.com.au`,
+  whose profile has `global_role: null, unicorn_role: "Super Admin"`).
+  Confirmed #23 (`BulkMessageDialog` DialogTitle) was already fixed by an
+  earlier, unrelated PR; annotated rather than re-implemented.
+- **P6-A retargeted into a full-page retirement.** Started as the
+  `AddClientTaskDialog`/`AddStaffTaskDialog` consolidation per the
+  task-dialog characterization packet. Live verification of the id-type fix
+  surfaced that `PackageDetail.tsx` (the dialogs' only consumer) is itself
+  an unreachable, redundant page — reachable only via one unlabeled icon
+  button, every feature either disconnected from the real data model or a
+  strictly less-capable duplicate of a live equivalent elsewhere. See
+  `dead-code-feature-consolidation-investigation-2026-09-04.md` §7ter for
+  the full investigation. The consolidation work was discarded; the whole
+  `/admin/package/:id...` route tree was retired instead, in its own PR.
+  This also surfaced a process gap: a stage was briefly added to a real
+  client tenant's `tenants.stage_ids` while probing reachability instead of
+  using Demo RTO/a seeded tenant, and had to be reverted via Supabase MCP
+  after an in-page fetch-based revert attempt was correctly blocked by the
+  permission classifier. Logged as a standing rule: future write-testing on
+  this plan uses Demo RTO, a seeded tenant, or an inactive tenant — never
+  whatever real tenant happens to have convenient data.
+- **Not yet started:** P2 (depends on P1-C), P3-A, P4-B/C/D, P5, P6-B, P7 —
+  several of these require live-schema investigation, product/security
+  decisions, or their own separately authorized packets per §1's rules.
+
+Lint after the merged P0/P1/P4-A PRs: 166 errors (all `no-explicit-any`),
+44 warnings, route count 243/0 duplicates. On the P6-A retirement branch
+(not yet merged): 128 errors, 43 warnings, 240 routes/0 duplicates — the
+drop reflects the retired page's own `any` findings and its 3 removed
+routes, not a regression.
+
 ## 1. Outcome and operating principles
 
 Phase 2.5 is formally closed as a prerequisite gate, not as a claim that every lint finding is gone. The next objective is a controlled stabilization pass that:

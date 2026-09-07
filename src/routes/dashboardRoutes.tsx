@@ -22,8 +22,6 @@ const StrategicCommandCentre = lazy(() => import("@/pages/StrategicCommandCentre
 const StrategicOrchestrationDashboard = lazy(() => import("@/pages/StrategicOrchestrationDashboard"));
 const TemplateGapAnalysis = lazy(() => import("@/pages/TemplateGapAnalysis"));
 const WorkflowOptimisation = lazy(() => import("@/pages/WorkflowOptimisation"));
-const PackageDetail = lazy(() => import("@/pages/PackageDetail"));
-const AdminPackageTenantDetail = lazy(() => import("@/pages/AdminPackageTenantDetail"));
 const AdminTgaIntegration = lazy(() => import("@/pages/AdminTgaIntegration"));
 const AdminXeroIntegration = lazy(() => import("@/pages/AdminXeroIntegration"));
 const Calendar = lazy(() => import("@/pages/Calendar"));
@@ -624,9 +622,6 @@ export const dashboardLayoutRoutes = (
       <Route path="/superadmin/academy/package-course-rules" element={<AcademyPackageCourseRulesPage />} />
     </Route>
     <Route element={<ProtectedRoute><DashboardLayoutRoute /></ProtectedRoute>}>
-      <Route path="/admin/package/:id" element={<PackageDetail />} />
-      <Route path="/admin/package/:id/tenant/:tenantId/instance/:instanceId" element={<AdminPackageTenantDetail />} />
-      <Route path="/admin/package/:id/tenant/:tenantId" element={<AdminPackageTenantDetail />} />
       <Route path="/admin/integrations/tga" element={<AdminTgaIntegration />} />
       <Route path="/admin/integrations/xero" element={<AdminXeroIntegration />} />
       <Route path="/calendar" element={<Calendar />} />

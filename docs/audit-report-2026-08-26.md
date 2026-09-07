@@ -128,6 +128,16 @@ The audit found one confirmed authorization defect, several verification blocker
 - **Impact:** A failed reorder can leave package stages in a partially changed order.
 - **Remediation:** Use a transactional reorder RPC, temporary order values, or explicit rollback.
 - **Resolution (2026-08-26; cleanup follow-up 2026-08-28):** The original legacy `/package/:id` route has no confirmed in-app navigation, its reorder handler targets the wrong `package_stages` column (`order_number` vs. `sort_order`), and the live route check returned the catch-all 404. The route is intentionally retired. However, `PackageDetail.tsx` is shared by active admin wrappers (`/admin/package/:id...`), so deleting it was incorrect and caused the PR #413 regression; PR #416 restored it. No migration was created.
+- **Further resolution (2026-09-07):** the "active admin wrappers" this
+  finding preserved `PackageDetail.tsx` for were themselves found to be
+  effectively dead — reachable only via one unlabeled icon button anywhere
+  in the live UI, with every feature either disconnected from the real data
+  model or a strictly less-capable duplicate of a live equivalent
+  elsewhere. This finding's own reorder-race bug is now moot: `PackageDetail.tsx`,
+  `AdminPackageTenantDetail.tsx`, and the `/admin/package/:id...` route
+  tree were retired in full during Phase 2.6 stabilization Packet P6-A —
+  see `docs/kb/reference/dead-code-feature-consolidation-investigation-2026-09-04.md`
+  §7ter.
 
 ### F-020 — Built-in QA smoke links are stale or incorrect
 

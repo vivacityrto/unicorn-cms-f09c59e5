@@ -660,6 +660,23 @@ is resolved. This is an active production issue on the primary staff
 dashboard, not a backlog item; see Phase 2.6 stabilization plan Packet P3-A
 item 2 for the containment/fix packet.
 
+### 27. `PackageDetail.tsx` Manager-field lookup 406 — RESOLVED VIA RETIREMENT (2026-09-07)
+
+`/admin/package/:id/tenant/:tenantId`'s "Manager" field looked up
+`public.users` by `manager_id` using `.single()` (not `.maybeSingle()`); a
+stale or orphaned `manager_id` reference threw a `406`
+(`PGRST116`), silently leaving the field blank instead of surfacing an
+error. `docs/kb/codebase-state/internal-staff-audit-2026-07-29.md` flagged
+this exact error class on this exact route on 2026-07-29 and never chased
+it down. Root-caused during the Phase 2.6 stabilization plan's Packet P6-A
+investigation (see
+`docs/kb/reference/dead-code-feature-consolidation-investigation-2026-09-04.md`
+§7ter) and resolved by retiring the whole page rather than patching it in
+place — the page was found to be effectively unreachable (one unlabeled
+icon button) and every one of its features was either disconnected from
+the real data model or a strictly less-capable duplicate of a live,
+actively-used equivalent elsewhere. No separate fix was made or is needed.
+
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
