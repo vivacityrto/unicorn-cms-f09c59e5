@@ -16,15 +16,18 @@ is untouched. See the correction note in
 `phase-3-5-parallel-preparation-packets-2026-09-04.md`'s Packet D for the
 full evidence.
 
-## Candidate 3 — stage quality evaluator
+## Candidate 3 — stage quality evaluator — DONE (2026-09-07, Phase 2.6 Packet P6-B)
 
-`useStageQualityCheck.tsx` is approximately 745 LOC with two near-duplicated
-evaluation pipelines. Proposed boundary: a pure evaluator over a typed data
-snapshot, leaving hook orchestration, Supabase reads, tenant binding, and UI
-state outside it. Required before coding: fixtures for both pipelines,
-score-by-score parity assertions, missing-data/unknown semantics, and a direct
-comparison against the current live query shapes. No RLS, RPC, or schema change
-belongs in this refactor.
+`useStageQualityCheck.tsx` was approximately 745 LOC with two near-duplicated
+evaluation pipelines. Extracted `stageQualityEvaluator.ts`, a pure evaluator
+over a typed `StageQualitySnapshot`, leaving hook orchestration, Supabase
+reads, tenant/package binding, and UI state in the two original files
+unchanged. Added 29 parity fixtures (`stageQualityEvaluator.test.ts`) proving
+both pipelines' exact prior behavior, including the two real differences the
+original candidate writeup hadn't fully characterized: the hook's generic
+email/document fallback pass checks (absent from the certification guardrail
+`computeStageQuality`), and the hook-only "certified integrity" self-check.
+No RLS, RPC, or schema change — pure frontend extraction.
 
 ## Candidate 4 — seat-card presentation core
 
