@@ -229,12 +229,23 @@ dead-code reachability gates"), not a live file. Its replacement,
 `usePackageUsageQuery.tsx`, is the one actually imported by
 `useTenantTimeTracker.tsx` and `PackageBreakdownModal.tsx`. The other three
 names in that same stabilization-plan sentence — `ComplianceScoreBreakdown`,
-`useComplianceScore`, `useCompletionEligibility` — are correctly live per the
+`useComplianceScore`, `useCompletionEligibility` — ~~are correctly live per the
 existing 2026-09-05 correction in the dead-code register (§7bis) and PR
-#689; do not conflate their disposition with `usePackageUsage.tsx`'s. No
-deletion is authorized by this note — `usePackageUsage.tsx` simply remains a
-genuine Phase 2.6 zero-inbound candidate, to be actioned only through its own
-Packet P5-A/P6-B implementation PR with the full reachability/gate checklist.
+#689; do not conflate their disposition with `usePackageUsage.tsx`'s.~~ **This
+was itself wrong — corrected 2026-09-07, Phase 2.6 P6-B.** The §7bis
+"confirmed live" correction was checked against `a0cf450b5`, a commit that
+was never actually current `origin/main` on 2026-09-05 — it's the exact
+commit the still-open `.claude/worktrees/any-retirement-batch6` worktree
+(branch `hotfix/p2p5-any-batch84`) sits on, cut before 2026-08-27's
+dead-code batches 4/12 and 11/12 deleted every claimed live caller
+(`useCompletionCascade.ts`, `ComplianceScoreCard.tsx`,
+`CompletionSummaryModal.tsx`). All three files were genuinely dead and have
+now been retired: `usePackageUsage.tsx` and `useCompletionEligibility.ts`
+in this same P6-B pass, `ComplianceScoreBreakdown.tsx`/`useComplianceScore.ts`
+in an earlier P6-B PR the same day. No deletion was authorized by this note alone at the time it was written —
+`usePackageUsage.tsx` was a genuine Phase 2.6 zero-inbound candidate,
+correctly deferred to its own Packet P5-A/P6-B implementation PR with the
+full reachability/gate checklist, which is exactly what then happened.
 
 ## Phase 2.6 stabilization plan (2026-09-07)
 
