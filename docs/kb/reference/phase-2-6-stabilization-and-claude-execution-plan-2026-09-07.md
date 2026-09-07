@@ -311,12 +311,42 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   persona, since `generate-meeting-recurrence`/EOS Meetings is
   Vivacity-staff-only and Demo RTO's client persona has no access to it.
   Both entries corrected in the same PR as this retirement.
+- **P3-A item 1 (Client Health H0.0) partially done: cron paused, one
+  direct consumer contained; the wider RPC/AI/executive graph is
+  deliberately out of scope here.** Carl explicitly authorized pausing the
+  nightly `run-stage-health-monitor-nightly` cron (job 15) — "the client
+  health will be superseded by the new client health plan, so you can stop
+  the cron" — resolving H0.0's one explicit decision gate. Applied via a
+  guarded, allowlisted migration (unschedules only that job by name,
+  refuses on ID reuse, postflight-verified); `stage_health_snapshots` and
+  the `run-stage-health-monitor` Edge Function are retained as evidence,
+  not dropped. Audit entry:
+  `docs/audit-log/entries/2026-09-07-pause-stage-health-monitor-cron.md`.
+  Also contained the one component confirmed as a direct, standalone
+  frontend consumer of the raw metric — `PortfolioHealthWidget.tsx` — which
+  now shows an explicit "unavailable — data repair in progress" message
+  instead of computing healthy/at-risk/critical percentages from
+  known-defective data, and no longer queries `stage_health_snapshots` at
+  all. **Deliberately not touched in this pass:** the plan doc's own §4
+  "current product and request graph" lists a much wider consumer set —
+  `v_dashboard_attention_ranked` (25% stage-weighted, feeds the whole
+  `/triage-dashboard`), `rpc_portfolio_client_health()` in `MainDashboard`,
+  staff Ask Viv's portfolio fact builder, `ask-viv-assistant`,
+  `compliance-assistant`, and executive health/consultant-distribution
+  views. Containing those correctly needs the H0.1-style characterization
+  work the plan itself calls for (exact formulas, defaults, fallbacks,
+  caller permissions per consumer) before a safe "unavailable" swap can be
+  written for each — attempting that in the same pass as a single-widget
+  fix would risk silently changing AI-generated content or executive
+  reporting behavior without the evidence base the plan requires. Left as
+  a properly scoped follow-up, not guessed at.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A items 1-2, P4-D, the rest of P6-B (useStageQualityCheck
-  evaluator, SeatCard display core, the product/reachability-gated islands,
-  old standalone UI candidates, zero-inbound candidates), P7 — several of
-  these require live-schema investigation, product/security decisions, or
-  their own separately authorized packets per §1's rules.
+  infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
+  consumer graph above), P4-D, the rest of P6-B (`useStageQualityCheck`
+  evaluator, SeatCard display core, the product/reachability-gated
+  islands, old standalone UI candidates, zero-inbound candidates), P7 —
+  several of these require live-schema investigation, product/security
+  decisions, or their own separately authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
