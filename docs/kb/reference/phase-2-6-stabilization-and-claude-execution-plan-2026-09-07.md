@@ -73,6 +73,24 @@ active cron function; `notification_schedule` and the active
 regression tests pass. Production state is unchanged pending reviewed PR
 merge, after which the native Supabase GitHub sync will deploy the Edge change.
 
+**2026-09-07, session 9 — M3-B merged; deployment verification parked:** PR
+#973 merged as `acf0069e7b7a0704485805dbc9ffd8cc52c7a441`. The read-only
+post-merge Supabase check still found the pre-M3-B queue and email deployments
+(v170); the queue endpoint returned 401 rather than the committed 410 stub.
+No manual production deployment or hosted data change was performed. Keep the
+deployment/source check parked as an explicit follow-up; M3-C cannot close
+until the stub is live and the quiet-period proof is collected.
+
+**2026-09-07, session 10 — M3-C preflight captured:** merged-source and
+read-only production checks found no live database function, view, trigger, or
+cron reference to `notification_schedule`; the table remains present with
+zero rows, six indexes, and four RLS policies. The 24-hour Edge log query
+found three old-v170/401 queue requests, including the audit probes, while
+the committed 410 stub is still not deployed. The quiet-period gate therefore
+has not started; no migration, Edge deletion, or hosted data change was
+authorized. Evidence is recorded in
+[`notification-schedule-m3c-preflight.md`](../../audit-log/entries/2026-09-07-notification-schedule-m3c-preflight.md).
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then

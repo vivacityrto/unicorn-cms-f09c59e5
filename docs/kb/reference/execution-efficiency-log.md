@@ -1,5 +1,13 @@
 # Execution efficiency log
 
+### 2026-09-07 — M3-B post-merge verification parked
+PR #973 merged as `acf0069e7b7a0704485805dbc9ffd8cc52c7a441`. The read-only
+Supabase check still observed the pre-M3-B `process-notification-queue` and
+`send-automated-email` deployments (v170); the queue endpoint returned 401,
+not the committed 410 stub. No manual deploy or hosted data change was made.
+Deployment/source verification remains a required follow-up before M3-C can
+close; the original M3-B implementation record below is retained as history.
+
 ### 2026-09-07 — Cron/migration stabilization M3-B (implementation pending merge)
 One isolated Edge worktree handled the dormant notification retirement. Three
 `notification_schedule` writes were removed from `send-automated-email`, and
