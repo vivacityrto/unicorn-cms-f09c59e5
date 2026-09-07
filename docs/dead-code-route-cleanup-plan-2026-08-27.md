@@ -12,6 +12,17 @@ Remove only routes and components proven to have no supported runtime, API, docu
 ## Decisions and evidence (2026-08-27)
 
 - **`PackageDetail.tsx`: retain.** PR #413 deleted the file after classifying the legacy `/package/:id` route as unreachable, but `AdminPackageDetailWrapper.tsx` and `AdminPackageTenantDetail.tsx` still import the shared component for active `/admin/package/:id...` routes. PR #416 restored it after the deletion broke module resolution.
+  **Follow-up (2026-09-07):** this "retain" call was correct for its own
+  question (don't break the still-live admin wrapper routes) but never
+  asked whether *those* admin routes were themselves dead. A fresh
+  investigation during Phase 2.6 stabilization Packet P6-A found they were:
+  only one unlabeled icon button anywhere in the live UI linked here, and
+  every feature on the page was either disconnected from the real data
+  model or a strictly less-capable duplicate of a live equivalent
+  elsewhere. `PackageDetail.tsx`, `AdminPackageTenantDetail.tsx`, and their
+  3 routes were retired for that separate reason — see
+  `docs/kb/reference/dead-code-feature-consolidation-investigation-2026-09-04.md`
+  §7ter for the full evidence.
 - **`/package/:id`: retire.** It has no confirmed in-app navigation, the route was already returning 404 in the live SuperAdmin check, and its shared `PackageDetail.tsx` implementation is still used by active admin routes and therefore remains.
 - **`/client/eos`: retire completely.** The old page and its sole-consumer components were already removed; the remaining compatibility redirect is now removed as requested. The supported client portal is `/client/home`.
 - **Security fixes included in this branch:** block IPv4-mapped IPv6 URL literals in the Firecrawl validator and bind SharePoint sharing URLs to the tenant's configured shared/root folder ancestry, not merely the same drive.

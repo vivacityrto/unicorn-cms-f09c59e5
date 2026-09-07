@@ -243,6 +243,110 @@ the active `/audits` route renders `AuditsAssessments` instead. The component
 is frontend-only and has no backend object dependency. This PR removes the
 orphaned file only; no active audit route or data contract changes.
 
+## 7ter. `/admin/package/:id...` route tree retirement (2026-09-07, Phase 2.6 stabilization Packet P6-A)
+
+**Newly discovered, not in this register's original candidate list — found
+incidentally while implementing the task-dialog consolidation (Packet P6-A),
+then investigated separately and retired in its own PR.**
+
+**Candidate:** `src/pages/PackageDetail.tsx`, `src/pages/AdminPackageTenantDetail.tsx`,
+`src/components/AddClientTaskDialog.tsx`, `src/components/AddStaffTaskDialog.tsx`,
+`src/components/AddExistingStageDialog.tsx`, `src/components/AddExistingDocumentDialog.tsx`,
+and the 3 routes registering them in `dashboardRoutes.tsx`
+(`/admin/package/:id`, `/admin/package/:id/tenant/:tenantId`,
+`/admin/package/:id/tenant/:tenantId/instance/:instanceId`).
+
+**Reachability:** the only entry point anywhere in the live UI was one
+unlabeled `ChevronRight` icon button inside an already-expanded "Manage"
+accordion panel in `src/components/client/ClientPackagesTab.tsx` — no nav
+item, breadcrumb, notification template, or Edge-function-generated link
+pointed here. No deep link/email/audit-log reference found. Quantitative
+confirmation: only 6 tenants (of the full production tenant base) ever had
+anything written to `tenants.stage_ids`, the one tenant-scoped field this
+page's own "Stages" feature used — over the product's entire lifetime.
+
+**This page nearly retired once before, for a different, narrower reason.**
+`docs/dead-code-route-cleanup-plan-2026-08-27.md` and
+`docs/audit-report-2026-08-26.md` record PR #413 deleting
+`PackageDetail.tsx` after confusing it with an already-dead legacy
+`/package/:id` route; that broke the (at-the-time genuinely live)
+`/admin/package/:id...` wrapper routes, restored in PR #416. That assessment
+was correct in 2026-08-26 — it did not evaluate whether the admin route tree
+itself was dead, which is the question this entry answers.
+
+**Every distinguishable feature on the page turned out to be either
+disconnected from the real data model, or a strictly less capable duplicate
+of an already-live, actively-used equivalent:**
+
+| Feature | What `PackageDetail.tsx` did | The real, live equivalent |
+|---|---|---|
+| "Stages" list / Add Existing Stage | Appended to `tenants.stage_ids`, a tenant-wide array unrelated to per-package stage progress. No remove UI exists anywhere in the codebase for this array. | `client_package_stage_state`, rendered inline in `ClientPackagesTab.tsx` ("Stage Progress X/Y") |
+| Staff/Client Tasks dialogs | Full CRUD on `package_staff_tasks`/`package_client_tasks`, but hard-deletes | `usePackageBuilder.tsx`'s `addStaffTask`/`updateStaffTask`/`deleteStaffTask` (+ client equivalents) — used by Package Builder's `StageDetailPanel.tsx` and `/admin/stages/:id`; soft-deletes via `is_deleted`, tracks `is_override`, syncs recurring flags. Strictly more capable. |
+| Documents (`AddExistingDocumentDialog`) | Linked `document_stage_links`; zero other callers of this dialog existed | `ManageDocuments.tsx` / `StageDocumentsPanel.tsx` — same table, actively used |
+| Remove tenant from package | Crude `package_instances.is_complete = true`, no end-date handling | `ClientPackagesTab.tsx`'s `handleFinalisePackage` — proper end-date and renewal handling |
+| Notes | `StageNotesTab` (shared with `AuditTemplateBuilder.tsx`, so not fully dead code either way) | `ClientPackagesTab.tsx`'s parallel `PackageNotesSection` |
+
+**A real, previously-flagged, never-fixed bug found along the way:** the
+page's "Manager" field looked up `users` by `manager_id` with `.single()`
+(not `.maybeSingle()`); a stale/orphaned `manager_id` reference threw a
+`406`. `docs/kb/codebase-state/internal-staff-audit-2026-07-29.md` flagged
+this exact error class on this exact route on 2026-07-29 and never chased
+it down. Root-caused here; moot on retirement rather than separately
+patched.
+
+**Correction to an earlier verbal claim this session:** `tenants.stage_ids`
+is not fully unread — `src/components/ask-viv/AskVivScopeSelectorModal.tsx`
+reads it to populate an Ask Viv phase-scope filter. Given only 6 tenants
+ever populated it, removing the one write path (this retirement) leaves
+that filter permanently empty for those tenants going forward and
+permanently absent for everyone else — not a functional regression, since
+this data source was already stagnant and disconnected from the real
+per-package stage system, but noted for accuracy rather than silently
+calling the column dead.
+
+**Git history corroboration:** every commit touching `PackageDetail.tsx` in
+recent weeks was mechanical (Phase 2.5 `any`-typing, a global date-format
+sweep, an RBAC route-guard sweep) — zero deliberate feature-level
+engineering, consistent with genuine abandonment.
+
+**Disposition:** retired. `package_staff_tasks`, `package_client_tasks`,
+`document_stage_links`, `package_instances`, and `tenants.stage_ids` itself
+are untouched — all remain live schema, used by the surfaces named above.
+Verification: `lint:ratchet`, `typecheck` (0 errors), `test:frontend`,
+`test:edge`, `build`, route manifest (243 → 240, exactly the 3 removed
+routes, confirmed via `npm run routes`), and authenticated SuperAdmin
+Playwright confirming both retired route variants now render the app's own
+404 (not a crash) and `ClientPackagesTab.tsx`'s Manage/Stages/Notes/
+Renew/Finalise flow is unchanged with the chevron button removed.
+
+**Architecture metrics (`npm run metrics`), measured via `scripts/architecture-metrics.mjs`
+in two isolated worktrees — `origin/main@7e84ee9e3` (this retirement's
+branch-cut point) vs. the retirement branch tip:**
+
+| Measure | Before | After | Delta |
+|---|---:|---:|---:|
+| Tracked product files | 1,732 | 1,727 | −5 |
+| Physical lines | 493,171 | 489,913 | −3,258 |
+| Lines excl. generated types | 419,707 | 416,449 | −3,258 |
+| Product lines excl. generated + tests | 408,900 | 405,642 | −3,258 |
+| Files over 600 lines | 119 | 118 | −1 (`PackageDetail.tsx`, 1,678 lines) |
+| Files over 1,000 lines | 33 | 32 | −1 (same file) |
+| Supabase client imports — pages | 107 | 105 | −2 |
+| Supabase client imports — components | 222 | 218 | −4 |
+| Direct Supabase calls — pages | 96 | 94 | −2 |
+| Direct Supabase calls — components | 186 | 182 | −4 |
+| `unicorn_role` files | 162 | 160 | −2 |
+| Raw `any` keyword hits | 462 | 461 | −1 |
+
+The −3,258 physical-line delta doesn't exactly match `git diff --cached
+--stat`'s −3,267 (deletions) + 237 (doc insertions) net figure for this
+PR's own commit; the ~9-line gap is `origin/main` itself measuring a few
+lines apart between the two separate metrics runs (a git-fetch timing
+artifact between commands, not a PR discrepancy) — noted for
+transparency rather than silently rounded away. The 6 deleted files vs. a
+measured 5-file drop has the same explanation. Both are far smaller than
+the actual retirement's real size and don't change any conclusion above.
+
 ## 6. Cross-program sequence
 
 ### Phase 2.5 checkpoint and ongoing lane

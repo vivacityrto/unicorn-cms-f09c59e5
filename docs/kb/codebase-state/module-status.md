@@ -155,8 +155,8 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 
 **What exists:**
 - `packages`, `package_stages`, `package_stage_instances` schema
-- Admin view (`/admin/manage-packages`, `/admin/package/:id`, `/admin/package/:id/tenant/:tenantId`)
-- Tenant view (`/manage-packages`) — the legacy `/package/:id` route is retired; shared package detail remains available through active admin routes.
+- Admin view (`/admin/manage-packages`)
+- Tenant view (`/manage-packages`) — the legacy `/package/:id` route is retired. **(2026-09-07)** The `/admin/package/:id` and `/admin/package/:id/tenant/:tenantId` admin routes and their shared `PackageDetail.tsx` implementation are now also retired (Phase 2.6 stabilization Packet P6-A) — reachable only via one unlabeled icon button in `ClientPackagesTab.tsx`, and every feature was a disconnected or strictly-inferior duplicate of the client-tenant Packages tab (`ClientPackagesTab.tsx`, `client_package_stage_state`, Package Builder's `StageDetailPanel.tsx`). See `dead-code-feature-consolidation-investigation-2026-09-04.md` §7ter.
 - Stages management (`/manage-stages`)
 - `add-missing-packages` edge function — ensures default packages per tenant
 - **Duplicate-package guard (`1ce4b026`, 2026-04-23)** — `start_client_package` RPC now refuses to add a package of the same regulatory stream (RTO / CRICOS / GTO / generic) a tenant already has. New helper `fn_package_stream(p_package_id)` derives the stream from the package name/slug. Migration: `supabase/migrations/20260423093423_781c87e1-…sql`.
