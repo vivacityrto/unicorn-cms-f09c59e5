@@ -116,12 +116,28 @@ schema or production changes in this packet.
 
 ## Packet D — Phase 5 Edge consistency
 
-`extract-note-title` (137 lines) and `extract-suggest-title` (133 lines) are
+`extract-note-title` (137 lines) and `extract-suggest-title` (133 lines) were
 the first bounded clone candidate, but they are public Edge contracts. Source
 evidence shows both require an authenticated token, accept `{ content }`,
 truncate input to 2,000 characters, return `{ title }`, cap titles at ten
 words, and fail soft with HTTP 200 for provider/configuration failures. Their
-system prompts intentionally differ, and they have separate callers.
+system prompts intentionally differ.
+
+**Correction (2026-09-07, Phase 2.6 Packet P6-B):** the "separate callers"
+claim above was wrong for `extract-suggest-title` — a fresh repo-wide grep
+(`src/`, `supabase/functions/**`, `supabase/config.toml`) found zero callers
+anywhere, and `function_edge_logs` showed zero invocations. It was added
+alongside a "suggestion tables and RBAC" feature (`SuggestionDetail.tsx`,
+`FloatingSuggestionsDialog.tsx`) whose UI never got wired to AI-assisted
+titling — the feature exists, the AI title suggestion for it never shipped.
+There is no clone pair to consolidate; `extract-suggest-title` was retired
+outright instead (source removed, `supabase/config.toml` entry removed).
+`extract-note-title` is untouched — it has 5 real repo callers and remains
+exactly as-is. Retiring the source doesn't undeploy the live Supabase
+function (no `delete_edge_function` MCP tool was available in that session);
+it stays ACTIVE but now unreachable from any code path here, harmless (auth-
+gated, no tenant data touched) — a manual delete via the Supabase dashboard
+is a disclosed follow-up, not done as part of this change.
 
 Before extraction, add contract fixtures for OPTIONS/CORS, missing/invalid
 auth, short content, provider 429/402/other failures, malformed tool output,

@@ -3,16 +3,18 @@
 Preparation-only follow-up to the task-dialog packet. No runtime or database
 changes are included.
 
-## Candidate 2 — title extraction pair
+## Candidate 2 — title extraction pair — RETARGETED (2026-09-07, Phase 2.6 Packet P6-B)
 
 `extract-note-title` and `extract-suggest-title` are approximately 135 LOC
-each with a roughly 12-line behavioral difference. Proposed boundary: one
-private shared title-extraction service, while retaining both public Edge
-Function names, request/response contracts, authentication, CORS behavior,
-rate handling, and provider-failure semantics. Required before coding: source
-diff, deployed-caller inventory, auth/CORS/rate/error parity tests, and a
-negative test proving caller-controlled URLs or provider payloads cannot widen
-the contract.
+each with a roughly 12-line behavioral difference, but the required
+deployed-caller inventory (never actually done before this candidate was
+written up) found `extract-suggest-title` has zero callers anywhere in
+`src/` or `supabase/functions/**`, and zero logged invocations. This was not
+a live clone pair to consolidate — `extract-suggest-title` was retired
+outright (source + `supabase/config.toml` entry removed); `extract-note-title`
+is untouched. See the correction note in
+`phase-3-5-parallel-preparation-packets-2026-09-04.md`'s Packet D for the
+full evidence.
 
 ## Candidate 3 — stage quality evaluator
 

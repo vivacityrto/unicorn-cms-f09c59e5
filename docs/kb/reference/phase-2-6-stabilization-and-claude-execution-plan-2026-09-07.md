@@ -285,7 +285,32 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   auto-deploy still unreliable, see the finding above) and live-verified
   against production using the SuperAdmin persona (this feature is
   Vivacity-staff-only, `/eos/*` — Demo RTO's client persona has no access
-  to it) with test data cleaned up afterward.
+  to it; correction to this entry's original wording, which incorrectly
+  said Demo RTO) with test data cleaned up afterward.
+- **P6-B "title extraction pair" cohort retargeted into a retirement.**
+  Both this section's §8 packet definition and the underlying candidate
+  writeups (`phase-2-6-next-candidate-packets-2026-09-04.md`,
+  `dead-code-feature-consolidation-investigation-2026-09-04.md`) assumed
+  `extract-note-title` and `extract-suggest-title` were a live near-duplicate
+  pair needing consolidation. Reachability triage (the required
+  deployed-caller inventory these docs called for, but that had never
+  actually been done) found `extract-suggest-title` has zero callers in
+  `src/` or `supabase/functions/**` and zero logged invocations — it was
+  added alongside a "suggestion tables and RBAC" feature whose UI never
+  got wired to AI-assisted titling. There was no clone pair to consolidate.
+  Retired `extract-suggest-title` outright (source + `supabase/config.toml`
+  entry removed); `extract-note-title` (5 real callers) is untouched — no
+  consolidation needed for a single remaining function. The live Supabase
+  function stays deployed and ACTIVE (no `delete_edge_function` MCP tool
+  available this session) but is now unreachable from any code path;
+  manually deleting it via the dashboard is a disclosed follow-up, not
+  done here.
+- **P3-A item 3 / L10 #25's "Demo RTO" wording corrected.** That entry and
+  this doc's own progress-log line for it originally said the live
+  verification ran against Demo RTO; it actually used the SuperAdmin
+  persona, since `generate-meeting-recurrence`/EOS Meetings is
+  Vivacity-staff-only and Demo RTO's client persona has no access to it.
+  Both entries corrected in the same PR as this retirement.
 - **P3-A item 1 (Client Health H0.0) partially done: cron paused, one
   direct consumer contained; the wider RPC/AI/executive graph is
   deliberately out of scope here.** Carl explicitly authorized pausing the
@@ -317,9 +342,11 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   a properly scoped follow-up, not guessed at.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
-  consumer graph above), P4-D, the rest of P6-B, P7 — several of these
-  require live-schema investigation, product/security decisions, or their
-  own separately authorized packets per §1's rules.
+  consumer graph above), P4-D, the rest of P6-B (`useStageQualityCheck`
+  evaluator, SeatCard display core, the product/reachability-gated
+  islands, old standalone UI candidates, zero-inbound candidates), P7 —
+  several of these require live-schema investigation, product/security
+  decisions, or their own separately authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
