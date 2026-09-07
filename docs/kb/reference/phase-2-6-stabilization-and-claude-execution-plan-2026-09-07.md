@@ -138,16 +138,53 @@ remains unchanged at 738 failed and 242 skipped rows. Supabase recorded
   permission classifier. Logged as a standing rule: future write-testing on
   this plan uses Demo RTO, a seeded tenant, or an inactive tenant — never
   whatever real tenant happens to have convenient data.
+- **P5-A batch 3/3 (`ask-viv-assistant`, 76 findings, the largest remaining
+  file), pending merge.**
+  [#970](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/970).
+  Staff-only agentic tool-calling assistant (21 tools in one `executeTool`
+  dispatcher) — the client portal calls a separate, untouched
+  `ask-viv-assistant-client` function. Modelled 20 local row-shape
+  interfaces, one per distinct query/RPC result shape, replacing per-
+  callback `any` annotations with a single cast at first read (same
+  pattern as #968). The standalone `tsc --noEmit` pass against the real,
+  unmodified `_shared/**` dependency tree (not just a stub) surfaced two
+  real narrowing gaps this fixed (`rank_clients_by_activity`/
+  `get_activity_trend` both divided a dynamically-keyed column value
+  without narrowing `unknown` to `number` first) — genuine bugs the
+  linter alone would not have caught. Also surfaced (left alone, out of
+  scope) 6 pre-existing type errors in two untouched `_shared` files.
+  Added `auth-gate.test.mjs` (function had zero prior test coverage).
+  **P5-A is now fully addressed pending these 3 PRs merging** (#967, #968,
+  #970 — 6 + 43 + 76 = 125 of the 166 baseline `no-explicit-any` findings;
+  the remaining 41 were the isolation-test findings via P1-C and the two
+  frontier frontend files already resolved earlier).
+  **Process note:** discovered mid-batch that Edge Functions on this
+  project deploy via Supabase's native GitHub sync integration on merge
+  to `main` (not a repo-committed Action — none of `.github/workflows/*`
+  reference deploy/supabase), contradicting `AGENTS.md`'s current "no
+  automatic Supabase deployment workflow" claim. Correcting that claim is
+  deliberately deferred until the mechanism is empirically confirmed on a
+  real merge (per Carl's instruction), not assumed from this discovery
+  alone. No live Playwright pass was done pre-merge for this reason —
+  there's nothing new deployed to exercise yet; live verification happens
+  after merge once the sync integration deploys it.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-B/C/D, P5-A, P6-B, P7 — several of these
-  require live-schema investigation, product/security decisions, or their
-  own separately authorized packets per §1's rules.
+  infra decision), P3-A, P4-B/C/D, P6-B, P7 — several of these require
+  live-schema investigation, product/security decisions, or their own
+  separately authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
 duplicates, typecheck 0 errors. The P6-A retirement's own drop from 166→128
 errors and 243→240 routes reflects the retired page's own `any` findings
-and its 3 removed routes, not a regression.
+and its 3 removed routes, not a regression. PRs #967, #968, and #970
+(all pending merge) will together bring this to 3 errors once merged
+(128 minus 125 across the three P5-A batches) — the residual 3 being
+`generate-meeting-recurrence` (1, deliberately excluded, tied to its own
+L10 #25 auth-review packet) and `InviteUserDialog.tsx`/
+`AddWorkboardItemDialog.tsx` (2, per §8's own P5-A item 2-3, requiring
+reachability confirmation and a bounded cross-schema adapter
+respectively — not yet started).
 
 ## 1. Outcome and operating principles
 

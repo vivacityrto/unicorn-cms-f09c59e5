@@ -66,6 +66,7 @@
  * would otherwise be indistinguishable from real same-day signings.
  */
 
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkSuperAdmin, UserProfile } from "../_shared/auth-helpers.ts";
 import { jsonError, jsonRaw } from "../_shared/response-helpers.ts";
@@ -395,7 +396,7 @@ For "are there new clients" / "who's onboarded recently" style questions, use li
 Write naturally — you don't need to follow any fixed section structure. Keep answers focused and easy to read.`;
 
 /** Whether this user is in the Ask Viv Assistant rollout — master flag, then Super Admin / beta / all-staff rings. */
-async function isAssistantEnabledForUser(supabase: any, userId: string, profile: UserProfile): Promise<boolean> {
+async function isAssistantEnabledForUser(supabase: SupabaseClient, userId: string, profile: UserProfile): Promise<boolean> {
   try {
     const { data } = await supabase
       .from("app_settings")
@@ -416,7 +417,7 @@ async function isAssistantEnabledForUser(supabase: any, userId: string, profile:
 
 /** Check today's cumulative usage against the configured daily cap, before doing any real work. */
 async function checkUsageCap(
-  supabase: any,
+  supabase: SupabaseClient,
   userId: string
 ): Promise<{ withinCap: boolean; used: number; cap: number; unlimited: boolean }> {
   const { data: settings } = await supabase
@@ -443,7 +444,7 @@ async function checkUsageCap(
 }
 
 /** Record actual token usage from this request, upserting today's row. */
-async function recordUsage(supabase: any, userId: string, inputTokens: number, outputTokens: number): Promise<void> {
+async function recordUsage(supabase: SupabaseClient, userId: string, inputTokens: number, outputTokens: number): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   try {
     const { data: existing } = await supabase
@@ -495,6 +496,175 @@ interface StaffResolution {
   candidates?: Array<{ user_id: string; name: string; email: string }>;
 }
 
+// ── Query-result row shapes ──────────────────────────────────────────
+// This file has no Database generic on its Supabase client (matching every
+// other Edge Function in this repo — none import the frontend's generated
+// types), so each tool casts its own query result to a row shape modelling
+// only the columns that tool actually selects, rather than leaving the
+// callback parameter as `any`.
+
+interface TenantSearchRow {
+  id: number;
+  name: string;
+  status: string;
+}
+
+/** Shared shape returned by the match_ask_viv_corpus RPC across every tool that calls it. */
+interface AskVivCorpusMatchRow {
+  source_type: string;
+  heading: string;
+  content: string;
+  similarity: number;
+  tenant_id?: number | null;
+}
+
+interface SrtoChunkMatchRow {
+  source_document: string;
+  framework: string;
+  clause: string;
+  heading: string;
+  content: string;
+  similarity: number;
+}
+
+interface StaffCandidateRow {
+  user_uuid: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  unicorn_role?: string;
+}
+
+interface CscAssignmentRow {
+  tenant_id: number;
+  role_label?: string;
+  is_primary?: boolean;
+  assigned_since?: string;
+}
+
+interface NewClientTenantRow {
+  id: number;
+  name: string;
+  status: string;
+  lifecycle_status: string;
+  risk_level: string;
+  package_id: number | null;
+  client_onboarded_at: string | null;
+  created_at: string;
+}
+
+interface ActionItemDeadlineRow {
+  id: string;
+  tenant_id: number;
+  title: string;
+  due_date: string;
+  priority: string;
+  item_type: string;
+}
+
+/** v_audit_schedule — different tools select different column subsets, all optional here. */
+interface AuditScheduleRow {
+  tenant_id: number;
+  client_name?: string;
+  next_due_date?: string | null;
+  days_until_due?: number | null;
+  registration_end_date?: string | null;
+}
+
+interface AuditScheduleCompareRow {
+  tenant_id: number;
+  schedule_status: string;
+  next_due_date: string | null;
+  days_until_due: number | null;
+}
+
+interface AuditFindingRow {
+  finding_id: string;
+  audit_id: string;
+  finding_code: string;
+  summary: string;
+  priority: string;
+  section_title: string;
+}
+
+interface AttentionRankedRow {
+  tenant_id: number;
+  tenant_name: string;
+  attention_score: number;
+  attention_drivers_json: Array<{ driver: string; [key: string]: unknown }> | null;
+  overdue_tasks_count: number;
+  days_since_activity: number | null;
+  burn_risk_status: string | null;
+  days_to_renewal: number | null;
+  risk_status: string | null;
+}
+
+interface StageHealthRow {
+  tenant_id: number;
+  health_status: string;
+}
+
+interface ConsultantLoadRow {
+  user_uuid: string;
+  weekly_assignable_hours: number;
+  current_load: number;
+  remaining_capacity: number;
+  active_clients_count: number;
+}
+
+interface UserNameRow {
+  user_uuid: string;
+  first_name: string;
+  last_name: string;
+}
+
+interface AcademyAdoptionRow {
+  tenant_id: number;
+  tenant_name: string;
+  academy_access_enabled: boolean;
+  enrolled_users: number | null;
+  courses_enrolled: number;
+  certificates_issued: number;
+}
+
+interface DocumentTemplateRow {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  document_status: string;
+  framework_type: string | null;
+  format: string;
+  is_core: boolean;
+  standard_set: string | null;
+}
+
+interface EosMeetingRef {
+  scheduled_date: string | null;
+  title: string | null;
+  status: string | null;
+  meeting_type: string;
+}
+
+interface EosMeetingSummaryListRow {
+  id: string;
+  meeting_id: string;
+  rating: number | null;
+  headlines: unknown;
+  issues: unknown;
+  rocks: unknown;
+  eos_meetings: EosMeetingRef | null;
+}
+
+interface EosMeetingSummaryDetailRow extends EosMeetingSummaryListRow {
+  todos: unknown;
+  cascades: unknown;
+  attendance: unknown;
+  segue_shares: unknown;
+  vto_changes: unknown;
+  chart_changes: unknown;
+}
+
 /**
  * Resolve a staff name to their actively-assigned client tenant_ids via
  * tenant_csc_assignments — the authoritative CSC-assignment table (not
@@ -503,7 +673,7 @@ interface StaffResolution {
  * csc_name scope, so they all resolve staff names identically to
  * list_clients_for_staff.
  */
-async function resolveStaffNameToTenantIds(supabase: any, staffName: string): Promise<StaffResolution> {
+async function resolveStaffNameToTenantIds(supabase: SupabaseClient, staffName: string): Promise<StaffResolution> {
   const words = staffName.split(/\s+/).filter(Boolean);
   const orConditions = words.flatMap((w) => [`first_name.ilike.%${w}%`, `last_name.ilike.%${w}%`, `email.ilike.%${w}%`]).join(",");
 
@@ -517,8 +687,8 @@ async function resolveStaffNameToTenantIds(supabase: any, staffName: string): Pr
     .limit(25);
   if (error) throw new Error(error.message);
 
-  const allCandidates = candidates || [];
-  const fullMatches = allCandidates.filter((u: any) => {
+  const allCandidates = (candidates ?? []) as StaffCandidateRow[];
+  const fullMatches = allCandidates.filter((u) => {
     const haystack = `${u.first_name ?? ""} ${u.last_name ?? ""} ${u.email ?? ""}`.toLowerCase();
     return words.every((w) => haystack.includes(w.toLowerCase()));
   });
@@ -528,7 +698,7 @@ async function resolveStaffNameToTenantIds(supabase: any, staffName: string): Pr
     return {
       ambiguous: true,
       tenantIds: [],
-      candidates: matched.map((u: any) => ({ user_id: u.user_uuid, name: `${u.first_name} ${u.last_name}`, email: u.email })),
+      candidates: matched.map((u) => ({ user_id: u.user_uuid, name: `${u.first_name} ${u.last_name}`, email: u.email })),
     };
   }
 
@@ -544,7 +714,7 @@ async function resolveStaffNameToTenantIds(supabase: any, staffName: string): Pr
   return {
     ambiguous: false,
     staffName: `${staffMember.first_name} ${staffMember.last_name}`,
-    tenantIds: (assignments || []).map((a: any) => a.tenant_id),
+    tenantIds: ((assignments ?? []) as Array<{ tenant_id: number }>).map((a) => a.tenant_id),
   };
 }
 
@@ -552,7 +722,7 @@ async function resolveStaffNameToTenantIds(supabase: any, staffName: string): Pr
 async function executeTool(
   name: string,
   input: Record<string, unknown>,
-  supabase: any,
+  supabase: SupabaseClient,
   profile: UserProfile
 ): Promise<{ result: unknown; summary: string }> {
   if (name === "search_clients") {
@@ -569,13 +739,13 @@ async function executeTool(
     if (error) {
       return { result: { error: error.message }, summary: `search_clients("${nameQuery}") failed` };
     }
-    const matches = (data || []).map((t: any) => ({ tenant_id: t.id, name: t.name, status: t.status }));
+    const matches = ((data ?? []) as TenantSearchRow[]).map((t) => ({ tenant_id: t.id, name: t.name, status: t.status }));
     return {
       result: { matches },
       summary:
         matches.length === 0
           ? `search_clients("${nameQuery}") — no matches`
-          : `search_clients("${nameQuery}") — ${matches.length} match(es): ${matches.map((m: any) => m.name).join(", ")}`,
+          : `search_clients("${nameQuery}") — ${matches.length} match(es): ${matches.map((m) => m.name).join(", ")}`,
     };
   }
 
@@ -627,12 +797,12 @@ async function executeTool(
         filter_source_type: null,
       });
       if (error) throw new Error(error.message);
-      const matches = (data || [])
-        .filter((r: any) => r.source_type === "note" || r.source_type === "email")
+      const matches = ((data ?? []) as AskVivCorpusMatchRow[])
+        .filter((r) => r.source_type === "note" || r.source_type === "email")
         .slice(0, 8);
       return {
         result: {
-          matches: matches.map((m: any) => ({
+          matches: matches.map((m) => ({
             source_type: m.source_type,
             heading: m.heading,
             content: m.content,
@@ -667,9 +837,9 @@ async function executeTool(
         filter_source_type: "eos",
       });
       if (error) throw new Error(error.message);
-      const matches = data || [];
+      const matches = (data ?? []) as AskVivCorpusMatchRow[];
       return {
-        result: { matches: matches.map((m: any) => ({ heading: m.heading, content: m.content, similarity: m.similarity })) },
+        result: { matches: matches.map((m) => ({ heading: m.heading, content: m.content, similarity: m.similarity })) },
         summary: matches.length === 0 ? `search_eos("${query}") — no matches` : `search_eos("${query}") — ${matches.length} match(es)`,
       };
     } catch (err) {
@@ -696,9 +866,9 @@ async function executeTool(
         filter_source_type: "document",
       });
       if (error) throw new Error(error.message);
-      const matches = data || [];
+      const matches = (data ?? []) as AskVivCorpusMatchRow[];
       return {
-        result: { matches: matches.map((m: any) => ({ heading: m.heading, content: m.content, similarity: m.similarity })) },
+        result: { matches: matches.map((m) => ({ heading: m.heading, content: m.content, similarity: m.similarity })) },
         summary:
           matches.length === 0
             ? `search_documents(${tenantId}, "${query}") — no matches`
@@ -738,8 +908,8 @@ async function executeTool(
       return { result: { error: staffErr.message }, summary: `list_clients_for_staff("${staffName}") failed` };
     }
 
-    const allCandidates = candidates || [];
-    const fullMatches = allCandidates.filter((u: any) => {
+    const allCandidates = (candidates ?? []) as StaffCandidateRow[];
+    const fullMatches = allCandidates.filter((u) => {
       const haystack = `${u.first_name ?? ""} ${u.last_name ?? ""} ${u.email ?? ""}`.toLowerCase();
       return words.every((w) => haystack.includes(w.toLowerCase()));
     });
@@ -750,7 +920,7 @@ async function executeTool(
     if (staff.length > 1) {
       return {
         result: {
-          staff_matches: staff.map((s: any) => ({
+          staff_matches: staff.map((s) => ({
             user_id: s.user_uuid,
             name: `${s.first_name} ${s.last_name}`,
             email: s.email,
@@ -783,16 +953,17 @@ async function executeTool(
       };
     }
 
-    const tenantIds = (assignments || []).map((a: any) => a.tenant_id);
+    const assignmentRows = (assignments ?? []) as CscAssignmentRow[];
+    const tenantIds = assignmentRows.map((a) => a.tenant_id);
     const tenantsById = new Map<number, { name: string; status: string }>();
     if (tenantIds.length > 0) {
       const { data: tenantRows } = await supabase.from("tenants").select("id, name, status").in("id", tenantIds);
-      for (const t of tenantRows || []) {
+      for (const t of (tenantRows ?? []) as TenantSearchRow[]) {
         tenantsById.set(t.id, { name: t.name, status: t.status });
       }
     }
 
-    const clients = (assignments || []).map((a: any) => ({
+    const clients = assignmentRows.map((a) => ({
       tenant_id: a.tenant_id,
       name: tenantsById.get(a.tenant_id)?.name ?? null,
       status: tenantsById.get(a.tenant_id)?.status ?? null,
@@ -828,10 +999,10 @@ async function executeTool(
         filter_clause: null,
       });
       if (error) throw new Error(error.message);
-      const matches = data || [];
+      const matches = (data ?? []) as SrtoChunkMatchRow[];
       return {
         result: {
-          matches: matches.map((m: any) => ({
+          matches: matches.map((m) => ({
             source_document: m.source_document,
             framework: m.framework,
             clause: m.clause,
@@ -883,7 +1054,9 @@ async function executeTool(
         .eq("status", "active")
         .eq("is_system_tenant", false);
       if (tenantsErr) throw new Error(tenantsErr.message);
-      const tenantNameById = new Map<number, string>((activeTenants || []).map((t: any) => [t.id, t.name]));
+      const tenantNameById = new Map<number, string>(
+        ((activeTenants ?? []) as Array<{ id: number; name: string }>).map((t) => [t.id, t.name])
+      );
 
       const selectCols = config.valueColumn ? `tenant_id, ${config.valueColumn}` : "tenant_id";
       const { data: rows, error: rowsErr } = await supabase
@@ -894,10 +1067,12 @@ async function executeTool(
         .limit(10000);
       if (rowsErr) throw new Error(rowsErr.message);
 
+      // Row shape is dynamic — the queried table and value column vary per
+      // metric (ACTIVITY_METRIC_CONFIG), so only tenant_id is guaranteed.
       const totals = new Map<number, number>();
-      for (const row of (rows || []) as any[]) {
+      for (const row of (rows ?? []) as Array<{ tenant_id: number; [key: string]: unknown }>) {
         if (!tenantNameById.has(row.tenant_id)) continue; // inactive/system tenant — excluded from the ranked set entirely
-        const inc = config.valueColumn ? (row[config.valueColumn] ?? 0) / 60 : 1;
+        const inc = config.valueColumn ? ((row[config.valueColumn] as number | null) ?? 0) / 60 : 1;
         totals.set(row.tenant_id, (totals.get(row.tenant_id) ?? 0) + inc);
       }
 
@@ -940,9 +1115,9 @@ async function executeTool(
         .limit(500);
       if (error) throw new Error(error.message);
 
-      const withEffectiveDate = (rows || [])
-        .map((t: any) => ({ ...t, effective_date: t.client_onboarded_at || t.created_at, source: t.client_onboarded_at ? "client_onboarded_at" : "created_at" }))
-        .filter((t: any) => t.effective_date >= cutoff);
+      const withEffectiveDate = ((rows ?? []) as NewClientTenantRow[])
+        .map((t) => ({ ...t, effective_date: t.client_onboarded_at || t.created_at, source: t.client_onboarded_at ? "client_onboarded_at" : "created_at" }))
+        .filter((t) => t.effective_date >= cutoff);
 
       const dayCounts = new Map<string, number>();
       for (const t of withEffectiveDate) {
@@ -953,17 +1128,17 @@ async function executeTool(
       const bulkDaySet = new Set(bulkImportDays.map(([day]) => day));
 
       const genuinelyNew = withEffectiveDate
-        .filter((t: any) => !bulkDaySet.has(t.effective_date.slice(0, 10)))
-        .sort((a: any, b: any) => (a.effective_date < b.effective_date ? 1 : -1))
+        .filter((t) => !bulkDaySet.has(t.effective_date.slice(0, 10)))
+        .sort((a, b) => (a.effective_date < b.effective_date ? 1 : -1))
         .slice(0, limit);
 
-      const tenantIds = genuinelyNew.map((t: any) => t.id);
-      const packageIds = [...new Set(genuinelyNew.map((t: any) => t.package_id).filter((p: any) => p != null))];
+      const tenantIds = genuinelyNew.map((t) => t.id);
+      const packageIds = [...new Set(genuinelyNew.map((t) => t.package_id).filter((p): p is number => p != null))];
 
       const packageNameById = new Map<number, string>();
       if (packageIds.length > 0) {
         const { data: packageRows } = await supabase.from("packages").select("id, name").in("id", packageIds);
-        for (const p of packageRows || []) packageNameById.set(p.id, p.name);
+        for (const p of (packageRows ?? []) as Array<{ id: number; name: string }>) packageNameById.set(p.id, p.name);
       }
 
       const cscNameByTenant = new Map<number, string>();
@@ -974,19 +1149,22 @@ async function executeTool(
           .in("tenant_id", tenantIds)
           .eq("is_primary", true)
           .is("ended_at", null);
-        const cscUserIds = [...new Set((assignments || []).map((a: any) => a.csc_user_id))];
+        const assignmentRows = (assignments ?? []) as Array<{ tenant_id: number; csc_user_id: string }>;
+        const cscUserIds = [...new Set(assignmentRows.map((a) => a.csc_user_id))];
         const cscNameByUserId = new Map<string, string>();
         if (cscUserIds.length > 0) {
           const { data: cscUsers } = await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", cscUserIds);
-          for (const u of cscUsers || []) cscNameByUserId.set(u.user_uuid, `${u.first_name} ${u.last_name}`);
+          for (const u of (cscUsers ?? []) as Array<{ user_uuid: string; first_name: string; last_name: string }>) {
+            cscNameByUserId.set(u.user_uuid, `${u.first_name} ${u.last_name}`);
+          }
         }
-        for (const a of assignments || []) {
+        for (const a of assignmentRows) {
           const name = cscNameByUserId.get(a.csc_user_id);
           if (name) cscNameByTenant.set(a.tenant_id, name);
         }
       }
 
-      const newClients = genuinelyNew.map((t: any) => ({
+      const newClients = genuinelyNew.map((t) => ({
         tenant_id: t.id,
         name: t.name,
         status: t.status,
@@ -1073,14 +1251,15 @@ async function executeTool(
       const { data: registrationRows, error: regErr } = await registrationQuery;
       if (regErr) throw new Error(regErr.message);
 
-      const tenantIds = [...new Set((overdueItems || []).map((i: any) => i.tenant_id))];
+      const overdueItemRows = (overdueItems ?? []) as ActionItemDeadlineRow[];
+      const tenantIds = [...new Set(overdueItemRows.map((i) => i.tenant_id))];
       const tenantNameById = new Map<number, string>();
       if (tenantIds.length > 0) {
         const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
-        for (const t of tenantRows || []) tenantNameById.set(t.id, t.name);
+        for (const t of (tenantRows ?? []) as Array<{ id: number; name: string }>) tenantNameById.set(t.id, t.name);
       }
 
-      const overdueActionItems = (overdueItems || []).map((i: any) => ({
+      const overdueActionItems = overdueItemRows.map((i) => ({
         tenant_id: i.tenant_id,
         client_name: tenantNameById.get(i.tenant_id) ?? null,
         title: i.title,
@@ -1088,21 +1267,23 @@ async function executeTool(
         priority: i.priority,
         item_type: i.item_type,
       }));
-      const overdueAudits = (auditDueRows || []).filter((r: any) => r.next_due_date < today);
-      const upcomingAuditDeadlines = (auditDueRows || []).filter((r: any) => r.next_due_date >= today);
+      const auditDueRowsTyped = (auditDueRows ?? []) as AuditScheduleRow[];
+      const registrationRowsTyped = (registrationRows ?? []) as AuditScheduleRow[];
+      const overdueAudits = auditDueRowsTyped.filter((r) => (r.next_due_date ?? "") < today);
+      const upcomingAuditDeadlines = auditDueRowsTyped.filter((r) => (r.next_due_date ?? "") >= today);
 
       return {
         result: {
           window_days: windowDays,
           overdue_action_items: overdueActionItems,
-          overdue_audits: overdueAudits.map((r: any) => ({ tenant_id: r.tenant_id, client_name: r.client_name, next_due_date: r.next_due_date, days_overdue: -r.days_until_due })),
-          upcoming_audit_deadlines: upcomingAuditDeadlines.map((r: any) => ({ tenant_id: r.tenant_id, client_name: r.client_name, next_due_date: r.next_due_date, days_until_due: r.days_until_due })),
-          registrations_expiring_soon: (registrationRows || []).map((r: any) => ({ tenant_id: r.tenant_id, client_name: r.client_name, registration_end_date: r.registration_end_date })),
+          overdue_audits: overdueAudits.map((r) => ({ tenant_id: r.tenant_id, client_name: r.client_name, next_due_date: r.next_due_date, days_overdue: -(r.days_until_due ?? 0) })),
+          upcoming_audit_deadlines: upcomingAuditDeadlines.map((r) => ({ tenant_id: r.tenant_id, client_name: r.client_name, next_due_date: r.next_due_date, days_until_due: r.days_until_due })),
+          registrations_expiring_soon: registrationRowsTyped.map((r) => ({ tenant_id: r.tenant_id, client_name: r.client_name, registration_end_date: r.registration_end_date })),
         },
         summary:
           `list_deadlines_and_overdue_work(${cscName || "platform-wide"}) — ${overdueActionItems.length} overdue action item(s), ` +
           `${overdueAudits.length} overdue audit(s), ${upcomingAuditDeadlines.length} upcoming audit deadline(s), ` +
-          `${(registrationRows || []).length} registration(s) expiring soon`,
+          `${registrationRowsTyped.length} registration(s) expiring soon`,
       };
     } catch (err) {
       return { result: { error: err instanceof Error ? err.message : String(err) }, summary: "list_deadlines_and_overdue_work failed" };
@@ -1118,20 +1299,21 @@ async function executeTool(
         .limit(100);
       if (error) throw new Error(error.message);
 
-      const auditIds = [...new Set((findings || []).map((f: any) => f.audit_id))];
+      const findingRows = (findings ?? []) as AuditFindingRow[];
+      const auditIds = [...new Set(findingRows.map((f) => f.audit_id))];
       const auditTenantById = new Map<string, number>();
       if (auditIds.length > 0) {
         const { data: audits } = await supabase.from("client_audits").select("id, subject_tenant_id").in("id", auditIds);
-        for (const a of audits || []) auditTenantById.set(a.id, a.subject_tenant_id);
+        for (const a of (audits ?? []) as Array<{ id: string; subject_tenant_id: number }>) auditTenantById.set(a.id, a.subject_tenant_id);
       }
       const relevantTenantIds = [...new Set([...auditTenantById.values()])];
       const tenantNameById = new Map<number, string>();
       if (relevantTenantIds.length > 0) {
         const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", relevantTenantIds);
-        for (const t of tenantRows || []) tenantNameById.set(t.id, t.name);
+        for (const t of (tenantRows ?? []) as Array<{ id: number; name: string }>) tenantNameById.set(t.id, t.name);
       }
 
-      let enriched = (findings || []).map((f: any) => {
+      let enriched = findingRows.map((f) => {
         const ftid = auditTenantById.get(f.audit_id) ?? null;
         return {
           tenant_id: ftid,
@@ -1142,7 +1324,7 @@ async function executeTool(
           section: f.section_title,
         };
       });
-      if (tenantId !== null) enriched = enriched.filter((f: any) => f.tenant_id === tenantId);
+      if (tenantId !== null) enriched = enriched.filter((f) => f.tenant_id === tenantId);
 
       return {
         result: { findings: enriched, note: "Only critical/high-priority findings with no remediation action recorded are included — not every finding." },
@@ -1155,7 +1337,7 @@ async function executeTool(
 
   if (name === "compare_clients") {
     const tenantIds = Array.isArray(input.tenant_ids)
-      ? (input.tenant_ids as any[]).map((t) => Number(t)).filter((t) => !Number.isNaN(t))
+      ? (input.tenant_ids as unknown[]).map((t) => Number(t)).filter((t) => !Number.isNaN(t))
       : [];
     if (tenantIds.length < 2) {
       return { result: { error: "tenant_ids must include at least 2 tenant ids" }, summary: "compare_clients called with fewer than 2 tenant_ids" };
@@ -1172,9 +1354,11 @@ async function executeTool(
         .select("tenant_id, schedule_status, next_due_date, days_until_due")
         .in("tenant_id", tenantIds);
       if (auditErr) throw new Error(auditErr.message);
-      const auditByTenant = new Map<number, any>((auditRows || []).map((r: any) => [r.tenant_id, r]));
+      const auditByTenant = new Map<number, AuditScheduleCompareRow>(
+        ((auditRows ?? []) as AuditScheduleCompareRow[]).map((r) => [r.tenant_id, r])
+      );
 
-      const comparison = (attentionRows || []).map((r: any) => ({
+      const comparison = ((attentionRows ?? []) as AttentionRankedRow[]).map((r) => ({
         tenant_id: r.tenant_id,
         name: r.tenant_name,
         attention_score: r.attention_score,
@@ -1223,7 +1407,7 @@ async function executeTool(
       if (error) throw new Error(error.message);
 
       const counts = new Map<number, { critical: number; monitoring: number }>();
-      for (const row of (rows || []) as any[]) {
+      for (const row of (rows ?? []) as StageHealthRow[]) {
         const entry = counts.get(row.tenant_id) ?? { critical: 0, monitoring: 0 };
         if (row.health_status === "critical") entry.critical++;
         else entry.monitoring++;
@@ -1234,7 +1418,7 @@ async function executeTool(
       const tenantNameById = new Map<number, string>();
       if (tenantIds.length > 0) {
         const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
-        for (const t of tenantRows || []) tenantNameById.set(t.id, t.name);
+        for (const t of (tenantRows ?? []) as Array<{ id: number; name: string }>) tenantNameById.set(t.id, t.name);
       }
 
       const hotspots = tenantIds
@@ -1266,18 +1450,18 @@ async function executeTool(
       // vw_consultant_load can have more than one row per user_uuid (one per
       // internal tenant-membership row) — dedupe to the first, since the
       // computed load/capacity figures are identical across duplicates.
-      const byUser = new Map<string, any>();
-      for (const row of (loadRows || []) as any[]) {
+      const byUser = new Map<string, ConsultantLoadRow>();
+      for (const row of (loadRows ?? []) as ConsultantLoadRow[]) {
         if (!byUser.has(row.user_uuid)) byUser.set(row.user_uuid, row);
       }
       const userIds = [...byUser.keys()];
       const { data: users } = userIds.length > 0
         ? await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", userIds)
-        : { data: [] as any[] };
-      const nameById = new Map<string, string>((users || []).map((u: any) => [u.user_uuid, `${u.first_name} ${u.last_name}`]));
+        : { data: [] as UserNameRow[] };
+      const nameById = new Map<string, string>(((users ?? []) as UserNameRow[]).map((u) => [u.user_uuid, `${u.first_name} ${u.last_name}`]));
 
       const workload = [...byUser.values()]
-        .map((r: any) => ({
+        .map((r) => ({
           name: nameById.get(r.user_uuid) ?? null,
           weekly_assignable_hours: r.weekly_assignable_hours,
           current_load_hours: r.current_load,
@@ -1316,12 +1500,12 @@ async function executeTool(
       if (error) throw new Error(error.message);
 
       const periodTotals: number[] = new Array(periods).fill(0);
-      for (const row of (rows || []) as any[]) {
-        const ts = new Date(row[config.dateColumn]).getTime();
+      for (const row of (rows ?? []) as Array<{ [key: string]: unknown }>) {
+        const ts = new Date(row[config.dateColumn] as string).getTime();
         const ageDays = (now - ts) / 86400000;
         const periodIndex = Math.floor(ageDays / periodDays);
         if (periodIndex < 0 || periodIndex >= periods) continue;
-        const inc = config.valueColumn ? (row[config.valueColumn] ?? 0) / 60 : 1;
+        const inc = config.valueColumn ? ((row[config.valueColumn] as number | null) ?? 0) / 60 : 1;
         periodTotals[periodIndex] += inc;
       }
 
@@ -1375,20 +1559,20 @@ async function executeTool(
       });
       if (error) throw new Error(error.message);
 
-      let matches = (data || []).filter((r: any) => r.source_type === "note" || r.source_type === "email");
-      if (scopeTenantIds) matches = matches.filter((r: any) => r.tenant_id != null && scopeTenantIds!.includes(r.tenant_id));
+      let matches = ((data ?? []) as AskVivCorpusMatchRow[]).filter((r) => r.source_type === "note" || r.source_type === "email");
+      if (scopeTenantIds) matches = matches.filter((r) => r.tenant_id != null && scopeTenantIds!.includes(r.tenant_id));
       matches = matches.slice(0, limit);
 
-      const tenantIds = [...new Set(matches.map((m: any) => m.tenant_id).filter((t: any) => t != null))];
+      const tenantIds = [...new Set(matches.map((m) => m.tenant_id).filter((t): t is number => t != null))];
       const tenantNameById = new Map<number, string>();
       if (tenantIds.length > 0) {
         const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
-        for (const t of tenantRows || []) tenantNameById.set(t.id, t.name);
+        for (const t of (tenantRows ?? []) as Array<{ id: number; name: string }>) tenantNameById.set(t.id, t.name);
       }
 
       return {
         result: {
-          matches: matches.map((m: any) => ({
+          matches: matches.map((m) => ({
             tenant_id: m.tenant_id,
             client_name: m.tenant_id != null ? tenantNameById.get(m.tenant_id) ?? null : null,
             source_type: m.source_type,
@@ -1419,14 +1603,14 @@ async function executeTool(
       const { data, error } = await query;
       if (error) throw new Error(error.message);
 
-      const rows = data || [];
-      const adopted = rows.filter((r: any) => (r.enrolled_users ?? 0) > 0);
+      const rows = (data ?? []) as AcademyAdoptionRow[];
+      const adopted = rows.filter((r) => (r.enrolled_users ?? 0) > 0);
       const shown = tenantId !== null ? rows : adopted;
 
       return {
         result: {
           portfolio_summary: { total_clients_checked: rows.length, clients_with_enrolled_users: adopted.length },
-          clients: shown.map((r: any) => ({
+          clients: shown.map((r) => ({
             tenant_id: r.tenant_id,
             name: r.tenant_name,
             academy_access_enabled: r.academy_access_enabled,
@@ -1456,7 +1640,7 @@ async function executeTool(
       const { data, error } = await dbQuery;
       if (error) throw new Error(error.message);
 
-      const templates = (data || []).map((d: any) => ({
+      const templates = ((data ?? []) as DocumentTemplateRow[]).map((d) => ({
         id: d.id,
         title: d.title,
         description: d.description,
@@ -1496,8 +1680,8 @@ async function executeTool(
         .limit(500);
       if (error) throw new Error(error.message);
 
-      const meetings = (data || [])
-        .map((row: any) => {
+      const meetings = ((data ?? []) as EosMeetingSummaryListRow[])
+        .map((row) => {
           const issues = Array.isArray(row.issues) ? row.issues : [];
           const rocks = Array.isArray(row.rocks) ? row.rocks : [];
           const headlines = Array.isArray(row.headlines) ? row.headlines : [];
@@ -1507,10 +1691,10 @@ async function executeTool(
             scheduled_date: row.eos_meetings?.scheduled_date ?? null,
             rating: row.rating,
             headline_count: headlines.length,
-            issues_solved: issues.filter((i: any) => i.status === "Solved").length,
-            issues_open: issues.filter((i: any) => i.status !== "Solved").length,
-            rocks_on_track: rocks.filter((r: any) => r.status === "on_track").length,
-            rocks_off_track: rocks.filter((r: any) => r.status && r.status !== "on_track").length,
+            issues_solved: issues.filter((i) => i.status === "Solved").length,
+            issues_open: issues.filter((i) => i.status !== "Solved").length,
+            rocks_on_track: rocks.filter((r) => r.status === "on_track").length,
+            rocks_off_track: rocks.filter((r) => r.status && r.status !== "on_track").length,
           };
         })
         .sort((a, b) => new Date(b.scheduled_date ?? 0).getTime() - new Date(a.scheduled_date ?? 0).getTime())
@@ -1546,7 +1730,7 @@ async function executeTool(
       }
       const { data, error } = await query;
       if (error) throw new Error(error.message);
-      const rows = (data || []) as any[];
+      const rows = (data ?? []) as EosMeetingSummaryDetailRow[];
       const row = meetingId
         ? rows[0]
         : rows.sort(
@@ -1579,8 +1763,8 @@ async function executeTool(
 
       const { data: users } = userIds.size > 0
         ? await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", [...userIds])
-        : { data: [] as any[] };
-      const nameById = new Map<string, string>((users || []).map((u: any) => [u.user_uuid, `${u.first_name} ${u.last_name}`]));
+        : { data: [] as UserNameRow[] };
+      const nameById = new Map<string, string>(((users ?? []) as UserNameRow[]).map((u) => [u.user_uuid, `${u.first_name} ${u.last_name}`]));
       const nameOf = (id: string | null | undefined) => (id ? nameById.get(id) ?? "Unknown staff" : null);
 
       const details = {
@@ -1588,12 +1772,12 @@ async function executeTool(
         scheduled_date: row.eos_meetings?.scheduled_date ?? null,
         status: row.eos_meetings?.status ?? null,
         rating: row.rating,
-        attendance: attendance.map((a: any) => ({ name: nameOf(a.user_id), attended: a.attended })),
-        headlines: headlines.map((h: any) => ({ by: nameOf(h.user_id), headline: h.headline, is_good_news: h.is_good_news })),
-        issues: issues.map((i: any) => ({ title: i.title, status: i.status, solution: i.solution, solved_at: i.solved_at })),
-        todos: todos.map((t: any) => ({ title: t.title, status: t.status, owner: nameOf(t.owner_id), due_date: t.due_date, completed_at: t.completed_at })),
-        rocks: rocks.map((r: any) => ({ title: r.title, status: r.status, owner: nameOf(r.owner_id), rock_level: r.rock_level })),
-        personal_professional_wins: segueShares.map((s: any) => ({
+        attendance: attendance.map((a) => ({ name: nameOf(a.user_id), attended: a.attended })),
+        headlines: headlines.map((h) => ({ by: nameOf(h.user_id), headline: h.headline, is_good_news: h.is_good_news })),
+        issues: issues.map((i) => ({ title: i.title, status: i.status, solution: i.solution, solved_at: i.solved_at })),
+        todos: todos.map((t) => ({ title: t.title, status: t.status, owner: nameOf(t.owner_id), due_date: t.due_date, completed_at: t.completed_at })),
+        rocks: rocks.map((r) => ({ title: r.title, status: r.status, owner: nameOf(r.owner_id), rock_level: r.rock_level })),
+        personal_professional_wins: segueShares.map((s) => ({
           name: nameOf(s.user_id),
           rating: s.rating,
           personal_win: s.personal_win,
@@ -1624,7 +1808,7 @@ async function executeTool(
  * wall, and keeps per-turn cost bounded as a conversation grows.
  */
 async function maybeSummarizeConversation(
-  supabase: any,
+  supabase: SupabaseClient,
   conversationId: string,
   contextSummary: string | null,
   summaryCoversTurns: number
@@ -1651,7 +1835,7 @@ async function maybeSummarizeConversation(
     return { contextSummary, summaryCoversTurns };
   }
 
-  const transcript = turnsToSummarize.map((t: any) => `${t.role}: ${t.content}`).join("\n\n");
+  const transcript = ((turnsToSummarize ?? []) as Array<{ role: string; content: string }>).map((t) => `${t.role}: ${t.content}`).join("\n\n");
   const summaryPrompt = contextSummary
     ? `Existing summary so far:\n${contextSummary}\n\nNew turns to fold in:\n${transcript}`
     : `Conversation turns to summarize:\n${transcript}`;
