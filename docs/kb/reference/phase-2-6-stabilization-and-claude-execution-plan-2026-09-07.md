@@ -736,6 +736,25 @@ deployment was performed for this M4 code in this session.
 
 ### Packet M5 — environment-safe migration replay
 
+**Session 12 preflight (2026-09-07): blocked at strategy selection, with
+read-only evidence captured.** The persistent `tenant-isolation-qa` branch
+(`iqichbimamlyjpaguddl`) remains `MIGRATIONS_FAILED`; it has 17 migrations
+through `20260714074812`, while production has 329. The first unapplied
+migration is `20260714074920_enable_retention_and_risk_forecast_cron`, whose
+`cron` dependency and production URL make blind replay unsafe. The branch
+reports `preview_project_status=ACTIVE_HEALTHY`, but that is not evidence of a
+migration-complete schema. No reset, rebase, migration marking, extension
+enablement, or data/schema write was performed.
+
+Recommended replay strategy: create a clean QA branch from the current
+production schema baseline (or an equivalent reviewed baseline export), then
+replay only environment-neutral migrations. Replace cron registration with a
+controlled deployment step that defaults to zero schedules in QA/preview and
+refuses the production project ref. This is safer than patching the failed
+branch in place because the current migration history contains both backfills
+and environment-specific scheduling assumptions. Carl must approve the branch
+repair strategy before any destructive or migration-history operation.
+
 Stop adding environment-specific cron registration to ordinary schema
 migrations. Move scheduling to a controlled deployment step that derives the
 target URL from the selected project, defaults to no schedules in preview/QA,
