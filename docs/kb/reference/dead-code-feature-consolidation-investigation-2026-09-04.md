@@ -88,7 +88,7 @@ Keep:
 | Candidate | Evidence | Proposed boundary | Gate / potential |
 |---|---|---|---|
 | `AddClientTaskDialog` + `AddStaffTaskDialog` | About 335 LOC each and only a small owner/schema-specific diff | Shared form/controller with thin client/staff adapters; never one boolean-mode mega-component | Characterize both insert/update schemas, owner behavior, and permissions. Likely 250–300 net LOC reduction. |
-| `extract-note-title` + `extract-suggest-title` | 137/133 LOC and about a 12-line behavioral diff | Shared internal title-extraction service while retaining both public endpoint names and response contracts | Add auth, CORS, rate, provider-failure, and response tests first. About 100 LOC potential. |
+| ~~`extract-note-title` + `extract-suggest-title`~~ | RETARGETED 2026-09-07 (P6-B): `extract-suggest-title` had zero repo callers and zero logged invocations — not a live clone pair. Retired outright instead of consolidated; `extract-note-title` (5 real callers) is untouched. See the correction note in `phase-3-5-parallel-preparation-packets-2026-09-04.md`'s Packet D. | — | — |
 | `useStageQualityCheck.tsx` | About 745 LOC with two near-duplicated evaluation pipelines | One pure evaluator over a typed data snapshot, wrapped by the hook and standalone caller | No focused fixtures currently exist; add parity fixtures first. Roughly 250–300 LOC potential. |
 | `SeatCard` + `DraggableSeatCard` | Substantial shared presentation, but meaningful drag/mutation differences | Extract display core only; keep drag behavior, mutation, and permission logic in adapters | Lower-confidence 150–300 LOC potential; verify both interactive contexts. |
 
