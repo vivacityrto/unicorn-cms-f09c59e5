@@ -55,7 +55,11 @@ export function PackagePhasesTab({ packageId, packageStageIds, stageMap }: Packa
   const togglePhaseExpanded = (phaseId: string) => {
     setExpandedPhases(prev => {
       const next = new Set(prev);
-      next.has(phaseId) ? next.delete(phaseId) : next.add(phaseId);
+      if (next.has(phaseId)) {
+        next.delete(phaseId);
+      } else {
+        next.add(phaseId);
+      }
       return next;
     });
   };
