@@ -469,10 +469,21 @@ on unrelated features:
 
 - **`AddTimeDialog.tsx` note-creation** — was writing the acting user's ID
   into the wrong (legacy numeric) column instead of the required
-  `created_by` field. **FIXED.** The same insert also references two
+  `created_by` field. **FIXED.** The same insert also referenced two
   columns that don't exist at all (`client_id`, `package_instance_id`) —
-  **documented, not fixed**, needs a product decision on the intended
-  parent/child mapping.
+  every insert through this path had always 400'd with an unknown-column
+  error. **FIXED (Phase 2.6 Packet P4-C, 2026-09-07):** replaced with the
+  real `parent_type`/`parent_id`/`package_id` shape, matching the same
+  package-instance-vs-tenant convention `useNotes.tsx`'s `createNote` and
+  `ClientStructuredNotesTab.tsx` already use elsewhere (`parent_type:
+  'package_instance', parent_id: <instance id>` when a package is selected,
+  else `parent_type: 'tenant', parent_id: <tenant id>`) — not a guess, an
+  existing established mapping this code path had simply never followed.
+  Verified live end-to-end on Demo RTO: logged a real time entry with
+  "Link a note" → "+ New note", saved successfully with zero console
+  errors, confirmed via SQL the resulting row had
+  `parent_type='package_instance'`, the correct `parent_id`/`package_id`,
+  and a correct `timeentry_id` link — then deleted both test rows.
 - **`useEosHealth.tsx` Health Score** — the Rocks-discipline dimension
   never selected `seat_id`, so it always treated every Rock as seat-less.
   **FIXED.**
@@ -487,9 +498,9 @@ on unrelated features:
   missing a `task_id` field the code actually reads from ClickUp comments.
   **FIXED.**
 - **`EditTimeDialog.tsx` / `AddTimeDialog.tsx`** — both show a blank/wrong
-  "Person" field when editing a time entry, because `tenant_users.user_id`
-  has no FK to `public.users` — the same class of gap as item 5 above, just
-  a different table pair. **Documented, not fixed** in either case.
+  "Person"/"Notify" field, because the query selected a nonexistent
+  `tenant_users.user_uuid` column (real column: `user_id`) — see item 21
+  above for the full writeup. **FIXED (Phase 2.6 Packet P4-C).**
 - **`useAuditPrep.ts`'s `useGenerateRequestFromQuestions`** — not a live bug
   (confirmed zero consumers anywhere in the codebase — dead code, never
   wired to any component), but worth noting it also had its own real bug
@@ -525,7 +536,7 @@ of bug stops resurfacing every time someone touches a nearby insert.
 
 ## Processes — Audit Log tab (`useProcesses.tsx`, `ProcessDetail.tsx`)
 
-### 20. Process Audit Log has never shown any entries — DOCUMENTED, NOT FIXED (wrong FK schema target)
+### 20. Process Audit Log has never shown any entries — FIXED (Phase 2.6 Packet P4-C, 2026-09-07)
 The Audit Log tab on a process's detail page has always silently shown
 "No audit entries available," even for processes with real history
 (created/updated/approved/archived/submitted-for-review entries do get
@@ -545,18 +556,22 @@ verification — the batch's own diff only changed the query's TypeScript
 generics (fixing a masked TS2589 "excessively deep" error), not the query
 shape, so this is confirmed pre-existing and unrelated to that change.
 
-Not fixed here: the correct fix is either repointing the embed to
-`auth.users` (schema/FK decision — `auth.users` isn't normally embeddable
-the same way, may need a view or a manual second lookup by
-`actor_user_id` against `public.users` instead, since the two tables'
-UUIDs correlate 1:1 in this codebase's convention) or altering the FK
-itself to target `public.users(user_uuid)` to match every other
-actor/owner FK in this table family. Left for a schema-change session
-per the standing guardrail, not patched inline during a type-only batch.
+**Fixed (Phase 2.6 Packet P4-C, 2026-09-07):** `useProcesses.tsx`'s
+`useProcessAuditLog` now does a two-step fetch instead of the impossible
+embed — query `process_audit_log` for the raw rows, separately batch-query
+`public.users` by `user_uuid` for the distinct `actor_user_id`s, and merge
+client-side. `public.users.user_uuid` is kept in sync with `auth.users.id`
+by the `link_auth_user_to_profile` trigger (confirmed via
+`pg_get_functiondef`), so it's the correct join key — no schema change
+needed, matching the same pattern already used by `useStageAuditLog.tsx`
+for an identical actor-resolution problem elsewhere in the codebase.
+Verified live: a real process with 10 audit entries
+(`6f10a988-eebb-4a6b-95e0-025edaed9842`) now shows every entry's real
+actor name instead of the empty state, zero console errors.
 
 ## Client Time tab (`ClientTimeTab.tsx` -> `EditTimeDialog.tsx`)
 
-### 21. "Person" dropdown in Edit Time Entry silently shows staff only, never tenant contacts — DOCUMENTED, NOT FIXED (wrong column name)
+### 21. "Person" dropdown in Edit Time Entry silently shows staff only, never tenant contacts — FIXED (Phase 2.6 Packet P4-C, 2026-09-07)
 Opening "Edit Time Entry" on an existing time entry populates the "Person"
 selector's tenant-side half from a query that 400s every time:
 `supabase.from('tenant_users').select('user_uuid, users:user_uuid(user_uuid,
@@ -576,6 +591,24 @@ this repo's standing guardrail on FK-embed hints.
 Found incidentally during batch 80 of the `no-explicit-any` retirement's
 live verification — `EditTimeDialog.tsx` is not one of that batch's changed
 files, so this is confirmed pre-existing and unrelated to that diff.
+
+**Fixed (Phase 2.6 Packet P4-C, 2026-09-07):** replaced the broken embed
+with a two-step fetch (`tenant_users.select('user_id')`, then batch-query
+`users` by `user_uuid`) in both `EditTimeDialog.tsx` and `AddTimeDialog.tsx`
+(same broken query duplicated verbatim in both files, feeding
+`EditTimeDialog`'s "Person" selector and both dialogs' "Notify" selector).
+A second bug was found alongside it while fixing this: even with the query
+fixed, `EditTimeDialog.tsx`'s "Person" `<Select>` only ever rendered the
+`vivacityStaff` state (Vivacity staff only) — the merged
+staff-plus-tenant-contacts list (`teamMembers`) was computed but never
+wired into that dropdown's JSX, only into the separate "Notify" selector.
+Fixed by pointing the Person select at `teamMembers` instead, and removed
+the now-fully-unused `vivacityStaff` state (`setVivacityStaff` was its only
+other reference). Verified live on Demo RTO (tenant 7547, 7 real tenant
+contacts): both the Person dropdown (Edit Time Entry) and the Notify
+dropdown (Add Time Entry) now list every tenant contact
+(James Okafor, John dorer, Daniel Evans, Carl Academy, Ghost User3,
+K_Account Test) alongside staff, zero console errors.
 
 ## Client notification surfaces
 

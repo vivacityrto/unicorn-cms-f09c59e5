@@ -815,6 +815,19 @@ LOC reduction is a secondary benefit expected in P8. Do not trade visible duplic
 11. Are client conversations tenant-shared or participant-private for conversation existence, subject/preview, message body, attachments, notifications, timeline and realtime? Who may add or remove participants?
 12. If staff messaging becomes portfolio-scoped, which roles/relationships receive notifications and retain list/read/reply/assign/resolve rights, and how are dead links prevented during cutover?
 13. Are Academy-only client users excluded from ordinary messaging and broadcast recipients, or included for named communications?
+14. **Parked 2026-09-07 (Carl, during Phase 2.6 Packet P4-C):** every
+    person-picker built on `public.users` (Notify selectors, "Person"
+    fields, actor lookups) currently lists every non-disabled row
+    unfiltered — confirmed live on Demo RTO's Notify dropdown, which mixes
+    real staff/tenant contacts with entries like "BA Bulk Generate",
+    "TC Test", "GU Ghost", and "KT K_Account". Needs a council pass to
+    define which `users` rows are genuine people vs. system/bulk-operation/
+    test/ghost accounts (a `is_system_account` flag already exists per
+    `docs/audit-log/entries/2026-08-25-grant-authenticated-select-is-system-account.md`
+    — check whether it already covers this, or whether a broader
+    classification is needed) and whether that exclusion belongs in RBAC v6's
+    canonical evaluator or as a standalone codebase-optimization-plan cohort.
+    Not scoped or actioned here — explicitly deferred by Carl.
 
 No phase should silently answer these through code. Record approved answers in the policy ADR and relevant KB procedure.
 

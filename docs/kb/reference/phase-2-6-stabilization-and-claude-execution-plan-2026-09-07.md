@@ -63,6 +63,16 @@ tables remain present/RLS-enabled with zero rows, and the notification outbox
 remains unchanged at 738 failed and 242 skipped rows. Supabase recorded
 `retire_legacy_audit_functions` as migration `20260907052028`. M3-B is next.
 
+**2026-09-07, session 8 — M3-B implemented:** removed the three dormant
+`notification_schedule` writes from `send-automated-email` while preserving
+its three email response paths, and replaced the unused
+`process-notification-queue` worker with a credential-free HTTP 410 retirement
+stub. The shared cron-auth inventory no longer treats the retired worker as an
+active cron function; `notification_schedule` and the active
+`process-notification-outbox` contract remain intact for M3-C/M3-D. Static
+regression tests pass. Production state is unchanged pending reviewed PR
+merge, after which the native Supabase GitHub sync will deploy the Edge change.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then
@@ -196,10 +206,17 @@ remains unchanged at 738 failed and 242 skipped rows. Supabase recorded
   in production right now, for any stage — a pre-existing, unrelated data
   fact) so its fix rests on static verification + code-pattern review only,
   disclosed as a coverage gap rather than silently claimed as tested.
+- **P4-C (identity and lookup reads) done and merged (PR #976).** Process
+  Audit Log (#20), Edit/Add Time person lookup (#21), and `AddTimeDialog`'s
+  note-insert (unnumbered) all fixed against confirmed live schema — none
+  needed a decision packet. See Packet P4-C's own section (§7) for full
+  detail. Also surfaced a parked, explicitly-deferred finding: person-picker
+  dropdowns built on `public.users` list system/test/bulk-operation accounts
+  unfiltered — logged as RBAC v6 plan §13 item 14, not actioned here.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A, P4-C, P4-D, the rest of P6-B, P7 — several of
-  these require live-schema investigation, product/security decisions, or
-  their own separately authorized packets per §1's rules.
+  infra decision), P3-A, P4-D, the rest of P6-B, P7 — several of these
+  require live-schema investigation, product/security decisions, or their
+  own separately authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
@@ -434,6 +451,39 @@ gap.
 Investigate and fix Process Audit Log (#20), Edit/Add Time person lookup (#21), and the unnumbered `AddTimeDialog` missing-parent-column issue. Confirm the actual identity columns and joins from the live schema before editing.
 
 **Stop condition:** if the correct identity model is unclear, produce a decision packet instead of guessing.
+
+**Status (2026-09-07): done, pending merge.** All three fixed — none needed
+a decision packet, the correct identity model was confirmed live via
+`pg_constraint`/`pg_get_functiondef` in every case:
+- **#20** (`useProcessAuditLog`): two-step fetch against `public.users` by
+  `user_uuid` (kept in sync with `auth.users.id` by the
+  `link_auth_user_to_profile` trigger), matching `useStageAuditLog.tsx`'s
+  existing pattern for the same actor-resolution problem.
+- **#21** (`EditTimeDialog.tsx`/`AddTimeDialog.tsx`): fixed the wrong
+  `tenant_users.user_uuid` → `user_id` column, plus a second bug found
+  alongside it — `EditTimeDialog.tsx`'s "Person" select was wired to the
+  wrong state (`vivacityStaff` instead of the already-merged `teamMembers`),
+  so even a correct query would never have surfaced tenant contacts there.
+- **`AddTimeDialog` note-insert** (unnumbered, L10's "also found" list):
+  `notes.client_id`/`package_instance_id` aren't real columns; replaced
+  with the real `parent_type`/`parent_id`/`package_id` shape, matching the
+  existing convention in `useNotes.tsx`'s `createNote` and
+  `ClientStructuredNotesTab.tsx` — an existing established mapping, not a
+  guess.
+
+Live-verified on Demo RTO (tenant 7547): #20 against a real process with 10
+audit entries; #21's Person/Notify dropdowns now list all 7 real tenant
+contacts; the note-insert fix end-to-end (real time entry + linked note
+created, verified via SQL, then deleted). Zero console errors throughout.
+Full detail: `l10-real-bugs-found-2026-09-04.md` items #15/#20/#21 and the
+execution-efficiency log's P4-C entry.
+
+**Parked, not part of this packet:** live-verifying these dropdowns
+surfaced that `public.users` person-pickers list system/bulk-operation/
+test accounts unfiltered alongside real people (e.g. "Bulk Generate",
+"Test", "Ghost", "K_Account" all appeared next to real staff/tenant
+contacts in the Notify dropdown). Logged as RBAC v6 plan §13 item 14 — a
+council-scoped decision, explicitly deferred by Carl, not actioned here.
 
 ### Packet P4-D — schema/product decision queue
 

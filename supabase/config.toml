@@ -119,7 +119,7 @@ verify_jwt = false
 [functions.process-notification-outbox]
 verify_jwt = false
 
-# Vendored from production 2026-08-15. Cron/worker; JWT disabled to match live.
+# Retired 2026-09-07 (M3-B). Kept as a 410 stub so stale invocations fail visibly.
 [functions.process-notification-queue]
 verify_jwt = false
 
