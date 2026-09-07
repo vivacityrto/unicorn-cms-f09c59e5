@@ -111,7 +111,10 @@ the migration is recorded in Supabase migration history. Historical
 The M3 dependency review found zero rows in both legacy tables. The three
 legacy audit routines are service-role-only, unscheduled after M2, and have no
 repository callers, so they are candidates for a separately authorized
-function-drop migration. `notification_audit_log` must remain because the
+function-drop migration. **M3-A is now complete:** the three routines were
+dropped in production under migration `retire_legacy_audit_functions`
+(`20260907052028`), with postflight confirming they are absent.
+`notification_audit_log` must remain because the
 active `process-notification-outbox` worker writes delivery success/failure
 records to it. `notification_schedule` is not yet removable: the deployed but
 unscheduled `process-notification-queue` worker reads it and
