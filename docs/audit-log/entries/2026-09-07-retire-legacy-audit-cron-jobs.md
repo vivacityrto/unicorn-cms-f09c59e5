@@ -1,8 +1,11 @@
 # Retire legacy audit cron jobs
 
-**Date:** 2026-09-07  
-**Packet:** M2  
-**Scope:** repository migration authoring and read-only production preflight  
+**Date:** 2026-09-07
+
+**Packet:** M2
+
+**Scope:** repository migration authoring and read-only production preflight
+
 **Hosted state changed:** no
 
 ## Decision
