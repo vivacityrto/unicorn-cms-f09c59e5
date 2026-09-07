@@ -525,6 +525,19 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   unreachable model. All of its Supabase calls are on shared
   views/tables also used by the live triage dashboard — no backend object
   retired.
+- **P6-B `useStageReleases.tsx` retired, backend objects confirmed
+  partially live.** Zero repo-wide imports (fresh check in this batch's
+  own worktree, not carried over from an earlier one — see the §7bis
+  stale-worktree lesson above). Its "calls server objects" caution was
+  checked, not skipped: `create_stage_release`, `release_to_tenant`, and
+  `generate-release-documents` have no other frontend caller and their
+  liveness is unconfirmed either way, but `send-stage-email` **is** still
+  called elsewhere (`src/hooks/useEmailTemplates.tsx`, direct `fetch` to
+  the Edge Function URL) — confirming the caution's exact concern, not a
+  hypothetical one. Retired the frontend hook only; the
+  `stage_releases`/`stage_release_items` tables, the two RPCs, and both
+  Edge Functions are all deliberately left untouched pending their own
+  backend-impact review.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
   consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
@@ -534,9 +547,9 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   functions' own retirement decisions; the unverified `StageCellEditor`
   dead-export finding; the remaining "data/workflow
   hooks" in the
-  zero-inbound queue: `useStageReleases`/
-  `useMeetingSeries`/`useMeetingMinutes`/`useKpiReview`/
-  `useAISuggestions`/`useEosDrafts`/`useDocumentScan`/`useEngagementAudit`
+  zero-inbound queue: `useMeetingSeries`/`useMeetingMinutes`/
+  `useKpiReview`/`useAISuggestions`/`useEosDrafts`/`useDocumentScan`/
+  `useEngagementAudit`
   — each has its own caution note requiring a
   server-object/sibling-comparison/policy-preservation check before
   touching, `useClientAICompanion`, `StandardsPicker.tsx`), P7 — several
