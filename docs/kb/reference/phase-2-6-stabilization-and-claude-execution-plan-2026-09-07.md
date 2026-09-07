@@ -53,12 +53,16 @@
   merged. `ClientLayout.tsx` and `useKpiSummary.tsx` fixed; typecheck is 0
   errors; `.github/workflows/typecheck.yml` added as a real, non-exempted
   CI gate.
-- **P1-C (isolation-suite hardening): in progress by Codex.**
-  [#962](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/962),
-  open — placeholders removed, live RLS suite typed against generated
-  schema. Still correctly credential-gated pending Carl's disposable-QA-
-  project decision, which remains outstanding; do not wire in a service-role
-  secret until that decision lands.
+- **P1-C (isolation-suite hardening): steps 1–5 done by Codex, merged.**
+  [#962](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/962) —
+  placeholders removed, live RLS suite typed against generated schema.
+  [#963](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/963) —
+  unique per-run `RUN_ID`, fail-closed reverse-dependency cleanup. Steps 6
+  (concurrent-run serialization) and 7 (disposable QA project + protected
+  workflow) remain outstanding — the suite is still correctly credential-
+  gated (`describe.skipIf(!RLS_SUITE_ENABLED)`) pending Carl's
+  disposable-QA-project decision; do not wire in a service-role secret
+  until that decision lands.
 - **P4-A** (small frontend correctness): [#959](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/959),
   merged. Fixed L10 #22/#24 (`ClientRouteGuard` render-time `navigate()`)
   and #11 (`useKpiAccess` missing the `unicorn_role` SuperAdmin check —
@@ -66,7 +70,9 @@
   whose profile has `global_role: null, unicorn_role: "Super Admin"`).
   Confirmed #23 (`BulkMessageDialog` DialogTitle) was already fixed by an
   earlier, unrelated PR; annotated rather than re-implemented.
-- **P6-A retargeted into a full-page retirement.** Started as the
+- **P6-A retargeted into a full-page retirement, merged.**
+  [#964](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/964).
+  Started as the
   `AddClientTaskDialog`/`AddStaffTaskDialog` consolidation per the
   task-dialog characterization packet. Live verification of the id-type fix
   surfaced that `PackageDetail.tsx` (the dialogs' only consumer) is itself
@@ -83,15 +89,16 @@
   permission classifier. Logged as a standing rule: future write-testing on
   this plan uses Demo RTO, a seeded tenant, or an inactive tenant — never
   whatever real tenant happens to have convenient data.
-- **Not yet started:** P2 (depends on P1-C), P3-A, P4-B/C/D, P5, P6-B, P7 —
-  several of these require live-schema investigation, product/security
-  decisions, or their own separately authorized packets per §1's rules.
+- **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
+  infra decision), P3-A, P4-B/C/D, P5-A, P6-B, P7 — several of these
+  require live-schema investigation, product/security decisions, or their
+  own separately authorized packets per §1's rules.
 
-Lint after the merged P0/P1/P4-A PRs: 166 errors (all `no-explicit-any`),
-44 warnings, route count 243/0 duplicates. On the P6-A retirement branch
-(not yet merged): 128 errors, 43 warnings, 240 routes/0 duplicates — the
-drop reflects the retired page's own `any` findings and its 3 removed
-routes, not a regression.
+Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
+steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0
+duplicates, typecheck 0 errors. The P6-A retirement's own drop from 166→128
+errors and 243→240 routes reflects the retired page's own `any` findings
+and its 3 removed routes, not a regression.
 
 ## 1. Outcome and operating principles
 
