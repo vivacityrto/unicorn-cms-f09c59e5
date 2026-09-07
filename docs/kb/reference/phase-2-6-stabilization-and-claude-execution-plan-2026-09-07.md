@@ -91,6 +91,17 @@ has not started; no migration, Edge deletion, or hosted data change was
 authorized. Evidence is recorded in
 [`notification-schedule-m3c-preflight.md`](../../audit-log/entries/2026-09-07-notification-schedule-m3c-preflight.md).
 
+**2026-09-07, session 11 — M3-B deployment verified; M3-C quiet period
+started:** after native Git sync lagged, the explicitly authorized manual
+deployment published `process-notification-queue` v171 (410
+`FUNCTION_RETIRED`) and `send-automated-email` v171 to production. Deployed
+source checks confirmed the queue has no `notification_schedule` or
+service-role reference and the email function has no remaining legacy-table
+writer. A read-only endpoint probe returned HTTP 410 with the retirement code;
+no database or data change occurred. The M3-C quiet-period clock starts from
+this verified deployment, and the table drop remains separately authorized
+work.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then

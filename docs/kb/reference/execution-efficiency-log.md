@@ -1,5 +1,14 @@
 # Execution efficiency log
 
+### 2026-09-07 — M3-B deployment verification completed; M3-C quiet period started
+After native Git sync lagged, the explicitly authorized manual deployment
+published `process-notification-queue` v171 (410 retirement stub) and
+`send-automated-email` v171. Read-only source checks confirmed the retired
+queue has no legacy table reference and the email function has no remaining
+`notification_schedule` writer. The production endpoint returned HTTP 410
+`FUNCTION_RETIRED`; no database or data change occurred. M3-C monitoring now
+uses this deployment as its quiet-period baseline.
+
 ### 2026-09-07 — M3-B post-merge verification parked
 PR #973 merged as `acf0069e7b7a0704485805dbc9ffd8cc52c7a441`. The read-only
 Supabase check still observed the pre-M3-B `process-notification-queue` and
