@@ -1,5 +1,16 @@
 # Execution efficiency log
 
+### 2026-09-07 — Cron/migration stabilization M3-B (implementation pending merge)
+One isolated Edge worktree handled the dormant notification retirement. Three
+`notification_schedule` writes were removed from `send-automated-email`, and
+`process-notification-queue` was reduced to a credential-free 410 stub while
+the active outbox worker remained untouched. Targeted cron-auth and retirement
+regression tests passed (13/13). Lint ratchet, typecheck, frontend tests,
+Edge tests, build, and KB-link checks all passed. Playwright was not run
+because this packet changes no UI route and port 8080 was owned by another
+active Claude worktree. The post-merge Supabase function health check remains
+pending; no hosted state changed in this session.
+
 ### 2026-09-06 Phase 2.5 send-email Edge cohort (PR #888 merged)
 One authenticated Edge file (10 findings) was handled in a fresh isolated worktree with the shared Playwright-capable node_modules junction. Static gates ran concurrently under the mutex; lint ratchet reduced 10→0, frontend (298 passed/15 skipped), Edge (260), build passed, and typecheck retained only the five documented baseline errors. Unauthenticated Playwright passed 12/12 desktop/mobile login, reset, activation, protected-route, and 404 flows with no writes; auth-hook/direct outbound paths were deliberately not invoked. Baseline after merge: 539 total errors (532 explicit-any), 39 warnings across 130 files. Worktree, junction, temporary harness, server, and reports were removed.
 
