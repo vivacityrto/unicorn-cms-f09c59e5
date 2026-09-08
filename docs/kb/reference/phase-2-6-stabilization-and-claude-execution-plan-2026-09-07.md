@@ -800,8 +800,8 @@ work.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), the rest of P3-A item 1 (the wider consumer graph
   above — `rpc_portfolio_client_health()`, Ask Viv fact builder,
-  compliance-assistant, executive views), the remaining four P4-D items
-  (#10, #14, #15, #18 — #3/#4/#16 done 2026-09-08), `InviteUserDialog.tsx`'s
+  compliance-assistant, executive views), the remaining three P4-D items
+  (#10, #15, #18 — #3/#4/#14/#16 done 2026-09-08), `InviteUserDialog.tsx`'s
   bounded cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard
   display core — blocked on missing Playwright coverage), P7 — several of
   these require live-schema investigation, product/security decisions, or
@@ -1146,7 +1146,7 @@ Keep these as separately approved migration packets:
 - ~~Import Stage identity allocation (#3)~~ — **done 2026-09-08**, Carl authorized;
 - ~~Archive Package status contract (#4)~~ — **done 2026-09-08**, Carl authorized;
 - calendar event identity and invitations (#10);
-- stage archive audit identity (#14);
+- ~~stage archive audit identity (#14)~~ — **done 2026-09-08**, Carl authorized;
 - legacy tenant mapping (#15);
 - ~~Academy RPC return type (#16)~~ — **done 2026-09-08**, Carl authorized; and
 - tenant-less notification preferences (#18).
@@ -1177,9 +1177,25 @@ running it directly against a real enrolment — real lesson rows
 returned correctly. No frontend change needed. Audit entry:
 `docs/audit-log/entries/2026-09-08-fix-academy-lesson-detail-video-id-type.md`.
 
-The remaining four P4-D items (#10, #14, #15, #18) each still need
+**#14 done 2026-09-08 — also turned out to need no design decision.**
+The L10 register's framing (needs "a new integer/text audit-events variant
+column, a lookup table, or accepting that stage-entity audit events use a
+different logging path") was wrong on investigation: the correct pattern
+(`entity_id: crypto.randomUUID()`, real numeric id kept in
+`details.stage_id`) already existed and worked elsewhere in the same
+codebase (`AdminStageDetail.tsx`'s other audit calls,
+`useStageTemplateContent.tsx`'s own `logStageTemplateAudit()` helper) —
+it just wasn't applied consistently. Scope was also undersold: the same
+bug existed in ~15 call sites across 10 files, not the single
+archive/restore call site originally documented. Applied the existing
+correct pattern to every remaining broken site (frontend-only, no
+migration) and fixed `useStageAnalytics.tsx`'s matching read-side
+assumption. Audit entry:
+`docs/audit-log/entries/2026-09-08-fix-stage-audit-entity-id-mismatch.md`.
+
+The remaining three P4-D items (#10, #15, #18) each still need
 their own design decision before a fix — not the same "just run it"
-shape as #3/#4/#16.
+shape as #3/#4/#14/#16.
 
 ## 8. Residual lint and Phase 2.6 packets
 
