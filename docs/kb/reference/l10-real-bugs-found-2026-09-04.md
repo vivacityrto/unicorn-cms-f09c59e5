@@ -366,7 +366,7 @@ the schema and the sibling file that writes this data.
 
 ## Academy admin — Enrolment Progress drawer (`EnrolmentProgressDrawer.tsx`)
 
-### 16. Enrolment Progress drawer's Lessons section has never shown real lesson data — DOCUMENTED, NOT FIXED (backend function bug)
+### 16. Enrolment Progress drawer's Lessons section has never shown real lesson data — FIXED (Phase 2.6 Packet P4-D, 2026-09-08)
 The drawer's Lessons section always renders "No lessons published in this
 course" regardless of the course's actual content or the enrolment's real
 progress (confirmed on a real enrolment showing "3/5 lessons complete" in
@@ -385,6 +385,17 @@ Found during batch 42's live verification. Not fixed here — this needs
 someone with write access to fix the function definition (correct column
 9's type to match what's actually selected) via a proper migration, not a
 frontend change.
+
+**Fixed 2026-09-08.** Confirmed via `information_schema` that `video_id`
+was the only mismatched column (the other 15 already matched their
+source columns exactly). Dropped and recreated the function with
+`video_id` corrected from `text` to `uuid`, re-granting the same three
+roles' `EXECUTE` privilege. Verified live: extracted the function's own
+`RETURN QUERY` SELECT and ran it directly against a real enrolment
+(`academy_enrollments.id = 1`) — returned real lesson rows with correctly
+typed `video_id` UUIDs, no error. No frontend change needed — `useLessonDetail`
+already consumed the RPC generically. See
+`docs/audit-log/entries/2026-09-08-fix-academy-lesson-detail-video-id-type.md`.
 
 ## Tenant Documents — package-name lookup has no real FK (`TenantDocuments.tsx`)
 

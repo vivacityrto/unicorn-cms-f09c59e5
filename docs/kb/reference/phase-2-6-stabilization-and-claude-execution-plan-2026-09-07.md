@@ -774,8 +774,8 @@ work.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), the rest of P3-A item 1 (the wider consumer graph
   above — `rpc_portfolio_client_health()`, Ask Viv fact builder,
-  compliance-assistant, executive views), the remaining five P4-D items
-  (#10, #14, #15, #16, #18 — #3/#4 done 2026-09-08), `InviteUserDialog.tsx`'s
+  compliance-assistant, executive views), the remaining four P4-D items
+  (#10, #14, #15, #18 — #3/#4/#16 done 2026-09-08), `InviteUserDialog.tsx`'s
   bounded cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard
   display core — blocked on missing Playwright coverage), P7 — several of
   these require live-schema investigation, product/security decisions, or
@@ -1121,7 +1121,7 @@ Keep these as separately approved migration packets:
 - calendar event identity and invitations (#10);
 - stage archive audit identity (#14);
 - legacy tenant mapping (#15);
-- Academy RPC return type (#16); and
+- ~~Academy RPC return type (#16)~~ — **done 2026-09-08**, Carl authorized; and
 - tenant-less notification preferences (#18).
 
 Each packet requires dependency/grant/RLS review, generated types, migration rollback, post-apply checks, and explicit production authorization.
@@ -1136,9 +1136,23 @@ string). A second, previously-undocumented occurrence of #3's bug was
 found and fixed in the same migration: `useStageDuplication.tsx`'s
 "Duplicate Stage" flow had the identical missing-default failure.
 Audit entry: `docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
-The remaining five P4-D items (#10, #14, #15, #16, #18) each still need
+
+**#16 done 2026-09-08, also no design ambiguity — a single mechanical
+type mismatch.** `fn_academy_enrollment_lesson_detail`'s `RETURNS TABLE`
+declared `video_id` as `text`, but `academy_lessons.video_id` is
+genuinely `uuid` — every call had always errored (`42804`), so the
+Enrolment Progress drawer's Lessons section always showed empty.
+Confirmed via `information_schema` that `video_id` was the only
+mismatched column of 16. Dropped and recreated the function with the
+corrected type, re-granting the same three roles' `EXECUTE` privilege.
+Verified live by extracting the function's own `RETURN QUERY` SELECT and
+running it directly against a real enrolment — real lesson rows
+returned correctly. No frontend change needed. Audit entry:
+`docs/audit-log/entries/2026-09-08-fix-academy-lesson-detail-video-id-type.md`.
+
+The remaining four P4-D items (#10, #14, #15, #18) each still need
 their own design decision before a fix — not the same "just run it"
-shape as #3/#4.
+shape as #3/#4/#16.
 
 ## 8. Residual lint and Phase 2.6 packets
 

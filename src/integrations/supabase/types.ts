@@ -47113,7 +47113,7 @@ export type Database = {
           description?: string | null
           effective_date?: string | null
           frameworks?: string[] | null
-          id: number
+          id?: number
           is_archived?: boolean
           is_audit_workspace?: boolean
           is_certified?: boolean
