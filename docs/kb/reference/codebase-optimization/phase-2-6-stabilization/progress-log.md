@@ -4,9 +4,9 @@
 
 ## Progress log
 
-**2026-09-09, session 37 — `qa:residue`'s first target written:
-independent fixture-leftover sweep (`feat/qa-residue`; live-proof
-pending):** Continuing the same-session P2-QA sweep. Read
+**2026-09-09, session 37 — `qa:residue`'s first target written and
+live-proven: independent fixture-leftover sweep (`feat/qa-residue`,
+PR #1045; live-proof workflow run `34292052765`, 5/5 passing):** Continuing the same-session P2-QA sweep. Read
 `qa-environment-and-coverage-strategy.md`'s existing note that `qa:residue`
 was "partially covered by `qa:rls`'s own residue assertions" — verified by
 reading `isolation.test.tsx` directly: it has fail-closed cleanup
@@ -36,9 +36,13 @@ rows being clean.
 `.github/workflows/qa-residue.yml` follows the established shape (its own
 `unicorn-qa-p2-residue` concurrency group).
 
-Verified locally: lint, typecheck, `test:frontend`, build, KB links (see
-verification chain below). **Not yet live-proven** — same honest gap as
-every other suite before its first live run.
+Verified locally: lint, typecheck, `test:frontend` (330/43 skipped, up from
+330/38), build, KB links (0 broken, 792 links). PR #1045 merged; dispatched
+`qa-residue.yml` against `main` post-merge (workflow run
+[`34292052765`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34292052765)),
+all 5 tests passed against the live `unicorn-qa` project in 4.15s — the
+first automated confirmation (rather than a one-time manual check) that
+`unicorn-qa` is genuinely clean of every fixture suite's leftover data.
 
 **2026-09-09, session 36 — `qa:cron-safety`'s first target written and
 live-proven: `unicorn-qa` remains schedule-free (`feat/qa-cron-safety`,
