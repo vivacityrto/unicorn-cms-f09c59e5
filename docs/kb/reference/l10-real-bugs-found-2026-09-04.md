@@ -479,7 +479,7 @@ already-fixed two-step fetch) loads correctly. No separate fix to
 
 ## Notification preferences (`useNotificationPrefs.ts`)
 
-### 18. Saving notification preferences has never worked for tenant-scoped users — PARTIALLY FIXED (deeper bug found, needs a schema decision)
+### 18. Saving notification preferences has never worked for tenant-scoped users — FIXED
 `updateMutation` called `update_user_notification_prefs` with five separate
 `p_`-prefixed arguments (`p_email_enabled`, `p_inapp_enabled`,
 `p_digest_enabled`, `p_quiet_hours`, `p_event_settings`) — but the real
@@ -525,6 +525,28 @@ constraint needs a product/schema decision (allow NULL + adjust the
 tenant-less path, or exclude the notification-prefs UI for tenant-less
 accounts) before all 626 users can use this feature. Tracked as a backlog
 item, not silently patched as a side effect of a type-retirement batch.
+
+**Fixed 2026-09-08.** Investigated the 72 tenant-less rows further before
+choosing an option: confirmed live they're not a homogeneous "staff"
+population — ~61 are genuine internal Vivacity staff, 4 are real external
+client-domain users who appear genuinely orphaned from any tenant (not
+merely mislinked), and 6 are test/dev noise. Carl deferred the
+tenant-*assignment* question (who among the 72 should actually be tied to
+a real tenant, e.g. the internal "Vivacity Coaching & Consulting" tenant)
+to the architectural redesign/RBAC v6 plan rather than deciding it here —
+parked in `docs/kb/reference/tenant-operating-model-data-architecture-plan-2026-09-02.md`
+§18 item 14 and `docs/kb/reference/rbac-v6-authorization-implementation-plan-2026-09-01.md`
+§13 item 15 — and then authorized the originally-scoped fix: allow
+`NULL tenant_id` (option 1 of the three), independent of who eventually
+gets assigned to a real tenant. Made `tenant_id` nullable, added a partial
+unique index so a second NULL-tenant save updates rather than duplicates,
+and fixed both RPCs' `tenant_id = v_tenant_id` comparisons (never `TRUE`
+for `NULL`) to `IS NOT DISTINCT FROM`, plus branched the upsert's
+`ON CONFLICT` target on whether the user has a tenant. Verified live by
+impersonating a real tenant-less account's JWT in a rolled-back
+transaction — read and two sequential writes all behaved correctly, no
+duplicate row. No frontend change needed. Full detail:
+`docs/audit-log/entries/2026-09-08-allow-tenant-less-notification-prefs.md`.
 
 ## Also found this session, outside Package Builder (for completeness)
 

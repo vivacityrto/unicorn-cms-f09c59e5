@@ -288,7 +288,15 @@ function isAllowlisted(finding, entries) {
   if (!RISK_CATEGORIES.has(finding.category)) return false;
   return entries.some((entry) => {
     const fileMatches = entry.file === finding.file || entry.file === "*";
-    const targetMatches = entry.targetProject === finding.targetProject;
+    // Only production-url/cron-registration/cron-unschedule/http-call findings
+    // ever carry a targetProject (a plain INSERT/UPDATE/DELETE/TRUNCATE match
+    // never sets one - see addMatch calls above) - require it to match when
+    // present, but don't demand an impossible match against undefined for a
+    // category that was never about a cross-project target in the first
+    // place. This does not weaken the URL/cron/http-call categories: those
+    // always have a real targetProject, so entry.targetProject must still
+    // equal it exactly.
+    const targetMatches = finding.targetProject === undefined || entry.targetProject === finding.targetProject;
     return fileMatches && targetMatches && categoriesFor(entry).has(finding.category);
   });
 }
