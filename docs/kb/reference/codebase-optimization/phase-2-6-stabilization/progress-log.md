@@ -4,6 +4,25 @@
 
 ## Progress log
 
+**2026-09-09, session 29 — PostgREST error-message regression audit and fix
+(`codex/fix-recurrence-errors-kb-size`):** reviewed the recent Edge Function
+typing edits for the same `catch (unknown)` narrowing failure found in
+`generate-meeting-recurrence`. Three additional confirmed cases were found:
+`add-missing-packages`, `send-action-item-due-reminders`, and
+`sync-clickup-time` can throw plain Supabase result errors, so an
+`instanceof Error`-only fallback would discard their `.message`. Added the
+shared `_shared/error-message.ts` structural guard and focused Node coverage
+for native `Error`, message-bearing PostgREST objects, and safe fallbacks;
+updated all four affected functions and the existing add-packages static test.
+The audit found no equivalent regression in the other reviewed recent Edge
+edits: they either wrap query errors in `new Error`, read `.message`
+structurally, or do not expose a caught error message. No schema, RLS,
+migration, deployment, or production-data change was made.
+
+Architecture metrics were rerun: the shared helper and focused test add two
+tracked Edge files and 45 physical lines (1,698→1,700 files;
+478,546→478,591 lines); no frontend or schema footprint changed.
+
 **2026-09-08, session 28 — last deliberate lint exception retired,
 `generate-meeting-recurrence` typing (`hotfix/generate-meeting-recurrence-typing`):**
 Packet P3-A item 3 deferred this file's `catch (error: any)` cleanup until

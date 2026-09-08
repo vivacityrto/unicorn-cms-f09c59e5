@@ -1,6 +1,7 @@
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { extractToken, verifyAuth, checkVivacityTeam } from "../_shared/auth-helpers.ts";
+import { getErrorMessage } from "../_shared/error-message.ts";
 
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 const RATE_LIMIT_MS = 650;
@@ -204,7 +205,7 @@ Deno.serve(async (req) => {
   } catch (err: unknown) {
     console.error("sync-clickup-time error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+      JSON.stringify({ error: getErrorMessage(err, String(err)) }),
       { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   }

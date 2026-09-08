@@ -124,48 +124,18 @@ The 173 lint errors (as authored) were distributed as follows:
 
 The seven non-`any` errors are expression-only ternaries in `NewEnrolmentModal.tsx`, `ImportVideosPanel.tsx`, `AuditPreparationSection.tsx`, `ClientTimelineTab.tsx`, and `BulkMessageHistory.tsx` (with two findings in the first file). Convert them to explicit `if/else` statements without changing behavior.
 
-> **Reconciled 2026-09-08 — every row above is now stale, in a good way.**
-> Fresh `npm run lint` + `npm run lint:baseline` at `origin/main@e5930f908`:
-> **2 errors, 44 warnings** (46 problems total; `lint-baseline.json` tracks
-> 42 rule-attributed findings — 2 errors, 40 warnings — the other 4
-> warnings are ruleId-less "unused eslint-disable directive" notices the
-> baseline script doesn't attribute to a rule). Reconciling against the
-> table above, by what closed each gap:
-> - **`ask-viv-assistant` (76) and `tga-rto-sync` (43):** fixed, P5-A
->   batches 2-3 (PRs #968, #970).
-> - **`isolation.test.tsx` (38):** fixed, P1-C steps 1-5 by Codex (PRs
->   #962-#963) — typed the live RLS suite against generated schema.
-> - **7 single-finding Edge Functions:** fixed, P5-A batch 1 (PR #967).
-> - **`AddWorkboardItemDialog.tsx`:** retired outright as dead code (P6-B,
->   this session), not fixed — zero repo-wide imports.
-> - **`InviteUserDialog.tsx`:** fixed, P5-A item 3
->   (`hotfix/p5a-invite-user-unicorn1-adapter`) — replaced with a bounded
->   `Unicorn1SchemaClient` adapter. Live verification of the adapter's one
->   write call surfaced a separate, pre-existing production bug (fails at
->   the PostgREST layer regardless of typing); documented, not fixed, in
->   `l10-real-bugs-found.md` item 33.
-> - **The 7 non-`any` errors (`no-unused-expressions`):** fixed, P1-A (PR
->   #957).
-> - **TypeScript errors (5 → 0):** fixed, P1-B (PR #958).
-> - **The 1 error remaining today** is `@typescript-eslint/no-explicit-any`
->   in `supabase/functions/generate-meeting-recurrence/index.ts` (its auth
->   gate shipped in PR #979; typing cleanup was explicitly deferred per
->   this packet's own P3-A item 3 rule — auth before typing).
-> - **Warnings (39 → 44, a net increase):** `react-refresh/only-export-components`
->   went 39 → 40 (net +1 across churn, not investigated further — a
->   Fast-Refresh style concern, not correctness); 4 new "unused
->   eslint-disable directive" notices appeared (`useDebouncedAutosave.ts`,
->   `workforce.ts`, `usePageViewTracking.ts`, `friendlyDbError.ts`) — stale
->   disable comments left over from fixes elsewhere, not yet cleaned up.
->
-> **Net effect: the `no-explicit-any` elimination effort (§2's original
-> exit target) is functionally done** — 2 residuals remain, both already
-> individually documented and one already exception-approved. `ESLint
-> errors: 0` is not literally met (2 remain) but both are known,
-> deliberate, and tracked, not backlog. Frontend tests, routes, and KB
-> links in the table above were not re-verified as part of this
-> reconciliation pass (it was scoped to the ESLint/TypeScript rows only,
-> per what was asked) — re-check those separately before trusting them.
+> **Reconciled 2026-09-09 — the original baseline is now historical.** Fresh
+> lint after PRs #957, #958, #967, #968, #970, #979 and #1033 leaves zero
+> errors and 44 tracked warnings; TypeScript is clean. The reviewed
+> `InviteUserDialog.tsx` cross-schema adapter remains a bounded architectural
+> exception. The isolation suite was typed and hardened in
+> P1-C, the seven single-finding Edge Functions plus `tga-rto-sync` and
+> `ask-viv-assistant` were completed in P5-A, and `AddWorkboardItemDialog.tsx`
+> was retired after exact-export reachability proved it dead. The recurrence
+> typing now also preserves message-bearing PostgREST errors; the focused
+> regression coverage is recorded in the stabilization progress log. The
+> separate pre-existing PostgREST write bug remains documented in
+> `l10-real-bugs-found.md` item 33.
 
 ## 3. Execution order and dependency graph
 
@@ -376,7 +346,7 @@ Perform reachability triage before touching any candidate. Recommended order:
 5. type `tga-rto-sync` in contract-sized batches; and
 6. type `ask-viv-assistant` in authorization/tool-contract batches.
 
-Do not use `unknown` casts merely to lower the count. Every Edge batch needs request/response, auth-negative, CORS and external-contract tests. `generate-meeting-recurrence` remains coupled to its security packet.
+Do not use `unknown` casts merely to lower the count. Every Edge batch needs request/response, auth-negative, CORS and external-contract tests. `generate-meeting-recurrence`'s auth and typing work shipped in PRs #979 and #1033; its PostgREST error-message regression is covered in the stabilization progress log.
 
 Track the 39 Fast Refresh warnings separately; resolve them through module-boundary extraction rather than mixing them into query or auth changes.
 
@@ -386,8 +356,8 @@ a bounded `Unicorn1SchemaClient` adapter type isolating exactly the one
 legacy write call. Live verification of that call surfaced a separate,
 pre-existing production bug (the call fails at the PostgREST layer
 regardless of typing — see `l10-real-bugs-found.md` item 33); not fixed as
-part of this typing packet, documented instead. One deliberate exception now
-remains: the deferred `generate-meeting-recurrence` typing boundary.
+part of this typing packet, documented instead. The packet is complete; the
+remaining architectural exception is the reviewed Unicorn1 cross-schema adapter.
 
 ### Packet P6-A — AddClientTaskDialog/AddStaffTaskDialog consolidation
 

@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-09-09 — Preserve PostgREST messages in typed Edge Function catches (Phase 2.6 P5-A follow-up) — audited recent `catch (unknown)` typing edits, fixed four affected functions with a shared structural message guard and focused tests, and confirmed no hosted state changed.](entries/2026-09-09-edge-postgrest-error-message-preservation.md) · author: Codex
+
 - [2026-09-08 — Retire the remaining M4 forecast and health cron jobs](entries/2026-09-08-retire-m4-forecast-health-crons.md) — Carl selected retirement for jobs 20/21 after confirming both produced zero forecast rows; the migration unschedules only those exact jobs and retains all functions, tables, and rows for the Client Health replacement.
 
 - [2026-09-08 — KB restructuring: canonical program index + phase-folder hierarchy — established a folder-based hierarchy across the four tracked initiatives (Codebase Optimization, RBAC v6, Tenant Operating Model, Client Health Activity Analytics): master plan docs stay flat, phase/execution-branch docs move under `docs/kb/reference/codebase-optimization/<phase-slug>/`, a new thin `program-index.md` glues status/dependencies/gates together, embedded progress narrative was extracted verbatim into sibling `progress-log.md` files, and two new CI gates (`check-kb-doc-size.mjs`, `check-packet-status-audit-gate.mjs`) enforce doc-size limits and packet-status-to-audit-entry correlation going forward. `docs/audit-log/` itself untouched. No application code, schema, or migration changed.](entries/2026-09-08-kb-program-index-and-phase-folders.md) · author: Claude Code

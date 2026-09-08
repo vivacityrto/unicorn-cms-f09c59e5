@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
+import { getErrorMessage } from "../_shared/error-message.ts";
 
 interface RecurrenceRequest {
   meeting_id: string;
@@ -231,7 +232,7 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in generate-meeting-recurrence:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     return new Response(
       JSON.stringify({ error: message }),
       {

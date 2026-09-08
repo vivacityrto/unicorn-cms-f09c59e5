@@ -18,6 +18,7 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
+import { getErrorMessage } from "../_shared/error-message.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { appUrl } from "../_shared/app-base-url.ts";
 import { cronUnauthorizedResponse, isCronAuthorized } from "../_shared/cron-auth.ts";
@@ -234,7 +235,7 @@ serve(async (req) => {
             });
             sent++;
           } catch (sendErr: unknown) {
-            const message = sendErr instanceof Error ? sendErr.message : String(sendErr);
+            const message = getErrorMessage(sendErr, String(sendErr));
             errors.push(`${recipientUser.email} (item ${item.id}, offset ${offsetDays}): ${message}`);
           }
         }
@@ -247,7 +248,7 @@ serve(async (req) => {
     );
   } catch (e: unknown) {
     console.error("send-action-item-due-reminders error:", e);
-    const message = e instanceof Error ? e.message : String(e);
+    const message = getErrorMessage(e, String(e));
     return new Response(JSON.stringify({ success: false, error: message }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders(req) },
