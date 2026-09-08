@@ -254,7 +254,7 @@ direct SQL that no row with that name remains.
 
 ## Tenant Documents — Excel auto-generation legacy lookup (`TenantDocuments.tsx`)
 
-### 15. Excel document generation's legacy-client lookup has always been undefined — DOCUMENTED, NOT FIXED
+### 15. Excel document generation's legacy-client lookup has always been undefined — FIXED
 `TenantDocuments.tsx`'s `handleExcelGenerate` queries
 `supabase.from("tenants").select("client_legacy_id")` before calling
 `generateAndDownload({..., clientLegacyId: tenantData?.client_legacy_id})`.
@@ -286,6 +286,19 @@ product decision on the correct legacy-mapping source). The `any`-cast
 removal preserved the existing (broken) behavior via an explicit narrow
 cast, matching item 15's established pattern, rather than silently
 patching it.
+
+**Fixed 2026-09-08:** the "correct source column is unclear" framing above
+was resolved by checking the live schema rather than guessing.
+`tenants.unicorn1_id` was a red herring — a different id space entirely
+(the old Unicorn1 system's own row number, not a foreign key into this
+table). The real answer: `clients_legacy.tenant_id` is a `bigint` FK
+straight to `tenants.id`, fully populated and 1:1 across all 11
+`clients_legacy` rows. Replaced `GeneratedDocumentsTab.tsx`'s broken
+`tenants.select('client_legacy_id')` query with `clients_legacy.select
+('id').eq('tenant_id', tenantId).maybeSingle()`. `TenantDocuments.tsx`
+(this item's original file) no longer needed the fix — it was
+independently retired as dead code in an earlier PR (`479972a21`). Full
+detail: `docs/audit-log/entries/2026-09-08-fix-excel-generation-legacy-client-lookup.md`.
 
 **Update (Phase 2.6 Packet P4-B/P6-B, 2026-09-07):** `TenantDocuments.tsx`
 was retired as unreachable dead code (see item #17) — its copy of this bug

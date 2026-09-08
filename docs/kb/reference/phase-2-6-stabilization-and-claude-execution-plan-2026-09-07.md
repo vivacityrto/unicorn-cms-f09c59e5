@@ -814,8 +814,8 @@ work.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), the rest of P3-A item 1 (the wider consumer graph
   above — `rpc_portfolio_client_health()`, Ask Viv fact builder,
-  compliance-assistant, executive views), the remaining three P4-D items
-  (#10, #15, #18 — #3/#4/#14/#16 done 2026-09-08), `InviteUserDialog.tsx`'s
+  compliance-assistant, executive views), the remaining two P4-D items
+  (#10, #18 — #3/#4/#14/#15/#16 done 2026-09-08), `InviteUserDialog.tsx`'s
   bounded cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard
   display core — blocked on missing Playwright coverage), P7 — several of
   these require live-schema investigation, product/security decisions, or
@@ -1161,7 +1161,7 @@ Keep these as separately approved migration packets:
 - ~~Archive Package status contract (#4)~~ — **done 2026-09-08**, Carl authorized;
 - calendar event identity and invitations (#10);
 - ~~stage archive audit identity (#14)~~ — **done 2026-09-08**, Carl authorized;
-- legacy tenant mapping (#15);
+- ~~legacy tenant mapping (#15)~~ — **done 2026-09-08**, Carl authorized;
 - ~~Academy RPC return type (#16)~~ — **done 2026-09-08**, Carl authorized; and
 - tenant-less notification preferences (#18).
 
@@ -1207,9 +1207,37 @@ migration) and fixed `useStageAnalytics.tsx`'s matching read-side
 assumption. Audit entry:
 `docs/audit-log/entries/2026-09-08-fix-stage-audit-entity-id-mismatch.md`.
 
-The remaining three P4-D items (#10, #15, #18) each still need
-their own design decision before a fix — not the same "just run it"
-shape as #3/#4/#14/#16.
+**#15 done 2026-09-08 — also no design decision needed once the schema was
+checked directly.** The L10 register's "correct source column is unclear"
+framing pointed at `tenants.unicorn1_id`, a red herring — a different id
+space entirely (the old Unicorn1 system's own row number). The real
+answer was `clients_legacy.tenant_id`, a `bigint` FK straight to
+`tenants.id`, fully populated and 1:1 across all 11 `clients_legacy` rows.
+Fixed `GeneratedDocumentsTab.tsx`'s broken `tenants.select
+('client_legacy_id')` query (a column that has never existed on
+`tenants`) to query `clients_legacy` by `tenant_id` instead.
+`TenantDocuments.tsx` (this item's other documented occurrence) no longer
+needed the fix — independently retired as dead code in an earlier PR
+(`479972a21`). Audit entry:
+`docs/audit-log/entries/2026-09-08-fix-excel-generation-legacy-client-lookup.md`.
+
+**#10 investigated 2026-09-08, confirmed to need real feature work, not a
+bounded fix — correctly left in the queue.** Even fixing
+`calendar_events.calendar_id`/`provider_event_id`'s `NOT NULL` columns
+would not produce a working Outlook invite: `sync-outlook-calendar` has no
+`action: 'create'` handler at all — every code path in that function only
+syncs *from* Outlook inbound (pulls existing events into the DB); nothing
+posts a new event *to* Outlook via the Graph API. `useAuditSchedule.ts`'s
+`if (syncData?.outlook_event_id)` check can never be true — that field is
+never returned under any action. Building this for real needs a new
+outbound Graph API call (likely a `Calendars.ReadWrite` scope this
+integration may not currently request — the existing OAuth flow only
+mentions `Calendars.Read` in its refresh scope default), plus a decision on
+placeholder values for the local row between insert and successful Outlook
+creation. Genuinely out of scope for a P4-D "run it" packet.
+
+The remaining two P4-D items (#10, #18) each still need their own design
+decision (or, for #10, real feature scoping) before a fix.
 
 ## 8. Residual lint and Phase 2.6 packets
 
