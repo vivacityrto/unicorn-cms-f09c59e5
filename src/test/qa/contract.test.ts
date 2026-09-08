@@ -98,6 +98,17 @@ describe.skipIf(!SUITE_ENABLED).sequential("qa:contract — generated types vs. 
     await release?.();
   });
 
+  it("TEMP DIAGNOSTIC — dump raw OpenAPI shape for one RPC path (remove after review)", () => {
+    console.warn("[qa:contract diagnostic] top-level keys:", JSON.stringify(Object.keys(openApi)));
+    const samplePath = openApi.paths?.["/rpc/check_permission"];
+    console.warn("[qa:contract diagnostic] paths['/rpc/check_permission']:", JSON.stringify(samplePath));
+    const sampleDefinition = openApi.definitions?.["check_permission"];
+    console.warn("[qa:contract diagnostic] definitions['check_permission']:", JSON.stringify(sampleDefinition));
+    const definitionKeysSample = Object.keys(openApi.definitions ?? {}).slice(0, 10);
+    console.warn("[qa:contract diagnostic] first 10 definitions keys:", JSON.stringify(definitionKeysSample));
+    expect(true).toBe(true);
+  });
+
   it("returns a recognizable OpenAPI document with table definitions", () => {
     expect(openApi.definitions, "expected an OpenAPI 'definitions' object listing tables").toBeTruthy();
     expect(Object.keys(openApi.definitions ?? {}).length).toBeGreaterThan(0);
