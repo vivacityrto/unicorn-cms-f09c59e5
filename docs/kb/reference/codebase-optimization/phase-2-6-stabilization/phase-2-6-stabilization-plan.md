@@ -60,8 +60,9 @@ coming from rounded/cohort accounting. Treat the dead-code register and current
 architecture metrics as authoritative; do not use 9,209 as an exact present
 LOC total. Remaining work is: the P2 layered-QA scope; the one remaining
 deliberate lint exception (deferred `generate-meeting-recurrence` typing);
-the SeatCard display-core prerequisite; and the P7 Phase 3
-preparation/implementation sequence. The separate RBAC correctness hotfix
+and the P7 Phase 3 preparation/implementation sequence (gated on RBAC v6's
+vocabulary decision). The SeatCard display-core prerequisite is resolved —
+the cluster was dead code, retired outright rather than extracted. The separate RBAC correctness hotfix
 remains security-owned and is not a Phase 2.6 refactor. M4's forecast
 decision queue for jobs 20/21 is retired (jobs 14 and 15 were already
 retired/paused) — see progress-log.md sessions 21-22 and this repo's
@@ -409,9 +410,14 @@ Retain `usePackageUsage.tsx` and every live replacement identified in the Phase 
 
 **Exit:** every candidate is retired, consolidated, retained with rationale, or deferred; before/after LOC and graph metrics are recorded; no backend object is removed by frontend evidence alone.
 
-**Status:** completed cohorts done — SeatCard display-core extraction remains
-deferred until independent authenticated drag/drop Playwright coverage exists;
-see [progress-log.md](progress-log.md).
+**Status:** completed cohorts done. The SeatCard display-core extraction
+never needed the assumed drag/drop Playwright prerequisite — a fresh
+reachability trace found `SeatCard`/`FunctionColumn`/`DraggableSeatCard`/
+`DraggableFunctionColumn`/`SwimlaneDragDropProvider` (1,633 LOC) were dead
+code, superseded same-day by `EosFunctionCard.tsx` and never cleaned up.
+Retired outright (`hotfix/retire-dead-seatcard-cluster`); see
+[next-candidate-packets.md](next-candidate-packets.md) Candidate 4 and
+[progress-log.md](progress-log.md).
 
 ## 9. Phase 3 pilot packets
 
