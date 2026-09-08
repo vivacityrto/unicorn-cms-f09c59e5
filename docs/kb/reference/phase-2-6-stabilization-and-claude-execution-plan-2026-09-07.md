@@ -92,6 +92,21 @@ empty. A schema-only rollback script is committed for recovery if a future
 owner revives this contract; it does not recreate the retired audit functions
 or queue worker. M3-C is closed.
 
+**2026-09-08, session 21 — M4 production preflight:** the stage-health cron
+is already paused in production (job 15 is absent) under the earlier H0.0
+containment, while `run-workload-forecast-nightly` (job 14, `0 16 * * *`)
+remains active. Production currently has 357,471 stage-health rows with zero
+non-zero `progress_percentage` values, 2,539 workload snapshots through
+2026-09-07, and zero rows in `tenant_package_burn_forecast`,
+`tenant_risk_forecasts`, and `tenant_retention_forecasts`; the predictive risk
+snapshot is stale since 2026-02-13. The merged M4 source includes
+`output_health`/503 safeguards, but the deployed `run-stage-health-monitor`
+and `run-workload-forecast` sources do not yet contain those safeguards. No
+deployment or schedule change was made. M4 therefore stops at an explicit
+product decision: repair and deploy the workload path with authenticated,
+read-only Playwright proof, or retire/unschedule it as part of the Client
+Health replacement.
+
 **2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
 migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
 and its JSON companion. No hosted state changed. M1 is next.
