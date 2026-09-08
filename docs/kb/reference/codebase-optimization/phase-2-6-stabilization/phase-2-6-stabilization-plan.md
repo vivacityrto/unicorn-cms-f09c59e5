@@ -4,7 +4,7 @@
 >
 > **Prepared:** 2026-09-07 · **Truth-sync reviewed:** 2026-09-08
 >
-> **Evidence base:** historical audit at `origin/main@b24bbca57`, reconciled against `origin/main@afafe1f5a` (code state unchanged from `e1a0013ee`), current lint/typecheck/routes/KB-link checks, the Phase 2.6 investigation, and read-only Supabase checks of production plus the dedicated `unicorn-qa` project
+> **Evidence base:** historical audit at `origin/main@b24bbca57`, reconciled against current `origin/main@99e3ea998`, current lint/typecheck/routes/KB-link checks, the Phase 2.6 investigation, and read-only Supabase checks of production plus the dedicated `unicorn-qa` project
 >
 > **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md)
 >
@@ -26,21 +26,23 @@
 >
 > **Evidence:** [Progress log](progress-log.md)
 >
-> **Audit entry:** none at the phase level — individual packets record their own per `docs/audit-log/entries/`
+> **Audit entry:** none needed - documentation-only status reconciliation; individual packet changes retain their existing audit entries
 
 ## Current truth-sync (2026-09-08)
 
 This addendum is the present-tense source of truth; dated progress entries below
 remain intact as historical evidence. Phase 2.5 is closed as a prerequisite
 gate at PR #953. Phase 2.6 stabilization/retirement is active and partly
-shipped; Phase 3 is not started. The dedicated QA target is `unicorn-qa`
+shipped; Phase 3 is not started. P1-C, P4-A, P4-B, P4-C, P4-D, P6-A and the
+completed P6-B cohorts are closed; M0, M1, M2, M3-A, M3-C and M6 are closed;
+M5 is superseded. The dedicated QA target is `unicorn-qa`
 (`qfpxvumcrnzrjyvqkicq`), not the earlier failed `tenant-isolation-qa` branch.
 P1-C live proof completed in protected workflow run `34179875080`; the
 administrative secret-move/repeat-run tail was intentionally waived and is not
-an open implementation blocker (see session 23 and the QA coverage strategy).
+an open implementation blocker.
 
 Current repository measurements, taken from the merged code state at
-`origin/main@afafe1f5a`, are: 1,702 tracked product files; 480,206 physical
+`origin/main@99e3ea998`, are: 1,702 tracked product files; 480,206 physical
 lines (407,168 excluding generated types; 395,650 excluding generated types and
 tests); 115 files over 600 lines and 32 over 1,000; six wrapper files (105
 lines); 240 routes with zero duplicate paths; and typecheck at zero errors.
@@ -54,10 +56,12 @@ The often-quoted **9,209 retired lines** is an approximate Phase 2.6 aggregate:
 direct per-PR shortstat summation is approximately 8,867, with the difference
 coming from rounded/cohort accounting. Treat the dead-code register and current
 architecture metrics as authoritative; do not use 9,209 as an exact present
-LOC total. Remaining work is the P3-A client-health consumer graph, P4-D #18,
-the bounded InviteUser adapter, the SeatCard/P6-B tail and P7, followed by the
-separately gated Phase 3 architecture work.
-
+LOC total. Remaining work is: the P2 layered-QA scope; M4's forecast decision
+queue for jobs 20/21 (jobs 14 and 15 are already retired/paused); the two
+deliberate lint exceptions (`InviteUserDialog.tsx` and deferred
+`generate-meeting-recurrence` typing); the SeatCard display-core prerequisite;
+and the P7 Phase 3 preparation/implementation sequence. The separate RBAC
+correctness hotfix remains security-owned and is not a Phase 2.6 refactor.
 ## Progress log
 
 Full execution history: [progress-log.md](progress-log.md).
@@ -243,6 +247,9 @@ Add or update focused tests only if the branch is not already covered. The emitt
 
 **Exit:** lint errors fall from 173 to 166; `npm run lint:ratchet` passes.
 
+**Status:** done — superseded by the later lint-retirement batches; current
+lint status is recorded in [progress-log.md](progress-log.md).
+
 ### Packet P1-B — typecheck to zero and CI enforcement
 
 Fix the five current errors:
@@ -253,6 +260,9 @@ Fix the five current errors:
 Then add a CI typecheck workflow or gate. The gate must run the repository’s canonical `npm run typecheck`, not `tsc -b --noEmit`, because the latter is known to exhaust the default heap on this repository.
 
 **Exit:** typecheck returns zero; CI catches a deliberately introduced type error; no baseline exception is added.
+
+**Status:** done — typecheck is zero and the PR gate is active; see
+[progress-log.md](progress-log.md).
 
 ### Packet P1-C — isolation suite hardening
 
@@ -287,10 +297,12 @@ Each packet must update the L10 status, add regression tests, and state whether 
 
 ### Packet P3-A — urgent containment and authorization
 
-1. **Client Health H0.0:** show “unavailable — data repair in progress” wherever the invalid stage-health metric is consumed. Do not relabel the metric as trustworthy.
-2. **Dashboard timeout:** reproduce #612’s four view timeouts, add a bounded fix or documented owner, and verify the triage route read-only.
-3. **`generate-meeting-recurrence` (#25):** add explicit caller authorization and negative tests before any typing cleanup.
-4. **RBAC correctness hotfix:** disabled principals, arbitrary-subject `check_permission`, and `ProtectedRoute` fail-open behavior are separate security PRs, not Phase 2.6 refactors.
+1. **Client Health H0.0:** show “unavailable — data repair in progress” wherever the invalid stage-health metric is consumed. Do not relabel the metric as trustworthy. **Done** via PR #1024 and the linked characterization.
+2. **Dashboard timeout:** reproduce #612’s four view timeouts, add a bounded fix or documented owner, and verify the triage route read-only. **Done** in the merged containment work.
+3. **`generate-meeting-recurrence` (#25):** add explicit caller authorization and negative tests before any typing cleanup. **Done** in its dedicated merged security fix; typing remains deliberately separate.
+4. **RBAC correctness hotfix:** disabled principals, arbitrary-subject `check_permission`, and `ProtectedRoute` fail-open behavior are separate security PRs, not Phase 2.6 refactors. **Not started here; separately security-owned.**
+
+**Status:** done for items 1–3; item 4 is explicitly outside this packet.
 
 ### Packet P4-A — small frontend correctness
 
@@ -299,6 +311,8 @@ Each packet must update the L10 status, add regression tests, and state whether 
 - Fix the `global_role`/`unicorn_role` mismatch in Team KPI checks (#11).
 
 **Playwright:** protected deep links, denied client routes, staff routes, communications modal open/close, and KPI loading/error states. Read-only only.
+
+**Status:** done — merged in PR #959; #23 was already fixed and was recorded as such.
 
 ### Packet P4-B — invalid relationship reads
 
@@ -349,6 +363,10 @@ Do not use `unknown` casts merely to lower the count. Every Edge batch needs req
 
 Track the 39 Fast Refresh warnings separately; resolve them through module-boundary extraction rather than mixing them into query or auth changes.
 
+**Status:** functionally done for the targeted `no-explicit-any` contracts. Two
+deliberate exceptions remain: `InviteUserDialog.tsx` and the deferred
+`generate-meeting-recurrence` typing boundary.
+
 ### Packet P6-A — AddClientTaskDialog/AddStaffTaskDialog consolidation
 
 Use [task-dialog characterization](task-dialog-characterization.md) as the implementation source.
@@ -359,6 +377,10 @@ Use [task-dialog characterization](task-dialog-characterization.md) as the imple
 - Add parity coverage for create/edit table selection, validation, past-date behavior, reset/close/onSuccess, error toasts, labels/DOM IDs, and UUID pass-through.
 
 **Playwright:** authenticated read-only open, edit, cancel and validation flows at `/admin/package/:id`; no persistent writes unless separately authorized.
+
+**Status:** resolved by retirement rather than consolidation in PR #964; the
+original parity implementation was not shipped because its only consumer was
+confirmed dead code.
 
 ### Packet P6-B — remaining proven retirement cohorts
 
@@ -375,7 +397,9 @@ Retain `usePackageUsage.tsx` and every live replacement identified in the Phase 
 
 **Exit:** every candidate is retired, consolidated, retained with rationale, or deferred; before/after LOC and graph metrics are recorded; no backend object is removed by frontend evidence alone.
 
-**Status:** done — see [progress-log.md](progress-log.md) and the linked audit entry below.
+**Status:** completed cohorts done — SeatCard display-core extraction remains
+deferred until independent authenticated drag/drop Playwright coverage exists;
+see [progress-log.md](progress-log.md).
 
 ## 9. Phase 3 pilot packets
 
@@ -514,6 +538,9 @@ every migration risk classified as keep, fix, retire, or owner decision.
 **Artifact:** [Cron and Migration Inventory — 2026-09-07](../../../codebase-state/cron-and-migration-inventory-2026-09-07.md)
 and its [machine-readable companion](../../../codebase-state/cron-and-migration-inventory-2026-09-07.json).
 
+**Status:** done — the versioned Markdown/JSON inventory is committed and
+linked from the progress log.
+
 ### Packet M1 — migration safety scanner and CI guardrail
 
 Add a repository script (for example, `scripts/audit-migrations.mjs`) that
@@ -535,6 +562,9 @@ an unreviewed data mutation during QA replay.
 
 **Implementation:** the scanner usage and reviewed-exception contract are
 documented in [Migration safety guardrail — 2026-09-07](../../../codebase-state/migration-safety-guardrail-2026-09-07.md).
+
+**Status:** done — scanner, regression tests, CI guardrail, and reviewed
+exception contract are implemented; see [progress-log.md](progress-log.md).
 
 ### Packet M2 — controlled retirement of legacy audit jobs
 
@@ -613,7 +643,10 @@ are blocking correctness defects, not typing cleanup.
 
 ### Packet M4 — forecast and health output integrity
 
-**Status:** in progress — see [progress-log.md](progress-log.md) and the linked audit entries below.
+**Status:** in progress — H0.0 containment is complete; jobs 15 (stage health)
+and 14 (workload forecast) are paused/retired. The remaining decision queue is
+jobs 20/21 (`run-tenant-risk-forecast` and `run-retention-forecast`), which
+still require an explicit repair-and-prove or retire decision.
 
 - Add Client Health H0.0 containment so invalid stage-health data is shown as
   unavailable/data-repair-in-progress rather than relabelled as trustworthy.

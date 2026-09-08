@@ -4,6 +4,20 @@
 
 ## Progress log
 
+**2026-09-08, session 24 — status reconciliation after KB restructuring:**
+The historical packet entries below remain preserved, but their current status
+is normalized here. P1-A, P1-B, P1-C, P3-A items 1–3, P4-A, P4-B, P4-C,
+P4-D, P6-A and the completed P6-B cohorts are done. P3-A item 4 is a separate
+RBAC/security hotfix and is not part of this stabilization implementation.
+P5-A is functionally complete with two deliberate lint exceptions:
+`InviteUserDialog.tsx` and deferred `generate-meeting-recurrence` typing.
+M0, M1, M2, M3-A, M3-C and M6 are done; M5 is superseded. M4 remains open
+only for the repair-versus-retire decision on forecast jobs 20/21; job 15 is
+paused and job 14 is retired. Remaining implementation candidates are the
+broader layered-QA scope (P2), SeatCard display-core coverage/extraction, and
+Phase 3 preparation/implementation (P7), which remains gated by RBAC and
+Tenant Operating Model decisions.
+
 **2026-09-08, session 13 — Dedicated QA project provisioned:** created
 `unicorn-qa` (project ref `qfpxvumcrnzrjyvqkicq`) in Southeast Asia
 (`ap-southeast-1`). Read-only post-provision capture confirms the project is
