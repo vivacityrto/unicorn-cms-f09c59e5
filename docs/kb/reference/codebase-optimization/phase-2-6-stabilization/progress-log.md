@@ -4,9 +4,9 @@
 
 ## Progress log
 
-**2026-09-09, session 36 — `qa:cron-safety`'s first target written:
-`unicorn-qa` remains schedule-free (`feat/qa-cron-safety`; live-proof
-pending):** Continuing the same-session sweep through remaining P2-QA
+**2026-09-09, session 36 — `qa:cron-safety`'s first target written and
+live-proven: `unicorn-qa` remains schedule-free (`feat/qa-cron-safety`,
+PR #1043; live-proof workflow run `34291546797`, 2/2 passing):** Continuing the same-session sweep through remaining P2-QA
 suites. `qa:cron-safety`'s contract ("QA remains schedule-free unless
 explicitly enabled") can't be tested through a normal PostgREST call — the
 `cron` schema isn't exposed to PostgREST, and confirmed via `execute_sql`
@@ -33,9 +33,11 @@ an anon caller is denied with `42501`.
 `.github/workflows/qa-cron-safety.yml` follows the established shape (its
 own `unicorn-qa-p2-cron-safety` concurrency group).
 
-Verified locally: lint, typecheck, `test:frontend`, build, KB links (see
-verification chain below). **Not yet live-proven** — same honest gap as
-every other suite before its first live run.
+Verified locally: lint, typecheck, `test:frontend` (330/38 skipped, up from
+330/36), build, KB links (0 broken, 792 links). PR #1043 merged; dispatched
+`qa-cron-safety.yml` against `main` post-merge (workflow run
+[`34291546797`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34291546797)),
+both tests passed against the live `unicorn-qa` project in 2.99s.
 
 **2026-09-09, session 35 — `qa:edge`'s first target written and live-proven:
 tenant-lifecycle (`feat/qa-edge-tenant-lifecycle`, PR #1041; live-proof
