@@ -139,12 +139,16 @@ Implemented in the current P1-C follow-up:
 - protected manual/nightly workflow skeleton with a GitHub Actions concurrency
   group and QA-only secret names.
 
-Remaining before P1-C exits:
+P1-C administrative tail — intentionally skipped (2026-09-08):
 
-- move the temporary QA-only secrets from repository scope into the protected
-  `unicorn-qa` environment once owner access is available; and
-- retain the successful live proof and repeat it after that move, never exposing
-  the service-role secret to forked PRs.
+Carl accepted the successful live proof as the P1-C exit evidence and explicitly
+waived moving the two QA-only secrets from repository scope into the protected
+`unicorn-qa` environment, along with a duplicate proof run after that move.
+This is a deliberate scope decision, not an uncompleted task. The workflow
+remains restricted to manual/nightly triggers, uses the `unicorn-qa` project
+allowlist, and does not expose secrets to forked pull requests. The
+repository-level QA secrets remain an acknowledged governance exception and
+must not be reused by ordinary pull-request workflows or pointed at production.
 
 Live proof is complete in workflow run
 [`34179875080`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34179875080):
@@ -155,8 +159,8 @@ standard service-role/API-role grants; the `dd_access_status` and
 `dd_lifecycle_status` values; the identity values used by the production user
 normalization trigger; and the fixture's manual consultant-assignment mode.
 These repairs contain no production data and are recorded in the QA cutover
-record. The repository-level secrets are a temporary access workaround while
-Angela provisions the environment; delete them after the move.
+record. The repository-level secret placement is retained under the explicit
+waiver above.
 
 Once those pass, the same QA environment can support the broader layered
 coverage model. Expansion should be tracked as separate suites and impact
