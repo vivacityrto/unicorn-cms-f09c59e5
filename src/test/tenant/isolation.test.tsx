@@ -378,6 +378,10 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
           name: `Test Tenant A ${RUN_ID}`,
           slug: `test-tenant-a-${RUN_ID}`.toLowerCase(),
           status: "active",
+          // Keep the fixture focused on tenant/message RLS. The production
+          // auto-assignment trigger is unrelated and requires consultant
+          // capacity data that is intentionally absent from the empty QA DB.
+          consultant_assignment_method: "manual",
         };
         const { data: tA, error: tAErr } = await svc
           .from("tenants")
@@ -392,6 +396,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
           name: `Test Tenant B ${RUN_ID}`,
           slug: `test-tenant-b-${RUN_ID}`.toLowerCase(),
           status: "active",
+          consultant_assignment_method: "manual",
         };
         const { data: tB, error: tBErr } = await svc
           .from("tenants")
