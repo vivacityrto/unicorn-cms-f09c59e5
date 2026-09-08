@@ -1,0 +1,24 @@
+{
+  "capturedAt": "2026-09-08",
+  "projectRef": "qfpxvumcrnzrjyvqkicq",
+  "projectName": "unicorn-qa",
+  "captureKind": "initial-empty-project",
+  "note": "Read-only catalog capture immediately after provisioning. Supabase-managed baseline objects may exist; application schema and migration history are not loaded yet.",
+  "schemaSummary": {
+    "extensions": { "count": 5, "fingerprint": "bb1468941d01b79ab443e06a573ab0db" },
+    "tables": { "count": 8, "fingerprint": "33dc4d1f5bc27316fdc0a4956e665420" },
+    "views": { "count": 0, "fingerprint": "d41d8cd98f00b204e9800998ecf8427e" },
+    "functions": { "count": 0, "fingerprint": null },
+    "triggers": { "count": 0, "fingerprint": "d41d8cd98f00b204e9800998ecf8427e" },
+    "policies": { "count": 0, "fingerprint": "d41d8cd98f00b204e9800998ecf8427e" },
+    "publications": { "count": 1, "fingerprint": "d8a6bdfa6af5c8379bfef5f61a664f1a" }
+  },
+  "migrationCount": 0,
+  "latestMigration": null,
+  "cronScheduleCount": 0,
+  "productionUrlReferences": 0,
+  "migrationFailures": 0,
+  "applicationDataImported": false,
+  "githubConnected": false,
+  "branches": 0
+}

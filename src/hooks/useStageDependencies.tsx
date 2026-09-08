@@ -255,13 +255,16 @@ export async function updateStageDependencies(
     return false;
   }
 
-  // Log audit event if changed
+  // Log audit event if changed. entity_id is a strict uuid column and
+  // stage.id is a plain integer, so we use a random uuid here and keep the
+  // real id in details.
   if (JSON.stringify(oldKeys.sort()) !== JSON.stringify(stageKeys.sort())) {
     await supabase.from('audit_events').insert({
       entity: 'stage',
-      entity_id: stageId.toString(),
+      entity_id: crypto.randomUUID(),
       action: 'stage.dependencies_updated',
       details: {
+        stage_id: stageId,
         stage_title: stageTitle,
         old_dependencies: oldKeys,
         new_dependencies: stageKeys

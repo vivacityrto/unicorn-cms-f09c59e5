@@ -1,0 +1,43 @@
+{
+  "capturedAt": "2026-09-08",
+  "projectRef": "qfpxvumcrnzrjyvqkicq",
+  "projectName": "unicorn-qa",
+  "captureKind": "schema-only-sanitized-baseline-applied",
+  "scope": {
+    "mode": "application-scope",
+    "schemas": ["public", "private"],
+    "excludedSchemas": ["auth", "storage", "realtime"],
+    "excludedExtensions": ["pg_cron", "pg_net"],
+    "excludedPublications": true,
+    "sanitizedFunctionOverrides": true
+  },
+  "schemaSummary": {
+    "extensions": { "count": 3, "fingerprint": "688485db3defb996612ba737cb62eae9" },
+    "tables": { "count": 652, "fingerprint": "4068110a85ce69b28b8b0c6453ef7c2d" },
+    "views": { "count": 136, "fingerprint": "6934eb8cb50b6608f1b20fef8d951ce5" },
+    "functions": { "count": 669, "fingerprint": "f3f72b03692e1955618bb9303ca1eec5" },
+    "triggers": { "count": 485, "fingerprint": "3b81b633ef4c4aff7235466ca152c1dc" },
+    "policies": { "count": 1960, "fingerprint": "314934ff241bffb4d5b011d6d778d720" },
+    "publications": { "count": 1, "fingerprint": "d8a6bdfa6af5c8379bfef5f61a664f1a" }
+  },
+  "criticalPolicyCount": 23,
+  "criticalPolicyFingerprint": "584793741ee6fbd015d82d85db33f6fd",
+  "criticalColumnCount": 174,
+  "criticalColumnFingerprint": "482c9abe7ed0da087525caefc93f41f8",
+  "criticalForeignKeyCount": 19,
+  "criticalForeignKeyFingerprint": "6f99d643446163734611c72f45b6648a",
+  "migrationCount": 68,
+  "latestMigration": "20260908003950",
+  "cronRelationPresent": false,
+  "cronScheduleCount": 0,
+  "productionUrlReferences": 0,
+  "migrationFailures": 0,
+  "nonEmptyApplicationTables": 0,
+  "sanitizedDumpSha256": "C7EA155CD52AD070C00AA86746A627F0E11DB1A30AA266C2C9E9FF5DD7C9FCE2",
+  "exceptions": [
+    "Managed storage/auth/realtime schemas were not copied; the capture is intentionally application-scope.",
+    "pg_cron and pg_net were not installed; QA has no cron relation or schedules.",
+    "Production URL/HTTP trigger functions were replaced with QA no-op trigger bodies.",
+    "current_user_tenant_ids() was corrected from SETOF uuid to SETOF bigint to match tenant_members.tenant_id."
+  ]
+}

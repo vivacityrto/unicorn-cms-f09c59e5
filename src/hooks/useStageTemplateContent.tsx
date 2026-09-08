@@ -422,12 +422,7 @@ export function useStageTemplateContent(stageId: number | null) {
       if (error) throw error;
     }
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId.toString(),
-      action: 'stage.template_updated',
-      details: { change_type: 'document_linked', document_id: documentId }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'document_linked', document_id: documentId });
 
     await fetchContent();
   };
@@ -462,12 +457,7 @@ export function useStageTemplateContent(stageId: number | null) {
       if (error) throw error;
     }
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId.toString(),
-      action: 'stage.template_updated',
-      details: { change_type: 'documents_bulk_linked', document_ids: documentIds }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'documents_bulk_linked', document_ids: documentIds });
 
     await fetchContent();
   };
@@ -478,12 +468,7 @@ export function useStageTemplateContent(stageId: number | null) {
     // This preserves the interface for StageDocumentsPanel toggles without errors
     console.warn('updateDocument: junction-specific fields not persisted in documents.stage model', data);
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId?.toString() || '',
-      action: 'stage.template_updated',
-      details: { change_type: 'document_updated', document_id: docId, updates: data }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'document_updated', document_id: docId, updates: data });
 
     await fetchContent();
   };
@@ -497,12 +482,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId?.toString() || '',
-      action: 'stage.template_updated',
-      details: { change_type: 'document_unlinked', document_id: docId }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'document_unlinked', document_id: docId });
 
     await fetchContent();
   };

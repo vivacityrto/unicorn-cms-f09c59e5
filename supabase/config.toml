@@ -113,13 +113,10 @@ verify_jwt = false
 [functions.create-meeting-time-drafts]
 verify_jwt = false
 
-[functions.link-sharepoint-document]
-verify_jwt = false
-
 [functions.process-notification-outbox]
 verify_jwt = false
 
-# Vendored from production 2026-08-15. Cron/worker; JWT disabled to match live.
+# Retired 2026-09-07 (M3-B). Kept as a 410 stub so stale invocations fail visibly.
 [functions.process-notification-queue]
 verify_jwt = false
 
@@ -340,9 +337,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-email-note]
-verify_jwt = false
-
-[functions.extract-suggest-title]
 verify_jwt = false
 
 [functions.lookup-unicorn1-client]

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 
 interface RecurrenceRequest {
   meeting_id: string;
@@ -117,6 +118,15 @@ serve(async (req) => {
   }
 
   try {
+    // Explicit caller gate: this function previously had no recognizable
+    // auth check at all (L10 #25) and relied entirely on the RLS policies
+    // below to reject unauthorized writes. RLS is unchanged and remains the
+    // real per-tenant/facilitator boundary — this just rejects a non-staff
+    // caller up front instead of letting them hit the DB for an opaque
+    // RLS denial.
+    const caller = await requireCaller(req, FeatureKeys.staffMeetings);
+    if (caller instanceof Response) return caller;
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -130,6 +140,32 @@ serve(async (req) => {
     const requestData: RecurrenceRequest = await req.json();
 
     console.log('Generating recurrence for:', requestData);
+
+    // Confirm the caller-supplied tenant_id actually matches the meeting's
+    // real tenant before writing anything. RLS's WITH CHECK only verifies
+    // the caller is a facilitator/admin FOR the tenant_id value being
+    // written, not that meeting_id genuinely belongs to that tenant — so a
+    // mismatched pair would otherwise still pass RLS and create rows that
+    // cross-reference the wrong tenant.
+    const { data: meeting, error: meetingError } = await supabase
+      .from('eos_meetings')
+      .select('tenant_id')
+      .eq('id', requestData.meeting_id)
+      .maybeSingle();
+
+    if (meetingError || !meeting) {
+      return new Response(
+        JSON.stringify({ error: 'Meeting not found or not accessible' }),
+        { status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (meeting.tenant_id !== requestData.tenant_id) {
+      return new Response(
+        JSON.stringify({ error: 'tenant_id does not match the specified meeting' }),
+        { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Generate RRULE and occurrences
     const { rrule, occurrences } = generateOccurrences(requestData);

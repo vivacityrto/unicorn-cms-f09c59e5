@@ -565,8 +565,8 @@ export default function AdminStageAnalytics() {
                                 {formatActionName(event.action)}
                               </Badge>
                               {event.stage_title && (
-                                <Link 
-                                  to={`/admin/stages/${event.entity_id}`}
+                                <Link
+                                  to={`/admin/stages/${event.stage_id}`}
                                   className="text-sm font-medium hover:underline truncate"
                                 >
                                   {event.stage_title}

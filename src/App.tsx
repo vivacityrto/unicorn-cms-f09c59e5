@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { RouteMeta } from "@/components/seo/RouteMeta";
 import { AuthProvider } from "./hooks/useAuth";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
@@ -28,7 +28,6 @@ import { dashboardLayoutRoutes } from "./routes/dashboardRoutes";
  const Login = lazy(() => import("./pages/Login"));
 
  // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
- const TenantDocumentDetailWrapper = lazy(() => import("./pages/TenantDocumentDetailWrapper"));
 
  const AcceptInvitationWrapper = lazy(() => import("./pages/AcceptInvitationWrapper"));
  const NotFound = lazy(() => import("./pages/NotFound"));
@@ -95,6 +94,16 @@ function VersionGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// TenantDocuments.tsx, TenantDocumentsHub.tsx, TenantDocumentDetail.tsx, and
+// TenantDocumentDetailWrapper.tsx were retired (Phase 2.6 Packet P4-B/P6-B)
+// as unreachable — zero real navigation entry points anywhere in the app;
+// the real, live "Documents" tab is ClientDetail's embedded DocumentsHub.
+// This redirect covers any stray bookmark/external link to the old route.
+function LegacyTenantDocumentDetailRedirect() {
+  const { tenantId } = useParams<{ tenantId: string }>();
+  return <Navigate replace to={`/tenant/${encodeURIComponent(tenantId || '')}?tab=documents`} />;
+}
+
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="unicorn-theme">
   <QueryClientProvider client={queryClient}>
@@ -136,11 +145,7 @@ const App = () => (
             <Route path="/admin/governance-documents" element={<Navigate to="/manage-documents" replace />} />
             <Route
               path="/tenant/:tenantId/document/:documentId"
-              element={
-                <ProtectedRoute>
-                  <TenantDocumentDetailWrapper />
-                </ProtectedRoute>
-              } 
+              element={<LegacyTenantDocumentDetailRedirect />}
             />
             <Route
               path="/admin/client-packages/:clientPackageId"

@@ -137,12 +137,14 @@ export async function updateStageFrameworks(
     
     if (error) throw error;
     
-    // Log audit event
+    // Log audit event. entity_id is a strict uuid column and stage.id is a
+    // plain integer, so we use a random uuid here and keep the real id in details.
     await supabase.from('audit_events').insert({
       entity: 'stage',
-      entity_id: stageId.toString(),
+      entity_id: crypto.randomUUID(),
       action: 'stage.frameworks_updated',
       details: {
+        stage_id: stageId,
         old_frameworks: oldFrameworks,
         new_frameworks: newValue,
         stage_title: stageTitle

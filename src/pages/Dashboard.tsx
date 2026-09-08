@@ -15,6 +15,7 @@ import { ExpandablePortfolioSection } from "@/components/dashboard/ExpandablePor
 import { OverloadBanner } from "@/components/dashboard/OverloadBanner";
 import { TenantDrawer } from "@/components/portfolio/TenantDrawer";
 import { StaffOnboardingBanner } from "@/components/staff/StaffOnboardingBanner";
+import { LegacyStageHealthUnavailable } from "@/components/client-health/LegacyStageHealthUnavailable";
 
 const Dashboard = () => {
   const { profile, loading: authLoading } = useAuth();
@@ -104,6 +105,9 @@ const Dashboard = () => {
           onSavedViewChange={setSavedView}
           canSeeAll={canSeeAll}
         />
+        <div className="px-4 md:px-6 pt-4">
+          <LegacyStageHealthUnavailable />
+        </div>
 
         <div className="flex-1 p-4 md:p-6 space-y-6 overflow-y-auto">
           {tenantsLoading ? (

@@ -150,7 +150,7 @@ serve(async (req: Request) => {
       await supabase.from("audit_dashboard_events").insert({
         actor_user_id: user.id,
         action: "test_seed_executed",
-        metadata_json: { tenants_seeded: tenants.map((t: any) => ({ id: t.id, name: t.name })), results },
+        metadata_json: { tenants_seeded: tenants.map((t) => ({ id: t.id, name: t.name })), results },
       });
 
       return new Response(

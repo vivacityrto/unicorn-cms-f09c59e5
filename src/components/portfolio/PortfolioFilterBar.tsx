@@ -4,6 +4,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
+import { LegacyStageHealthUnavailable } from '@/components/client-health/LegacyStageHealthUnavailable';
 import type { SavedView } from '@/hooks/useDashboardTriage';
 
 interface PortfolioFilters {
@@ -69,18 +70,7 @@ export function PortfolioFilterBar({ filters, onFiltersChange, savedView, onSave
         </Select>
 
         {/* Stage health */}
-        <Select value={filters.stageHealth || '_all'} onValueChange={(v) => update({ stageHealth: v === '_all' ? null : v })}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Stage Health" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all">All Health</SelectItem>
-            <SelectItem value="critical">Critical</SelectItem>
-            <SelectItem value="at_risk">At Risk</SelectItem>
-            <SelectItem value="monitoring">Monitoring</SelectItem>
-            <SelectItem value="healthy">Healthy</SelectItem>
-          </SelectContent>
-        </Select>
+        <LegacyStageHealthUnavailable compact />
 
         {/* Toggles */}
         <div className="flex items-center gap-2">

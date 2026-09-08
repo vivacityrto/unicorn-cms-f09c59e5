@@ -184,12 +184,14 @@ export function useStageExportImport() {
         })),
       };
 
-      // Log export
+      // Log export. entity_id is a strict uuid column and stage.id is a plain
+      // integer, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: stageId.toString(),
+        entity_id: crypto.randomUUID(),
         action: 'stage.exported',
         details: {
+          stage_id: stageId,
           package_id: packageId || null,
           task_count: teamTasks.length + clientTasks.length,
           email_count: emails.length,
@@ -279,14 +281,11 @@ export function useStageExportImport() {
       const baseKey = newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const newStageKey = `${baseKey}-${Date.now()}`;
 
-      // KNOWN BUG (pre-existing, found while removing `any` here, not fixed - see
-      // execution-efficiency-log.md): stages.id has no default/sequence at the DB
-      // level (column_default is null, not-null constrained), so every insert into
-      // `stages` requires an explicit id. This insert has always failed with a NOT
-      // NULL violation - "Import Stage" has never actually created a stage. Fixing
-      // it needs a schema decision (add a sequence/default to stages.id, a migration
-      // requiring its own audit entry) out of scope for a type-only batch - left
-      // functionally unchanged, typed honestly via an explicit cast rather than `any`.
+      // FIXED (Phase 2.6 Packet P4-D, 2026-09-08): stages.id previously had no
+      // default/sequence, so this insert always 400'd with a NOT NULL violation.
+      // A stages_id_seq default was added via a schema migration (see L10 item #3
+      // and docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md)
+      // - this insert already omitted id, so no code change was needed here.
       // Create new stage (always non-certified for safety)
       const { data: newStage, error: createError } = await supabase
         .from('stages')
@@ -379,12 +378,14 @@ export function useStageExportImport() {
         if (!error) counts.documents = data.documents.length;
       }
 
-      // Log import
+      // Log import. entity_id is a strict uuid column and stage.id is a plain
+      // integer, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: newStage.id.toString(),
+        entity_id: crypto.randomUUID(),
         action: 'stage.imported',
         details: {
+          stage_id: newStage.id,
           original_title: data.stage.title,
           imported_title: newTitle,
           source_package_context: data.package_context,

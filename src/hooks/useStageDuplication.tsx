@@ -48,15 +48,13 @@ export function useStageDuplication() {
         ? `${sourceStage.version_label} (copy)`
         : null;
 
-      // KNOWN BUG (pre-existing, found while removing `any` here, not fixed - see
-      // execution-efficiency-log.md): stages.id has no default/sequence at the DB
-      // level (confirmed via information_schema - column_default is null, not-null
-      // constrained), so every insert into `stages` requires an explicit id. This
-      // insert has always failed with a NOT NULL violation - "Duplicate Stage" has
-      // never actually created a copy. Fixing it needs a schema decision (add a
-      // sequence/default to stages.id, which is a migration requiring its own audit
-      // entry) that's out of scope for a type-only batch - left functionally
-      // unchanged, typed honestly via an explicit cast rather than `any`.
+      // FIXED (Phase 2.6 Packet P4-D, 2026-09-08): stages.id previously had no
+      // default/sequence, so this insert always 400'd with a NOT NULL violation -
+      // "Duplicate Stage" never actually created a copy. This was a second,
+      // previously-undocumented occurrence of L10 item #3 ("Import Stage"); same
+      // root cause, same fix (stages_id_seq default added via schema migration,
+      // see docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md).
+      // This insert already omitted id, so no code change was needed here.
       const { data: newStage, error: createError } = await supabase
         .from('stages')
         .insert({
@@ -178,12 +176,14 @@ export function useStageDuplication() {
         }
       }
 
-      // 5. Log audit event
+      // 5. Log audit event. entity_id is a strict uuid column and stage.id is
+      // a plain integer, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: newStage.id.toString(),
+        entity_id: crypto.randomUUID(),
         action: 'stage.duplicated',
         details: {
+          stage_id: newStage.id,
           source_stage_id: sourceStageId,
           new_stage_id: newStage.id,
           source_package_id: sourcePackageId || null,

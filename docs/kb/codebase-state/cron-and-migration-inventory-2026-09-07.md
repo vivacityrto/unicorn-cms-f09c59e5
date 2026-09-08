@@ -1,8 +1,8 @@
 # Cron and Migration Inventory
 
-> **Status:** M0 inventory complete; M2 retirement applied to production
+> **Status:** M0 inventory complete; M2/M3 retirement applied; M4 preflight refreshed 2026-09-08
 >
-> **Captured:** 2026-09-07
+> **Captured:** 2026-09-08
 >
 > **Evidence:** production Supabase project `yxkgdalkbrriasiyyrwk`, persistent
 > preview branch `tenant-isolation-qa` (`iqichbimamlyjpaguddl`), repository
@@ -47,8 +47,8 @@ request; it is not an application-level success assertion.
 | 11 | `sync-outlook-calendar-every-30min` | `*/30 * * * *` | 1,440 | 0 | Current calendar sync | Keep |
 | 12 | `close-stale-preview-sessions` | `0 */4 * * *` | 180 | 0 | Current impersonation-session maintenance | Keep |
 | 13 | `reclaim-stale-cohort-locks` | `*/5 * * * *` | 8,640 | 0 | Current lock maintenance | Keep |
-| 14 | `run-workload-forecast-nightly` | `0 16 * * *` | 30 | 0 | 2,510 workload snapshots; burn forecast has 0 rows | Fix and add output health |
-| 15 | `run-stage-health-monitor-nightly` | `0 15 * * *` | 30 | 0 | 357,471 snapshots; 0 non-zero progress values | Contain and fix |
+| 14 | `run-workload-forecast-nightly` | `0 16 * * *` | retired | — | Job absent after M4 retirement; 2,539 workload snapshots retained; burn/risk/retention forecast tables remain empty | Retired by M4 (2026-09-08); retain function/tables for Client Health replacement |
+| 15 | `run-stage-health-monitor-nightly` | `0 15 * * *` | retired | — | Job absent after H0.0 containment; 357,471 retained snapshots with 0 non-zero progress values | Paused by P3-A; retain evidence pending Client Health replacement |
 | 16 | `email_tickets_flag_sla_breaches` | `*/5 * * * *` | 8,640 | 0 | Current ticket-SLA maintenance | Keep |
 | 17 | `generate-notifications-reporting-obligations` | `15 0 * * *` | 30 | 0 | Current notification generator | Keep |
 | 18 | `bulk-documents-reclaim-locks` | `*/5 * * * *` | 8,640 | 0 | Current bulk-document lock maintenance | Keep pending usage review |
@@ -72,7 +72,7 @@ request; it is not an application-level success assertion.
 | Table | Rows | Latest generated value | Finding |
 |---|---:|---|---|
 | `stage_health_snapshots` | 357,471 | 2026-09-06 15:00 UTC | 0 rows with non-zero progress |
-| `workload_snapshots` | 2,510 | 2026-09-06 16:00 UTC | Workload output exists |
+| `workload_snapshots` | 2,539 | 2026-09-07 16:00 UTC | Workload output exists, but deployed function lacks M4 output-health safeguards |
 | `tenant_risk_forecasts` | 0 | — | No forecast output |
 | `tenant_retention_forecasts` | 0 | — | No forecast output |
 | `tenant_package_burn_forecast` | 0 | — | No burn output |
@@ -89,11 +89,12 @@ following `SECURITY DEFINER` functions still reference it:
 - `audit_send_evidence_reminders()` — uses a documented status mismatch and
   calls the email Edge Function directly.
 
-`notification_schedule` is also referenced by the current
-`process-notification-queue` Edge Function and `send-automated-email`; it is
-not safe to drop as part of M2. `notification_audit_log` is written by the
-current `process-notification-outbox` Edge Function even though no frontend
-consumer was identified in this pass. Dropping either table requires a
+M3-B retired the deployed `process-notification-queue` as a credential-free
+410 stub and removed the three legacy writers from `send-automated-email`.
+`notification_audit_log` is written by the current
+`process-notification-outbox` Edge Function even though no frontend consumer
+was identified in this pass. M3-C subsequently removed
+`notification_schedule`; dropping either keeper table requires a
 separate dependency, retention and rollback review.
 
 M2 read-only preflight confirmed the exact production jobs and their recent
@@ -116,11 +117,11 @@ dropped in production under migration `retire_legacy_audit_functions`
 (`20260907052028`), with postflight confirming they are absent.
 `notification_audit_log` must remain because the
 active `process-notification-outbox` worker writes delivery success/failure
-records to it. `notification_schedule` is not yet removable: the deployed but
-unscheduled `process-notification-queue` worker reads it and
-`send-automated-email` contains three unreachable audit-only writers. Those
-code paths must be retired before a quiet-period proof and a separately
-authorized table-drop migration.
+records to it. M3-C completed the retirement of `notification_schedule` under
+the separately authorized `retire_notification_schedule` migration
+(`20260908031729`). Postflight confirmed the table is absent and both keeper
+tables remain intact, with zero database-function, view, trigger, or cron
+references remaining.
 
 ## Migration replay inventory
 

@@ -2493,12 +2493,14 @@ export default function AdminStageDetail() {
             <AlertDialogAction 
               onClick={async () => {
                 if (pendingCertifiedAction) {
-                  // Log audit event for certified edit
+                  // Log audit event for certified edit. entity_id is a strict
+                  // uuid column and stage ids are plain integers, so we use a
+                  // random uuid here and keep the real id in details.
                   await supabase.from('audit_events').insert({
                     entity: 'stage',
-                    entity_id: stageIdNum?.toString() || '',
+                    entity_id: crypto.randomUUID(),
                     action: 'stage.certified_edited',
-                    details: { stage_title: stage?.title },
+                    details: { stage_id: stageIdNum, stage_title: stage?.title },
                   });
                   await pendingCertifiedAction();
                 }

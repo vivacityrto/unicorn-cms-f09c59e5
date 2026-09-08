@@ -289,12 +289,13 @@ export function StageDocumentsPanel({
         if (error) throw error;
       }
 
-      // Log audit event
+      // Log audit event. entity_id is a strict uuid column and stage.id is a
+      // plain integer, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: stageId.toString(),
+        entity_id: crypto.randomUUID(),
         action: 'stage_document_linked',
-        details: { document_ids: docIds, count: docIds.length }
+        details: { stage_id: stageId, document_ids: docIds, count: docIds.length }
       });
 
 
@@ -321,12 +322,13 @@ export function StageDocumentsPanel({
     try {
       await onDelete(docId);
       
-      // Log audit event
+      // Log audit event. entity_id is a strict uuid column and stage.id is a
+      // plain integer, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: stageId.toString(),
+        entity_id: crypto.randomUUID(),
         action: 'stage_document_unlinked',
-        details: { stage_document_id: docId }
+        details: { stage_id: stageId, stage_document_id: docId }
       });
       
       toast({ title: 'Document unlinked from stage' });

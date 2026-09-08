@@ -32,6 +32,11 @@ former `unicorn-kb` and `unicorn-audit` repos — see
 - The repo contains **both** `bun.lock` and `package-lock.json`, but **bun is
   not installed** on most dev VMs. Use **npm** (Node 22 is installed; Vite 8
   requires Node 20+).
+- Worktrees must reuse the main checkout's dependency install through a
+  junction at `<worktree>\node_modules` pointing to the sibling main
+  checkout's `node_modules`. Do not run `npm install` inside a worktree unless
+  the junction target is genuinely unavailable; this avoids duplicate installs
+  and memory pressure on the shared development machine.
 - `npm install` emits an `ERESOLVE` peer-dependency warning for
   `lovable-tagger` vs `vite@8` — this is expected and harmless; install still
   succeeds.
@@ -42,12 +47,30 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   port set in `vite.config.ts`).
 - Build: `npm run build` (production; also inlines critical CSS + writes
   `version.json`). `npm run build:dev` for a development-mode build.
-- Lint: `npm run lint`. NOTE: the codebase currently reports **~4,100
-  pre-existing eslint errors** (measured 2026-09-01; corrected from an
-  earlier vaguer "many thousands" here — 97% of them are a single rule,
-  `@typescript-eslint/no-explicit-any`, including in `supabase/functions/**`);
-  a non-zero exit is the current baseline, not an environment problem.
-  `eslint.config.js`'s top-level `ignores` now also excludes
+- Lint: `npm run lint`. NOTE: this used to report ~4,100 pre-existing
+  eslint errors (measured 2026-09-01, 97% a single rule,
+  `@typescript-eslint/no-explicit-any`) — that backlog is now **eliminated**,
+  driven down via the Phase 2.5 any-retirement program (~90 merged PRs,
+  closed at PR #953) and the Phase 2.6 stabilization plan's P1-A/P1-B/P5-A
+  packets plus dead-code retirement (`docs/kb/reference/
+  phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md`). As of
+  2026-09-08 (`origin/main@e5930f908`), `npm run lint` reports **2 errors,
+  44 warnings** (46 problems; `docs/kb/reference/lint-baseline.json` tracks
+  42 of those — 2 errors, 40 warnings — the 4 remaining warnings are
+  "unused eslint-disable directive" notices with no `ruleId`, which the
+  baseline script deliberately doesn't attribute to a rule). The 2 errors
+  are both `@typescript-eslint/no-explicit-any`, both known and deliberate:
+  `InviteUserDialog.tsx` (a reviewed `unicorn1` cross-schema exception) and
+  `supabase/functions/generate-meeting-recurrence/index.ts` (auth-gate fix
+  already shipped in PR #979; its own typing cleanup was explicitly
+  deferred, per Packet P3-A item 3's "add explicit caller authorization
+  and negative tests before any typing cleanup" rule). The 44 warnings are
+  almost entirely `react-refresh/only-export-components` (40) — a
+  Fast-Refresh style concern, not correctness — plus the 4 stale
+  eslint-disable notices above. Re-run `npm run lint:baseline` before
+  trusting this if it's been a while; a non-zero exit is still expected
+  (2 known errors), just no longer a ~4,100-error wall.
+  `eslint.config.js`'s top-level `ignores` also excludes
   `.worktrees/**`/`worktrees/**`/`.claude/worktrees/**` — without it, ESLint
   was re-linting the full contents of any stray nested git worktree left
   inside the repo (see "Local dev server troubleshooting" below for the
@@ -57,10 +80,11 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   full-repo check — for every `.ts`/`.tsx` file changed since
   `origin/main` (override the base with `LINT_RATCHET_BASE`), it compares
   that file's lint error count before vs. after. A file that already had
-  errors and still has the *same* count after your change passes (fixing
-  the ~4,100-error backlog isn't required to ship a PR); a file with *more*
-  errors than before, or a brand-new file with any errors at all, fails the
-  check. Runs in CI on every PR (`.github/workflows/lint-ratchet.yml`).
+  errors and still has the *same* count after your change passes (this
+  guard against regression stays useful even with the backlog gone — see
+  the lint NOTE above); a file with *more* errors than before, or a
+  brand-new file with any errors at all, fails the check. Runs in CI on
+  every PR (`.github/workflows/lint-ratchet.yml`).
   Separately, `@typescript-eslint/no-unused-vars` (off repo-wide) is now
   `error` for `src/services/**` and `src/contexts/**` specifically — both
   tested at zero violations, the plan's requested "one bounded directory"
@@ -155,6 +179,12 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   membership, not just a tenant match). Wiring `SUPABASE_SERVICE_ROLE_KEY`
   into CI so this suite actually runs is a separate, not-yet-scoped
   follow-up — deliberately not done as a side effect of this note.
+- **P1-C follow-up state (2026-09-08):** the placeholder tests have been
+  removed, the live tests use generated types and run-scoped cleanup, and the
+  allowlisted `unicorn-qa` target plus protected workflow skeleton now exist.
+  The harness fails closed when a service-role key targets another project and
+  serializes local runs; GitHub Actions adds the cross-run concurrency lock.
+  The QA-only secrets and first live run remain intentionally outstanding.
 - Architecture metrics (P0.5, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`):
   `npm run metrics` (`scripts/architecture-metrics.mjs`) reproduces the
   plan's section-3 baseline table from a script instead of an ad-hoc pass —
@@ -794,11 +824,59 @@ app-layer allowlist are the actual defense for anything invoked from
 
 ## Supabase deployment workflow
 
-Deploy hosted Supabase migrations and Edge Functions through the configured
-Supabase MCP tools. Do not rely on GitHub Actions or the Supabase CLI for
-production deployment; the repository intentionally has no automatic
-Supabase deployment workflow because production migration history may contain
-MCP-applied changes that are not present in every checkout.
+**Edge Functions auto-deploy on merge to `main` via Supabase's native
+GitHub sync integration — but it has since been observed to fail
+silently, so treat it as unreliable, not just laggy.** The mechanism is
+configured on Supabase's dashboard side (Project Settings → Integrations
+→ GitHub — not a file in this repo; `.github/workflows/*.yml` contains no
+deploy step). It worked as expected once (2026-09-07, PR #970:
+`ask-viv-assistant` merged 05:29 UTC, deployed version advanced 147→148 by
+05:41 UTC, source verified byte-for-byte consistent) — but the very same
+day, PRs #967/#968 (7 functions total: `tga-rto-sync`,
+`add-missing-packages`, `tga-rto-import`, `bulk-send-invitations`,
+`create-client-audit`, `dashboard-test-seed`,
+`create-tasks-from-minutes`) merged and **none of the 7 auto-deployed** —
+confirmed via a real source diff (not just a stale timestamp) 20+ minutes
+post-merge, e.g. `tga-rto-sync`'s deployed `index.ts` still had the
+pre-fix `const norm = (v: any) => ...` line. Carl independently confirmed
+Codex hit the identical failure the same day. Root cause not diagnosed
+(dashboard-side integration, no repo-visible logs); no fix identified —
+just do not trust it.
+
+**Standing practice until Supabase's sync is proven reliable again:**
+after merging any PR that touches `supabase/functions/**`, check
+`list_edge_functions` for each changed function ~15 min post-merge. If the
+version hasn't advanced, deploy manually via `mcp__supabase__
+deploy_edge_function` — reconstruct the file/`_shared/*.ts` dependency
+closure from `git show origin/main:<path>` for each, matching the
+function's existing `verify_jwt` setting (check via `list_edge_functions`
+first, don't default to `true`). Manual deploys risk transcription errors
+from retyping large files into the tool call's JSON, so verify after:
+extract the deployed source via `get_edge_function` and diff it against
+`git show origin/main:<path>`. When reproducing that comparison by hand
+(rather than scripting the extraction), expect false-positive
+whitespace-only diffs from your own retyping, not the deploy — a
+mismatch limited to trailing spaces or blank-line whitespace is very
+likely your reproduction, not the deployed content; re-check by eye
+against the original tool output before treating it as a real
+discrepancy.
+
+Because of this, **do not merge an Edge Function PR into `main` without
+being ready for it to go live** — a merge is a production deployment, not
+just a repo change, whether or not the auto-deploy actually fires. Still
+perform a post-merge check (via Supabase MCP
+`list_edge_functions`/`get_edge_function`, or `query_logs`) that the
+version advanced and the source matches — this is no longer optional
+diligence, it's the only signal you have that the function is actually
+live.
+
+**Migrations are a separate, MCP-controlled path** — apply hosted
+Supabase migrations through the configured Supabase MCP tools
+(`apply_migration`), not GitHub Actions or the Supabase CLI. Whether the
+GitHub sync integration also touches `supabase/migrations/**` on merge is
+not yet confirmed either way; until it is, continue treating migrations
+as exclusively MCP-deployed and do not assume a migration merged to
+`main` has applied itself.
 
 ## Session end (commit conventions)
 
