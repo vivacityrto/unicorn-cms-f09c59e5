@@ -42,6 +42,14 @@ an explicit contract or waiver rather than guessed test generation. P1-C is
 the first protected gate; the broader coverage model is a follow-on after its
 live proof.
 
+**2026-09-08, session 17 — P1-C execution guard implemented:** the isolation
+suite now fails closed if a service-role key is pointed at anything other than
+the allowlisted `unicorn-qa` project, and uses an atomic same-host lock. The
+protected `workflow_dispatch`/nightly workflow adds the cross-run GitHub
+Actions concurrency lock and injects only QA environment secrets. No secret
+has been added; live execution remains intentionally blocked until the
+`unicorn-qa` environment is configured.
+
 **2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
 migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
 and its JSON companion. No hosted state changed. M1 is next.

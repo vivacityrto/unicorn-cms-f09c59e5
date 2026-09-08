@@ -131,16 +131,23 @@ unique run IDs and fail-closed reverse-dependency cleanup. Completed in the
 environment path: allowlisted QA project, sanitized application-scope schema
 baseline and parity verification.
 
+Implemented in the current P1-C follow-up:
+
+- same-host atomic lock in the test harness;
+- allowlist guard that fails closed when a service-role key targets any other
+  project; and
+- protected manual/nightly workflow skeleton with a GitHub Actions concurrency
+  group and QA-only secret names.
+
 Remaining before P1-C exits:
 
-- project-level concurrent-run serialization;
 - QA-only service-role secret in a protected environment;
 - live execution of the 15 RLS tests against `unicorn-qa`;
 - proof of cleanup failure propagation and zero residual rows/Auth users; and
-- protected manual/nightly workflow, never exposed to forked PRs.
+- activation of the protected workflow after the first clean live runs,
+  never exposed to forked PRs.
 
 Once those pass, the same QA environment can support the broader layered
 coverage model. Expansion should be tracked as separate suites and impact
 packets rather than inflating `isolation.test.tsx` into an unreviewable
 all-purpose test.
-
