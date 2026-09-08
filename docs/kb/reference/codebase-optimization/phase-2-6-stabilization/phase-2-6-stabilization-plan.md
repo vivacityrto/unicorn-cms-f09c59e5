@@ -514,6 +514,15 @@ work.
   fix would risk silently changing AI-generated content or executive
   reporting behavior without the evidence base the plan requires. Left as
   a properly scoped follow-up, not guessed at.
+- **P3-A item 1 follow-up (2026-09-08):** characterized the remaining
+   Client Health consumers and removed the now-dead `MainDashboard` reads of
+   `v_dashboard_attention_ranked.worst_stage_health_status` and
+   `rpc_portfolio_client_health()`. The panel remains explicitly unavailable;
+   no schema/RPC behavior changed. The characterization matrix is recorded in
+   [`p3-a-client-health-consumer-characterization-2026-09-08.md`](p3-a-client-health-consumer-characterization-2026-09-08.md).
+   Ask Viv/Compliance Assistant attention facts and operational Edge readers
+   remain deliberately retained as separate follow-up contracts; they are not
+   silently relabeled as Client Health.
 - **P3-A item 2 (dashboard timeout) done, and it closes part of the
   "deliberately not touched" gap immediately above.** L10 #26 (Attention
   Ranking/Priority Inbox/Behavioural Prompts/Labour Efficiency returning

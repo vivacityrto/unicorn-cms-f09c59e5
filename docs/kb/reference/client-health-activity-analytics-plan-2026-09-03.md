@@ -12,6 +12,24 @@
 
 ---
 
+## Current implementation reconciliation (2026-09-08)
+
+The plan's original evidence remains a dated planning baseline. Phase 2.6
+P3-A has now contained the legacy stage-health signal on the main dashboard,
+executive widget, triage views and Ask Viv hotspot tool. The `/dashboard`
+`MainDashboard` no longer queries `v_dashboard_attention_ranked` for the
+legacy health field or calls `rpc_portfolio_client_health()`; it displays an
+explicit unavailable state. The triage attention views remain available for
+operational drivers (tasks, risk, gaps, activity and deadlines), but their
+stage-health fields are `unavailable` and `attention_score` is not a health
+score. The full consumer matrix and next safe boundary are recorded in
+[`p3-a-client-health-consumer-characterization-2026-09-08.md`](p3-a-client-health-consumer-characterization-2026-09-08.md).
+
+No Client Health H1 metric definition, schema projection, forecast repair,
+production data correction or cron restart is authorized by this update.
+
+---
+
 ## 1. Executive decision
 
 Build client health and activity analytics as a **separate companion program** on top of the tenant operating-model and RBAC foundations. Add only shared event, provenance, freshness, tenant-scope, metric-governance, and intervention primitives to the parent architecture. Do not enlarge the already broad tenant plan into a combined migration.

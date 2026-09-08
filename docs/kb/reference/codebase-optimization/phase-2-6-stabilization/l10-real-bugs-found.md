@@ -818,6 +818,15 @@ for full detail, including a disclosed side effect (the dashboard's
 `=== 'critical'`, now correctly never matches instead of trusting stale
 data).
 
+**P3-A follow-up (2026-09-08):** after that containment, `MainDashboard.tsx`
+still issued a redundant assigned-client health read and the aggregate
+`rpc_portfolio_client_health()` call even though the panel rendered the
+explicit unavailable state. Those reads are now removed; the database RPC is
+retained until a separate schema/RBAC dependency review. The remaining Ask
+Viv and Compliance Assistant attention consumers are documented as
+operational-attention inputs, not Client Health evidence, in
+`docs/kb/reference/p3-a-client-health-consumer-characterization-2026-09-08.md`.
+
 ### 27. `PackageDetail.tsx` Manager-field lookup 406 — RESOLVED VIA RETIREMENT (2026-09-07)
 
 `/admin/package/:id/tenant/:tenantId`'s "Manager" field looked up
