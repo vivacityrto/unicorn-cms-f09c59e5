@@ -4,6 +4,49 @@
 
 ## Progress log
 
+**2026-09-09, session 32 — `qa:data-lifecycle`'s first target written: tenant
+lifecycle (`feat/qa-data-lifecycle-tenant`; live-proof pending):** Carl chose
+tenant lifecycle (suspend/close/archive/reactivate via `tenant-lifecycle`)
+over package builder, invitations, EOS meeting recurrences, and
+documents/versions (the last explicitly flagged as needing its own
+bounded-state-machine design first, per the master plan's P4.6). Real
+invariants worth protecting: SuperAdmin gating on suspend/close/archive (a
+previously-fixed security gap — `AGENTS.md`'s own guardrail note on
+`tenant-lifecycle` originally leaving suspend/close on the broader
+`staff.internal` gate), no-duplicate-close, reason-required validation on
+close/reactivate, the 30-day archive cooldown + `force_override`, and
+reactivate-from-archived's own separate SuperAdmin gate.
+
+This is P2-QA's first suite calling a real Edge Function rather than
+reading tables/OpenAPI directly. Confirmed `unicorn-qa` had **zero** Edge
+Functions deployed (`list_edge_functions` returned `{"functions":[]}`) —
+deploying one there was a new category of action, so it was paused for
+explicit approval before proceeding. Deployed `tenant-lifecycle` + its full
+`_shared/*` dependency closure (`auth-helpers.ts`, `supabase-client.ts`,
+`response-helpers.ts`, `cors.ts`, `requireCaller.ts`,
+`requireCaller-helpers.ts`) via `deploy_edge_function` against project
+`qfpxvumcrnzrjyvqkicq`. One real deploy-bundler quirk found and fixed:
+uploaded files are bundled under one flat root together with `index.ts`
+(unlike the real repo, where `_shared/` sits one directory *above* each
+function) — so the deploy-only copy of `index.ts` uses `./_shared/...`
+imports instead of the source repo's `../_shared/...`. Confirmed live with
+an unauthenticated smoke call: clean `401 UNAUTHORIZED` from the
+`requireCaller` gate, proving the bundle and runtime both work.
+
+Wrote `src/test/qa/data-lifecycle-tenant.test.ts` (11 tests) following the
+same persona-creation pattern as `isolation.test.tsx`'s `makePersona`
+(`auth.admin.createUser` + `users` upsert + `signInWithPassword` for a real
+access token) and `.github/workflows/qa-data-lifecycle.yml` (its own
+`unicorn-qa-p2-data-lifecycle` concurrency group). Verified locally: lint
+(0 errors), lint:ratchet (new file, 0 errors), typecheck (0 errors),
+`test:frontend` (330 passed/30 skipped, up from 330/19 — the suite's own
+11 tests all correctly skip without a service-role key), `test:edge`
+(276/276), build, KB links (0 broken).
+
+**NOT yet verified:** the live run against `unicorn-qa`'s real data — same
+honest gap as `qa:contract` before its own live proof. Next step: dispatch
+`qa-data-lifecycle.yml`, review the result, and record it here.
+
 **2026-09-08, session 31 — `qa:migrations`'s static-safety half was
 already built, just undocumented (`docs/qa-migrations-coverage-correction`):**
 before starting on the next unbuilt P2-QA suite, checked whether existing
