@@ -178,7 +178,7 @@ unrelated errors were observed — an "Ask Viv" feature-flag lookup returning
 
 ## Audit workspace — scheduling (`/admin/audits/:id`, Schedule tab)
 
-### 10. Opening/closing meeting calendar invites have never actually been sent — DOCUMENTED, NOT FIXED
+### 10. Opening/closing meeting calendar invites have never actually been sent — FIXED
 `useAuditSchedule.ts`'s `useScheduleAuditPhase()` creates a local `calendar_events`
 row after scheduling an opening or closing meeting, then uses that row's id to
 call the `sync-outlook-calendar` edge function (which sends the actual Outlook
@@ -197,9 +197,26 @@ gone out to attendees.
 literal value this insert always sets) — meaning this insert has never once
 succeeded in production, for any audit, ever.
 
-Not fixed here because the correct source for `calendar_id`/`provider_event_id`
-on a purely-internal (non-Outlook-originated) calendar event is a product/
-schema decision, not a type-only change — it's out of scope for this batch.
+**Fixed 2026-09-08:** the real underlying problem was bigger than a missing
+`calendar_id`/`provider_event_id` value — there was no *outbound* Outlook
+calendar capability anywhere in the codebase at all. Every existing Graph
+calendar call (`sync-outlook-calendar`'s sync, `generate-minutes-draft`/
+`sync-meeting-artifacts`'s single-event fetches) was read-only, and the
+requested OAuth scope was `Calendars.Read` only. Added real `create-event`/
+`cancel-event` actions to `sync-outlook-calendar` (Graph `POST`/`DELETE
+/me/events`, `Calendars.ReadWrite` scope), following the exact pattern
+`send-email-graph` already uses for outbound `Mail.Send` calls. The local
+`calendar_events` row is now inserted fully populated from the real Graph
+response instead of as a placeholder beforehand, which is what fixes the
+original `NOT NULL` constraint failure — neither value exists until Outlook
+has actually created the event. Never blocks scheduling/cancelling itself on
+a Graph failure (not connected, insufficient scope, etc.) — surfaces a
+visible "reconnect Outlook" notice instead of the old silent no-op. Live
+Playwright verification was deliberately skipped per Carl's explicit
+direction (avoiding real calendar-data creation on a live Outlook mailbox);
+13 existing connections will need to reconnect to pick up the new write
+scope. Full detail:
+`docs/audit-log/entries/2026-09-08-add-outbound-outlook-calendar-invites.md`.
 
 ## KPI v2 dashboard (`src/hooks/useKpiAccess.tsx`)
 

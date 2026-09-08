@@ -859,8 +859,8 @@ work.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
   infra decision), the rest of P3-A item 1 (the wider consumer graph
   above — `rpc_portfolio_client_health()`, Ask Viv fact builder,
-  compliance-assistant, executive views), the remaining two P4-D items
-  (#10, #18 — #3/#4/#14/#15/#16 done 2026-09-08), `InviteUserDialog.tsx`'s
+  compliance-assistant, executive views), the remaining P4-D item
+  (#18 — #3/#4/#10/#14/#15/#16 done 2026-09-08), `InviteUserDialog.tsx`'s
   bounded cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard
   display core — blocked on missing Playwright coverage), P7 — several of
   these require live-schema investigation, product/security decisions, or
@@ -1204,7 +1204,7 @@ Keep these as separately approved migration packets:
 
 - ~~Import Stage identity allocation (#3)~~ — **done 2026-09-08**, Carl authorized;
 - ~~Archive Package status contract (#4)~~ — **done 2026-09-08**, Carl authorized;
-- calendar event identity and invitations (#10);
+- ~~calendar event identity and invitations (#10)~~ — **done 2026-09-08**, Carl authorized;
 - ~~stage archive audit identity (#14)~~ — **done 2026-09-08**, Carl authorized;
 - ~~legacy tenant mapping (#15)~~ — **done 2026-09-08**, Carl authorized;
 - ~~Academy RPC return type (#16)~~ — **done 2026-09-08**, Carl authorized; and
@@ -1266,23 +1266,26 @@ needed the fix — independently retired as dead code in an earlier PR
 (`479972a21`). Audit entry:
 `docs/audit-log/entries/2026-09-08-fix-excel-generation-legacy-client-lookup.md`.
 
-**#10 investigated 2026-09-08, confirmed to need real feature work, not a
-bounded fix — correctly left in the queue.** Even fixing
-`calendar_events.calendar_id`/`provider_event_id`'s `NOT NULL` columns
-would not produce a working Outlook invite: `sync-outlook-calendar` has no
-`action: 'create'` handler at all — every code path in that function only
-syncs *from* Outlook inbound (pulls existing events into the DB); nothing
-posts a new event *to* Outlook via the Graph API. `useAuditSchedule.ts`'s
-`if (syncData?.outlook_event_id)` check can never be true — that field is
-never returned under any action. Building this for real needs a new
-outbound Graph API call (likely a `Calendars.ReadWrite` scope this
-integration may not currently request — the existing OAuth flow only
-mentions `Calendars.Read` in its refresh scope default), plus a decision on
-placeholder values for the local row between insert and successful Outlook
-creation. Genuinely out of scope for a P4-D "run it" packet.
+**#10 investigated 2026-09-08, confirmed to be real feature work (not a
+bounded fix), scoped with Carl, then built the same day.** Confirmed via a
+full-repo search that no outbound "create Outlook event" capability
+existed anywhere — every Graph calendar call was read-only, and the
+requested OAuth scope was `Calendars.Read` only. Carl approved building it
+after reviewing the scope (new `Calendars.ReadWrite` scope + one-time
+reconnect for 13 existing connections, new `create-event`/`cancel-event`
+actions in `sync-outlook-calendar` following `send-email-graph`'s proven
+outbound-Graph-call pattern, never blocking scheduling/cancelling on a
+Graph failure — a visible notice instead of the old silent no-op) and
+explicitly asked to skip live Playwright verification ("I don't want to be
+making live calendar data" — any real-usage issue gets fixed then). Fixed
+the original ordering bug for real: the local `calendar_events` row is now
+inserted fully populated from the real Graph response, never as a
+placeholder beforehand (that ordering is exactly what made the original
+insert always fail its `NOT NULL` constraints). Audit entry:
+`docs/audit-log/entries/2026-09-08-add-outbound-outlook-calendar-invites.md`.
 
-The remaining two P4-D items (#10, #18) each still need their own design
-decision (or, for #10, real feature scoping) before a fix.
+The remaining P4-D item (#18) still needs its own product decision before
+a fix.
 
 ## 8. Residual lint and Phase 2.6 packets
 

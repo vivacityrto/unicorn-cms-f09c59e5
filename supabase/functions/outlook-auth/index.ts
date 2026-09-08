@@ -204,7 +204,7 @@ serve(async (req) => {
       };
 
       const canonicalRedirectUri = resolved.redirectUri;
-      const exchangeScope = stateData.scope || 'openid profile email offline_access Calendars.Read';
+      const exchangeScope = stateData.scope || 'openid profile email offline_access Calendars.ReadWrite';
 
       console.log('[outlook-auth] Exchanging code:', {
         userId: stateData.user_id,

@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { autoCompleteStageTasks } from '@/hooks/useStageAuditLink';
 import type { AuditAppointment, AppointmentType } from '@/types/auditWorkspace';
-import type { Database, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import type { Database, TablesUpdate } from '@/integrations/supabase/types';
 
 // schedule_audit_phase's generated Args mark p_start_time/p_end_time as required
 // strings (Postgres parameters with no default), but the SQL body only reads them
@@ -121,73 +121,68 @@ export function useScheduleAuditPhase(auditId: string | undefined) {
         return appointmentId;
       }
 
-      // For meetings booked ahead of time, create a calendar event and sync it
-      // (including sending an invite) — not applicable once isBackdated is true.
+      // For meetings booked ahead of time, create a real Outlook calendar
+      // event + invite via sync-outlook-calendar's create-event action — not
+      // applicable once isBackdated is true. This never blocks scheduling:
+      // if the connected user's Outlook account can't accept the write (not
+      // connected, or connected under the old read-only scope), the meeting
+      // still schedules successfully and we surface a visible notice rather
+      // than silently doing nothing — see L10 #10 in
+      // docs/kb/reference/l10-real-bugs-found-2026-09-04.md for why a
+      // silent no-op was the bug in the first place.
       if (params.appointmentType === 'opening_meeting' || params.appointmentType === 'closing_meeting') {
         const meetingLabel = params.appointmentType === 'opening_meeting' ? 'Opening Meeting' : 'Closing Meeting';
         const title = `${meetingLabel} — ${params.auditTitle || 'Audit'}`;
 
-        try {
-          // KNOWN BUG (confirmed live, not fixed here — out of scope for a
-          // type-only change): calendar_events.calendar_id and
-          // provider_event_id are NOT NULL with no default, and this insert
-          // supplies neither, so it has never once succeeded in production
-          // (confirmed: 0 of 9,611 calendar_events rows have
-          // provider = 'internal'). The surrounding try/catch silently
-          // swallows the resulting error, so no calendar entry or Outlook
-          // invite has ever actually gone out for an opening/closing
-          // meeting scheduled through this flow. Needs a design decision on
-          // where calendar_id/provider_event_id should come from before
-          // this can be fixed for real.
-          const calendarInsertPayload = {
-            tenant_id: params.tenantId,
-            user_id: user.id,
-            title,
-            description: params.clientInstructions || '',
-            start_at: `${params.scheduledDate}T${params.startTime || '09:00'}:00`,
-            end_at: `${params.scheduledDate}T${params.endTime || '10:00'}:00`,
-            location: params.location || null,
-            meeting_url: params.meetingUrl || null,
-            attendees: params.attendees || [],
-            provider: 'internal',
-            status: 'confirmed',
-          } as unknown as TablesInsert<'calendar_events'>;
-          const { data: event, error: calErr } = await supabase
-            .from('calendar_events')
-            .insert(calendarInsertPayload)
-            .select('id')
-            .single();
+        if (params.tenantId) {
+          try {
+            const attendeePayload = ((params.attendees || []) as Array<{ email?: string; name?: string }>)
+              .filter((a) => a?.email)
+              .map((a) => ({ email: a.email, name: a.name }));
 
-          if (!calErr && event) {
-            const eventId = event.id;
-            // Link calendar event to appointment
-            const linkUpdate: TablesUpdate<'audit_appointments'> = { calendar_event_id: eventId };
-            await supabase
-              .from('audit_appointments')
-              .update(linkUpdate)
-              .eq('id', appointmentId);
+            const { data: createResult, error: createErr } = await supabase.functions.invoke('sync-outlook-calendar', {
+              body: {
+                action: 'create-event',
+                tenant_id: params.tenantId,
+                title,
+                description: params.clientInstructions || '',
+                start_at: `${params.scheduledDate}T${params.startTime || '09:00'}:00`,
+                end_at: `${params.scheduledDate}T${params.endTime || '10:00'}:00`,
+                location: params.location || null,
+                meeting_url: params.meetingUrl || null,
+                attendees: attendeePayload,
+                send_invites: true,
+              },
+            });
 
-            // Try Outlook sync (non-blocking)
-            try {
-              const { data: syncData } = await supabase.functions.invoke('sync-outlook-calendar', {
-                body: { event_id: eventId, action: 'create', send_invites: true },
-              });
-              if (syncData?.outlook_event_id) {
-                const outlookSyncUpdate: TablesUpdate<'audit_appointments'> = {
-                  outlook_event_id: syncData.outlook_event_id,
-                  outlook_synced_at: new Date().toISOString(),
-                };
-                await supabase
-                  .from('audit_appointments')
-                  .update(outlookSyncUpdate)
-                  .eq('id', appointmentId);
+            if (createErr || !createResult?.success) {
+              const errorCode = createResult?.error_code;
+              if (errorCode === 'not_connected' || errorCode === 'insufficient_scope') {
+                toast.warning('Meeting scheduled, but no calendar invite was sent — reconnect Outlook to enable invites.');
+              } else {
+                console.error('[useScheduleAuditPhase] Calendar event creation failed:', createErr || createResult);
+                toast.warning('Meeting scheduled, but the calendar invite could not be sent.');
               }
-            } catch {
-              // Outlook sync is optional
+            } else {
+              const linkUpdate: TablesUpdate<'audit_appointments'> = {
+                calendar_event_id: createResult.calendar_event_id || null,
+                outlook_event_id: createResult.outlook_event_id || null,
+                outlook_synced_at: new Date().toISOString(),
+              };
+              await supabase
+                .from('audit_appointments')
+                .update(linkUpdate)
+                .eq('id', appointmentId);
+              if (createResult.warning) {
+                toast.warning(createResult.warning);
+              }
             }
+          } catch (err) {
+            // Calendar event creation is optional — never fails the
+            // scheduling mutation itself.
+            console.error('[useScheduleAuditPhase] Calendar event creation threw:', err);
+            toast.warning('Meeting scheduled, but the calendar invite could not be sent.');
           }
-        } catch {
-          // Calendar event creation is optional
         }
       }
 
@@ -226,7 +221,7 @@ export function useCancelAuditAppointment(auditId: string | undefined) {
       if (appointment.outlook_event_id && appointment.calendar_event_id) {
         try {
           await supabase.functions.invoke('sync-outlook-calendar', {
-            body: { event_id: appointment.calendar_event_id, action: 'cancel' },
+            body: { event_id: appointment.calendar_event_id, action: 'cancel-event' },
           });
         } catch { /* best-effort; the appointment is already cancelled above regardless of calendar sync */ }
       }

@@ -57,6 +57,27 @@ interface TokenRecord {
   scope?: string;
 }
 
+interface RequestBody {
+  action?: string;
+  includeMeetings?: boolean;
+  folder?: string;
+  top?: number;
+  filterEmail?: string;
+  // create-event / cancel-event fields
+  tenant_id?: number;
+  title?: string;
+  description?: string;
+  start_at?: string;
+  end_at?: string;
+  location?: string;
+  meeting_url?: string;
+  attendees?: Array<{ email?: string; name?: string }>;
+  send_invites?: boolean;
+  client_id?: number;
+  package_id?: number;
+  event_id?: string;
+}
+
 async function refreshTokenIfNeeded(
   supabaseAdmin: SupabaseClient,
   userId: string,
@@ -81,7 +102,7 @@ async function refreshTokenIfNeeded(
       client_secret: MICROSOFT_CLIENT_SECRET,
       refresh_token: token.refresh_token,
       grant_type: 'refresh_token',
-      scope: token.scope || 'openid profile email offline_access Calendars.Read'
+      scope: token.scope || 'openid profile email offline_access Calendars.ReadWrite'
     })
   });
 
@@ -260,11 +281,13 @@ serve(async (req) => {
     let includeMeetings = false;
     let folder = 'inbox';
     let top = 50;
-    
+
     let filterEmail: string | undefined;
-    
+    let requestBody: RequestBody = {};
+
     try {
-      const body = await req.json();
+      const body = await req.json() as RequestBody;
+      requestBody = body || {};
       action = body?.action || 'sync-calendar';
       includeMeetings = body?.includeMeetings === true;
       folder = body?.folder || 'inbox';
@@ -329,6 +352,239 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Token expired. Please reconnect to Outlook.' }),
         { status: 401, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle create-event action - create a real Outlook calendar event and
+    // send the invite, then persist the local calendar_events row from the
+    // real Graph response. Deliberately does NOT insert a placeholder row
+    // before calling Graph (that ordering is the bug this whole feature was
+    // broken by from day one - calendar_id/provider_event_id are NOT NULL
+    // with no default, so a pre-insert always failed before Graph was ever
+    // called).
+    if (action === 'create-event') {
+      const {
+        tenant_id: tenantId,
+        title,
+        description,
+        start_at: startAt,
+        end_at: endAt,
+        location,
+        meeting_url: meetingUrl,
+        attendees: rawAttendees,
+        send_invites: sendInvites,
+        client_id: clientId,
+        package_id: packageId,
+      } = requestBody;
+
+      if (!tenantId || !title || !startAt || !endAt) {
+        return new Response(
+          JSON.stringify({ success: false, error_code: 'invalid_request', message: 'tenant_id, title, start_at, and end_at are required' }),
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const shouldInvite = sendInvites !== false;
+      const attendeeList = shouldInvite
+        ? (rawAttendees || [])
+          .filter((a) => a?.email)
+          .map((a) => ({ email: a.email, name: a.name || a.email, type: 'required' }))
+        : [];
+      const graphAttendees = attendeeList.map((a) => ({
+        emailAddress: { address: a.email, name: a.name },
+        type: a.type,
+      }));
+
+      // start_at/end_at arrive as naive local datetime strings (no UTC
+      // offset) and have always been written to calendar_events' timestamptz
+      // columns as-is - PostgREST casts a bare timestamp string using the
+      // connection's UTC session timezone, so the row's actual stored instant
+      // has always been "the naive string, read as UTC". Use the same UTC
+      // interpretation for the Graph event so the Outlook invite's time
+      // matches the local record exactly rather than introducing a second,
+      // different timezone assumption.
+      const graphPayload = {
+        subject: title,
+        body: { contentType: 'Text', content: description || (meetingUrl ? `Meeting link: ${meetingUrl}` : '') },
+        start: { dateTime: startAt, timeZone: 'UTC' },
+        end: { dateTime: endAt, timeZone: 'UTC' },
+        location: location ? { displayName: location } : undefined,
+        attendees: graphAttendees,
+      };
+
+      let graphEvent: { id: string; webLink?: string } | null = null;
+      try {
+        const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/events', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(graphPayload),
+        });
+
+        if (!graphRes.ok) {
+          const errText = await graphRes.text();
+          console.error('[sync-outlook] create-event Graph API error:', { status: graphRes.status, body: errText });
+          if (graphRes.status === 401) {
+            return new Response(
+              JSON.stringify({ success: false, error_code: 'not_connected', message: 'Token expired. Please reconnect to Outlook.' }),
+              { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+            );
+          }
+          if (graphRes.status === 403) {
+            return new Response(
+              JSON.stringify({ success: false, error_code: 'insufficient_scope', message: 'Outlook connection needs calendar write access - please reconnect to Outlook to enable calendar invites.' }),
+              { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+            );
+          }
+          return new Response(
+            JSON.stringify({ success: false, error_code: 'graph_error', message: `Graph API error: ${graphRes.status}` }),
+            { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+          );
+        }
+
+        graphEvent = await graphRes.json();
+      } catch (err) {
+        console.error('[sync-outlook] create-event error:', err);
+        return new Response(
+          JSON.stringify({ success: false, error_code: 'graph_error', message: err instanceof Error ? err.message : 'Failed to create Outlook event' }),
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!graphEvent?.id) {
+        return new Response(
+          JSON.stringify({ success: false, error_code: 'graph_error', message: 'Outlook did not return a created event id' }),
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: calendarEventRow, error: insertError } = await supabaseAdmin
+        .from('calendar_events')
+        .insert({
+          tenant_id: tenantId,
+          user_id: user.id,
+          provider: 'outlook',
+          provider_event_id: graphEvent.id,
+          calendar_id: 'primary',
+          title,
+          description: description || null,
+          location: location || null,
+          meeting_url: meetingUrl || null,
+          start_at: startAt,
+          end_at: endAt,
+          attendees: { list: attendeeList, emails: attendeeList.map((a) => a.email).filter(Boolean) },
+          status: 'confirmed',
+          source: 'created',
+          client_id: clientId || null,
+          package_id: packageId || null,
+          raw: graphEvent,
+        })
+        .select('id')
+        .single();
+
+      if (insertError || !calendarEventRow) {
+        // The Outlook event genuinely exists at this point - report success
+        // for the invite itself but flag that local linking
+        // (audit_appointments.calendar_event_id) won't be possible.
+        console.error('[sync-outlook] create-event: failed to persist local calendar_events row:', insertError);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            outlook_event_id: graphEvent.id,
+            web_link: graphEvent.webLink,
+            calendar_event_id: null,
+            warning: 'Outlook invite sent, but the local calendar record failed to save.',
+          }),
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          calendar_event_id: calendarEventRow.id,
+          outlook_event_id: graphEvent.id,
+          web_link: graphEvent.webLink,
+        }),
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle cancel-event action - cancel a previously created Outlook event.
+    if (action === 'cancel-event') {
+      const { event_id: calendarEventId } = requestBody;
+
+      if (!calendarEventId) {
+        return new Response(
+          JSON.stringify({ success: false, error_code: 'invalid_request', message: 'event_id is required' }),
+          { status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: calendarEventRow, error: lookupError } = await supabaseAdmin
+        .from('calendar_events')
+        .select('id, provider_event_id, user_id')
+        .eq('id', calendarEventId)
+        .single();
+
+      if (lookupError || !calendarEventRow) {
+        return new Response(
+          JSON.stringify({ success: false, error_code: 'not_found', message: 'Calendar event not found' }),
+          { status: 404, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (calendarEventRow.user_id !== user.id) {
+        return new Response(
+          JSON.stringify({ success: false, error_code: 'forbidden', message: 'Not your calendar event' }),
+          { status: 403, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+
+      try {
+        const graphRes = await fetch(
+          `https://graph.microsoft.com/v1.0/me/events/${encodeURIComponent(calendarEventRow.provider_event_id)}`,
+          { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+
+        // 404 means the event is already gone from Outlook (e.g. manually
+        // deleted there) - treat as success, since the end state we want
+        // (no Outlook event) is already true either way.
+        if (!graphRes.ok && graphRes.status !== 404) {
+          const errText = await graphRes.text();
+          console.error('[sync-outlook] cancel-event Graph API error:', { status: graphRes.status, body: errText });
+          if (graphRes.status === 401) {
+            return new Response(
+              JSON.stringify({ success: false, error_code: 'not_connected', message: 'Token expired. Please reconnect to Outlook.' }),
+              { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+            );
+          }
+          if (graphRes.status === 403) {
+            return new Response(
+              JSON.stringify({ success: false, error_code: 'insufficient_scope', message: 'Outlook connection needs calendar write access - please reconnect to Outlook.' }),
+              { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+            );
+          }
+          return new Response(
+            JSON.stringify({ success: false, error_code: 'graph_error', message: `Graph API error: ${graphRes.status}` }),
+            { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+          );
+        }
+      } catch (err) {
+        console.error('[sync-outlook] cancel-event error:', err);
+        return new Response(
+          JSON.stringify({ success: false, error_code: 'graph_error', message: err instanceof Error ? err.message : 'Failed to cancel Outlook event' }),
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+
+      await supabaseAdmin.from('calendar_events').update({ status: 'cancelled' }).eq('id', calendarEventId);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
