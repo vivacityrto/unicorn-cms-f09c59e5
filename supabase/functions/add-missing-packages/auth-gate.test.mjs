@@ -18,9 +18,9 @@ assert.ok(firstDbCallIndex > -1, 'must query the packages table');
 assert.ok(optionsIndex < gateIndex, 'OPTIONS handling must run before the auth gate');
 assert.ok(gateIndex < firstDbCallIndex, 'the auth gate must run before any DB read/write');
 
-// The error branch must not leak an untyped `any` error value directly —
-// it should narrow via `instanceof Error` before building the response.
+// The error branch must preserve message-bearing PostgREST result errors
+// without leaking an untyped `any` value directly.
 assert.match(source, /catch \(error: unknown\)/);
-assert.match(source, /error instanceof Error/);
+assert.match(source, /getErrorMessage\(error, String\(error\)\)/);
 
 console.log('add-missing-packages auth-gate checks passed');

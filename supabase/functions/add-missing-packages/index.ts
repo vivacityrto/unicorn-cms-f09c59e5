@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import { requireSuperAdmin } from '../_shared/requireCaller.ts';
+import { getErrorMessage } from '../_shared/error-message.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error, String(error));
     return new Response(
       JSON.stringify({ success: false, error: message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
