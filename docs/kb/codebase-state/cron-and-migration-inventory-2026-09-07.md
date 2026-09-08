@@ -1,12 +1,12 @@
 # Cron and Migration Inventory
 
-> **Status:** M0 inventory complete; M2/M3 retirement applied; M4 preflight refreshed 2026-09-08
+> **Status:** M0 inventory complete; M2/M3/M4 retirement applied; refreshed 2026-09-08
 >
 > **Captured:** 2026-09-08
 >
 > **Evidence:** production Supabase project `yxkgdalkbrriasiyyrwk`, dedicated
 > QA project `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`), repository
-> `origin/main@afafe1f5a`. The earlier `tenant-isolation-qa` preview branch is
+> `origin/main@e091aa17e`. The earlier `tenant-isolation-qa` preview branch is
 > historical and is not a current replay target.
 >
 > **Machine-readable companion:**
@@ -14,12 +14,12 @@
 
 ## Executive result
 
-Production now has 24 active cron jobs (27 before M2). The current schedule is not uniformly
+Production now has 20 active cron jobs (27 before M2; jobs 14, 15, 20 and 21 are absent). The current schedule is not uniformly
 healthy:
 
 - jobs 4, 5 and 6 were a legacy audit-reminder path and were unscheduled by M2;
-- jobs 20 and 21 invoke successfully but their forecast tables contain zero
-  rows;
+- jobs 20 and 21 were unscheduled by M4 after their forecast tables remained
+  empty;
 - job 15 writes stage-health rows, but all 357,471 rows have
   `progress_percentage = 0`; and
 - job 14 writes workload snapshots, but its burn-forecast table is empty.
@@ -54,8 +54,8 @@ request; it is not an application-level success assertion.
 | 17 | `generate-notifications-reporting-obligations` | `15 0 * * *` | 30 | 0 | Current notification generator | Keep |
 | 18 | `bulk-documents-reclaim-locks` | `*/5 * * * *` | 8,640 | 0 | Current bulk-document lock maintenance | Keep pending usage review |
 | 19 | `bulk-documents-purge-items` | `15 3 * * *` | 30 | 0 | Current bulk-document retention maintenance | Keep pending usage review |
-| 20 | `run-tenant-risk-forecast-nightly` | `0 13 * * *` | 30 | 0 | `tenant_risk_forecasts` has 0 rows | Repair or retire |
-| 21 | `run-retention-forecast-nightly` | `0 14 * * *` | 30 | 0 | `tenant_retention_forecasts` has 0 rows | Repair or retire |
+| 20 | `run-tenant-risk-forecast-nightly` | `0 13 * * *` | retired | — | `tenant_risk_forecasts` has 0 rows; retained for Client Health replacement | Retired by M4 (2026-09-08) |
+| 21 | `run-retention-forecast-nightly` | `0 14 * * *` | retired | — | `tenant_retention_forecasts` has 0 rows; retained for Client Health replacement | Retired by M4 (2026-09-08) |
 | 22 | `reconcile-invite-delivery-status` | `*/20 * * * *` | 2,160 | 0 | Current invitation reconciliation | Keep |
 | 23 | `send-action-item-due-reminders-nightly` | `0 20 * * *` | 30 | 0 | Current action-item reminder path | Keep |
 | 24 | `embed-ask-viv-corpus-incremental` | `*/30 * * * *` | 1,440 | 0 | Current Ask Viv ingestion | Keep |

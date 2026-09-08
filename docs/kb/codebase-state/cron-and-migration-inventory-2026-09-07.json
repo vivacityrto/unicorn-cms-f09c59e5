@@ -1,6 +1,6 @@
 {
-  "capturedAt": "2026-09-07",
-  "repositoryEvidence": "origin/main@b5c79c9b4",
+  "capturedAt": "2026-09-08",
+  "repositoryEvidence": "origin/main@e091aa17e",
   "productionProjectRef": "yxkgdalkbrriasiyyrwk",
   "qa": {
     "branch": "tenant-isolation-qa",
@@ -18,7 +18,7 @@
   },
   "production": {
     "appliedMigrations": 329,
-    "activeCronJobs": 24,
+    "activeCronJobs": 20,
     "cronExtensions": {
       "pg_cron": "1.6",
       "pg_net": "0.14.0"
@@ -34,14 +34,14 @@
       {"id":11,"name":"sync-outlook-calendar-every-30min","schedule":"*/30 * * * *","runs30d":1440,"failed30d":0,"disposition":"keep"},
       {"id":12,"name":"close-stale-preview-sessions","schedule":"0 */4 * * *","runs30d":180,"failed30d":0,"disposition":"keep"},
       {"id":13,"name":"reclaim-stale-cohort-locks","schedule":"*/5 * * * *","runs30d":8640,"failed30d":0,"disposition":"keep"},
-      {"id":14,"name":"run-workload-forecast-nightly","schedule":"0 16 * * *","runs30d":30,"failed30d":0,"disposition":"fix-output-health"},
-      {"id":15,"name":"run-stage-health-monitor-nightly","schedule":"0 15 * * *","runs30d":30,"failed30d":0,"disposition":"contain-and-fix"},
+      {"id":14,"name":"run-workload-forecast-nightly","schedule":"0 16 * * *","runs30d":30,"failed30d":0,"disposition":"retired-m4-2026-09-08"},
+      {"id":15,"name":"run-stage-health-monitor-nightly","schedule":"0 15 * * *","runs30d":30,"failed30d":0,"disposition":"retired-p3a-2026-09-07"},
       {"id":16,"name":"email_tickets_flag_sla_breaches","schedule":"*/5 * * * *","runs30d":8640,"failed30d":0,"disposition":"keep"},
       {"id":17,"name":"generate-notifications-reporting-obligations","schedule":"15 0 * * *","runs30d":30,"failed30d":0,"disposition":"keep"},
       {"id":18,"name":"bulk-documents-reclaim-locks","schedule":"*/5 * * * *","runs30d":8640,"failed30d":0,"disposition":"keep-pending-usage-review"},
       {"id":19,"name":"bulk-documents-purge-items","schedule":"15 3 * * *","runs30d":30,"failed30d":0,"disposition":"keep-pending-usage-review"},
-      {"id":20,"name":"run-tenant-risk-forecast-nightly","schedule":"0 13 * * *","runs30d":30,"failed30d":0,"disposition":"repair-or-retire"},
-      {"id":21,"name":"run-retention-forecast-nightly","schedule":"0 14 * * *","runs30d":30,"failed30d":0,"disposition":"repair-or-retire"},
+      {"id":20,"name":"run-tenant-risk-forecast-nightly","schedule":"0 13 * * *","runs30d":30,"failed30d":0,"disposition":"retired-m4-2026-09-08"},
+      {"id":21,"name":"run-retention-forecast-nightly","schedule":"0 14 * * *","runs30d":30,"failed30d":0,"disposition":"retired-m4-2026-09-08"},
       {"id":22,"name":"reconcile-invite-delivery-status","schedule":"*/20 * * * *","runs30d":2160,"failed30d":0,"disposition":"keep"},
       {"id":23,"name":"send-action-item-due-reminders-nightly","schedule":"0 20 * * *","runs30d":30,"failed30d":0,"disposition":"keep"},
       {"id":24,"name":"embed-ask-viv-corpus-incremental","schedule":"*/30 * * * *","runs30d":1440,"failed30d":0,"disposition":"keep"},
@@ -54,7 +54,7 @@
     ],
     "outputTables": [
       {"table":"stage_health_snapshots","rows":357471,"latest":"2026-09-06T15:00:17.96448Z","nonzeroProgress":0},
-      {"table":"workload_snapshots","rows":2510,"latest":"2026-09-06T16:00:09.292271Z"},
+      {"table":"workload_snapshots","rows":2539,"latest":"2026-09-07T16:00:00Z"},
       {"table":"tenant_risk_forecasts","rows":0,"latest":null},
       {"table":"tenant_retention_forecasts","rows":0,"latest":null},
       {"table":"tenant_package_burn_forecast","rows":0,"latest":null},

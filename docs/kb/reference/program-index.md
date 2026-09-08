@@ -19,7 +19,7 @@ initiatives. Start here for "where does this program stand," go to
 
 | Initiative | Status | Current phase/packet | Master plan |
 |---|---|---|---|
-| Codebase Optimization | active | Phase 2.6 stabilization — P4-D (schema/product decision queue) fully closed 2026-09-08 (#3/#4/#10/#14/#15/#16/#18); P3-A (client-health consumer containment) closed 2026-09-08 via PR #1024 | [`codebase-optimization-plan-2026-08-28.md`](codebase-optimization-plan-2026-08-28.md) |
+| Codebase Optimization | active | Phase 2.6 stabilization — P4-D and M4 (forecast/health cron retirement) closed 2026-09-08; P3-A (client-health consumer containment) closed 2026-09-08 via PR #1024 | [`codebase-optimization-plan-2026-08-28.md`](codebase-optimization-plan-2026-08-28.md) |
 | RBAC v6 | planning | Implementation plan only — no production migration, Edge deployment, permission grant, or role change authorized yet; awaiting the plan's own §13 decisions from Vivacity | [`rbac-v6-authorization-implementation-plan-2026-09-01.md`](rbac-v6-authorization-implementation-plan-2026-09-01.md) |
 | Tenant Operating Model | planning | Council-reviewed implementation plan; no implementation or production mutation authorized in the planning session itself | [`tenant-operating-model-data-architecture-plan-2026-09-02.md`](tenant-operating-model-data-architecture-plan-2026-09-02.md) |
 | Client Health Activity Analytics | planning (architecturally a child of Tenant Operating Model — see Dependencies below) | Current implementation reconciliation (2026-09-08): P3-A has contained the legacy stage-health signal on the main dashboard, executive widget, triage views, and Ask Viv hotspot tool | [`client-health-activity-analytics-plan-2026-09-03.md`](client-health-activity-analytics-plan-2026-09-03.md) |
@@ -33,7 +33,7 @@ real-time state.
 
 | Initiative | Current phase/packet | Branch | Owner/tool | Started |
 |---|---|---|---|---|
-| Codebase Optimization | Phase 2.6 stabilization — P4-D closed, next candidate not yet picked | — | — | — |
+| Codebase Optimization | Phase 2.6 stabilization — P4-D and M4 closed; next candidate not yet picked | — | — | — |
 | RBAC v6 | Awaiting Vivacity decisions (§13) | — | — | — |
 | Tenant Operating Model | Awaiting Carl/Vivacity decisions (§18) | — | — | — |
 | Client Health Activity Analytics | P3-A consumer containment closed 2026-09-08 | — | — | — |
@@ -76,3 +76,4 @@ record. These are the entries most load-bearing for current status:
 
 - [2026-09-08 — Allow tenant-less users to save notification preferences](../../audit-log/entries/2026-09-08-allow-tenant-less-notification-prefs.md) — closed Codebase Optimization P4-D's last item; parked the tenant-assignment decision to Tenant Operating Model §18.
 - [2026-09-08 — P3A main-dashboard health-read retirement](../../audit-log/entries/2026-09-08-p3a-main-dashboard-health-read-retirement.md) — closed Codebase Optimization P3-A / Client Health consumer containment.
+- [2026-09-08 — M4 forecast/health cron retirement](../../audit-log/entries/2026-09-08-retire-m4-forecast-health-crons.md) — unscheduled the empty-output forecast jobs and retained their data/functions for the Client Health replacement.

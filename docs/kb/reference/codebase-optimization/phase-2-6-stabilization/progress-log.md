@@ -4,7 +4,7 @@
 
 ## Progress log
 
-**2026-09-08, session 25 — P5-A item 3 closed, `InviteUserDialog.tsx`
+**2026-09-08, session 26 — P5-A item 3 closed, `InviteUserDialog.tsx`
 `unicorn1` adapter shipped (`hotfix/p5a-invite-user-unicorn1-adapter`):**
 replaced the reviewed `(supabase as any).schema('unicorn1')...` cross-schema
 exception with a bounded `Unicorn1SchemaClient` adapter type (`mapUnicorn1
@@ -38,14 +38,27 @@ is normalized here. P1-A, P1-B, P1-C, P3-A items 1–3, P4-A, P4-B, P4-C,
 P4-D, P6-A and the completed P6-B cohorts are done. P3-A item 4 is a separate
 RBAC/security hotfix and is not part of this stabilization implementation.
 P5-A is now fully done: item 3 (`InviteUserDialog.tsx`) shipped in session
-25 above. One deliberate lint exception remains: deferred
+26 above. One deliberate lint exception remains: deferred
 `generate-meeting-recurrence` typing.
-M0, M1, M2, M3-A, M3-C and M6 are done; M5 is superseded. M4 remains open
-only for the repair-versus-retire decision on forecast jobs 20/21; job 15 is
-paused and job 14 is retired. Remaining implementation candidates are the
+M0, M1, M2, M3-A, M3-C, M4 and M6 are done; M5 is superseded. Jobs 14, 15,
+20 and 21 are retired, with their data and functions retained. Remaining
+implementation candidates are the
 broader layered-QA scope (P2), SeatCard display-core coverage/extraction, and
 Phase 3 preparation/implementation (P7), which remains gated by RBAC and
 Tenant Operating Model decisions.
+
+**2026-09-08, session 25 — M4 retired by product decision:** the production
+preflight confirmed forecast jobs 20 and 21 were active while their respective
+output tables remained empty. Carl selected retirement rather than repair.
+Migration `20260908080000_retire_forecast_health_crons.sql` was merged and
+applied to production as Supabase migration `20260908074316`; it unscheduled
+only those exact schedules with ID-reuse checks and a postflight assertion.
+Jobs 14 and 15 were already absent. Postflight found 20 active cron jobs,
+both retired names absent, neighboring jobs 19/22 unchanged, all six
+forecast/health tables retained, and their row counts unchanged (357,471
+stage snapshots, 2,539 workload snapshots, zero forecast outputs). The
+forecast/health Edge Functions and historical rows remain intact for the
+Client Health replacement. No data deletion is part of this retirement.
 
 **2026-09-08, session 13 — Dedicated QA project provisioned:** created
 `unicorn-qa` (project ref `qfpxvumcrnzrjyvqkicq`) in Southeast Asia

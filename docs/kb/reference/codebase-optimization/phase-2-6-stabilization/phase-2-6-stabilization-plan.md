@@ -58,12 +58,14 @@ The often-quoted **9,209 retired lines** is an approximate Phase 2.6 aggregate:
 direct per-PR shortstat summation is approximately 8,867, with the difference
 coming from rounded/cohort accounting. Treat the dead-code register and current
 architecture metrics as authoritative; do not use 9,209 as an exact present
-LOC total. Remaining work is: the P2 layered-QA scope; M4's forecast decision
-queue for jobs 20/21 (jobs 14 and 15 are already retired/paused); the one
-remaining deliberate lint exception (deferred `generate-meeting-recurrence`
-typing); the SeatCard display-core prerequisite; and the P7 Phase 3
+LOC total. Remaining work is: the P2 layered-QA scope; the one remaining
+deliberate lint exception (deferred `generate-meeting-recurrence` typing);
+the SeatCard display-core prerequisite; and the P7 Phase 3
 preparation/implementation sequence. The separate RBAC correctness hotfix
-remains security-owned and is not a Phase 2.6 refactor.
+remains security-owned and is not a Phase 2.6 refactor. M4's forecast
+decision queue for jobs 20/21 is retired (jobs 14 and 15 were already
+retired/paused) — see progress-log.md sessions 21-22 and this repo's
+`supabase/migrations/20260908080000_retire_forecast_health_crons.sql`.
 ## Progress log
 
 Full execution history: [progress-log.md](progress-log.md).
@@ -516,16 +518,17 @@ authorizes a production change by itself.
 | `audit-flag-overdue-chcs` (#6) | Repeatedly fails because `notification_schedule.payload` no longer exists | Retire after owner confirmation |
 | `audit-evidence-reminders` (#5) | Legacy/half-shipped path; its status filter does not match the current evidence contract | Retire or formally migrate |
 | `audit-24hr-confirmation` (#4) | Legacy path using the removed `notification_schedule.payload` contract | Retire or formally migrate |
-| `run-tenant-risk-forecast` (#20) and `run-retention-forecast` (#21) | Active requests but zero forecast rows | Product decision: repair and prove output, or retire |
-| `run-stage-health-monitor` (#15) | Writes snapshots, but progress is universally zero and health is not trustworthy | Contain and fix; do not silently retire |
-| `run-workload-forecast` (#14) | Workload snapshots exist, but burn-forecast output is empty | Fix and add output-health checks |
+| `run-tenant-risk-forecast` (#20) and `run-retention-forecast` (#21) | Retired after zero forecast rows | Retain functions/tables/rows for Client Health replacement; do not restart silently |
+| `run-stage-health-monitor` (#15) | Retired after H0.0 containment; retained snapshots are not trustworthy | Define replacement under Client Health; do not restart silently |
+| `run-workload-forecast` (#14) | Retired after snapshots accumulated but burn output stayed empty | Define replacement under Client Health; do not restart silently |
 | `regulator-watch-check` (#29) | Active function with no current repository owner/reference found | Ownership review |
 | Bulk-document reclaim/purge (#18/#19) | Current maintenance functions exist | Keep unless a usage audit proves they are obsolete |
 | Notifications, calendar, invites, Ask Viv, Xero, activity digest, locks, and stalled-job recovery | Current consumers or operational evidence exist | Keep |
 
 M2 retired the former immediate retirement candidate group (jobs 4, 5, and 6).
-Jobs 20 and 21 still require an explicit repair-or-retire decision; they must
-not remain active as apparently successful no-op jobs.
+M4 then retired jobs 14, 15, 20 and 21; they must not be reactivated as
+apparently successful no-op jobs without a new Client Health contract and
+explicit authorization.
 
 ### Packet M0 — read-only cron and migration inventory
 
@@ -653,18 +656,14 @@ are blocking correctness defects, not typing cleanup.
 
 ### Packet M4 — forecast and health output integrity
 
-**Status:** in progress — H0.0 containment is complete; jobs 15 (stage health)
-and 14 (workload forecast) are paused/retired. The remaining decision queue is
-jobs 20/21 (`run-tenant-risk-forecast` and `run-retention-forecast`), which
-still require an explicit repair-and-prove or retire decision.
+**Status:** retired 2026-09-08 — H0.0 containment and the forecast retirement
+path are complete. Jobs 14/15/20/21 are unscheduled; their functions, tables,
+and historical rows remain retained for the Client Health replacement.
 
 - Add Client Health H0.0 containment so invalid stage-health data is shown as
   unavailable/data-repair-in-progress rather than relabelled as trustworthy.
-- For jobs 14 and 15, define freshness, row-count and non-zero-output
-  expectations; make violations fail visibly instead of recording a successful
-  no-op.
-- For jobs 20 and 21, repair and prove forecast inserts, or unschedule them
-  after the product decision.
+- Jobs 14/15/20/21 are retired rather than repaired; their output-health work
+  is superseded by the Client Health metric contract.
 - Run authenticated, read-only Playwright checks for `/dashboard`,
   `/executive`, `/triage-dashboard` and the affected Ask Viv surface. Do not
   seed or mutate dashboard data.

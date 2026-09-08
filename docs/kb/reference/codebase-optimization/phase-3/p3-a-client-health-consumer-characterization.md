@@ -49,7 +49,8 @@ replacement:
 | Compliance Assistant portfolio path | `buildPortfolioFacts()` via shared fact builder | Same attention facts are passed to deterministic/LLM reasoning | **Retained but not authoritative health**; no numerical health claim is allowed | Require the H1 metric catalogue and confidence/provenance fields before new health facts |
 | `get_stage_health_hotspots` | Ask Viv tool handler | Would have exposed legacy stage labels | **Already contained:** returns `unavailable/data_repair_in_progress` | Do not restore until replacement projection is live and tested |
 | `rpc_portfolio_client_health()` | `SECURITY DEFINER` database function over attention view | Aggregates four legacy stage labels | **Retained database object; no caller after this packet** | Drop or repurpose only in an explicit schema/RBAC packet after dependency scan |
-| `run-stage-health-monitor` | `stage_health_snapshots` writer | Writes the defective snapshot stream | Cron paused; function/table retained as evidence | Decide replacement/retirement with Client Health H1/H2; no deletion here |
+| `run-stage-health-monitor` | `stage_health_snapshots` writer | Writes the defective snapshot stream | Cron retired; function/table retained as evidence | Define replacement under Client Health H1/H2; no legacy restart |
+| `run-tenant-risk-forecast`, `run-retention-forecast` | Forecast-table writers | Jobs ran without producing forecast rows | Crons retired by M4; functions/tables retained as evidence | Define replacement outputs and freshness under Client Health; no legacy restart |
 | `run-workload-forecast`, `risk-command-engine`, `strategic-orchestration` | Snapshot/forecast reads in Edge code | May consume legacy stage snapshots in write-capable or operational paths | **Out of scope:** not UI-only consumers | Inventory deployed callers and contracts before any change |
 
 ## Legacy-to-Client-Health mapping
