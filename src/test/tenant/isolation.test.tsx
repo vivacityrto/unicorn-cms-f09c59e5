@@ -18,6 +18,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
+import {
+  acquireRlsSuiteLock,
+  getRlsSuiteConfigurationError,
+  readRlsSuiteEnvironment,
+} from "./rls-suite-guard";
 
 /* -------------------------------------------------------------------------- */
 /*  Live RLS suite — tenant_messages / tenant_conversations                   */
@@ -25,14 +30,15 @@ import type { Database, Tables, TablesInsert } from "@/integrations/supabase/typ
 /*  VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY).                */
 /* -------------------------------------------------------------------------- */
 
-const SUPABASE_URL =
-  process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "";
-const SUPABASE_ANON =
-  process.env.VITE_SUPABASE_ANON_KEY ??
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.SUPABASE_PUBLISHABLE_KEY ??
-  "";
-const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+const RLS_ENV = readRlsSuiteEnvironment();
+const SUPABASE_URL = RLS_ENV.supabaseUrl;
+const SUPABASE_ANON = RLS_ENV.supabaseAnon;
+const SERVICE_ROLE = RLS_ENV.serviceRole;
+const RLS_CONFIGURATION_ERROR = getRlsSuiteConfigurationError(RLS_ENV);
+
+if (RLS_CONFIGURATION_ERROR) {
+  throw new Error(`[tenant isolation] ${RLS_CONFIGURATION_ERROR}`);
+}
 
 const RLS_SUITE_ENABLED = Boolean(SUPABASE_URL && SUPABASE_ANON && SERVICE_ROLE);
 
@@ -219,6 +225,7 @@ let convA2 = "";
 let convA_noStaff = "";
 let convB = "";
 let setupFailed = false;
+let releaseRlsLock: (() => Promise<void>) | null = null;
 
 // Captured from test 4 so test 15 can assert on the exact audit row.
 let a1InsertedMessageId: string | null = null;
@@ -360,6 +367,7 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
   "tenant_messages RLS — live database",
   () => {
     beforeAll(async () => {
+      releaseRlsLock = await acquireRlsSuiteLock(RLS_ENV.lockPath);
       svc = createClient<Database>(SUPABASE_URL, SERVICE_ROLE, {
         auth: { persistSession: false, autoRefreshToken: false },
       });
@@ -448,8 +456,12 @@ describe.skipIf(!RLS_SUITE_ENABLED).sequential(
     }, 60_000);
 
     afterAll(async () => {
-      if (!svc || setupFailed) return;
-      throwCleanupFailures(await cleanupFixtures());
+      try {
+        if (!svc || setupFailed) return;
+        throwCleanupFailures(await cleanupFixtures());
+      } finally {
+        if (releaseRlsLock) await releaseRlsLock();
+      }
     }, 60_000);
 
     /* ---------------- Persona A1 ---------------- */

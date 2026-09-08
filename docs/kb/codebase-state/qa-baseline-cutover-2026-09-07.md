@@ -147,3 +147,11 @@ entries at capture time), not a copy of production's historical
 push` against the full historical tree; future migrations must be scanned,
 reviewed and applied forward explicitly, with the ledger and parity capture
 updated after each approved sync.
+
+The P1-C harness now enforces the allowlisted QA project when a service-role
+key is present and serializes same-host runs with an atomic lock. The protected
+workflow adds the cross-run GitHub Actions concurrency group. Configure the
+`unicorn-qa` environment with `QA_SUPABASE_PUBLISHABLE_KEY` and
+`QA_SUPABASE_SERVICE_ROLE_KEY` only after the owner approves secret storage;
+until then, the live suite must remain skipped and no credential should be
+added to repository or ordinary PR CI.

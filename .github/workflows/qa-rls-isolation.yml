@@ -1,0 +1,44 @@
+name: QA tenant isolation
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 18 * * *"
+
+# Cross-run project lock. The test file adds an atomic same-host lock for
+# local/manual runs; this concurrency group covers separate GitHub runners.
+concurrency:
+  group: unicorn-qa-p1c
+  cancel-in-progress: false
+
+jobs:
+  tenant-isolation:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Validate the non-production QA target
+        run: npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
+      - name: Require QA-only credentials
+        env:
+          QA_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+          QA_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          test -n "$QA_PUBLISHABLE_KEY" || { echo "QA_SUPABASE_PUBLISHABLE_KEY is not configured"; exit 1; }
+          test -n "$QA_SERVICE_ROLE_KEY" || { echo "QA_SUPABASE_SERVICE_ROLE_KEY is not configured"; exit 1; }
+      - name: Run live tenant-isolation RLS suite
+        run: npx vitest run src/test/tenant/isolation.test.tsx --pool=forks --maxWorkers=1
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          QA_SUPABASE_PROJECT_REF: qfpxvumcrnzrjyvqkicq

@@ -179,6 +179,12 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   membership, not just a tenant match). Wiring `SUPABASE_SERVICE_ROLE_KEY`
   into CI so this suite actually runs is a separate, not-yet-scoped
   follow-up — deliberately not done as a side effect of this note.
+- **P1-C follow-up state (2026-09-08):** the placeholder tests have been
+  removed, the live tests use generated types and run-scoped cleanup, and the
+  allowlisted `unicorn-qa` target plus protected workflow skeleton now exist.
+  The harness fails closed when a service-role key targets another project and
+  serializes local runs; GitHub Actions adds the cross-run concurrency lock.
+  The QA-only secrets and first live run remain intentionally outstanding.
 - Architecture metrics (P0.5, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`):
   `npm run metrics` (`scripts/architecture-metrics.mjs`) reproduces the
   plan's section-3 baseline table from a script instead of an ad-hoc pass —
