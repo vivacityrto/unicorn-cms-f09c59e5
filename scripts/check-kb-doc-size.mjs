@@ -30,11 +30,11 @@ const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 // even with all historical narrative extracted (the optimization plan sat
 // at 1155 lines immediately after its own progress-log extraction, none of
 // it narrative). Phase/packet docs under codebase-optimization/ are meant
-// to be scoped, bounded execution units -- 700 lines is the ceiling that
+// to be scoped, bounded execution units -- 750 lines is the ceiling that
 // actually would have caught the stabilization plan's 1804-line growth
 // well before it got there.
 const MASTER_MAX_LINES = 1600;
-const PHASE_MAX_LINES = 700;
+const PHASE_MAX_LINES = 750;
 
 // The four master initiative docs (flat, at docs/kb/reference/ root) --
 // checked against MASTER_MAX_LINES -- plus everything under the

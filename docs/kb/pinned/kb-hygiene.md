@@ -28,6 +28,17 @@ docs/                 ← in-codebase product/feature docs that Lovable reads
 docs/kb/              ← team KB. This file's folder.
   ├── pinned/         ← uploaded to Claude Project (always in context)
   ├── reference/      ← fetched via GitHub MCP on demand
+  │   ├── program-index.md            ← thin canonical glue across the four
+  │   │                                 active initiatives (status/phase/
+  │   │                                 dependencies/gates/links only)
+  │   ├── codebase-optimization-plan-2026-08-28.md   ← master plan, flat
+  │   ├── rbac-v6-authorization-implementation-plan-2026-09-01.md   ← flat
+  │   ├── tenant-operating-model-data-architecture-plan-2026-09-02.md  ← flat
+  │   ├── client-health-activity-analytics-plan-2026-09-03.md  ← flat
+  │   └── codebase-optimization/      ← phase/execution branches only —
+  │       ├── phase-2-6-stabilization/    see "Program/phase folder
+  │       ├── phase-3/                    hierarchy" below for the rule
+  │       └── cross-cutting/
   ├── codebase-state/ ← fetched via GitHub MCP; as-shipped state of the codebase
   └── handoffs/       ← scenario-specific procedures
 
@@ -112,6 +123,109 @@ One fact lives in one place. Duplicates are bugs.
 | As-shipped system architecture | `codebase-state/architecture.md` |
 | Actual code behaviour | this repo's source (ground truth) |
 | Audit narrative | `docs/audit-log/entries/*.md` (read-only context; not part of source precedence) |
+| Cross-initiative status/dependencies/gates | `reference/program-index.md` (thin glue only — never implementation detail) |
+
+---
+
+## Program/phase folder hierarchy
+
+Added 2026-09-08 alongside `reference/program-index.md`, once the
+Codebase Optimization Plan had branched twice (Phase 2.6 → Stabilization
+plan → QA/coverage strategy doc) with no structural place recording which
+files belonged to which phase.
+
+**Four peer initiatives, never nested inside one another:** Codebase
+Optimization, RBAC v6, Tenant Operating Model, Client Health Activity
+Analytics. Each keeps its master plan as a flat file directly in
+`docs/kb/reference/` — do not move these again without a real reason,
+they carry the most inbound cross-references in the whole tree. Client
+Health is architecturally a *child* of Tenant Operating Model (its own
+header says so), but is still tracked as its own initiative file here
+because it has its own phased execution — see `program-index.md`'s
+"Dependencies and gates" for the real relationship.
+
+**A phase or execution branch that spawns its own document(s) nests
+under `docs/kb/reference/<initiative>/<phase-slug>/`** — a direct child
+of the initiative folder, named for the exact phase (don't invent a
+grouping level a plan's own numbering doesn't have — Phase 2.6 nests
+directly under `codebase-optimization/`, not under an invented
+`phase-2/` umbrella, because the plan's own phases run 0, 1, 2, 2.5, 2.6,
+3 as siblings in sequence).
+
+**A further subfolder is only created once a child area accumulates 2+
+files** that would otherwise clutter the parent phase folder — one file
+stays flat in the parent.
+
+**Standard packet/phase-doc header** (additive to the freshness header
+below — used only on initiative, phase, and packet-level docs, not on
+docs like `glossary.md` that have no parent plan):
+
+```
+> **Parent plan:** <link up>
+> **Program index:** <link to reference/program-index.md, relative depth depends on the doc's own location>
+> **Status:** active | planning | completed | superseded
+> **Owner:** <name>
+> **Scope:** <one line>
+> **Dependencies:** <links, or "none">
+> **Exit criteria:** <one line>
+> **Evidence:** <links to audit entries / verification, or "none yet">
+> **Audit entry:** <link, or "none needed — <reason>", or "none yet">
+```
+
+**Reading order for initiative work** (also in `AGENTS.md`, so Codex gets
+it natively): before touching any of the four initiatives' work, read
+`program-index.md` → the owning initiative's master plan → the relevant
+phase doc → the specific packet → its linked audit entries, in that
+order. After finishing, update only the docs whose status or evidence
+actually changed, add an audit entry when the existing schema/RLS/
+trigger/security/cron rule requires one, and run
+`node scripts/check-kb-links.mjs` before opening the PR.
+
+**Update discipline.** Completing a packet updates: (a) its own doc, (b)
+the owning phase doc, (c) `program-index.md` *only if status or a
+dependency actually changed* — most packet completions don't move the
+needle at the program level and shouldn't touch this file, (d) a new
+audit-log entry only for the categories `AGENTS.md` already requires one
+for (production/schema/migration/security/cron/operational changes) —
+this doesn't invent a new audit-trigger rule, it points at the existing
+one.
+
+**Progress narrative belongs in a sibling `progress-log.md`, not inline
+in the plan.** A plan/phase doc stays current-state-only — status,
+scope, exit criteria, what's next. Anything retrospective ("done
+2026-09-08: fixed X, verified Y...") moves to a `progress-log.md`
+sibling in the same folder, newest-first, one entry per completion, with
+a link to the fuller audit-log entry. This is enforced, not just
+convention: `scripts/check-kb-doc-size.mjs` fails CI if a phase/packet
+doc under `codebase-optimization/` exceeds 750 lines (master docs get a
+1600-line ceiling — they're foundational architecture, not narrative,
+and stay legitimately larger even fully trimmed) — any file whose
+basename ends in `progress-log.md` is exempt, since it's expected to
+grow. `l10-real-bugs-found.md` carries the same exemption for a
+different reason: it's a point-in-time bug-evidence register, not a
+living plan — its length comes from genuinely distinct, independently-
+evidenced findings, not narrative that could move elsewhere.
+
+**`docs/audit-log/` is never restructured to mirror the plan tree.** It
+stays flat and chronological, exactly as today. Plans and packets link
+to specific entries; entries never link back into a folder structure.
+`scripts/check-packet-status-audit-gate.mjs` catches the one real gap
+this leaves: a packet's `**Status:**` flipping to a closed state with no
+correlated new file under `docs/audit-log/entries/` and no explicit
+`**Audit entry:** none needed — <reason>` opt-out on the packet itself.
+(If `**Audit entry:**` is written as a real link, `check-kb-links.mjs`
+already verifies the target exists — that half needs no separate check.)
+
+**Superseded/historical docs are never deleted** — they stay where they
+are (typically `docs/kb/handoffs/`) and get an explicit
+`status: superseded` note pointing at the replacement, matching the
+ADR-supersession rule under "Pruning discipline" below.
+
+This ruleset only applies to the four tracked initiatives. A routine,
+standalone feature request or bug fix unrelated to any of them is not
+funneled through this structure — it's still just its own branch, its
+own PR, and an audit entry only if it touches schema/RLS/trigger/
+security/cron, exactly as before.
 
 ---
 

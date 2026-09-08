@@ -52,8 +52,8 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   `@typescript-eslint/no-explicit-any`) — that backlog is now **eliminated**,
   driven down via the Phase 2.5 any-retirement program (~90 merged PRs,
   closed at PR #953) and the Phase 2.6 stabilization plan's P1-A/P1-B/P5-A
-  packets plus dead-code retirement (`docs/kb/reference/
-  phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md`). As of
+  packets plus dead-code retirement (`docs/kb/reference/codebase-optimization/
+  phase-2-6-stabilization/phase-2-6-stabilization-plan.md`). As of
   2026-09-08 (`origin/main@e5930f908`), `npm run lint` reports **2 errors,
   44 warnings** (46 problems; `docs/kb/reference/lint-baseline.json` tracks
   42 of those — 2 errors, 40 warnings — the 4 remaining warnings are
@@ -253,6 +253,28 @@ resolution, preserve all existing document entries and inspect the final diff
 for lost claims, links, or evidence. Run the relevant documentation checks — at
 minimum `node scripts/check-kb-links.mjs` for KB changes — and explicitly note
 when a related document was reviewed but intentionally unchanged.
+
+## Reading order for the four tracked initiatives (standing practice, added 2026-09-08)
+
+Four initiatives run in parallel under `docs/kb/reference/`: Codebase
+Optimization, RBAC v6, Tenant Operating Model, Client Health Activity
+Analytics. Before touching any of their work, read in this order:
+`docs/kb/reference/program-index.md` → the owning initiative's master plan
+(the four flat files directly under `docs/kb/reference/`) → the relevant
+phase doc (`docs/kb/reference/codebase-optimization/<phase-slug>/`, for
+Codebase Optimization phases) → the specific packet → its linked audit
+entries. After finishing, update only the docs whose status or evidence
+actually changed, add an audit entry when the existing schema/RLS/trigger/
+security/cron rule above requires one, and run
+`node scripts/check-kb-links.mjs` before opening the PR. Full ruleset,
+including the packet header standard and the folder-nesting convention:
+`docs/kb/pinned/kb-hygiene.md` → "Program/phase folder hierarchy".
+
+This only applies to the four tracked initiatives. A routine, standalone
+feature request or bug fix unrelated to any of them is not funneled
+through this structure — it's still just its own branch, its own PR, and
+an audit entry only if it touches schema/RLS/trigger/security/cron,
+exactly as before.
 
 ## Workflow efficiency checkpoints (standing practice, added 2026-09-04)
 
