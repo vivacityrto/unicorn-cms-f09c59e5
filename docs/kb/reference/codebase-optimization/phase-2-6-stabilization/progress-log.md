@@ -4,7 +4,7 @@
 
 ## Progress log
 
-**2026-09-09, session 33 — real production bug found and fixed while
+**2026-09-09, session 34 — real production bug found and fixed while
 live-verifying `qa:data-lifecycle` (`hotfix/tenant-lifecycle-close-fk-bug`;
 `docs/audit-log/entries/2026-09-09-tenant-lifecycle-close-fk-bug.md`,
 `l10-real-bugs-found.md` item 34):** dispatching session 32's suite for
@@ -41,13 +41,16 @@ what that table should contain before it's worth building.
 Verified: existing `response-context.test.mjs` and
 `suspend-close-superadmin.test.mjs` (don't reference the changed query
 shape, unaffected) plus the full `test:edge` suite (279/279) still pass.
-Redeployed the fixed function to `unicorn-qa`; re-dispatched
-`qa-data-lifecycle.yml` for the real regression proof (result to be
-recorded once that run completes). PR opened for the production-side fix,
-following the standard "merge is a live production deployment" protocol
-from `AGENTS.md` → "Supabase deployment workflow" (auto-deploy-on-merge is
-unreliable — post-merge version check required before treating this as
-actually live).
+Redeployed the fixed function to `unicorn-qa` (version 2) and re-dispatched
+`qa-data-lifecycle.yml`: **all 11/11 tests passed** (workflow run
+`34289646607`), including the real close-with-audit-log-verification test
+that previously 500'd — genuine regression proof, not just "the request
+succeeded." `qa:data-lifecycle`'s first target is now fully live-proven.
+PR opened for the production-side fix, following the standard "merge is a
+live production deployment" protocol from `AGENTS.md` → "Supabase
+deployment workflow" (auto-deploy-on-merge is unreliable — post-merge
+version check required before treating this as actually live in
+production).
 
 **2026-09-09, session 33 — PostgREST error-message regression audit and fix
 (`codex/fix-recurrence-errors-kb-size`):** reviewed the recent Edge Function
