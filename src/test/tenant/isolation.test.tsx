@@ -287,7 +287,7 @@ async function addTenantMember(tenantId: number, userId: string): Promise<string
   const membership: TenantMemberInsert = {
     tenant_id: tenantId,
     user_id: userId,
-    role: "member",
+    role: "General User",
     status: "active",
     joined_at: new Date().toISOString(),
   };
