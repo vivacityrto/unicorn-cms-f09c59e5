@@ -4,7 +4,7 @@
 
 ## Progress log
 
-**2026-09-09, session 29 — PostgREST error-message regression audit and fix
+**2026-09-09, session 33 — PostgREST error-message regression audit and fix
 (`codex/fix-recurrence-errors-kb-size`):** reviewed the recent Edge Function
 typing edits for the same `catch (unknown)` narrowing failure found in
 `generate-meeting-recurrence`. Three additional confirmed cases were found:
@@ -22,6 +22,142 @@ migration, deployment, or production-data change was made.
 Architecture metrics were rerun: the shared helper and focused test add two
 tracked Edge files and 45 physical lines (1,698→1,700 files;
 478,546→478,591 lines); no frontend or schema footprint changed.
+**2026-09-09, session 32 — `qa:data-lifecycle`'s first target written: tenant
+lifecycle (`feat/qa-data-lifecycle-tenant`; live-proof pending):** Carl chose
+tenant lifecycle (suspend/close/archive/reactivate via `tenant-lifecycle`)
+over package builder, invitations, EOS meeting recurrences, and
+documents/versions (the last explicitly flagged as needing its own
+bounded-state-machine design first, per the master plan's P4.6). Real
+invariants worth protecting: SuperAdmin gating on suspend/close/archive (a
+previously-fixed security gap — `AGENTS.md`'s own guardrail note on
+`tenant-lifecycle` originally leaving suspend/close on the broader
+`staff.internal` gate), no-duplicate-close, reason-required validation on
+close/reactivate, the 30-day archive cooldown + `force_override`, and
+reactivate-from-archived's own separate SuperAdmin gate.
+
+This is P2-QA's first suite calling a real Edge Function rather than
+reading tables/OpenAPI directly. Confirmed `unicorn-qa` had **zero** Edge
+Functions deployed (`list_edge_functions` returned `{"functions":[]}`) —
+deploying one there was a new category of action, so it was paused for
+explicit approval before proceeding. Deployed `tenant-lifecycle` + its full
+`_shared/*` dependency closure (`auth-helpers.ts`, `supabase-client.ts`,
+`response-helpers.ts`, `cors.ts`, `requireCaller.ts`,
+`requireCaller-helpers.ts`) via `deploy_edge_function` against project
+`qfpxvumcrnzrjyvqkicq`. One real deploy-bundler quirk found and fixed:
+uploaded files are bundled under one flat root together with `index.ts`
+(unlike the real repo, where `_shared/` sits one directory *above* each
+function) — so the deploy-only copy of `index.ts` uses `./_shared/...`
+imports instead of the source repo's `../_shared/...`. Confirmed live with
+an unauthenticated smoke call: clean `401 UNAUTHORIZED` from the
+`requireCaller` gate, proving the bundle and runtime both work.
+
+Wrote `src/test/qa/data-lifecycle-tenant.test.ts` (11 tests) following the
+same persona-creation pattern as `isolation.test.tsx`'s `makePersona`
+(`auth.admin.createUser` + `users` upsert + `signInWithPassword` for a real
+access token) and `.github/workflows/qa-data-lifecycle.yml` (its own
+`unicorn-qa-p2-data-lifecycle` concurrency group). Verified locally: lint
+(0 errors), lint:ratchet (new file, 0 errors), typecheck (0 errors),
+`test:frontend` (330 passed/30 skipped, up from 330/19 — the suite's own
+11 tests all correctly skip without a service-role key), `test:edge`
+(276/276), build, KB links (0 broken).
+
+**NOT yet verified:** the live run against `unicorn-qa`'s real data — same
+honest gap as `qa:contract` before its own live proof. Next step: dispatch
+`qa-data-lifecycle.yml`, review the result, and record it here.
+
+**2026-09-08, session 31 — `qa:migrations`'s static-safety half was
+already built, just undocumented (`docs/qa-migrations-coverage-correction`):**
+before starting on the next unbuilt P2-QA suite, checked whether existing
+tooling already covered any of the remaining candidates first.
+`scripts/audit-migrations.mjs` — already CI-wired via
+`.github/workflows/migration-safety.yml` on every PR/push touching
+migrations, diff-scoped (`--changed-only`) — already detects exactly
+`qa:migrations`'s stated contract: production URLs, `cron.schedule`/
+`unschedule`, `net.http_*` calls, destructive DML, and hidden-backfill
+tags. Confirmed its own test suite passes (6/6,
+`node --test scripts/audit-migrations.test.mjs`). The coverage-model table
+called this "Not started"; corrected to reflect reality rather than
+duplicate already-working, already-proven tooling. Honestly scoped what's
+genuinely still missing: actually replaying an approved migration onto
+`unicorn-qa` and confirming a clean apply remains a manual/reviewed process
+(the doc's own "explicit QA sync" step), not an automated test — that part
+of the contract is still open. Docs-only change, no code.
+
+**2026-09-08, session 30 — `qa:contract` live-proven, RPC check promoted
+from soft to hard (`chore/qa-contract-diagnostic`):** with `qa-contract.yml`
+now on `main` (session 29's PR merged) and its `unicorn-qa` environment
+confirmed to have no protection rules, ran the real workflow via
+`gh workflow run` (workflow run `34238305046`). All 4 tests passed,
+including the two meaningful hard assertions (no table/column drift between
+generated types.ts and the live `unicorn-qa` schema) — genuine proof, not
+just "the request succeeded."
+
+The soft RPC-argument check surfaced 447 identical-shaped findings
+("exists but no matching entry in definitions") — every single generated
+function, not a mix of pass/fail, which is the signature of a parsing-shape
+bug rather than 447 real drifts. Added a one-off diagnostic test
+(`chore/qa-contract-diagnostic`, dispatched directly against the branch
+ref — confirmed `workflow_dispatch` works against any ref once the workflow
+file exists on `main`, no merge needed to iterate) and confirmed via its raw
+payload (workflow run `34238555502`): `definitions[functionName]` is
+table-only; an RPC's actual argument shape lives at
+`paths['/rpc/<name>'].post.parameters[].schema` (a body-parameter object
+schema with `properties` per arg and a `required` array). Rewrote
+`extractRpcArgs` to the confirmed-correct shape, removed the diagnostic
+test, and promoted the RPC check from soft/warn-only to a real hard
+assertion (arg-name match plus required/optional-drift comparison).
+Re-dispatched (workflow run `34238835701`): all 4 tests passed clean,
+confirming no RPC argument drift either. `qa:contract` is now fully
+live-proven, not just locally unit-tested. Full local verification chain
+also re-confirmed green after the fix: lint (0 errors, 44 warnings),
+typecheck, `test:frontend` (330/19 skipped), `test:edge` (276/276), build.
+
+**2026-09-08, session 29 — P2-QA's first suite, `qa:contract`, written
+(`feat/qa-contract-suite`; not yet live-proven):** built the first suite
+beyond `qa:rls` in the layered-QA coverage programme
+(`qa-environment-and-coverage-strategy.md`). Design decision made during
+scoping: PostgREST's own built-in OpenAPI introspection endpoint
+(`GET /rest/v1/`, confirmed `service_role`-only — the public anon key gets
+`"Only the service_role API key can be used for this endpoint"`) supplies
+everything needed with **zero new migration or RPC** — reusing the exact
+same `QA_SUPABASE_SERVICE_ROLE_KEY` secret `qa:rls` already has.
+
+New files: `src/test/qa/parse-generated-types.ts` (TypeScript-compiler-API
+parser for `src/integrations/supabase/types.ts`'s `Database["public"]`
+literal — same `typescript` package `scripts/generate-route-manifest.mjs`
+already uses, chosen over regex since the generated file's formatting isn't
+a stable contract), `src/test/qa/qa-suite-guard.ts` (a small, independent
+"must target QA not production" guard — deliberately *not* a shared import
+from `src/test/tenant/rls-suite-guard.ts`, to keep zero risk to the
+already-proven P1-C harness for the sake of a few dozen shared lines),
+`src/test/qa/contract.test.ts` (the suite itself), and
+`.github/workflows/qa-contract.yml` (workflow_dispatch/nightly-schedule
+only, `environment: unicorn-qa`, its own `unicorn-qa-p2-contract`
+concurrency group distinct from P1-C's).
+
+**Verified by this session:** the parser, both against a hand-written
+fixture and against the real 73k-line generated file (found >50 tables and
+>50 functions; exact-matched the known `tenants` table and
+`check_permission` function shapes) — `parse-generated-types.test.ts`, 3/3
+passing. The guard module — `qa-suite-guard.test.ts`, 4/4 passing, mirrors
+`rls-suite-guard.test.ts`'s own test shapes. `contract.test.ts` itself
+correctly `describe.skipIf`s to 0-run when no service-role key is present
+locally (same as `qa:rls`), confirmed via a live local `vitest run`.
+
+**NOT verified by this session, honestly disclosed rather than assumed
+correct:** the live PostgREST-OpenAPI fetch/diff has never actually run
+against `unicorn-qa` — that requires the QA-only service-role key, a
+protected GitHub Environment secret unavailable outside CI. Table/column
+existence checks are hard assertions; the RPC argument-shape comparison is
+deliberately a soft, warn-only check for v1, since the exact OpenAPI
+payload shape for RPC parameter definitions couldn't be confirmed without a
+live run. **Next step is for Carl (or a CI run) to trigger
+`qa-contract.yml` once** — the same process P1-C's own first live proof
+followed — then tighten the soft RPC check once that output is reviewed.
+Full local verification chain green: lint (0 errors), lint:ratchet,
+typecheck, `test:frontend` (330 passed/19 skipped, up from 323/15 —
++7 new passing, +4 newly-skipped from `contract.test.ts`), `test:edge`
+(276/276), build.
 
 **2026-09-08, session 28 — last deliberate lint exception retired,
 `generate-meeting-recurrence` typing (`hotfix/generate-meeting-recurrence-typing`):**

@@ -1,0 +1,41 @@
+name: QA contract (generated types vs. live schema)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 19 * * *"
+
+# Cross-run project lock, distinct from P1-C's own group so a scheduled
+# contract run never blocks on (or is blocked by) the isolation suite.
+concurrency:
+  group: unicorn-qa-p2-contract
+  cancel-in-progress: false
+
+jobs:
+  qa-contract:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Validate the non-production QA target
+        run: npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
+      - name: Require QA-only credentials
+        env:
+          QA_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          test -n "$QA_SERVICE_ROLE_KEY" || { echo "QA_SUPABASE_SERVICE_ROLE_KEY is not configured"; exit 1; }
+      - name: Run qa:contract suite
+        run: npx vitest run src/test/qa/contract.test.ts --pool=forks --maxWorkers=1
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          QA_SUPABASE_PROJECT_REF: qfpxvumcrnzrjyvqkicq

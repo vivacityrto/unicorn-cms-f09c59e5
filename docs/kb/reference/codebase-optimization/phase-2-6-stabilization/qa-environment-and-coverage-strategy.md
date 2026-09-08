@@ -63,16 +63,16 @@ step. Blind historical `supabase db push` is prohibited.
 
 P1-C is one protected suite in a layered QA programme:
 
-| Suite | Primary contract | Typical trigger |
-| --- | --- | --- |
-| `qa:rls` | Tenant boundaries, grants, staff access and negative authorization | RLS policy, grant, tenant-scoped table or auth helper change |
-| `qa:contract` | Generated types, columns, enums, FKs and RPC return shapes | Schema or RPC migration |
-| `qa:edge` | Auth, CORS, request/response and external-contract behavior | Edge Function change |
-| `qa:data-lifecycle` | Create/update/archive/delete workflows and invariants | Feature workflow or trigger change |
-| `qa:residue` | Run-scoped rows, Auth users, storage objects and orphan records | Any fixture-producing suite |
-| `qa:migrations` | Replay safety and absence of production URLs, cron, HTTP or hidden backfills | Migration change |
-| `qa:e2e` | Authenticated read-only route and workflow smoke checks | Route, auth or query-behavior change |
-| `qa:cron-safety` | QA remains schedule-free unless explicitly enabled | Cron or scheduling change |
+| Suite | Primary contract | Typical trigger | Status |
+| --- | --- | --- | --- |
+| `qa:rls` | Tenant boundaries, grants, staff access and negative authorization | RLS policy, grant, tenant-scoped table or auth helper change | Live-proven (workflow run `34179875080`) |
+| `qa:contract` | Generated types, columns, enums, FKs and RPC return shapes | Schema or RPC migration | Live-proven (workflow runs `34238305046`, `34238555502` diagnostic, `34238835701` — see `progress-log.md` session 29/30) |
+| `qa:edge` | Auth, CORS, request/response and external-contract behavior | Edge Function change | Not started as a standalone suite, but its blocking prerequisite is gone — `tenant-lifecycle` was deployed to `unicorn-qa` for `qa:data-lifecycle` below, proving Edge Function deployment to QA works. A general `qa:edge` suite (auth/CORS/response-contract tests across functions) is still unbuilt |
+| `qa:data-lifecycle` | Create/update/archive/delete workflows and invariants | Feature workflow or trigger change | First target (tenant lifecycle: suspend/close/archive/reactivate) written — see `progress-log.md` for live-proof status. `tenant-lifecycle` deployed to `unicorn-qa` specifically for this (zero Edge Functions existed there before) |
+| `qa:residue` | Run-scoped rows, Auth users, storage objects and orphan records | Any fixture-producing suite | Partially covered — `qa:rls`'s own residue assertions; not a standalone suite yet |
+| `qa:migrations` | Replay safety and absence of production URLs, cron, HTTP or hidden backfills | Migration change | **Static-safety half already covered** by `scripts/audit-migrations.mjs`, live in CI on every PR/push touching migrations (`.github/workflows/migration-safety.yml`, diff-scoped) — production-URL, cron-registration/unschedule, HTTP-call, destructive-mutation and hidden-backfill-tag detection. **Not covered:** actually replaying an approved migration onto `unicorn-qa` and confirming a clean apply — the "explicit QA sync" step (§ below) remains a manual/reviewed process, not an automated test |
+| `qa:e2e` | Authenticated read-only route and workflow smoke checks | Route, auth or query-behavior change | Not started |
+| `qa:cron-safety` | QA remains schedule-free unless explicitly enabled | Cron or scheduling change | Not started |
 
 P1-C remains a focused gate. It is not replaced by Playwright, and a green
 frontend suite cannot substitute for a real RLS assertion.
@@ -116,7 +116,9 @@ test or an owner-approved waiver.
 ## Execution and isolation rules
 
 1. Migrations are authored, reviewed and merged to `main`.
-2. The changed-only migration scanner runs before QA sync and blocks
+2. The changed-only migration scanner (`scripts/audit-migrations.mjs`,
+   already live in CI via `.github/workflows/migration-safety.yml` on every
+   PR/push touching migrations) runs before QA sync and blocks
    production URLs, cron/HTTP calls, hidden backfills, destructive DML and
    unreviewed extension assumptions.
 3. The approved migration is applied to QA explicitly; QA does not auto-follow
