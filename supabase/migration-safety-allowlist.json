@@ -47,6 +47,24 @@
       "expires": "2026-10-08"
     },
     {
+      "id": "m4-retire-forecast-health-crons",
+      "file": "supabase/migrations/20260908080000_retire_forecast_health_crons.sql",
+      "categories": ["cron-unschedule"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl explicitly authorized retiring forecast jobs 20 and 21 after M4 preflight confirmed both output tables are empty. The migration only unschedules the exact named jobs and retains all functions, tables, and rows for Client Health replacement.",
+      "expires": "2026-10-08"
+    },
+    {
+      "id": "m4-restore-forecast-health-crons",
+      "file": "supabase/migrations/rollback/20260908080000_retire_forecast_health_crons.down.sql",
+      "categories": ["cron-registration", "http-call"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Manual, disabled-by-default rollback for M4 forecast cron retirement; requires explicit session settings and an operator decision before restoring either schedule.",
+      "expires": "2026-10-08"
+    },
+    {
       "id": "p4d-18-allow-tenant-less-notification-prefs",
       "file": "supabase/migrations/20260908070000_allow_tenant_less_notification_prefs.sql",
       "categories": ["data-mutation", "destructive-mutation"],

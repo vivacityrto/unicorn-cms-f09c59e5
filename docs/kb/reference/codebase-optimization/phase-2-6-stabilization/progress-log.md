@@ -18,6 +18,17 @@ broader layered-QA scope (P2), SeatCard display-core coverage/extraction, and
 Phase 3 preparation/implementation (P7), which remains gated by RBAC and
 Tenant Operating Model decisions.
 
+**2026-09-08, session 25 — M4 retired by product decision:** the production
+preflight confirmed forecast jobs 20 and 21 were still active while their
+respective output tables remained empty. Carl selected retirement rather than
+repair. Migration `20260908080000_retire_forecast_health_crons.sql` is staged
+to unschedule only those exact schedules with ID-reuse checks and a postflight
+assertion; jobs 14 and 15 were already absent. The forecast/health Edge
+Functions, tables, indexes, policies and historical rows remain intact for
+the Client Health replacement. Post-merge production application and
+verification are tracked by the linked audit entry; no data deletion is part
+of this retirement.
+
 **2026-09-08, session 13 — Dedicated QA project provisioned:** created
 `unicorn-qa` (project ref `qfpxvumcrnzrjyvqkicq`) in Southeast Asia
 (`ap-southeast-1`). Read-only post-provision capture confirms the project is
