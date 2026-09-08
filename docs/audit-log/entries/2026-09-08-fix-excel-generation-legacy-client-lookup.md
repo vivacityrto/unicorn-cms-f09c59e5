@@ -58,7 +58,21 @@ stale local checkout had briefly suggested otherwise.
   `npm run build` — all clean.
 - `LINT_RATCHET_BASE=origin/main node scripts/lint-ratchet.mjs` — no
   regression in the one changed file.
-- Live verification pending — recorded here once done.
+- Live verification (Playwright, authenticated SuperAdmin): inserted a
+  disposable `clients_legacy` row for Demo RTO (tenant 7547), then ran the
+  fixed query's exact logic against the real compiled app module in a live
+  authenticated session — it correctly resolved `clients_legacy.id` to the
+  test row's real uuid instead of `undefined`. A full UI button
+  click-through was not reachable: no document anywhere in production
+  currently has `is_auto_generated = true` with an Excel format, a
+  pre-existing, unrelated data-availability gap (the "Generate Excel"
+  button never renders today, for any tenant) — not something this fix
+  introduces or something worth forcing around with unrequested `tenants`
+  row mutations (that table carries several unconditional lifecycle/audit
+  triggers on UPDATE). Zero console errors. Test `clients_legacy` row
+  deleted afterward; confirmed 0 rows remain for tenant 7547, and no
+  `generated_documents`/`excel_generated_files` rows were ever created
+  (generation was never triggered).
 
 ## Open questions parked
 
