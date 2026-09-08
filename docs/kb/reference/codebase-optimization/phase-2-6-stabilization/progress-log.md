@@ -4,6 +4,53 @@
 
 ## Progress log
 
+**2026-09-08, session 29 — P2-QA's first suite, `qa:contract`, written
+(`feat/qa-contract-suite`; not yet live-proven):** built the first suite
+beyond `qa:rls` in the layered-QA coverage programme
+(`qa-environment-and-coverage-strategy.md`). Design decision made during
+scoping: PostgREST's own built-in OpenAPI introspection endpoint
+(`GET /rest/v1/`, confirmed `service_role`-only — the public anon key gets
+`"Only the service_role API key can be used for this endpoint"`) supplies
+everything needed with **zero new migration or RPC** — reusing the exact
+same `QA_SUPABASE_SERVICE_ROLE_KEY` secret `qa:rls` already has.
+
+New files: `src/test/qa/parse-generated-types.ts` (TypeScript-compiler-API
+parser for `src/integrations/supabase/types.ts`'s `Database["public"]`
+literal — same `typescript` package `scripts/generate-route-manifest.mjs`
+already uses, chosen over regex since the generated file's formatting isn't
+a stable contract), `src/test/qa/qa-suite-guard.ts` (a small, independent
+"must target QA not production" guard — deliberately *not* a shared import
+from `src/test/tenant/rls-suite-guard.ts`, to keep zero risk to the
+already-proven P1-C harness for the sake of a few dozen shared lines),
+`src/test/qa/contract.test.ts` (the suite itself), and
+`.github/workflows/qa-contract.yml` (workflow_dispatch/nightly-schedule
+only, `environment: unicorn-qa`, its own `unicorn-qa-p2-contract`
+concurrency group distinct from P1-C's).
+
+**Verified by this session:** the parser, both against a hand-written
+fixture and against the real 73k-line generated file (found >50 tables and
+>50 functions; exact-matched the known `tenants` table and
+`check_permission` function shapes) — `parse-generated-types.test.ts`, 3/3
+passing. The guard module — `qa-suite-guard.test.ts`, 4/4 passing, mirrors
+`rls-suite-guard.test.ts`'s own test shapes. `contract.test.ts` itself
+correctly `describe.skipIf`s to 0-run when no service-role key is present
+locally (same as `qa:rls`), confirmed via a live local `vitest run`.
+
+**NOT verified by this session, honestly disclosed rather than assumed
+correct:** the live PostgREST-OpenAPI fetch/diff has never actually run
+against `unicorn-qa` — that requires the QA-only service-role key, a
+protected GitHub Environment secret unavailable outside CI. Table/column
+existence checks are hard assertions; the RPC argument-shape comparison is
+deliberately a soft, warn-only check for v1, since the exact OpenAPI
+payload shape for RPC parameter definitions couldn't be confirmed without a
+live run. **Next step is for Carl (or a CI run) to trigger
+`qa-contract.yml` once** — the same process P1-C's own first live proof
+followed — then tighten the soft RPC check once that output is reviewed.
+Full local verification chain green: lint (0 errors), lint:ratchet,
+typecheck, `test:frontend` (330 passed/19 skipped, up from 323/15 —
++7 new passing, +4 newly-skipped from `contract.test.ts`), `test:edge`
+(276/276), build.
+
 **2026-09-08, session 28 — last deliberate lint exception retired,
 `generate-meeting-recurrence` typing (`hotfix/generate-meeting-recurrence-typing`):**
 Packet P3-A item 3 deferred this file's `catch (error: any)` cleanup until
