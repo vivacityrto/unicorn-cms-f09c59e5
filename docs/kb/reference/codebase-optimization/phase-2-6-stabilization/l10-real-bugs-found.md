@@ -936,6 +936,57 @@ RPC is likely not worth the investment — recommend leaving this documented
 rather than scheduling a fix, unless Unicorn 1's retirement timeline slips
 significantly.
 
+### 34. Tenant "Close" has always failed for every tenant — FIXED (2026-09-09, found while live-verifying Packet P2-QA's `qa:data-lifecycle` suite)
+
+Found while live-verifying the new `qa:data-lifecycle` suite's real HTTP-level
+test of `tenant-lifecycle`'s `close` action (not a static-analysis or typing
+find — a real live call against `unicorn-qa` returned `500 Internal Server
+Error`, and the same query was then confirmed broken in **production** too).
+`executeCloseTransaction`'s Step 1 queried `stage_instances` with a PostgREST
+embed — `.select("id, status, packageinstance_id, package_instances!inner(tenant_id)")`
+— to scope open stages to the closing tenant. `stage_instances.packageinstance_id`
+is a real `bigint` column, but confirmed via `pg_constraint` that **no foreign
+key constraint exists between `stage_instances` and `package_instances`, in
+production or `unicorn-qa`** (`stage_instances`'s only FK is
+`linked_audit_id → client_audits`). PostgREST cannot resolve an embed without
+a matching FK, so this query fails with `PGRST200` unconditionally — not
+depending on whether the tenant has any open stages, meaning **every real
+"Close" action call has failed with a 500 since this code was written**,
+regardless of environment. Step 2 (cancelling open tasks) used the identical
+broken pattern one level deeper
+(`client_task_instances.select("...", "stage_instances!inner(packageinstance_id, package_instances!inner(tenant_id))")`).
+
+This is the same root cause `ClientAuditsTab.tsx` already independently
+discovered and worked around (see its own code comment, from
+`hotfix: fix Client Detail package/stage bugs found in Playwright audit`) —
+`tenant-lifecycle` was simply never updated to match. Fixed the same way:
+resolve the tenant's `package_instances` ids with a plain query first, then
+filter `stage_instances`/`client_task_instances` by those ids directly
+instead of relying on an embed the schema doesn't support. No behavior
+change to the actual close semantics — same open-stage/open-task scoping,
+same "closed"/`3` status transitions, same audit log — only the query
+mechanism changed. Verified: existing `response-context.test.mjs` and
+`suspend-close-superadmin.test.mjs` (unaffected, don't reference this query
+shape) plus the full `test:edge` suite (279/279) still pass; the new
+`qa:data-lifecycle` suite's live run is the actual regression-proof for the
+real fixed behavior (table/column names cited above confirmed directly via
+`pg_constraint`/`information_schema.columns` against production, not
+assumed).
+
+A second, separate, non-blocking issue surfaced in the same investigation:
+`runCloseSafetyChecks`'s unresolved-risk-flags check queries
+`public.compliance_risk_flags`, which **does not exist in production
+either** (`to_regclass` returns `null`) — confirmed pre-existing, not
+introduced by this fix. Because the code only logs and continues on this
+specific query's error (it's a warning-only check, not a blocking one), this
+has never caused a visible failure — it just means the "N unresolved
+compliance risk flag(s) exist" warning has never actually been able to
+surface. **Not fixed here** — the correct fix needs a product decision on
+what this table should actually contain (a genuine `compliance_risk_flags`
+feature was apparently planned but never built), which is out of scope for
+this fix. Documented as a known gap; revisit if/when the compliance-risk-flag
+feature is actually built.
+
 ## Carl-reported regressions (2026-09-07) — DOCUMENTED, NOT INVESTIGATED
 
 Reported directly by Carl, not surfaced by this session's typing work.

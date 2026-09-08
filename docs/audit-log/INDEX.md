@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-09-09 — tenant-lifecycle "Close" action always failed (missing FK) — found live-verifying Phase 2.6 P2-QA's `qa:data-lifecycle` suite: `stage_instances` has no foreign key to `package_instances` in production or `unicorn-qa`, so `executeCloseTransaction`'s PostgREST embed failed unconditionally since the code was written. Fixed with a plain two-step query lookup (the same workaround `ClientAuditsTab.tsx` already applied for the identical root cause); no behavior change to close semantics. A separate, non-blocking `compliance_risk_flags` gap (table doesn't exist in production either) was documented, not fixed, pending a product decision.](entries/2026-09-09-tenant-lifecycle-close-fk-bug.md) · author: Claude Code
+
 - [2026-09-09 — Preserve PostgREST messages in typed Edge Function catches (Phase 2.6 P5-A follow-up) — audited recent `catch (unknown)` typing edits, fixed four affected functions with a shared structural message guard and focused tests, and confirmed no hosted state changed.](entries/2026-09-09-edge-postgrest-error-message-preservation.md) · author: Codex
 
 - [2026-09-08 — Retire the remaining M4 forecast and health cron jobs](entries/2026-09-08-retire-m4-forecast-health-crons.md) — Carl selected retirement for jobs 20/21 after confirming both produced zero forecast rows; the migration unschedules only those exact jobs and retains all functions, tables, and rows for the Client Health replacement.
