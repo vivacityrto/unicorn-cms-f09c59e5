@@ -31,13 +31,26 @@ email/document fallback pass checks (absent from the certification guardrail
 `computeStageQuality`), and the hook-only "certified integrity" self-check.
 No RLS, RPC, or schema change — pure frontend extraction.
 
-## Candidate 4 — seat-card presentation core
+## Candidate 4 — seat-card presentation core — RETARGETED (2026-09-08, Phase 2.6 stabilization)
 
-`SeatCard` and `DraggableSeatCard` share presentation but differ in drag,
-mutation, health, and permission behavior. Proposed boundary: display-only
-primitive plus explicit adapters. This is lowest priority and should not begin
-until the interactive contexts have independent browser coverage and the
-shared primitive has no authority or mutation responsibilities.
+This candidate assumed `SeatCard`/`FunctionColumn`/`DraggableSeatCard`/
+`DraggableFunctionColumn` were live, consolidatable duplicates. A fresh
+reachability trace before starting the "build independent browser coverage"
+prerequisite found they are not reachable at all: `/eos/accountability` →
+`EosAccountabilityChart.tsx` → `ChartBuilder` renders only `OrgChartView` and
+`EosChartGrid`, and neither references any of the four components — seats
+are rendered by a separate, independent `EosFunctionCard.tsx`. Zero importers
+of the four names exist anywhere in `src/` outside their own cluster (plus
+`SwimlaneDragDropProvider.tsx`, their shared dnd-kit context), and no test
+references them. Git history shows `EosFunctionCard.tsx` was created the same
+day as `FunctionColumn.tsx`, ~14 hours later — an apparent same-day
+replacement that was never cleaned up. This was not a live clone pair to
+consolidate — the cluster (1,633 LOC across 5 files) was retired outright.
+See `l10-real-bugs-found.md`-style evidence in the retirement PR
+(`hotfix/retire-dead-seatcard-cluster`). `SeatHealthBadge` and
+`SeatCoverageIndicator`, used inside the dead cluster, were kept — both have
+independent live callers (`SeatHealthSection`, `SeatDetailPanel`) reachable
+from `ChartBuilder`.
 
 ## Common gate
 

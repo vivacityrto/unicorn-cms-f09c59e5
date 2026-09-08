@@ -414,9 +414,14 @@ Retain `usePackageUsage.tsx` and every live replacement identified in the Phase 
 
 **Exit:** every candidate is retired, consolidated, retained with rationale, or deferred; before/after LOC and graph metrics are recorded; no backend object is removed by frontend evidence alone.
 
-**Status:** completed cohorts done — SeatCard display-core extraction remains
-deferred until independent authenticated drag/drop Playwright coverage exists;
-see [progress-log.md](progress-log.md).
+**Status:** completed cohorts done. The SeatCard display-core extraction
+never needed the assumed drag/drop Playwright prerequisite — a fresh
+reachability trace found `SeatCard`/`FunctionColumn`/`DraggableSeatCard`/
+`DraggableFunctionColumn`/`SwimlaneDragDropProvider` (1,633 LOC) were dead
+code, superseded same-day by `EosFunctionCard.tsx` and never cleaned up.
+Retired outright (`hotfix/retire-dead-seatcard-cluster`); see
+[next-candidate-packets.md](next-candidate-packets.md) Candidate 4 and
+[progress-log.md](progress-log.md).
 
 ## 9. Phase 3 pilot packets
 

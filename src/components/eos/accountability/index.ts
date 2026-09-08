@@ -1,5 +1,3 @@
-export { SeatCard } from './SeatCard';
-export { FunctionColumn } from './FunctionColumn';
 export { ChartBuilder } from './ChartBuilder';
 export { SaveVersionDialog, VersionHistoryDialog } from './VersionDialogs';
 export { SeatDetailPanel } from './SeatDetailPanel';
@@ -7,9 +5,6 @@ export { AccountabilityGaps } from './AccountabilityGaps';
 export { OrgChartView } from './OrgChartView';
 export { EosFunctionCard } from './EosFunctionCard';
 export { EosChartGrid } from './EosChartGrid';
-export { DraggableFunctionColumn } from './DraggableFunctionColumn';
-export { DraggableSeatCard } from './DraggableSeatCard';
-export { SwimlaneDragDropProvider } from './SwimlaneDragDropProvider';
 export { SeatHealthBadge } from './SeatHealthBadge';
 export { SeatHealthSection } from './SeatHealthSection';
 export { RecommendationsPanel } from './RecommendationsPanel';
