@@ -46,22 +46,24 @@ Current repository measurements, taken from the merged code state at
 lines (407,168 excluding generated types; 395,650 excluding generated types and
 tests); 115 files over 600 lines and 32 over 1,000; six wrapper files (105
 lines); 240 routes with zero duplicate paths; and typecheck at zero errors.
-The committed lint baseline is 2 errors and 40 rule-attributed warnings (full
-lint prints 2 errors and 44 warnings, including four rule-less unused-disable
-notices). The two errors are the reviewed `InviteUserDialog.tsx` exception and
-the deferred `generate-meeting-recurrence` typing boundary. These measurements
-supersede the historical snapshots embedded in the original packet text.
+As of `hotfix/p5a-invite-user-unicorn1-adapter` (2026-09-08), the lint
+baseline is down to 1 error and 40 rule-attributed warnings (full lint
+prints 1 error and 44 warnings, including four rule-less unused-disable
+notices) — the `InviteUserDialog.tsx` `any` exception is retired (P5-A item
+3, bounded typed adapter); the deferred `generate-meeting-recurrence` typing
+boundary is the sole remaining error. These measurements supersede the
+historical snapshots embedded in the original packet text.
 
 The often-quoted **9,209 retired lines** is an approximate Phase 2.6 aggregate:
 direct per-PR shortstat summation is approximately 8,867, with the difference
 coming from rounded/cohort accounting. Treat the dead-code register and current
 architecture metrics as authoritative; do not use 9,209 as an exact present
 LOC total. Remaining work is: the P2 layered-QA scope; M4's forecast decision
-queue for jobs 20/21 (jobs 14 and 15 are already retired/paused); the two
-deliberate lint exceptions (`InviteUserDialog.tsx` and deferred
-`generate-meeting-recurrence` typing); the SeatCard display-core prerequisite;
-and the P7 Phase 3 preparation/implementation sequence. The separate RBAC
-correctness hotfix remains security-owned and is not a Phase 2.6 refactor.
+queue for jobs 20/21 (jobs 14 and 15 are already retired/paused); the one
+remaining deliberate lint exception (deferred `generate-meeting-recurrence`
+typing); the SeatCard display-core prerequisite; and the P7 Phase 3
+preparation/implementation sequence. The separate RBAC correctness hotfix
+remains security-owned and is not a Phase 2.6 refactor.
 ## Progress log
 
 Full execution history: [progress-log.md](progress-log.md).
@@ -126,14 +128,17 @@ The seven non-`any` errors are expression-only ternaries in `NewEnrolmentModal.t
 > - **7 single-finding Edge Functions:** fixed, P5-A batch 1 (PR #967).
 > - **`AddWorkboardItemDialog.tsx`:** retired outright as dead code (P6-B,
 >   this session), not fixed — zero repo-wide imports.
-> - **`InviteUserDialog.tsx`:** still present — a deliberately retained,
->   reviewed `unicorn1` cross-schema exception, not a gap.
+> - **`InviteUserDialog.tsx`:** fixed, P5-A item 3
+>   (`hotfix/p5a-invite-user-unicorn1-adapter`) — replaced with a bounded
+>   `Unicorn1SchemaClient` adapter. Live verification of the adapter's one
+>   write call surfaced a separate, pre-existing production bug (fails at
+>   the PostgREST layer regardless of typing); documented, not fixed, in
+>   `l10-real-bugs-found.md` item 33.
 > - **The 7 non-`any` errors (`no-unused-expressions`):** fixed, P1-A (PR
 >   #957).
 > - **TypeScript errors (5 → 0):** fixed, P1-B (PR #958).
-> - **The 2 errors remaining today** are both `@typescript-eslint/no-explicit-any`:
->   `InviteUserDialog.tsx` (the exception above) and
->   `supabase/functions/generate-meeting-recurrence/index.ts` (its auth
+> - **The 1 error remaining today** is `@typescript-eslint/no-explicit-any`
+>   in `supabase/functions/generate-meeting-recurrence/index.ts` (its auth
 >   gate shipped in PR #979; typing cleanup was explicitly deferred per
 >   this packet's own P3-A item 3 rule — auth before typing).
 > - **Warnings (39 → 44, a net increase):** `react-refresh/only-export-components`
@@ -363,9 +368,14 @@ Do not use `unknown` casts merely to lower the count. Every Edge batch needs req
 
 Track the 39 Fast Refresh warnings separately; resolve them through module-boundary extraction rather than mixing them into query or auth changes.
 
-**Status:** functionally done for the targeted `no-explicit-any` contracts. Two
-deliberate exceptions remain: `InviteUserDialog.tsx` and the deferred
-`generate-meeting-recurrence` typing boundary.
+**Status:** done. Item 3 (`InviteUserDialog.tsx`) shipped
+(`hotfix/p5a-invite-user-unicorn1-adapter`) — the `as any` cast is replaced by
+a bounded `Unicorn1SchemaClient` adapter type isolating exactly the one
+legacy write call. Live verification of that call surfaced a separate,
+pre-existing production bug (the call fails at the PostgREST layer
+regardless of typing — see `l10-real-bugs-found.md` item 33); not fixed as
+part of this typing packet, documented instead. One deliberate exception now
+remains: the deferred `generate-meeting-recurrence` typing boundary.
 
 ### Packet P6-A — AddClientTaskDialog/AddStaffTaskDialog consolidation
 

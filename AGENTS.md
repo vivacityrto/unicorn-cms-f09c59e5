@@ -54,13 +54,20 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   closed at PR #953) and the Phase 2.6 stabilization plan's P1-A/P1-B/P5-A
   packets plus dead-code retirement (`docs/kb/reference/codebase-optimization/
   phase-2-6-stabilization/phase-2-6-stabilization-plan.md`). As of
-  2026-09-08 (`origin/main@e5930f908`), `npm run lint` reports **2 errors,
-  44 warnings** (46 problems; `docs/kb/reference/lint-baseline.json` tracks
-  42 of those — 2 errors, 40 warnings — the 4 remaining warnings are
-  "unused eslint-disable directive" notices with no `ruleId`, which the
-  baseline script deliberately doesn't attribute to a rule). The 2 errors
-  are both `@typescript-eslint/no-explicit-any`, both known and deliberate:
-  `InviteUserDialog.tsx` (a reviewed `unicorn1` cross-schema exception) and
+  `hotfix/p5a-invite-user-unicorn1-adapter` (2026-09-08), `npm run lint`
+  reports **1 error, 44 warnings** (45 problems; `docs/kb/reference/
+  lint-baseline.json` tracks 41 of those — 1 error, 40 warnings — the 4
+  remaining warnings are "unused eslint-disable directive" notices with no
+  `ruleId`, which the baseline script deliberately doesn't attribute to a
+  rule). `InviteUserDialog.tsx`'s reviewed `unicorn1` cross-schema exception
+  is retired (P5-A item 3 — replaced with a bounded typed adapter isolating
+  the `as unknown` boundary to one call; live-verifying that call surfaced a
+  separate, pre-existing production bug where the write fails at the
+  PostgREST layer regardless of typing — see `docs/kb/reference/
+  codebase-optimization/phase-2-6-stabilization/l10-real-bugs-found.md` item
+  33 — documented there, not fixed, since Unicorn 1 and this import flow are
+  expected to be retired). The 1 remaining error is
+  `@typescript-eslint/no-explicit-any` in
   `supabase/functions/generate-meeting-recurrence/index.ts` (auth-gate fix
   already shipped in PR #979; its own typing cleanup was explicitly
   deferred, per Packet P3-A item 3's "add explicit caller authorization
@@ -69,7 +76,7 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   Fast-Refresh style concern, not correctness — plus the 4 stale
   eslint-disable notices above. Re-run `npm run lint:baseline` before
   trusting this if it's been a while; a non-zero exit is still expected
-  (2 known errors), just no longer a ~4,100-error wall.
+  (1 known error), just no longer a ~4,100-error wall.
   `eslint.config.js`'s top-level `ignores` also excludes
   `.worktrees/**`/`worktrees/**`/`.claude/worktrees/**` — without it, ESLint
   was re-linting the full contents of any stray nested git worktree left
