@@ -47,7 +47,7 @@ request; it is not an application-level success assertion.
 | 11 | `sync-outlook-calendar-every-30min` | `*/30 * * * *` | 1,440 | 0 | Current calendar sync | Keep |
 | 12 | `close-stale-preview-sessions` | `0 */4 * * *` | 180 | 0 | Current impersonation-session maintenance | Keep |
 | 13 | `reclaim-stale-cohort-locks` | `*/5 * * * *` | 8,640 | 0 | Current lock maintenance | Keep |
-| 14 | `run-workload-forecast-nightly` | `0 16 * * *` | active | — | 2,539 workload snapshots through 2026-09-07; burn forecast has 0 rows; deployed source lacks M4 output-health safeguards | Product decision: repair/deploy with proof, or retire |
+| 14 | `run-workload-forecast-nightly` | `0 16 * * *` | retired | — | Job absent after M4 retirement; 2,539 workload snapshots retained; burn/risk/retention forecast tables remain empty | Retired by M4 (2026-09-08); retain function/tables for Client Health replacement |
 | 15 | `run-stage-health-monitor-nightly` | `0 15 * * *` | retired | — | Job absent after H0.0 containment; 357,471 retained snapshots with 0 non-zero progress values | Paused by P3-A; retain evidence pending Client Health replacement |
 | 16 | `email_tickets_flag_sla_breaches` | `*/5 * * * *` | 8,640 | 0 | Current ticket-SLA maintenance | Keep |
 | 17 | `generate-notifications-reporting-obligations` | `15 0 * * *` | 30 | 0 | Current notification generator | Keep |

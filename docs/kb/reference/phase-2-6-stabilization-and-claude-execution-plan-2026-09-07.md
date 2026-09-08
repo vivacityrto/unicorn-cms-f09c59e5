@@ -107,6 +107,15 @@ product decision: repair and deploy the workload path with authenticated,
 read-only Playwright proof, or retire/unschedule it as part of the Client
 Health replacement.
 
+**2026-09-08, session 22 — M4 workload cron retired:** Carl selected the
+retirement path after the preflight confirmed the workload job was producing
+snapshots but no burn/risk/retention forecast output. The fail-closed
+`retire_workload_forecast_cron` migration was applied to production and
+recorded by Supabase as `20260908035935`. Postflight confirms job 14 and its
+name are absent; the 2,539 workload snapshots and all forecast tables remain
+unchanged. The `run-workload-forecast` Edge Function remains deployed for
+separate replacement work. No data rows, function, or table were deleted.
+
 **2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
 migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
 and its JSON companion. No hosted state changed. M1 is next.
