@@ -1,0 +1,33 @@
+name: QA seed e2e personas (provisioning, not a test)
+
+on:
+  workflow_dispatch:
+
+# Provisioning is idempotent but still shouldn't race itself.
+concurrency:
+  group: unicorn-qa-p2-seed-e2e-personas
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Validate the non-production QA target
+        run: npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
+      - name: Seed persistent qa:e2e personas + tenant
+        run: node scripts/qa-seed-e2e-personas.mjs
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          QA_E2E_SUPERADMIN_PASSWORD: ${{ secrets.QA_E2E_SUPERADMIN_PASSWORD }}
+          QA_E2E_CLIENT_PASSWORD: ${{ secrets.QA_E2E_CLIENT_PASSWORD }}
