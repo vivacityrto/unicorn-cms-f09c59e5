@@ -4,6 +4,39 @@
 
 ## Progress log
 
+**2026-09-09, session 36 — `qa:cron-safety`'s first target written:
+`unicorn-qa` remains schedule-free (`feat/qa-cron-safety`; live-proof
+pending):** Continuing the same-session sweep through remaining P2-QA
+suites. `qa:cron-safety`'s contract ("QA remains schedule-free unless
+explicitly enabled") can't be tested through a normal PostgREST call — the
+`cron` schema isn't exposed to PostgREST, and confirmed via `execute_sql`
+against `unicorn-qa` that the `pg_cron` extension isn't even installed
+there (consistent with the original baseline observation in
+`qa-baseline-cutover-2026-09-07.md`). Added a minimal, read-only
+`public.qa_cron_safety_status()` RPC directly to `unicorn-qa` (via
+`apply_migration` against project `qfpxvumcrnzrjyvqkicq` only) that checks
+`pg_extension` first and only queries `cron.job` if the extension is
+actually installed, returning `(pg_cron_installed, cron_job_count,
+cron_job_names)`. `EXECUTE` granted to `service_role` only, revoked from
+`anon`/`authenticated`/`public` — confirmed via
+`information_schema.routine_privileges` (only `postgres` and `service_role`
+listed) and empirically with the QA project's public anon key: PostgREST
+returned `401`/`42501` ("permission denied for function
+qa_cron_safety_status"). This is deliberately QA-only tooling: not added to
+`supabase/migrations/**` (it has no purpose in production, which
+legitimately runs `pg_cron` jobs) and not in the generated `types.ts`, so
+`src/test/qa/cron-safety.test.ts` calls it via raw `fetch` against the PostgREST
+RPC endpoint, matching `edge-tenant-lifecycle.test.ts`'s untyped-call
+pattern rather than the typed `supabase-js` client used by
+`qa:data-lifecycle`. Two tests: the RPC reports zero registered jobs, and
+an anon caller is denied with `42501`.
+`.github/workflows/qa-cron-safety.yml` follows the established shape (its
+own `unicorn-qa-p2-cron-safety` concurrency group).
+
+Verified locally: lint, typecheck, `test:frontend`, build, KB links (see
+verification chain below). **Not yet live-proven** — same honest gap as
+every other suite before its first live run.
+
 **2026-09-09, session 35 — `qa:edge`'s first target written and live-proven:
 tenant-lifecycle (`feat/qa-edge-tenant-lifecycle`, PR #1041; live-proof
 workflow run `34290824352`, 6/6 passing):** Carl asked to
