@@ -27,6 +27,24 @@
       "owner": "Carl",
       "reason": "Carl explicitly authorized M3-C after the dependency cross-check: notification_schedule is empty and has no foreign-key, function, view, trigger, or cron dependants; legacy queue and email writers are retired. The active notification_audit_log and notification_outbox tables are preserved.",
       "expires": "2026-10-08"
+    },
+    {
+      "id": "m4-retire-workload-forecast-cron",
+      "file": "supabase/migrations/20260908060000_retire_workload_forecast_cron.sql",
+      "categories": ["cron-unschedule"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl explicitly authorized retiring the active workload forecast schedule after M4 preflight confirmed snapshots exist but burn/risk/retention forecast outputs are empty. The Edge Function and all snapshot/forecast tables are retained for evidence and a separately approved Client Health replacement.",
+      "expires": "2026-10-08"
+    },
+    {
+      "id": "m4-restore-workload-forecast-cron",
+      "file": "supabase/migrations/rollback/20260908060000_retire_workload_forecast_cron.down.sql",
+      "categories": ["cron-registration", "http-call"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Manual, disabled-by-default rollback for M4 schedule retirement; requires explicit session settings and an operator decision before restoring the workload cron.",
+      "expires": "2026-10-08"
     }
   ]
 }
