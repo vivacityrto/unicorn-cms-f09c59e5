@@ -84,8 +84,18 @@ the entity_id/uuid issue and out of scope here.
   `npm run build` — all clean.
 - `LINT_RATCHET_BASE=origin/main node scripts/lint-ratchet.mjs` — no
   regressions across all 13 changed files.
-- Live verification (Playwright, authenticated SuperAdmin) pending —
-  in progress as this PR goes up; result to be recorded here once done.
+- Live verification (Playwright, authenticated SuperAdmin): created a
+  disposable test stage (`ZZTEST_p4d14_verification`, id 1149), archived
+  then restored it — both `audit_events` inserts returned 201 (not the
+  old 400), with real `entity_id` uuids and `details.stage_id = 1149`;
+  the stage's own Audit Log tab correctly showed both entries. Stage
+  Analytics' activity feed rendered the same two events with correct
+  titles/timestamps, and its "view stage" link navigated to
+  `/admin/stages/1149` (a real numeric id, not a uuid). Zero console
+  errors throughout. Test stage cleaned up via direct SQL afterward (no
+  UI delete option exists for stages) — confirmed 0 rows remain with
+  that name; the 2 `audit_events` rows from the archive/restore are the
+  real audit trail, not residue.
 
 ## Open questions parked
 
