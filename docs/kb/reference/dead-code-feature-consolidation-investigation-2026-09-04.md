@@ -50,28 +50,52 @@ The formerly unused Audit shells and their exclusive legacy dependencies were ch
 
 | Cohort | Files / potential | Required caution before retirement |
 |---|---|---|
-| Workboard UI | Four files under `src/components/workboard/**` plus `src/hooks/useClientWorkboard.tsx`; about 1,751 LOC | Confirm the user-facing workboard was intentionally retired. `client_action_items` remains active elsewhere and must not be treated as dead database infrastructure. |
-| SharePoint document-link UI | `LinkedDocumentsList.tsx`, `SharePointDocumentPicker.tsx`, `useDocumentLinks.tsx`; about 1,088 LOC | The frontend island is disconnected, but the hook calls `link-sharepoint-document`. Do not infer that the endpoint or `document_links` is unused. |
-| Abandoned bulk-generation steps | `PackageFilterStep.tsx`, `ScopeStep.tsx`, `StageDocFilterStep.tsx`, `useTenantSharepointStatus.ts`; about 386 LOC | Verify every current wizard variant and the active targeted bulk-generation flow. |
-| Reassignment island | `ReassignConsultantDialog.tsx`, `useConsultantAssignment.tsx`; about 356 LOC | Preserve active CSC assignment contracts. If retired, remove these dead predicates from the RBAC/staff-directory census rather than consolidating them. |
-| Network-status island | `NetworkStatusIndicator.tsx`, `useNetworkStatus.ts`; about 302 LOC | Check build-time, preview, and development registries before deletion. |
-| Compliance-score island | `ComplianceScoreBreakdown.tsx`, `useComplianceScore.ts`; about 245 LOC | Confirm product/history disposition; do not infer that its backing view or RPC is dead. |
-| Old standalone UI | `client/BulkUploadDialog.tsx` and `dashboard/WeekTasksTable.tsx`; 344 and 228 LOC | Confirm no modal registry, launcher, planned restoration, or external embedding. |
+| ~~Workboard UI~~ | **✅ Retired 2026-09-07 (Phase 2.6 P6-B).** Four files under `src/components/workboard/**` (`AddWorkboardItemDialog.tsx`, `WorkboardBoardView.tsx`, `WorkboardItemDrawer.tsx`, `WorkboardListView.tsx`) plus `src/hooks/useClientWorkboard.tsx`; 1,765 LOC. Zero repo-wide references to any of the 5 beyond the cluster's own internal cross-imports — confirmed no page/route renders any of the 4 view components. **Caution satisfied, not skipped:** `client_action_items`/`client_action_item_comments` (the tables `useClientWorkboard.tsx` reads/writes) are genuinely still live — `ClientActionItemsTab.tsx`, `ClientTasksPage.tsx`, `TasksManagement.tsx`, several KPI-v2 components, and the Ask Viv fact builder's backend all read the same tables through a completely different, active UI. This is a superseded duplicate feature, not dead database infrastructure — only the orphaned standalone board/list-view UI was removed; the data model remains fully live and manageable through its real successor. | — |
+| ~~SharePoint document-link UI~~ | **✅ Retired 2026-09-07 (Phase 2.6 P6-B), frontend only.** `LinkedDocumentsList.tsx`, `SharePointDocumentPicker.tsx`, `useDocumentLinks.tsx`; 1,088 LOC. `LinkedDocumentsList.tsx` (the cluster's only entry point) had zero repo-wide references beyond the cluster's own internal cross-imports. **The caution's own instruction — "do not infer the endpoint or `document_links` is unused" — was checked, not skipped**: production `document_links` has 0 rows, ever (`select count(*) from document_links`), while `document_stage_links` (the table the live document-stage-linking feature actually uses, e.g. read by `useStageQualityCheck.tsx`'s document counts) has 678 real rows. This is stronger evidence than reachability alone — the feature was deployed but never adopted by any real user, superseded from day one by a differently-named table. Retired the 3 frontend files only; the `link-sharepoint-document` Edge Function and the empty `document_links` table were deliberately left untouched — their own retirement is a separate, later decision requiring the usual Edge/schema authorization, not inferred from this frontend-only cleanup. **✅ Backend retired 2026-09-08, Carl explicitly authorized.** Dropped `document_links`, its FK-dependent `document_link_audit` (also 0 rows), and the `update_document_links_updated_at` trigger function via a guarded migration (audit entry: `docs/audit-log/entries/2026-09-08-retire-document-links.md`); postflight confirmed `document_stage_links` (678 rows) untouched. Removed `link-sharepoint-document`'s source and `supabase/config.toml` entry from the repo — the deployed Edge Function itself remains ACTIVE but is now unreachable from any code path (no `delete_edge_function` MCP tool available; manual dashboard deletion is a disclosed follow-up). `merge_tenants()` references `document_links` defensively inside an exception-guarded per-table loop and will now log a harmless `document_links_error` entry on future tenant merges instead of failing — not fixed, disclosed. | — |
+| ~~Abandoned bulk-generation steps~~ | **✅ Retired 2026-09-07 (Phase 2.6 P6-B).** `PackageFilterStep.tsx`, `ScopeStep.tsx`, `StageDocFilterStep.tsx`, `useTenantSharepointStatus.ts`; 386 LOC. **Caution satisfied, not skipped:** confirmed the active targeted bulk-generation flow is `TargetedMode.tsx` (imported by the live `BulkGenerateNew.tsx`, reached from `BulkGenerateButton.tsx`'s `/manage-documents/bulk-generate/new` link), and that `BulkGenerateNew.tsx` imports only `TargetedMode` — no reference to any of the 4 retired files, confirming the older step-wizard was fully superseded, not one of two live variants. All 4 files' Supabase calls are plain reads on shared core tables (`packages`, `tenants`, `stages`, `tenant_sharepoint_settings`) — no exclusive backend object retired. | — |
+| ~~Reassignment island~~ | **✅ Retired 2026-09-07 (Phase 2.6 P6-B).** `ReassignConsultantDialog.tsx` (129 LOC), `useConsultantAssignment.tsx` (228 LOC); 357 LOC. **Caution satisfied, not skipped:** confirmed active CSC assignment contracts are preserved — `BulkReassignCscDialog.tsx` (live, imported by `ManageTenants.tsx`) is a completely independent implementation that does not use `useConsultantAssignment.tsx` at all, so retiring this island doesn't touch the live reassignment path. `ReassignConsultantDialog.tsx`'s only caller was actually removed 2026-08-27 (`235c3a3ce`, dead-code batch 8/12) — predating a later claim in `codebase-optimization-plan-2026-08-28.md` (Phase 2.5 any-batch 9a) that Playwright "verified live... Users (including the Reassign Consultant dialog)"; that claim is corrected there — it almost certainly conflated this dead dialog with the similarly-named, genuinely-live `BulkReassignCscDialog.tsx` typed in the same batch. Per this row's own instruction, removed the dead duplicated staff-listing predicate (`is_vivacity_internal`/`disabled`/`archived`/`kpi_pod` WHERE clause) from `docs/kb/handoffs/rbac-v6-gate-closure-plan.md`'s census of ~9 files needing future `useListableStaff()` migration, rather than migrating dead code. | — |
+| ~~Network-status island~~ | **✅ Retired 2026-09-07 (Phase 2.6 P6-B).** `NetworkStatusIndicator.tsx`, `useNetworkStatus.ts`; 302 LOC. Zero repo-wide references beyond the two files themselves (checked `src/`, config files, `.html`); a repo-wide grep for `NetworkStatusIndicator`/`useNetworkStatus`/`network-status`/`networkStatus` across `*.ts(x)`/`*.json`/`*.config.*`/`*.html` found nothing else — no build-time, preview, or dev registry references. Both files were created in the same original commit and never touched again despite the component's own usage docstring suggesting it belonged in `AuthenticatedLayout` or `App.tsx` — it was built but never mounted. Pure browser-API code (`navigator.onLine`, the Network Information API) with zero server/RPC/Edge Function dependency, so no backend disposition question applies. | — |
+| ~~Compliance-score island~~ | **✅ Retired 2026-09-07 (Phase 2.6 P6-B), frontend only.** `ComplianceScoreBreakdown.tsx` (146 LOC), `useComplianceScore.ts` (115 LOC); 261 LOC. **The caution's own instruction — "do not infer its backing view or RPC is dead" — was checked against production data, not inferred:** `compliance_score_snapshots` (the table `v_compliance_score_latest` reads and `calculate_compliance_score` RPC writes) has 0 rows, ever, and no `cron.job` invokes the RPC. This feature has never actually computed a compliance score for any tenant/package from any path — no frontend caller, no cron, no data. Two other frontend files (`PackageDataManager.tsx`'s cascade-delete-on-package-removal, `import-unicorn1-client`'s import row-count) reference the same table defensively but don't compute or display scores — their presence doesn't indicate the feature is live. Retired the 2 frontend files only; `calculate_compliance_score`, `v_compliance_score_latest`, and the empty `compliance_score_snapshots` table are deliberately left untouched — their own retirement needs separate Edge/schema authorization. **Product decision 2026-09-08: KEEP, not retirement candidates.** `calculate_compliance_score` is a real, sophisticated composite scoring engine (phase completion, documentation coverage, risk health, consult health, plus staleness/critical-risk/missing-docs caps), computed from genuinely live tables (`client_package_stage_state`, `stage_documents`/`document_instances`, `eos_issues`, `package_instances`, `time_entries`) — not a stub. Carl confirmed this is earmarked for the same future client health feature as `useClientAICompanion.ts` (see that entry above) rather than dead weight; the 0-row table just means it was never wired into any UI or cron, not that the logic is unused/wrong. Do not retire `calculate_compliance_score`, `v_compliance_score_latest`, or `compliance_score_snapshots` without checking back with Carl first. | — |
+| ~~Old standalone UI~~ | **✅ Retired 2026-09-07 (Phase 2.6 P6-B).** `client/BulkUploadDialog.tsx` (345 LOC) and `dashboard/WeekTasksTable.tsx` (250 LOC). Zero repo-wide references to either beyond the files themselves; no modal registry, launcher, or lazy-loaded reference found. `BulkUploadDialog.tsx`'s one Supabase call is a `package-documents` storage upload — shared bucket infrastructure used elsewhere, not exclusive to this file, so no backend disposition question. `WeekTasksTable.tsx`'s calls are plain reads on shared tables (`tasks_tenants`, `tenants`, `users`), same reasoning. **Process-integrity finding on `WeekTasksTable.tsx`:** its only caller was deleted on 2026-08-27 (`c1dcf097f`, dead-code batch 11/12), but a 2026-09-06 lint-typing PR (`033209d1e`, "chore: type dashboard overdue tasks") explicitly claimed in `execution-efficiency-log.md` and `codebase-optimization-plan-2026-08-28.md` that "fresh reachability confirmed `WeekTasksTable` is active on the protected `/dashboard` route," including a claimed Playwright pass "1/1 with zero page/console errors" — `/dashboard` is served by `MainDashboard.tsx`, which never imported this component (confirmed via `src/routes/dashboardRoutes.tsx`'s own header comment distinguishing it from the unrelated `Dashboard.tsx`). The component had already been orphaned for 10 days when that claim was made; the Playwright pass most likely just loaded `/dashboard` successfully regardless of whether this specific component rendered anything, and was mistakenly presented as verification of it. See the corresponding correction note added to both of those docs' PR #842 entries. | — |
 
 ### 3.3 Individual zero-inbound investigation queue
 
 The following are candidates, not a bulk-deletion list:
 
-- Data/workflow hooks: `useStageReleases` (396 LOC), `usePortfolioCockpit` (316), `useMeetingSeries` (285), `usePackageUsage` (266), `useMeetingMinutes` (207), `useKpiReview` (149), `useAISuggestions` (122), `useEosDrafts` (100), `useDocumentScan` (46), `useEngagementAudit` (42), and `useCompletionEligibility` (39).
-- UX/platform artifacts: `useDevOverflowWarning` (234), `engagement-guardrails.ts` (187), `useYouveGotMailToast` (168), `useClientAICompanion` (142), `useProgressAnchors` (102), `stage-registry.ts` (86), and `features/pdp/components/StandardsPicker.tsx` (198).
+- Data/workflow hooks: ~~`useStageReleases` (396 LOC)~~, ~~`usePortfolioCockpit` (316)~~, ~~`useMeetingSeries` (285)~~, ~~`usePackageUsage` (266)~~, ~~`useMeetingMinutes` (207)~~, ~~`useKpiReview` (149)~~, ~~`useAISuggestions` (122)~~, ~~`useEosDrafts` (100)~~, ~~`useDocumentScan` (46)~~, ~~`useEngagementAudit` (42)~~, and ~~`useCompletionEligibility` (39)~~. **All zero-inbound data/workflow hooks in this list are now retired.**
+
+**✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useEngagementAudit.ts` (42 LOC) — zero repo-wide imports, verified fresh in this batch's own worktree. Its only server object, `engagement_audit_log` (insert-only), is empty (0 rows) in production with no cron references and no other caller — genuinely never used, the same disposition as the already-retired sibling `engagement-guardrails.ts` (pure celebration-governance validation logic from the same never-shipped feature area). Table left untouched.
+
+**✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useDocumentScan.tsx` (46 LOC) — zero repo-wide imports, verified fresh in this batch's own worktree. Its only server object is the `scan-document` Edge Function, which has a live sibling caller: `useExcelBindings.tsx` (imported by `ExcelBindingStatusBadge.tsx`) independently invokes the same `scan-document` function with an equivalent implementation (auth check + `functions.invoke('scan-document', ...)`) — genuine functional duplication/supersession, not a dead backend. The Edge Function is untouched and remains live via that caller.
+
+**✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useEosDrafts.tsx` (100 LOC) — exports `useEosVtoDrafts` and `useEosChartDrafts` (not a `useEosDrafts` symbol itself; the register name is the filename), both zero repo-wide imports, verified fresh in this batch's own worktree. Backend-impact check performed: `eos_vto_drafts` and `eos_chart_drafts` are both empty (0 rows) in production, no cron references, and neither `propose_vto_change` nor `propose_chart_change` RPC has any other frontend caller — genuinely never used. All left untouched.
+
+**✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useAISuggestions.tsx` (122 LOC) — zero repo-wide imports, verified fresh in this batch's own worktree. Its "calls server objects" caution was checked, not skipped: `ai_suggestions` is empty (0 rows) in production, no cron references, and neither the `ai-generate-suggestions` Edge Function nor the `accept_ai_suggestion` RPC has any other frontend caller — genuinely never used, the same category as `useMeetingMinutes`. (An unrelated `aiSuggestion` prop in `src/components/audit/workspace/QuestionCard.tsx` is a same-named coincidence in the audit-evidence feature area, not this hook's `ai_suggestions` table.) The Edge Function, RPC, and table are all left untouched.
+
+**✅ Retired 2026-09-08 (Phase 2.6 P6-B), genuine product gap uncovered:** `useKpiReview.tsx` (149 LOC) — zero repo-wide imports, verified fresh in this batch's own worktree. Its tables have real (if minimal) production data: `kpi_reviews` and `kpi_review_signoffs` each have 1 row, no cron references either. A live sibling exists — `MyKpiSignOffSection.tsx` (routed via `MyKpiDashboardPage.tsx`) reads and inserts into the same two tables directly (not through this hook) for the *subject*-side view/sign-off flow. But `compute_kpi_overall_status` and `upsert_kpi_review` (the *reviewer*-side create/edit RPCs) and the `locked_at` lock action have **no caller anywhere else** — this hook was the only frontend path to create or lock a KPI review. **This is not a case of "safe orphaning after supersession"**: `MyKpiDashboardPage.tsx` itself links to `/admin/kpi-review` ("Open reviewer view"), and `ProtectedRoute.tsx` has a `/admin/kpi-*` allowlist carve-out for `kpi_role === 'reviewer'` users — but no route matching `/admin/kpi-*` is registered anywhere in `dashboardRoutes.tsx`/`App.tsx`. The reviewer-side page this hook was built for appears to have been removed (or never finished) independently of this retirement; retiring the already-unreachable hook doesn't change current behavior (nothing could call it), but the underlying reviewer workflow is currently broken and this is a product decision (rebuild the `/admin/kpi-review` page, or formally retire the create/lock RPCs and `locked_at` column) — not something to resolve as a side effect of dead-code cleanup. Both RPCs and the `locked_at` column are left untouched.
+
+**Product decision made 2026-09-08 — retire, don't rebuild.** Carl confirmed `/kpi` (`KpiPage.tsx`, the "kpi-v2" system with its own reviewer-facing "Team KPI" toggle via `KpiTeamSection.tsx`) is the canonical live KPI feature, superseding this entire "kpi-review" sign-off concept. Retired: `MyKpiSignOffSection.tsx` (the live sibling named above — zero repo-wide imports once removed from its one caller), the broken "Open reviewer view" link and its now-unused `canViewAnyStaff`/`useKpiAccess` wiring in `MyKpiDashboardPage.tsx`, and `ProtectedRoute.tsx`'s dead `/admin/kpi-*` carve-out (guarded a route that was never registered). `kpi_reviews`/`kpi_review_signoffs` tables, `compute_kpi_overall_status`/`upsert_kpi_review` RPCs, and the `locked_at` column remain deliberately untouched — their own retirement needs separate schema authorization. `useKpiAccess.tsx`'s `isReviewer`/`kpi_role === 'reviewer'` check is untouched and still live — it's what powers `/kpi`'s real Team KPI toggle, unrelated to the retired sign-off concept.
+
+**✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useMeetingMinutes.tsx` (207 LOC) — zero repo-wide imports, verified fresh in this batch's own worktree. Its "calls server objects" caution was checked, not skipped: `eos_meeting_minutes_versions` and `eos_minutes_audit_log` are both **empty (0 rows)** in production, no cron references either, and all 6 RPCs it called (`save_meeting_minutes`, `finalise_meeting_minutes`, `create_minutes_revision`, `lock_meeting_minutes`, `unlock_meeting_minutes`, `restore_minutes_version`) have no other frontend caller — unlike `useStageReleases`/`useMeetingSeries`, this backend was never actually used, not merely orphaned later. **Separate finding, flagged not fixed:** `MeetingExecutionPanel.tsx` (lines 185, 191) still renders "View Minutes"/"View Attendance" links to `/eos/meetings/:id/minutes` and `/eos/meetings/:id/attendance` — neither route is registered anywhere (only `/summary` and `/live` exist in `dashboardRoutes.tsx`/`App.tsx`). These were already dead links before this retirement (this hook was never the page behind them) and remain dead links after it — whether to build the missing minutes/attendance pages or remove the links is a product decision, out of scope for this dead-code retirement. **Resolved 2026-09-08:** Carl confirmed no pages should be built for these — removed the "Quick Actions" block (both links, plus the now-unused `Eye` icon import) from `MeetingExecutionPanel.tsx`. The "Minutes: [status]" badge above it is untouched — it's a plain status display, not a navigation link.
+
+**✅ Retired 2026-09-08 (Phase 2.6 P6-B):** `useMeetingSeries.tsx` (285 LOC) — zero repo-wide imports, verified fresh in this batch's own worktree at `origin/main`. Its "calls server objects" caution was checked, not skipped: the `eos_meeting_series` table has real production data (8 rows, no cron job references it), and all 5 RPCs it called (`create_meeting_series`, `update_meeting_series`, `generate_series_instances`, `start_meeting_instance`, `complete_meeting_instance`) have no other frontend caller — none of that backend was touched. Sibling comparison found the live replacement: `useEosConfigMeetingActions.tsx` ("RPCs backing Stage 2 ('type + date only' scheduling) and the Configuration-derived meeting lifecycle actions added alongside it (M6/M8 migrations)") calls `create_meeting_from_configuration`/`sync_meeting_to_configuration`/`skip_meeting_occurrence` and invalidates the same `eos-meeting-series`/`eos-meetings` query keys — confirming genuine functional supersession, the same pattern as `usePackageUsage`→`usePackageUsageQuery`. The shared `eos_meetings` table this hook also read is untouched and remains heavily used by `useNextMeeting`, `useEosReadiness`, `useEosHealth`, `LiveMeetingView.tsx`, and others.
+
+**✅ Retired 2026-09-07 (Phase 2.6 P6-B):** `usePackageUsage.tsx` (266 LOC) — zero repo-wide imports (`from '@/hooks/usePackageUsage'` matches nowhere). Its caution below ("compare behavior before retirement") was checked, not skipped: the live `usePackageUsageQuery.tsx` (4 real callers: `ClientTimeSummaryCard.tsx`, `PackageBreakdownModal.tsx`, `TenantTimeTrackerBar.tsx`, `useTenantTimeTracker.tsx`) calls the identical three RPCs the old hook did (`rpc_get_package_usage`, `rpc_check_package_thresholds`, `rpc_dismiss_alert`), and `useTenantPackages.ts` also calls the same RPCs — genuinely shared, live backend contract, confirming true functional supersession rather than a same-named coincidence. No backend object retired. Also retired `useCompletionEligibility.ts` (39 LOC) in the same PR — **§7bis's 2026-09-05 "confirmed live via `useCompletionCascade.ts`" claim was itself wrong**, based on a stale, diverged worktree rather than true `origin/main` (see the correction added to §7bis above); `useCompletionCascade.ts` was deleted 2026-08-27, `useCompletionEligibility.ts` has had zero real importers since. Its `v_completion_eligibility` view is left untouched — retirement is frontend-only.
+- UX/platform artifacts: ~~`useDevOverflowWarning` (234)~~, ~~`engagement-guardrails.ts` (187)~~, ~~`useYouveGotMailToast` (168)~~, `useClientAICompanion` (142, **decision: keep, see below**), ~~`useProgressAnchors` (102)~~, ~~`stage-registry.ts` (86)~~, and `features/pdp/components/StandardsPicker.tsx` (198, **decision: keep, see below**).
+
+**Product decision 2026-09-08 — `useClientAICompanion.ts` KEPT, earmarked for a future client health feature.** Not a retirement candidate despite zero repo-wide imports and empty `client_ai_sessions`/`client_ai_messages` tables (0 rows each) — this is unfinished, deliberately-built roadmap work, not abandoned code. Its backend, `supabase/functions/client-ai-companion/index.ts` (Deno version 525, tagged "Unicorn 2.0 Phase 17"), is a substantial, production-quality implementation: gated by `requireCaller` (`FeatureKeys.staffAi`, plus a tenant-member `orAllow` fallback), enforces Standards-for-RTOs-2025-specific guardrails (a strict "preparation only, never compliance determination" system prompt per interaction mode, escalation triggers for questions like "are we compliant"/"audit ready" that hand off to a canned non-committal response rather than answering), writes audit events (`client_ai_checklist_generated`, `client_ai_escalation_triggered`), persists session/message history, and pulls context from the `knowledge_edges` graph and `stage_instances`/`stages`. This is exactly the kind of business logic worth reusing when the client health feature (referenced elsewhere in this session's work — see `PortfolioHealthWidget.tsx`'s "data repair in progress" containment and the paused `run-stage-health-monitor-nightly` cron, both pending "the new client health plan") gets built. **Do not retire `useClientAICompanion.ts`, `client-ai-companion`, `client_ai_sessions`, or `client_ai_messages`** without checking back with Carl first — the empty tables reflect "never wired into the client portal UI yet," not "dead."
+
+**Product decision 2026-09-08 — `StandardsPicker.tsx` KEPT, same reasoning.** A fully working, generic standards-clause combobox (`Command`/`Popover`-based, groups by framework — RTO/CRICOS/GTO/Membership — searchable, reads live `standards_reference` data: 82 real active rows, not empty) sitting in `src/features/pdp/`, a feature area that is otherwise very much live: `useWorkforcePdp` (sibling file) is used by `StaffPdpsPage.tsx` and `superadmin/workforce-pdp.tsx`, and `exportAuditPack.ts` (also sibling) is used by `StaffPdpsPage.tsx` too. This reads as a ready-made "link this PDP item to a specific standard clause" widget that was never wired into those pages' forms — not dead code, an unfinished wire-up. Keep.
+
+**✅ Retired 2026-09-07 (Phase 2.6 P6-B)**, the 5 struck-through above: `useDevOverflowWarning.ts` (dev-only overflow diagnostic, no-op in production, zero backend calls), `engagement-guardrails.ts` (pure celebration-governance validation logic, zero backend calls), `useYouveGotMailToast.tsx` (read-only query against the shared `conversation_participants`/`tenant_messages` tables — deleting the frontend hook doesn't retire either table, both remain heavily used elsewhere), `useProgressAnchors.ts` (read-only query against the shared `v_phase_actions_remaining`/`v_progress_anchor_inputs` views — same reasoning, views untouched), and `stage-registry.ts` (pure TypeScript type re-exports derived from the generated `Database` type, zero runtime code). All confirmed zero repo-wide references beyond their own files before deletion.
 
 Important dispositions:
 
-- `usePackageUsage.tsx` has an active newer sibling, `usePackageUsageQuery.tsx`; compare behavior before retirement.
-- `usePortfolioCockpit.ts` contains an old restricted-portfolio model. Preserve the recorded operating-policy decision even if the implementation is retired.
-- `useStageReleases`, `useMeetingSeries`, `useMeetingMinutes`, `useAISuggestions`, and `useClientAICompanion` call server objects. Removing an orphaned frontend caller is not server-object retirement evidence.
-- `StandardsPicker` may represent roadmap intent; it requires a product decision.
-- PR #562 changed `useStageReleases.tsx` during Phase 2.5 even though the current source search finds no importer. Future lint/type batches must perform reachability triage first so effort is not spent improving code already queued for retirement.
+- ~~`usePackageUsage.tsx` has an active newer sibling, `usePackageUsageQuery.tsx`; compare behavior before retirement.~~ Done — see the ✅ Retired note above.
+- ~~`usePortfolioCockpit.ts` contains an old restricted-portfolio model. Preserve the recorded operating-policy decision even if the implementation is retired.~~ **✅ Retired 2026-09-07 (Phase 2.6 P6-B)**, decision preserved, not lost: zero repo-wide imports, and its consumer `PortfolioTable.tsx` plus the related `ConsultantAssignmentCard.tsx` were already deleted 2026-08-27 (dead-code batches 8/12 and 11/12) — independently confirmed orphaned even earlier, in `docs/audit-log/entries/2026-07-27-csc-assignment-silent-failure.md` ("not imported by any live page — orphaned/unreachable, no action taken"), predating and unrelated to this session's stale-worktree §7bis findings. The old policy this hook encoded — restricting the portfolio view to only a non-staff user's own assigned-CSC tenants (`assigned_csc_user_id === profile.user_uuid`) — is preserved here in this KB entry rather than lost with the code; current live behavior (the actual triage dashboard) shows the full portfolio to all staff roles, a deliberate difference from this old, unreachable model, not something this retirement changes. All of `usePortfolioCockpit.ts`'s Supabase calls (`v_dashboard_tenant_portfolio`, `v_dashboard_priority_inbox`, `priority_inbox_actions`, `audit_dashboard_events`, `v_dashboard_tenant_recent_comms`) are shared objects also used by the live triage dashboard — no backend object retired.
+- ~~`useStageReleases`~~, ~~`useMeetingSeries`~~, ~~`useMeetingMinutes`~~, ~~`useAISuggestions`~~, and `useClientAICompanion` call server objects. Removing an orphaned frontend caller is not server-object retirement evidence. **`useClientAICompanion`'s product decision (keep, future client health feature) is recorded above — not a retirement candidate.**
+- ~~`StandardsPicker` may represent roadmap intent; it requires a product decision.~~ **Decided 2026-09-08: keep — see above.**
+- PR #562 changed `useStageReleases.tsx` during Phase 2.5 even though the current source search finds no importer. Future lint/type batches must perform reachability triage first so effort is not spent improving code already queued for retirement. **✅ Retired 2026-09-08 (Phase 2.6 P6-B)**, ending this repeat-mistake pattern: `useStageReleases.tsx` (396 LOC) had zero repo-wide imports. Its "calls server objects" caution was checked, not skipped — two of its Edge Functions/RPCs (`create_stage_release`, `release_to_tenant`, `generate-release-documents`) have no other caller and their liveness is unconfirmed either way, but `send-stage-email` **is** still called elsewhere (`useEmailTemplates.tsx`, via direct `fetch`) — confirming the caution's exact concern, not a hypothetical one. Retired the frontend hook only; `stage_releases`/`stage_release_items` tables, the RPCs, and both Edge Functions are all deliberately left untouched.
 
 ### 3.4 Required retains and false-positive controls
 
@@ -88,8 +112,8 @@ Keep:
 | Candidate | Evidence | Proposed boundary | Gate / potential |
 |---|---|---|---|
 | `AddClientTaskDialog` + `AddStaffTaskDialog` | About 335 LOC each and only a small owner/schema-specific diff | Shared form/controller with thin client/staff adapters; never one boolean-mode mega-component | Characterize both insert/update schemas, owner behavior, and permissions. Likely 250–300 net LOC reduction. |
-| `extract-note-title` + `extract-suggest-title` | 137/133 LOC and about a 12-line behavioral diff | Shared internal title-extraction service while retaining both public endpoint names and response contracts | Add auth, CORS, rate, provider-failure, and response tests first. About 100 LOC potential. |
-| `useStageQualityCheck.tsx` | About 745 LOC with two near-duplicated evaluation pipelines | One pure evaluator over a typed data snapshot, wrapped by the hook and standalone caller | No focused fixtures currently exist; add parity fixtures first. Roughly 250–300 LOC potential. |
+| ~~`extract-note-title` + `extract-suggest-title`~~ | RETARGETED 2026-09-07 (P6-B): `extract-suggest-title` had zero repo callers and zero logged invocations — not a live clone pair. Retired outright instead of consolidated; `extract-note-title` (5 real callers) is untouched. See the correction note in `phase-3-5-parallel-preparation-packets-2026-09-04.md`'s Packet D. | — | — |
+| ~~`useStageQualityCheck.tsx`~~ | DONE 2026-09-07 (P6-B): extracted `stageQualityEvaluator.ts`, a pure A-E evaluator with no Supabase calls, used by both the hook and `computeStageQuality`. 29 parity fixtures added; both real behavioral differences (generic email/document fallback checks, hook-only certified-integrity check) preserved via explicit options, not silently unified. | — | — |
 | `SeatCard` + `DraggableSeatCard` | Substantial shared presentation, but meaningful drag/mutation differences | Extract display core only; keep drag behavior, mutation, and permission logic in adapters | Lower-confidence 150–300 LOC potential; verify both interactive contexts. |
 
 The original 800–1,500 net-line target remains plausible, but parity and clearer ownership are the acceptance criteria. Similar-looking dialogs are not consolidation candidates until their lifecycle, authorization, and side effects are proven equivalent.
@@ -179,7 +203,7 @@ liveness-triage rule from §7 above and §3.3 item 5) independently
 reconfirmed two items already on this register, at current `origin/main`
 after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
 
-- **Correction from the current-origin sweep (2026-09-05):** the cached
+- ~~**Correction from the current-origin sweep (2026-09-05):** the cached
   zero-inbound evidence for **`ComplianceScoreBreakdown.tsx`** and
   **`useComplianceScore.ts`** is stale. At `origin/main` (`a0cf450b5`),
   `ComplianceScoreBreakdown` is imported and rendered by
@@ -187,14 +211,47 @@ after [PR #679](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/679):
   `ComplianceScoreBreakdown` and `CompletionSummaryModal`. This island is
   live and is **not** a retirement candidate. Its backing
   `v_compliance_score_latest` view and `calculate_compliance_score` RPC also
-  remain live; no deletion or schema action is authorized.
-- **Correction from the current-origin sweep (2026-09-05):** the cached
+  remain live; no deletion or schema action is authorized.~~ **This
+  correction was itself wrong — re-corrected 2026-09-07, Phase 2.6 P6-B.**
+  `a0cf450b5` was not current `origin/main` on 2026-09-05 despite being
+  labeled as such — it's the exact commit the still-open
+  `.claude/worktrees/any-retirement-batch6` worktree (branch
+  `hotfix/p2p5-any-batch84`) was sitting on, a branch cut *before*
+  2026-08-27's dead-code batch 11/12 (`c1dcf097f`) deleted both
+  `ComplianceScoreCard.tsx` and `CompletionSummaryModal.tsx`. Whoever ran
+  this "fresh" reachability check on 2026-09-05 almost certainly ran it
+  inside that stale, diverged worktree rather than against true
+  `origin/main`, so it saw callers that had already been gone for 9 days.
+  Confirmed via `git merge-base --is-ancestor c1dcf097f origin/main` (true)
+  and a repo-wide grep (zero real importers of either file). Retired for
+  real in P6-B — see the dead-code register's §3.2 "Compliance-score
+  island" entry.
+- ~~**Correction from the current-origin sweep (2026-09-05):** the cached
   zero-inbound evidence for **`useCompletionEligibility.ts`** is stale. At
   `origin/main` (`a0cf450b5`), it is imported and executed by
   `useCompletionCascade.ts`, so it is live and is **not** a retirement
   candidate. Its `v_completion_eligibility` view remains a live backend
   contract. PR #677's earlier type-only cast cleanup does not change this
-  disposition.
+  disposition.~~ **This correction was itself wrong too — re-corrected
+  2026-09-07, Phase 2.6 P6-B.** Same root cause as above: `useCompletionCascade.ts`
+  (the claimed live caller) was deleted 2026-08-27 in dead-code batch 4/12
+  (`d551e764c`), also before this "fresh" check's date, also an ancestor of
+  current `origin/main`. `useCompletionEligibility.ts` had zero real
+  importers and was retired in P6-B alongside `usePackageUsage.tsx` — see
+  the "data/workflow hooks" bullet in §3.3 below.
+- ~~**Flagged for a future re-check, not verified in this pass:** the
+  `StageCellEditor`/`MembershipGrid.tsx` finding immediately below this
+  list was made in the same PR #683 timeframe as the two now-corrected
+  claims above — it hasn't been independently re-verified against true
+  current `origin/main` and could be subject to the same stale-worktree
+  risk. Treat it as unconfirmed until someone re-checks it fresh.~~ **This
+  flag was itself stale (corrected 2026-09-08, Phase 2.6 P6-B) — the flag
+  was carried forward without checking whether the finding it worried about
+  had already been resolved.** It had: see the "Actioned candidate (PR #686,
+  merged 2026-09-05)" entry a few lines below, which predates this flag's
+  own re-statement in the Phase 2.6 stabilization plan on 2026-09-07. The
+  `StageCellEditor` export is already retired, `StageStatusDot` and the file
+  are intact, and it was live-verified via Playwright at the time.
 Batch 81's live-verification pass (PR #683) turned up a third, more
 specific finding: **`StageCellEditor` itself (the named export in
 `src/components/membership/StageCellEditor.tsx`) has no importer anywhere**
@@ -346,6 +403,97 @@ artifact between commands, not a PR discrepancy) — noted for
 transparency rather than silently rounded away. The 6 deleted files vs. a
 measured 5-file drop has the same explanation. Both are far smaller than
 the actual retirement's real size and don't change any conclusion above.
+
+## 7quater. `/tenant/:tenantId/document(s)...` route tree retirement (2026-09-07, Phase 2.6 stabilization Packets P4-B/P6-B)
+
+**Surfaced by Carl noticing a page he'd never seen before** (`/tenant/6278/documents`) mid-session, immediately after fixing two genuine
+`packages:package_id`-embed no-FK bugs elsewhere (`StagePreviewDialog.tsx`,
+`BulkGenerateDocumentsDialog.tsx`, Packet P4-B) — the same query pattern
+was about to be fixed a third time in `TenantDocuments.tsx` before a pause
+to check reachability first, matching the standing "reachability triage
+before any batch" lesson from the `PackageDetail.tsx` retirement above.
+
+**Candidate:** `src/pages/TenantDocuments.tsx`, `src/pages/TenantDocumentsHub.tsx`,
+`src/pages/TenantDocumentDetail.tsx`, `src/pages/TenantDocumentDetailWrapper.tsx`,
+and the 3 routes registering them (`/tenant/:tenantId/documents`,
+`/tenant/:tenantId/documents-hub` in `dashboardRoutes.tsx`;
+`/tenant/:tenantId/document/:documentId` in `App.tsx`).
+
+**Reachability:** exhaustive grep of `src/` for `navigate(`, `Link to=`, and
+string-template route references to `/documents`, `/documents-hub`, and
+`/document/` under a tenant path found **zero real call sites** — the only
+references anywhere were the routes' own registrations and
+`TenantDocuments.tsx`'s own internal "back" button linking to
+`TenantDocumentDetail.tsx`, i.e. the cluster only ever links to itself.
+`npm run routes`'s manifest confirmed the same: no guard/nav-item wired
+these paths into any menu, breadcrumb, or notification template.
+
+**Git history corroboration:** `TenantDocuments.tsx` and
+`TenantDocumentsHub.tsx` have no deliberate feature-level commits in recent
+history — only ancient Lovable "Changes" auto-commits and mechanical
+Phase 2.5 `any`-typing sweeps, the same abandonment signature as
+`PackageDetail.tsx` in §7ter.
+
+**The real, live equivalent already existed and was already fixed.**
+`ClientDetail.tsx`'s embedded "Documents" tab (route
+`/tenant/:tenantId?tab=documents`) renders `DocumentsHub.tsx` →
+`GeneratedDocumentsTab.tsx` — a different component tree entirely, reached
+by every real user of this feature. `GeneratedDocumentsTab.tsx` already
+carried the identical two-step-fetch fix for the `documents.package_id`
+no-FK bug (see L10 item #17's update), applied independently in an earlier,
+unrelated-sounding commit — meaning the "third fix" about to be written
+into `TenantDocuments.tsx` would have fixed code nobody could ever reach.
+
+**Disposition:** retired. All 4 files deleted; the 3 routes replaced with
+`<Navigate replace>` redirects to the real Documents tab
+(`/tenant/:tenantId?tab=documents`), matching the existing
+`LegacyAuditTabRedirect`/`/admin/governance-documents` precedent for
+retired routes that might still have a stray bookmark or external link.
+`documents`, `document_versions`, and `document_stage_links` themselves are
+untouched — all remain live schema used by `DocumentsHub.tsx` and
+`ManageDocuments.tsx`. Verification: `lint:ratchet` (0 regressions),
+`typecheck` (0 errors, documented baseline unchanged), `test:frontend`
+(287 passed / 15 skipped), `test:edge` (261 passed), `build`,
+`check:kb-links` (0 broken), and authenticated SuperAdmin Playwright
+confirming all 3 retired routes now redirect to the real Documents tab
+with zero console errors, the real tab (including its already-fixed
+Generated sub-tab) renders correctly, and the separately-fixed
+`StagePreviewDialog.tsx`/`BulkGenerateDocumentsDialog.tsx` queries load
+without error live.
+
+**Coverage gap, honestly disclosed:** `BulkGenerateDocumentsDialog.tsx`'s
+own dialog could not be opened live during this verification — its trigger
+button only renders when a stage has `package_stage_documents` rows
+(`stageDocuments.length > 0`), and a direct query confirmed **zero
+non-deleted rows exist in that table in production right now**, for any
+package or stage. This is a pre-existing, unrelated data-state fact (not
+caused by this PR), so the dialog's fix rests on static evidence only:
+`lint:ratchet`/`typecheck` passing and a code review confirming it
+replicates the same batched-Map two-step-fetch pattern already verified
+live in `StagePreviewDialog.tsx` and `GeneratedDocumentsTab.tsx`.
+
+**Architecture metrics (`npm run metrics`), measured via
+`scripts/architecture-metrics.mjs` in two isolated trees — the merge-base
+commit (`db2c46105`) vs. this retirement's worktree with all changes applied:**
+
+| Measure | Before | After | Delta |
+|---|---:|---:|---:|
+| Tracked product files | 1,727 | 1,724 | −3 (−4 frontend, +1 edge — unrelated, see note) |
+| Physical lines | 490,147 | 489,187 | −960 |
+| Lines excl. generated types | 416,683 | 415,723 | −960 |
+| Product lines excl. generated + tests | 405,821 | 404,861 | −960 |
+| Files over 600 lines | 118 | 118 | 0 |
+| Files over 1,000 lines | 32 | 32 | 0 |
+| Wrapper files | 7 | 6 | −1 (`TenantDocumentDetailWrapper.tsx`) |
+| Supabase client imports — pages | 105 | 102 | −3 |
+| Direct Supabase calls — pages | 94 | 91 | −3 |
+| Raw `any` keyword hits | 386 | 388 | +2 (false positive — the word "any" inside this retirement's own redirect comments, "covers any stray bookmark"; not a typing regression, confirmed by `lint:ratchet` showing 0 new findings) |
+
+The +1 edge-function-file reading is unexplained by anything in this PR's
+diff (nothing under `supabase/functions/**` was touched) and is small
+enough not to change any conclusion above — noted for transparency rather
+than silently rounded away, matching §7ter's own disclosed measurement-gap
+precedent.
 
 ## 6. Cross-program sequence
 

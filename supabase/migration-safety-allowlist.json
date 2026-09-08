@@ -9,6 +9,15 @@
       "owner": "Carl",
       "reason": "Product-owner-approved M2 retirement of broken legacy audit reminder jobs 4, 5, and 6; tables and helper functions remain in place.",
       "expires": "2026-10-07"
+    },
+    {
+      "id": "p3a-h00-pause-stage-health-monitor-cron",
+      "file": "supabase/migrations/20260907140000_pause_stage_health_monitor_cron.sql",
+      "categories": ["cron-unschedule"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl explicitly authorized pausing the nightly stage-health cron (2026-09-07, Phase 2.6 Packet P3-A / H0.0 containment) since the current metric is known-defective and superseded by the new client-health plan. stage_health_snapshots table and the run-stage-health-monitor Edge Function are retained.",
+      "expires": "2026-10-07"
     }
   ]
 }

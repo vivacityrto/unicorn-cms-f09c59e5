@@ -26,7 +26,6 @@ const MUST_CALL_RPC = [
   "bulk-account-actions",
   "bulk-send-invitations",
   "generate-membership-certificate",
-  "link-sharepoint-document",
   "outlook-auth",
   "research-evidence-gap-check",
   "create-client-audit",

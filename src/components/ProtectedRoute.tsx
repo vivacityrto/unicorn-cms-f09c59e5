@@ -171,12 +171,9 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRol
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Admin routes require administration:access (Super Admin only),
-  // except /admin/kpi-* which is also accessible to KPI reviewers.
+  // Admin routes require administration:access (Super Admin only).
   if (isAdminRoute && !canAccessRoute(currentPath)) {
-    const isKpiAdminRoute = currentPath.startsWith('/admin/kpi-');
-    const hasKpiReviewerAccess = profile?.kpi_role === 'reviewer';
-    if (!(allowVivacityTeam && isVivacityTeam) && !(isKpiAdminRoute && hasKpiReviewerAccess)) {
+    if (!(allowVivacityTeam && isVivacityTeam)) {
       return <Navigate to="/dashboard" replace />;
     }
   }

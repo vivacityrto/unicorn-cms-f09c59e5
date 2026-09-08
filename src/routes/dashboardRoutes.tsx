@@ -40,8 +40,6 @@ const SupportTicketsPage = lazy(() => import("@/pages/SupportTicketsPage"));
 const TeamCommunicationsPage = lazy(() => import("@/pages/TeamCommunicationsPage"));
 const TeamInboxTabs = lazy(() => import("@/pages/TeamInboxTabs"));
 const TeamSettings = lazy(() => import("@/pages/TeamSettings"));
-const TenantDocumentsHub = lazy(() => import("@/pages/TenantDocumentsHub"));
-const TenantDocuments = lazy(() => import("@/pages/TenantDocuments"));
 const TenantLogins = lazy(() => import("@/pages/TenantLogins"));
 const TenantMembers = lazy(() => import("@/pages/TenantMembers"));
 const TenantNotes = lazy(() => import("@/pages/TenantNotes"));
@@ -133,6 +131,15 @@ const AuditWorkspaceNew = lazy(() => import("@/pages/AuditWorkspaceNew"));
 function LegacyAuditTabRedirect({ tab }: { tab: 'findings' | 'actions' | 'report' }) {
   const { id } = useParams<{ id: string }>();
   return <Navigate replace to={`/audits/${encodeURIComponent(id || '')}?tab=${tab}`} />;
+}
+// TenantDocuments.tsx, TenantDocumentsHub.tsx, TenantDocumentDetail.tsx, and
+// TenantDocumentDetailWrapper.tsx were retired (Phase 2.6 Packet P4-B/P6-B)
+// as unreachable — zero real navigation entry points anywhere in the app;
+// the real, live "Documents" tab is ClientDetail's embedded DocumentsHub.
+// Redirects here cover any stray bookmark/external link to the old routes.
+function LegacyTenantDocumentsRedirect() {
+  const { tenantId } = useParams<{ tenantId: string }>();
+  return <Navigate replace to={`/tenant/${encodeURIComponent(tenantId || '')}?tab=documents`} />;
 }
 const NewSupportTicketPage = lazy(() => import("@/pages/NewSupportTicketPage"));
 const SuggestionDetail = lazy(() => import("@/pages/SuggestionDetail"));
@@ -641,8 +648,8 @@ export const dashboardLayoutRoutes = (
       <Route path="/communications" element={<TeamCommunicationsPage />} />
       <Route path="/inbox" element={<TeamInboxTabs />} />
       <Route path="/team-settings" element={<TeamSettings />} />
-      <Route path="/tenant/:tenantId/documents-hub" element={<TenantDocumentsHub />} />
-      <Route path="/tenant/:tenantId/documents" element={<TenantDocuments />} />
+      <Route path="/tenant/:tenantId/documents-hub" element={<LegacyTenantDocumentsRedirect />} />
+      <Route path="/tenant/:tenantId/documents" element={<LegacyTenantDocumentsRedirect />} />
       <Route path="/tenant/:tenantId/logins" element={<TenantLogins />} />
       <Route path="/tenant/:tenantId/members" element={<TenantMembers />} />
       <Route path="/tenant/:tenantId/notes" element={<TenantNotes />} />

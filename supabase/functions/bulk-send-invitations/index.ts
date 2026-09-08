@@ -241,9 +241,10 @@ serve(async (req: Request) => {
         email: contact.email,
       });
       consecutiveFailures = 0;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(`[bulk-send] Unhandled error for tenant ${tenant_id}:`, e);
-      details.push({ tenant_id, outcome: "failed", error: e?.message || String(e) });
+      const errMsg = e instanceof Error ? e.message : String(e);
+      details.push({ tenant_id, outcome: "failed", error: errMsg });
       consecutiveFailures += 1;
       if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
         aborted = true;

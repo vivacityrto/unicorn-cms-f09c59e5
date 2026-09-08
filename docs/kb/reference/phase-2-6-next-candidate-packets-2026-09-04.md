@@ -3,26 +3,31 @@
 Preparation-only follow-up to the task-dialog packet. No runtime or database
 changes are included.
 
-## Candidate 2 — title extraction pair
+## Candidate 2 — title extraction pair — RETARGETED (2026-09-07, Phase 2.6 Packet P6-B)
 
 `extract-note-title` and `extract-suggest-title` are approximately 135 LOC
-each with a roughly 12-line behavioral difference. Proposed boundary: one
-private shared title-extraction service, while retaining both public Edge
-Function names, request/response contracts, authentication, CORS behavior,
-rate handling, and provider-failure semantics. Required before coding: source
-diff, deployed-caller inventory, auth/CORS/rate/error parity tests, and a
-negative test proving caller-controlled URLs or provider payloads cannot widen
-the contract.
+each with a roughly 12-line behavioral difference, but the required
+deployed-caller inventory (never actually done before this candidate was
+written up) found `extract-suggest-title` has zero callers anywhere in
+`src/` or `supabase/functions/**`, and zero logged invocations. This was not
+a live clone pair to consolidate — `extract-suggest-title` was retired
+outright (source + `supabase/config.toml` entry removed); `extract-note-title`
+is untouched. See the correction note in
+`phase-3-5-parallel-preparation-packets-2026-09-04.md`'s Packet D for the
+full evidence.
 
-## Candidate 3 — stage quality evaluator
+## Candidate 3 — stage quality evaluator — DONE (2026-09-07, Phase 2.6 Packet P6-B)
 
-`useStageQualityCheck.tsx` is approximately 745 LOC with two near-duplicated
-evaluation pipelines. Proposed boundary: a pure evaluator over a typed data
-snapshot, leaving hook orchestration, Supabase reads, tenant binding, and UI
-state outside it. Required before coding: fixtures for both pipelines,
-score-by-score parity assertions, missing-data/unknown semantics, and a direct
-comparison against the current live query shapes. No RLS, RPC, or schema change
-belongs in this refactor.
+`useStageQualityCheck.tsx` was approximately 745 LOC with two near-duplicated
+evaluation pipelines. Extracted `stageQualityEvaluator.ts`, a pure evaluator
+over a typed `StageQualitySnapshot`, leaving hook orchestration, Supabase
+reads, tenant/package binding, and UI state in the two original files
+unchanged. Added 29 parity fixtures (`stageQualityEvaluator.test.ts`) proving
+both pipelines' exact prior behavior, including the two real differences the
+original candidate writeup hadn't fully characterized: the hook's generic
+email/document fallback pass checks (absent from the certification guardrail
+`computeStageQuality`), and the hook-only "certified integrity" self-check.
+No RLS, RPC, or schema change — pure frontend extraction.
 
 ## Candidate 4 — seat-card presentation core
 

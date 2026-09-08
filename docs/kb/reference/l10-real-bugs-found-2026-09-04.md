@@ -50,28 +50,30 @@ panel's duplicate-stage flow. Fixed the same way.
 the test package, confirmed success, then removed it from the package and
 deleted the orphaned row via SQL.
 
-### 3. "Import Stage" has never worked — DOCUMENTED, NOT FIXED
+### 3. "Import Stage" has never worked — FIXED (Phase 2.6 Packet P4-D, 2026-09-08)
 Found **earlier tonight** (batch 8b, a few hours before #1/#2 above, in a
 completely different file: `useStageExportImport.tsx`) — same exact root
 cause. Already has a code comment: *"stages.id has no default/sequence...
 every insert into `stages` requires an explicit id. This insert has always
 failed with a NOT NULL violation — 'Import Stage' has never actually
-created a stage."* Deliberately left broken because the real fix is a
-schema decision (add a sequence/default to `stages.id`) that needs its own
-migration and audit entry — out of scope for a type-only batch. **This is
-the one still-open item from tonight** — worth deciding whether to add a
-proper default/sequence to both `packages.id` and `stages.id` so future
-code doesn't need to keep rediscovering this by hand.
+created a stage."* **Fixed 2026-09-08:** added a `stages_id_seq` owned
+sequence and `DEFAULT nextval(...)` to `stages.id`, matching the existing
+`tenants.id` convention. A second, previously-undocumented occurrence of
+this exact bug was found in `useStageDuplication.tsx`'s "Duplicate Stage"
+flow while fixing this — same root cause, fixed by the same migration.
+Neither insert needed a code change (both already omit `id`). See
+`docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
 
-### 4. "Archive Package" has always failed — DOCUMENTED, NOT FIXED
+### 4. "Archive Package" has always failed — FIXED (Phase 2.6 Packet P4-D, 2026-09-08)
 `archivePackage()` sets `status: 'archived'`, but the database's
-`packages_status_check` CHECK constraint only allows `'active'`/`'inactive'`
+`packages_status_check` CHECK constraint only allowed `'active'`/`'inactive'`
 — confirmed live (a real `23514` constraint violation on every Archive
-click during tonight's testing). Not a simple code fix: the Package Builder
-UI clearly intends three distinct statuses (separate filter option, count
-badge, and "Draft" vs "Archived" bucketing all exist in the list view), so
-this needs the CHECK constraint widened via a migration, not a code change
-that would just quietly collapse "archived" into "inactive."
+click during tonight's testing). The Package Builder UI clearly intends
+three distinct statuses (separate filter option, count badge, and "Draft"
+vs "Archived" bucketing all exist in the list view). **Fixed 2026-09-08:**
+widened `packages_status_check` to also allow `'archived'` via a migration;
+no code change needed. See
+`docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
 
 ### 5. Stage Preview dialog has never shown real data — DOCUMENTED, NOT FIXED
 The "Stage Preview" dialog (shows a stage's usage — team tasks, client
@@ -285,6 +287,12 @@ removal preserved the existing (broken) behavior via an explicit narrow
 cast, matching item 15's established pattern, rather than silently
 patching it.
 
+**Update (Phase 2.6 Packet P4-B/P6-B, 2026-09-07):** `TenantDocuments.tsx`
+was retired as unreachable dead code (see item #17) — its copy of this bug
+no longer exists. `GeneratedDocumentsTab.tsx`'s copy is the real, live
+instance and remains open, unfixed, pending the same product decision on
+the correct legacy-mapping source.
+
 ## Manage Stages — audit trail (`AdminManageStages.tsx`)
 
 ### 14. Stage archive/restore has never recorded an audit trail entry — DOCUMENTED, NOT FIXED (compliance-relevant)
@@ -325,6 +333,16 @@ events use a different logging path) rather than a type-only patch.
 Flagged to Carl given this is specifically an **audit-trail** gap on a
 compliance platform, even though it doesn't block the underlying
 archive/restore feature.
+
+**Confirmed systemic, not isolated (2026-09-08, live verification of P4-D
+#3's fix).** The identical `audit_events.entity_id` uuid-vs-integer
+mismatch also breaks the audit-log write for Duplicate Stage and Import
+Stage — both actions succeed, but silently fail to write their audit
+row, same failure mode as archive/restore. This is every stage-mutating
+action that tries to write an `audit_events` row, not an isolated
+archive/restore quirk — useful evidence for whichever fix this item
+eventually gets. See
+`docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
 
 ## KPI v2 — Developer ticket queue (`KpiMonthlySummaryCards.tsx`, `KpiDeveloperTicketQueue.tsx`)
 
@@ -370,29 +388,42 @@ frontend change.
 
 ## Tenant Documents — package-name lookup has no real FK (`TenantDocuments.tsx`)
 
-### 17. Tenant Documents page has never loaded documents for any tenant with an assigned package — DOCUMENTED, NOT FIXED (missing FK, same root cause as #5/#8)
-`TenantDocuments.tsx`'s document list embeds `packages:package_id(name)`
+### 17. Tenant Documents page has never loaded documents for any tenant with an assigned package — RESOLVED VIA RETIREMENT (2026-09-07)
+`TenantDocuments.tsx`'s document list embedded `packages:package_id(name)`
 on the `documents` table — but **`documents.package_id` has no foreign key
 to `packages` at all** (confirmed via `pg_constraint`: `documents` has
 exactly two FKs, `created_by → auth.users` and
 `current_published_version_id → document_versions`; nothing on
 `package_id`). Every real request for a tenant that actually has an
-assigned package 400s with "could not find a relationship" — reproduced
+assigned package 400d with "could not find a relationship" — reproduced
 live for HPA Training Pty Ltd (tenant #6278), which has a real package and
 a "Failed to load documents" toast on this exact page. Tenants checked
 during batch 41's own verification (Demo RTO and others) all happened to
 have zero packages/documents, so the query's `if (tenantPackageIds.length
 > 0)` guard never fired and this failure mode went unnoticed there.
 
-Same root cause and fix pattern as items #5 and #8 above (an embed
-assuming a FK relationship that was never created) — a two-step fetch
-(load documents, then separately fetch package names by id and merge
-client-side) would work without a migration, or an actual FK could be
-added. Not fixed here: this predates tonight's `no-explicit-any` work
-entirely (the query string is unchanged from before batch 41's type-only
-edit) and is a pre-existing production bug on a page most tenants happen
-not to exercise, not something to silently patch as a side effect of a
-type-retirement batch.
+**Update (Phase 2.6 Packet P4-B/P6-B, 2026-09-07):** root-caused as dead
+code, matching item #27's precedent — `TenantDocuments.tsx` (route
+`/tenant/:tenantId/documents`), `TenantDocumentsHub.tsx`
+(`/tenant/:tenantId/documents-hub`), `TenantDocumentDetail.tsx`, and
+`TenantDocumentDetailWrapper.tsx` (`/tenant/:tenantId/document/:documentId`)
+had **zero real navigation entry points anywhere in the app** — no
+`navigate()`/`Link to=` call site referenced any of these three routes,
+and neither file had been touched by any of this repo's typing/fix batches
+except ancient Lovable auto-commits. The real, live "Documents" tab is
+`ClientDetail.tsx`'s embedded `DocumentsHub.tsx` (route
+`/tenant/:tenantId?tab=documents`), whose `GeneratedDocumentsTab.tsx`
+already carries the identical two-step-fetch fix for this exact
+`packages:package_id` no-FK bug, applied independently in an earlier,
+unrelated-sounding commit. Rather than duplicate that fix onto dead code,
+all 4 files and their 3 routes were retired, replaced with
+`<Navigate replace>` redirects to the real Documents tab (matching the
+existing `LegacyAuditTabRedirect`/`/admin/governance-documents` precedent
+for retired routes with possible stray bookmarks/external links). Verified
+live: all 3 old routes redirect correctly with zero console errors, and
+the real Documents tab (including its Generated sub-tab, exercising the
+already-fixed two-step fetch) loads correctly. No separate fix to
+`TenantDocuments.tsx` was made or is needed.
 
 ## Notification preferences (`useNotificationPrefs.ts`)
 
@@ -450,10 +481,21 @@ on unrelated features:
 
 - **`AddTimeDialog.tsx` note-creation** — was writing the acting user's ID
   into the wrong (legacy numeric) column instead of the required
-  `created_by` field. **FIXED.** The same insert also references two
+  `created_by` field. **FIXED.** The same insert also referenced two
   columns that don't exist at all (`client_id`, `package_instance_id`) —
-  **documented, not fixed**, needs a product decision on the intended
-  parent/child mapping.
+  every insert through this path had always 400'd with an unknown-column
+  error. **FIXED (Phase 2.6 Packet P4-C, 2026-09-07):** replaced with the
+  real `parent_type`/`parent_id`/`package_id` shape, matching the same
+  package-instance-vs-tenant convention `useNotes.tsx`'s `createNote` and
+  `ClientStructuredNotesTab.tsx` already use elsewhere (`parent_type:
+  'package_instance', parent_id: <instance id>` when a package is selected,
+  else `parent_type: 'tenant', parent_id: <tenant id>`) — not a guess, an
+  existing established mapping this code path had simply never followed.
+  Verified live end-to-end on Demo RTO: logged a real time entry with
+  "Link a note" → "+ New note", saved successfully with zero console
+  errors, confirmed via SQL the resulting row had
+  `parent_type='package_instance'`, the correct `parent_id`/`package_id`,
+  and a correct `timeentry_id` link — then deleted both test rows.
 - **`useEosHealth.tsx` Health Score** — the Rocks-discipline dimension
   never selected `seat_id`, so it always treated every Rock as seat-less.
   **FIXED.**
@@ -468,9 +510,9 @@ on unrelated features:
   missing a `task_id` field the code actually reads from ClickUp comments.
   **FIXED.**
 - **`EditTimeDialog.tsx` / `AddTimeDialog.tsx`** — both show a blank/wrong
-  "Person" field when editing a time entry, because `tenant_users.user_id`
-  has no FK to `public.users` — the same class of gap as item 5 above, just
-  a different table pair. **Documented, not fixed** in either case.
+  "Person"/"Notify" field, because the query selected a nonexistent
+  `tenant_users.user_uuid` column (real column: `user_id`) — see item 21
+  above for the full writeup. **FIXED (Phase 2.6 Packet P4-C).**
 - **`useAuditPrep.ts`'s `useGenerateRequestFromQuestions`** — not a live bug
   (confirmed zero consumers anywhere in the codebase — dead code, never
   wired to any component), but worth noting it also had its own real bug
@@ -506,7 +548,7 @@ of bug stops resurfacing every time someone touches a nearby insert.
 
 ## Processes — Audit Log tab (`useProcesses.tsx`, `ProcessDetail.tsx`)
 
-### 20. Process Audit Log has never shown any entries — DOCUMENTED, NOT FIXED (wrong FK schema target)
+### 20. Process Audit Log has never shown any entries — FIXED (Phase 2.6 Packet P4-C, 2026-09-07)
 The Audit Log tab on a process's detail page has always silently shown
 "No audit entries available," even for processes with real history
 (created/updated/approved/archived/submitted-for-review entries do get
@@ -526,18 +568,22 @@ verification — the batch's own diff only changed the query's TypeScript
 generics (fixing a masked TS2589 "excessively deep" error), not the query
 shape, so this is confirmed pre-existing and unrelated to that change.
 
-Not fixed here: the correct fix is either repointing the embed to
-`auth.users` (schema/FK decision — `auth.users` isn't normally embeddable
-the same way, may need a view or a manual second lookup by
-`actor_user_id` against `public.users` instead, since the two tables'
-UUIDs correlate 1:1 in this codebase's convention) or altering the FK
-itself to target `public.users(user_uuid)` to match every other
-actor/owner FK in this table family. Left for a schema-change session
-per the standing guardrail, not patched inline during a type-only batch.
+**Fixed (Phase 2.6 Packet P4-C, 2026-09-07):** `useProcesses.tsx`'s
+`useProcessAuditLog` now does a two-step fetch instead of the impossible
+embed — query `process_audit_log` for the raw rows, separately batch-query
+`public.users` by `user_uuid` for the distinct `actor_user_id`s, and merge
+client-side. `public.users.user_uuid` is kept in sync with `auth.users.id`
+by the `link_auth_user_to_profile` trigger (confirmed via
+`pg_get_functiondef`), so it's the correct join key — no schema change
+needed, matching the same pattern already used by `useStageAuditLog.tsx`
+for an identical actor-resolution problem elsewhere in the codebase.
+Verified live: a real process with 10 audit entries
+(`6f10a988-eebb-4a6b-95e0-025edaed9842`) now shows every entry's real
+actor name instead of the empty state, zero console errors.
 
 ## Client Time tab (`ClientTimeTab.tsx` -> `EditTimeDialog.tsx`)
 
-### 21. "Person" dropdown in Edit Time Entry silently shows staff only, never tenant contacts — DOCUMENTED, NOT FIXED (wrong column name)
+### 21. "Person" dropdown in Edit Time Entry silently shows staff only, never tenant contacts — FIXED (Phase 2.6 Packet P4-C, 2026-09-07)
 Opening "Edit Time Entry" on an existing time entry populates the "Person"
 selector's tenant-side half from a query that 400s every time:
 `supabase.from('tenant_users').select('user_uuid, users:user_uuid(user_uuid,
@@ -557,6 +603,24 @@ this repo's standing guardrail on FK-embed hints.
 Found incidentally during batch 80 of the `no-explicit-any` retirement's
 live verification — `EditTimeDialog.tsx` is not one of that batch's changed
 files, so this is confirmed pre-existing and unrelated to that diff.
+
+**Fixed (Phase 2.6 Packet P4-C, 2026-09-07):** replaced the broken embed
+with a two-step fetch (`tenant_users.select('user_id')`, then batch-query
+`users` by `user_uuid`) in both `EditTimeDialog.tsx` and `AddTimeDialog.tsx`
+(same broken query duplicated verbatim in both files, feeding
+`EditTimeDialog`'s "Person" selector and both dialogs' "Notify" selector).
+A second bug was found alongside it while fixing this: even with the query
+fixed, `EditTimeDialog.tsx`'s "Person" `<Select>` only ever rendered the
+`vivacityStaff` state (Vivacity staff only) — the merged
+staff-plus-tenant-contacts list (`teamMembers`) was computed but never
+wired into that dropdown's JSX, only into the separate "Notify" selector.
+Fixed by pointing the Person select at `teamMembers` instead, and removed
+the now-fully-unused `vivacityStaff` state (`setVivacityStaff` was its only
+other reference). Verified live on Demo RTO (tenant 7547, 7 real tenant
+contacts): both the Person dropdown (Edit Time Entry) and the Notify
+dropdown (Add Time Entry) now list every tenant contact
+(James Okafor, John dorer, Daniel Evans, Carl Academy, Ghost User3,
+K_Account Test) alongside staff, zero console errors.
 
 ## Client notification surfaces
 
@@ -604,9 +668,9 @@ During the Phase 2.5 authenticated SharePoint cohort smoke test, `/client/files`
 this is the same root cause as [#22](#22-clientrouteguard-updates-browserrouter-during-render--documented-not-fixed),
 not a second bug — see that entry. Fix once (Packet P4-A) for both.
 
-### 25. Meeting recurrence Edge function has no recognizable caller authorization gate — DOCUMENTED, DEFERRED
+### 25. Meeting recurrence Edge function has no recognizable caller authorization gate — FIXED (2026-09-07, Phase 2.6 Packet P3-A item 3)
 
-Fresh Phase 2.5 reachability review confirmed `generate-meeting-recurrence` is invoked by `useEosMeetingRecurrences` and inserts recurrence/occurrence rows using the caller's bearer token, but the function has no explicit `auth.getUser`/permission helper or other recognizable gate. Its existing RLS-backed behavior was left unchanged and the attempted type-only cleanup was reverted. This requires a dedicated auth/RBAC and RLS review before any further cleanup or production invocation; no writes were performed during verification.
+Fresh Phase 2.5 reachability review confirmed `generate-meeting-recurrence` is invoked by `useEosMeetingRecurrences` and inserts recurrence/occurrence rows using the caller's bearer token, but the function had no explicit `auth.getUser`/permission helper or other recognizable gate. Live schema review confirmed the RLS policies on `eos_meeting_recurrences`/`eos_meeting_occurrences` (`WITH CHECK (is_super_admin() OR (tenant_id = get_current_user_tenant() AND (is_eos_admin(...) OR can_facilitate_eos(...))))`) were genuinely enforcing per-tenant facilitator/admin authorization all along — this was a missing defense-in-depth application-layer gate, not an open write path. Fixed by adding an explicit `requireCaller(req, FeatureKeys.staffMeetings)` check before any DB access (rejects non-staff callers early instead of letting them hit an opaque RLS denial) and a server-side check that the caller-supplied `tenant_id` actually matches the referenced `meeting_id`'s real tenant (RLS's `WITH CHECK` only verifies the caller is authorized *for* the supplied `tenant_id`, not that `meeting_id` genuinely belongs to it — a mismatched pair would previously still pass RLS and write rows cross-referencing the wrong tenant). The existing RLS-backed forwarded-JWT client was deliberately kept unchanged for the actual writes (no switch to a service-role client), so the finer-grained facilitator/eos-admin authorization boundary is unchanged, not loosened or broadened. Added `auth-gate.test.mjs`. Live-verified against production using the SuperAdmin persona (correction: this feature is Vivacity-staff-only, `/eos/*` — Demo RTO's client persona has no access to it; this entry originally said Demo RTO in error).
 
 ## Main staff dashboard (`/triage-dashboard`)
 
@@ -676,6 +740,98 @@ place — the page was found to be effectively unreachable (one unlabeled
 icon button) and every one of its features was either disconnected from
 the real data model or a strictly less-capable duplicate of a live,
 actively-used equivalent elsewhere. No separate fix was made or is needed.
+
+### 28. `bulk-send-invitations` per-tenant validation errors crash instead of returning a structured response — DOCUMENTED, NOT FIXED (found 2026-09-07)
+
+Found during Phase 2.6 stabilization Packet P5-A's Edge Function typing
+pass (PR #967), while typing `bulk-send-invitations/index.ts` — not caused
+by the typing change itself, pre-existing. Three call sites
+(`tenant_ids must be an array of numbers` at ~line 98, tenant-access-check
+failure at ~line 106, and cross-tenant `FORBIDDEN` at ~line 113) call the
+file's own `jsonResponse(req, status, body)` helper as `jsonResponse(422,
+{...})` / `jsonResponse(500, {...})` / `jsonResponse(403, {...})` — omitting
+the required `req` first argument. This shifts every argument one position:
+`status` receives the body object, `body` is `undefined`, and `req` is a
+plain number. `jsonResponse` spreads `corsHeaders(req)` into the response
+headers, so `corsHeaders(422)` runs against a number instead of a `Request`
+— whatever that helper does with `req.headers`/`req.method` internally will
+throw, turning what should be a structured 422/500/403 JSON error response
+into an unhandled exception (a bare 500 with no diagnostic body) for exactly
+the three validation paths meant to explain *why* the batch was rejected.
+Not caught by `npm run typecheck`: `supabase/functions/**` isn't included in
+either `tsconfig.app.json` or `tsconfig.node.json`, so this arity/argument-
+order mismatch never gets compiler-checked. Deliberately not fixed in PR
+#967 — it's a behavioral change, out of scope for a lint/typing-only
+packet — left for a small, separate follow-up fix (add the missing `req`
+argument to all three call sites) plus its own PR.
+
+### 29. `tga-rto-import`'s `handleImport`/`handleStatus` reference an out-of-scope `req` — DOCUMENTED, NOT FIXED (found 2026-09-07)
+
+`supabase/functions/tga-rto-import/index.ts`'s `handleImport(supabase, userId,
+body, correlationId)` and `handleStatus(supabase, correlationId)` both call
+`jsonResponse(req, {...})` internally on every return path, but neither
+function receives `req` as a parameter — `req` only exists in the outer
+`serve(async (req) => {...})` closure. Every real invocation of the
+`action=import` or default/status path throws `ReferenceError: req is not
+defined` at the `jsonResponse(req, ...)` call, so the function cannot
+successfully return a response on any code path through either handler. The
+same `jsonResponse(req, ...)`-without-`req`-in-scope shape as item 28 above
+(`bulk-send-invitations`), found independently the same day in a different
+function while verifying a manual Edge Function deploy, not via typing work.
+Confirmed pre-existing (not introduced by this session) via
+`git log --oneline -5 -- supabase/functions/tga-rto-import/index.ts` — the
+last substantive edit was PR #303 (`fix(security): replace wildcard CORS
+with an APP_BASE_URL allowlist`), long before Phase 2.6. Found while
+byte-for-byte-verifying a manual deploy of this function during P5-A's Edge
+Function auto-deploy recovery (see `docs/kb/reference/execution-efficiency-
+log.md`'s 2026-09-07 entry and this repo's `AGENTS.md` → "Supabase
+deployment workflow") — the manual deploy shipped the file exactly as it
+exists on `origin/main` (pre-existing bug included, not a transcription
+error), so **tga-rto-import is currently non-functional on both actions**
+until this is fixed. Not fixed here — out of scope for a deploy-recovery
+task; needs `req` threaded into both function signatures as a parameter and
+both call sites updated. Worth fixing together with item 28 given the
+identical bug shape, but tracked separately since they're different files.
+
+## Carl-reported regressions (2026-09-07) — DOCUMENTED, NOT INVESTIGATED
+
+Reported directly by Carl, not surfaced by this session's typing work.
+No root cause, affected file, or reproduction has been confirmed yet — added
+here as a todo queue for triage under a future packet (most likely fits
+alongside P4-B/C's "invalid relationship reads"/"identity and lookup"
+framing once each is root-caused), not as verified L10 entries in the same
+sense as items 1–28 above.
+
+### 29. Editing or deleting package stage tasks no longer works
+
+On a package's stage, staff and client task IDs are reportedly mangled, so
+clicking Delete or saving an edit on any of those tasks fails silently or
+errors — an admin cleaning up a package stage can't remove or change tasks
+at all.
+
+### 30. RTO scope end dates can go missing
+
+On a client's training.gov.au scope lists (qualifications, units, skill
+sets, courses, training packages), the end/expiry date reportedly now
+ignores the stored date column and only reads it from the raw sync
+snapshot — so staff checking when a qualification comes off scope can see
+a blank or stale date and mis-advise the client.
+
+### 31. Client portal admins can remove their own login by mistake
+
+The "Swap to Contact" action in the client portal's Users page is
+reportedly offered on the signed-in admin's own row, so a client admin can
+convert themselves into a contact and instantly lose their own Unicorn
+login and seat — the equivalent staff-side screen deliberately hides this
+action for the signed-in user's own account.
+
+### 32. Past meeting summaries no longer show cascade messages
+
+"One Phrase Close" reportedly replaced the old cascade messages in meeting
+summaries, but summaries recorded before the change still hold cascade
+text that is now hidden — so someone opening an older meeting summary
+sees that section vanish and loses the key messages recorded at that
+meeting.
 
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by

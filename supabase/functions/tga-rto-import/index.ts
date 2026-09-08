@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { corsHeaders } from "../_shared/cors.ts";
 
 // ============================================================================
@@ -157,11 +157,8 @@ interface ImportRunResult {
   error_message?: string;
 }
 
-// deno-lint-ignore no-explicit-any
-type SupabaseClientAny = any;
-
 async function createImportRun(
-  supabase: SupabaseClientAny,
+  supabase: SupabaseClient,
   runType: 'scheduled' | 'manual',
   userId: string | null,
   sourceRef: string | null,
@@ -189,7 +186,7 @@ async function createImportRun(
 }
 
 async function completeImportRun(
-  supabase: SupabaseClientAny,
+  supabase: SupabaseClient,
   runId: string,
   status: 'success' | 'failed',
   recordsProcessed: number,
@@ -223,7 +220,7 @@ async function completeImportRun(
 }
 
 async function upsertRtos(
-  supabase: SupabaseClientAny,
+  supabase: SupabaseClient,
   rtos: Record<string, string>[],
   importId: string,
   correlationId: string
@@ -274,7 +271,7 @@ async function upsertRtos(
 }
 
 async function insertScopeItems(
-  supabase: SupabaseClientAny,
+  supabase: SupabaseClient,
   items: Record<string, string>[],
   importId: string,
   correlationId: string
@@ -394,7 +391,7 @@ interface ImportRequest {
 }
 
 async function handleImport(
-  supabase: SupabaseClientAny,
+  supabase: SupabaseClient,
   userId: string | null,
   body: ImportRequest,
   correlationId: string
@@ -516,7 +513,7 @@ async function handleImport(
 // ============================================================================
 
 async function handleStatus(
-  supabase: SupabaseClientAny,
+  supabase: SupabaseClient,
   correlationId: string
 ): Promise<Response> {
   logStage(correlationId, 'status.check');
