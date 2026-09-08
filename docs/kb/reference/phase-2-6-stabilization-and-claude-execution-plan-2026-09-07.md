@@ -50,6 +50,23 @@ Actions concurrency lock and injects only QA environment secrets. No secret
 has been added; live execution remains intentionally blocked until the
 `unicorn-qa` environment is configured.
 
+**2026-09-08, session 18 — P1-C live proof completed:** PRs #1006, #1007 and
+#1008 are merged. The protected workflow run
+[`34179875080`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34179875080)
+executed all 15 tenant-isolation RLS tests against `unicorn-qa`; all 15 passed.
+The run also proved cleanup: a post-run QA query found zero run-scoped tenants,
+profiles, memberships, conversations, messages, audit rows or Auth users. QA
+needed four non-production parity repairs discovered by the live run: standard
+`service_role` and API-role grants, the `dd_access_status` and
+`dd_lifecycle_status` lookup values, the identity lookup values (including the
+production trigger-normalized `Client Child`/`Vivacity Team` values), and a
+fixture-only `consultant_assignment_method = 'manual'` override so the unrelated
+consultant auto-assignment trigger does not require capacity data. These were
+applied only to `unicorn-qa`; no production schema or data changed. The
+repository-level QA secrets are temporary while Angela enables the protected
+environment; they must be moved to `unicorn-qa` and deleted from repository
+scope afterward.
+
 **2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
 migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
 and its JSON companion. No hosted state changed. M1 is next.
@@ -177,18 +194,19 @@ work.
   merged. `ClientLayout.tsx` and `useKpiSummary.tsx` fixed; typecheck is 0
   errors; `.github/workflows/typecheck.yml` added as a real, non-exempted
   CI gate.
-- **P1-C (isolation-suite hardening): steps 1–5 done by Codex, merged.**
+- **P1-C (isolation-suite hardening): live proof complete.**
   [#962](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/962) —
   placeholders removed, live RLS suite typed against generated schema.
-  [#963](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/963) —
+ [#963](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/963) —
   unique per-run `RUN_ID`, fail-closed reverse-dependency cleanup. Step 6
-  (concurrent-run serialization) and the protected workflow portion of step 7
-  remain outstanding. The dedicated `unicorn-qa` project and application-
-  scope parity gate are now established; the suite remains correctly
-  credential-gated (`describe.skipIf(!RLS_SUITE_ENABLED)`) until its QA-only
-  service-role secret, lock and residue proof are complete. The reusable QA
-  coverage model is documented separately and must expand beyond P1-C for
-  future schema/features.
+  (concurrent-run serialization) is complete, and the live suite has now
+  executed all 15 tests successfully with zero residual fixture rows or Auth
+  users. The dedicated `unicorn-qa` project and application-scope parity gate
+  are established. The workflow is currently running with temporary
+  repository-level QA secrets while environment access is provisioned; move
+  those secrets to the protected `unicorn-qa` environment before treating the
+  workflow boundary as final. The reusable QA coverage model is documented
+  separately and must expand beyond P1-C for future schema/features.
 - **P4-A** (small frontend correctness): [#959](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/959),
   merged. Fixed L10 #22/#24 (`ClientRouteGuard` render-time `navigate()`)
   and #11 (`useKpiAccess` missing the `unicorn_role` SuperAdmin check —
@@ -1038,7 +1056,8 @@ Before adding credentials:
 
 **Playwright:** not a substitute for RLS tests. Use Playwright only for the authenticated read-only persona smoke checks after the suite is safe.
 
-**Exit:** the live isolation tests execute, pass, and prove cleanup; the suite cannot silently pass while skipped.
+**Exit:** the live isolation tests execute, pass, and prove cleanup; the suite cannot silently pass while skipped. Live proof is complete in run
+[`34179875080`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34179875080).
 
 The QA project is reusable beyond this packet. Its layered suites and
 change-impact rules are documented in

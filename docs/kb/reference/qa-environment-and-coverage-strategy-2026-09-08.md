@@ -141,11 +141,22 @@ Implemented in the current P1-C follow-up:
 
 Remaining before P1-C exits:
 
-- QA-only service-role secret in a protected environment;
-- live execution of the 15 RLS tests against `unicorn-qa`;
-- proof of cleanup failure propagation and zero residual rows/Auth users; and
-- activation of the protected workflow after the first clean live runs,
-  never exposed to forked PRs.
+- move the temporary QA-only secrets from repository scope into the protected
+  `unicorn-qa` environment once owner access is available; and
+- retain the successful live proof and repeat it after that move, never exposing
+  the service-role secret to forked PRs.
+
+Live proof is complete in workflow run
+[`34179875080`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34179875080):
+all 15 RLS tests passed and a post-run query found zero run-scoped tenants,
+profiles, memberships, conversations, messages, audit rows or Auth users. The
+first live run also identified and repaired QA-only parity prerequisites:
+standard service-role/API-role grants; the `dd_access_status` and
+`dd_lifecycle_status` values; the identity values used by the production user
+normalization trigger; and the fixture's manual consultant-assignment mode.
+These repairs contain no production data and are recorded in the QA cutover
+record. The repository-level secrets are a temporary access workaround while
+Angela provisions the environment; delete them after the move.
 
 Once those pass, the same QA environment can support the broader layered
 coverage model. Expansion should be tracked as separate suites and impact
