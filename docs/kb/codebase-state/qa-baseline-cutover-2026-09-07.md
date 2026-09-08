@@ -8,7 +8,7 @@ must not be added as an ordinary file under `supabase/migrations/` because
 production would attempt to apply it.
 
 The broader reusable QA coverage model is recorded in
-[`qa-environment-and-coverage-strategy-2026-09-08.md`](../reference/qa-environment-and-coverage-strategy-2026-09-08.md).
+[`qa-environment-and-coverage-strategy.md`](../reference/codebase-optimization/phase-2-6-stabilization/qa-environment-and-coverage-strategy.md).
 This cutover is the environment gate for P1-C, not the complete application QA
 programme.
 

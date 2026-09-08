@@ -6,9 +6,9 @@
 >
 > **Evidence base:** historical audit at `origin/main@b24bbca57`, reconciled against `origin/main@afafe1f5a` (code state unchanged from `e1a0013ee`), current lint/typecheck/routes/KB-link checks, the Phase 2.6 investigation, and read-only Supabase checks of production plus the dedicated `unicorn-qa` project
 >
-> **Parent plan:** [Codebase Optimization and KB Renewal Plan](codebase-optimization-plan-2026-08-28.md)
+> **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md)
 >
-> **Phase 2.6 source:** [Dead Code, Feature Consolidation, and Architecture Redesign Investigation](dead-code-feature-consolidation-investigation-2026-09-04.md)
+> **Phase 2.6 source:** [Dead Code, Feature Consolidation, and Architecture Redesign Investigation](../cross-cutting/dead-code-feature-consolidation-investigation.md)
 >
 > **Related bug register:** [L10 real bugs found](l10-real-bugs-found.md)
 
@@ -312,7 +312,7 @@ work.
   an unreachable, redundant page — reachable only via one unlabeled icon
   button, every feature either disconnected from the real data model or a
   strictly less-capable duplicate of a live equivalent elsewhere. See
-  `dead-code-feature-consolidation-investigation-2026-09-04.md` §7ter for
+  `dead-code-feature-consolidation-investigation.md` §7ter for
   the full investigation. The consolidation work was discarded; the whole
   `/admin/package/:id...` route tree was retired instead, in its own PR.
   This also surfaced a process gap: a stage was briefly added to a real
@@ -407,7 +407,7 @@ work.
   3 routes) were unreachable dead code whose only live equivalent
   (`ClientDetail.tsx`'s embedded Documents tab) was already fixed. Retired
   all 4 files and redirected the 3 routes instead of fixing dead code — see
-  `dead-code-feature-consolidation-investigation-2026-09-04.md` §7quater and
+  `dead-code-feature-consolidation-investigation.md` §7quater and
   L10 item #17's update for the full investigation. Verified live:
   `StagePreviewDialog.tsx`'s fixed query and all 3 retirement redirects,
   zero console errors; `BulkGenerateDocumentsDialog.tsx`'s own dialog could
@@ -464,7 +464,7 @@ work.
 - **P6-B "title extraction pair" cohort retargeted into a retirement.**
   Both this section's §8 packet definition and the underlying candidate
   writeups (`next-candidate-packets.md`,
-  `dead-code-feature-consolidation-investigation-2026-09-04.md`) assumed
+  `dead-code-feature-consolidation-investigation.md`) assumed
   `extract-note-title` and `extract-suggest-title` were a live near-duplicate
   pair needing consolidation. Reachability triage (the required
   deployed-caller inventory these docs called for, but that had never
@@ -519,7 +519,7 @@ work.
    `v_dashboard_attention_ranked.worst_stage_health_status` and
    `rpc_portfolio_client_health()`. The panel remains explicitly unavailable;
    no schema/RPC behavior changed. The characterization matrix is recorded in
-   [`p3-a-client-health-consumer-characterization-2026-09-08.md`](p3-a-client-health-consumer-characterization-2026-09-08.md).
+   [`p3-a-client-health-consumer-characterization.md`](../phase-3/p3-a-client-health-consumer-characterization.md).
    Ask Viv/Compliance Assistant attention facts and operational Edge readers
    remain deliberately retained as separate follow-up contracts; they are not
    silently relabeled as Client Health.
@@ -589,7 +589,7 @@ work.
   Network Information API) — no server/RPC/Edge Function dependency, so
   none of the caution this cohort's sibling islands need (SharePoint,
   Workboard, Reassignment, Compliance-score all have live backend ties per
-  `dead-code-feature-consolidation-investigation-2026-09-04.md` §3.2).
+  `dead-code-feature-consolidation-investigation.md` §3.2).
   **SeatCard display core explicitly not started** — the packet itself
   gates it behind independent Playwright drag-and-drop coverage for both
   `SeatCard`/`DraggableSeatCard` interactive contexts, which doesn't exist
@@ -1195,7 +1195,7 @@ Address Stage Preview (#5), Bulk Generate (#8), and Tenant Documents (#17) by re
 two-step-fetch pattern (batched `Map` lookups, `pg_constraint`-verified no
 real FK exists, matching the pattern `GeneratedDocumentsTab.tsx` already
 used). #17 turned out to be dead code — see the P6-B retirement below and
-`dead-code-feature-consolidation-investigation-2026-09-04.md` §7quater; no
+`dead-code-feature-consolidation-investigation.md` §7quater; no
 separate fix was made or is needed. Live evidence: #5's fixed query and
 #17's retirement redirects verified with zero console errors; #8's dialog
 could not be opened live (`package_stage_documents` has zero non-deleted
@@ -1407,7 +1407,7 @@ above): `/tenant/:tenantId/document(s)...` route tree.**
 exhaustive `navigate()`/`Link to=`/route-manifest sweep found no real entry
 point, and the live equivalent (`ClientDetail.tsx`'s embedded Documents
 tab) was already fixed independently. Full writeup:
-`dead-code-feature-consolidation-investigation-2026-09-04.md` §7quater.
+`dead-code-feature-consolidation-investigation.md` §7quater.
 Before/after metrics: 1,727→1,724 tracked files, 490,147→489,187 physical
 lines (−960). No backend object removed — `documents`,
 `document_versions`, `document_stage_links` all remain live schema used by
@@ -1809,5 +1809,5 @@ This stabilization programme is complete when:
 ## 14. Claude Code handoff prompt
 
 ```text
-Execute docs/kb/reference/phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md one packet at a time from fresh origin/main worktrees. Begin with P0 truth sync and open-PR disposition; preserve PR #612’s unique dashboard-timeout evidence before closing it. Treat M0–M6 as the cron/migration safety track that must precede P1-C's QA credential and workflow. Do not merge unattended. For every implementation PR, perform reachability and generated-schema checks, acquire the shared heavy-command lock, run lint:ratchet, typecheck, frontend tests, Edge tests, build, and the applicable KB/routes/Playwright checks. Keep database, RLS, RPC, grant, permission, tenant-scope, cron, migration and production-data work separately authorized. Never place a production service-role key in ordinary CI. Update the L10, residue, cron inventory and execution ledgers as evidence changes. Stop on ambiguous authorization, schema, ownership, product, or browser evidence and report the exact decision required.
+Execute docs/kb/reference/codebase-optimization/phase-2-6-stabilization/phase-2-6-stabilization-plan.md one packet at a time from fresh origin/main worktrees. Begin with P0 truth sync and open-PR disposition; preserve PR #612’s unique dashboard-timeout evidence before closing it. Treat M0–M6 as the cron/migration safety track that must precede P1-C's QA credential and workflow. Do not merge unattended. For every implementation PR, perform reachability and generated-schema checks, acquire the shared heavy-command lock, run lint:ratchet, typecheck, frontend tests, Edge tests, build, and the applicable KB/routes/Playwright checks. Keep database, RLS, RPC, grant, permission, tenant-scope, cron, migration and production-data work separately authorized. Never place a production service-role key in ordinary CI. Update the L10, residue, cron inventory and execution ledgers as evidence changes. Stop on ambiguous authorization, schema, ownership, product, or browser evidence and report the exact decision required.
 ```

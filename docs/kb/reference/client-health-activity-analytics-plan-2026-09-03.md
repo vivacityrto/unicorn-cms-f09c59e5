@@ -23,7 +23,7 @@ explicit unavailable state. The triage attention views remain available for
 operational drivers (tasks, risk, gaps, activity and deadlines), but their
 stage-health fields are `unavailable` and `attention_score` is not a health
 score. The full consumer matrix and next safe boundary are recorded in
-[`p3-a-client-health-consumer-characterization-2026-09-08.md`](p3-a-client-health-consumer-characterization-2026-09-08.md).
+[`p3-a-client-health-consumer-characterization.md`](codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md).
 
 No Client Health H1 metric definition, schema projection, forecast repair,
 production data correction or cron restart is authorized by this update.

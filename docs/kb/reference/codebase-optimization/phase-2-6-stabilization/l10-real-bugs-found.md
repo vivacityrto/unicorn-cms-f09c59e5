@@ -825,7 +825,7 @@ explicit unavailable state. Those reads are now removed; the database RPC is
 retained until a separate schema/RBAC dependency review. The remaining Ask
 Viv and Compliance Assistant attention consumers are documented as
 operational-attention inputs, not Client Health evidence, in
-`docs/kb/reference/p3-a-client-health-consumer-characterization-2026-09-08.md`.
+`docs/kb/reference/codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md`.
 
 ### 27. `PackageDetail.tsx` Manager-field lookup 406 — RESOLVED VIA RETIREMENT (2026-09-07)
 
