@@ -62,7 +62,10 @@ The often-quoted **9,209 retired lines** is an approximate Phase 2.6 aggregate:
 direct per-PR shortstat summation is approximately 8,867, with the difference
 coming from rounded/cohort accounting. Treat the dead-code register and current
 architecture metrics as authoritative; do not use 9,209 as an exact present
-LOC total. Remaining work is: the P2 layered-QA scope; and the P7 Phase 3
+LOC total. Remaining work is: the P2-QA layered-QA coverage-programme scope
+(see [qa-environment-and-coverage-strategy.md](qa-environment-and-coverage-strategy.md) —
+not the master plan's unrelated "Packet P2: feature boundary pilot"); and
+the P7 Phase 3
 preparation/implementation sequence (gated on RBAC v6's vocabulary decision).
 The SeatCard display-core prerequisite is resolved (dead code, retired
 outright) and the last deliberate lint exception is closed — see above. The
@@ -170,7 +173,9 @@ The seven non-`any` errors are expression-only ternaries in `NewEnrolmentModal.t
 P0  truth sync + PR disposition
 │
 ├── P1  lint correctness + typecheck zero + CI gate
-├── P2  isolation-suite hardening ──► protected QA-only workflow
+├── P2-QA  isolation-suite hardening ──► protected QA-only workflow
+│         (see qa-environment-and-coverage-strategy.md — distinct from the
+│         master plan's own unrelated "Packet P2: feature boundary pilot")
 ├── P3  urgent production bugs/containment
 └── P4  remaining L10 bugs
      │
