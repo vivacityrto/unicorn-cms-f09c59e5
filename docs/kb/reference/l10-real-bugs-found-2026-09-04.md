@@ -50,28 +50,30 @@ panel's duplicate-stage flow. Fixed the same way.
 the test package, confirmed success, then removed it from the package and
 deleted the orphaned row via SQL.
 
-### 3. "Import Stage" has never worked — DOCUMENTED, NOT FIXED
+### 3. "Import Stage" has never worked — FIXED (Phase 2.6 Packet P4-D, 2026-09-08)
 Found **earlier tonight** (batch 8b, a few hours before #1/#2 above, in a
 completely different file: `useStageExportImport.tsx`) — same exact root
 cause. Already has a code comment: *"stages.id has no default/sequence...
 every insert into `stages` requires an explicit id. This insert has always
 failed with a NOT NULL violation — 'Import Stage' has never actually
-created a stage."* Deliberately left broken because the real fix is a
-schema decision (add a sequence/default to `stages.id`) that needs its own
-migration and audit entry — out of scope for a type-only batch. **This is
-the one still-open item from tonight** — worth deciding whether to add a
-proper default/sequence to both `packages.id` and `stages.id` so future
-code doesn't need to keep rediscovering this by hand.
+created a stage."* **Fixed 2026-09-08:** added a `stages_id_seq` owned
+sequence and `DEFAULT nextval(...)` to `stages.id`, matching the existing
+`tenants.id` convention. A second, previously-undocumented occurrence of
+this exact bug was found in `useStageDuplication.tsx`'s "Duplicate Stage"
+flow while fixing this — same root cause, fixed by the same migration.
+Neither insert needed a code change (both already omit `id`). See
+`docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
 
-### 4. "Archive Package" has always failed — DOCUMENTED, NOT FIXED
+### 4. "Archive Package" has always failed — FIXED (Phase 2.6 Packet P4-D, 2026-09-08)
 `archivePackage()` sets `status: 'archived'`, but the database's
-`packages_status_check` CHECK constraint only allows `'active'`/`'inactive'`
+`packages_status_check` CHECK constraint only allowed `'active'`/`'inactive'`
 — confirmed live (a real `23514` constraint violation on every Archive
-click during tonight's testing). Not a simple code fix: the Package Builder
-UI clearly intends three distinct statuses (separate filter option, count
-badge, and "Draft" vs "Archived" bucketing all exist in the list view), so
-this needs the CHECK constraint widened via a migration, not a code change
-that would just quietly collapse "archived" into "inactive."
+click during tonight's testing). The Package Builder UI clearly intends
+three distinct statuses (separate filter option, count badge, and "Draft"
+vs "Archived" bucketing all exist in the list view). **Fixed 2026-09-08:**
+widened `packages_status_check` to also allow `'archived'` via a migration;
+no code change needed. See
+`docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
 
 ### 5. Stage Preview dialog has never shown real data — DOCUMENTED, NOT FIXED
 The "Stage Preview" dialog (shows a stage's usage — team tasks, client
@@ -331,6 +333,16 @@ events use a different logging path) rather than a type-only patch.
 Flagged to Carl given this is specifically an **audit-trail** gap on a
 compliance platform, even though it doesn't block the underlying
 archive/restore feature.
+
+**Confirmed systemic, not isolated (2026-09-08, live verification of P4-D
+#3's fix).** The identical `audit_events.entity_id` uuid-vs-integer
+mismatch also breaks the audit-log write for Duplicate Stage and Import
+Stage — both actions succeed, but silently fail to write their audit
+row, same failure mode as archive/restore. This is every stage-mutating
+action that tries to write an `audit_events` row, not an isolated
+archive/restore quirk — useful evidence for whichever fix this item
+eventually gets. See
+`docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
 
 ## KPI v2 — Developer ticket queue (`KpiMonthlySummaryCards.tsx`, `KpiDeveloperTicketQueue.tsx`)
 

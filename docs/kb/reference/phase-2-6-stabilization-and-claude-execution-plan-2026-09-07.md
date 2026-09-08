@@ -1018,8 +1018,8 @@ council-scoped decision, explicitly deferred by Carl, not actioned here.
 
 Keep these as separately approved migration packets:
 
-- Import Stage identity allocation (#3);
-- Archive Package status contract (#4);
+- ~~Import Stage identity allocation (#3)~~ — **done 2026-09-08**, Carl authorized;
+- ~~Archive Package status contract (#4)~~ — **done 2026-09-08**, Carl authorized;
 - calendar event identity and invitations (#10);
 - stage archive audit identity (#14);
 - legacy tenant mapping (#15);
@@ -1027,6 +1027,20 @@ Keep these as separately approved migration packets:
 - tenant-less notification preferences (#18).
 
 Each packet requires dependency/grant/RLS review, generated types, migration rollback, post-apply checks, and explicit production authorization.
+
+**#3/#4 done 2026-09-08 (single migration, no design ambiguity needed —
+both had one clear fix already identified in the L10 register).** Added
+a `stages_id_seq` default to `stages.id` (matching the existing
+`tenants.id` convention) and widened `packages_status_check` to allow
+`'archived'`. Neither needed a frontend code change (both inserts
+already omitted `id`; `archivePackage()` already set the right status
+string). A second, previously-undocumented occurrence of #3's bug was
+found and fixed in the same migration: `useStageDuplication.tsx`'s
+"Duplicate Stage" flow had the identical missing-default failure.
+Audit entry: `docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
+The remaining five P4-D items (#10, #14, #15, #16, #18) each still need
+their own design decision before a fix — not the same "just run it"
+shape as #3/#4.
 
 ## 8. Residual lint and Phase 2.6 packets
 
