@@ -334,6 +334,16 @@ Flagged to Carl given this is specifically an **audit-trail** gap on a
 compliance platform, even though it doesn't block the underlying
 archive/restore feature.
 
+**Confirmed systemic, not isolated (2026-09-08, live verification of P4-D
+#3's fix).** The identical `audit_events.entity_id` uuid-vs-integer
+mismatch also breaks the audit-log write for Duplicate Stage and Import
+Stage — both actions succeed, but silently fail to write their audit
+row, same failure mode as archive/restore. This is every stage-mutating
+action that tries to write an `audit_events` row, not an isolated
+archive/restore quirk — useful evidence for whichever fix this item
+eventually gets. See
+`docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
+
 ## KPI v2 — Developer ticket queue (`KpiMonthlySummaryCards.tsx`, `KpiDeveloperTicketQueue.tsx`)
 
 ### 13. Developer "Comms compliance" KPI metric has always shown as fully non-compliant — FIXED

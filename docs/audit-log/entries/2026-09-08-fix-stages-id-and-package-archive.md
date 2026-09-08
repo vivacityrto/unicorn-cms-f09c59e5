@@ -73,12 +73,55 @@ cause a third time.
 - Neither the `stages` nor `packages` table had any rows touched — this
   is a schema-only change.
 
+## Live verification (2026-09-08, after merge to origin/main)
+
+Authenticated SuperAdmin Playwright pass against a throwaway test
+package/stages (created and fully deleted afterward, zero residue,
+zero client-tenant data touched — `stages`/`packages` are global admin
+templates with no `tenant_id`):
+
+- **Duplicate Stage: PASS.** New stage row created successfully.
+- **Import Stage: PASS.** JSON stage-export import created a new stage
+  row successfully.
+- **Archive Package: PASS.** `status` flipped to `archived`; the list
+  view's Archived filter/count picked it up correctly.
+
+**Two findings surfaced, disclosed rather than silently noted:**
+
+1. **A transient 409 (`23505` duplicate key on `stages`'s PK) on the very
+   first live Duplicate Stage attempt after this migration**, not
+   reproduced on retry. Root-caused via direct SQL replay: the
+   `stages_id_seq` default itself works correctly and reliably — the
+   collision is consistent with the coexistence of the new sequence
+   default with the pre-existing `MAX(id)+1` explicit-id workaround
+   pattern noted below: if another insert supplies an explicit id via
+   that workaround at (or near) the same moment the sequence's `nextval()`
+   would have produced the same value, both can collide. Not a flaw in
+   the fix itself — the sequence's own correctness was independently
+   confirmed — but a narrow, real race window that persists until callers
+   still using the explicit-id workaround are migrated to rely on the new
+   default instead (see the open item below, still not done here).
+2. **`audit_events.entity_id` (a `uuid` column) vs `stages.id` (a plain
+   integer) breaks audit-trail writes for Duplicate Stage and Import
+   Stage too, not only Archive/Restore.** This confirms L10 item #14
+   ("Stage archive/restore has never recorded an audit trail entry") is
+   a systemic issue affecting every stage-mutating action that tries to
+   write an `audit_events` row, not an isolated case — useful evidence
+   for whatever fix #14 eventually gets (new column/lookup table/
+   different logging path), not actioned here. The underlying
+   duplicate/import actions themselves still succeed; only their audit
+   log entry silently fails to write (a pre-existing condition, not
+   introduced or worsened by this PR).
+
 ## Open questions parked
 
 - The `MAX(id)+1` workaround pattern still present in `usePackageBuilder.tsx`
-  and elsewhere for `stages`/`packages` inserts is now unnecessary but
-  harmless (an explicit id always wins over the new default) — cleaning
-  those up to rely on the default is a separate, low-priority follow-up,
-  not done here.
+  and elsewhere for `stages`/`packages` inserts is now unnecessary and,
+  per the live-verification finding above, a real (if narrow) source of
+  collision risk against the new sequence default — migrating those call
+  sites to rely on the default is a separate, low-priority follow-up, not
+  done here.
 - L10 items #10, #14, #15, #16, #18 remain in the P4-D queue, each still
-  needing its own design decision before a fix — not touched in this change.
+  needing its own design decision before a fix — not touched in this
+  change. #14 specifically now has broader confirmed impact per the
+  finding above.
