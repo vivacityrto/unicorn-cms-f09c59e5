@@ -17,7 +17,7 @@ RLS, RPC, Edge, or database behavior was changed.
 ## Completed preparation
 
 - Task-dialog characterization is recorded in
-  [`phase-2-6-task-dialog-characterization-2026-09-04.md`](phase-2-6-task-dialog-characterization-2026-09-04.md)
+  [`task-dialog-characterization.md`](task-dialog-characterization.md)
   and merged in PR #593.
 - Three-seat council sequencing is recorded in the optimization plan and
   shared `MEMORY.md`.

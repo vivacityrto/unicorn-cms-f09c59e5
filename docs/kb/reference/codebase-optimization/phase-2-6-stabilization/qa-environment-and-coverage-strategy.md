@@ -30,7 +30,7 @@ ordinary pull-request CI.
 
 The target is `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`) at
 `https://qfpxvumcrnzrjyvqkicq.supabase.co`. The application-scope baseline is
-loaded and verified by the [QA baseline cutover record](../codebase-state/qa-baseline-cutover-2026-09-07.md).
+loaded and verified by the [QA baseline cutover record](../../../codebase-state/qa-baseline-cutover-2026-09-07.md).
 
 The verified contract proves matching application-scope extension, table and
 view fingerprints; matching function, trigger and policy counts; matching

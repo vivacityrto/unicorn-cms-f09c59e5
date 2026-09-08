@@ -10,7 +10,7 @@
 >
 > **Phase 2.6 source:** [Dead Code, Feature Consolidation, and Architecture Redesign Investigation](dead-code-feature-consolidation-investigation-2026-09-04.md)
 >
-> **Related bug register:** [L10 real bugs found](l10-real-bugs-found-2026-09-04.md)
+> **Related bug register:** [L10 real bugs found](l10-real-bugs-found.md)
 
 ## Current truth-sync (2026-09-08)
 
@@ -157,7 +157,7 @@ unchanged. The `run-workload-forecast` Edge Function remains deployed for
 separate replacement work. No data rows, function, or table were deleted.
 
 **2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
-migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
+migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../../../codebase-state/cron-and-migration-inventory-2026-09-07.md)
 and its JSON companion. No hosted state changed. M1 is next.
 
 **2026-09-07, session 3 — Packet M1 implemented:** added the repository
@@ -231,7 +231,7 @@ found three old-v170/401 queue requests, including the audit probes, while
 the committed 410 stub is still not deployed. The quiet-period gate therefore
 has not started; no migration, Edge deletion, or hosted data change was
 authorized. Evidence is recorded in
-[`notification-schedule-m3c-preflight.md`](../../audit-log/entries/2026-09-07-notification-schedule-m3c-preflight.md).
+[`notification-schedule-m3c-preflight.md`](../../../../audit-log/entries/2026-09-07-notification-schedule-m3c-preflight.md).
 
 **2026-09-07, session 11 — M3-B deployment verified; M3-C quiet period
 started:** after native Git sync lagged, the explicitly authorized manual
@@ -463,7 +463,7 @@ work.
   said Demo RTO) with test data cleaned up afterward.
 - **P6-B "title extraction pair" cohort retargeted into a retirement.**
   Both this section's §8 packet definition and the underlying candidate
-  writeups (`phase-2-6-next-candidate-packets-2026-09-04.md`,
+  writeups (`next-candidate-packets.md`,
   `dead-code-feature-consolidation-investigation-2026-09-04.md`) assumed
   `extract-note-title` and `extract-suggest-title` were a live near-duplicate
   pair needing consolidation. Reachability triage (the required
@@ -1155,7 +1155,7 @@ Before adding credentials:
 
 The QA project is reusable beyond this packet. Its layered suites and
 change-impact rules are documented in
-[`qa-environment-and-coverage-strategy-2026-09-08.md`](qa-environment-and-coverage-strategy-2026-09-08.md).
+[`qa-environment-and-coverage-strategy.md`](qa-environment-and-coverage-strategy.md).
 
 ## 7. Bug-fix execution packets
 
@@ -1223,7 +1223,7 @@ Live-verified on Demo RTO (tenant 7547): #20 against a real process with 10
 audit entries; #21's Person/Notify dropdowns now list all 7 real tenant
 contacts; the note-insert fix end-to-end (real time entry + linked note
 created, verified via SQL, then deleted). Zero console errors throughout.
-Full detail: `l10-real-bugs-found-2026-09-04.md` items #15/#20/#21 and the
+Full detail: `l10-real-bugs-found.md` items #15/#20/#21 and the
 execution-efficiency log's P4-C entry.
 
 **Parked, not part of this packet:** live-verifying these dropdowns
@@ -1367,7 +1367,7 @@ Track the 39 Fast Refresh warnings separately; resolve them through module-bound
 
 ### Packet P6-A — AddClientTaskDialog/AddStaffTaskDialog consolidation
 
-Use [task-dialog characterization](phase-2-6-task-dialog-characterization-2026-09-04.md) as the implementation source.
+Use [task-dialog characterization](task-dialog-characterization.md) as the implementation source.
 
 - Preserve separate client/staff table adapters.
 - Preserve the current route guard and authorization behavior.
@@ -1538,8 +1538,8 @@ that only write when later invoked.
 **Exit:** a committed Markdown/JSON matrix exists, with every active job and
 every migration risk classified as keep, fix, retire, or owner decision.
 
-**Artifact:** [Cron and Migration Inventory — 2026-09-07](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
-and its [machine-readable companion](../codebase-state/cron-and-migration-inventory-2026-09-07.json).
+**Artifact:** [Cron and Migration Inventory — 2026-09-07](../../../codebase-state/cron-and-migration-inventory-2026-09-07.md)
+and its [machine-readable companion](../../../codebase-state/cron-and-migration-inventory-2026-09-07.json).
 
 ### Packet M1 — migration safety scanner and CI guardrail
 
@@ -1561,7 +1561,7 @@ fix.
 an unreviewed data mutation during QA replay.
 
 **Implementation:** the scanner usage and reviewed-exception contract are
-documented in [Migration safety guardrail — 2026-09-07](../codebase-state/migration-safety-guardrail-2026-09-07.md).
+documented in [Migration safety guardrail — 2026-09-07](../../../codebase-state/migration-safety-guardrail-2026-09-07.md).
 
 ### Packet M2 — controlled retirement of legacy audit jobs
 
