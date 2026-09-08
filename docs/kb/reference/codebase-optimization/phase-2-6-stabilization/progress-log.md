@@ -4,6 +4,24 @@
 
 ## Progress log
 
+**2026-09-08, session 28 — last deliberate lint exception retired,
+`generate-meeting-recurrence` typing (`hotfix/generate-meeting-recurrence-typing`):**
+Packet P3-A item 3 deferred this file's `catch (error: any)` cleanup until
+its auth gate shipped with negative tests — both landed in PR #979
+(`l10-real-bugs-found.md` item 25). With that condition satisfied, fixed the
+one remaining `@typescript-eslint/no-explicit-any` finding: `catch (error: any)`
+→ `catch (error)` with `error instanceof Error ? error.message : 'Unknown
+error'`, matching the established pattern used throughout
+`supabase/functions/**` (verified via grep — dozens of functions already use
+this exact shape). Pure type-narrowing, no behavior change; skipped live
+Playwright verification per this plan's own rule for changes that can't
+alter emitted JS (this is the textbook example the rule names). Full repo
+`npm run lint` now reports **0 errors** — the entire Phase 2.5/2.6
+`no-explicit-any` retirement program (begun at ~4,100 errors) is complete
+with zero known residual exceptions. Full verification chain green:
+lint (0 errors, 44 warnings), lint:ratchet, typecheck, `test:frontend`
+(323/15 skipped), `test:edge` (276/276), build.
+
 **2026-09-08, session 27 — SeatCard display-core "prerequisite" resolved as
 dead-code retirement, not an extraction (`hotfix/retire-dead-seatcard-cluster`):**
 before starting the documented prerequisite (building independent

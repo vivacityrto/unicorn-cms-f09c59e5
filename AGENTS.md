@@ -54,24 +54,27 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   closed at PR #953) and the Phase 2.6 stabilization plan's P1-A/P1-B/P5-A
   packets plus dead-code retirement (`docs/kb/reference/codebase-optimization/
   phase-2-6-stabilization/phase-2-6-stabilization-plan.md`). As of
-  `hotfix/p5a-invite-user-unicorn1-adapter` (2026-09-08), `npm run lint`
-  reports **1 error, 44 warnings** (45 problems; `docs/kb/reference/
-  lint-baseline.json` tracks 41 of those — 1 error, 40 warnings — the 4
-  remaining warnings are "unused eslint-disable directive" notices with no
-  `ruleId`, which the baseline script deliberately doesn't attribute to a
-  rule). `InviteUserDialog.tsx`'s reviewed `unicorn1` cross-schema exception
-  is retired (P5-A item 3 — replaced with a bounded typed adapter isolating
-  the `as unknown` boundary to one call; live-verifying that call surfaced a
+  `hotfix/generate-meeting-recurrence-typing` (2026-09-08), `npm run lint`
+  reports **0 errors, 44 warnings** (`docs/kb/reference/lint-baseline.json`
+  tracks 40 rule-attributed warnings — the 4 remaining are "unused
+  eslint-disable directive" notices with no `ruleId`, which the baseline
+  script deliberately doesn't attribute to a rule). Both deliberate
+  `@typescript-eslint/no-explicit-any` exceptions are now retired:
+  `InviteUserDialog.tsx`'s reviewed `unicorn1` cross-schema exception
+  (P5-A item 3 — replaced with a bounded typed adapter isolating the
+  `as unknown` boundary to one call; live-verifying that call surfaced a
   separate, pre-existing production bug where the write fails at the
   PostgREST layer regardless of typing — see `docs/kb/reference/
   codebase-optimization/phase-2-6-stabilization/l10-real-bugs-found.md` item
   33 — documented there, not fixed, since Unicorn 1 and this import flow are
-  expected to be retired). The 1 remaining error is
-  `@typescript-eslint/no-explicit-any` in
-  `supabase/functions/generate-meeting-recurrence/index.ts` (auth-gate fix
-  already shipped in PR #979; its own typing cleanup was explicitly
-  deferred, per Packet P3-A item 3's "add explicit caller authorization
-  and negative tests before any typing cleanup" rule). The 44 warnings are
+  expected to be retired), and `supabase/functions/generate-meeting-
+  recurrence/index.ts`'s deferred `catch (error: any)` (its auth gate shipped
+  in PR #979 with negative tests, so Packet P3-A item 3's "auth before
+  typing" deferral condition was satisfied — fixed with the same
+  `error instanceof Error` narrowing used throughout `supabase/functions/**`,
+  no behavior change). The full `no-explicit-any` retirement program begun
+  in Phase 2.5 is now complete with zero known residual exceptions. The 44
+  warnings are
   almost entirely `react-refresh/only-export-components` (40) — a
   Fast-Refresh style concern, not correctness — plus the 4 stale
   eslint-disable notices above. Re-run `npm run lint:baseline` before
