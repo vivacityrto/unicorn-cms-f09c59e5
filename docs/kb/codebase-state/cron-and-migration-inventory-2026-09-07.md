@@ -89,11 +89,12 @@ following `SECURITY DEFINER` functions still reference it:
 - `audit_send_evidence_reminders()` — uses a documented status mismatch and
   calls the email Edge Function directly.
 
-`notification_schedule` is also referenced by the current
-`process-notification-queue` Edge Function and `send-automated-email`; it is
-not safe to drop as part of M2. `notification_audit_log` is written by the
-current `process-notification-outbox` Edge Function even though no frontend
-consumer was identified in this pass. Dropping either table requires a
+M3-B retired the deployed `process-notification-queue` as a credential-free
+410 stub and removed the three legacy writers from `send-automated-email`.
+`notification_audit_log` is written by the current
+`process-notification-outbox` Edge Function even though no frontend consumer
+was identified in this pass. M3-C subsequently removed
+`notification_schedule`; dropping either keeper table requires a
 separate dependency, retention and rollback review.
 
 M2 read-only preflight confirmed the exact production jobs and their recent
@@ -116,11 +117,11 @@ dropped in production under migration `retire_legacy_audit_functions`
 (`20260907052028`), with postflight confirming they are absent.
 `notification_audit_log` must remain because the
 active `process-notification-outbox` worker writes delivery success/failure
-records to it. `notification_schedule` is now past the M3-B dependency gate:
-the deployed `process-notification-queue` is a credential-free 410 retirement
-stub and `send-automated-email` contains no remaining writer. The table is
-still not removable until the conservative 24-hour quiet-period proof
-completes and a separately authorized table-drop migration is applied.
+records to it. M3-C completed the retirement of `notification_schedule` under
+the separately authorized `retire_notification_schedule` migration
+(`20260908031729`). Postflight confirmed the table is absent and both keeper
+tables remain intact, with zero database-function, view, trigger, or cron
+references remaining.
 
 ## Migration replay inventory
 
