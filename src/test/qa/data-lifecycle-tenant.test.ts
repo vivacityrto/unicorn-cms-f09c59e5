@@ -201,6 +201,9 @@ describe.skipIf(!SUITE_ENABLED).sequential("qa:data-lifecycle — tenant-lifecyc
       action: "close",
       reason: "qa:data-lifecycle fixture close",
     });
+    if (status !== 200) {
+      console.warn("[qa:data-lifecycle diagnostic] close response:", JSON.stringify(json));
+    }
     expect(status).toBe(200);
     expect(json.ok).toBe(true);
     const data = json.data as Record<string, unknown>;
