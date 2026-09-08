@@ -40,11 +40,25 @@ export interface HighRiskStage {
   topEditor: string | null;
 }
 
+// audit_events.entity_id is a random uuid (not the stage id) for entity='stage'
+// rows - the real numeric stage id lives in details.stage_id. See useStageAuditLog.tsx.
+function getStageIdFromDetails(details: Json | null): number | null {
+  if (details && typeof details === 'object' && !Array.isArray(details) && 'stage_id' in details) {
+    const value = (details as Record<string, Json>).stage_id;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const parsed = parseInt(value, 10);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+  }
+  return null;
+}
+
 export interface StageAuditEvent {
   id: string;
   created_at: string;
   action: string;
-  entity_id: string;
+  stage_id: number | null;
   stage_title: string | null;
   user_id: string | null;
   user_email: string | null;
@@ -284,14 +298,15 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       if (activeStageIds.length === 0) return [];
 
-      // Get recent edits from audit log
+      // Get recent edits from audit log. entity_id is a random uuid for
+      // entity='stage' rows - the real stage id lives in details.stage_id.
       const { data: auditEvents, error: auditError } = await supabase
         .from('audit_events')
-        .select('entity_id, created_at, user_id, action')
+        .select('details, created_at, user_id, action')
         .eq('entity', 'stage')
         .gte('created_at', cutoffDate.toISOString())
-        .in('entity_id', activeStageIds.map(String));
-      
+        .in('details->>stage_id', activeStageIds.map(String));
+
       if (auditError) throw auditError;
 
       // Also check package_builder_audit_log for stage-related edits. This table
@@ -308,7 +323,8 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
       const stageEditData = new Map<number, { count: number; lastEdit: string | null; editors: Map<string, number> }>();
 
       (auditEvents || []).forEach(e => {
-        const stageId = parseInt(e.entity_id);
+        const stageId = getStageIdFromDetails(e.details);
+        if (stageId === null) return;
         if (!stageEditData.has(stageId)) {
           stageEditData.set(stageId, { count: 0, lastEdit: null, editors: new Map() });
         }
@@ -404,16 +420,17 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       const { data: events, error } = await supabase
         .from('audit_events')
-        .select('id, created_at, action, entity_id, user_id, details')
+        .select('id, created_at, action, user_id, details')
         .eq('entity', 'stage')
         .gte('created_at', cutoffDate.toISOString())
         .order('created_at', { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
 
-      // Get stage titles
-      const stageIds = [...new Set((events || []).map(e => parseInt(e.entity_id)))];
+      // Get stage titles. entity_id is a random uuid for entity='stage' rows -
+      // the real stage id lives in details.stage_id.
+      const stageIds = [...new Set((events || []).map(e => getStageIdFromDetails(e.details)).filter((id): id is number => id !== null))];
       const stageTitleMap = new Map<number, string>();
       if (stageIds.length > 0) {
         const { data: stages } = await supabase
@@ -436,16 +453,19 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         (users || []).forEach(u => userEmailMap.set(u.user_uuid, u.email));
       }
 
-      return (events || []).map(e => ({
-        id: e.id,
-        created_at: e.created_at,
-        action: e.action,
-        entity_id: e.entity_id,
-        stage_title: stageTitleMap.get(parseInt(e.entity_id)) || null,
-        user_id: e.user_id,
-        user_email: e.user_id ? userEmailMap.get(e.user_id) || null : null,
-        details: e.details
-      }));
+      return (events || []).map(e => {
+        const stageId = getStageIdFromDetails(e.details);
+        return {
+          id: e.id,
+          created_at: e.created_at,
+          action: e.action,
+          stage_id: stageId,
+          stage_title: stageId !== null ? stageTitleMap.get(stageId) || null : null,
+          user_id: e.user_id,
+          user_email: e.user_id ? userEmailMap.get(e.user_id) || null : null,
+          details: e.details
+        };
+      });
     },
     staleTime: QUERY_STALE_TIMES.REALTIME,
   });

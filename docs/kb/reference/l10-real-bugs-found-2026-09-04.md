@@ -295,7 +295,7 @@ the correct legacy-mapping source.
 
 ## Manage Stages — audit trail (`AdminManageStages.tsx`)
 
-### 14. Stage archive/restore has never recorded an audit trail entry — DOCUMENTED, NOT FIXED (compliance-relevant)
+### 14. Stage archive/restore has never recorded an audit trail entry — FIXED (compliance-relevant)
 `AdminManageStages.tsx`'s `toggleArchive` writes to `audit_events` after
 every archive/restore action:
 ```ts
@@ -326,13 +326,24 @@ regardless. Found during batch 39's live verification (console showed two
 confirming the archive/restore UI flow itself works correctly (which it
 does).
 
-**Why not fixed here**: `stage.id` has no UUID representation to give —
-fixing this properly needs a decision (a new integer/text audit-events
-variant column, a lookup table, or accepting that stage-entity audit
-events use a different logging path) rather than a type-only patch.
-Flagged to Carl given this is specifically an **audit-trail** gap on a
-compliance platform, even though it doesn't block the underlying
-archive/restore feature.
+**Fixed 2026-09-08:** investigating before fixing found the original framing
+above was wrong on both counts. First, scope: the identical bug existed in
+**~15 call sites across 10 files**, not just this one — `useStageReplacement.tsx`,
+`useStageExportImport.tsx`, `StageBuilder.tsx`, `useStageDependencies.tsx`,
+`useStageTemplateContent.tsx`, `StageDocumentsPanel.tsx`,
+`StageFrameworkSelector.tsx`, `useStageDuplication.tsx`, `useStageStandards.tsx`,
+and one leftover in `AdminStageDetail.tsx`. Second, no schema decision was
+actually needed: `AdminStageDetail.tsx`'s other 4 audit calls and
+`useStageTemplateContent.tsx`'s own `logStageTemplateAudit()` helper already
+used the correct pattern (`entity_id: crypto.randomUUID()`, real numeric id
+kept in `details.stage_id`) — exactly what the stage detail page's own audit
+reader (`useStageAuditLog.tsx`) already expected. Applied that same pattern
+to every remaining broken call site, and fixed `useStageAnalytics.tsx`
+(which read `entity_id` back as if it held the real stage id) to read
+`details.stage_id` instead. `package_builder_audit_log`/`client_audit_log`
+were checked live via `information_schema` and confirmed to have a genuinely
+`text` entity_id column — their integer-string writes were correct and left
+untouched. Full detail: `docs/audit-log/entries/2026-09-08-fix-stage-audit-entity-id-mismatch.md`.
 
 **Confirmed systemic, not isolated (2026-09-08, live verification of P4-D
 #3's fix).** The identical `audit_events.entity_id` uuid-vs-integer

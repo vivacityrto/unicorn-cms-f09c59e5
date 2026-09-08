@@ -208,12 +208,14 @@ export function useStageReplacement() {
         }
       }
 
-      // Log audit event
+      // Log audit event. entity_id is a strict uuid column and stage ids are
+      // plain integers, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: oldStageId.toString(),
+        entity_id: crypto.randomUUID(),
         action: 'stage.replaced_in_packages',
         details: {
+          stage_id: oldStageId,
           old_stage_id: oldStageId,
           new_stage_id: newStageId,
           package_ids: packageIds,

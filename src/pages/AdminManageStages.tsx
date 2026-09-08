@@ -424,12 +424,13 @@ export default function AdminManageStages() {
           : 'Stage has been restored and is now available.',
       });
       
-      // Log audit event
+      // Log audit event. entity_id is a strict uuid column and stage.id is a
+      // plain integer, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: stage.id.toString(),
+        entity_id: crypto.randomUUID(),
         action: newArchived ? 'stage.archived' : 'stage.restored',
-        details: { stage_title: stage.title },
+        details: { stage_id: stage.id, stage_title: stage.title },
       });
       
       fetchStages();
