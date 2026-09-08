@@ -81,6 +81,17 @@ conservative 24-hour quiet-period window, the earliest drop gate is
 until that evidence is re-checked and the separately authorized migration is
 applied. No hosted state changed in this cross-check.
 
+**2026-09-08, session 20 — M3-C completed:** Carl explicitly overrode the
+conservative quiet-period timing after the final read-only dependency check.
+The fail-closed `retire_notification_schedule` migration was applied to
+production and recorded by Supabase as `20260908031729`. Postflight confirms
+`public.notification_schedule` is absent, while `notification_audit_log` and
+`notification_outbox` remain present; function, view, and cron scans still
+return zero references. No rows were deleted because the retired table was
+empty. A schema-only rollback script is committed for recovery if a future
+owner revives this contract; it does not recreate the retired audit functions
+or queue worker. M3-C is closed.
+
 **2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
 migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
 and its JSON companion. No hosted state changed. M1 is next.
@@ -1498,13 +1509,17 @@ reviewed Edge change (no cron job or frontend caller exists). Run Edge tests,
 lint ratchet, typecheck, build, and a read-only function health check. Do not
 drop `notification_schedule` in the same Edge deployment.
 
-#### M3-C — drop `notification_schedule` only after a quiet-period proof
+#### M3-C — drop `notification_schedule` after dependency proof
 
 After M3-B, verify no deployed function, migration, trigger, view, or frontend
-caller references the table; confirm zero rows and zero recent access/error
+caller references the table; confirm zero rows and no recent access/error
 evidence; then apply a separately authorized, reversible migration to drop the
 table and its indexes/policies. Postflight must assert the relation is absent
 and that `notification_audit_log` and `notification_outbox` remain intact.
+**Completed 2026-09-08:** migration `retire_notification_schedule` was
+applied and recorded as `20260908031729`; postflight found the relation absent,
+both keeper tables intact, and zero remaining database function/view/cron
+references. The repository includes a schema-only rollback script.
 
 #### M3-D — retain and govern `notification_audit_log`
 

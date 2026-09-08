@@ -18,6 +18,15 @@
       "owner": "Carl",
       "reason": "Carl explicitly authorized pausing the nightly stage-health cron (2026-09-07, Phase 2.6 Packet P3-A / H0.0 containment) since the current metric is known-defective and superseded by the new client-health plan. stage_health_snapshots table and the run-stage-health-monitor Edge Function are retained.",
       "expires": "2026-10-07"
+    },
+    {
+      "id": "m3c-retire-empty-notification-schedule",
+      "file": "supabase/migrations/20260908050000_retire_notification_schedule.sql",
+      "categories": ["destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl explicitly authorized M3-C after the dependency cross-check: notification_schedule is empty and has no foreign-key, function, view, trigger, or cron dependants; legacy queue and email writers are retired. The active notification_audit_log and notification_outbox tables are preserved.",
+      "expires": "2026-10-08"
     }
   ]
 }

@@ -241,6 +241,19 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   actual tables; that reconciliation is out of scope for a Phase 0 tooling
   change. Run it manually, or make it a CI gate once Phase 1 lands.
 
+## Documentation synchronization (standing practice)
+
+Implementation work is incomplete until its authoritative documentation is
+reconciled. For every change, identify and update the relevant plan,
+codebase-state, handoff, or operational document with current status, evidence,
+and remaining work. Material production, schema, migration, cron, security, or
+operational changes also require a corresponding `docs/audit-log/entries/`
+record and `docs/audit-log/INDEX.md` update. During rebases or conflict
+resolution, preserve all existing document entries and inspect the final diff
+for lost claims, links, or evidence. Run the relevant documentation checks — at
+minimum `node scripts/check-kb-links.mjs` for KB changes — and explicitly note
+when a related document was reviewed but intentionally unchanged.
+
 ## Workflow efficiency checkpoints (standing practice, added 2026-09-04)
 
 When starting a new phase of a multi-batch plan (e.g. a new sub-phase of
