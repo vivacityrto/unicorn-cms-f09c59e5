@@ -898,6 +898,44 @@ task; needs `req` threaded into both function signatures as a parameter and
 both call sites updated. Worth fixing together with item 28 given the
 identical bug shape, but tracked separately since they're different files.
 
+### 33. "Import from Unicorn 1"'s legacy-mapping backfill has never worked — DOCUMENTED, NOT FIXED (found 2026-09-08)
+
+Found during Phase 2.6 stabilization Packet P5-A item 3 (replacing
+`InviteUserDialog.tsx`'s reviewed `unicorn1` cross-schema `as any` exception
+with a bounded typed adapter, PR for
+`hotfix/p5a-invite-user-unicorn1-adapter`) while live-verifying the new
+adapter against production. After a real "Import from Unicorn 1" flow
+succeeds (the new `public.users`/`tenant_users`/`tenant_members` rows are
+created via `invite-user`'s `skip_email` path), the dialog's final step —
+`(supabase as any).schema('unicorn1').from('users').update({
+mapped_user_uuid }).eq('ID', legacyId)` — fails at the PostgREST layer with
+`"The schema must be one of the following: public, graphql_public"`. This
+project's PostgREST config only ever exposed the `public` schema, so a
+direct `.schema('unicorn1')` call from the browser (anon/authenticated key)
+can never succeed, regardless of typing or RLS grants. Confirmed
+independently of typing by exercising the exact call live (not just reading
+the code): a legacy record's `mapped_user_uuid` stayed `NULL` after a
+successful import.
+
+`search-unicorn1-users/index.ts` already documents the correct workaround
+for the identical constraint — a `SECURITY DEFINER` RPC (`search_unicorn1_
+users`) instead of a direct schema-qualified PostgREST call — but no
+equivalent write-side RPC exists for setting `mapped_user_uuid`. Because the
+original code never checked this call's error, the failure has been fully
+silent since the import flow was built: every import "succeeds" (the user
+account is created) but the legacy record is never actually marked mapped,
+so it can be found and re-imported again later.
+
+Not fixed here — building the missing RPC is a real schema/migration change
+(new `SECURITY DEFINER` function, its own audit-log entry, grant review),
+out of scope for a lint/typing packet. The P5-A adapter now at least logs
+this failure to the console instead of swallowing it silently, and its own
+code comment records this gap. Given Unicorn 1 (and this import flow with
+it) is expected to be retired rather than actively developed, building the
+RPC is likely not worth the investment — recommend leaving this documented
+rather than scheduling a fix, unless Unicorn 1's retirement timeline slips
+significantly.
+
 ## Carl-reported regressions (2026-09-07) — DOCUMENTED, NOT INVESTIGATED
 
 Reported directly by Carl, not surfaced by this session's typing work.

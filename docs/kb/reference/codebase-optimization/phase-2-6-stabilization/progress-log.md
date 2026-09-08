@@ -4,15 +4,45 @@
 
 ## Progress log
 
+**2026-09-08, session 26 — P5-A item 3 closed, `InviteUserDialog.tsx`
+`unicorn1` adapter shipped (`hotfix/p5a-invite-user-unicorn1-adapter`):**
+replaced the reviewed `(supabase as any).schema('unicorn1')...` cross-schema
+exception with a bounded `Unicorn1SchemaClient` adapter type (`mapUnicorn1
+UserToUuid`), isolating the `as unknown` boundary to exactly the one legacy
+write call instead of casting the whole client. Lint baseline drops from 2
+errors to 1 (only the deferred `generate-meeting-recurrence` typing boundary
+remains); typecheck, `test:frontend` (323 passed/15 skipped), and `test:edge`
+(276/276) all stayed green. Live verification (SuperAdmin persona, real
+browser, real Demo RTO tenant) surfaced a separate, pre-existing production
+bug: the adapter's one write call fails at the PostgREST layer
+("The schema must be one of the following: public, graphql_public")
+regardless of typing, because this project's PostgREST config never exposed
+the `unicorn1` schema — confirmed independent of this fix by exercising the
+exact call directly against production. Documented as
+`l10-real-bugs-found.md` item 33 rather than fixed: the correct fix is a new
+`SECURITY DEFINER` RPC (matching `search-unicorn1-users`'s existing
+workaround for the identical constraint), which is real schema/migration
+work out of scope for a typing packet, and Unicorn 1 (and this import flow)
+is expected to be retired rather than actively developed. All test-import
+data (a dummy `test@gmail.com` legacy record, tenant 7547/Demo RTO) was
+created and fully cleaned up in the same session — no residual test rows,
+and the target legacy row's `mapped_user_uuid` was confirmed to remain
+`NULL` throughout (the write never actually executed). Playwright storage
+states for both `superadmin` and `client-demo` (Demo RTO) personas were
+regenerated fresh in the main checkout (not a worktree) specifically so
+Codex can reuse them.
+
 **2026-09-08, session 24 — status reconciliation after KB restructuring:**
 The historical packet entries below remain preserved, but their current status
 is normalized here. P1-A, P1-B, P1-C, P3-A items 1–3, P4-A, P4-B, P4-C,
 P4-D, P6-A and the completed P6-B cohorts are done. P3-A item 4 is a separate
 RBAC/security hotfix and is not part of this stabilization implementation.
-P5-A is functionally complete with two deliberate lint exceptions:
-`InviteUserDialog.tsx` and deferred `generate-meeting-recurrence` typing.
+P5-A is now fully done: item 3 (`InviteUserDialog.tsx`) shipped in session
+26 above. One deliberate lint exception remains: deferred
+`generate-meeting-recurrence` typing.
 M0, M1, M2, M3-A, M3-C, M4 and M6 are done; M5 is superseded. Jobs 14, 15,
-20 and 21 are retired, with their data and functions retained. Remaining implementation candidates are the
+20 and 21 are retired, with their data and functions retained. Remaining
+implementation candidates are the
 broader layered-QA scope (P2), SeatCard display-core coverage/extraction, and
 Phase 3 preparation/implementation (P7), which remains gated by RBAC and
 Tenant Operating Model decisions.
