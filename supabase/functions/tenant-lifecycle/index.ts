@@ -284,40 +284,69 @@ async function executeCloseTransaction(
 ) {
   const now = new Date().toISOString();
 
-  // Step 1: Close open stage_instances
-  const { data: openStages, error: stagesQueryErr } = await supabase
-    .from("stage_instances")
-    .select("id, status, packageinstance_id, package_instances!inner(tenant_id)")
-    .eq("package_instances.tenant_id", tenantId)
-    .in("status", ["not_started", "in_progress", "blocked", "monitor"]);
+  // stage_instances.packageinstance_id -> package_instances has no formal FK
+  // constraint (confirmed live: PostgREST embedding -- package_instances!inner(...)
+  // -- fails with PGRST200 "no relationship found" for every tenant, every
+  // time, unconditionally, since the embed can't be resolved regardless of
+  // row content). Resolve the tenant scope with a plain two-step lookup
+  // instead of relying on an embed the schema doesn't actually support.
+  const { data: tenantPackageInstances, error: packageInstancesErr } = await supabase
+    .from("package_instances")
+    .select("id")
+    .eq("tenant_id", tenantId);
 
-  if (stagesQueryErr) {
-    console.error("Close: failed to query open stages:", stagesQueryErr);
-    return CommonErrors.internalError(req, "Failed to query open stages");
+  if (packageInstancesErr) {
+    console.error("Close: failed to query package instances:", packageInstancesErr);
+    return CommonErrors.internalError(req, "Failed to query package instances");
   }
 
-  const stageIds = (openStages || []).map(s => s.id);
+  const packageInstanceIds = (tenantPackageInstances || []).map(p => p.id);
+
+  // Step 1: Close open stage_instances
+  let stageInstanceIds: number[] = [];
+  let openStageIds: number[] = [];
+
+  if (packageInstanceIds.length > 0) {
+    const { data: tenantStages, error: stagesQueryErr } = await supabase
+      .from("stage_instances")
+      .select("id, status")
+      .in("packageinstance_id", packageInstanceIds);
+
+    if (stagesQueryErr) {
+      console.error("Close: failed to query open stages:", stagesQueryErr);
+      return CommonErrors.internalError(req, "Failed to query open stages");
+    }
+
+    stageInstanceIds = (tenantStages || []).map(s => s.id);
+    openStageIds = (tenantStages || [])
+      .filter(s => ["not_started", "in_progress", "blocked", "monitor"].includes(s.status))
+      .map(s => s.id);
+  }
+
   let stagesClosed = 0;
 
-  if (stageIds.length > 0) {
+  if (openStageIds.length > 0) {
     const { error: stagesUpdateErr, count } = await supabase
       .from("stage_instances")
       .update({ status: "closed", status_date: now })
-      .in("id", stageIds);
+      .in("id", openStageIds);
 
     if (stagesUpdateErr) {
       console.error("Close: failed to close stages:", stagesUpdateErr);
       return CommonErrors.internalError(req, "Failed to close stage instances");
     }
-    stagesClosed = count ?? stageIds.length;
+    stagesClosed = count ?? openStageIds.length;
   }
 
-  // Step 2: Cancel open tasks
-  const { data: openTasks, error: tasksQueryErr } = await supabase
-    .from("client_task_instances")
-    .select("id, status, stage_instances!inner(packageinstance_id, package_instances!inner(tenant_id))")
-    .eq("stage_instances.package_instances.tenant_id", tenantId)
-    .in("status", [0, 2]);
+  // Step 2: Cancel open tasks (scoped by the tenant's full stage_instance set,
+  // not just the ones closed in Step 1 above -- matches original semantics).
+  const { data: openTasks, error: tasksQueryErr } = stageInstanceIds.length > 0
+    ? await supabase
+        .from("client_task_instances")
+        .select("id, status")
+        .in("stageinstance_id", stageInstanceIds)
+        .in("status", [0, 2])
+    : { data: [], error: null };
 
   if (tasksQueryErr) {
     console.error("Close: failed to query open tasks:", tasksQueryErr);

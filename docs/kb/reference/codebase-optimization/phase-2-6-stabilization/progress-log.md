@@ -4,6 +4,54 @@
 
 ## Progress log
 
+**2026-09-09, session 34 — real production bug found and fixed while
+live-verifying `qa:data-lifecycle` (`hotfix/tenant-lifecycle-close-fk-bug`;
+`docs/audit-log/entries/2026-09-09-tenant-lifecycle-close-fk-bug.md`,
+`l10-real-bugs-found.md` item 34):** dispatching session 32's suite for
+real against `unicorn-qa` first hit a reference-data gap (`dd_unicorn_roles`
+had no `'Super Admin'` row — this table was deliberately hand-seeded for
+P1-C's own two persona roles only; added a third row, confirmed as
+sensible/non-critical and auto-approved). Re-dispatching then surfaced a
+second, unrelated finding that was **not** a QA-environment gap: 6 of 11
+tests failed starting at the `close` action itself (`500`), cascading
+through everything downstream. Confirmed via `pg_constraint` against
+**production** (not just QA): `stage_instances` has no foreign key to
+`package_instances` at all, in either environment — so
+`executeCloseTransaction`'s PostgREST embed
+(`package_instances!inner(tenant_id)`) has failed with `PGRST200`
+unconditionally since this code was written. **Every real "Close" action
+call has been broken in production**, not just in the QA mirror. Carl
+confirmed fixing it now (not deferring) given severity.
+
+Fixed by resolving the tenant's `package_instances` ids with a plain query
+first, then filtering `stage_instances`/`client_task_instances` by those
+ids directly — the exact same workaround `ClientAuditsTab.tsx` already
+independently discovered and applied for the identical root cause (its own
+code comment references the earlier `hotfix: fix Client Detail
+package/stage bugs found in Playwright audit`); `tenant-lifecycle` was
+simply never updated to match. No behavior change to close semantics, only
+the query mechanism. A second, separate, non-blocking issue was found in
+the same investigation and left documented rather than fixed:
+`compliance_risk_flags` (queried by the close safety check) doesn't exist
+in production either — silently degrades today since that check only logs
+and continues on error, so nothing crashes, but the "unresolved risk flags"
+warning has never actually been able to fire. Needs a product decision on
+what that table should contain before it's worth building.
+
+Verified: existing `response-context.test.mjs` and
+`suspend-close-superadmin.test.mjs` (don't reference the changed query
+shape, unaffected) plus the full `test:edge` suite (279/279) still pass.
+Redeployed the fixed function to `unicorn-qa` (version 2) and re-dispatched
+`qa-data-lifecycle.yml`: **all 11/11 tests passed** (workflow run
+`34289646607`), including the real close-with-audit-log-verification test
+that previously 500'd — genuine regression proof, not just "the request
+succeeded." `qa:data-lifecycle`'s first target is now fully live-proven.
+PR opened for the production-side fix, following the standard "merge is a
+live production deployment" protocol from `AGENTS.md` → "Supabase
+deployment workflow" (auto-deploy-on-merge is unreliable — post-merge
+version check required before treating this as actually live in
+production).
+
 **2026-09-09, session 33 — PostgREST error-message regression audit and fix
 (`codex/fix-recurrence-errors-kb-size`):** reviewed the recent Edge Function
 typing edits for the same `catch (unknown)` narrowing failure found in
