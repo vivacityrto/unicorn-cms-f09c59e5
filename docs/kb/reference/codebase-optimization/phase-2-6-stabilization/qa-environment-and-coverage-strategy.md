@@ -70,7 +70,7 @@ P1-C is one protected suite in a layered QA programme:
 | `qa:edge` | Auth, CORS, request/response and external-contract behavior | Edge Function change | Not started — needs Edge Functions deployed to `unicorn-qa` first (no such deployment exists today) |
 | `qa:data-lifecycle` | Create/update/archive/delete workflows and invariants | Feature workflow or trigger change | Not started |
 | `qa:residue` | Run-scoped rows, Auth users, storage objects and orphan records | Any fixture-producing suite | Partially covered — `qa:rls`'s own residue assertions; not a standalone suite yet |
-| `qa:migrations` | Replay safety and absence of production URLs, cron, HTTP or hidden backfills | Migration change | Not started (the changed-only migration scanner described below is a prerequisite) |
+| `qa:migrations` | Replay safety and absence of production URLs, cron, HTTP or hidden backfills | Migration change | **Static-safety half already covered** by `scripts/audit-migrations.mjs`, live in CI on every PR/push touching migrations (`.github/workflows/migration-safety.yml`, diff-scoped) — production-URL, cron-registration/unschedule, HTTP-call, destructive-mutation and hidden-backfill-tag detection. **Not covered:** actually replaying an approved migration onto `unicorn-qa` and confirming a clean apply — the "explicit QA sync" step (§ below) remains a manual/reviewed process, not an automated test |
 | `qa:e2e` | Authenticated read-only route and workflow smoke checks | Route, auth or query-behavior change | Not started |
 | `qa:cron-safety` | QA remains schedule-free unless explicitly enabled | Cron or scheduling change | Not started |
 
@@ -116,7 +116,9 @@ test or an owner-approved waiver.
 ## Execution and isolation rules
 
 1. Migrations are authored, reviewed and merged to `main`.
-2. The changed-only migration scanner runs before QA sync and blocks
+2. The changed-only migration scanner (`scripts/audit-migrations.mjs`,
+   already live in CI via `.github/workflows/migration-safety.yml` on every
+   PR/push touching migrations) runs before QA sync and blocks
    production URLs, cron/HTTP calls, hidden backfills, destructive DML and
    unreviewed extension assumptions.
 3. The approved migration is applied to QA explicitly; QA does not auto-follow

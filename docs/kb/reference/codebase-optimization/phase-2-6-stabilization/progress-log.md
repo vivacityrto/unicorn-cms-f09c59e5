@@ -4,6 +4,24 @@
 
 ## Progress log
 
+**2026-09-08, session 31 — `qa:migrations`'s static-safety half was
+already built, just undocumented (`docs/qa-migrations-coverage-correction`):**
+before starting on the next unbuilt P2-QA suite, checked whether existing
+tooling already covered any of the remaining candidates first.
+`scripts/audit-migrations.mjs` — already CI-wired via
+`.github/workflows/migration-safety.yml` on every PR/push touching
+migrations, diff-scoped (`--changed-only`) — already detects exactly
+`qa:migrations`'s stated contract: production URLs, `cron.schedule`/
+`unschedule`, `net.http_*` calls, destructive DML, and hidden-backfill
+tags. Confirmed its own test suite passes (6/6,
+`node --test scripts/audit-migrations.test.mjs`). The coverage-model table
+called this "Not started"; corrected to reflect reality rather than
+duplicate already-working, already-proven tooling. Honestly scoped what's
+genuinely still missing: actually replaying an approved migration onto
+`unicorn-qa` and confirming a clean apply remains a manual/reviewed process
+(the doc's own "explicit QA sync" step), not an automated test — that part
+of the contract is still open. Docs-only change, no code.
+
 **2026-09-08, session 30 — `qa:contract` live-proven, RPC check promoted
 from soft to hard (`chore/qa-contract-diagnostic`):** with `qa-contract.yml`
 now on `main` (session 29's PR merged) and its `unicorn-qa` environment
