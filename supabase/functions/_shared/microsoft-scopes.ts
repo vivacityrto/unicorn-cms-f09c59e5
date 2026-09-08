@@ -1,6 +1,5 @@
 /**
  * Microsoft OAuth scope constants — shared across edge functions.
- * Mirror of src/lib/microsoft/scopes.ts for Deno runtime.
  */
 
 export const BASE_SCOPES = [
@@ -12,7 +11,11 @@ export const BASE_SCOPES = [
 ];
 
 export const MAIL_SCOPES = ['Mail.Read', 'Mail.Send'];
-export const CALENDAR_SCOPES = ['Calendars.Read'];
+// ReadWrite (not just Read) so sync-outlook-calendar can create/cancel
+// Outlook calendar invites for opening/closing audit meetings, not just sync
+// existing events. Existing connections made under the old Calendars.Read
+// scope need to reconnect via the normal connect flow to pick this up.
+export const CALENDAR_SCOPES = ['Calendars.ReadWrite'];
 export const DOCUMENT_SCOPES = ['Files.Read.All'];
 
 export interface SurfaceFlags {
