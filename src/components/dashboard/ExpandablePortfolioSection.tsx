@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,6 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import type { AttentionTenant } from '@/hooks/useDashboardTriage';
 import { cn } from '@/lib/utils';
+import { LegacyStageHealthUnavailable } from '@/components/client-health/LegacyStageHealthUnavailable';
 
 interface Props {
   activeTenants: AttentionTenant[];
@@ -14,17 +14,6 @@ interface Props {
   cscNameMap: Record<string, string>;
   onRowClick: (tenant: AttentionTenant) => void;
 }
-
-const healthBadge: Record<string, { class: string; label: string }> = {
-  critical: { class: 'bg-destructive text-destructive-foreground', label: 'Critical' },
-  at_risk: { class: 'bg-orange-500 text-white', label: 'At Risk' },
-  monitoring: { class: 'bg-amber-500 text-white', label: 'Monitor' },
-  healthy: { class: 'bg-emerald-500 text-white', label: 'Healthy' },
-  // Client Health H0.0 containment (2026-09-08): the real signal is
-  // currently unavailable, not "healthy" — do not fall back to the
-  // healthy badge for this value.
-  unavailable: { class: 'bg-muted text-muted-foreground', label: 'Unavailable' },
-};
 
 function ScorePill({ score }: { score: number }) {
   const color = score >= 70 ? 'bg-destructive text-destructive-foreground'
@@ -35,12 +24,11 @@ function ScorePill({ score }: { score: number }) {
 }
 
 function TenantRow({ t, cscNameMap, onClick }: { t: AttentionTenant; cscNameMap: Record<string, string>; onClick: () => void }) {
-  const health = healthBadge[t.worst_stage_health_status] || healthBadge.healthy;
   return (
     <TableRow className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={onClick}>
       <TableCell className="font-medium text-sm">{t.tenant_name}</TableCell>
       <TableCell className="text-center"><ScorePill score={t.attention_score} /></TableCell>
-      <TableCell><Badge className={cn('text-[10px]', health.class)}>{health.label}</Badge></TableCell>
+      <TableCell><LegacyStageHealthUnavailable compact /></TableCell>
       <TableCell className="text-right text-sm">
         {t.overdue_tasks_count > 0 ? <span className="text-destructive">{t.overdue_tasks_count}</span> : '0'}
         <span className="text-muted-foreground">/{t.open_tasks_count}</span>
@@ -116,7 +104,7 @@ export function ExpandablePortfolioSection({ activeTenants, lowAttentionTenants,
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 w-full justify-start">
               {lowOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              Low Attention ({lowAttentionTenants.length} tenants) — stable, healthy, no gaps
+              Lower attention score ({lowAttentionTenants.length} tenants) — inspect available signals
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>

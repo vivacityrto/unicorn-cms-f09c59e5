@@ -2,7 +2,7 @@
 
 - **Date:** 2026-09-07
 - **Author:** Codex
-- **Status:** implementation prepared; production deployment pending reviewed PR merge
+- **Status:** implemented and merged in PR #973; production deployment verification parked
 - **Scope:** Edge Function source/config/tests only; no database migration or data change
 
 ## Change
@@ -27,6 +27,15 @@ changed.
   project’s native Supabase GitHub sync is expected to deploy the two changed
   functions after merge; post-merge version/source and read-only health checks
   are required before M3-C.
+
+### Post-merge verification note (2026-09-07)
+
+PR #973 is merged as `acf0069e7b7a0704485805dbc9ffd8cc52c7a441`. A read-only
+post-merge check found production still serving the pre-M3-B queue deployment
+(version 170; unauthenticated probe returned 401 rather than the stub’s 410),
+so Supabase deployment/source verification is explicitly parked. No manual
+production deployment or hosted data change was performed. M3-C must not exit
+until the stub is observed live and its quiet-period evidence is collected.
 
 ## Follow-up
 

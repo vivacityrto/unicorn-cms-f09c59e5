@@ -60,13 +60,25 @@ unchanged in both so all downstream consumers keep working):
 read from `v_dashboard_tenant_portfolio`, so they inherit the fix and the
 performance win without their own changes.
 
-**Frontend, no behavioral risk, added for correctness not required for
-the timeout fix:** `AttentionRankingSection.tsx`, `ExpandablePortfolioSection.tsx`,
-and `TenantDrawer.tsx` had a fallback that silently rendered any
-unrecognized `worst_stage_health_status` value as a green "Healthy" badge
-— exactly the "relabeled as trustworthy" outcome H0.0 said not to do.
-Added an explicit `unavailable` entry to each component's badge/color
-map so it renders as a distinct neutral "Unavailable" state instead.
+**Frontend containment superseded by a concurrent, more complete fix.**
+`AttentionRankingSection.tsx`, `ExpandablePortfolioSection.tsx`, and
+`TenantDrawer.tsx` originally had a fallback that silently rendered any
+unrecognized `worst_stage_health_status` value as a green "Healthy"
+badge — exactly the "relabeled as trustworthy" outcome H0.0 said not to
+do. This PR initially added an explicit `unavailable` entry to each
+component's badge/color map to fix that, but while resolving a merge
+conflict against `origin/main` it turned out Codex had independently
+shipped a more thorough fix to the same three files in the same session
+window (`d11c2c3cb`, "fix: contain invalid legacy health outputs"): a
+shared `LegacyStageHealthUnavailable` component that renders
+"Unavailable — data repair in progress" **unconditionally**, regardless
+of the backend value, replacing the badge/color maps entirely (also
+updating the "Low Attention" section's copy, which this PR hadn't
+touched). Took Codex's version as-is rather than layering a second,
+redundant containment mechanism on top — it's fully compatible with
+this PR's backend fix (it doesn't inspect the value at all) and is the
+better implementation. This PR's own frontend badge-map edits were
+discarded during the merge.
 
 `stage_health_snapshots` itself (the raw table) and the
 `run-stage-health-monitor` Edge Function remain completely untouched —

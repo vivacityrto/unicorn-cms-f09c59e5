@@ -2,9 +2,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Target, ArrowUpRight, ArrowDownRight, ChevronRight } from 'lucide-react';
+import { Target, ChevronRight } from 'lucide-react';
 import type { AttentionTenant } from '@/hooks/useDashboardTriage';
 import { cn } from '@/lib/utils';
+import { LegacyStageHealthUnavailable } from '@/components/client-health/LegacyStageHealthUnavailable';
 
 interface Props {
   tenants: AttentionTenant[];
@@ -12,17 +13,6 @@ interface Props {
   onRowClick: (tenant: AttentionTenant) => void;
   onViewFullPortfolio: () => void;
 }
-
-const healthBadge: Record<string, { class: string; label: string }> = {
-  critical: { class: 'bg-destructive text-destructive-foreground', label: 'Critical' },
-  at_risk: { class: 'bg-orange-500 text-white', label: 'At Risk' },
-  monitoring: { class: 'bg-amber-500 text-white', label: 'Monitor' },
-  healthy: { class: 'bg-emerald-500 text-white', label: 'Healthy' },
-  // Client Health H0.0 containment (2026-09-08): the real signal is
-  // currently unavailable, not "healthy" — do not fall back to the
-  // healthy badge for this value.
-  unavailable: { class: 'bg-muted text-muted-foreground', label: 'Unavailable' },
-};
 
 function AttentionScorePill({ score }: { score: number }) {
   const color = score >= 70 ? 'bg-destructive text-destructive-foreground'
@@ -46,7 +36,7 @@ export function AttentionRankingSection({ tenants, cscNameMap, onRowClick, onVie
           </div>
           <div>
             <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">Attention Ranking</h2>
-            <p className="text-xs text-muted-foreground">Top 5 tenants by composite score</p>
+            <p className="text-xs text-muted-foreground">Top 5 by available operational signals; legacy stage health is unavailable</p>
           </div>
         </div>
       </div>
@@ -68,7 +58,6 @@ export function AttentionRankingSection({ tenants, cscNameMap, onRowClick, onVie
               </TableHeader>
               <TableBody>
                 {tenants.map((t, i) => {
-                  const health = healthBadge[t.worst_stage_health_status] || healthBadge.healthy;
                   return (
                     <TableRow
                       key={t.tenant_id}
@@ -86,7 +75,7 @@ export function AttentionRankingSection({ tenants, cscNameMap, onRowClick, onVie
                         <AttentionScorePill score={t.attention_score} />
                       </TableCell>
                       <TableCell>
-                        <Badge className={cn('text-[10px]', health.class)}>{health.label}</Badge>
+                        <LegacyStageHealthUnavailable compact />
                       </TableCell>
                       <TableCell className="text-right text-sm">
                         {t.mandatory_gaps_count > 0 ? (

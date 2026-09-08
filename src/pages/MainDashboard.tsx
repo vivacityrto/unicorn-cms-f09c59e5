@@ -45,6 +45,7 @@ import { usePortfolioTimeline } from "@/hooks/usePortfolioTimeline";
 import { groupedEventHref } from "@/hooks/portfolioTimelineGrouping";
 import { EVENT_ICON_MAP, EVENT_COLOR_MAP } from "@/components/client/TimelineEventCard";
 import type { TimelineEventType } from "@/types/timeline";
+import { LegacyStageHealthUnavailable } from "@/components/client-health/LegacyStageHealthUnavailable";
 
 /* ------------------------------ helpers ------------------------------ */
 
@@ -788,20 +789,9 @@ export default function MainDashboard() {
 
   const today = todayIsoLocal();
 
-  const health = healthScope === "mine" ? healthMine : healthPortfolio;
-  // Total for the *active* scope — mirrors ClientHealthDonut's own sum, so the
-  // top "Clients" card never shows a stale "mine" count while Portfolio is selected.
-  const activeClientTotal = health
-    ? health.healthy + health.monitoring + health.at_risk + health.critical
-    : null;
-  const healthDonutData = health
-    ? [
-        { label: "Excellent", value: health.healthy, color: "#4CAF50" },
-        { label: "Good", value: health.monitoring, color: "#2196F3" },
-        { label: "At Risk", value: health.at_risk, color: "#FFC107" },
-        { label: "Critical", value: health.critical, color: "#F44336" },
-      ]
-    : [];
+  // Client totals and health bands came from the defective legacy stage-health
+  // source, so do not present either as a trustworthy number during repair.
+  const activeClientTotal = null;
 
 
   const todayLabel = format(new Date(), "EEE, d MMM");
@@ -1121,7 +1111,7 @@ export default function MainDashboard() {
                 )
               }
             >
-              <ClientHealthDonut data={healthDonutData} />
+              <LegacyStageHealthUnavailable />
             </Panel>
 
             <Panel title="Quick Actions" icon={Zap}>

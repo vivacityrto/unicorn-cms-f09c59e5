@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "status": "verified",
+  "target": {
+    "name": "unicorn-qa",
+    "projectRef": "qfpxvumcrnzrjyvqkicq",
+    "url": "https://qfpxvumcrnzrjyvqkicq.supabase.co",
+    "environment": "qa",
+    "lifecycle": "application-scope-baseline-verified"
+  },
+  "provisioning": {
+    "provisionedAt": "2026-09-07T23:06:12.856366Z",
+    "status": "ACTIVE_HEALTHY",
+    "region": "ap-southeast-1",
+    "postgresMajor": 17,
+    "initialMigrationCount": 0,
+    "initialPublicTableCount": 0,
+    "githubConnected": false,
+    "branches": 0
+  },
+  "source": {
+    "projectRef": "yxkgdalkbrriasiyyrwk",
+    "capturedAt": "2026-09-07",
+    "commitSha": "acf0069e7b7a0704485805dbc9ffd8cc52c7a441",
+    "migrationCutoff": "20260907052028"
+  },
+  "schema": {
+    "inventoryComplete": true,
+    "fingerprint": "composite:application-scope-v1",
+    "summary": {
+      "extensions": { "count": 3, "fingerprint": "688485db3defb996612ba737cb62eae9" },
+      "tables": { "count": 652, "fingerprint": "4068110a85ce69b28b8b0c6453ef7c2d" },
+      "views": { "count": 136, "fingerprint": "6934eb8cb50b6608f1b20fef8d951ce5" },
+      "functions": { "count": 669, "fingerprint": "be23e315d2a680d4bc154bbead1e14a0" },
+      "triggers": { "count": 485, "fingerprint": "3b81b633ef4c4aff7235466ca152c1dc" },
+      "policies": { "count": 1960, "fingerprint": "5fec7c611e69c92e7db4cfe2c7cb5cee" },
+      "publications": { "count": 1, "fingerprint": "d8a6bdfa6af5c8379bfef5f61a664f1a" }
+    },
+    "sourceSummary": {
+      "extensions": { "count": 8, "fingerprint": "388ab58536d8424a9e6625f2a256862f" },
+      "tables": { "count": 662, "fingerprint": "218481e9e0553e1973202755cc1f92a5" },
+      "views": { "count": 136, "fingerprint": "6934eb8cb50b6608f1b20fef8d951ce5" },
+      "functions": { "count": 670, "fingerprint": "83ed3376634f3d1419d9e3a17d9e64f6" },
+      "triggers": { "count": 486, "fingerprint": "42d877a91f7f047fd5ad62a6d8a56f6c" },
+      "policies": { "count": 1966, "fingerprint": "6144126e386641f27d9796f539600abc" },
+      "publications": { "count": 2, "fingerprint": "1898ba002577646846a9780745391c73" }
+    },
+    "extensions": [],
+    "tables": [],
+    "views": [],
+    "functions": [],
+    "triggers": [],
+    "policies": [],
+    "grants": [],
+    "publications": [],
+    "criticalObjects": {
+      "tables": [
+        "public.conversation_participants",
+        "public.messages",
+        "public.notification_audit_log",
+        "public.tenant_messages",
+        "public.tenants",
+        "public.users"
+      ],
+      "rls": {
+        "public.conversation_participants": { "enabled": true, "forced": true },
+        "public.messages": { "enabled": true, "forced": true },
+        "public.tenant_messages": { "enabled": true, "forced": false },
+        "public.tenants": { "enabled": true, "forced": false },
+        "public.users": { "enabled": true, "forced": false }
+      },
+      "policyCount": 23,
+      "policyFingerprint": "584793741ee6fbd015d82d85db33f6fd",
+      "columnCount": 174,
+      "columnFingerprint": "482c9abe7ed0da087525caefc93f41f8",
+      "foreignKeyCount": 19,
+      "foreignKeyFingerprint": "6f99d643446163734611c72f45b6648a"
+    }
+  },
+  "cron": {
+    "enabled": false,
+    "scheduleCount": 0
+  },
+  "parity": {
+    "mode": "application-scope",
+    "schemas": ["public", "private"],
+    "excludedSchemas": ["auth", "storage", "realtime"],
+    "excludedExtensions": ["pg_cron", "pg_net"],
+    "excludedPublications": true,
+    "sanitizedFunctionOverrides": true,
+    "strictSummaryKeys": ["extensions", "tables", "views"],
+    "countOnlySummaryKeys": ["functions", "triggers", "policies"],
+    "excludedSummaryKeys": ["publications"],
+    "requiredExceptions": [
+      "Managed storage/auth/realtime schemas were not copied; the capture is intentionally application-scope.",
+      "pg_cron and pg_net were not installed; QA has no cron relation or schedules.",
+      "Production URL/HTTP trigger functions were replaced with QA no-op trigger bodies.",
+      "current_user_tenant_ids() was corrected from SETOF uuid to SETOF bigint to match tenant_members.tenant_id."
+    ]
+  },
+  "sync": {
+    "mode": "controlled",
+    "source": "main",
+    "automatic": false
+  }
+}
