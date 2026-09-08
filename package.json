@@ -12,6 +12,8 @@
     "lint:baseline": "node scripts/generate-lint-baseline.mjs",
     "lint:email-redirects": "node scripts/check-email-redirect-urls.mjs",
     "audit:migrations": "node scripts/audit-migrations.mjs",
+    "qa:baseline:validate": "node scripts/validate-qa-baseline.mjs",
+    "qa:baseline:parity": "node scripts/qa-baseline-parity.mjs",
     "preview": "vite preview",
     "metrics": "node scripts/architecture-metrics.mjs",
     "tenant:p0:inventory": "node scripts/tenant-p0-inventory.mjs",
