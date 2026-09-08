@@ -56,9 +56,8 @@ The often-quoted **9,209 retired lines** is an approximate Phase 2.6 aggregate:
 direct per-PR shortstat summation is approximately 8,867, with the difference
 coming from rounded/cohort accounting. Treat the dead-code register and current
 architecture metrics as authoritative; do not use 9,209 as an exact present
-LOC total. Remaining work is: the P2 layered-QA scope; M4's forecast decision
-queue for jobs 20/21 (jobs 14 and 15 are already retired/paused); the two
-deliberate lint exceptions (`InviteUserDialog.tsx` and deferred
+LOC total. Remaining work is: the P2 layered-QA scope; the two deliberate lint
+exceptions (`InviteUserDialog.tsx` and deferred
 `generate-meeting-recurrence` typing); the SeatCard display-core prerequisite;
 and the P7 Phase 3 preparation/implementation sequence. The separate RBAC
 correctness hotfix remains security-owned and is not a Phase 2.6 refactor.
