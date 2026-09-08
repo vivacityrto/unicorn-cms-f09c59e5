@@ -14,6 +14,34 @@
 
 ## Progress log
 
+**2026-09-08, session 13 — Dedicated QA project provisioned:** created
+`unicorn-qa` (project ref `qfpxvumcrnzrjyvqkicq`) in Southeast Asia
+(`ap-southeast-1`). Read-only post-provision capture confirms the project is
+healthy, has no application migrations, no cron schedules, no branches, no
+GitHub integration and no imported application data. The QA baseline manifest
+now points at this project and remains `pending-capture` until a reviewed
+schema baseline is loaded and parity-verified. No production state or secret
+was accessed or changed.
+
+**2026-09-08, session 15 — QA application-scope parity verified:** the
+reviewed schema-only baseline is loaded in `unicorn-qa` and passes the scoped
+parity checker. The manifest is now `verified` for strict extension/table/view
+fingerprints, function/trigger/policy counts, critical RLS columns/foreign
+keys/policies, no cron relation, no production URLs and no application rows.
+Managed schemas, scheduling extensions and sanitized trigger/type overrides
+are explicit exceptions. P1-C remains gated only on the QA-only service-role
+secret and isolation-harness proof; future syncs stay explicit and
+migration-ledger aware.
+
+**2026-09-08, session 16 — reusable QA coverage model documented:** the QA
+project is now recorded as a general application-integration sandbox, not only
+an isolation-test target. The new QA strategy defines migration/feature impact
+classification, suite selection, schema/RLS/RPC/Edge/data-lifecycle/residue
+and Playwright layers, plus the rule that behavioral coverage is expanded by
+an explicit contract or waiver rather than guessed test generation. P1-C is
+the first protected gate; the broader coverage model is a follow-on after its
+live proof.
+
 **2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
 migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
 and its JSON companion. No hosted state changed. M1 is next.
@@ -73,6 +101,35 @@ active cron function; `notification_schedule` and the active
 regression tests pass. Production state is unchanged pending reviewed PR
 merge, after which the native Supabase GitHub sync will deploy the Edge change.
 
+**2026-09-07, session 9 — M3-B merged; deployment verification parked:** PR
+#973 merged as `acf0069e7b7a0704485805dbc9ffd8cc52c7a441`. The read-only
+post-merge Supabase check still found the pre-M3-B queue and email deployments
+(v170); the queue endpoint returned 401 rather than the committed 410 stub.
+No manual production deployment or hosted data change was performed. Keep the
+deployment/source check parked as an explicit follow-up; M3-C cannot close
+until the stub is live and the quiet-period proof is collected.
+
+**2026-09-07, session 10 — M3-C preflight captured:** merged-source and
+read-only production checks found no live database function, view, trigger, or
+cron reference to `notification_schedule`; the table remains present with
+zero rows, six indexes, and four RLS policies. The 24-hour Edge log query
+found three old-v170/401 queue requests, including the audit probes, while
+the committed 410 stub is still not deployed. The quiet-period gate therefore
+has not started; no migration, Edge deletion, or hosted data change was
+authorized. Evidence is recorded in
+[`notification-schedule-m3c-preflight.md`](../../audit-log/entries/2026-09-07-notification-schedule-m3c-preflight.md).
+
+**2026-09-07, session 11 — M3-B deployment verified; M3-C quiet period
+started:** after native Git sync lagged, the explicitly authorized manual
+deployment published `process-notification-queue` v171 (410
+`FUNCTION_RETIRED`) and `send-automated-email` v171 to production. Deployed
+source checks confirmed the queue has no `notification_schedule` or
+service-role reference and the email function has no remaining legacy-table
+writer. A read-only endpoint probe returned HTTP 410 with the retirement code;
+no database or data change occurred. The M3-C quiet-period clock starts from
+this verified deployment, and the table drop remains separately authorized
+work.
+
 **2026-09-07, session 1 — Packets P0-A, P0-B, P0-C, P1-A, P1-B, P4-A merged:**
 
 > **Restoration note:** this whole section was added in PR #961 and then
@@ -116,12 +173,14 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   [#962](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/962) —
   placeholders removed, live RLS suite typed against generated schema.
   [#963](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/963) —
-  unique per-run `RUN_ID`, fail-closed reverse-dependency cleanup. Steps 6
-  (concurrent-run serialization) and 7 (disposable QA project + protected
-  workflow) remain outstanding — the suite is still correctly credential-
-  gated (`describe.skipIf(!RLS_SUITE_ENABLED)`) pending Carl's
-  disposable-QA-project decision; do not wire in a service-role secret
-  until that decision lands.
+  unique per-run `RUN_ID`, fail-closed reverse-dependency cleanup. Step 6
+  (concurrent-run serialization) and the protected workflow portion of step 7
+  remain outstanding. The dedicated `unicorn-qa` project and application-
+  scope parity gate are now established; the suite remains correctly
+  credential-gated (`describe.skipIf(!RLS_SUITE_ENABLED)`) until its QA-only
+  service-role secret, lock and residue proof are complete. The reusable QA
+  coverage model is documented separately and must expand beyond P1-C for
+  future schema/features.
 - **P4-A** (small frontend correctness): [#959](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/959),
   merged. Fixed L10 #22/#24 (`ClientRouteGuard` render-time `navigate()`)
   and #11 (`useKpiAccess` missing the `unicorn_role` SuperAdmin check —
@@ -938,6 +997,10 @@ Before adding credentials:
 
 **Exit:** the live isolation tests execute, pass, and prove cleanup; the suite cannot silently pass while skipped.
 
+The QA project is reusable beyond this packet. Its layered suites and
+change-impact rules are documented in
+[`qa-environment-and-coverage-strategy-2026-09-08.md`](qa-environment-and-coverage-strategy-2026-09-08.md).
+
 ## 7. Bug-fix execution packets
 
 Each packet must update the L10 status, add regression tests, and state whether production data repair is required. Schema or product decisions stop implementation until approved.
@@ -1325,6 +1388,16 @@ are blocking correctness defects, not typing cleanup.
 
 ### Packet M4 — forecast and health output integrity
 
+**Session 12 status (2026-09-07): H0.0 containment implemented; jobs 14/15
+output-health checks implemented; deployment and dashboard Playwright evidence
+remain open.** The affected frontend surfaces now show an explicit
+“Unavailable — data repair in progress” state, and the stage-health filter and
+Ask Viv hotspot tool no longer present the legacy labels as trustworthy. The
+nightly stage-health and workload functions now return a visible `503` when
+input/output counts do not reconcile or an insert fails, and include an
+`output_health` payload on successful/not-applicable runs. No production
+deployment was performed for this M4 code in this session.
+
 - Add Client Health H0.0 containment so invalid stage-health data is shown as
   unavailable/data-repair-in-progress rather than relabelled as trustworthy.
 - For jobs 14 and 15, define freshness, row-count and non-zero-output
@@ -1337,6 +1410,26 @@ are blocking correctness defects, not typing cleanup.
   seed or mutate dashboard data.
 
 ### Packet M5 — environment-safe migration replay
+
+**Session 12 preflight (2026-09-07): blocked at strategy selection, with
+read-only evidence captured.** The dashboard-created `tenant-isolation-qa`
+branch (`iqichbimamlyjpaguddl`) is not actually persistent or Git-linked and
+remains `MIGRATIONS_FAILED`; it has 17 migrations
+through `20260714074812`, while production has 329. The first unapplied
+migration is `20260714074920_enable_retention_and_risk_forecast_cron`, whose
+`cron` dependency and production URL make blind replay unsafe. The branch
+reports `preview_project_status=ACTIVE_HEALTHY`, but that is not evidence of a
+migration-complete schema. No reset, rebase, migration marking, extension
+enablement, or data/schema write was performed.
+
+Recommended replay strategy: create a clean QA branch from the current
+production schema baseline (or an equivalent reviewed baseline export), then
+replay only environment-neutral migrations. Replace cron registration with a
+controlled deployment step that defaults to zero schedules in QA/preview and
+refuses the production project ref. This is safer than patching the failed
+branch in place because the current migration history contains both backfills
+and environment-specific scheduling assumptions. Carl must approve the branch
+repair strategy before any destructive or migration-history operation.
 
 Stop adding environment-specific cron registration to ordinary schema
 migrations. Move scheduling to a controlled deployment step that derives the
@@ -1353,6 +1446,32 @@ before acting:
 
 Do not reset, delete or mark migrations applied in QA until that strategy is
 approved and the resulting schema is checked against the migration inventory.
+
+**Session 13 implementation (2026-09-07): repository guard added.** The
+baseline cutover procedure is documented in
+`../codebase-state/qa-baseline-cutover-2026-09-07.md`. The new
+`scripts/validate-qa-baseline.mjs` validator and `qa:baseline:validate` script
+require a verified, non-production, cron-free baseline with controlled
+forward-sync metadata. This is a metadata guard only; it does not mutate
+Supabase or claim schema parity. Hosted branch recreation remains blocked until
+the manifest is captured and the migration-history cutover is approved.
+
+> **Supersession note:** the historical Session 14 wording below predates the
+> applied QA capture. Session 15 above is authoritative for current baseline
+> status and replaces its `pending-capture`/"not attempted" statements.
+
+**Session 14 baseline capture (2026-09-07): read-only production evidence
+recorded.** The capture found 8 extensions, 662 tables, 136 views, 670
+functions, 486 triggers, 1,966 policies and 2 publications; the migration
+ledger now contains 332 entries through `20260907052028`. The P1-C critical
+surface (`conversation_participants`, `messages`, `tenant_messages`,
+`tenants`, `users`) is present with RLS enabled and 23 critical policies. The
+organization review found no suitable existing QA project: `vivacity-au` has
+only three migrations, while `ComplyHub Project` has a different schema and 49
+cron jobs. The manifest remains `pending-capture` until a detailed inventory
+and a real QA parity check exist. Hosted creation is not attempted because
+Supabase branch creation replays the historical migration tree and would hit
+the known cron/production-URL failure again.
 
 **Exit:** the preview branch is healthy, migration-complete, contains no cron
 jobs by default, and cannot call production as a side effect of replay.

@@ -32,6 +32,11 @@ former `unicorn-kb` and `unicorn-audit` repos — see
 - The repo contains **both** `bun.lock` and `package-lock.json`, but **bun is
   not installed** on most dev VMs. Use **npm** (Node 22 is installed; Vite 8
   requires Node 20+).
+- Worktrees must reuse the main checkout's dependency install through a
+  junction at `<worktree>\node_modules` pointing to the sibling main
+  checkout's `node_modules`. Do not run `npm install` inside a worktree unless
+  the junction target is genuinely unavailable; this avoids duplicate installs
+  and memory pressure on the shared development machine.
 - `npm install` emits an `ERESOLVE` peer-dependency warning for
   `lovable-tagger` vs `vite@8` — this is expected and harmless; install still
   succeeds.

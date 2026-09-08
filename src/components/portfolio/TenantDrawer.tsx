@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import type { AttentionTenant as PortfolioTenant, TenantComms } from '@/hooks/useDashboardTriage';
 import { cn } from '@/lib/utils';
+import { LegacyStageHealthUnavailable } from '@/components/client-health/LegacyStageHealthUnavailable';
 
 interface Props {
   tenant: PortfolioTenant | null;
@@ -45,10 +46,6 @@ interface EmailPreview {
 const riskColors: Record<string, string> = {
   high: 'text-destructive', elevated: 'text-orange-500', emerging: 'text-amber-500', stable: 'text-emerald-500'
 };
-const healthColors: Record<string, string> = {
-  critical: 'text-destructive', at_risk: 'text-orange-500', monitoring: 'text-amber-500', healthy: 'text-emerald-500'
-};
-
 function AttentionDriversSection({ tenant }: { tenant: PortfolioTenant }) {
   const drivers = (Array.isArray(tenant.attention_drivers_json) ? tenant.attention_drivers_json : []) as DriverView[];
   if (drivers.length === 0) return null;
@@ -82,7 +79,11 @@ function AttentionDriversSection({ tenant }: { tenant: PortfolioTenant }) {
         ].map(s => (
           <div key={s.label} className="border rounded p-1.5">
             <p className="text-[10px] text-muted-foreground">{s.label} ({s.weight}%)</p>
-            <p className="text-sm font-bold">{s.value ?? 0}</p>
+            {s.label === 'Stage' ? (
+              <LegacyStageHealthUnavailable compact />
+            ) : (
+              <p className="text-sm font-bold">{s.value ?? 0}</p>
+            )}
           </div>
         ))}
       </div>
@@ -143,9 +144,7 @@ export function TenantDrawer({ tenant, open, onOpenChange, fetchComms, onLogEven
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Worst Stage Health</span>
-                <span className={cn('font-medium capitalize', healthColors[tenant.worst_stage_health_status] || '')}>
-                  {tenant.worst_stage_health_status.replace('_', ' ')}
-                </span>
+                <LegacyStageHealthUnavailable compact />
               </div>
               {tenant.critical_stage_count > 0 && (
                 <div className="flex justify-between">

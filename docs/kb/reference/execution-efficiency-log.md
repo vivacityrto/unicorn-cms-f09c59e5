@@ -1,5 +1,31 @@
 # Execution efficiency log
 
+### 2026-09-07 — M4 H0.0 containment and output-health guardrails
+The M4 stabilization batch reused the existing dependency junction instead of
+installing dependencies in the worktree. A shared unavailable state replaced
+legacy stage-health labels on the dashboard, executive widget, triage tables,
+tenant drawer, and filter; the Ask Viv hotspot tool now returns a generic
+data-repair-in-progress result. Jobs 14 and 15 gained input/output reconciliation
+and visible 503 failures for partial writes. Targeted Vitest passed (2/2) and
+the Edge suite passed (265/265); no production state was changed.
+
+### 2026-09-07 — M3-B deployment verification completed; M3-C quiet period started
+After native Git sync lagged, the explicitly authorized manual deployment
+published `process-notification-queue` v171 (410 retirement stub) and
+`send-automated-email` v171. Read-only source checks confirmed the retired
+queue has no legacy table reference and the email function has no remaining
+`notification_schedule` writer. The production endpoint returned HTTP 410
+`FUNCTION_RETIRED`; no database or data change occurred. M3-C monitoring now
+uses this deployment as its quiet-period baseline.
+
+### 2026-09-07 — M3-B post-merge verification parked
+PR #973 merged as `acf0069e7b7a0704485805dbc9ffd8cc52c7a441`. The read-only
+Supabase check still observed the pre-M3-B `process-notification-queue` and
+`send-automated-email` deployments (v170); the queue endpoint returned 401,
+not the committed 410 stub. No manual deploy or hosted data change was made.
+Deployment/source verification remains a required follow-up before M3-C can
+close; the original M3-B implementation record below is retained as history.
+
 ### 2026-09-07 — Cron/migration stabilization M3-B (implementation pending merge)
 One isolated Edge worktree handled the dormant notification retirement. Three
 `notification_schedule` writes were removed from `send-automated-email`, and

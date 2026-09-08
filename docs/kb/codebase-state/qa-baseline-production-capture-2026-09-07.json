@@ -1,0 +1,24 @@
+{
+  "projectRef": "yxkgdalkbrriasiyyrwk",
+  "capturedAt": "2026-09-07",
+  "schemaSummary": {
+    "extensions": { "count": 8, "fingerprint": "388ab58536d8424a9e6625f2a256862f" },
+    "tables": { "count": 662, "fingerprint": "218481e9e0553e1973202755cc1f92a5" },
+    "views": { "count": 136, "fingerprint": "6934eb8cb50b6608f1b20fef8d951ce5" },
+    "functions": { "count": 670, "fingerprint": "83ed3376634f3d1419d9e3a17d9e64f6" },
+    "triggers": { "count": 486, "fingerprint": "42d877a91f7f047fd5ad62a6d8a56f6c" },
+    "policies": { "count": 1966, "fingerprint": "6144126e386641f27d9796f539600abc" },
+    "publications": { "count": 2, "fingerprint": "1898ba002577646846a9780745391c73" }
+  },
+  "criticalPolicyCount": 23,
+  "criticalPolicyFingerprint": "584793741ee6fbd015d82d85db33f6fd",
+  "criticalColumnCount": 174,
+  "criticalColumnFingerprint": "482c9abe7ed0da087525caefc93f41f8",
+  "criticalForeignKeyCount": 19,
+  "criticalForeignKeyFingerprint": "6f99d643446163734611c72f45b6648a",
+  "migrationCount": 332,
+  "latestMigration": "20260907052028",
+  "cronScheduleCount": 24,
+  "productionUrlReferences": 0,
+  "migrationFailures": 0
+}
