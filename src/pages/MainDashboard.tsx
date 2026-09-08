@@ -73,7 +73,6 @@ interface UnifiedTask {
   createdAt: string | null;
 }
 
-type AttentionHealthRow = Pick<Tables<"v_dashboard_attention_ranked">, "worst_stage_health_status">;
 type TaskTenantRow = Pick<Tables<"tasks_tenants">, "id" | "task_name" | "description" | "due_date" | "priority" | "status" | "created_at">;
 type ClientActionItemRow = Pick<Tables<"client_action_items">, "id" | "title" | "due_date" | "priority" | "status" | "created_at">;
 type OpsWorkItemRow = Pick<Tables<"ops_work_items">, "id" | "title" | "due_at" | "priority" | "status" | "created_at">;
@@ -89,7 +88,6 @@ type ClientMessage = {
 };
 type EosRockRow = Pick<Tables<"eos_rocks">, "id" | "title" | "status" | "due_date" | "completion_percentage">;
 type CalendarEventRow = Pick<Tables<"calendar_events">, "id" | "title" | "start_at" | "end_at" | "organizer_email" | "organiser_email" | "attendees" | "user_id">;
-type PortfolioClientHealth = { healthy?: number; monitoring?: number; at_risk?: number; critical?: number };
 
 function normalizePriority(p: unknown): "high" | "medium" | "low" | null {
   if (p === null || p === undefined) return null;
@@ -409,12 +407,6 @@ export default function MainDashboard() {
   const [broadcasts, setBroadcasts] = useState<BroadcastCampaignRow[]>([]);
   // Client messages
   const [clientMsgs, setClientMsgs] = useState<ClientMessage[]>([]);
-  // Client health
-  type HealthCounts = { healthy: number; monitoring: number; at_risk: number; critical: number };
-  const [healthMine, setHealthMine] = useState<HealthCounts | null>(null);
-  const [healthPortfolio, setHealthPortfolio] = useState<HealthCounts | null>(null);
-  const [hasMineAssignments, setHasMineAssignments] = useState(false);
-  const [healthScope, setHealthScope] = useState<"mine" | "portfolio">("mine");
   // Upcoming calendar
   const [upcoming, setUpcoming] = useState<CalendarEventRow[]>([]);
 
@@ -428,49 +420,6 @@ export default function MainDashboard() {
   useEffect(() => {
     if (!isStaff || !userUuid) return;
     const today = todayIsoLocal();
-
-    // Clients + health donut. Fetches both "my assigned clients" and
-    // portfolio-wide counts up front so the Mine/Portfolio toggle switches
-    // instantly with no refetch. Defaults to "mine" when the signed-in user
-    // has assignments (CSCs), otherwise "portfolio" (devs, admins, etc. who
-    // would otherwise see an empty "No client data" state).
-    const tallyHealth = (rows: AttentionHealthRow[]): HealthCounts => {
-      const counts: HealthCounts = { healthy: 0, monitoring: 0, at_risk: 0, critical: 0 };
-      rows.forEach((r) => {
-        const k = (r.worst_stage_health_status ?? "").toLowerCase();
-        if (k in counts) counts[k as keyof HealthCounts]++;
-      });
-      return counts;
-    };
-    (async () => {
-      const { data } = await supabase
-        .from("v_dashboard_attention_ranked")
-        .select("worst_stage_health_status")
-        .eq("assigned_csc_user_id", userUuid)
-        .eq("tenant_status", "active");
-      const rows = data ?? [];
-      setHealthMine(tallyHealth(rows));
-      setHasMineAssignments(rows.length > 0);
-      setHealthScope(rows.length > 0 ? "mine" : "portfolio");
-
-      // Portfolio-wide counts go through a SECURITY DEFINER RPC rather than a
-      // plain select: under RLS, a tenant-unfiltered query re-evaluates the
-      // tenants access policy (plus several expensive joins) once per row,
-      // which times out for non-trivial portfolios. The RPC computes the
-      // aggregate server-side, bypassing that per-row cost entirely.
-      const { data: portfolioData, error: portfolioError } = await supabase.rpc("rpc_portfolio_client_health");
-      const portfolioResult = portfolioData as unknown as PortfolioClientHealth | null;
-      if (portfolioError) {
-        console.error("rpc_portfolio_client_health failed:", portfolioError);
-      } else if (portfolioResult) {
-        setHealthPortfolio({
-          healthy: portfolioResult.healthy ?? 0,
-          monitoring: portfolioResult.monitoring ?? 0,
-          at_risk: portfolioResult.at_risk ?? 0,
-          critical: portfolioResult.critical ?? 0,
-        });
-      }
-    })();
 
     // Tasks union
     (async () => {
@@ -869,7 +818,7 @@ export default function MainDashboard() {
           <SummaryCard
             title="Clients"
             value={activeClientTotal ?? "…"}
-            sub={healthScope === "mine" ? "active" : "portfolio"}
+            sub="unavailable"
             icon={UsersIcon}
             topAccent="#23C0DD"
             onClick={() => navigate("/manage-tenants")}
@@ -1079,36 +1028,9 @@ export default function MainDashboard() {
               icon={HeartPulse}
               footerHref="/manage-tenants"
               actions={
-                hasMineAssignments ? (
-                  <div className="flex items-center gap-0.5 p-0.5 rounded-full bg-muted">
-                    <button
-                      type="button"
-                      onClick={() => setHealthScope("mine")}
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
-                        healthScope === "mine"
-                          ? "bg-card text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Mine
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHealthScope("portfolio")}
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
-                        healthScope === "portfolio"
-                          ? "bg-card text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Portfolio
-                    </button>
-                  </div>
-                ) : (
-                  <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
-                    Portfolio
-                  </Badge>
-                )
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
+                  Unavailable
+                </Badge>
               }
             >
               <LegacyStageHealthUnavailable />
