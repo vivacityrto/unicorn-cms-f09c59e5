@@ -15,17 +15,18 @@
  *  ../tenant/isolation.test.tsx) targeting unicorn-qa specifically. Skipped
  *  entirely when unset, exactly like the P1-C suite.
  *
- *  HONEST LIMITATION (not yet live-proven as of authoring): this suite was
- *  written and its *parser* unit-tested against the real generated types
- *  file, but the live PostgREST-OpenAPI fetch/diff has never actually run
- *  against unicorn-qa -- the QA-only service-role key is a protected GitHub
- *  Environment secret unavailable outside CI. The table/column existence
- *  checks below are asserted as hard failures; the RPC argument-shape
- *  comparison is deliberately soft (warns, does not fail) until a first
- *  real run's payload shape confirms the parsing matches this PostgREST
- *  version's actual OpenAPI output. Tighten it once that first run's
- *  console output has been reviewed -- do not assume the soft-check shape
- *  guess was correct without checking.
+ *  LIVE-PROVEN 2026-09-08 (workflow run 34238305046, then a diagnostic run
+ *  34238555502 to inspect the real OpenAPI shape): table/column existence
+ *  passed clean against the real unicorn-qa schema. The RPC-argument check
+ *  was shipped as a soft, warn-only placeholder because the initial
+ *  assumption about where PostgREST stores an RPC's argument shape
+ *  (`definitions[functionName]`) was wrong -- confirmed via the diagnostic
+ *  run's raw payload: `definitions` is table-only, and an RPC's argument
+ *  shape actually lives at `paths['/rpc/<name>'].post.parameters[].schema`
+ *  (an object schema with `properties` per arg and a `required` array).
+ *  Rewritten below to the confirmed-correct shape and promoted to a real
+ *  hard assertion; re-run once more (workflow run to be recorded in
+ *  progress-log.md) to confirm it passes clean before trusting this comment.
  * ============================================================================
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -55,9 +56,25 @@ interface OpenApiTableDefinition {
   properties?: Record<string, OpenApiColumnDefinition>;
 }
 
+interface OpenApiBodyParameter {
+  in: "body";
+  name: string;
+  required?: boolean;
+  schema?: {
+    properties?: Record<string, OpenApiColumnDefinition>;
+    required?: string[];
+  };
+}
+
+interface OpenApiRpcPathEntry {
+  post?: {
+    parameters?: Array<OpenApiBodyParameter | Record<string, unknown>>;
+  };
+}
+
 interface OpenApiDocument {
   definitions?: Record<string, OpenApiTableDefinition>;
-  paths?: Record<string, unknown>;
+  paths?: Record<string, OpenApiRpcPathEntry>;
 }
 
 async function fetchOpenApiDocument(supabaseUrl: string, serviceRoleKey: string): Promise<OpenApiDocument> {
@@ -79,6 +96,28 @@ async function fetchOpenApiDocument(supabaseUrl: string, serviceRoleKey: string)
     throw new Error("[qa:contract] PostgREST introspection response was not a JSON object");
   }
   return body as OpenApiDocument;
+}
+
+/**
+ * Extracts an RPC's argument names + required-ness from its `/rpc/<name>`
+ * path entry's POST body-parameter schema. Returns null when the path
+ * entry doesn't have the expected shape (e.g. a GET-only RPC with no POST
+ * verb at all), so the caller can report "shape not found" distinctly from
+ * "found and mismatched".
+ */
+function extractRpcArgs(
+  pathEntry: OpenApiRpcPathEntry | undefined,
+): { name: string; required: boolean }[] | null {
+  const parameters = pathEntry?.post?.parameters;
+  if (!Array.isArray(parameters)) return null;
+  const bodyParam = parameters.find(
+    (p): p is OpenApiBodyParameter =>
+      typeof p === "object" && p !== null && (p as OpenApiBodyParameter).in === "body",
+  );
+  const properties = bodyParam?.schema?.properties;
+  if (!properties) return null;
+  const required = new Set(bodyParam?.schema?.required ?? []);
+  return Object.keys(properties).map((name) => ({ name, required: required.has(name) }));
 }
 
 describe.skipIf(!SUITE_ENABLED).sequential("qa:contract — generated types vs. live schema", () => {
@@ -143,46 +182,52 @@ describe.skipIf(!SUITE_ENABLED).sequential("qa:contract — generated types vs. 
     expect(mismatches, mismatches.join("\n")).toEqual([]);
   });
 
-  it("[soft check] every generated RPC function is still exposed live, with a matching argument shape", () => {
-    // Deliberately non-throwing -- see the file header's HONEST LIMITATION
-    // note. Logs findings so a real CI run's output can be reviewed to
-    // confirm this PostgREST version's OpenAPI shape matches what's assumed
-    // here, then this should be tightened into a real assertion.
+  it("has no RPC function missing live, or with a drifted argument list", () => {
     const paths = openApi.paths ?? {};
-    const findings: string[] = [];
+    const mismatches: string[] = [];
 
     for (const fn of generated.functions) {
       const path = `/rpc/${fn.name}`;
-      if (!(path in paths)) {
-        findings.push(`${fn.name}: no '${path}' entry in the live OpenAPI paths`);
+      const pathEntry = paths[path];
+      if (!pathEntry) {
+        mismatches.push(`${fn.name}: no '${path}' entry in the live OpenAPI paths (dropped/renamed function?)`);
         continue;
       }
-      const definition = openApi.definitions?.[fn.name];
-      if (!definition?.properties) {
-        findings.push(`${fn.name}: '${path}' exists but no matching '${fn.name}' entry in definitions to compare args against`);
+
+      const liveArgs = extractRpcArgs(pathEntry);
+      if (!liveArgs) {
+        // A handful of RPCs are GET-only (STABLE/IMMUTABLE with no body
+        // params) or otherwise don't expose a POST body schema -- can't
+        // meaningfully diff those, so skip rather than false-positive.
         continue;
       }
-      const liveArgs = new Set(Object.keys(definition.properties));
-      const generatedArgs = new Set(fn.args.map((a) => a.name));
-      const missingFromLive = [...generatedArgs].filter((a) => !liveArgs.has(a));
-      const missingFromGenerated = [...liveArgs].filter((a) => !generatedArgs.has(a));
+
+      const liveArgNames = new Set(liveArgs.map((a) => a.name));
+      const generatedArgNames = new Set(fn.args.map((a) => a.name));
+
+      const missingFromLive = [...generatedArgNames].filter((a) => !liveArgNames.has(a));
+      const missingFromGenerated = [...liveArgNames].filter((a) => !generatedArgNames.has(a));
+
       if (missingFromLive.length > 0 || missingFromGenerated.length > 0) {
-        findings.push(
-          `${fn.name}: arg mismatch -- generated-only ${JSON.stringify(missingFromLive)}, live-only ${JSON.stringify(missingFromGenerated)}`,
+        mismatches.push(
+          `${fn.name}: arg name mismatch -- generated-only ${JSON.stringify(missingFromLive)}, live-only ${JSON.stringify(missingFromGenerated)}`,
         );
+        continue;
+      }
+
+      for (const liveArg of liveArgs) {
+        const generatedArg = fn.args.find((a) => a.name === liveArg.name);
+        if (!generatedArg) continue; // already reported above
+        // Live "required" means no default in Postgres; generated
+        // "optional" means the arg had a default when types were generated.
+        if (generatedArg.optional === liveArg.required) {
+          mismatches.push(
+            `${fn.name}.${liveArg.name}: optional/required drifted -- generated ${generatedArg.optional ? "optional" : "required"}, live ${liveArg.required ? "required" : "optional"}`,
+          );
+        }
       }
     }
 
-    if (findings.length > 0) {
-      console.warn(
-        `[qa:contract] soft RPC-shape findings (${findings.length}) -- review before promoting to a hard assertion:\n` +
-          findings.join("\n"),
-      );
-    }
-
-    // Intentionally always passes -- this is a reporting check for v1, see
-    // the file header. Promote to `expect(findings).toEqual([])` once a
-    // real run's output confirms the parsing shape is correct.
-    expect(true).toBe(true);
+    expect(mismatches, mismatches.join("\n")).toEqual([]);
   });
 });
