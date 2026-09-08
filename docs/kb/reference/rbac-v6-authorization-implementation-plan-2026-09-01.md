@@ -828,6 +828,15 @@ LOC reduction is a secondary benefit expected in P8. Do not trade visible duplic
     classification is needed) and whether that exclusion belongs in RBAC v6's
     canonical evaluator or as a standalone codebase-optimization-plan cohort.
     Not scoped or actioned here — explicitly deferred by Carl.
+15. **Parked 2026-09-08 (Carl, during Phase 2.6 Packet P4-D, L10 #18):**
+    72 of 626 `public.users` rows have `tenant_id IS NULL` — confirmed to be
+    a heterogeneous population (~61 genuine internal staff who plausibly
+    belong to the real "Vivacity Coaching & Consulting" tenant, 4 real
+    external client-domain users who appear genuinely orphaned from any
+    tenant, 6 test/dev noise), not a single class that can be fixed with one
+    rule. Full detail and evidence:
+    `docs/kb/reference/tenant-operating-model-data-architecture-plan-2026-09-02.md`
+    §18 item 14. Not scoped or actioned here — explicitly deferred by Carl.
 
 No phase should silently answer these through code. Record approved answers in the policy ADR and relevant KB procedure.
 

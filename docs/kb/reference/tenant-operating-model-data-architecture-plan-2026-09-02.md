@@ -1058,6 +1058,40 @@ The April performance audit's 13-query architecture is historical and should rem
 11. Will Xero remain the financial source of truth, and which entity/account is connected?
 12. What Supabase branch/disposable environment and synthetic persona process is approved for mutation and cross-tenant testing?
 13. What observation window, canary cohort, performance budget, and rollback owner apply to each risk class?
+14. **Parked 2026-09-08 (Carl, during Phase 2.6 Packet P4-D, L10 #18 —
+    notification-preferences fix):** `public.users.tenant_id` is `NULL` for
+    72 of 626 rows, and that population is not homogeneous — confirmed live
+    via `information_schema`/direct SQL, not assumed:
+    - **~61 are genuine internal Vivacity staff** (44 `@vivacity.com.au` +
+      17 `@vivacitycoaching.com.au`, spanning Super Admin/BGT/CSC/Integrator/
+      Team Member/User `unicorn_role`s). These plausibly should all resolve
+      to the real "Vivacity Coaching & Consulting" tenant (`tenants.id =
+      6372`, confirmed to exist) as their home tenant, rather than being
+      tenant-less by omission.
+    - **4 are real external client-domain users, not staff** — Brian Cannan
+      (`thinkrealestate.net.au`), Luckmali Fernando
+      (`australiancollege.edu.au`), Tania Allen (`visionalliance.com.au`),
+      Patrick DCruze (`mind-makers.ai`) — all role `Admin`/`User`. A
+      fuzzy tenant-name match against their apparent organization found
+      **no matching tenant** for any of the four; they appear genuinely
+      orphaned (never linked to a real tenant), not merely mislinked to an
+      existing one. Assigning these to Vivacity's own tenant would be wrong
+      (would grant them visibility into Vivacity's internal client-facing
+      data) — their real tenant needs identifying separately, likely
+      requiring business knowledge of which real RTO client each belongs to.
+    - **6 are test/dev/typo noise** (`test22@email.com`, `test@example.com`,
+      two `gmail.com` dev accounts, one duplicate-typo Vivacity staff email
+      `vivcitycoaching.com.au`).
+
+    This is exactly the kind of "what does a NULL/unbound `tenant_id`
+    represent" question §5's evidence-model discipline already asks for
+    every candidate column (see the `tenant_members`/`package_instances`/
+    `tenant_profile` unmatched-ID findings above) — not something to answer
+    by silently defaulting all 72 rows to one tenant as a side effect of an
+    unrelated notification-preferences bug fix. Not scoped or actioned here
+    — explicitly deferred by Carl. Also relevant to RBAC v6 plan §13 item 14
+    (person-picker genuine-vs-system-account classification) — same
+    underlying `public.users` population, different lens.
 
 No implementation phase should answer these through incidental code.
 

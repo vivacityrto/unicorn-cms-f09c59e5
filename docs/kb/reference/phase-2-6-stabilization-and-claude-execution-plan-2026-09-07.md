@@ -889,8 +889,8 @@ work.
 - **Not yet started:** P2 (not blocked by P1-C; its broader layered-QA scope
   is separately scheduled after the proof), the rest of P3-A item 1 (the wider consumer graph
   above — `rpc_portfolio_client_health()`, Ask Viv fact builder,
-  compliance-assistant, executive views), the remaining P4-D item
-  (#18 — #3/#4/#10/#14/#15/#16 done 2026-09-08), `InviteUserDialog.tsx`'s
+  compliance-assistant, executive views) — **P4-D is fully closed**
+  (#3/#4/#10/#14/#15/#16/#18 all done 2026-09-08), `InviteUserDialog.tsx`'s
   bounded cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard
   display core — blocked on missing Playwright coverage), P7 — several of
   these require live-schema investigation, product/security decisions, or
@@ -1243,7 +1243,7 @@ Keep these as separately approved migration packets:
 - ~~stage archive audit identity (#14)~~ — **done 2026-09-08**, Carl authorized;
 - ~~legacy tenant mapping (#15)~~ — **done 2026-09-08**, Carl authorized;
 - ~~Academy RPC return type (#16)~~ — **done 2026-09-08**, Carl authorized; and
-- tenant-less notification preferences (#18).
+- ~~tenant-less notification preferences (#18)~~ — **done 2026-09-08**, Carl authorized.
 
 Each packet requires dependency/grant/RLS review, generated types, migration rollback, post-apply checks, and explicit production authorization.
 
@@ -1319,8 +1319,34 @@ placeholder beforehand (that ordering is exactly what made the original
 insert always fail its `NOT NULL` constraints). Audit entry:
 `docs/audit-log/entries/2026-09-08-add-outbound-outlook-calendar-invites.md`.
 
-The remaining P4-D item (#18) still needs its own product decision before
-a fix.
+**#18 done 2026-09-08 — the tenant-assignment question was deliberately
+separated from the schema fix.** Carl asked for a breakdown of the feature/
+bug/reason first, then investigated the 72 tenant-less `public.users` rows
+further before deciding: confirmed live they're not one homogeneous "staff"
+population — ~61 genuine internal Vivacity staff, 4 real external
+client-domain users who appear genuinely orphaned from any tenant, 6
+test/dev noise. Carl deferred *who* should be assigned to a real tenant
+(e.g. the internal "Vivacity Coaching & Consulting" tenant) to the
+architectural redesign/RBAC v6 plan — parked in both
+`docs/kb/reference/tenant-operating-model-data-architecture-plan-2026-09-02.md`
+§18 item 14 and `docs/kb/reference/rbac-v6-authorization-implementation-plan-2026-09-01.md`
+§13 item 15 — then authorized the originally-scoped fix regardless of that
+open question: allow `NULL tenant_id` (the "Allow NULL" option, not a
+separate tenant-less path or hiding the UI). Made `tenant_id` nullable,
+added a partial unique index so a second NULL-tenant save updates rather
+than duplicates, and fixed both RPCs' `= v_tenant_id` comparisons (never
+`TRUE` for `NULL`) to `IS NOT DISTINCT FROM`, branching the upsert's
+`ON CONFLICT` target on tenant presence. Verified live via JWT
+impersonation in a rolled-back transaction. Also fixed an unrelated
+pre-existing bug in `scripts/audit-migrations.mjs` found while shipping
+this — `data-mutation`/`destructive-mutation` findings from a plain
+INSERT/UPDATE/DELETE/TRUNCATE never carried a `targetProject`, making them
+structurally impossible to allowlist; fixed narrowly with 2 new regression
+tests, no effect on the URL/cron/http-call categories. Audit entry:
+`docs/audit-log/entries/2026-09-08-allow-tenant-less-notification-prefs.md`.
+
+**All seven P4-D items are now done.** The P4-D schema/product-decision
+queue that opened this section is closed.
 
 ## 8. Residual lint and Phase 2.6 packets
 
