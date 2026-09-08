@@ -2,6 +2,14 @@
 
 **Parent plan:** [Phase 2.6 Stabilization Plan](phase-2-6-stabilization-plan.md) · **Program index:** [Program Index](../../program-index.md)
 
+**Packet label:** this is Packet **P2-QA** in the stabilization plan's own
+execution-order diagram (§3) — distinct from `codebase-optimization-plan-2026-08-28.md`'s
+unrelated "Packet P2: establish one practical feature boundary" (the
+Lifecycle Checklists pilot, same initiative as this plan's P7 Phase 3 pilot).
+Both plans independently number their packets P0, P1, P2... starting from
+their own local zero, so a bare "P2" is ambiguous across documents — always
+qualify it (P2-QA vs. the master plan's P2) when referencing either.
+
 ## Purpose
 
 `unicorn-qa` is the reusable hosted integration-testing environment for the

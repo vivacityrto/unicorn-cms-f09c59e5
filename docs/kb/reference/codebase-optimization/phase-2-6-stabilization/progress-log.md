@@ -81,12 +81,16 @@ is normalized here. P1-A, P1-B, P1-C, P3-A items 1–3, P4-A, P4-B, P4-C,
 P4-D, P6-A and the completed P6-B cohorts are done. P3-A item 4 is a separate
 RBAC/security hotfix and is not part of this stabilization implementation.
 P5-A is now fully done: item 3 (`InviteUserDialog.tsx`) shipped in session
-26 above. One deliberate lint exception remains: deferred
-`generate-meeting-recurrence` typing.
+26, and the last deliberate lint exception (`generate-meeting-recurrence`
+typing) closed in session 28 — zero known `no-explicit-any` exceptions
+remain repo-wide.
 M0, M1, M2, M3-A, M3-C, M4 and M6 are done; M5 is superseded. Jobs 14, 15,
-20 and 21 are retired, with their data and functions retained. Remaining
-implementation candidates are the
-broader layered-QA scope (P2), SeatCard display-core coverage/extraction, and
+20 and 21 are retired, with their data and functions retained. SeatCard
+display-core coverage was resolved in session 27 as a dead-code retirement,
+not an extraction. Remaining implementation candidates are the broader
+layered-QA coverage-programme scope (P2-QA — see
+[qa-environment-and-coverage-strategy.md](qa-environment-and-coverage-strategy.md),
+not the master plan's unrelated "Packet P2: feature boundary pilot"), and
 Phase 3 preparation/implementation (P7), which remains gated by RBAC and
 Tenant Operating Model decisions.
 
@@ -954,8 +958,10 @@ work.
   instead of failing — disclosed, not fixed. No allowlist entry needed
   (pure DDL, no risk-category match in `audit-migrations.mjs`). Audit
   entry: `docs/audit-log/entries/2026-09-08-retire-document-links.md`.
-- **Not yet started:** P2 (not blocked by P1-C; its broader layered-QA scope
-  is separately scheduled after the proof), the rest of P3-A item 1 (the wider consumer graph
+- **Not yet started:** P2-QA (not blocked by P1-C; its broader layered-QA
+  coverage-programme scope is separately scheduled after the proof — see
+  `qa-environment-and-coverage-strategy.md`, not the master plan's unrelated
+  "Packet P2: feature boundary pilot"), the rest of P3-A item 1 (the wider consumer graph
   above — `rpc_portfolio_client_health()`, Ask Viv fact builder,
   compliance-assistant, executive views) — **P4-D is fully closed**
   (#3/#4/#10/#14/#15/#16/#18 all done 2026-09-08), `InviteUserDialog.tsx`'s

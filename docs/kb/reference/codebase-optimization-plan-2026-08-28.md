@@ -253,6 +253,13 @@ First-wave clone target: 800–1,500 net lines removed with parity tests. Simila
 
 ### P2 — establish one practical feature boundary
 
+> **Not to be confused with:** the Phase 2.6 stabilization plan's own,
+> unrelated "Packet P2-QA" (isolation-suite hardening / layered-QA coverage
+> programme — see `phase-2-6-stabilization/qa-environment-and-coverage-strategy.md`).
+> Both plans number their own packets from P0 independently, so a bare "P2"
+> is ambiguous across documents. This P2 is the same initiative as the
+> stabilization plan's P7 Phase 3 pilot packets (P7-A–P7-D).
+
 | ID | Candidate | Evidence | Intended result | Gate |
 |---|---|---|---|---|
 | P2.1 | Re-evaluate the Lifecycle Checklists pilot from the April Clean Architecture proposal | `src/domain`/`src/data` still do not exist; `useLifecycleChecklists.ts` still owns types, raw Supabase queries, React Query, and toasts | Prove a minimal feature API/query/domain convention without a broad rewrite | Confirm the admin feature is still used; add behavior tests first; do not add four files per type mechanically |
