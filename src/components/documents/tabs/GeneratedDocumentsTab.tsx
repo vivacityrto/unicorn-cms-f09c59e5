@@ -159,21 +159,21 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
       return;
     }
 
-    // NOTE: `tenants` has no `client_legacy_id` column (that column only exists on
-    // excel_generated_files/generated_documents) — this select has always failed
-    // silently (error not checked), so clientLegacyId has always been undefined.
-    // Pre-existing bug, out of scope for this type-only change; the cast preserves
-    // that exact (broken) behavior. See docs/kb/reference/l10-real-bugs-found-2026-09-04.md #15.
-    const { data: tenantData } = await supabase
-      .from('tenants')
-      .select('client_legacy_id')
-      .eq('id', tenantId)
-      .single();
+    // `tenants` has no `client_legacy_id` column - the real link to the legacy
+    // Unicorn1 client record is `clients_legacy.tenant_id` (a direct FK to
+    // `tenants.id`). Most tenants have no clients_legacy row at all (it's a
+    // small, migrated-data-only table), so this is expected to be null for
+    // the common case - maybeSingle() rather than single() avoids an error.
+    const { data: legacyClient } = await supabase
+      .from('clients_legacy')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
 
     await generateAndDownload({
       documentId: doc.id,
       tenantId,
-      clientLegacyId: (tenantData as unknown as { client_legacy_id?: string } | null)?.client_legacy_id,
+      clientLegacyId: legacyClient?.id,
       stageId: doc.stage || undefined,
       packageId: doc.package_id || undefined,
     });
